@@ -6,7 +6,6 @@
           <MessageOutlined class="title-icon" />
           会话管理
         </h1>
-        <p class="page-description">管理和查看智能助手的对话会话记录</p>
       </div>
       <div class="header-actions">
         <a-button type="primary" @click="clearAllHistory" :disabled="sessionHistory.length === 0">
@@ -515,13 +514,6 @@ onMounted(() => {
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-    }
-
-    .page-description {
-      margin: 0;
-      color: var(--ant-text-color-secondary);
-      font-size: 16px;
-      line-height: 1.5;
     }
   }
 

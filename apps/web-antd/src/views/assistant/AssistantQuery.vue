@@ -7,9 +7,6 @@
           <Icon icon="lucide:message-square" size="24" color="#1890ff" />
           <h2>智能问答</h2>
         </div>
-        <div class="page-description">
-          与智能助手进行对话，获取专业的技术支持和解答
-        </div>
       </div>
       <div class="header-right">
         <a-space>
@@ -41,7 +38,7 @@
                 对话
               </div>
             </div>
-            
+
             <div class="card-content">
               <!-- 聊天历史 -->
               <div class="chat-history" ref="chatHistoryRef">
@@ -49,7 +46,7 @@
                   <Icon icon="lucide:message-circle" size="48" color="#bfbfbf" />
                   <p>开始您的第一次对话吧！</p>
                 </div>
-                
+
                 <div v-for="(message, index) in chatHistory" :key="index" class="message-item">
                   <!-- 用户消息 -->
                   <div v-if="message.role === 'user'" class="user-message">
@@ -61,7 +58,7 @@
                       <Icon icon="lucide:user" size="16" />
                     </a-avatar>
                   </div>
-                  
+
                   <!-- 助手消息 -->
                   <div v-else class="assistant-message">
                     <a-avatar class="message-avatar" style="background-color: #52c41a;">
@@ -70,25 +67,26 @@
                     <div class="message-content">
                       <div class="message-text" v-html="formatMarkdown(message.content)"></div>
                       <div class="message-time">{{ formatTime(message.timestamp) }}</div>
-                      
+
                       <!-- 来源文档 -->
-                      <div v-if="message.sourceDocuments && message.sourceDocuments.length > 0" class="source-documents">
+                      <div v-if="message.sourceDocuments && message.sourceDocuments.length > 0"
+                        class="source-documents">
                         <a-divider style="margin: 12px 0 8px 0;" />
                         <div class="source-title">
                           <Icon icon="lucide:file-text" size="14" color="#8c8c8c" />
                           参考文档
                         </div>
                         <div class="source-list">
-                          <a-tag v-for="(doc, idx) in message.sourceDocuments.slice(0, 3)" :key="idx" 
-                                 color="blue" class="source-tag"
-                                 @click="showDocumentDetail(doc)">
+                          <a-tag v-for="(doc, idx) in message.sourceDocuments.slice(0, 3)" :key="idx" color="blue"
+                            class="source-tag" @click="showDocumentDetail(doc)">
                             {{ doc.title || `文档${idx + 1}` }}
                           </a-tag>
                         </div>
                       </div>
-                      
+
                       <!-- 推荐问题 -->
-                      <div v-if="message.followUpQuestions && message.followUpQuestions.length > 0" class="follow-up-questions">
+                      <div v-if="message.followUpQuestions && message.followUpQuestions.length > 0"
+                        class="follow-up-questions">
                         <a-divider style="margin: 12px 0 8px 0;" />
                         <div class="follow-up-title">
                           <Icon icon="lucide:lightbulb" size="14" color="#8c8c8c" />
@@ -96,8 +94,7 @@
                         </div>
                         <div class="question-list">
                           <a-button v-for="(question, idx) in message.followUpQuestions.slice(0, 3)" :key="idx"
-                                    type="link" size="small" @click="askFollowUpQuestion(question)"
-                                    class="follow-up-btn">
+                            type="link" size="small" @click="askFollowUpQuestion(question)" class="follow-up-btn">
                             {{ question }}
                           </a-button>
                         </div>
@@ -105,7 +102,7 @@
                     </div>
                   </div>
                 </div>
-                
+
                 <!-- 加载中状态 -->
                 <div v-if="isLoading" class="loading-message">
                   <a-avatar class="message-avatar" style="background-color: #52c41a;">
@@ -117,19 +114,11 @@
                   </div>
                 </div>
               </div>
-              
+
               <!-- 输入区域 -->
               <div class="chat-input">
-                <a-input-search
-                  v-model:value="questionInput"
-                  placeholder="请输入您的问题..."
-                  enter-button="发送"
-                  size="large"
-                  :loading="isLoading"
-                  :disabled="isLoading"
-                  @search="sendMessage"
-                  @keydown.enter.prevent="sendMessage"
-                >
+                <a-input-search v-model:value="questionInput" placeholder="请输入您的问题..." enter-button="发送" size="large"
+                  :loading="isLoading" :disabled="isLoading" @search="sendMessage" @keydown.enter.prevent="sendMessage">
                   <template #enterButton>
                     <a-button type="primary" :loading="isLoading">
                       <Icon icon="lucide:send" size="16" />
@@ -140,7 +129,7 @@
             </div>
           </div>
         </a-col>
-        
+
         <!-- 侧边栏 -->
         <a-col :span="6">
           <!-- 会话信息 -->
@@ -151,13 +140,13 @@
                 会话信息
               </div>
             </div>
-            
+
             <div class="card-content">
               <div class="info-item">
                 <label class="form-label">会话ID</label>
                 <div class="form-value">{{ currentSessionId || '新会话' }}</div>
               </div>
-              
+
               <div class="info-item">
                 <label class="form-label">助手模式</label>
                 <a-select v-model:value="assistantMode" class="form-control" @change="onModeChange">
@@ -165,19 +154,19 @@
                   <a-select-option :value="2">MCP模式</a-select-option>
                 </a-select>
               </div>
-              
+
               <div class="info-item">
                 <label class="form-label">网络搜索</label>
                 <a-switch v-model:checked="useWebSearch" />
               </div>
-              
+
               <div class="info-item">
                 <label class="form-label">消息数量</label>
                 <div class="form-value">{{ chatHistory.length }}</div>
               </div>
             </div>
           </div>
-          
+
           <!-- 快捷问题 -->
           <div class="content-card sidebar-card">
             <div class="card-header">
@@ -186,12 +175,11 @@
                 快捷问题
               </div>
             </div>
-            
+
             <div class="card-content">
               <div class="quick-questions">
-                <a-button v-for="(question, index) in quickQuestions" :key="index"
-                          type="default" block class="quick-question-btn"
-                          @click="askQuickQuestion(question)">
+                <a-button v-for="(question, index) in quickQuestions" :key="index" type="default" block
+                  class="quick-question-btn" @click="askQuickQuestion(question)">
                   {{ question }}
                 </a-button>
               </div>
@@ -200,7 +188,7 @@
         </a-col>
       </a-row>
     </div>
-    
+
     <!-- 文档详情弹窗 -->
     <a-modal v-model:open="documentModalVisible" title="文档详情" width="800px" :footer="null">
       <div v-if="selectedDocument">
@@ -401,9 +389,9 @@ const showDocumentDetail = (document: any) => {
 // 格式化时间
 const formatTime = (timestamp: string) => {
   const date = new Date(timestamp);
-  return date.toLocaleTimeString('zh-CN', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  return date.toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit'
   });
 };
 
@@ -470,12 +458,6 @@ onMounted(() => {
   background-clip: text;
 }
 
-.page-description {
-  margin: 0;
-  color: var(--ant-text-color-secondary);
-  font-size: 16px;
-  line-height: 1.5;
-}
 
 .header-right {
   flex-shrink: 0;
@@ -532,7 +514,7 @@ onMounted(() => {
     flex: 1;
     padding: 16px 24px;
     overflow-y: auto;
-    
+
     .empty-state {
       display: flex;
       flex-direction: column;
@@ -540,30 +522,30 @@ onMounted(() => {
       justify-content: center;
       height: 300px;
       color: var(--text-color-tertiary, #bfbfbf);
-      
+
       p {
         margin: 16px 0 0 0;
         font-size: 14px;
       }
     }
-    
+
     .message-item {
       margin-bottom: 24px;
-      
+
       &:last-child {
         margin-bottom: 0;
       }
     }
-    
+
     .user-message {
       display: flex;
       justify-content: flex-end;
       align-items: flex-start;
       gap: 12px;
-      
+
       .message-content {
         max-width: 70%;
-        
+
         .message-text {
           background: var(--primary-color, #1890ff);
           color: #ffffff;
@@ -574,7 +556,7 @@ onMounted(() => {
           font-size: 14px;
           line-height: 1.5;
         }
-        
+
         .message-time {
           text-align: right;
           font-size: 12px;
@@ -583,16 +565,16 @@ onMounted(() => {
         }
       }
     }
-    
+
     .assistant-message {
       display: flex;
       justify-content: flex-start;
       align-items: flex-start;
       gap: 12px;
-      
+
       .message-content {
         max-width: 70%;
-        
+
         .message-text {
           background: var(--bg-color-light, #fafafa);
           color: var(--text-color-primary, #262626);
@@ -603,29 +585,35 @@ onMounted(() => {
           font-size: 14px;
           line-height: 1.5;
           border: 1px solid var(--border-color, #f0f0f0);
-          
-          :deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
+
+          :deep(h1),
+          :deep(h2),
+          :deep(h3),
+          :deep(h4),
+          :deep(h5),
+          :deep(h6) {
             margin: 8px 0 4px 0;
             font-weight: 600;
           }
-          
+
           :deep(p) {
             margin: 8px 0;
             line-height: 1.6;
           }
-          
-          :deep(ul), :deep(ol) {
+
+          :deep(ul),
+          :deep(ol) {
             margin: 8px 0;
             padding-left: 20px;
           }
-          
+
           :deep(code) {
             background: #f5f5f5;
             padding: 2px 4px;
             border-radius: 3px;
             font-family: monospace;
           }
-          
+
           :deep(pre) {
             background: #f5f5f5;
             padding: 12px;
@@ -634,13 +622,13 @@ onMounted(() => {
             margin: 8px 0;
           }
         }
-        
+
         .message-time {
           font-size: 12px;
           color: var(--text-color-tertiary, #bfbfbf);
           margin-top: 4px;
         }
-        
+
         .source-documents {
           .source-title {
             font-size: 12px;
@@ -650,23 +638,23 @@ onMounted(() => {
             gap: 4px;
             margin-bottom: 4px;
           }
-          
+
           .source-list {
             display: flex;
             flex-wrap: wrap;
             gap: 4px;
           }
-          
+
           .source-tag {
             cursor: pointer;
             transition: all 0.2s ease;
-            
+
             &:hover {
               transform: translateY(-1px);
             }
           }
         }
-        
+
         .follow-up-questions {
           .follow-up-title {
             font-size: 12px;
@@ -676,14 +664,14 @@ onMounted(() => {
             gap: 4px;
             margin-bottom: 4px;
           }
-          
+
           .question-list {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
             gap: 2px;
           }
-          
+
           .follow-up-btn {
             padding: 2px 0;
             height: auto;
@@ -693,19 +681,19 @@ onMounted(() => {
         }
       }
     }
-    
+
     .loading-message {
       display: flex;
       justify-content: flex-start;
       align-items: center;
       gap: 12px;
-      
+
       .message-content {
         display: flex;
         align-items: center;
         gap: 8px;
       }
-      
+
       .loading-text {
         color: var(--text-color-secondary, #8c8c8c);
         font-size: 14px;
@@ -764,7 +752,7 @@ onMounted(() => {
   font-size: 13px;
   white-space: normal;
   transition: all 0.2s ease;
-  
+
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -775,18 +763,18 @@ onMounted(() => {
 .document-content {
   max-height: 400px;
   overflow-y: auto;
-  
+
   h4 {
     margin: 0 0 12px 0;
     color: var(--text-color-primary, #262626);
     font-weight: 600;
   }
-  
+
   :deep(p) {
     line-height: 1.6;
     margin: 8px 0;
   }
-  
+
   :deep(code) {
     background: #f5f5f5;
     padding: 2px 4px;
@@ -803,7 +791,7 @@ onMounted(() => {
       flex: 0 0 100% !important;
       max-width: 100% !important;
     }
-    
+
     :deep(.ant-col:last-child) {
       display: none;
     }

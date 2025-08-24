@@ -25,6 +25,21 @@
         <a-tag color="orange" v-else>请填写诊断参数</a-tag>
       </template>
       
+      <!-- 数据源错误提示 -->
+      <a-alert 
+        v-if="dataError.hasError"
+        :message="dataError.isPrometheusDown ? '监控数据源异常' : '数据获取异常'"
+        :description="dataError.errorMessage"
+        :type="dataError.isPrometheusDown ? 'warning' : 'error'"
+        show-icon
+        closable
+        style="margin-bottom: 16px;"
+      >
+        <template #icon>
+          <ExclamationCircleOutlined v-if="dataError.isPrometheusDown" />
+        </template>
+      </a-alert>
+      
       <a-form layout="horizontal" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
         <a-row :gutter="[24, 16]">
           <a-col :xs="24" :md="12">
@@ -138,12 +153,19 @@
               </div>
               <div class="metric-info">
                 <div class="metric-name">系统状态</div>
-                <div class="metric-value">{{ quickDiagnosisResult?.status === 'healthy' ? '健康' : '异常' }}</div>
+                <div class="metric-value">
+                  {{ dataError.isPrometheusDown ? '数据源异常' : 
+                     (quickDiagnosisResult?.status === 'healthy' ? '健康' : 
+                      quickDiagnosisResult?.status ? '异常' : '未知') }}
+                </div>
               </div>
             </div>
             <div class="metric-status">
-              <a-tag :color="quickDiagnosisResult?.status === 'healthy' ? 'green' : 'red'">
-                {{ quickDiagnosisResult?.status === 'healthy' ? '正常' : '异常' }}
+              <a-tag :color="dataError.isPrometheusDown ? 'orange' : 
+                            (quickDiagnosisResult?.status === 'healthy' ? 'green' : 'red')">
+                {{ dataError.isPrometheusDown ? '数据源异常' :
+                   (quickDiagnosisResult?.status === 'healthy' ? '正常' : 
+                    quickDiagnosisResult?.status ? '异常' : '未知') }}
               </a-tag>
               <div class="metric-time">{{ timeRange }}小时内</div>
             </div>
@@ -346,6 +368,13 @@ const diagnosisLevel = ref('standard');
 const autoRefresh = ref(false);
 const hasInitialData = ref(false);
 
+// 错误状态管理
+const dataError = ref({
+  hasError: false,
+  errorMessage: '',
+  isPrometheusDown: false
+});
+
 // 用户输入数据
 const inputData = ref({
   namespace: ''
@@ -384,6 +413,34 @@ const getErrorSeverityText = (errorCount: number) => {
   return '严重';
 };
 
+// 错误处理辅助函数
+const resetErrorState = () => {
+  dataError.value = {
+    hasError: false,
+    errorMessage: '',
+    isPrometheusDown: false
+  };
+};
+
+const handleDataError = (error: any, context: string) => {
+  console.error(`${context}失败:`, error);
+  
+  // 检查是否是 Prometheus 连接问题
+  const isPrometheusError = error?.message?.includes('prometheus') || 
+                           error?.response?.status === 502 ||
+                           error?.response?.status === 503 ||
+                           error?.message?.includes('connection') ||
+                           error?.message?.includes('timeout');
+  
+  dataError.value = {
+    hasError: true,
+    errorMessage: isPrometheusError 
+      ? '监控数据源(Prometheus)暂不可用，页面将显示默认状态' 
+      : `${context}失败: ${error.message || '未知错误'}`,
+    isPrometheusDown: isPrometheusError
+  };
+};
+
 // 方法定义
 const refreshAllDiagnosis = async () => {
   if (!isFormValid.value) {
@@ -392,18 +449,40 @@ const refreshAllDiagnosis = async () => {
   }
 
   loading.value = true;
+  resetErrorState();
+  
   try {
-    await Promise.all([
+    // 并发执行API调用，即使部分失败也不影响其他调用
+    const results = await Promise.allSettled([
       fetchQuickDiagnosis(),
       fetchEventPatterns(),
       fetchErrorSummary()
     ]);
     
-    hasInitialData.value = true;
-    updateCharts();
-    message.success('诊断数据已更新');
+    // 检查是否所有API都失败了
+    const allFailed = results.every(result => result.status === 'rejected');
+    const anyFailed = results.some(result => result.status === 'rejected');
+    
+    if (allFailed) {
+      // 如果全部失败，可能是系统性问题
+      const firstError = (results[0] as PromiseRejectedResult).reason;
+      handleDataError(firstError, '获取诊断数据');
+      message.warning('数据源暂不可用，显示默认界面');
+    } else {
+      // 部分成功
+      hasInitialData.value = true;
+      updateCharts();
+      
+      if (anyFailed) {
+        message.warning('部分数据获取失败，页面可能显示不完整');
+      } else {
+        message.success('诊断数据已更新');
+      }
+    }
+    
   } catch (error) {
     console.error('获取诊断数据失败:', error);
+    handleDataError(error, '获取诊断数据');
     message.error('获取诊断数据失败');
   } finally {
     loading.value = false;
@@ -416,6 +495,17 @@ const fetchQuickDiagnosis = async () => {
     quickDiagnosisResult.value = response;
   } catch (error) {
     console.error('快速诊断失败:', error);
+    // 设置默认值，确保页面能正常渲染
+    quickDiagnosisResult.value = {
+      status: 'unknown',
+      namespace: inputData.value.namespace,
+      critical_issues: [],
+      warnings: [],
+      recommendations: [],
+      timestamp: new Date().toISOString(),
+      analysis_duration: 0
+    };
+    throw error; // 重新抛出以便上层处理
   }
 };
 
@@ -425,6 +515,16 @@ const fetchEventPatterns = async () => {
     eventPatternsResult.value = response;
   } catch (error) {
     console.error('事件模式分析失败:', error);
+    // 设置默认值
+    eventPatternsResult.value = {
+      namespace: inputData.value.namespace,
+      time_range_hours: Number(timeRange.value),
+      patterns: [],
+      trending_events: [],
+      anomalous_events: [],
+      timestamp: new Date().toISOString()
+    };
+    throw error;
   }
 };
 
@@ -434,6 +534,17 @@ const fetchErrorSummary = async () => {
     errorSummaryResult.value = response;
   } catch (error) {
     console.error('错误摘要失败:', error);
+    // 设置默认值
+    errorSummaryResult.value = {
+      namespace: inputData.value.namespace,
+      time_range_hours: Number(timeRange.value),
+      total_errors: 0,
+      error_categories: {},
+      top_errors: [],
+      error_timeline: [],
+      timestamp: new Date().toISOString()
+    };
+    throw error;
   }
 };
 
@@ -443,19 +554,87 @@ const initEventPatternsChart = () => {
   if (!eventPatternsChartRef.value) return;
 
   eventPatternsChart = echarts.init(eventPatternsChartRef.value);
+  
+  // 即使没有数据也要渲染空图表
+  if (!eventPatternsResult.value || eventPatternsResult.value.patterns.length === 0) {
+    const emptyOption = {
+      title: {
+        text: dataError.value.isPrometheusDown ? '数据源暂不可用' : '暂无事件数据',
+        left: 'center',
+        top: 'middle',
+        textStyle: {
+          color: 'var(--ant-text-color-secondary)',
+          fontSize: 16
+        }
+      },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      xAxis: { type: 'category', data: [] },
+      yAxis: { type: 'value' },
+      series: [{ name: '事件趋势', type: 'line', data: [] }]
+    };
+    eventPatternsChart.setOption(emptyOption);
+    return;
+  }
+  
   updateEventPatternsChart();
 };
 
 const initErrorCategoriesChart = () => {
-  if (!errorCategoriesChartRef.value || !errorSummaryResult.value) return;
+  if (!errorCategoriesChartRef.value) return;
 
   errorCategoriesChart = echarts.init(errorCategoriesChartRef.value);
+  
+  // 检查是否有错误摘要数据
+  if (!errorSummaryResult.value) {
+    const emptyOption = {
+      title: {
+        text: dataError.value.isPrometheusDown ? '数据源暂不可用' : '暂无错误数据',
+        left: 'center',
+        top: 'middle',
+        textStyle: {
+          color: 'var(--ant-text-color-secondary)',
+          fontSize: 16
+        }
+      },
+      series: [{
+        name: '错误分类',
+        type: 'pie',
+        radius: '70%',
+        data: []
+      }]
+    };
+    errorCategoriesChart.setOption(emptyOption);
+    return;
+  }
 
   const categories = errorSummaryResult.value.error_categories || {};
   const data = Object.entries(categories).map(([name, value]) => ({
     name,
     value: value as number
   }));
+
+  // 如果没有错误数据，显示空状态
+  if (data.length === 0) {
+    const emptyOption = {
+      title: {
+        text: '无错误数据',
+        left: 'center',
+        top: 'middle',
+        textStyle: {
+          color: 'var(--ant-text-color-secondary)',
+          fontSize: 16
+        }
+      },
+      series: [{
+        name: '错误分类',
+        type: 'pie',
+        radius: '70%',
+        data: []
+      }]
+    };
+    errorCategoriesChart.setOption(emptyOption);
+    return;
+  }
 
   const option = {
     tooltip: {
@@ -494,9 +673,30 @@ const initErrorCategoriesChart = () => {
 };
 
 const initErrorTrendsChart = () => {
-  if (!errorTrendsChartRef.value || !errorSummaryResult.value) return;
+  if (!errorTrendsChartRef.value) return;
 
   errorTrendsChart = echarts.init(errorTrendsChartRef.value);
+  
+  // 检查是否有错误摘要数据
+  if (!errorSummaryResult.value) {
+    const emptyOption = {
+      title: {
+        text: dataError.value.isPrometheusDown ? '数据源暂不可用' : '暂无趋势数据',
+        left: 'center',
+        top: 'middle',
+        textStyle: {
+          color: 'var(--ant-text-color-secondary)',
+          fontSize: 16
+        }
+      },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      xAxis: { type: 'category', data: [] },
+      yAxis: { type: 'value' },
+      series: [{ name: '错误数量', type: 'line', data: [] }]
+    };
+    errorTrendsChart.setOption(emptyOption);
+    return;
+  }
 
   const timeline = errorSummaryResult.value.error_timeline || [];
   const timeData = timeline.map((item: any) => formatTimeForChart(item.timestamp));
@@ -541,7 +741,28 @@ const initErrorTrendsChart = () => {
 };
 
 const updateEventPatternsChart = () => {
-  if (!eventPatternsChart || !eventPatternsResult.value) return;
+  if (!eventPatternsChart) return;
+  
+  // 如果没有数据，显示空状态
+  if (!eventPatternsResult.value || eventPatternsResult.value.patterns.length === 0) {
+    const emptyOption = {
+      title: {
+        text: dataError.value.isPrometheusDown ? '数据源暂不可用' : '暂无事件数据',
+        left: 'center',
+        top: 'middle',
+        textStyle: {
+          color: 'var(--ant-text-color-secondary)',
+          fontSize: 16
+        }
+      },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      xAxis: { type: 'category', data: [] },
+      yAxis: { type: 'value' },
+      series: [{ name: '事件趋势', type: 'line', data: [] }]
+    };
+    eventPatternsChart.setOption(emptyOption);
+    return;
+  }
 
   const patterns = eventPatternsResult.value.patterns || [];
   
@@ -695,6 +916,9 @@ const resetDashboard = () => {
   quickDiagnosisResult.value = null;
   eventPatternsResult.value = null;
   errorSummaryResult.value = null;
+  
+  // 重置错误状态
+  resetErrorState();
   
   // 数据已重置，模板会自动更新显示
   

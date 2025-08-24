@@ -6,11 +6,12 @@
           <CheckCircleOutlined class="title-icon" />
           服务信息
         </h1>
-        <p class="page-description">查看智能助手服务的详细信息和配置参数</p>
       </div>
       <div class="header-actions">
         <a-button type="primary" @click="refreshInfo" :loading="loading">
-          <template #icon><ReloadOutlined /></template>
+          <template #icon>
+            <ReloadOutlined />
+          </template>
           刷新信息
         </a-button>
       </div>
@@ -80,7 +81,9 @@
             <div class="endpoint-header">
               <a-tag color="purple">{{ name }}</a-tag>
               <a-button type="link" size="small" @click="copyToClipboard(url)">
-                <template #icon><CopyOutlined /></template>
+                <template #icon>
+                  <CopyOutlined />
+                </template>
                 复制
               </a-button>
             </div>
@@ -106,7 +109,7 @@
         <div v-else class="empty-config">
           <a-empty description="暂无配置信息" />
         </div>
-        
+
         <div v-if="configInfo.version || configInfo.timestamp" class="config-meta">
           <a-divider />
           <div class="meta-info">
@@ -137,8 +140,8 @@ import {
   CalendarOutlined,
   ClockCircleOutlined
 } from '@ant-design/icons-vue';
-import { 
-  getAssistantInfo, 
+import {
+  getAssistantInfo,
   getAssistantConfig,
   type ServiceInfoResponse,
   type ServiceConfigResponse
@@ -208,10 +211,10 @@ const fetchServiceInfo = async () => {
     loading.value = true;
     const response = await getAssistantInfo();
     const data = response as ServiceInfoResponse;
-    
+
     // 更新服务信息
     Object.assign(serviceInfo, data);
-    
+
     message.success('服务信息获取成功');
   } catch (error: any) {
     message.error(`获取服务信息失败: ${error.message}`);
@@ -227,10 +230,10 @@ const fetchConfigInfo = async () => {
     configLoading.value = true;
     const response = await getAssistantConfig();
     const data = response as ServiceConfigResponse;
-    
+
     // 更新配置信息
     Object.assign(configInfo, data);
-    
+
     message.success('配置信息获取成功');
   } catch (error: any) {
     message.error(`获取配置信息失败: ${error.message}`);
@@ -281,13 +284,6 @@ onMounted(() => {
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-    }
-
-    .page-description {
-      margin: 0;
-      color: var(--ant-text-color-secondary);
-      font-size: 16px;
-      line-height: 1.5;
     }
   }
 
@@ -357,11 +353,11 @@ onMounted(() => {
             font-size: 20px;
             font-weight: 600;
             line-height: 1.2;
-            
+
             &.online {
               color: #52c41a;
             }
-            
+
             &.offline {
               color: #ff4d4f;
             }
@@ -516,13 +512,13 @@ onMounted(() => {
   .info-container {
     padding: 16px;
   }
-  
+
   .info-header {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
   }
-  
+
   .header-actions {
     justify-content: center;
   }

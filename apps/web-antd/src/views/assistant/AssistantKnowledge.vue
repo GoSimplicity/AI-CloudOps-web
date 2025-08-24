@@ -6,7 +6,6 @@
           <FileTextOutlined class="title-icon" />
           知识库管理
         </h1>
-        <p class="page-description">管理智能助手的知识库文档，提升问答质量</p>
       </div>
       <div class="header-actions">
         <a-button type="primary" @click="refreshKnowledge" :loading="refreshing">
@@ -354,13 +353,6 @@ onMounted(() => {
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-    }
-
-    .page-description {
-      margin: 0;
-      color: var(--ant-text-color-secondary);
-      font-size: 16px;
-      line-height: 1.5;
     }
   }
 

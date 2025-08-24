@@ -19,8 +19,20 @@
       </div>
     </div>
 
+    <!-- 错误状态提示 -->
+    <a-alert 
+      v-if="dataError.hasError && serviceHealth"
+      :message="dataError.isServiceDown ? 'RCA服务连接异常' : '数据获取异常'"
+      :description="dataError.errorMessage"
+      :type="dataError.isServiceDown ? 'warning' : 'error'"
+      show-icon
+      closable
+      style="margin-bottom: 16px;"
+      @close="resetErrorState"
+    />
+
     <!-- 无数据状态 -->
-    <a-card v-if="!serviceHealth" class="empty-state-card">
+    <a-card v-if="!serviceHealth && !dataError.hasError" class="empty-state-card">
       <a-empty description="暂无健康监控数据">
         <template #image>
           <HeartOutlined style="font-size: 64px; color: #bfbfbf;" />
@@ -35,17 +47,37 @@
       </a-empty>
     </a-card>
 
+    <!-- 服务离线状态 -->
+    <a-card v-if="dataError.isServiceDown" class="offline-state-card">
+      <a-empty description="RCA服务暂不可用">
+        <template #image>
+          <CloseOutlined style="font-size: 64px; color: #ff4d4f;" />
+        </template>
+        <p style="color: #8c8c8c; margin: 16px 0;">
+          服务可能正在维护或遇到连接问题，显示最后已知状态
+        </p>
+        <a-button type="primary" @click="refreshHealth" :loading="loading">
+          <ReloadOutlined />
+          重试连接
+        </a-button>
+      </a-empty>
+    </a-card>
+
     <!-- 服务状态概览 -->
-    <a-row v-else :gutter="[16, 16]" class="status-overview">
+    <a-row v-if="serviceHealth" :gutter="[16, 16]" class="status-overview">
       <a-col :xs="12" :sm="6">
         <a-card class="status-card">
           <a-statistic
-            :value="serviceHealth?.status === 'healthy' ? '正常' : '异常'"
-            :value-style="{ color: serviceHealth?.status === 'healthy' ? '#3f8600' : '#cf1322' }"
+            :value="dataError.isServiceDown ? '离线' : 
+                   (serviceHealth?.status === 'healthy' ? '正常' : 
+                    serviceHealth?.status === 'unknown' ? '未知' : '异常')"
+            :value-style="{ color: dataError.isServiceDown ? '#ff4d4f' :
+                                   (serviceHealth?.status === 'healthy' ? '#3f8600' : '#cf1322') }"
           >
             <template #title>
               <div class="stat-title">
-                <CheckCircleOutlined :style="{ color: serviceHealth?.status === 'healthy' ? '#3f8600' : '#cf1322' }" />
+                <CheckCircleOutlined :style="{ color: dataError.isServiceDown ? '#ff4d4f' :
+                                                      (serviceHealth?.status === 'healthy' ? '#3f8600' : '#cf1322') }" />
                 服务状态
               </div>
             </template>
@@ -385,10 +417,8 @@ import {
   getRCAConfig,
   getRCAInfo,
   type RCAHealthResponse,
-  type ServiceReadyResponse,
-  type ServiceConfigResponse,
-  type ServiceInfoResponse
 } from '#/api/core/rca';
+import type { ServiceReadyResponse, ServiceConfigResponse, ServiceInfoResponse } from '#/api/core/common';
 
 const loading = ref(false);
 const autoRefresh = ref(true);
@@ -398,6 +428,14 @@ const serviceReady = ref<ServiceReadyResponse | null>(null);
 const serviceConfig = ref<ServiceConfigResponse | null>(null);
 const serviceInfo = ref<ServiceInfoResponse | null>(null);
 
+// 错误状态管理
+const dataError = ref({
+  hasError: false,
+  errorMessage: '',
+  isServiceDown: false,
+  hasPartialData: false
+});
+
 const responseTimeChartRef = ref<HTMLElement>();
 const trendChartRef = ref<HTMLElement>();
 let responseTimeChart: echarts.ECharts | null = null;
@@ -405,27 +443,120 @@ let trendChart: echarts.ECharts | null = null;
 
 let refreshTimer: NodeJS.Timeout | null = null;
 
+// 错误处理辅助函数
+const resetErrorState = () => {
+  dataError.value = {
+    hasError: false,
+    errorMessage: '',
+    isServiceDown: false,
+    hasPartialData: false
+  };
+};
+
+const handleDataError = (error: any, context: string, isMainService = false) => {
+  console.error(`${context}失败:`, error);
+  
+  // 检查是否是服务连接问题
+  const isServiceError = error?.response?.status === 502 ||
+                        error?.response?.status === 503 ||
+                        error?.response?.status === 404 ||
+                        error?.message?.includes('connection') ||
+                        error?.message?.includes('timeout') ||
+                        error?.code === 'ECONNREFUSED';
+  
+  dataError.value = {
+    hasError: true,
+    errorMessage: isServiceError 
+      ? 'RCA服务暂不可用，显示离线状态' 
+      : `${context}失败: ${error.message || '未知错误'}`,
+    isServiceDown: isServiceError && isMainService,
+    hasPartialData: !isMainService && !!serviceHealth.value
+  };
+};
+
 const refreshHealth = async () => {
   loading.value = true;
+  resetErrorState();
+  
   try {
-    const [healthResponse, readyResponse, configResponse, infoResponse] = await Promise.all([
+    // 使用 Promise.allSettled 以确保即使部分失败也能显示可用数据
+    const results = await Promise.allSettled([
       getRCAHealth(),
       getRCAReady(),
-      getRCAConfig().catch(() => null),
-      getRCAInfo().catch(() => null)
+      getRCAConfig(),
+      getRCAInfo()
     ]);
     
-    serviceHealth.value = healthResponse;
-    serviceReady.value = readyResponse;
-    serviceConfig.value = configResponse;
-    serviceInfo.value = infoResponse;
+    // 处理健康检查结果（最重要的数据）
+    if (results[0].status === 'fulfilled') {
+      serviceHealth.value = results[0].value;
+    } else {
+      handleDataError(results[0].reason, '获取健康状态', true);
+      // 设置默认健康状态
+      serviceHealth.value = {
+        status: 'unknown',
+        prometheus_connected: false,
+        kubernetes_connected: false,
+        redis_connected: false,
+        last_check_time: new Date().toISOString(),
+        version: 'Unknown'
+      };
+    }
+    
+    // 处理就绪状态
+    if (results[1].status === 'fulfilled') {
+      serviceReady.value = results[1].value;
+    } else {
+      console.error('获取就绪状态失败:', results[1].reason);
+      serviceReady.value = {
+        ready: false,
+        service: 'RCA服务',
+        message: '服务状态检查失败',
+        timestamp: new Date().toISOString()
+      };
+    }
+    
+    // 处理配置信息（非关键）
+    if (results[2].status === 'fulfilled') {
+      serviceConfig.value = results[2].value;
+    } else {
+      console.error('获取配置失败:', results[2].reason);
+      serviceConfig.value = null;
+    }
+    
+    // 处理服务信息（非关键）
+    if (results[3].status === 'fulfilled') {
+      serviceInfo.value = results[3].value;
+    } else {
+      console.error('获取服务信息失败:', results[3].reason);
+      serviceInfo.value = {
+        service: 'RCA服务',
+        version: 'Unknown',
+        description: 'RCA智能根因分析服务',
+        capabilities: [],
+        endpoints: {},
+        constraints: {},
+        status: 'unknown'
+      };
+    }
     
     await nextTick();
     updateCharts();
     
-    message.success('健康状态已更新');
+    // 检查是否有错误发生
+    const failedCount = results.filter(r => r.status === 'rejected').length;
+    if (failedCount === 0) {
+      message.success('健康状态已更新');
+    } else if (failedCount === results.length) {
+      message.warning('服务暂不可用，显示离线状态');
+    } else {
+      message.warning('部分数据获取失败，页面可能显示不完整');
+      dataError.value.hasPartialData = true;
+    }
+    
   } catch (error) {
     console.error('获取健康状态失败:', error);
+    handleDataError(error, '获取健康状态', true);
     message.error('获取健康状态失败');
   } finally {
     loading.value = false;
@@ -465,18 +596,47 @@ const updateCharts = () => {
 };
 
 const updateResponseTimeChart = () => {
-  if (!responseTimeChartRef.value || !serviceHealth.value) return;
+  if (!responseTimeChartRef.value) return;
 
   responseTimeChart = echarts.init(responseTimeChartRef.value);
 
+  // 如果没有健康数据或服务离线，显示空状态
+  if (!serviceHealth.value || dataError.value.isServiceDown) {
+    const option = {
+      title: {
+        text: dataError.value.isServiceDown ? '服务离线' : '暂无响应时间数据',
+        left: 'center',
+        top: 'middle',
+        textStyle: {
+          color: 'var(--ant-text-color-secondary)',
+          fontSize: 12
+        }
+      },
+      grid: { left: 0, right: 0, top: 10, bottom: 0 },
+      xAxis: { type: 'category', show: false, data: [] },
+      yAxis: { type: 'value', show: false },
+      series: [{
+        type: 'line',
+        data: [],
+        smooth: true,
+        lineStyle: { color: '#d9d9d9', width: 2 },
+        symbol: 'none',
+        areaStyle: { color: 'rgba(217, 217, 217, 0.1)' }
+      }]
+    };
+    responseTimeChart.setOption(option);
+    return;
+  }
 
+  // 模拟响应时间数据（实际项目中应该从API获取）
+  const mockData = [50, 45, 60, 55, 48, 52];
   const option = {
     grid: { left: 0, right: 0, top: 10, bottom: 0 },
-    xAxis: { type: 'category', show: false, data: [] },
+    xAxis: { type: 'category', show: false, data: ['', '', '', '', '', ''] },
     yAxis: { type: 'value', show: false },
     series: [{
       type: 'line',
-      data: [],
+      data: mockData,
       smooth: true,
       lineStyle: { color: '#52c41a', width: 2 },
       symbol: 'none',
@@ -487,9 +647,53 @@ const updateResponseTimeChart = () => {
 };
 
 const updateTrendChart = () => {
-  if (!trendChartRef.value || !serviceHealth.value) return;
+  if (!trendChartRef.value) return;
 
   trendChart = echarts.init(trendChartRef.value);
+
+  // 如果没有健康数据或服务离线，显示空状态
+  if (!serviceHealth.value || dataError.value.isServiceDown) {
+    const option = {
+      title: {
+        text: dataError.value.isServiceDown ? '服务离线，无趋势数据' : '暂无健康趋势数据',
+        left: 'center',
+        top: 'middle',
+        textStyle: {
+          color: 'var(--ant-text-color-secondary)',
+          fontSize: 16
+        }
+      },
+      legend: {
+        data: ['服务状态', 'Prometheus', 'Kubernetes', 'Redis'],
+        textStyle: { color: 'var(--ant-text-color)' }
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        data: [],
+        axisLine: { lineStyle: { color: 'var(--ant-border-color)' } }
+      },
+      yAxis: {
+        type: 'value',
+        name: '状态',
+        axisLine: { lineStyle: { color: 'var(--ant-border-color)' } },
+        splitLine: { lineStyle: { color: 'var(--ant-border-color-split)' } }
+      },
+      series: [
+        { name: '服务状态', type: 'line', data: [], lineStyle: { color: '#d9d9d9' } },
+        { name: 'Prometheus', type: 'line', data: [], lineStyle: { color: '#d9d9d9' } },
+        { name: 'Kubernetes', type: 'line', data: [], lineStyle: { color: '#d9d9d9' } },
+        { name: 'Redis', type: 'line', data: [], lineStyle: { color: '#d9d9d9' } }
+      ]
+    };
+    trendChart.setOption(option);
+    return;
+  }
 
   const currentTime = formatTimeForChart(new Date());
   const option = {
@@ -730,12 +934,18 @@ onUnmounted(() => {
   align-items: center;
 }
 
-.empty-state-card {
+.empty-state-card,
+.offline-state-card {
   margin-bottom: 24px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   text-align: center;
   padding: 48px 24px;
+}
+
+.offline-state-card {
+  border: 1px solid #ff4d4f;
+  background-color: rgba(255, 77, 79, 0.05);
 }
 
 .status-overview {
