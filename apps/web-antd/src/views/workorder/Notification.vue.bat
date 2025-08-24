@@ -560,7 +560,8 @@ import {
   testSendNotification,
   duplicateNotification
 } from '#/api/core/workorder_notification';
-import { listFormDesign } from '#/api/core/workorder_form_design';
+import { listWorkorderFormDesign } from '#/api/core/workorder_form_design';
+import { listWorkorderTemplate } from '#/api/core/workorder_template';
 import { getUserList } from '#/api/core/user';
 
 // 表单ref
@@ -743,7 +744,7 @@ const userSearchQuery = ref('');
 const loadPublishedForms = async (page = 1) => {
   formsLoading.value = true;
   try {
-    const response = await listFormDesign({
+    const response = await listWorkorderTemplate({
       page: page,
       size: formsPagination.pageSize,
       status: 2
@@ -910,7 +911,7 @@ const getAvatarColor = (name: string): string => {
 };
 
 const getPreviewMessage = (notification: Notification): string => {
-  return notification.messageTemplate
+  return (notification.messageTemplate || '')
     .replace('{formName}', getFormName(notification.formId))
     .replace('{formUrl}', notification.formUrl || generateFormUrl(notification.formId))
     .replace('{senderName}', '系统管理员')

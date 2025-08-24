@@ -16,6 +16,5 @@ export * from './workorder_form_design';
 export * from './workorder_instance';
 export * from './workorder_process';
 export * from './workorder_template';
-export * from './workorder_notification';
 export * from './assistant';
 export * from './rca';
