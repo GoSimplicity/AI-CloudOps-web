@@ -1,18 +1,19 @@
 import { requestClientAIOps } from '#/api/request';
+import type { ServiceConfigResponse, ServiceInfoResponse, ServiceReadyResponse } from './common';
 
 // 严重程度级别枚举
 export enum SeverityLevel {
   CRITICAL = 'critical',
   HIGH = 'high',
   MEDIUM = 'medium',
-  LOW = 'low'
+  LOW = 'low',
 }
 
 // 数据源类型枚举
 export enum DataSourceType {
   METRICS = 'metrics',
   EVENTS = 'events',
-  LOGS = 'logs'
+  LOGS = 'logs',
 }
 
 // 关联分析结果接口
@@ -213,34 +214,10 @@ export interface ErrorSummaryResponse {
   timestamp: string;
 }
 
-// 服务配置响应接口
-export interface ServiceConfigResponse {
-  service: string;
-  config: Record<string, any>;
-  timestamp: string;
-}
-
-// 服务就绪响应接口
-export interface ServiceReadyResponse {
-  ready: boolean;
-  service: string;
-  timestamp: string;
-  message: string;
-}
-
-// 服务信息响应接口
-export interface ServiceInfoResponse {
-  service: string;
-  version: string;
-  description: string;
-  capabilities: string[];
-  endpoints: Record<string, string>;
-  constraints: Record<string, any>;
-  status: string;
-}
-
 // 执行根因分析API
-export async function analyzeRootCause(request: RCAAnalyzeRequest): Promise<RCAAnalysisResponse> {
+export async function analyzeRootCause(
+  request: RCAAnalyzeRequest,
+): Promise<RCAAnalysisResponse> {
   return requestClientAIOps.post('/rca/analyze', request);
 }
 
@@ -265,23 +242,31 @@ export async function getRCAConfig(): Promise<ServiceConfigResponse> {
 }
 
 // 快速诊断API
-export async function quickDiagnosis(namespace: string): Promise<QuickDiagnosisResponse> {
+export async function quickDiagnosis(
+  namespace: string,
+): Promise<QuickDiagnosisResponse> {
   return requestClientAIOps.get('/rca/quick-diagnosis', {
-    params: { namespace }
+    params: { namespace },
   });
 }
 
 // 事件模式分析API
-export async function getEventPatterns(namespace: string, hours: number = 1.0): Promise<EventPatternsResponse> {
+export async function getEventPatterns(
+  namespace: string,
+  hours: number = 1.0,
+): Promise<EventPatternsResponse> {
   return requestClientAIOps.get('/rca/event-patterns', {
-    params: { namespace, hours }
+    params: { namespace, hours },
   });
 }
 
 // 错误摘要API
-export async function getErrorSummary(namespace: string, hours: number = 1.0): Promise<ErrorSummaryResponse> {
+export async function getErrorSummary(
+  namespace: string,
+  hours: number = 1.0,
+): Promise<ErrorSummaryResponse> {
   return requestClientAIOps.get('/rca/error-summary', {
-    params: { namespace, hours }
+    params: { namespace, hours },
   });
 }
 
