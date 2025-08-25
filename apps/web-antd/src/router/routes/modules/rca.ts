@@ -40,6 +40,15 @@ const routes: RouteRecordRaw[] = [
           title: '服务监控',
         },
       },
+      {
+        name: 'RCACache',
+        path: '/rca/cache',
+        component: () => import('#/views/rca/RCACache.vue'),
+        meta: {
+          icon: 'lucide:database',
+          title: '缓存管理',
+        },
+      },
     ],
   },
 ];

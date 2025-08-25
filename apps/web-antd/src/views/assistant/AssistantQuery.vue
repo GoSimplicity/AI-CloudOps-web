@@ -2,27 +2,32 @@
   <div class="query-container">
     <!-- 页面头部 -->
     <div class="page-header">
-      <div class="header-left">
-        <div class="page-title">
-          <Icon icon="lucide:message-square" size="24" color="#1890ff" />
-          <h2>智能问答</h2>
+      <div class="header-content">
+        <div class="header-left">
+          <div class="header-icon">
+            <Icon icon="lucide:message-square" size="48" color="#1890ff" />
+          </div>
+          <div class="header-text">
+            <h1 class="page-title">智能问答</h1>
+            <p class="page-subtitle">基于RAG和MCP的智能对话助手</p>
+          </div>
         </div>
-      </div>
-      <div class="header-right">
-        <a-space>
-          <a-button @click="clearSession" type="default">
-            <Icon icon="lucide:trash-2" size="16" color="#8c8c8c" />
-            清空会话
-          </a-button>
-          <a-button @click="exportSession" type="default">
-            <Icon icon="lucide:download" size="16" color="#8c8c8c" />
-            导出会话
-          </a-button>
-          <a-button @click="goToSessionManage" type="primary">
-            <Icon icon="lucide:users" size="16" color="#ffffff" />
-            会话管理
-          </a-button>
-        </a-space>
+        <div class="header-actions">
+          <a-space>
+            <a-button @click="clearSession" type="default">
+              <Icon icon="lucide:trash-2" size="16" color="#8c8c8c" />
+              清空会话
+            </a-button>
+            <a-button @click="exportSession" type="default">
+              <Icon icon="lucide:download" size="16" color="#8c8c8c" />
+              导出会话
+            </a-button>
+            <a-button @click="goToSessionManage" type="primary">
+              <Icon icon="lucide:users" size="16" color="#ffffff" />
+              会话管理
+            </a-button>
+          </a-space>
+        </div>
       </div>
     </div>
 
@@ -422,46 +427,54 @@ onMounted(() => {
 }
 
 /* 页面头部 */
-.page-header {
+.query-container .page-header {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+}
+
+.query-container .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--ant-border-color, #d9d9d9);
+  width: 100%;
 }
 
-.header-left {
-  flex: 1;
-}
-
-.page-title {
+.query-container .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 24px;
-  font-weight: bold;
-  margin: 0;
-  background: linear-gradient(90deg, #1890ff, #52c41a);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  gap: 16px;
 }
 
-.page-title h2 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: bold;
-  background: linear-gradient(90deg, #1890ff, #52c41a);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.query-container .header-icon {
+  font-size: 32px;
+  color: #1890ff;
 }
 
+.query-container .header-text {
+  display: flex;
+  flex-direction: column;
+}
 
-.header-right {
-  flex-shrink: 0;
-  margin-left: 16px;
+.query-container .page-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: #262626;
+  line-height: 1.2;
+}
+
+.query-container .page-subtitle {
+  color: #8c8c8c;
+  margin: 0;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.query-container .header-actions {
   display: flex;
   gap: 12px;
   align-items: center;

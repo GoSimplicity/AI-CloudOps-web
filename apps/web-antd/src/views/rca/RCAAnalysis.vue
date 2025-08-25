@@ -1,19 +1,28 @@
 <template>
   <div class="rca-analysis">
+    <!-- 页面头部 -->
     <div class="page-header">
-      <h1 class="page-title">
-        <PartitionOutlined class="title-icon" />
-        根因分析
-      </h1>
-      <div class="header-actions">
-        <a-button @click="resetForm">
-          <ClearOutlined />
-          重置
-        </a-button>
-        <a-button type="primary" @click="startAnalysis" :loading="analyzing" :disabled="!isFormValid">
-          <PlayCircleOutlined />
-          开始分析
-        </a-button>
+      <div class="header-content">
+        <div class="header-left">
+          <div class="header-icon">
+            <LineChartOutlined />
+          </div>
+          <div class="header-text">
+            <h1 class="page-title">根因分析</h1>
+            <p class="page-subtitle">智能故障分析和根因定位</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <a-button 
+            type="primary" 
+            size="large" 
+            @click="startAnalysis"
+            :loading="analyzing"
+            :disabled="!isFormValid || analyzing"
+          >
+            {{ analyzing ? '分析中...' : '开始分析' }}
+          </a-button>
+        </div>
       </div>
     </div>
 
@@ -41,6 +50,7 @@
                 :marks="timeMarks"
                 :step="0.5"
                 :tipFormatter="(value: number) => `${value}小时`"
+                class="time-window-slider"
               />
             </a-form-item>
 
@@ -62,7 +72,6 @@
                 :loading="loadingMetrics" 
                 style="margin-top: 8px;"
               >
-                <ReloadOutlined />
                 刷新指标
               </a-button>
             </a-form-item>
@@ -99,8 +108,45 @@
 
       <!-- 右侧结果面板 -->
       <a-col :xs="24" :lg="17">
+        <!-- 分析中的加载状态 -->
         <a-card 
-          v-if="analysisResult" 
+          v-if="analyzing" 
+          class="loading-card"
+        >
+          <div class="loading-container">
+            <a-spin size="large">
+              <template #indicator>
+                <Icon icon="mdi:chart-line" class="loading-icon" />
+              </template>
+            </a-spin>
+            <div class="loading-content">
+              <h3 class="loading-title">正在进行根因分析...</h3>
+              <p class="loading-subtitle">系统正在深度分析故障原因，请稍候</p>
+              <div class="loading-steps">
+                <div class="step-item">
+                  <Icon icon="mdi:check-circle" class="step-icon completed" />
+                  <span class="step-text">收集系统数据</span>
+                </div>
+                <div class="step-item">
+                  <Icon icon="mdi:loading" class="step-icon loading" />
+                  <span class="step-text">分析异常模式</span>
+                </div>
+                <div class="step-item">
+                  <Icon icon="mdi:circle-outline" class="step-icon pending" />
+                  <span class="step-text">生成分析报告</span>
+                </div>
+              </div>
+              <div class="loading-tips">
+                <Icon icon="mdi:lightbulb-outline" />
+                <span>分析时间取决于数据量大小，通常需要30秒到2分钟</span>
+              </div>
+            </div>
+          </div>
+        </a-card>
+
+        <!-- 分析结果 -->
+        <a-card 
+          v-else-if="analysisResult" 
           class="result-card"
           :body-style="{ padding: 0 }"
         >
@@ -404,9 +450,6 @@ import * as echarts from 'echarts';
 import { message } from 'ant-design-vue';
 import {
   PartitionOutlined,
-  ClearOutlined,
-  PlayCircleOutlined,
-  ReloadOutlined,
   BulbOutlined,
   NodeIndexOutlined,
   AlertOutlined,
@@ -414,7 +457,8 @@ import {
   CheckCircleOutlined,
   InfoCircleOutlined,
   FileTextOutlined,
-  BugOutlined
+  BugOutlined,
+  LineChartOutlined
 } from '@ant-design/icons-vue';
 import {
   analyzeRootCause,
@@ -448,9 +492,7 @@ const formData = reactive({
 // 时间标记
 const timeMarks = {
   0.5: '30m',
-  1: '1h',
   2: '2h',
-  3: '3h',
   6: '6h',
   12: '12h',
   24: '24h'
@@ -543,7 +585,16 @@ const startAnalysis = async () => {
     return;
   }
 
+  // 验证命名空间格式
+  const namespace = formData.namespace.trim();
+  if (!/^[a-z0-9-]+$/.test(namespace)) {
+    message.error('命名空间格式不正确，只能包含小写字母、数字和连字符');
+    return;
+  }
+
   analyzing.value = true;
+  message.info('开始根因分析，请稍候...');
+
   try {
     const request: RCAAnalyzeRequest = {
       namespace: formData.namespace,
@@ -559,10 +610,32 @@ const startAnalysis = async () => {
       initCharts();
     }
     
-    message.success('根因分析完成');
+    message.success('根因分析完成！发现了一些有价值的信息');
+    
+    // 如果有根因结果，显示摘要
+    if (response?.root_causes?.length > 0) {
+      const criticalCount = response.root_causes.filter(cause => cause.confidence > 0.7).length;
+      if (criticalCount > 0) {
+        message.warning(`发现 ${criticalCount} 个高置信度根因，请及时查看`);
+      }
+    }
   } catch (error) {
     console.error('根因分析失败:', error);
-    message.error('根因分析失败，请检查输入参数');
+    let errorMessage = '根因分析失败';
+    if (error instanceof Error) {
+      if (error.message.includes('Network Error')) {
+        errorMessage = '网络连接失败，请检查网络设置';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = '分析超时，请尝试缩小时间窗口';
+      } else if (error.message.includes('500')) {
+        errorMessage = '服务器内部错误，请联系管理员';
+      } else if (error.message.includes('404')) {
+        errorMessage = '分析服务不可用，请检查服务状态';
+      } else if (error.message.includes('400')) {
+        errorMessage = '请求参数有误，请检查命名空间和时间窗口设置';
+      }
+    }
+    message.error(errorMessage);
   } finally {
     analyzing.value = false;
   }
@@ -829,14 +902,7 @@ const formatShortTime = (timestamp?: string) => {
   });
 };
 
-// 重置表单
-const resetForm = () => {
-  formData.namespace = 'default';
-  formData.timeWindowHours = 2;
-  formData.metrics = [];
-  analysisResult.value = null;
-  message.success('表单已重置');
-};
+
 
 // 处理窗口调整
 const handleResize = () => {
@@ -858,54 +924,198 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
 });
 </script>
-
 <style scoped>
 .rca-analysis {
-  padding: 20px;
-  background: #f0f2f5;
-  min-height: 100vh;
+padding: 24px;
+background: #f5f5f5;
+min-height: 100vh;
 }
 
-/* 页头样式 */
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+/* 页面头部 */
+.rca-analysis .page-header {
+  background: #fff;
+  border-radius: 12px;
   padding: 16px 24px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
 }
 
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-  color: #262626;
+.rca-analysis .header-content {
+display: flex;
+justify-content: space-between;
+align-items: center;
+width: 100%;
 }
 
-.title-icon {
-  font-size: 24px;
+.rca-analysis .header-left {
+display: flex;
+align-items: center;
+gap: 16px;
+}
+
+.rca-analysis .header-icon {
+  font-size: 32px;
   color: #1890ff;
 }
 
-.header-actions {
-  display: flex;
-  gap: 12px;
+.rca-analysis .header-text {
+display: flex;
+  flex-direction: column;
+}
+
+.rca-analysis .page-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: #262626;
+  line-height: 1.2;
+}
+
+.rca-analysis .page-subtitle {
+  color: #8c8c8c;
+  margin: 0;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.rca-analysis .header-actions {
+display: flex;
+gap: 12px;
+align-items: center;
 }
 
 /* 卡片样式 */
 .config-card,
 .status-card,
 .result-card,
-.empty-card {
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+.empty-card,
+.loading-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
   overflow: hidden;
+}
+
+/* 加载状态样式 */
+.loading-card {
+  min-height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-container {
+  text-align: center;
+  padding: 60px 40px;
+  max-width: 500px;
+  width: 100%;
+}
+
+.loading-icon {
+  font-size: 60px;
+  color: #1890ff;
+  animation: pulse 2s infinite;
+}
+
+.loading-content {
+  margin-top: 32px;
+}
+
+.loading-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 8px;
+}
+
+.loading-subtitle {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin-bottom: 32px;
+  line-height: 1.5;
+}
+
+.loading-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding: 0 20px;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.step-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.step-icon.completed {
+  color: #52c41a;
+}
+
+.step-icon.loading {
+  color: #1890ff;
+  animation: spin 2s linear infinite;
+}
+
+.step-icon.pending {
+  color: #d9d9d9;
+}
+
+.step-text {
+  font-size: 14px;
+  color: #595959;
+  font-weight: 500;
+}
+
+.loading-tips {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 6px;
+  color: #389e0d;
+  font-size: 13px;
+}
+
+.loading-tips .iconify {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+/* 动画效果 */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .status-card {
@@ -935,13 +1145,19 @@ onUnmounted(() => {
   width: 6px;
 }
 
-.tab-content::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
+.tab-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
   border-radius: 3px;
 }
 
+.tab-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+
 .tab-content::-webkit-scrollbar-thumb:hover {
-  background: #bfbfbf;
+  background: #a8a8a8;
 }
 
 /* 元信息样式 */
@@ -1332,24 +1548,97 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+  background: white;
+}
+
+/* 时间窗口滑块样式 */
+.time-window-slider :deep(.ant-slider-mark) {
+  margin-top: 8px;
+}
+
+.time-window-slider :deep(.ant-slider-mark-text) {
+  font-size: 11px;
+  color: #8c8c8c;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.time-window-slider :deep(.ant-slider-mark-text:first-child) {
+  transform: translateX(0);
+}
+
+.time-window-slider :deep(.ant-slider-mark-text:last-child) {
+  transform: translateX(-100%);
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
   .rca-analysis {
+    padding: 16px;
+  }
+
+  .rca-analysis .page-header {
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .rca-analysis .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .rca-analysis .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .rca-analysis .page-title {
+    font-size: 20px;
+  }
+
+  .rca-analysis .page-subtitle {
+    font-size: 13px;
+  }
+
+  .rca-analysis .header-icon {
+    font-size: 36px;
+  }
+
+  /* 加载状态响应式 */
+  .loading-container {
+    padding: 40px 20px;
+  }
+
+  .loading-icon {
+    font-size: 48px;
+  }
+
+  .loading-title {
+    font-size: 18px;
+  }
+
+  .loading-steps {
+    padding: 0 10px;
+  }
+
+  .step-item {
+    padding: 10px 12px;
+  }
+
+  .step-text {
+    font-size: 13px;
+  }
+
+  .loading-tips {
+    font-size: 12px;
     padding: 12px;
   }
-  
-  .page-header {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .header-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-  
+
   .error-name {
     flex: 0 0 120px;
   }
@@ -1361,9 +1650,73 @@ onUnmounted(() => {
   .chart-container-small {
     height: 180px;
   }
+  
+  /* 小屏幕下的滑块标记样式 */
+  .time-window-slider :deep(.ant-slider-mark-text) {
+    font-size: 10px;
+  }
+  
+  .time-window-slider :deep(.ant-slider-mark) {
+    margin-top: 12px;
+  }
 }
 
 @media (max-width: 576px) {
+  .rca-analysis {
+    padding: 12px;
+  }
+
+  .rca-analysis .page-header {
+    padding: 16px;
+  }
+  
+  .rca-analysis .page-title {
+    font-size: 18px;
+  }
+  
+  .rca-analysis .page-subtitle {
+    font-size: 12px;
+  }
+  
+  .rca-analysis .header-icon {
+    font-size: 32px;
+  }
+
+  /* 小屏幕加载状态 */
+  .loading-container {
+    padding: 30px 16px;
+  }
+
+  .loading-icon {
+    font-size: 40px;
+  }
+
+  .loading-title {
+    font-size: 16px;
+  }
+
+  .loading-subtitle {
+    font-size: 13px;
+  }
+
+  .loading-steps {
+    padding: 0 5px;
+    gap: 12px;
+  }
+
+  .step-item {
+    padding: 8px 10px;
+  }
+
+  .step-text {
+    font-size: 12px;
+  }
+
+  .loading-tips {
+    font-size: 11px;
+    padding: 10px;
+  }
+  
   .cause-type {
     max-width: 200px;
   }

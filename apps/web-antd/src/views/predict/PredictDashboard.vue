@@ -1,20 +1,25 @@
 <template>
   <div class="predict-dashboard">
-    <!-- 页面标题 -->
+    <!-- 页面头部 -->
     <div class="page-header">
-      <h1 class="page-title">
-        <BarChartOutlined class="title-icon" />
-        AI预测看板
-      </h1>
-      <div class="header-actions">
-        <a-button @click="resetForm">
-          <ClearOutlined />
-          重置
-        </a-button>
-        <a-button type="primary" @click="refreshAllPredictions" :loading="loading" :disabled="!isFormValid">
-          <ReloadOutlined />
-          {{ hasInitialData ? '刷新预测' : '开始预测' }}
-        </a-button>
+      <div class="header-content">
+        <div class="header-left">
+          <div class="header-icon">
+            <BarChartOutlined />
+          </div>
+          <div class="header-text">
+            <h1 class="page-title">AI预测看板</h1>
+            <p class="page-subtitle">智能预测系统资源使用趋势</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <a-button @click="resetForm">
+            重置
+          </a-button>
+          <a-button type="primary" @click="refreshAllPredictions" :loading="loading" :disabled="!isFormValid">
+            {{ hasInitialData ? '刷新预测' : '开始预测' }}
+          </a-button>
+        </div>
       </div>
     </div>
 
@@ -719,34 +724,55 @@ onUnmounted(() => {
   min-height: 100vh;
 }
 
-.page-header {
+/* 页面头部 */
+.predict-dashboard .page-header {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+}
+
+.predict-dashboard .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--ant-border-color, #d9d9d9);
+  width: 100%;
 }
 
-.page-title {
+.predict-dashboard .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 24px;
-  font-weight: bold;
-  margin: 0;
-  background: linear-gradient(90deg, #1890ff, #52c41a);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  gap: 16px;
 }
 
-.title-icon {
-  font-size: 28px;
+.predict-dashboard .header-icon {
+  font-size: 32px;
   color: #1890ff;
 }
 
-.header-actions {
+.predict-dashboard .header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.predict-dashboard .page-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: #262626;
+  line-height: 1.2;
+}
+
+.predict-dashboard .page-subtitle {
+  color: #8c8c8c;
+  margin: 0;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.predict-dashboard .header-actions {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -1019,14 +1045,32 @@ onUnmounted(() => {
     padding: 16px;
   }
   
-  .page-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
+  .predict-dashboard .page-header {
+    padding: 20px;
+    margin-bottom: 16px;
   }
-  
-  .header-actions {
-    justify-content: center;
+
+  .predict-dashboard .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .predict-dashboard .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .predict-dashboard .page-title {
+    font-size: 20px;
+  }
+
+  .predict-dashboard .page-subtitle {
+    font-size: 13px;
+  }
+
+  .predict-dashboard .header-icon {
+    font-size: 36px;
   }
   
   .metric-header {

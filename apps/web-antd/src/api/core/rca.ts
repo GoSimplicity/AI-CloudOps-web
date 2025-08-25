@@ -141,9 +141,9 @@ export interface RCAAnalyzeRequest {
 }
 
 /**
- * 指标查询请求模型
+ * 指标数据查询请求模型
  */
-export interface RCAMetricsRequest {
+export interface RCAMetricsDataRequest {
   namespace: string; // Kubernetes命名空间
   start_time?: string; // 开始时间（ISO格式）
   end_time?: string; // 结束时间（ISO格式）
@@ -151,9 +151,9 @@ export interface RCAMetricsRequest {
 }
 
 /**
- * 事件查询请求模型
+ * 事件数据查询请求模型
  */
-export interface RCAEventsRequest {
+export interface RCAEventsDataRequest {
   namespace: string; // Kubernetes命名空间
   start_time?: string; // 开始时间（ISO格式）
   end_time?: string; // 结束时间（ISO格式）
@@ -161,9 +161,9 @@ export interface RCAEventsRequest {
 }
 
 /**
- * 日志查询请求模型
+ * 日志数据查询请求模型
  */
-export interface RCALogsRequest {
+export interface RCALogsDataRequest {
   namespace: string; // Kubernetes命名空间
   start_time?: string; // 开始时间（ISO格式）
   end_time?: string; // 结束时间（ISO格式）
@@ -209,6 +209,46 @@ export interface RCAAnalysisResponse {
   recommendations: string[];
   confidence_score: number;
   status: string;
+}
+
+/**
+ * 通用数据查询响应模型
+ */
+export interface RCADataResponse {
+  namespace: string;
+  items: Record<string, any>[];
+  total: number;
+  start_time?: string;
+  end_time?: string;
+  query_params?: Record<string, any>;
+  timestamp: string;
+}
+
+/**
+ * 缓存统计响应模型
+ */
+export interface RCACacheStatsResponse {
+  available: boolean;
+  healthy?: boolean;
+  cache_prefix?: string;
+  default_ttl?: number;
+  hit_rate?: number;
+  total_keys?: number;
+  memory_usage?: string;
+  timestamp: string;
+  message?: string;
+}
+
+/**
+ * 清理缓存响应模型
+ */
+export interface RCAClearCacheResponse {
+  success: boolean;
+  message: string;
+  cleared_count: number;
+  operation?: string;
+  namespace?: string;
+  timestamp: string;
 }
 
 /**
@@ -290,31 +330,68 @@ export async function getRCAConfig(): Promise<ServiceConfigResponse> {
 
 // 快速诊断API
 export async function quickDiagnosis(
-  namespace: string,
+  request: RCAQuickDiagnosisRequest,
 ): Promise<QuickDiagnosisResponse> {
-  return requestClientAIOps.get('/rca/quick-diagnosis', {
-    params: { namespace },
-  });
+  return requestClientAIOps.post('/rca/quick-diagnosis', request);
 }
 
 // 事件模式分析API
 export async function getEventPatterns(
-  namespace: string,
-  hours: number = 1.0,
+  request: RCAEventPatternsRequest,
 ): Promise<EventPatternsResponse> {
-  return requestClientAIOps.get('/rca/event-patterns', {
-    params: { namespace, hours },
-  });
+  return requestClientAIOps.post('/rca/event-patterns', request);
 }
 
 // 错误摘要API
 export async function getErrorSummary(
-  namespace: string,
-  hours: number = 1.0,
+  request: RCAErrorSummaryRequest,
 ): Promise<ErrorSummaryResponse> {
-  return requestClientAIOps.get('/rca/error-summary', {
-    params: { namespace, hours },
-  });
+  return requestClientAIOps.post('/rca/error-summary', request);
+}
+
+// 查询指标数据API
+export async function queryMetricsData(
+  request: RCAMetricsDataRequest,
+): Promise<RCADataResponse> {
+  return requestClientAIOps.post('/rca/data/metrics', request);
+}
+
+// 查询事件数据API
+export async function queryEventsData(
+  request: RCAEventsDataRequest,
+): Promise<RCADataResponse> {
+  return requestClientAIOps.post('/rca/data/events', request);
+}
+
+// 查询日志数据API
+export async function queryLogsData(
+  request: RCALogsDataRequest,
+): Promise<RCADataResponse> {
+  return requestClientAIOps.post('/rca/data/logs', request);
+}
+
+// 获取缓存统计API
+export async function getCacheStats(): Promise<RCACacheStatsResponse> {
+  return requestClientAIOps.get('/rca/cache/stats');
+}
+
+// 清理所有缓存API
+export async function clearAllCache(): Promise<RCAClearCacheResponse> {
+  return requestClientAIOps.delete('/rca/cache/clear');
+}
+
+// 清理指定命名空间缓存API
+export async function clearNamespaceCache(
+  request: { namespace: string },
+): Promise<RCAClearCacheResponse> {
+  return requestClientAIOps.post('/rca/cache/clear/namespace', request);
+}
+
+// 清理指定操作缓存API
+export async function clearOperationCache(
+  request: { operation: string },
+): Promise<RCAClearCacheResponse> {
+  return requestClientAIOps.post('/rca/cache/clear/operation', request);
 }
 
 // 获取RCA服务信息API

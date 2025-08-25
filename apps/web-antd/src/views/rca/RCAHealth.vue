@@ -1,21 +1,28 @@
 <template>
   <div class="rca-health">
+    <!-- 页面头部 -->
     <div class="page-header">
-      <h1 class="page-title">
-        <HeartOutlined class="title-icon" />
-        RCA服务健康监控
-      </h1>
-      <div class="header-actions">
-        <a-tag v-if="!serviceHealth" color="orange">点击刷新获取健康状态</a-tag>
-        <a-tag v-else :color="serviceHealth.status === 'healthy' ? 'green' : 'red'">
-          {{ serviceHealth.status === 'healthy' ? '服务健康' : '服务异常' }}
-        </a-tag>
-        <a-button @click="refreshHealth" :loading="loading" type="primary">
-          <ReloadOutlined />
-          {{ serviceHealth ? '刷新状态' : '获取健康状态' }}
-        </a-button>
-        <a-switch v-model:checked="autoRefresh" @change="toggleAutoRefresh" size="small" :disabled="!serviceHealth" />
-        <span style="margin-left: 8px;">自动刷新</span>
+      <div class="header-content">
+        <div class="header-left">
+          <div class="header-icon">
+            <HeartOutlined />
+          </div>
+          <div class="header-text">
+            <h1 class="page-title">健康监控</h1>
+            <p class="page-subtitle">系统健康状态监控和预警</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <a-button 
+            type="primary" 
+            size="large" 
+            @click="refreshHealth"
+            :loading="loading"
+            :disabled="loading"
+          >
+            {{ loading ? '获取状态中...' : '刷新状态' }}
+          </a-button>
+        </div>
       </div>
     </div>
 
@@ -32,19 +39,64 @@
     />
 
     <!-- 无数据状态 -->
-    <a-card v-if="!serviceHealth && !dataError.hasError" class="empty-state-card">
+    <a-card v-if="!serviceHealth && !dataError.hasError && !loading" class="empty-state-card">
       <a-empty description="暂无健康监控数据">
         <template #image>
           <HeartOutlined style="font-size: 64px; color: #bfbfbf;" />
         </template>
         <p style="color: #8c8c8c; margin: 16px 0;">
-          点击上方"获取健康状态"按钮来加载RCA服务的健康监控数据
+          点击上方"刷新状态"按钮来加载RCA服务的健康监控数据
         </p>
         <a-button type="primary" @click="refreshHealth" :loading="loading">
-          <ReloadOutlined />
           获取健康状态
         </a-button>
       </a-empty>
+    </a-card>
+
+    <!-- 加载状态 -->
+    <a-card v-if="loading && !serviceHealth" class="loading-state-card">
+      <div class="health-loading-content">
+        <div class="loading-main-icon">
+          <Icon icon="mdi:heart-pulse" class="pulse-animation" />
+        </div>
+        <h3 class="loading-title">正在获取健康状态...</h3>
+        <p class="loading-subtitle">系统正在检查各组件的运行状态</p>
+        
+        <!-- 检查步骤指示器 -->
+        <div class="health-check-steps">
+          <div class="check-step-item" :class="{ active: getHealthCheckStep() >= 1 }">
+            <div class="check-step-icon">
+              <Icon v-if="getHealthCheckStep() > 1" icon="mdi:check" />
+              <Icon v-else-if="getHealthCheckStep() === 1" icon="mdi:loading" class="rotate-animation" />
+              <Icon v-else icon="mdi:circle-outline" />
+            </div>
+            <span class="check-step-text">检查服务状态</span>
+          </div>
+          <div class="check-step-item" :class="{ active: getHealthCheckStep() >= 2 }">
+            <div class="check-step-icon">
+              <Icon v-if="getHealthCheckStep() > 2" icon="mdi:check" />
+              <Icon v-else-if="getHealthCheckStep() === 2" icon="mdi:loading" class="rotate-animation" />
+              <Icon v-else icon="mdi:circle-outline" />
+            </div>
+            <span class="check-step-text">检查组件连接</span>
+          </div>
+          <div class="check-step-item" :class="{ active: getHealthCheckStep() >= 3 }">
+            <div class="check-step-icon">
+              <Icon v-if="getHealthCheckStep() > 3" icon="mdi:check" />
+              <Icon v-else-if="getHealthCheckStep() === 3" icon="mdi:loading" class="rotate-animation" />
+              <Icon v-else icon="mdi:circle-outline" />
+            </div>
+            <span class="check-step-text">获取配置信息</span>
+          </div>
+        </div>
+
+        <a-alert 
+          message="预计耗时 10-30秒" 
+          type="info" 
+          show-icon
+          class="loading-tip"
+        />
+      </div>
     </a-card>
 
     <!-- 服务离线状态 -->
@@ -57,7 +109,6 @@
           服务可能正在维护或遇到连接问题，显示最后已知状态
         </p>
         <a-button type="primary" @click="refreshHealth" :loading="loading">
-          <ReloadOutlined />
           重试连接
         </a-button>
       </a-empty>
@@ -393,7 +444,6 @@ import * as echarts from 'echarts';
 import { message } from 'ant-design-vue';
 import {
   HeartOutlined,
-  ReloadOutlined,
   CheckCircleOutlined,
   DatabaseOutlined,
   ClusterOutlined,
@@ -421,7 +471,6 @@ import {
 import type { ServiceReadyResponse, ServiceConfigResponse, ServiceInfoResponse } from '../../api/core/common';
 
 const loading = ref(false);
-const autoRefresh = ref(true);
 const trendPeriod = ref('6h');
 const serviceHealth = ref<RCAHealthResponse | null>(null);
 const serviceReady = ref<ServiceReadyResponse | null>(null);
@@ -442,6 +491,7 @@ let responseTimeChart: echarts.ECharts | null = null;
 let trendChart: echarts.ECharts | null = null;
 
 let refreshTimer: NodeJS.Timeout | null = null;
+const healthCheckStep = ref(0);
 
 // 错误处理辅助函数
 const resetErrorState = () => {
@@ -474,11 +524,32 @@ const handleDataError = (error: any, context: string, isMainService = false) => 
   };
 };
 
+// 获取当前健康检查步骤
+const getHealthCheckStep = () => {
+  return healthCheckStep.value;
+};
+
 const refreshHealth = async () => {
   loading.value = true;
+  healthCheckStep.value = 0;
   resetErrorState();
   
+  // 开始健康检查提示
+  message.loading('开始健康检查，请稍候...', 2);
+  
   try {
+    // 步骤1: 检查服务状态
+    healthCheckStep.value = 1;
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // 步骤2: 检查组件连接  
+    healthCheckStep.value = 2;
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // 步骤3: 获取配置信息
+    healthCheckStep.value = 3;
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
     // 使用 Promise.allSettled 以确保即使部分失败也能显示可用数据
     const results = await Promise.allSettled([
       getRCAHealth(),
@@ -543,14 +614,20 @@ const refreshHealth = async () => {
     await nextTick();
     updateCharts();
     
+    // 完成所有步骤
+    healthCheckStep.value = 4;
+    
     // 检查是否有错误发生
     const failedCount = results.filter(r => r.status === 'rejected').length;
     if (failedCount === 0) {
-      message.success('健康状态已更新');
+      message.success('健康检查完成！所有组件状态正常');
     } else if (failedCount === results.length) {
       message.warning('服务暂不可用，显示离线状态');
     } else {
-      message.warning('部分数据获取失败，页面可能显示不完整');
+      message.success('健康检查完成！');
+      setTimeout(() => {
+        message.warning('部分数据获取失败，页面可能显示不完整', 3);
+      }, 500);
       dataError.value.hasPartialData = true;
     }
     
@@ -560,28 +637,11 @@ const refreshHealth = async () => {
     message.error('获取健康状态失败');
   } finally {
     loading.value = false;
+    healthCheckStep.value = 0;
   }
 };
 
-const toggleAutoRefresh = (enabled: boolean) => {
-  if (!serviceHealth.value && enabled) {
-    message.warning('请先获取健康状态数据');
-    autoRefresh.value = false;
-    return;
-  }
-  
-  if (enabled) {
-    startAutoRefresh();
-  } else {
-    stopAutoRefresh();
-  }
-};
 
-const startAutoRefresh = () => {
-  refreshTimer = setInterval(() => {
-    refreshHealth();
-  }, 30000);
-};
 
 const stopAutoRefresh = () => {
   if (refreshTimer) {
@@ -896,381 +956,644 @@ onUnmounted(() => {
 
 <style scoped>
 .rca-health {
-  padding: 24px;
-  background-color: var(--ant-background-color-light, #fafafa);
-  min-height: 100vh;
+padding: 24px;
+background: #f5f5f5;
+min-height: 100vh;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* 页面头部 */
+.rca-health .page-header {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 24px;
   margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--ant-border-color, #d9d9d9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
 }
 
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 24px;
-  font-weight: bold;
+.rca-health .header-content {
+display: flex;
+justify-content: space-between;
+align-items: center;
+width: 100%;
+}
+
+.rca-health .header-left {
+display: flex;
+align-items: center;
+gap: 16px;
+}
+
+.rca-health .header-icon {
+  font-size: 32px;
+  color: #1890ff;
+}
+
+.rca-health .header-text {
+display: flex;
+flex-direction: column;
+}
+
+.rca-health .page-title {
+  font-size: 18px;
+  font-weight: 600;
   margin: 0;
-  background: linear-gradient(90deg, #52c41a, #73d13d);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #262626;
 }
 
-.title-icon {
-  font-size: 28px;
-  color: #52c41a;
+.rca-health .page-subtitle {
+  color: #8c8c8c;
+  margin: 0;
+  font-size: 12px;
+  margin-top: 4px;
 }
 
-.header-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
+.rca-health .header-actions {
+display: flex;
+gap: 12px;
+align-items: center;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+.rca-health {
+  padding: 16px;
+}
+
+.rca-health .page-header {
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.rca-health .header-content {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.rca-health .header-actions {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.rca-health .page-title {
+  font-size: 20px;
+}
+
+.rca-health .page-subtitle {
+  font-size: 13px;
+}
+
+.rca-health .header-icon {
+  font-size: 36px;
+}
+}
+
+@media (max-width: 576px) {
+.rca-health {
+  padding: 12px;
+}
+
+.rca-health .page-header {
+  padding: 16px;
+}
+
+.rca-health .page-title {
+  font-size: 18px;
+}
+
+.rca-health .header-icon {
+  font-size: 32px;
+}
 }
 
 .empty-state-card,
-.offline-state-card {
-  margin-bottom: 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.offline-state-card,
+.loading-state-card {
+margin-bottom: 24px;
+border-radius: 8px;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+text-align: center;
+padding: 48px 24px;
+}
+
+.health-loading-content {
   text-align: center;
-  padding: 48px 24px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.loading-main-icon {
+  font-size: 80px;
+  color: #1890ff;
+  margin-bottom: 24px;
+}
+
+.pulse-animation {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.rotate-animation {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 8px;
+}
+
+.loading-subtitle {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin-bottom: 32px;
+}
+
+.health-check-steps {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin-bottom: 32px;
+}
+
+.check-step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  opacity: 0.5;
+}
+
+.check-step-item.active {
+  opacity: 1;
+  background: rgba(24, 144, 255, 0.05);
+  border: 1px solid rgba(24, 144, 255, 0.2);
+}
+
+.check-step-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: 2px solid #d9d9d9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #8c8c8c;
+  transition: all 0.3s ease;
+}
+
+.check-step-item.active .check-step-icon {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: white;
+}
+
+.check-step-text {
+  font-size: 12px;
+  color: #8c8c8c;
+  font-weight: 500;
+  text-align: center;
+}
+
+.check-step-item.active .check-step-text {
+  color: #1890ff;
+  font-weight: 600;
+}
+
+.loading-tip {
+  margin-top: 24px;
 }
 
 .offline-state-card {
-  border: 1px solid #ff4d4f;
-  background-color: rgba(255, 77, 79, 0.05);
+border: 1px solid #ff4d4f;
+background-color: rgba(255, 77, 79, 0.05);
 }
 
 .status-overview {
-  margin-bottom: 24px;
+margin-bottom: 24px;
 }
 
 .status-card {
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+border-radius: 12px;
+transition: all 0.3s ease;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+border: 1px solid #f0f0f0;
 }
 
 .status-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+transform: translateY(-2px);
+box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .stat-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--ant-text-color-secondary);
+display: flex;
+align-items: center;
+gap: 8px;
+font-size: 14px;
+color: var(--ant-text-color-secondary);
 }
 
 .main-content {
-  margin-bottom: 24px;
+margin-bottom: 24px;
 }
 
 .service-info-card,
 .performance-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+border-radius: 12px;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+border: 1px solid #f0f0f0;
 }
 
 .service-info-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+display: flex;
+flex-direction: column;
+gap: 16px;
 }
 
 .info-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--ant-border-color-split);
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 12px 0;
+border-bottom: 1px solid var(--ant-border-color-split);
 }
 
 .info-item:last-child {
-  border-bottom: none;
+border-bottom: none;
 }
 
 .info-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--ant-text-color-secondary);
-  font-weight: 500;
+display: flex;
+align-items: center;
+gap: 8px;
+font-size: 14px;
+color: var(--ant-text-color-secondary);
+font-weight: 500;
 }
 
 .info-value {
-  color: var(--ant-text-color);
-  font-size: 14px;
+color: var(--ant-text-color);
+font-size: 14px;
 }
 
 .performance-metrics {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+display: flex;
+flex-direction: column;
+gap: 24px;
 }
 
 .performance-metrics .metric-item {
-  padding: 16px;
-  border: 1px solid var(--ant-border-color-split);
-  border-radius: 8px;
-  background-color: var(--ant-background-color-light);
+padding: 16px;
+border: 1px solid var(--ant-border-color-split);
+border-radius: 8px;
+background-color: var(--ant-background-color-light);
 }
 
 .metric-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+display: flex;
+align-items: center;
+gap: 8px;
+margin-bottom: 12px;
 }
 
 .metric-title {
-  font-size: 14px;
-  color: var(--ant-text-color);
-  font-weight: 500;
+font-size: 14px;
+color: var(--ant-text-color);
+font-weight: 500;
 }
 
 .performance-metrics .metric-value {
-  font-size: 16px;
-  color: var(--ant-text-color);
+font-size: 16px;
+color: var(--ant-text-color);
 }
 
 .connection-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+display: flex;
+flex-direction: column;
+gap: 8px;
 }
 
 .connection-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 14px;
+display: flex;
+justify-content: space-between;
+align-items: center;
+font-size: 14px;
 }
 
 .mini-chart {
-  height: 60px;
-  width: 100%;
-  margin-top: 8px;
+height: 60px;
+width: 100%;
+margin-top: 8px;
 }
 
 .capabilities-section {
-  margin-bottom: 24px;
+margin-bottom: 24px;
 }
 
 .capabilities-card,
 .config-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
 }
 
 .capabilities-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+display: flex;
+flex-direction: column;
+gap: 16px;
 }
 
 .capability-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
-  border: 1px solid var(--ant-border-color-split);
-  border-radius: 8px;
-  transition: all 0.3s;
+display: flex;
+align-items: center;
+gap: 16px;
+padding: 16px;
+border: 1px solid var(--ant-border-color-split);
+border-radius: 8px;
+transition: all 0.3s;
 }
 
 .capability-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+transform: translateY(-2px);
 }
 
 .capability-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #722ed1, #a855f7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: white;
+width: 48px;
+height: 48px;
+border-radius: 50%;
+background: linear-gradient(135deg, #722ed1, #a855f7);
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 24px;
+color: white;
 }
 
 .capability-content {
-  flex: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+flex: 1;
+display: flex;
+justify-content: space-between;
+align-items: center;
 }
 
 .capability-name {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--ant-text-color);
+font-size: 16px;
+font-weight: 500;
+color: var(--ant-text-color);
 }
 
 .config-content {
-  max-height: 400px;
-  overflow-y: auto;
+max-height: 400px;
+overflow-y: auto;
 }
 
 .config-section {
-  margin-bottom: 24px;
+margin-bottom: 24px;
 }
 
 .config-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--ant-text-color);
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--ant-border-color-split);
+font-size: 16px;
+font-weight: 600;
+color: var(--ant-text-color);
+margin-bottom: 12px;
+padding-bottom: 8px;
+border-bottom: 1px solid var(--ant-border-color-split);
 }
 
 .config-items {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+display: flex;
+flex-direction: column;
+gap: 8px;
 }
 
 .config-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  font-size: 14px;
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 8px 0;
+font-size: 14px;
 }
 
 .config-key {
-  color: var(--ant-text-color-secondary);
-  font-weight: 500;
+color: var(--ant-text-color-secondary);
+font-weight: 500;
 }
 
 .config-value {
-  color: var(--ant-text-color);
+color: var(--ant-text-color);
 }
 
 .charts-section {
-  margin-bottom: 24px;
+margin-bottom: 24px;
 }
 
 .ready-status-card,
 .trend-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
 }
 
 .ready-status-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 0;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 16px;
+padding: 16px 0;
 }
 
 .ready-indicator {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 16px;
 }
 
 .status-circle {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  color: white;
+width: 80px;
+height: 80px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 32px;
+color: white;
 }
 
 .status-circle.ready {
-  background: linear-gradient(135deg, #52c41a, #73d13d);
+background: linear-gradient(135deg, #52c41a, #73d13d);
 }
 
 .status-circle.not-ready {
-  background: linear-gradient(135deg, #ff4d4f, #ff7875);
+background: linear-gradient(135deg, #ff4d4f, #ff7875);
 }
 
 .status-text {
-  text-align: center;
+text-align: center;
 }
 
 .status-label {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--ant-text-color);
-  margin-bottom: 4px;
+font-size: 18px;
+font-weight: 600;
+color: var(--ant-text-color);
+margin-bottom: 4px;
 }
 
 .status-message {
-  font-size: 14px;
-  color: var(--ant-text-color-secondary);
+font-size: 14px;
+color: var(--ant-text-color-secondary);
 }
 
 .ready-timestamp {
-  font-size: 12px;
-  color: var(--ant-text-color-secondary);
+font-size: 12px;
+color: var(--ant-text-color-secondary);
 }
 
 .trend-chart {
-  height: 300px;
-  width: 100%;
+height: 300px;
+width: 100%;
 }
 
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .rca-health {
-    padding: 16px;
-  }
-  
-  .page-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
-  }
-  
-  .header-actions {
-    justify-content: center;
-  }
-  
-  .info-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-  
-  .performance-metrics .metric-value {
-    font-size: 14px;
-  }
-  
-  .mini-chart {
-    height: 40px;
-  }
-  
-  .trend-chart {
-    height: 250px;
-  }
-  
-  .status-circle {
-    width: 60px;
-    height: 60px;
-    font-size: 24px;
-  }
-  
-  .status-label {
-    font-size: 16px;
-  }
+.rca-health {
+  padding: 16px;
+}
+
+.rca-health .page-header {
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.rca-health .header-content {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.rca-health .header-actions {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.rca-health .page-title {
+  font-size: 20px;
+}
+
+.rca-health .page-subtitle {
+  font-size: 13px;
+}
+
+.rca-health .header-icon {
+  font-size: 36px;
+}
+
+.info-item {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.performance-metrics .metric-value {
+  font-size: 14px;
+}
+
+.mini-chart {
+  height: 40px;
+}
+
+.trend-chart {
+  height: 250px;
+}
+
+.status-circle {
+  width: 60px;
+  height: 60px;
+  font-size: 24px;
+}
+
+.status-label {
+  font-size: 16px;
+}
+}
+
+@media (max-width: 576px) {
+.rca-health {
+  padding: 12px;
+}
+
+.rca-health .page-header {
+  padding: 16px;
+}
+
+.rca-health .page-title {
+  font-size: 18px;
+}
+
+.rca-health .header-icon {
+  font-size: 32px;
+}
+
+.status-circle {
+  width: 50px;
+  height: 50px;
+  font-size: 20px;
+}
+
+.status-label {
+  font-size: 14px;
+}
+
+.health-check-steps {
+  flex-direction: column;
+  gap: 16px;
+}
+
+.check-step-item {
+  flex-direction: row;
+  gap: 12px;
+  padding: 12px;
+}
+
+.check-step-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+
+.loading-main-icon {
+  font-size: 60px;
+}
+
+.loading-title {
+  font-size: 20px;
+}
 }
 </style>

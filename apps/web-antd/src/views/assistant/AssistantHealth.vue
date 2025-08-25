@@ -1,33 +1,30 @@
 <template>
   <div class="health-container">
-    <div class="health-header">
+    <!-- 页面头部 -->
+    <div class="page-header">
       <div class="header-content">
-        <h1 class="page-title">
-          <HeartOutlined class="title-icon" />
-          健康检查
-        </h1>
-      </div>
-      <div class="header-actions">
-        <a-space>
-          <a-button @click="checkHealth" :loading="healthLoading">
-            <template #icon>
-              <HeartOutlined />
-            </template>
-            健康检查
-          </a-button>
-          <a-button @click="checkReady" :loading="readyLoading">
-            <template #icon>
-              <CheckCircleOutlined />
-            </template>
-            就绪检查
-          </a-button>
-          <a-button type="primary" danger @click="clearCache" :loading="cacheLoading">
-            <template #icon>
-              <ClearOutlined />
-            </template>
-            清除缓存
-          </a-button>
-        </a-space>
+        <div class="header-left">
+          <div class="header-icon">
+            <HeartOutlined />
+          </div>
+          <div class="header-text">
+            <h1 class="page-title">健康检查</h1>
+            <p class="page-subtitle">智能助手服务健康状态监控</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <a-space>
+            <a-button @click="checkHealth" :loading="healthLoading">
+              健康检查
+            </a-button>
+            <a-button @click="checkReady" :loading="readyLoading">
+              就绪检查
+            </a-button>
+            <a-button type="primary" danger @click="clearCache" :loading="cacheLoading">
+              清除缓存
+            </a-button>
+          </a-space>
+        </div>
       </div>
     </div>
 
@@ -444,39 +441,58 @@ onUnmounted(() => {
   min-height: 100vh;
 }
 
-.health-header {
+/* 页面头部 */
+.health-container .page-header {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+}
+
+.health-container .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--ant-border-color, #d9d9d9);
-
-  .header-content {
-    .page-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 24px;
-      font-weight: bold;
-      margin: 0;
-      background: linear-gradient(90deg, #1890ff, #52c41a);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-  }
+  width: 100%;
 }
 
-.title-icon {
-  font-size: 28px;
+.health-container .header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.health-container .header-icon {
+  font-size: 32px;
   color: #1890ff;
+}
+
+.health-container .header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.health-container .page-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: #262626;
+  line-height: 1.2;
+}
+
+.health-container .page-subtitle {
+  color: #8c8c8c;
+  margin: 0;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.health-container .header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .health-content {
@@ -687,14 +703,32 @@ onUnmounted(() => {
     padding: 16px;
   }
 
-  .health-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
+  .health-container .page-header {
+    padding: 20px;
+    margin-bottom: 16px;
   }
 
-  .header-actions {
-    justify-content: center;
+  .health-container .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .health-container .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .health-container .page-title {
+    font-size: 20px;
+  }
+
+  .health-container .page-subtitle {
+    font-size: 13px;
+  }
+
+  .health-container .header-icon {
+    font-size: 36px;
   }
 
   .status-card {

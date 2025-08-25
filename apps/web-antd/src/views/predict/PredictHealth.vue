@@ -1,19 +1,26 @@
 <template>
   <div class="predict-health">
+    <!-- 页面头部 -->
     <div class="page-header">
-      <h1 class="page-title">
-        <HeartOutlined class="title-icon" />
-        预测服务健康监控
-      </h1>
-      <div class="header-actions">
-        <a-tag v-if="!serviceHealth" color="orange">点击刷新获取健康状态</a-tag>
-        <a-tag v-else color="green">数据已加载</a-tag>
-        <a-button @click="refreshHealth" :loading="loading" type="primary">
-          <ReloadOutlined />
-          {{ serviceHealth ? '刷新状态' : '获取健康状态' }}
-        </a-button>
-        <a-switch v-model:checked="autoRefresh" @change="toggleAutoRefresh" size="small" :disabled="!serviceHealth" />
-        <span style="margin-left: 8px;">自动刷新</span>
+      <div class="header-content">
+        <div class="header-left">
+          <div class="header-icon">
+            <HeartOutlined />
+          </div>
+          <div class="header-text">
+            <h1 class="page-title">预测服务健康监控</h1>
+            <p class="page-subtitle">监控预测服务的运行状态和性能指标</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <a-tag v-if="!serviceHealth" color="orange">点击刷新获取健康状态</a-tag>
+          <a-tag v-else color="green">数据已加载</a-tag>
+          <a-button @click="refreshHealth" :loading="loading" type="primary">
+            {{ serviceHealth ? '刷新状态' : '获取健康状态' }}
+          </a-button>
+          <a-switch v-model:checked="autoRefresh" @change="toggleAutoRefresh" size="small" :disabled="!serviceHealth" />
+          <span style="margin-left: 8px;">自动刷新</span>
+        </div>
       </div>
     </div>
 
@@ -27,7 +34,6 @@
           点击上方"获取健康状态"按钮来加载预测服务的健康监控数据
         </p>
         <a-button type="primary" @click="refreshHealth" :loading="loading">
-          <ReloadOutlined />
           获取健康状态
         </a-button>
       </a-empty>
@@ -600,34 +606,55 @@ onUnmounted(() => {
   min-height: 100vh;
 }
 
-.page-header {
+/* 页面头部 */
+.predict-health .page-header {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+}
+
+.predict-health .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--ant-border-color, #d9d9d9);
+  width: 100%;
 }
 
-.page-title {
+.predict-health .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 24px;
-  font-weight: bold;
-  margin: 0;
-  background: linear-gradient(90deg, #1890ff, #52c41a);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  gap: 16px;
 }
 
-.title-icon {
-  font-size: 28px;
+.predict-health .header-icon {
+  font-size: 32px;
   color: #1890ff;
 }
 
-.header-actions {
+.predict-health .header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.predict-health .page-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: #262626;
+  line-height: 1.2;
+}
+
+.predict-health .page-subtitle {
+  color: #8c8c8c;
+  margin: 0;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.predict-health .header-actions {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -880,14 +907,32 @@ onUnmounted(() => {
     padding: 16px;
   }
   
-  .page-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
+  .predict-health .page-header {
+    padding: 20px;
+    margin-bottom: 16px;
   }
-  
-  .header-actions {
-    justify-content: center;
+
+  .predict-health .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .predict-health .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .predict-health .page-title {
+    font-size: 20px;
+  }
+
+  .predict-health .page-subtitle {
+    font-size: 13px;
+  }
+
+  .predict-health .header-icon {
+    font-size: 36px;
   }
   
   .prediction-types-grid {
