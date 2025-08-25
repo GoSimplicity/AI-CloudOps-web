@@ -1,7 +1,9 @@
-import { requestClientAIOps } from '#/api/request';
+import { requestClientAIOps } from '../request';
 import type { ServiceConfigResponse, ServiceInfoResponse, ServiceReadyResponse } from './common';
 
-// 严重程度级别枚举
+/**
+ * 严重程度级别枚举
+ */
 export enum SeverityLevel {
   CRITICAL = 'critical',
   HIGH = 'high',
@@ -9,14 +11,18 @@ export enum SeverityLevel {
   LOW = 'low',
 }
 
-// 数据源类型枚举
+/**
+ * 数据源类型枚举
+ */
 export enum DataSourceType {
   METRICS = 'metrics',
   EVENTS = 'events',
   LOGS = 'logs',
 }
 
-// 关联分析结果接口
+/**
+ * 关联分析结果模型
+ */
 export interface CorrelationResult {
   confidence: number; // 置信度 0-1
   correlation_type: string; // 关联类型
@@ -24,7 +30,9 @@ export interface CorrelationResult {
   timeline: Record<string, any>[]; // 时间线
 }
 
-// 根因结果接口
+/**
+ * 根因结果模型
+ */
 export interface RootCause {
   cause_type: string; // 根因类型
   description: string; // 描述
@@ -34,29 +42,35 @@ export interface RootCause {
   recommendations: string[]; // 建议
 }
 
-// 指标数据接口
+/**
+ * 指标数据模型
+ */
 export interface MetricData {
   name: string; // 指标名称
   values: Record<string, any>[]; // 时间序列值 [{timestamp, value}]
   labels: Record<string, string>; // 标签
-  anomaly_score: number; // 异常分数 (0-1)
-  trend: string; // 趋势: increasing, decreasing, stable
+  anomaly_score?: number; // 异常分数 (0-1)
+  trend?: string; // 趋势: increasing, decreasing, stable
 }
 
-// 事件数据接口
+/**
+ * 事件数据模型
+ */
 export interface EventData {
-  timestamp: string; // 事件时间
+  timestamp: string; // 事件时间，ISO格式
   type: string; // 事件类型 (Normal, Warning)
   reason: string; // 事件原因
   message: string; // 事件消息
   involved_object: Record<string, string>; // 涉及的对象
   severity: SeverityLevel; // 严重程度
-  count: number; // 事件次数
+  count?: number; // 事件次数
 }
 
-// 日志数据接口
+/**
+ * 日志数据模型
+ */
 export interface LogData {
-  timestamp: string; // 日志时间
+  timestamp: string; // 日志时间，ISO格式
   pod_name: string; // Pod名称
   container_name: string; // 容器名称
   level: string; // 日志级别
@@ -65,19 +79,24 @@ export interface LogData {
   stack_trace?: string; // 堆栈跟踪
 }
 
-// 根因分析结果接口
+/**
+ * 根因分析结果模型
+ */
 export interface RootCauseAnalysis {
-  timestamp: string; // 分析时间
+  timestamp: string; // 分析时间，ISO格式
   namespace: string; // 命名空间
   root_causes: any[]; // 根因列表
-  correlations: any[]; // 关联分析结果
-  timeline: Record<string, any>[]; // 事件时间线
-  recommendations: string[]; // 建议列表
-  confidence_score: number; // 置信度分数
-  analysis_metadata: Record<string, any>; // 元数据
+  anomalies?: Record<string, any>; // 异常检测结果
+  correlations?: any[]; // 关联分析结果
+  timeline?: Record<string, any>[]; // 事件时间线
+  recommendations?: string[]; // 建议列表
+  confidence_score?: number; // 置信度分数
+  analysis_metadata?: Record<string, any>; // 元数据
 }
 
-// 指标数据响应接口
+/**
+ * 指标数据响应模型
+ */
 export interface MetricDataResponse {
   name: string;
   values: Record<string, any>[];
@@ -86,7 +105,9 @@ export interface MetricDataResponse {
   trend: string;
 }
 
-// 事件数据响应接口
+/**
+ * 事件数据响应模型
+ */
 export interface EventDataResponse {
   timestamp: string;
   type: string;
@@ -97,7 +118,9 @@ export interface EventDataResponse {
   count: number;
 }
 
-// 日志数据响应接口
+/**
+ * 日志数据响应模型
+ */
 export interface LogDataResponse {
   timestamp: string;
   pod_name: string;
@@ -108,57 +131,73 @@ export interface LogDataResponse {
   stack_trace?: string;
 }
 
-// 根因分析请求接口
+/**
+ * 根因分析请求模型
+ */
 export interface RCAAnalyzeRequest {
   namespace: string; // Kubernetes命名空间
   time_window_hours: number; // 分析时间窗口（小时）
   metrics?: string[]; // 要分析的Prometheus指标列表
 }
 
-// 指标查询请求接口
+/**
+ * 指标查询请求模型
+ */
 export interface RCAMetricsRequest {
   namespace: string; // Kubernetes命名空间
-  start_time?: string; // 开始时间
-  end_time?: string; // 结束时间
+  start_time?: string; // 开始时间（ISO格式）
+  end_time?: string; // 结束时间（ISO格式）
   metrics?: string; // 逗号分隔的指标名称
 }
 
-// 事件查询请求接口
+/**
+ * 事件查询请求模型
+ */
 export interface RCAEventsRequest {
   namespace: string; // Kubernetes命名空间
-  start_time?: string; // 开始时间
-  end_time?: string; // 结束时间
+  start_time?: string; // 开始时间（ISO格式）
+  end_time?: string; // 结束时间（ISO格式）
   severity?: string; // 严重程度过滤
 }
 
-// 日志查询请求接口
+/**
+ * 日志查询请求模型
+ */
 export interface RCALogsRequest {
   namespace: string; // Kubernetes命名空间
-  start_time?: string; // 开始时间
-  end_time?: string; // 结束时间
+  start_time?: string; // 开始时间（ISO格式）
+  end_time?: string; // 结束时间（ISO格式）
   pod_name?: string; // Pod名称
-  error_only: boolean; // 只返回错误日志
-  max_lines: number; // 最大日志行数
+  error_only?: boolean; // 只返回错误日志
+  max_lines?: number; // 最大日志行数
 }
 
-// 快速诊断请求接口
+/**
+ * 快速诊断请求模型
+ */
 export interface RCAQuickDiagnosisRequest {
   namespace: string; // Kubernetes命名空间
 }
 
-// 事件模式请求接口
+/**
+ * 事件模式请求模型
+ */
 export interface RCAEventPatternsRequest {
   namespace: string; // Kubernetes命名空间
   hours: number; // 分析时间范围（小时）
 }
 
-// 错误摘要请求接口
+/**
+ * 错误摘要请求模型
+ */
 export interface RCAErrorSummaryRequest {
   namespace: string; // Kubernetes命名空间
   hours: number; // 分析时间范围（小时）
 }
 
-// 根因分析响应接口
+/**
+ * 根因分析响应模型
+ */
 export interface RCAAnalysisResponse {
   namespace: string;
   analysis_id: string;
@@ -172,7 +211,9 @@ export interface RCAAnalysisResponse {
   status: string;
 }
 
-// RCA健康检查响应接口
+/**
+ * RCA健康检查响应模型
+ */
 export interface RCAHealthResponse {
   status: string;
   prometheus_connected: boolean;
@@ -182,18 +223,22 @@ export interface RCAHealthResponse {
   version?: string;
 }
 
-// 快速诊断响应接口
+/**
+ * 快速诊断响应模型
+ */
 export interface QuickDiagnosisResponse {
   namespace: string;
   status: string;
-  critical_issues: string[];
-  warnings: string[];
+  critical_issues: Record<string, any>[];
+  warnings: Record<string, any>[];
   recommendations: string[];
   timestamp: string;
   analysis_duration: number;
 }
 
-// 事件模式响应接口
+/**
+ * 事件模式响应模型
+ */
 export interface EventPatternsResponse {
   namespace: string;
   time_range_hours: number;
@@ -203,7 +248,9 @@ export interface EventPatternsResponse {
   timestamp: string;
 }
 
-// 错误摘要响应接口
+/**
+ * 错误摘要响应模型
+ */
 export interface ErrorSummaryResponse {
   namespace: string;
   time_range_hours: number;

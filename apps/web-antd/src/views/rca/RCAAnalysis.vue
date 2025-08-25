@@ -18,7 +18,8 @@
     </div>
 
     <a-row :gutter="[24, 24]">
-      <a-col :xs="24" :lg="8">
+      <!-- 左侧配置面板 -->
+      <a-col :xs="24" :lg="7">
         <a-card title="分析配置" class="config-card">
           <a-form :model="formData" layout="vertical">
             <a-form-item label="Kubernetes命名空间" name="namespace" required>
@@ -43,7 +44,7 @@
               />
             </a-form-item>
 
-            <a-form-item label="要分析的Prometheus指标" name="metrics">
+            <a-form-item label="Prometheus指标（可选）" name="metrics">
               <a-select
                 v-model:value="formData.metrics"
                 mode="multiple"
@@ -53,249 +54,344 @@
                 show-search
                 :filter-option="filterMetrics"
                 max-tag-count="responsive"
+                allow-clear
               />
-              <a-button size="small" @click="loadAvailableMetrics" :loading="loadingMetrics" style="margin-top: 8px;">
+              <a-button 
+                size="small" 
+                @click="loadAvailableMetrics" 
+                :loading="loadingMetrics" 
+                style="margin-top: 8px;"
+              >
                 <ReloadOutlined />
-                刷新指标列表
+                刷新指标
               </a-button>
             </a-form-item>
-
-            <a-collapse ghost>
-              <a-collapse-panel key="advanced" header="高级选项">
-                <a-form-item name="includeEvents">
-                  <a-checkbox v-model:checked="formData.includeEvents">
-                    包含Kubernetes事件分析
-                  </a-checkbox>
-                </a-form-item>
-
-                <a-form-item name="includeLogs">
-                  <a-checkbox v-model:checked="formData.includeLogs">
-                    包含日志分析
-                  </a-checkbox>
-                </a-form-item>
-
-                <a-form-item name="enableAiInsights">
-                  <a-checkbox v-model:checked="formData.enableAiInsights">
-                    启用AI洞察
-                  </a-checkbox>
-                </a-form-item>
-
-                <a-form-item label="分析深度" name="analysisDepth">
-                  <a-radio-group v-model:value="formData.analysisDepth" button-style="solid">
-                    <a-radio-button value="shallow">简单</a-radio-button>
-                    <a-radio-button value="normal">标准</a-radio-button>
-                    <a-radio-button value="deep">深度</a-radio-button>
-                  </a-radio-group>
-                </a-form-item>
-              </a-collapse-panel>
-            </a-collapse>
           </a-form>
+        </a-card>
+
+        <!-- 分析状态卡片 -->
+        <a-card v-if="analysisResult" title="分析概览" class="status-card">
+          <a-statistic
+            title="分析ID"
+            :value="analysisResult?.analysis_id?.substring(0, 8) + '...'"
+            style="margin-bottom: 16px;"
+          >
+            <template #suffix>
+              <a-tooltip :title="analysisResult?.analysis_id">
+                <InfoCircleOutlined />
+              </a-tooltip>
+            </template>
+          </a-statistic>
+          
+          <a-statistic
+            title="置信度"
+            :value="(analysisResult?.confidence_score * 100).toFixed(1)"
+            suffix="%"
+            :value-style="{ color: getConfidenceColor(analysisResult?.confidence_score || 0) }"
+          >
+            <template #prefix>
+              <CheckCircleOutlined v-if="(analysisResult?.confidence_score || 0) > 0.7" />
+              <ExclamationCircleOutlined v-else />
+            </template>
+          </a-statistic>
         </a-card>
       </a-col>
 
-      <a-col :xs="24" :lg="16">
-        <a-card title="根因分析结果" class="result-card" v-if="analysisResult">
-          <template #extra>
-            <a-space>
-              <a-tag color="processing">{{ analysisResult.analysis_id }}</a-tag>
-              <a-tag :color="getConfidenceColor(analysisResult.confidence_score)">
-                置信度: {{ ((analysisResult.confidence_score || 0) * 100).toFixed(1) }}%
-              </a-tag>
-              <a-tag :color="analysisResult.status === 'completed' ? 'green' : 'orange'">
-                {{ getAnalysisStatusText(analysisResult.status) }}
-              </a-tag>
-              <a-button size="small" @click="exportResult">
-                <DownloadOutlined />
-                导出
-              </a-button>
-            </a-space>
-          </template>
-          
-          <a-tabs v-model:activeKey="activeResultTab" @change="onResultTabChange">
+      <!-- 右侧结果面板 -->
+      <a-col :xs="24" :lg="17">
+        <a-card 
+          v-if="analysisResult" 
+          class="result-card"
+          :body-style="{ padding: 0 }"
+        >
+          <a-tabs v-model:activeKey="activeResultTab" @change="onResultTabChange" class="result-tabs">
+            <!-- 根因分析标签页 -->
             <a-tab-pane key="root-causes" tab="根因分析">
-              <div class="root-causes-section">
-                <div class="analysis-info" v-if="analysisResult">
-                  <div class="info-item">
-                    <span class="info-label">命名空间:</span>
-                    <a-tag color="blue">{{ analysisResult.namespace }}</a-tag>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">分析时间:</span>
-                    <span>{{ formatTime(analysisResult.timestamp) }}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">时间窗口:</span>
-                    <span>{{ analysisResult.time_window_hours }}小时</span>
-                  </div>
-                </div>
-                
-                <a-divider />
-                
-                <div v-if="analysisResult.root_causes?.length" class="root-causes-list">
-                  <div 
-                    v-for="(cause, index) in analysisResult.root_causes" 
-                    :key="index" 
-                    class="root-cause-item"
-                  >
-                    <div class="cause-header">
-                      <div class="cause-type">
-                        <component :is="getCauseTypeIcon(getRootCauseType(cause))" />
-                        <span>{{ getRootCauseType(cause) }}</span>
+              <div class="tab-content">
+                <!-- 分析元信息 -->
+                <div class="meta-info">
+                  <a-row :gutter="16">
+                    <a-col :span="8">
+                      <div class="meta-item">
+                        <span class="meta-label">命名空间</span>
+                        <span class="meta-value">{{ analysisResult?.namespace }}</span>
                       </div>
-                      <a-tag :color="getConfidenceColor(getRootCauseConfidence(cause))">
-                        {{ (getRootCauseConfidence(cause) * 100).toFixed(1) }}%
-                      </a-tag>
-                    </div>
-                    <div class="cause-description">{{ getRootCauseDescription(cause) }}</div>
-                    <div class="cause-evidence" v-if="getRootCauseEvidence(cause)">
-                      <div class="evidence-title">证据:</div>
-                      <div class="evidence-content">{{ JSON.stringify(getRootCauseEvidence(cause), null, 2) }}</div>
-                    </div>
-                    <div class="cause-recommendations" v-if="getRootCauseRecommendations(cause)?.length">
-                      <div class="recommendations-title">建议:</div>
-                      <ul class="recommendations-list">
-                        <li v-for="rec in getRootCauseRecommendations(cause)" :key="rec">{{ rec }}</li>
-                      </ul>
+                    </a-col>
+                    <a-col :span="8">
+                      <div class="meta-item">
+                        <span class="meta-label">时间窗口</span>
+                        <span class="meta-value">{{ analysisResult?.time_window_hours }}小时</span>
+                      </div>
+                    </a-col>
+                    <a-col :span="8">
+                      <div class="meta-item">
+                        <span class="meta-label">分析时间</span>
+                        <span class="meta-value">{{ formatShortTime(analysisResult?.timestamp) }}</span>
+                      </div>
+                    </a-col>
+                  </a-row>
+                </div>
+
+                <!-- 根因列表 -->
+                <div class="root-causes-container">
+                  <div v-if="analysisResult?.root_causes?.length" class="root-causes-list">
+                    <div 
+                      v-for="(cause, index) in analysisResult?.root_causes || []" 
+                      :key="index" 
+                      class="root-cause-card"
+                    >
+                      <div class="cause-header">
+                        <div class="cause-title">
+                          <AlertOutlined :style="{ color: getConfidenceColor(cause.confidence) }" />
+                          <span class="cause-type">{{ cause.cause_type }}</span>
+                        </div>
+                        <a-tag :color="getConfidenceColor(cause.confidence)">
+                          置信度 {{ (cause.confidence * 100).toFixed(0) }}%
+                        </a-tag>
+                      </div>
+                      
+                      <p class="cause-description">{{ cause.description }}</p>
+                      
+                      <!-- 证据展示 -->
+                      <div v-if="cause.evidence" class="evidence-section">
+                        <!-- 事件证据 -->
+                        <div v-if="cause.evidence.events?.length" class="evidence-block">
+                          <h5 class="evidence-title">
+                            <FileTextOutlined />
+                            关键事件
+                          </h5>
+                          <div class="events-list">
+                            <div 
+                              v-for="(event, idx) in cause.evidence.events.slice(0, 3)" 
+                              :key="idx"
+                              class="event-item"
+                            >
+                              <a-tag color="orange" class="event-tag">{{ event.reason }}</a-tag>
+                              <span class="event-count">×{{ event.count }}</span>
+                              <a-tooltip :title="event.message">
+                                <span class="event-message">{{ truncateText(event.message, 60) }}</span>
+                              </a-tooltip>
+                            </div>
+                            <div v-if="cause.evidence.events.length > 3" class="more-indicator">
+                              还有 {{ cause.evidence.events.length - 3 }} 个事件...
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <!-- 日志证据 -->
+                        <div v-if="cause.evidence.logs?.length" class="evidence-block">
+                          <h5 class="evidence-title">
+                            <BugOutlined />
+                            错误类型
+                          </h5>
+                          <div class="logs-tags">
+                            <a-tag 
+                              v-for="log in cause.evidence.logs" 
+                              :key="log" 
+                              color="red"
+                            >
+                              {{ log }}
+                            </a-tag>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                  <a-empty v-else description="未发现明确的根因" />
                 </div>
-                <a-empty v-else description="未发现明确的根因">
-                  <template #image>
-                    <SearchOutlined style="font-size: 48px; color: #bfbfbf;" />
-                  </template>
-                </a-empty>
               </div>
             </a-tab-pane>
 
+            <!-- 异常检测标签页 -->
             <a-tab-pane key="anomalies" tab="异常检测">
-              <div v-if="getAnomaliesData().length > 0" class="anomalies-section">
-                <div ref="anomalyChartRef" class="chart-container"></div>
-                <div class="anomalies-table">
-                  <h4>异常详情</h4>
-                  <a-table 
-                    :dataSource="getAnomaliesData()"
-                    :columns="anomalyColumns"
-                    :pagination="false"
-                    size="small"
-                    row-key="name"
-                  >
-                    <template #bodyCell="{ column, record }">
-                      <template v-if="column.key === 'score'">
+              <div class="tab-content">
+                <!-- 异常统计 -->
+                <div class="anomaly-stats" v-if="hasAnomalies">
+                  <a-row :gutter="[16, 16]">
+                    <a-col :xs="12" :sm="6">
+                      <div class="stat-card">
+                        <div class="stat-value">{{ getCriticalEventsCount() }}</div>
+                        <div class="stat-label">关键事件</div>
+                      </div>
+                    </a-col>
+                    <a-col :xs="12" :sm="6">
+                      <div class="stat-card">
+                        <div class="stat-value">{{ getEventClustersCount() }}</div>
+                        <div class="stat-label">事件集群</div>
+                      </div>
+                    </a-col>
+                    <a-col :xs="12" :sm="6">
+                      <div class="stat-card">
+                        <div class="stat-value">{{ getErrorTypesCount() }}</div>
+                        <div class="stat-label">错误类型</div>
+                      </div>
+                    </a-col>
+                    <a-col :xs="12" :sm="6">
+                      <div class="stat-card">
+                        <div class="stat-value">{{ getTotalErrorCount() }}</div>
+                        <div class="stat-label">错误总数</div>
+                      </div>
+                    </a-col>
+                  </a-row>
+                </div>
+
+                <!-- 图表区域 -->
+                <div v-if="hasAnomalies" class="charts-container">
+                  <a-row :gutter="[16, 16]">
+                    <a-col :span="24">
+                      <div class="chart-wrapper">
+                        <h4 class="chart-title">事件时间分布</h4>
+                        <div ref="eventsChartRef" class="chart-container"></div>
+                      </div>
+                    </a-col>
+                    <a-col :span="12">
+                      <div class="chart-wrapper">
+                        <h4 class="chart-title">集群分布</h4>
+                        <div ref="clustersChartRef" class="chart-container-small"></div>
+                      </div>
+                    </a-col>
+                    <a-col :span="12">
+                      <div class="chart-wrapper">
+                        <h4 class="chart-title">错误频率</h4>
+                        <div ref="errorLogsChartRef" class="chart-container-small"></div>
+                      </div>
+                    </a-col>
+                  </a-row>
+                </div>
+
+                <!-- 详细数据 -->
+                <div v-if="hasAnomalies" class="anomaly-details">
+                  <!-- 关键事件表格 -->
+                  <div v-if="getCriticalEventsCount() > 0" class="detail-section">
+                    <h4 class="section-title">关键事件列表</h4>
+                    <div class="table-wrapper">
+                      <a-table
+                        :dataSource="getCriticalEventsTableData()"
+                        :columns="criticalEventsColumns"
+                        :pagination="{ pageSize: 5, size: 'small' }"
+                        size="small"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- 错误频率 -->
+                  <div v-if="hasErrorFrequency()" class="detail-section">
+                    <h4 class="section-title">错误频率统计</h4>
+                    <div class="error-freq-list">
+                      <div 
+                        v-for="(count, key) in analysisResult?.anomalies?.logs?.error_frequency || {}" 
+                        :key="key"
+                        class="error-freq-item"
+                      >
+                        <span class="error-name">{{ truncateText(String(key), 40) }}</span>
                         <a-progress 
-                          :percent="record.score * 100" 
-                          :stroke-color="getAnomalyColor(record.score)"
+                          :percent="getErrorFrequencyPercent(count as number)" 
+                          :stroke-color="getErrorFrequencyColor(count as number)"
+                          :show-info="false"
                           size="small"
                         />
-                      </template>
-                      <template v-if="column.key === 'timestamp'">
-                        {{ formatTime(record.timestamp) }}
-                      </template>
-                    </template>
-                  </a-table>
+                        <span class="error-count">{{ count }}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                <a-empty v-if="!hasAnomalies" description="未检测到异常" />
               </div>
-              <a-empty v-else description="未检测到异常数据">
-                <template #image>
-                  <SearchOutlined style="font-size: 48px; color: #bfbfbf;" />
-                </template>
-              </a-empty>
             </a-tab-pane>
 
-            <a-tab-pane key="correlations" tab="关联分析">
-              <div class="correlations-section">
-                <div v-if="analysisResult.correlations?.length" class="correlations-list">
+            <!-- 相关性分析标签页 -->
+            <a-tab-pane key="correlations" tab="相关性分析">
+              <div class="tab-content">
+                <div v-if="hasCorrelations()" class="correlations-list">
                   <div 
-                    v-for="(correlation, index) in analysisResult.correlations" 
+                    v-for="(correlation, index) in analysisResult?.correlations || []" 
                     :key="index" 
-                    class="correlation-item"
+                    class="correlation-card"
                   >
                     <div class="correlation-header">
-                      <div class="correlation-type">{{ getCorrelationType(correlation) }}</div>
-                      <a-tag :color="getConfidenceColor(getCorrelationConfidence(correlation))">
-                        置信度: {{ (getCorrelationConfidence(correlation) * 100).toFixed(1) }}%
+                      <div class="correlation-title">
+                        <NodeIndexOutlined />
+                        <span>{{ correlation.correlation_type }}</span>
+                      </div>
+                      <a-tag :color="getConfidenceColor(correlation.confidence)">
+                        {{ (correlation.confidence * 100).toFixed(0) }}%
                       </a-tag>
                     </div>
-                    <div class="correlation-evidence" v-if="getCorrelationEvidence(correlation)?.length">
-                      <div class="evidence-title">证据:</div>
-                      <ul class="evidence-list">
-                        <li v-for="evidence in getCorrelationEvidence(correlation)" :key="evidence">{{ evidence }}</li>
-                      </ul>
-                    </div>
-                    <div class="correlation-timeline" v-if="getCorrelationTimeline(correlation)?.length">
-                      <div class="timeline-title">时间线:</div>
-                      <div class="timeline-content">
-                        <div 
-                          v-for="(event, eventIndex) in getCorrelationTimeline(correlation)" 
-                          :key="eventIndex"
-                          class="timeline-event"
+                    
+                    <div class="correlation-evidence">
+                      <h5>证据链</h5>
+                      <div class="evidence-list">
+                        <a-tag 
+                          v-for="ev in correlation.evidence" 
+                          :key="ev" 
+                          color="blue"
                         >
-                          <span class="event-time">{{ formatTime(event.timestamp) }}</span>
-                          <span class="event-description">{{ event.description || event.message || JSON.stringify(event) }}</span>
+                          {{ ev }}
+                        </a-tag>
+                      </div>
+                    </div>
+                    
+                    <div v-if="correlation.timeline?.length" class="timeline-section">
+                      <h5>时间线</h5>
+                      <div class="timeline-list">
+                        <div 
+                          v-for="(event, idx) in correlation.timeline.slice(0, 5)" 
+                          :key="idx"
+                          class="timeline-item"
+                        >
+                          <span class="timeline-time">{{ formatShortTime(event.timestamp) }}</span>
+                          <a-tag :color="getSeverityColor(event.severity)" size="small">
+                            {{ event.type }}
+                          </a-tag>
+                          <a-tooltip :title="event.description">
+                            <span class="timeline-desc">{{ truncateText(event.description, 50) }}</span>
+                          </a-tooltip>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                <a-empty v-else description="未发现明显的关联性">
-                  <template #image>
-                    <NodeIndexOutlined style="font-size: 48px; color: #bfbfbf;" />
-                  </template>
-                </a-empty>
+                <a-empty v-else description="暂无相关性分析数据" />
               </div>
             </a-tab-pane>
 
-            <a-tab-pane key="timeline" tab="事件时间线">
-              <div v-if="getTimelineEvents()?.length" class="timeline-section">
-                <div ref="timelineChartRef" class="chart-container"></div>
-                <div class="timeline-details">
-                  <h4>时间线详情</h4>
-                  <div class="timeline-events">
-                    <div 
-                      v-for="(event, index) in getTimelineEvents()" 
-                      :key="index"
-                      class="timeline-event-detail"
-                    >
-                      <div class="event-timestamp">{{ formatTime(event.timestamp) }}</div>
-                      <div class="event-content">{{ event.description || event.message || JSON.stringify(event) }}</div>
+            <!-- 修复建议标签页 -->
+            <a-tab-pane key="recommendations" tab="修复建议">
+              <div class="tab-content">
+                <div v-if="analysisResult?.recommendations?.length" class="recommendations-list">
+                  <div 
+                    v-for="(rec, index) in analysisResult?.recommendations || []" 
+                    :key="index"
+                    class="recommendation-card"
+                  >
+                    <div class="rec-header">
+                      <div class="rec-number">
+                        <BulbOutlined />
+                        <span>建议 {{ index + 1 }}</span>
+                      </div>
+                      <a-tag color="green">推荐</a-tag>
+                    </div>
+                    <div class="rec-content">{{ rec }}</div>
+                    <div class="rec-actions">
+                      <a-button type="link" size="small">查看详情</a-button>
+                      <a-button type="link" size="small">标记完成</a-button>
                     </div>
                   </div>
                 </div>
+                <a-empty v-else description="暂无修复建议" />
               </div>
-              <a-empty v-else description="暂无时间线数据">
-                <template #image>
-                  <ClockCircleOutlined style="font-size: 48px; color: #bfbfbf;" />
-                </template>
-              </a-empty>
             </a-tab-pane>
           </a-tabs>
         </a-card>
 
-        <a-card v-else class="empty-result-card">
-          <a-empty description="暂无分析结果">
+        <!-- 空状态 -->
+        <a-card v-else class="empty-card">
+          <a-empty description="请配置参数并开始分析">
             <template #image>
               <PartitionOutlined style="font-size: 64px; color: #bfbfbf;" />
             </template>
-            <a-button type="primary" @click="startAnalysis" :loading="analyzing" :disabled="!isFormValid">
-              开始根因分析
-            </a-button>
           </a-empty>
-        </a-card>
-
-        <a-card title="修复建议" class="recommendations-card" v-if="getRecommendations()?.length">
-          <div class="recommendations-list">
-            <div 
-              v-for="(rec, index) in getRecommendations()" 
-              :key="index" 
-              class="recommendation-item"
-            >
-              <div class="rec-icon">
-                <BulbOutlined />
-              </div>
-              <div class="rec-content">
-                <div class="rec-text">{{ rec }}</div>
-              </div>
-            </div>
-          </div>
         </a-card>
       </a-col>
     </a-row>
@@ -310,87 +406,118 @@ import {
   PartitionOutlined,
   ClearOutlined,
   PlayCircleOutlined,
-  DownloadOutlined,
-  SearchOutlined,
-  NodeIndexOutlined,
   ReloadOutlined,
   BulbOutlined,
-  ClockCircleOutlined
+  NodeIndexOutlined,
+  AlertOutlined,
+  ExclamationCircleOutlined,
+  CheckCircleOutlined,
+  InfoCircleOutlined,
+  FileTextOutlined,
+  BugOutlined
 } from '@ant-design/icons-vue';
 import {
   analyzeRootCause,
   getAllPrometheusMetrics,
   type RCAAnalyzeRequest,
   type RCAAnalysisResponse
-} from '#/api/core/rca';
+} from '../../api/core/rca';
 
+// 响应式数据
 const analyzing = ref(false);
 const loadingMetrics = ref(false);
 const activeResultTab = ref('root-causes');
 const analysisResult = ref<RCAAnalysisResponse | null>(null);
 const availableMetrics = ref<Array<{label: string, value: string}>>([]);
 
-const anomalyChartRef = ref<HTMLElement>();
-const timelineChartRef = ref<HTMLElement>();
-let anomalyChart: echarts.ECharts | null = null;
-let timelineChart: echarts.ECharts | null = null;
+// 图表引用
+const eventsChartRef = ref<HTMLElement>();
+const clustersChartRef = ref<HTMLElement>();
+const errorLogsChartRef = ref<HTMLElement>();
+let eventsChart: echarts.ECharts | null = null;
+let clustersChart: echarts.ECharts | null = null;
+let errorLogsChart: echarts.ECharts | null = null;
 
+// 表单数据
 const formData = reactive({
-  namespace: '',
-  timeWindowHours: 1,
-  metrics: [] as string[],
-  includeEvents: true,
-  includeLogs: true,
-  enableAiInsights: true,
-  analysisDepth: 'normal'
+  namespace: 'default',
+  timeWindowHours: 2,
+  metrics: [] as string[]
 });
 
+// 时间标记
 const timeMarks = {
   0.5: '30m',
   1: '1h',
+  2: '2h',
   3: '3h',
   6: '6h',
   12: '12h',
   24: '24h'
 };
 
-
-const anomalyColumns = [
+// 关键事件表格列定义
+const criticalEventsColumns = [
   {
-    title: '异常项',
-    dataIndex: 'name',
-    key: 'name',
-    width: 200
-  },
-  {
-    title: '异常分数',
-    dataIndex: 'score',
-    key: 'score',
-    width: 150
-  },
-  {
-    title: '时间戳',
+    title: '时间',
     dataIndex: 'timestamp',
     key: 'timestamp',
-    width: 180
+    width: 150,
+    ellipsis: true,
+    customRender: ({ text }: any) => formatShortTime(text)
   },
   {
-    title: '描述',
-    dataIndex: 'description',
-    key: 'description'
+    title: '原因',
+    dataIndex: 'reason',
+    key: 'reason',
+    width: 120,
+    ellipsis: true
+  },
+  {
+    title: '次数',
+    dataIndex: 'count',
+    key: 'count',
+    width: 80,
+    sorter: (a: any, b: any) => a.count - b.count
+  },
+  {
+    title: '消息',
+    dataIndex: 'message',
+    key: 'message',
+    ellipsis: true,
+    customRender: ({ text }: any) => truncateText(text, 100)
   }
 ];
 
-
+// 计算属性
 const isFormValid = computed(() => {
-  return formData.namespace.trim() !== '' && formData.timeWindowHours > 0;
+  return formData.namespace.trim() !== '';
 });
 
+const hasAnomalies = computed(() => {
+  if (!analysisResult.value?.anomalies) return false;
+  const anomalies = analysisResult.value.anomalies;
+  return !!(
+    anomalies.events?.critical_events?.length ||
+    Object.keys(anomalies.events?.event_clusters || {}).length ||
+    Object.keys(anomalies.logs?.error_types || {}).length ||
+    Object.keys(anomalies.logs?.error_frequency || {}).length
+  );
+});
+
+// 工具函数
+const truncateText = (text: string, maxLength: number) => {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+};
+
+// 加载可用指标
 const loadAvailableMetrics = async () => {
   loadingMetrics.value = true;
   try {
     const response = await getAllPrometheusMetrics();
-    const metrics = response.items || [];
+    const metrics = response.data?.items || response.items || response || [];
     availableMetrics.value = metrics.map((metric: string) => ({
       label: metric,
       value: metric
@@ -404,13 +531,15 @@ const loadAvailableMetrics = async () => {
   }
 };
 
+// 过滤指标
 const filterMetrics = (input: string, option: any) => {
   return option.label.toLowerCase().includes(input.toLowerCase());
 };
 
+// 开始分析
 const startAnalysis = async () => {
   if (!isFormValid.value) {
-    message.warning('请填写完整的分析参数');
+    message.warning('请填写命名空间');
     return;
   }
 
@@ -426,7 +555,10 @@ const startAnalysis = async () => {
     analysisResult.value = response;
     
     await nextTick();
-    initCharts();
+    if (activeResultTab.value === 'anomalies') {
+      initCharts();
+    }
+    
     message.success('根因分析完成');
   } catch (error) {
     console.error('根因分析失败:', error);
@@ -436,492 +568,415 @@ const startAnalysis = async () => {
   }
 };
 
+// 获取统计数据
+const getCriticalEventsCount = () => {
+  return analysisResult.value?.anomalies?.events?.critical_events?.length || 0;
+};
+
+const getEventClustersCount = () => {
+  return Object.keys(analysisResult.value?.anomalies?.events?.event_clusters || {}).length;
+};
+
+const getErrorTypesCount = () => {
+  return Object.keys(analysisResult.value?.anomalies?.logs?.error_types || {}).length;
+};
+
+const getTotalErrorCount = () => {
+  const errorFreq = analysisResult.value?.anomalies?.logs?.error_frequency || {};
+  return Object.values(errorFreq).reduce((sum: number, count: any) => sum + (count as number), 0);
+};
+
+const hasCorrelations = () => {
+  return analysisResult.value?.correlations && analysisResult.value.correlations.length > 0;
+};
+
+const hasErrorFrequency = () => {
+  const freq = analysisResult.value?.anomalies?.logs?.error_frequency;
+  return freq && Object.keys(freq).length > 0;
+};
+
+// 获取关键事件表格数据
+const getCriticalEventsTableData = () => {
+  const events = analysisResult.value?.anomalies?.events?.critical_events || [];
+  return events.map((event: any, index: number) => ({
+    key: index,
+    ...event
+  }));
+};
+
+// 获取错误频率百分比
+const getErrorFrequencyPercent = (count: number) => {
+  const values = Object.values(analysisResult.value?.anomalies?.logs?.error_frequency || {});
+  const maxCount = Math.max(...values.map(v => v as number));
+  return maxCount > 0 ? (count / maxCount) * 100 : 0;
+};
+
+// 获取错误频率颜色
+const getErrorFrequencyColor = (count: number) => {
+  const percent = getErrorFrequencyPercent(count);
+  if (percent > 80) return '#ff4d4f';
+  if (percent > 50) return '#faad14';
+  return '#1890ff';
+};
+
+// 初始化图表
 const initCharts = () => {
-  initAnomalyChart();
-  initTimelineChart();
+  nextTick(() => {
+    initEventsChart();
+    initClustersChart();
+    initErrorLogsChart();
+  });
 };
 
+// 初始化事件图表
+const initEventsChart = () => {
+  if (!eventsChartRef.value || !analysisResult.value) return;
 
-const getAnomaliesData = () => {
-  if (!analysisResult.value || !analysisResult.value.anomalies) return [];
-  
-  const anomalies = analysisResult.value.anomalies;
-  if (typeof anomalies === 'object' && anomalies !== null) {
-    return Object.entries(anomalies).map(([key, value]: [string, any]) => ({
-      name: key,
-      score: value.anomaly_score || value.score || 0,
-      timestamp: value.timestamp || new Date().toISOString(),
-      description: value.description || value.reason || '无描述'
-    }));
+  if (eventsChart) {
+    eventsChart.dispose();
   }
-  return [];
-};
+  eventsChart = echarts.init(eventsChartRef.value);
 
-
-const getAnomalyColor = (score: number) => {
-  if (score > 0.8) return '#ff4d4f';
-  if (score > 0.6) return '#faad14';
-  if (score > 0.3) return '#1890ff';
-  return '#52c41a';
-};
-
-const initAnomalyChart = () => {
-  if (!anomalyChartRef.value) return;
-
-  anomalyChart = echarts.init(anomalyChartRef.value);
-
-  const anomalyData = getAnomaliesData();
-  if (anomalyData.length === 0) {
-
-    const option = {
-      title: {
-        text: '暂无异常数据',
-        left: 'center',
-        top: 'middle',
-        textStyle: {
-          color: '#bfbfbf',
-          fontSize: 16
-        }
-      },
-      grid: { left: 0, right: 0, top: 10, bottom: 0 },
-      xAxis: { type: 'category', show: false, data: [] },
-      yAxis: { type: 'value', show: false },
-      series: []
-    };
-    anomalyChart.setOption(option);
-    return;
-  }
+  const criticalEvents = analysisResult.value.anomalies?.events?.critical_events || [];
+  const sortedEvents = [...criticalEvents].sort((a, b) => 
+    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
 
   const option = {
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '15%',
+      top: '5%',
+      containLabel: true
+    },
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross' }
-    },
-    legend: {
-      data: ['异常分数'],
-      textStyle: { color: 'var(--ant-text-color)' }
-    },
-    grid: {
-      left: '10%',
-      right: '5%',
-      top: '15%',
-      bottom: '15%',
-      containLabel: true
+      formatter: (params: any) => {
+        const data = params[0];
+        return `${data.name}<br/>事件数: ${data.value}`;
+      }
     },
     xAxis: {
       type: 'category',
-      data: anomalyData.map(item => formatTimeForChart(item.timestamp)),
-      axisLine: { lineStyle: { color: 'var(--ant-border-color)' } },
+      data: sortedEvents.map(e => formatShortTime(e.timestamp)),
       axisLabel: {
         rotate: 45,
-        interval: 0
+        interval: Math.floor(sortedEvents.length / 8)
       }
     },
     yAxis: {
       type: 'value',
-      name: '异常分数',
-      min: 0,
-      max: 1,
-      axisLine: { lineStyle: { color: 'var(--ant-border-color)' } },
-      splitLine: { lineStyle: { color: 'var(--ant-border-color-split)' } }
+      name: '次数'
     },
-    series: [
-      {
-        name: '异常分数',
-        type: 'line',
-        data: anomalyData.map(item => item.score),
-        smooth: true,
-        lineStyle: { width: 3, color: '#ff4d4f' },
-        areaStyle: { opacity: 0.2, color: '#ff4d4f' },
-        markLine: {
-          data: [{
-            type: 'average',
-            name: '平均值'
-          }]
-        }
+    series: [{
+      data: sortedEvents.map(e => e.count),
+      type: 'bar',
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: '#83bff6' },
+          { offset: 0.5, color: '#188df0' },
+          { offset: 1, color: '#188df0' }
+        ])
       }
-    ]
+    }]
   };
 
-  anomalyChart.setOption(option);
-  
-
-  setTimeout(() => {
-    anomalyChart?.resize();
-  }, 100);
+  eventsChart.setOption(option);
 };
 
-const initTimelineChart = () => {
-  if (!timelineChartRef.value || !analysisResult.value) return;
+// 初始化集群图表
+const initClustersChart = () => {
+  if (!clustersChartRef.value || !analysisResult.value) return;
 
-  timelineChart = echarts.init(timelineChartRef.value);
+  if (clustersChart) {
+    clustersChart.dispose();
+  }
+  clustersChart = echarts.init(clustersChartRef.value);
 
-  const timelineEvents = getTimelineEvents();
-  const timelineData = timelineEvents.map((event: any, index: number) => ({
-    name: event.event_type || event.type || `事件${index + 1}`,
-    value: [
-      formatTimeForChart(event.timestamp),
-      index,
-      event.severity || 'info',
-      event.description || event.message || ''
-    ]
+  const clusters = analysisResult.value.anomalies?.events?.event_clusters || {};
+  const clusterData = Object.entries(clusters).map(([key, events]) => ({
+    name: truncateText(key, 20),
+    value: (events as any[]).reduce((sum, e) => sum + (e.count || 1), 0)
   }));
 
   const option = {
     tooltip: {
       trigger: 'item',
-      formatter: (params: any) => {
-        const data = params.value;
-        return `时间: ${data[0]}<br/>事件: ${params.name}<br/>描述: ${data[3]}`;
-      }
+      formatter: '{b}: {c} ({d}%)'
     },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '70%'],
+      avoidLabelOverlap: false,
+      itemStyle: {
+        borderRadius: 10,
+        borderColor: '#fff',
+        borderWidth: 2
+      },
+      label: {
+        show: false,
+        position: 'center'
+      },
+      emphasis: {
+        label: {
+          show: true,
+          fontSize: 14,
+          fontWeight: 'bold'
+        }
+      },
+      data: clusterData
+    }]
+  };
+
+  clustersChart.setOption(option);
+};
+
+// 初始化错误日志图表
+const initErrorLogsChart = () => {
+  if (!errorLogsChartRef.value || !analysisResult.value) return;
+
+  if (errorLogsChart) {
+    errorLogsChart.dispose();
+  }
+  errorLogsChart = echarts.init(errorLogsChartRef.value);
+
+  const errorFrequency = analysisResult.value.anomalies?.logs?.error_frequency || {};
+  const errorData = Object.entries(errorFrequency)
+    .map(([key, value]) => ({
+      name: truncateText(key.split('_')[1] || key, 15),
+      value: value as number
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10);
+
+  const option = {
     grid: {
-      left: '10%',
-      right: '5%',
-      top: '15%',
-      bottom: '15%',
+      left: '3%',
+      right: '4%',
+      bottom: '20%',
+      top: '5%',
       containLabel: true
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      }
     },
     xAxis: {
       type: 'category',
-      data: timelineEvents.map((event: any) => formatTimeForChart(event.timestamp)),
-      axisLine: { lineStyle: { color: 'var(--ant-border-color)' } },
+      data: errorData.map(e => e.name),
       axisLabel: {
         rotate: 45,
         interval: 0
       }
     },
     yAxis: {
-      type: 'value',
-      name: '事件序列',
-      axisLine: { lineStyle: { color: 'var(--ant-border-color)' } },
-      splitLine: { lineStyle: { color: 'var(--ant-border-color-split)' } }
+      type: 'value'
     },
-    series: [
-      {
-        name: '事件时间线',
-        type: 'scatter',
-        data: timelineData,
-        symbolSize: (data: any) => {
-          const severity = data[2];
-          switch (severity) {
-            case 'critical': return 20;
-            case 'warning': return 15;
-            default: return 10;
-          }
-        },
-        itemStyle: {
-          color: (params: any) => {
-            const severity = params.value[2];
-            switch (severity) {
-              case 'critical': return '#ff4d4f';
-              case 'warning': return '#faad14';
-              default: return '#1890ff';
-            }
-          }
-        }
+    series: [{
+      data: errorData.map(e => e.value),
+      type: 'bar',
+      itemStyle: {
+        color: '#ff4d4f'
       }
-    ]
+    }]
   };
 
-  timelineChart.setOption(option);
-  
-
-  setTimeout(() => {
-    timelineChart?.resize();
-  }, 100);
+  errorLogsChart.setOption(option);
 };
 
+// 标签页切换
 const onResultTabChange = (key: string) => {
   activeResultTab.value = key;
-  nextTick(() => {
-    switch (key) {
-      case 'anomalies':
-        setTimeout(() => {
-          initAnomalyChart();
-        }, 50);
-        break;
-      case 'timeline':
-        setTimeout(() => {
-          initTimelineChart();
-        }, 50);
-        break;
-    }
-  });
-};
-
-const getConfidenceColor = (confidence?: number) => {
-  if (!confidence) return 'default';
-  if (confidence > 0.8) return 'green';
-  if (confidence > 0.6) return 'orange';
-  return 'red';
-};
-
-const getCauseTypeIcon = (causeType: string) => {
-  switch (causeType.toLowerCase()) {
-    case 'resource': 
-    case 'network': 
-    case 'application': 
-    case 'configuration': 
-    default: 
-      return 'SearchOutlined';
+  if (key === 'anomalies' && hasAnomalies.value) {
+    initCharts();
   }
 };
 
-
-const getRootCauseType = (cause: Record<string, any>) => {
-  return cause.cause_type || cause.type || '未知类型';
+// 获取置信度颜色
+const getConfidenceColor = (confidence: number) => {
+  if (confidence > 0.8) return '#52c41a';
+  if (confidence > 0.6) return '#1890ff';
+  if (confidence > 0.4) return '#faad14';
+  return '#ff4d4f';
 };
 
-const getRootCauseConfidence = (cause: Record<string, any>) => {
-  return cause.confidence || 0;
-};
-
-const getRootCauseDescription = (cause: Record<string, any>) => {
-  return cause.description || '无描述信息';
-};
-
-const getRootCauseEvidence = (cause: Record<string, any>) => {
-  return cause.evidence;
-};
-
-const getRootCauseRecommendations = (cause: Record<string, any>) => {
-  return cause.recommendations || [];
-};
-
-
-const getCorrelationType = (correlation: Record<string, any>) => {
-  return correlation.correlation_type || correlation.type || '未知关联类型';
-};
-
-const getCorrelationConfidence = (correlation: Record<string, any>) => {
-  return correlation.confidence || 0;
-};
-
-const getCorrelationEvidence = (correlation: Record<string, any>) => {
-  return correlation.evidence || [];
-};
-
-const getCorrelationTimeline = (correlation: Record<string, any>) => {
-  return correlation.timeline || [];
-};
-
-
-const getTimelineEvents = () => {
-  if (!analysisResult.value) return [];
-  
-  const timelineEvents: any[] = [];
-  if (analysisResult.value.correlations) {
-    analysisResult.value.correlations.forEach((correlation: any) => {
-      if (correlation.timeline && Array.isArray(correlation.timeline)) {
-        timelineEvents.push(...correlation.timeline);
-      }
-    });
-  }
-  
-  // 从根因分析的证据中提取事件
-  if (analysisResult.value.root_causes) {
-    analysisResult.value.root_causes.forEach((cause: any) => {
-      if (cause.evidence && cause.evidence.events && Array.isArray(cause.evidence.events)) {
-        timelineEvents.push(...cause.evidence.events.map((event: any) => ({
-          ...event,
-          event_type: event.reason || 'Event',
-          description: event.message || event.reason || 'Unknown event'
-        })));
-      }
-    });
-  }
-  
-  return timelineEvents;
-};
-
-// 分析状态文本
-const getAnalysisStatusText = (status: string) => {
-  const statusMap: Record<string, string> = {
-    'completed': '已完成',
-    'running': '运行中',
-    'failed': '失败',
-    'pending': '等待中'
+// 获取严重程度颜色
+const getSeverityColor = (severity: string) => {
+  const severityMap: Record<string, string> = {
+    'critical': '#ff4d4f',
+    'high': '#ff7875',
+    'medium': '#faad14',
+    'low': '#1890ff',
+    'info': '#52c41a'
   };
-  return statusMap[status] || status;
+  return severityMap[severity] || '#d9d9d9';
 };
 
-// 获取修复建议
-const getRecommendations = () => {
-  if (!analysisResult.value || !analysisResult.value.recommendations) return [];
+// 时间格式化
+const formatShortTime = (timestamp?: string) => {
+  if (!timestamp) return '-';
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) return timestamp;
   
-  const recommendations = analysisResult.value.recommendations;
-  if (Array.isArray(recommendations)) {
-    return recommendations.flatMap((rec: any) => {
-      if (typeof rec === 'string') {
-        try {
-          // 尝试解析JSON字符串
-          const parsed = JSON.parse(rec);
-          return Array.isArray(parsed) ? parsed : [rec];
-        } catch {
-          return [rec];
-        }
-      }
-      return Array.isArray(rec) ? rec : [rec];
-    });
-  }
-  
-  return [];
-};
-
-// 时间转换工具函数：UTC转北京时间
-const convertToBeijingTime = (utcTimestamp: string | Date): Date => {
-  const date = typeof utcTimestamp === 'string' ? new Date(utcTimestamp) : utcTimestamp;
-  // 北京时间 = UTC时间 + 8小时
-  return new Date(date.getTime() + 8 * 60 * 60 * 1000);
-};
-
-const formatTime = (timestamp?: string) => {
-  if (!timestamp) return '未知';
-  const beijingTime = convertToBeijingTime(timestamp);
-  return beijingTime.toLocaleString('zh-CN', { 
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
+  return date.toLocaleString('zh-CN', {
     month: '2-digit',
     day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-};
-
-const formatTimeForChart = (timestamp: string | Date): string => {
-  const beijingTime = convertToBeijingTime(timestamp);
-  return beijingTime.toLocaleTimeString('zh-CN', {
-    timeZone: 'Asia/Shanghai',
     hour: '2-digit',
     minute: '2-digit'
   });
 };
 
+// 重置表单
 const resetForm = () => {
-  Object.assign(formData, {
-    namespace: '',
-    timeWindowHours: 1,
-    metrics: [],
-    includeEvents: true,
-    includeLogs: true,
-    enableAiInsights: true,
-    analysisDepth: 'normal'
-  });
+  formData.namespace = 'default';
+  formData.timeWindowHours = 2;
+  formData.metrics = [];
   analysisResult.value = null;
   message.success('表单已重置');
 };
 
-const exportResult = () => {
-  if (!analysisResult.value) return;
-  
-  const data = JSON.stringify(analysisResult.value, null, 2);
-  const blob = new Blob([data], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `rca-analysis-result-${Date.now()}.json`;
-  link.click();
-  
-  URL.revokeObjectURL(url);
-  message.success('分析结果已导出');
-};
-
-// 图表resize处理函数
+// 处理窗口调整
 const handleResize = () => {
-  if (anomalyChart) {
-    anomalyChart.resize();
-  }
-  if (timelineChart) {
-    timelineChart.resize();
-  }
+  if (eventsChart) eventsChart.resize();
+  if (clustersChart) clustersChart.resize();
+  if (errorLogsChart) errorLogsChart.resize();
 };
 
+// 生命周期
 onMounted(() => {
   loadAvailableMetrics();
   window.addEventListener('resize', handleResize);
 });
 
 onUnmounted(() => {
-  anomalyChart?.dispose();
-  timelineChart?.dispose();
+  eventsChart?.dispose();
+  clustersChart?.dispose();
+  errorLogsChart?.dispose();
   window.removeEventListener('resize', handleResize);
 });
 </script>
 
 <style scoped>
 .rca-analysis {
-  padding: 24px;
-  background-color: var(--ant-background-color-light, #fafafa);
+  padding: 20px;
+  background: #f0f2f5;
   min-height: 100vh;
 }
 
+/* 页头样式 */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--ant-border-color, #d9d9d9);
+  padding: 16px 24px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .page-title {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 20px;
+  font-weight: 600;
   margin: 0;
-  background: linear-gradient(90deg, #fa541c, #ff7875);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #262626;
 }
 
 .title-icon {
-  font-size: 28px;
-  color: #fa541c;
+  font-size: 24px;
+  color: #1890ff;
 }
 
 .header-actions {
   display: flex;
   gap: 12px;
-  align-items: center;
 }
 
+/* 卡片样式 */
 .config-card,
+.status-card,
 .result-card,
-.empty-result-card,
-.recommendations-card {
+.empty-card {
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+}
+
+.status-card {
+  margin-top: 24px;
 }
 
 .form-error {
   color: #ff4d4f;
   font-size: 12px;
   margin-top: 4px;
-  line-height: 1.4;
 }
 
-.chart-container {
-  height: 400px;
-  width: 100%;
+/* 标签页样式 */
+.result-tabs :deep(.ant-tabs-nav) {
+  padding: 0 24px;
+  margin-bottom: 0;
+}
+
+.tab-content {
+  padding: 24px;
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+}
+
+/* 滚动条样式 */
+.tab-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tab-content::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+.tab-content::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+/* 元信息样式 */
+.meta-info {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meta-label {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.meta-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #262626;
   overflow: hidden;
-  position: relative;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.empty-result-card {
-  text-align: center;
-  padding: 48px 24px;
-}
-
-.root-causes-section {
+/* 根因分析样式 */
+.root-causes-container {
   max-height: 500px;
   overflow-y: auto;
+  padding-right: 4px;
 }
 
 .root-causes-list {
@@ -930,16 +985,16 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-.root-cause-item {
+.root-cause-card {
   padding: 16px;
-  border: 1px solid var(--ant-border-color-split);
+  border: 1px solid #e8e8e8;
   border-radius: 8px;
-  transition: all 0.3s;
+  background: white;
+  transition: box-shadow 0.3s;
 }
 
-.root-cause-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+.root-cause-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .cause-header {
@@ -949,317 +1004,377 @@ onUnmounted(() => {
   margin-bottom: 12px;
 }
 
-.cause-type {
+.cause-title {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.cause-type {
   font-size: 16px;
   font-weight: 600;
-  color: var(--ant-text-color);
+  color: #262626;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cause-description {
-  margin-bottom: 12px;
-  color: var(--ant-text-color);
-  line-height: 1.5;
+  color: #595959;
+  line-height: 1.6;
+  margin-bottom: 16px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
-.cause-components {
+/* 证据样式 */
+.evidence-section {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 16px;
+}
+
+.evidence-block {
+  margin-bottom: 16px;
+}
+
+.evidence-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #595959;
+  margin-bottom: 8px;
+}
+
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.event-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  padding: 8px;
+  background: #fafafa;
+  border-radius: 4px;
 }
 
-.components-label {
+.event-tag {
+  flex-shrink: 0;
+}
+
+.event-count {
+  font-weight: 600;
+  color: #ff7875;
+  flex-shrink: 0;
+}
+
+.event-message {
+  flex: 1;
   font-size: 12px;
-  color: var(--ant-text-color-secondary);
+  color: #8c8c8c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.anomalies-section {
+.more-indicator {
+  font-size: 12px;
+  color: #8c8c8c;
+  font-style: italic;
+}
+
+.logs-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 异常检测样式 */
+.anomaly-stats {
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #f0f0f0;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-top: 4px;
+}
+
+/* 图表样式 */
+.charts-container {
+  margin-bottom: 24px;
+}
+
+.chart-wrapper {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #f0f0f0;
+}
+
+.chart-title {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #262626;
+}
+
+.chart-container {
+  height: 250px;
+  width: 100%;
+}
+
+.chart-container-small {
+  height: 200px;
+  width: 100%;
+}
+
+/* 详细数据样式 */
+.anomaly-details {
+  margin-top: 24px;
+}
+
+.detail-section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #262626;
+  padding-left: 8px;
+  border-left: 3px solid #1890ff;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.table-wrapper :deep(.ant-table) {
+  font-size: 13px;
+}
+
+.error-freq-list {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
 }
 
-.anomalies-table h4 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
+.error-freq-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+}
+
+.error-name {
+  flex: 0 0 200px;
+  font-size: 12px;
+  color: #595959;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error-freq-item :deep(.ant-progress) {
+  flex: 1;
+}
+
+.error-count {
+  flex: 0 0 60px;
+  text-align: right;
   font-weight: 600;
-  color: var(--ant-text-color);
+  color: #ff4d4f;
+  font-size: 12px;
 }
 
-.correlations-section {
-  max-height: 500px;
-  overflow-y: auto;
-}
-
+/* 相关性分析样式 */
 .correlations-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.correlation-item {
+.correlation-card {
   padding: 16px;
-  border: 1px solid var(--ant-border-color-split);
+  border: 1px solid #e8e8e8;
   border-radius: 8px;
+  background: white;
 }
 
 .correlation-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
-.correlation-type {
+.correlation-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 16px;
-  font-weight: 600;
-  color: var(--ant-text-color);
-}
-
-.correlation-evidence {
-  color: var(--ant-text-color);
-}
-
-.evidence-title {
   font-weight: 500;
+  color: #262626;
+}
+
+.correlation-evidence h5,
+.timeline-section h5 {
+  font-size: 13px;
+  font-weight: 500;
+  color: #595959;
   margin-bottom: 8px;
 }
 
 .evidence-list {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.evidence-list li {
-  margin-bottom: 4px;
-  line-height: 1.4;
-}
-
-.recommendations-list {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.recommendation-item {
   display: flex;
-  gap: 16px;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--ant-border-color-split);
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
-.recommendation-item:last-child {
-  border-bottom: none;
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.rec-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+.timeline-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  background: linear-gradient(135deg, #faad14, #ffc53d);
-  color: white;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #fafafa;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.timeline-time {
+  color: #8c8c8c;
+  flex-shrink: 0;
+}
+
+.timeline-desc {
+  flex: 1;
+  color: #595959;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 建议样式 */
+.recommendations-list {
+  display: grid;
+  gap: 16px;
+}
+
+.recommendation-card {
+  padding: 16px;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  background: white;
+}
+
+.rec-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.rec-number {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #262626;
 }
 
 .rec-content {
-  flex: 1;
+  color: #595959;
+  line-height: 1.6;
+  margin-bottom: 12px;
+  word-wrap: break-word;
 }
 
-.rec-text {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--ant-text-color);
-}
-
-/* 分析信息样式 */
-.analysis-info {
+.rec-actions {
   display: flex;
-  gap: 24px;
-  margin-bottom: 16px;
-  padding: 16px;
-  background-color: var(--ant-background-color-light);
-  border-radius: 8px;
+  gap: 8px;
 }
 
-.analysis-info .info-item {
+/* 空状态 */
+.empty-card {
+  min-height: 400px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
 }
 
-.analysis-info .info-label {
-  font-weight: 500;
-  color: var(--ant-text-color-secondary);
-}
-
-/* 证据和建议样式 */
-.cause-evidence,
-.cause-recommendations {
-  margin-top: 12px;
-  padding: 12px;
-  background-color: var(--ant-background-color-light);
-  border-radius: 6px;
-  border-left: 3px solid #1890ff;
-}
-
-.evidence-title,
-.recommendations-title {
-  font-weight: 600;
-  color: var(--ant-text-color);
-  margin-bottom: 8px;
-}
-
-.evidence-content {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 12px;
-  color: var(--ant-text-color-secondary);
-  background-color: #f6f8fa;
-  padding: 8px;
-  border-radius: 4px;
-  overflow-x: auto;
-}
-
-.recommendations-list {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.recommendations-list li {
-  margin-bottom: 4px;
-  line-height: 1.4;
-}
-
-/* 关联分析时间线样式 */
-.correlation-timeline {
-  margin-top: 12px;
-  padding: 12px;
-  background-color: var(--ant-background-color-light);
-  border-radius: 6px;
-  border-left: 3px solid #52c41a;
-}
-
-.timeline-title {
-  font-weight: 600;
-  color: var(--ant-text-color);
-  margin-bottom: 8px;
-}
-
-.timeline-content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.timeline-event {
-  display: flex;
-  gap: 12px;
-  padding: 8px;
-  background-color: white;
-  border-radius: 4px;
-  border: 1px solid var(--ant-border-color-split);
-}
-
-.event-time {
-  font-size: 12px;
-  color: var(--ant-text-color-secondary);
-  white-space: nowrap;
-  min-width: 120px;
-}
-
-.event-description {
-  font-size: 14px;
-  color: var(--ant-text-color);
-}
-
-/* 时间线详情样式 */
-.timeline-section {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.timeline-details h4 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--ant-text-color);
-}
-
-.timeline-events {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.timeline-event-detail {
-  display: flex;
-  gap: 16px;
-  padding: 12px;
-  border: 1px solid var(--ant-border-color-split);
-  border-radius: 6px;
-  background-color: var(--ant-background-color-light);
-}
-
-.event-timestamp {
-  font-size: 12px;
-  color: var(--ant-text-color-secondary);
-  white-space: nowrap;
-  min-width: 140px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-}
-
-.event-content {
-  font-size: 14px;
-  color: var(--ant-text-color);
-  line-height: 1.4;
-}
-
-@media (max-width: 1200px) {
-  .rca-analysis :deep(.ant-col-lg-8) {
-    margin-bottom: 24px;
-  }
-}
-
+/* 响应式设计 */
 @media (max-width: 768px) {
   .rca-analysis {
-    padding: 16px;
+    padding: 12px;
   }
   
   .page-header {
     flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
-  }
-  
-  .header-actions {
-    justify-content: center;
-  }
-  
-  .chart-container {
-    height: 300px;
-  }
-  
-  .analysis-info {
-    flex-direction: column;
     gap: 12px;
   }
   
-  .timeline-event,
-  .timeline-event-detail {
-    flex-direction: column;
-    gap: 8px;
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
   
-  .event-time,
-  .event-timestamp {
-    min-width: auto;
+  .error-name {
+    flex: 0 0 120px;
+  }
+  
+  .chart-container {
+    height: 200px;
+  }
+  
+  .chart-container-small {
+    height: 180px;
+  }
+}
+
+@media (max-width: 576px) {
+  .cause-type {
+    max-width: 200px;
+  }
+  
+  .error-freq-item {
+    flex-wrap: wrap;
+  }
+  
+  .error-name {
+    flex: 0 0 100%;
+    margin-bottom: 8px;
   }
 }
 </style>

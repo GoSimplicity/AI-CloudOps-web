@@ -417,8 +417,8 @@ import {
   getRCAConfig,
   getRCAInfo,
   type RCAHealthResponse,
-} from '#/api/core/rca';
-import type { ServiceReadyResponse, ServiceConfigResponse, ServiceInfoResponse } from '#/api/core/common';
+} from '../../api/core/rca';
+import type { ServiceReadyResponse, ServiceConfigResponse, ServiceInfoResponse } from '../../api/core/common';
 
 const loading = ref(false);
 const autoRefresh = ref(true);
