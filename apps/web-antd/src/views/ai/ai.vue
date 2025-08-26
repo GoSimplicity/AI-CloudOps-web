@@ -284,6 +284,8 @@ import {
   Settings2
 } from 'lucide-vue-next';
 import { message } from 'ant-design-vue';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import {
   assistantQuery,
   clearAssistantCache,
@@ -451,6 +453,7 @@ const quickActions = [
   { text: '云服务器状态', icon: Settings },
   { text: '性能监控', icon: Zap },
   { text: '日志分析', icon: FileText },
+  { text: 'Markdown演示', icon: FileText },
   { text: '帮助文档', icon: HelpCircle }
 ];
 
@@ -802,6 +805,92 @@ const clearChat = async () => {
 
 // 快捷消息发送
 const sendQuickMessage = (text) => {
+  if (text === 'Markdown演示') {
+    // 显示Markdown演示内容
+    const demoContent = `# Markdown演示
+
+## 支持的功能
+
+### 文本格式
+- **粗体文本**
+- *斜体文本* 
+- ~~删除线~~
+- \`行内代码\`
+
+### 列表
+1. 有序列表项目1
+2. 有序列表项目2
+3. 有序列表项目3
+
+- 无序列表项目A
+- 无序列表项目B
+- 无序列表项目C
+
+### 代码块
+
+\`\`\`javascript
+// JavaScript 代码示例
+function hello(name) {
+  console.log(\`Hello, \${name}!\`);
+  return "Welcome to AI-CloudOps";
+}
+
+// 调用函数
+hello("World");
+\`\`\`
+
+\`\`\`python
+# Python 代码示例
+def calculate_performance(cpu_usage, memory_usage):
+    """计算系统性能指标"""
+    if cpu_usage > 80 or memory_usage > 90:
+        return "高负载"
+    elif cpu_usage > 60 or memory_usage > 70:
+        return "中等负载"
+    else:
+        return "正常"
+
+# 使用示例
+result = calculate_performance(75, 65)
+print(f"系统状态: {result}")
+\`\`\`
+
+### 引用
+> 这是一个引用块示例。AI-CloudOps 致力于提供最智能的运维解决方案。
+
+### 表格
+| 服务器 | CPU使用率 | 内存使用率 | 状态 |
+|--------|-----------|------------|------|
+| Web-01 | 45% | 60% | 正常 |
+| Web-02 | 78% | 85% | 告警 |
+| DB-01 | 35% | 50% | 正常 |
+
+### 链接
+访问 [AI-CloudOps官网](https://ai-cloudops.com) 了解更多信息。
+
+---
+
+*现在您可以尝试发送任何Markdown格式的内容，系统将完美渲染！*`;
+
+    const demoMessage = {
+      content: demoContent,
+      type: 'ai',
+      time: formatTime(new Date()),
+      sources: [],
+      followUpQuestions: [
+        '如何监控服务器状态？',
+        '告警阈值如何设置？',
+        '性能优化建议'
+      ]
+    };
+    
+    chatMessages.push(demoMessage);
+    nextTick(() => {
+      scrollToBottom();
+    });
+    return;
+  }
+  
   globalInputMessage.value = text;
   handleSearch();
 };
@@ -829,16 +918,106 @@ const toggleLike = (index) => {
   }
 };
 
+// 简单的代码高亮函数
+const highlightCode = (code, lang) => {
+  const keywords = {
+    javascript: ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'try', 'catch', 'import', 'export', 'class', 'extends'],
+    python: ['def', 'class', 'import', 'from', 'return', 'if', 'elif', 'else', 'for', 'while', 'try', 'except', 'with', 'as'],
+    bash: ['echo', 'cd', 'ls', 'mkdir', 'rm', 'cp', 'mv', 'grep', 'find', 'sudo', 'chmod', 'chown'],
+    sql: ['SELECT', 'FROM', 'WHERE', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER', 'JOIN', 'GROUP BY', 'ORDER BY']
+  };
+
+  let highlightedCode = escapeHtml(code);
+  
+  if (keywords[lang]) {
+    keywords[lang].forEach(keyword => {
+      const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+      highlightedCode = highlightedCode.replace(regex, `<span class="code-keyword">${keyword}</span>`);
+    });
+  }
+
+  // 高亮字符串
+  highlightedCode = highlightedCode.replace(/(["'])((?:\\.|(?!\1)[^\\])*?)\1/g, '<span class="code-string">$1$2$1</span>');
+  
+  // 高亮注释
+  if (lang === 'javascript' || lang === 'java' || lang === 'cpp') {
+    highlightedCode = highlightedCode.replace(/(\/\/.*$)/gm, '<span class="code-comment">$1</span>');
+    highlightedCode = highlightedCode.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="code-comment">$1</span>');
+  } else if (lang === 'python' || lang === 'bash') {
+    highlightedCode = highlightedCode.replace(/(#.*$)/gm, '<span class="code-comment">$1</span>');
+  } else if (lang === 'sql') {
+    highlightedCode = highlightedCode.replace(/(--.*$)/gm, '<span class="code-comment">$1</span>');
+  }
+
+  return highlightedCode;
+};
+
+// 配置 marked 选项
+marked.setOptions({
+  breaks: true, // 支持换行
+  gfm: true, // 启用GitHub风格的Markdown
+  headerIds: false, // 禁用header id生成
+  mangle: false, // 禁用header mangle
+  sanitize: false, // 交给DOMPurify处理
+  highlight: function(code, lang) {
+    const highlightedCode = highlightCode(code, lang);
+    const escapedCode = escapeHtml(code);
+    return `<pre class="language-${lang || 'text'}" data-code="${escapedCode}">
+      <div class="code-header">
+        <span class="code-lang">${lang || 'text'}</span>
+        <button class="code-copy-btn" onclick="copyCode(this)" title="复制代码">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="m5 15-4-4 4-4"></path>
+          </svg>
+        </button>
+      </div>
+      <code>${highlightedCode}</code>
+    </pre>`;
+  }
+});
+
+const escapeHtml = (text) => {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+};
+
 const renderMarkdown = (content) => {
   if (!content) return '';
-  // 简单的markdown渲染
-  return content
-    .replace(/\n/g, '<br>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`(.*?)`/g, '<code>$1</code>')
-    .replace(/^• (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+  
+  try {
+    // 使用 marked 解析 Markdown
+    const html = marked(content);
+    // 使用 DOMPurify 清理 HTML，防止 XSS 攻击
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: [
+        'p', 'br', 'strong', 'em', 'u', 'del', 's', 'code', 'pre',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'ul', 'ol', 'li',
+        'blockquote',
+        'a', 'img',
+        'table', 'thead', 'tbody', 'tr', 'th', 'td',
+        'hr', 'div', 'span', 'button', 'svg', 'rect', 'path', 'polyline'
+      ],
+      ALLOWED_ATTR: [
+        'href', 'target', 'rel', 'src', 'alt', 'title', 'class', 'style',
+        'data-code', 'onclick', 'width', 'height', 'viewBox', 'fill', 'stroke', 'stroke-width',
+        'x', 'y', 'rx', 'ry', 'd', 'points'
+      ],
+      ALLOWED_CLASSES: {
+        'span': ['code-keyword', 'code-string', 'code-comment', 'code-number', 'code-operator', 'code-lang'],
+        'pre': [/^language-/],
+        'div': ['code-header'],
+        'button': ['code-copy-btn']
+      },
+      ALLOW_DATA_ATTR: true
+    });
+  } catch (error) {
+    console.error('Markdown 渲染错误:', error);
+    // 如果解析失败，返回原始内容（转义HTML）
+    return escapeHtml(content).replace(/\n/g, '<br>');
+  }
 };
 
 const scrollToBottom = () => {
@@ -875,6 +1054,29 @@ watch(chatMessages, () => {
     scrollToBottom();
   });
 }, { deep: true });
+
+// 全局复制代码函数
+window.copyCode = function(button) {
+  const pre = button.closest('pre');
+  const code = pre.getAttribute('data-code');
+  if (code) {
+    navigator.clipboard.writeText(code).then(() => {
+      const originalText = button.innerHTML;
+      button.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20,6 9,17 4,12"></polyline>
+        </svg>
+      `;
+      button.style.color = '#10b981';
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.style.color = '';
+      }, 2000);
+    }).catch(() => {
+      message.error('复制失败');
+    });
+  }
+};
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
@@ -1318,23 +1520,237 @@ onBeforeUnmount(() => {
   border-color: #2563eb;
 }
 
-.text :deep(ul) {
+/* Markdown 内容样式 */
+.text :deep(h1),
+.text :deep(h2),
+.text :deep(h3),
+.text :deep(h4),
+.text :deep(h5),
+.text :deep(h6) {
+  margin: 16px 0 8px 0;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #f3f4f6;
+}
+
+.text :deep(h1) { font-size: 24px; border-bottom: 2px solid #374151; padding-bottom: 8px; }
+.text :deep(h2) { font-size: 20px; border-bottom: 1px solid #374151; padding-bottom: 6px; }
+.text :deep(h3) { font-size: 18px; }
+.text :deep(h4) { font-size: 16px; }
+.text :deep(h5) { font-size: 14px; }
+.text :deep(h6) { font-size: 13px; color: #9ca3af; }
+
+.text :deep(p) {
   margin: 8px 0;
-  padding-left: 0;
+  line-height: 1.6;
+}
+
+.text :deep(ul),
+.text :deep(ol) {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.text :deep(ul) {
+  list-style-type: disc;
+}
+
+.text :deep(ol) {
+  list-style-type: decimal;
 }
 
 .text :deep(li) {
-  list-style: none;
   margin-bottom: 4px;
+  line-height: 1.6;
+}
+
+.text :deep(ul li) {
+  list-style-type: disc;
+}
+
+.text :deep(ol li) {
+  list-style-type: decimal;
+}
+
+.text :deep(blockquote) {
+  margin: 12px 0;
+  padding: 8px 16px;
+  border-left: 4px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 0 4px 4px 0;
+  font-style: italic;
+  color: #e5e7eb;
 }
 
 .text :deep(code) {
   background: #111827;
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: 'Courier New', monospace;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Courier New', monospace;
   font-size: 13px;
   color: #93c5fd;
+  border: 1px solid #374151;
+}
+
+.text :deep(pre) {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 0;
+  margin: 12px 0;
+  overflow-x: auto;
+  position: relative;
+}
+
+.text :deep(.code-header) {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: #1f2937;
+  border-bottom: 1px solid #374151;
+  border-radius: 8px 8px 0 0;
+}
+
+.text :deep(.code-lang) {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.text :deep(.code-copy-btn) {
+  background: transparent;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  color: #9ca3af;
+  padding: 4px 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.text :deep(.code-copy-btn:hover) {
+  color: #3b82f6;
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.text :deep(pre code) {
+  background: transparent;
+  padding: 16px;
+  border: none;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e5e7eb;
+  white-space: pre;
+  display: block;
+  overflow-x: auto;
+}
+
+.text :deep(pre.language-javascript) { border-left: 4px solid #f7df1e; }
+.text :deep(pre.language-python) { border-left: 4px solid #3776ab; }
+.text :deep(pre.language-bash) { border-left: 4px solid #4eaa25; }
+.text :deep(pre.language-json) { border-left: 4px solid #ff6b6b; }
+.text :deep(pre.language-yaml) { border-left: 4px solid #cb171e; }
+.text :deep(pre.language-sql) { border-left: 4px solid #336791; }
+
+/* 代码高亮样式 */
+.text :deep(.code-keyword) {
+  color: #c792ea;
+  font-weight: 600;
+}
+
+.text :deep(.code-string) {
+  color: #a5d6ff;
+}
+
+.text :deep(.code-comment) {
+  color: #636f88;
+  font-style: italic;
+}
+
+.text :deep(.code-number) {
+  color: #fd9170;
+}
+
+.text :deep(.code-operator) {
+  color: #89ddff;
+}
+
+.text :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.text :deep(th),
+.text :deep(td) {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #374151;
+}
+
+.text :deep(th) {
+  background: #374151;
+  font-weight: 600;
+  color: #f3f4f6;
+}
+
+.text :deep(td) {
+  background: #2d3748;
+}
+
+.text :deep(tr:last-child td) {
+  border-bottom: none;
+}
+
+.text :deep(hr) {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #374151, transparent);
+  margin: 16px 0;
+}
+
+.text :deep(a) {
+  color: #60a5fa;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.text :deep(a:hover) {
+  color: #93c5fd;
+  border-bottom-color: #60a5fa;
+}
+
+.text :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.text :deep(strong) {
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+.text :deep(em) {
+  font-style: italic;
+  color: #e5e7eb;
+}
+
+.text :deep(del) {
+  text-decoration: line-through;
+  color: #9ca3af;
 }
 
 .message-actions {
