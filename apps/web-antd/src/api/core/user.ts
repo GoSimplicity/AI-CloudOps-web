@@ -79,7 +79,7 @@ export async function deleteUser(id: number) {
 }
 
 export async function updateUserInfo(data: UpdateProfileReq) {
-  return requestClient.post('/user/profile/update', data);
+  return requestClient.put(`/user/profile/update/${data.id}`, data);
 }
 
 export async function getUserDetailApi(id: number) {

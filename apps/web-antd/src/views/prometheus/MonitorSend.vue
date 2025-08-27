@@ -888,39 +888,90 @@ const loadSendGroupList = async (): Promise<void> => {
   }
 };
 
-// 加载选项数据 - 初始化基本数据，用于表格过滤
+// 加载选项数据
 const loadOptionsData = async (): Promise<void> => {
   try {
+    const pageSize = 50;
+
     // 加载采集池
-    const scrapePoolResponse = await getMonitorScrapePoolListApi({
-      page: 1,
-      size: 100
-    }) as ApiListResponse<MonitorScrapePool>;
-    if (scrapePoolResponse) {
-      scrapePools.value = scrapePoolResponse.items || [];
+    let allScrapePools: MonitorScrapePool[] = [];
+    let currentPage = 1;
+    let hasMoreData = true;
+
+    while (hasMoreData) {
+      const scrapePoolResponse = await getMonitorScrapePoolListApi({
+        page: currentPage,
+        size: pageSize
+      }) as ApiListResponse<MonitorScrapePool>;
+      
+      if (scrapePoolResponse && scrapePoolResponse.items && scrapePoolResponse.items.length > 0) {
+        allScrapePools = [...allScrapePools, ...scrapePoolResponse.items];
+        
+        if (scrapePoolResponse.items.length < pageSize || allScrapePools.length >= (scrapePoolResponse.total || 0)) {
+          hasMoreData = false;
+        } else {
+          currentPage++;
+        }
+      } else {
+        hasMoreData = false;
+      }
+    }
+    scrapePools.value = allScrapePools;
+
+    // 加载值班组 - 实现真分页
+    let allOnDutyGroups: MonitorOnDutyGroup[] = [];
+    currentPage = 1;
+    hasMoreData = true;
+
+    while (hasMoreData) {
+      const onDutyGroupResponse = await getMonitorOnDutyGroupListApi({
+        page: currentPage,
+        size: pageSize
+      }) as ApiListResponse<MonitorOnDutyGroup>;
+      
+      if (onDutyGroupResponse && onDutyGroupResponse.items && onDutyGroupResponse.items.length > 0) {
+        allOnDutyGroups = [...allOnDutyGroups, ...onDutyGroupResponse.items];
+        
+        if (onDutyGroupResponse.items.length < pageSize || allOnDutyGroups.length >= (onDutyGroupResponse.total || 0)) {
+          hasMoreData = false;
+        } else {
+          currentPage++;
+        }
+      } else {
+        hasMoreData = false;
+      }
+    }
+    onDutyGroups.value = allOnDutyGroups;
+
+    // 加载用户列表 - 实现真分页
+    let allUsers: UserInfo[] = [];
+    currentPage = 1;
+    hasMoreData = true;
+
+    while (hasMoreData) {
+      const userResponse = await getUserList({
+        page: currentPage,
+        size: pageSize,
+        search: ''
+      }) as ApiListResponse<UserInfo>;
+      
+      if (userResponse && userResponse.items && userResponse.items.length > 0) {
+        allUsers = [...allUsers, ...userResponse.items];
+        
+        if (userResponse.items.length < pageSize || allUsers.length >= (userResponse.total || 0)) {
+          hasMoreData = false;
+        } else {
+          currentPage++;
+        }
+      } else {
+        hasMoreData = false;
+      }
     }
 
-    // 加载值班组
-    const onDutyGroupResponse = await getMonitorOnDutyGroupListApi({
-      page: 1,
-      size: 100
-    }) as ApiListResponse<MonitorOnDutyGroup>;
-    if (onDutyGroupResponse) {
-      onDutyGroups.value = onDutyGroupResponse.items || [];
-    }
-
-    // 加载用户列表
-    const userResponse = await getUserList({
-      page: 1,
-      size: 100,
-      search: ''
-    }) as ApiListResponse<UserInfo>;
-    if (userResponse) {
-      userOptions.value = (userResponse.items || []).map((user: UserInfo) => ({
-        label: user.username,
-        value: user.id
-      }));
-    }
+    userOptions.value = allUsers.map((user: UserInfo) => ({
+      label: user.username,
+      value: user.id
+    }));
   } catch (error: any) {
     console.error('加载选项数据失败:', error);
     message.error('加载选项数据失败');

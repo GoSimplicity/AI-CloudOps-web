@@ -607,15 +607,36 @@ const getFlowActionText = (action: string): string => {
 const loadFlow = async (instanceId: number) => {
   try {
     loading.value = true
-    const params: ListWorkorderInstanceFlowReq = {
-      page: 1,
-      size: 100,
-      instance_id: instanceId
+    
+    let allFlows: any[] = [];
+    let currentPage = 1;
+    const pageSize = 50;
+    let hasMoreData = true;
+
+    while (hasMoreData) {
+      const params: ListWorkorderInstanceFlowReq = {
+        page: currentPage,
+        size: pageSize,
+        instance_id: instanceId
+      }
+
+      const res = await listWorkorderInstanceFlow(params)
+      
+      if (res && res.items && res.items.length > 0) {
+        allFlows = [...allFlows, ...res.items];
+        
+        if (res.items.length < pageSize || allFlows.length >= (res.total || 0)) {
+          hasMoreData = false;
+        } else {
+          currentPage++;
+        }
+      } else {
+        hasMoreData = false;
+      }
     }
 
-    const res = await listWorkorderInstanceFlow(params)
-    if (res && res.items) {
-      flowList.value = res.items
+    if (allFlows.length > 0) {
+      flowList.value = allFlows
     } else {
       flowList.value = []
     }

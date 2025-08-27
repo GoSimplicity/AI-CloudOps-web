@@ -91,8 +91,26 @@
       <div class="comments-content">
         <!-- 快速评论输入框 -->
         <div class="quick-comment-section">
+          <!-- 引用预览卡片 -->
+          <div v-if="quotedComment" class="quoted-comment-preview">
+            <div class="quote-header">
+              <div class="quote-info">
+                <IconComponent icon="quote" />
+                <span class="quote-label">引用 @{{ quotedComment.operator_name }} 的评论</span>
+                <span class="quote-time">{{ formatRelativeTime(quotedComment.created_at) }}</span>
+              </div>
+              <a-button type="text" size="small" class="quote-close" @click="clearQuote">
+                <IconComponent icon="close" />
+              </a-button>
+            </div>
+            <div class="quote-content">
+              <div class="quoted-text">{{ truncateText(quotedComment.content, 80) }}</div>
+            </div>
+          </div>
+          
           <div class="quick-comment-input">
             <a-textarea
+              ref="quickTextareaRef"
               v-model:value="quickCommentText"
               placeholder="快速添加评论..."
               :rows="2"
@@ -247,7 +265,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, defineEmits, defineExpose, nextTick } from 'vue'
+import { ref, reactive, computed, defineEmits, defineExpose, nextTick, withDefaults, defineProps } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   type WorkorderInstanceCommentItem,
@@ -256,6 +274,7 @@ import {
   createWorkorderInstanceComment,
   getInstanceCommentsTree
 } from '#/api/core/workorder_instance_comment'
+import type { WorkorderInstanceItem } from '#/api/core/workorder_instance'
 
 // 图标组件
 const IconComponent = ({ icon }: { icon: string }) => {
@@ -273,7 +292,8 @@ const IconComponent = ({ icon }: { icon: string }) => {
     quote: '❝',
     copy: '📋',
     like: '👍',
-    replies: '💬'
+    replies: '💬',
+    close: '✕'
   }
   return iconMap[icon] || ''
 }
@@ -282,6 +302,15 @@ const IconComponent = ({ icon }: { icon: string }) => {
 const emit = defineEmits<{
   commentAdded: []
 }>()
+
+// 定义props
+interface Props {
+  instance?: WorkorderInstanceItem
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  instance: undefined
+})
 
 // 状态数据
 const loading = ref(false)
@@ -440,13 +469,16 @@ const submitQuickComment = async () => {
   
   try {
     quickCommenting.value = true
-    await createWorkorderInstanceComment({
+    const commentData: CreateWorkorderInstanceCommentReq = {
       instance_id: commentsViewDialog.instanceId,
       content: quickCommentText.value,
       is_system: 0
-    })
+    }
+    
+    await createWorkorderInstanceComment(commentData)
     
     quickCommentText.value = ''
+    quotedComment.value = null // 清除引用状态
     message.success('评论发布成功')
     await refreshComments()
     emit('commentAdded')
@@ -489,13 +521,25 @@ const submitReply = async (commentId: number) => {
   
   try {
     replySubmitting.value[commentId] = true
-    // 这里应该调用回复API，目前模拟
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // 创建回复评论
+    const replyData: CreateWorkorderInstanceCommentReq = {
+      instance_id: commentsViewDialog.instanceId,
+      content: replyText.value[commentId].trim(),
+      parent_id: commentId,
+      type: 'normal',
+      is_system: 0
+    }
+    
+    await createWorkorderInstanceComment(replyData)
     
     message.success('回复成功')
     replyInputVisible.value[commentId] = false
     replyText.value[commentId] = ''
     await refreshComments()
+    
+    // 触发父组件的评论添加事件
+    emit('commentAdded')
   } catch (error: any) {
     message.error(`回复失败: ${error.message || '未知错误'}`)
   } finally {
@@ -527,9 +571,116 @@ const getCommentLikes = (commentId: number) => {
   return commentLikes.value[commentId] || 0
 }
 
-// 其他功能
-const quoteComment = (comment: WorkorderInstanceCommentItem) => {
-  quickCommentText.value = `> ${comment.content}\n\n`
+// 引用评论相关状态
+const quotedComment = ref<WorkorderInstanceCommentItem | null>(null)
+const quickTextareaRef = ref()
+
+// 其他功能 - 优化后的引用评论功能
+const quoteComment = async (comment: WorkorderInstanceCommentItem) => {
+  // 格式化引用内容
+  const quotedContent = formatQuotedContent(comment)
+  
+  // 设置引用内容到快速评论框
+  if (quickCommentText.value.trim()) {
+    // 如果已经有内容，追加引用
+    quickCommentText.value = `${quickCommentText.value}\n\n${quotedContent}`
+  } else {
+    // 如果没有内容，直接设置引用
+    quickCommentText.value = quotedContent
+  }
+  
+  // 设置当前引用的评论
+  quotedComment.value = comment
+  
+  // 自动滚动到快速评论输入框并聚焦
+  await nextTick()
+  scrollToQuickComment()
+  focusQuickComment()
+  
+  // 显示成功反馈
+  message.success(`已引用 ${comment.operator_name} 的评论`)
+}
+
+// 格式化引用内容
+const formatQuotedContent = (comment: WorkorderInstanceCommentItem): string => {
+  const userName = comment.operator_name || '匿名用户'
+  const timeStr = formatRelativeTime(comment.created_at)
+  
+  // 截断长内容
+  let content = comment.content || ''
+  const maxLength = 100
+  if (content.length > maxLength) {
+    content = content.substring(0, maxLength) + '...'
+  }
+  
+  // 处理多行内容，每行都加上引用符号
+  const quotedLines = content.split('\n').map(line => `> ${line}`).join('\n')
+  
+  return `**引用 @${userName} 在 ${timeStr} 的评论：**\n${quotedLines}\n\n`
+}
+
+// 滚动到快速评论输入框
+const scrollToQuickComment = () => {
+  const quickCommentElement = document.querySelector('.quick-comment-section')
+  if (quickCommentElement) {
+    quickCommentElement.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'center'
+    })
+  }
+}
+
+// 聚焦快速评论输入框
+const focusQuickComment = () => {
+  nextTick(() => {
+    if (quickTextareaRef.value) {
+      quickTextareaRef.value.focus()
+      // 将光标移动到末尾
+      const textarea = quickTextareaRef.value.$el.querySelector('textarea')
+      if (textarea) {
+        const length = textarea.value.length
+        textarea.setSelectionRange(length, length)
+      }
+    }
+  })
+}
+
+// 清除引用
+const clearQuote = () => {
+  quotedComment.value = null
+  // 清除引用内容（只清除引用部分，保留用户自己的内容）
+  if (quickCommentText.value) {
+    // 简单的处理方式：清除以 "**引用" 开头的内容块
+    const lines = quickCommentText.value.split('\n')
+    let filteredLines: string[] = []
+    let inQuoteBlock = false
+    
+    for (const line of lines) {
+      if (line.startsWith('**引用 @')) {
+        inQuoteBlock = true
+        continue
+      }
+      if (inQuoteBlock && line.trim() === '') {
+        inQuoteBlock = false
+        continue
+      }
+      if (inQuoteBlock && line.startsWith('>')) {
+        continue
+      }
+      if (!inQuoteBlock) {
+        filteredLines.push(line)
+      }
+    }
+    
+    quickCommentText.value = filteredLines.join('\n').trim()
+  }
+}
+
+// 文本截断工具函数
+const truncateText = (text: string, maxLength: number): string => {
+  if (!text) return ''
+  if (text.length <= maxLength) return text
+  return text.substring(0, maxLength) + '...'
 }
 
 const copyComment = async (content: string) => {
@@ -588,6 +739,7 @@ const saveComment = async () => {
 
     loading.value = true
     await createWorkorderInstanceComment(commentDialog.form)
+    
     message.success('评论添加成功')
     commentDialog.visible = false
     emit('commentAdded')
@@ -744,6 +896,92 @@ defineExpose({
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+/* 引用预览卡片 */
+.quoted-comment-preview {
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #f0f8ff 0%, #ffffff 100%);
+  border: 2px solid #d9ecf5;
+  border-radius: 12px;
+  overflow: hidden;
+  animation: slideInDown 0.3s ease;
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.quote-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(102, 126, 234, 0.08);
+  border-bottom: 1px solid #e1ecf4;
+}
+
+.quote-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.quote-label {
+  font-weight: 600;
+  color: #667eea;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.quote-time {
+  font-size: 12px;
+  color: #8c8c8c;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 2px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.quote-close {
+  color: #8c8c8c;
+  border: none;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.quote-close:hover {
+  background: rgba(255, 77, 79, 0.1);
+  color: #ff4d4f;
+}
+
+.quote-content {
+  padding: 12px 16px;
+}
+
+.quoted-text {
+  font-size: 13px;
+  color: #5a6c7d;
+  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border-left: 3px solid #667eea;
+  font-style: italic;
 }
 
 .quick-comment-input {

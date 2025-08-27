@@ -295,7 +295,8 @@ import {
 
 import { 
   type WorkorderFormDesignItem, 
-  listWorkorderFormDesign 
+  listWorkorderFormDesign,
+  FormDesignStatus
 } from '#/api/core/workorder_form_design';
 
 import ProcessBasicConfig from './components/ProcessBasicConfig.vue';
@@ -499,42 +500,81 @@ const loadProcesses = async (): Promise<void> => {
 };
 
 /**
- * 加载分类数据
+ * 加载分类数据 - 实现真分页
  */
 const loadCategories = async (): Promise<void> => {
   try {
-    const params = {
-      page: 1,
-      size: 100,
-      search: undefined
-    };
+    let allCategories: any[] = [];
+    let currentPage = 1;
+    const pageSize = 50;
+    let hasMoreData = true;
 
-    const res = await listWorkorderCategory(params) as any;
-    if (res && res.items) {
-      categories.value = res.items || [];
+    while (hasMoreData) {
+      const params = {
+        page: currentPage,
+        size: pageSize,
+        search: undefined
+      };
+
+      const res = await listWorkorderCategory(params) as any;
+      if (res && res.items && res.items.length > 0) {
+        allCategories = [...allCategories, ...res.items];
+        
+        // 检查是否还有更多数据
+        if (res.items.length < pageSize || allCategories.length >= (res.total || 0)) {
+          hasMoreData = false;
+        } else {
+          currentPage++;
+        }
+      } else {
+        hasMoreData = false;
+      }
     }
+
+    categories.value = allCategories;
   } catch (error: any) {
     console.error('Failed to load categories:', error);
+    categories.value = [];
   }
 };
 
 /**
- * 加载表单列表用于显示
+ * 加载表单列表用于显示 - 实现真分页
  */
 const loadFormDesigns = async (): Promise<void> => {
   try {
-    const params = {
-      page: 1,
-      size: 100,
-      search: undefined
-    };
+    let allForms: any[] = [];
+    let currentPage = 1;
+    const pageSize = 50;
+    let hasMoreData = true;
 
-    const res = await listWorkorderFormDesign(params) as any;
-    if (res && res.items) {
-      formDesigns.value = res.items || [];
+    while (hasMoreData) {
+      const params = {
+        page: currentPage,
+        size: pageSize,
+        search: undefined,
+        status: FormDesignStatus.Published // 只获取已发布的表单
+      };
+
+      const res = await listWorkorderFormDesign(params) as any;
+      if (res && res.items && res.items.length > 0) {
+        allForms = [...allForms, ...res.items];
+        
+        // 检查是否还有更多数据
+        if (res.items.length < pageSize || allForms.length >= (res.total || 0)) {
+          hasMoreData = false;
+        } else {
+          currentPage++;
+        }
+      } else {
+        hasMoreData = false;
+      }
     }
+
+    formDesigns.value = allForms;
   } catch (error: any) {
     console.error('Failed to load forms:', error);
+    formDesigns.value = [];
   }
 };
 

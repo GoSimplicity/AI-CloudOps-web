@@ -48,7 +48,12 @@ export const useAuthStore = defineStore('auth', () => {
         ]);
 
         userInfo = fetchUserInfoResult;
-        userStore.setUserInfo(userInfo);
+        const basicUserInfo = {
+          ...userInfo,
+          realName: userInfo.real_name || '',
+          userId: userInfo.user_id || '',
+        };
+        userStore.setUserInfo(basicUserInfo);
         accessStore.setAccessCodes(accessCodes);
 
         if (accessStore.loginExpired) {
@@ -59,9 +64,9 @@ export const useAuthStore = defineStore('auth', () => {
             : await router.push(userInfo.homePath || DEFAULT_HOME_PATH);
         }
 
-        if (userInfo?.realName) {
+        if (userInfo?.real_name) {
           notification.success({
-            description: `${$t('authentication.loginSuccessDesc')}:${userInfo?.realName}`,
+            description: `${$t('authentication.loginSuccessDesc')}:${userInfo?.real_name}`,
             duration: 3,
             message: $t('authentication.loginSuccess'),
           });
@@ -95,7 +100,12 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchUserInfo() {
     let userInfo: null | UserInfo = null;
     userInfo = await getUserInfoApi();
-    userStore.setUserInfo(userInfo);
+    const basicUserInfo = {
+      ...userInfo,
+      realName: userInfo.real_name || '',
+      userId: userInfo.user_id || '',
+    };
+    userStore.setUserInfo(basicUserInfo);
     return userInfo;
   }
 

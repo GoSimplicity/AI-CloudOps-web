@@ -579,32 +579,51 @@ const getActionText = (action: string): string => {
 const loadTimeline = async (instanceId: number) => {
   try {
     loading.value = true
-    const params: ListWorkorderInstanceTimelineReq = {
-      page: 1,
-      size: 100,
-      instance_id: instanceId
+    
+    let allTimelines: any[] = [];
+    let currentPage = 1;
+    const pageSize = 50;
+    let hasMoreData = true;
+
+    while (hasMoreData) {
+      const params: ListWorkorderInstanceTimelineReq = {
+        page: currentPage,
+        size: pageSize,
+        instance_id: instanceId
+      }
+
+      const res = await listWorkorderInstanceTimeline(params)
+      
+      if (res && res.items && res.items.length > 0) {
+        allTimelines = [...allTimelines, ...res.items];
+        
+        if (res.items.length < pageSize || allTimelines.length >= (res.total || 0)) {
+          hasMoreData = false;
+        } else {
+          currentPage++;
+        }
+      } else {
+        hasMoreData = false;
+      }
     }
 
-    const res = await listWorkorderInstanceTimeline(params)
-    if (res && res.items) {
-      timelineList.value = res.items
-      // 初始化详情展开状态
-      res.items.forEach((item: WorkorderInstanceTimelineItem) => {
-        if (item.action_detail) {
-          showDetails.value[item.id] = false
-        }
-      })
-    } else {
-      timelineList.value = []
-    }
+    timelineList.value = allTimelines;
+    // 初始化详情展开状态
+    allTimelines.forEach((item: WorkorderInstanceTimelineItem) => {
+      if (item.action_detail) {
+        showDetails.value[item.id] = false
+      }
+    });
   } catch (error: any) {
-    console.error('Failed to load timeline:', error)
-    message.error(`加载时间线失败: ${error.message || '未知错误'}`)
-    timelineList.value = []
+    message.error('加载时间线失败');
+    console.error('Failed to load timeline:', error);
+    timelineList.value = [];
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
+
+
 
 // 主要方法
 const showTimeline = async (instanceId: number) => {

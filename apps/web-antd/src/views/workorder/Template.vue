@@ -1076,12 +1076,32 @@ const loadTemplates = async () => {
 
 const loadCategories = async () => {
   try {
-    const res = await listWorkorderCategory({ page: 1, size: 100 });
-    if (res && res.items) {
-      categories.value = res.items;
-    } else {
-      categories.value = [];
+    let allCategories: any[] = [];
+    let currentPage = 1;
+    const pageSize = 50;
+    let hasMoreData = true;
+
+    while (hasMoreData) {
+      const res = await listWorkorderCategory({ 
+        page: currentPage, 
+        size: pageSize 
+      });
+      
+      if (res && res.items && res.items.length > 0) {
+        allCategories = [...allCategories, ...res.items];
+        
+        // 检查是否还有更多数据
+        if (res.items.length < pageSize || allCategories.length >= (res.total || 0)) {
+          hasMoreData = false;
+        } else {
+          currentPage++;
+        }
+      } else {
+        hasMoreData = false;
+      }
     }
+
+    categories.value = allCategories;
   } catch (error: any) {
     console.error('Failed to load categories:', error);
     message.error(`加载分类列表失败: ${error.message || '未知错误'}`);

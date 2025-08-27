@@ -26,6 +26,9 @@
                 {{ form.name }}
               </a-select-option>
             </a-select>
+            <div class="field-hint">
+              <InfoCircleOutlined /> 只能选择已发布的表单设计
+            </div>
           </a-form-item>
         </a-col>
       </a-row>
@@ -100,12 +103,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { InfoCircleOutlined } from '@ant-design/icons-vue';
 import { 
   ProcessStatus,
   type CreateWorkorderProcessReq 
 } from '#/api/core/workorder_process';
 import { type WorkorderCategoryItem, listWorkorderCategory } from '#/api/core/workorder_category';
-import { type WorkorderFormDesignItem, listWorkorderFormDesign } from '#/api/core/workorder_form_design';
+import { type WorkorderFormDesignItem, listWorkorderFormDesign, FormDesignStatus } from '#/api/core/workorder_form_design';
 
 // Props
 interface Props {
@@ -219,7 +223,8 @@ const loadForms = async (search?: string): Promise<void> => {
     const params = {
       page: 1,
       size: 50,
-      search: search || formSearchText.value || undefined
+      search: search || formSearchText.value || undefined,
+      status: FormDesignStatus.Published // 只获取已发布的表单
     };
 
     const res = await listWorkorderFormDesign(params) as any;
@@ -325,6 +330,13 @@ onMounted(async () => {
 .json-error-message {
   color: #ff4d4f;
   font-size: 12px;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: #8c8c8c;
   margin-top: 4px;
   line-height: 1.4;
 }

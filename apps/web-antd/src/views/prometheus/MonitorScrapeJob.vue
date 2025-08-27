@@ -849,12 +849,12 @@ const loadScrapeJobList = async (): Promise<void> => {
   }
 };
 
-// 获取采集池数据
+// 获取采集池数据 - 使用合理的分页大小
 const loadPools = async (): Promise<void> => {
   try {
     let allPools: Pool[] = [];
     let currentPage = 1;
-    const pageSize = 100;
+    const pageSize = 50; // 使用合理的分页大小
     let hasMoreData = true;
 
     while (hasMoreData) {

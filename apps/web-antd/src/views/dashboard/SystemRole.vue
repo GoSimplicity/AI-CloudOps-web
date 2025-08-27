@@ -729,10 +729,29 @@ const fetchRoleList = async () => {
 
 const fetchApiList = async () => {
   try {
-    const response = await listApisApi({
-      page: 1,
-      size: 100
-    });
+    let allApis: any[] = [];
+    let currentPage = 1;
+    const pageSize = 50;
+    let hasMoreData = true;
+
+    while (hasMoreData) {
+      const response = await listApisApi({
+        page: currentPage,
+        size: pageSize
+      });
+      
+      if (response && response.items && response.items.length > 0) {
+        allApis = [...allApis, ...response.items];
+        
+        if (response.items.length < pageSize || allApis.length >= (response.total || 0)) {
+          hasMoreData = false;
+        } else {
+          currentPage++;
+        }
+      } else {
+        hasMoreData = false;
+      }
+    }
     
     const safeApiList = (response.items || []).map((api: any) => ({
       ...api,

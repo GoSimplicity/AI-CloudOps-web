@@ -67,15 +67,15 @@ const routes: RouteRecordRaw[] = [
           title: '工单实例',
         },
       },
-      // {
-      //   name: '通知配置',
-      //   path: '/notification',
-      //   component: () => import('#/views/workorder/Notification.vue'),
-      //   meta: {
-      //     icon: 'lucide:bell',
-      //     title: '通知配置',
-      //   },
-      // },
+      {
+        name: '通知配置',
+        path: '/notification',
+        component: () => import('#/views/workorder/Notification.vue'),
+        meta: {
+          icon: 'lucide:bell',
+          title: '通知配置',
+        },
+      },
       {
         name: '模板管理',
         path: '/template',

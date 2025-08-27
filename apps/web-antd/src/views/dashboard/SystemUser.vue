@@ -528,6 +528,7 @@ const initFormData = () => ({
   enable: 1,
   account_type: 1,
   password: '',
+  newPassword: '',
   confirmPassword: '',
   home_path: '',
   id: 0,
@@ -736,10 +737,34 @@ const fetchUserList = async () => {
 
 const fetchRoleList = async () => {
   try {
-    const response = await listRolesApi({ page: 1, size: 100 });
-    roleList.value = response.items || [];
+    let allRoles: any[] = [];
+    let currentPage = 1;
+    const pageSize = 50;
+    let hasMoreData = true;
+
+    while (hasMoreData) {
+      const response = await listRolesApi({ 
+        page: currentPage, 
+        size: pageSize 
+      });
+      
+      if (response && response.items && response.items.length > 0) {
+        allRoles = [...allRoles, ...response.items];
+        
+        if (response.items.length < pageSize || allRoles.length >= (response.total || 0)) {
+          hasMoreData = false;
+        } else {
+          currentPage++;
+        }
+      } else {
+        hasMoreData = false;
+      }
+    }
+
+    roleList.value = allRoles;
   } catch (error: any) {
     message.error(error.message || '获取角色列表失败');
+    roleList.value = [];
   }
 };
 
