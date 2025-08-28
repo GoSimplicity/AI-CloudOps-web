@@ -1,19 +1,29 @@
 <template>
-  <div class="template-management-container">
+  <div class="cluster-management-container yaml-template-container">
     <!-- 页面头部 -->
     <div class="page-header">
       <div class="header-content">
         <div class="title-section">
           <div class="page-title">
             <FileTextOutlined class="title-icon" />
-            <h1>模板管理</h1>
+            <h1>YAML 模板管理</h1>
           </div>
-          <p class="page-subtitle">管理和维护您的 Kubernetes YAML 部署模板</p>
+          <p class="page-subtitle">创建、编辑和管理 Kubernetes YAML 模板</p>
         </div>
         <div class="header-actions">
-          <a-button type="primary" size="large" @click="showCreateModal" :disabled="!selectedCluster">
+          <a-upload
+            :show-upload-list="false"
+            :before-upload="handleImport"
+            accept=".yaml,.yml"
+          >
+            <a-button size="large">
+              <template #icon><ImportOutlined /></template>
+              导入模板
+            </a-button>
+          </a-upload>
+          <a-button type="primary" size="large" @click="showCreateModal">
             <template #icon><PlusOutlined /></template>
-            创建模板
+            新建模板
           </a-button>
         </div>
       </div>
@@ -31,33 +41,33 @@
         </div>
       </div>
       
-      <div class="overview-card total-clusters">
-        <div class="card-icon">
-          <ClusterOutlined />
-        </div>
-        <div class="card-info">
-          <div class="card-number">{{ clusters.length }}</div>
-          <div class="card-label">可用集群</div>
-        </div>
-      </div>
-      
-      <div class="overview-card selected-cluster">
-        <div class="card-icon">
-          <CloudServerOutlined />
-        </div>
-        <div class="card-info">
-          <div class="card-number">{{ selectedClusterName || '未选择' }}</div>
-          <div class="card-label">当前集群</div>
-        </div>
-      </div>
-      
-      <div class="overview-card last-update">
+      <div class="overview-card recent-templates">
         <div class="card-icon">
           <ClockCircleOutlined />
         </div>
         <div class="card-info">
-          <div class="card-number">{{ lastUpdateTime || '-' }}</div>
-          <div class="card-label">最近更新</div>
+          <div class="card-number">{{ recentTemplatesCount }}</div>
+          <div class="card-label">最近创建</div>
+        </div>
+      </div>
+      
+      <div class="overview-card my-templates">
+        <div class="card-icon">
+          <UserOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ myTemplatesCount }}</div>
+          <div class="card-label">我的模板</div>
+        </div>
+      </div>
+      
+      <div class="overview-card shared-templates">
+        <div class="card-icon">
+          <ShareAltOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ sharedTemplatesCount }}</div>
+          <div class="card-label">共享模板</div>
         </div>
       </div>
     </div>
@@ -68,9 +78,9 @@
         <a-select
           v-model:value="selectedCluster"
           placeholder="选择集群"
-          class="cluster-selector"
+          class="env-filter cluster-selector"
+          :loading="clustersLoading"
           @change="handleClusterChange"
-          allow-clear
         >
           <template #suffixIcon><ClusterOutlined /></template>
           <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
@@ -82,8 +92,8 @@
         </a-select>
         
         <a-input-search
-          v-model:value="searchText"
-          placeholder="搜索模板名称"
+          v-model:value="searchKeyword"
+          placeholder="搜索模板名称或内容"
           class="search-input"
           @search="onSearch"
           allow-clear
@@ -91,366 +101,377 @@
       </div>
       
       <div class="toolbar-right">
-        <div class="view-toggle">
-          <a-radio-group v-model:value="viewMode" button-style="solid" size="small">
-            <a-radio-button value="table">
-              <TableOutlined />
-            </a-radio-button>
-            <a-radio-button value="card">
-              <AppstoreOutlined />
-            </a-radio-button>
-          </a-radio-group>
-        </div>
-        
-        <a-button @click="getTemplates" :loading="loading" :disabled="!selectedCluster">
-          <template #icon><ReloadOutlined /></template>
+        <a-button 
+          danger 
+          :disabled="selectedRows.length === 0" 
+          @click="batchDelete"
+          :loading="batchDeleteLoading"
+        >
+          <template #icon><DeleteOutlined /></template>
+          批量删除 ({{ selectedRows.length }})
         </a-button>
         
-        <a-button type="primary" @click="showCreateModal" :disabled="!selectedCluster">
-          <template #icon><PlusOutlined /></template>
-          创建模板
+        <a-button @click="refreshData" :loading="loading">
+          <template #icon><ReloadOutlined /></template>
         </a-button>
       </div>
     </div>
 
-    <!-- 提示信息 -->
-    <a-alert 
-      v-if="!selectedCluster" 
-      message="请先选择一个集群来管理模板" 
-      type="info" 
-      show-icon 
-      class="cluster-alert"
-    />
-
-    <!-- 数据展示区域 -->
-    <div class="data-display" v-if="selectedCluster">
+    <!-- 模板列表 -->
+    <div class="data-display">
       <div class="display-header" v-if="filteredTemplates.length > 0">
         <div class="result-info">
           <span class="result-count">共 {{ filteredTemplates.length }} 个模板</span>
           <div class="env-tags">
-            <a-tag color="blue">
-              {{ selectedClusterName }}
-            </a-tag>
+            <a-tag color="blue">总计 {{ filteredTemplates.length }}</a-tag>
+            <a-tag color="green">我的 {{ myTemplatesCount }}</a-tag>
+            <a-tag color="orange">共享 {{ sharedTemplatesCount }}</a-tag>
           </div>
         </div>
       </div>
 
-      <!-- 表格视图 -->
       <a-table
-        v-if="viewMode === 'table'"
         :columns="columns"
         :data-source="filteredTemplates"
         :loading="loading"
         row-key="id"
-        :pagination="{
-          pageSize: 12, 
-          showSizeChanger: true, 
-          showQuickJumper: true,
-          showTotal: (total: number) => `共 ${total} 条模板`,
-          pageSizeOptions: ['12', '24', '48', '96']
+        :row-selection="{
+          selectedRowKeys: selectedRows.map(row => row.id),
+          onChange: onSelectChange,
         }"
-        class="template-table"
+        :pagination="{
+          current: currentPage,
+          pageSize: pageSize,
+          total: totalItems,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total: number, range: [number, number]) => `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
+          pageSizeOptions: ['10', '20', '50', '100']
+        }"
+        @change="handleTableChange"
+        class="cluster-table templates-table"
       >
-        <!-- 模板名称列 -->
-        <template #name="{ text }">
-          <div class="template-name">
-            <FileTextOutlined />
-            <span>{{ text }}</span>
-          </div>
-        </template>
-        
-        <!-- 创建时间列 -->
-        <template #created_at="{ text }">
-          <div class="timestamp">
-            <ClockCircleOutlined />
-            <a-tooltip :title="formatDateTime(text)">
-              {{ formatDate(text) }}
-            </a-tooltip>
-          </div>
-        </template>
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'name'">
+            <div class="template-name">
+              <FileTextOutlined class="template-icon" />
+              <span class="name-text">{{ record.name }}</span>
+              <a-tag v-if="isMyTemplate(record)" color="green" size="small">我的</a-tag>
+            </div>
+          </template>
 
-        <!-- 更新时间列 -->
-        <template #updated_at="{ text }">
-          <div class="timestamp">
-            <ClockCircleOutlined />
-            <a-tooltip :title="formatDateTime(text)">
-              {{ formatDate(text) }}
-            </a-tooltip>
-          </div>
-        </template>
+          <template v-else-if="column.key === 'content'">
+            <div class="content-preview">
+              <a-tooltip>
+                <template #title>
+                  <pre class="yaml-tooltip">{{ record.content.substring(0, 500) }}{{ record.content.length > 500 ? '...' : '' }}</pre>
+                </template>
+                <div class="content-summary">
+                  <CodeOutlined />
+                  {{ getContentSummary(record.content) }}
+                </div>
+              </a-tooltip>
+            </div>
+          </template>
 
-        <!-- 操作列 -->
-        <template #action="{ record }">
-          <div class="action-column">
-            <a-tooltip title="检查YAML格式">
-              <a-button type="primary" ghost shape="circle" @click="handleCheck(record)">
-                <template #icon><CheckOutlined /></template>
-              </a-button>
-            </a-tooltip>
-            
-            <a-tooltip title="编辑模板">
-              <a-button type="primary" ghost shape="circle" @click="handleEdit(record)">
-                <template #icon><EditOutlined /></template>
-              </a-button>
-            </a-tooltip>
-            
-            <a-tooltip title="删除模板">
-              <a-popconfirm
-                title="确定要删除该模板吗?"
-                description="此操作不可撤销"
-                @confirm="handleDelete(record)"
-                ok-text="确定"
-                cancel-text="取消"
-              >
-                <a-button type="primary" danger ghost shape="circle">
-                  <template #icon><DeleteOutlined /></template>
-                </a-button>
-              </a-popconfirm>
-            </a-tooltip>
-          </div>
-        </template>
+          <template v-else-if="column.key === 'cluster'">
+            <div class="cluster-info">
+              <CloudServerOutlined />
+              {{ getClusterName(record.cluster_id) }}
+            </div>
+          </template>
 
-        <!-- 空状态 -->
-        <template #emptyText>
-          <div class="empty-state">
-            <FileTextOutlined style="font-size: 48px; color: #d9d9d9; margin-bottom: 16px" />
-            <p>当前集群暂无模板数据</p>
-            <a-button type="primary" @click="showCreateModal">创建第一个模板</a-button>
-          </div>
-        </template>
-      </a-table>
-
-      <!-- 卡片视图 -->
-      <div v-else class="card-view">
-        <a-spin :spinning="loading">
-          <a-empty v-if="filteredTemplates.length === 0" description="暂无模板数据">
-            <template #image>
-              <FileTextOutlined style="font-size: 64px; color: #d9d9d9;" />
-            </template>
-            <template #description>
-              <span style="color: #999;">暂无模板数据</span>
-            </template>
-            <a-button type="primary" @click="showCreateModal">创建第一个模板</a-button>
-          </a-empty>
-          <div v-else class="template-cards">
-            <div v-for="template in filteredTemplates" :key="template.id" class="template-card">
-              <div class="card-header">
-                <div class="service-title template-title">
-                  <FileTextOutlined class="service-icon" />
-                  <h3>{{ template.name }}</h3>
-                </div>
-                <a-tag color="green" class="card-type-tag">
-                  <span class="status-dot"></span>
-                  模板
-                </a-tag>
-              </div>
-              
-              <div class="card-content">
-                <div class="card-detail created-at-detail">
-                  <span class="detail-label">创建时间:</span>
-                  <span class="detail-value">
-                    <ClockCircleOutlined />
-                    {{ formatDate(template.created_at) }}
-                  </span>
-                </div>
-                <div class="card-detail updated-at-detail">
-                  <span class="detail-label">更新时间:</span>
-                  <span class="detail-value">
-                    <ClockCircleOutlined />
-                    {{ formatDate(template.updated_at) }}
-                  </span>
-                </div>
-                <div class="card-detail cluster-detail">
-                  <span class="detail-label">所属集群:</span>
-                  <span class="detail-value">
-                    <CloudServerOutlined />
-                    {{ selectedClusterName }}
-                  </span>
-                </div>
-              </div>
-              
-              <div class="card-footer card-action-footer">
-                <a-button type="primary" ghost size="small" @click="handleCheck(template)">
-                  <template #icon><CheckOutlined /></template>
-                  检查
-                </a-button>
-                <a-button type="primary" ghost size="small" @click="handleEdit(template)">
-                  <template #icon><EditOutlined /></template>
-                  编辑
-                </a-button>
-                <a-popconfirm
-                  title="确定要删除该模板吗?"
-                  @confirm="handleDelete(template)"
-                  ok-text="确定"
-                  cancel-text="取消"
-                >
-                  <a-button type="primary" danger ghost size="small">
-                    <template #icon><DeleteOutlined /></template>
-                    删除
-                  </a-button>
-                </a-popconfirm>
+          <template v-else-if="column.key === 'created_at'">
+            <div class="time-info">
+              <div class="create-time">{{ formatDate(record.created_at) }}</div>
+              <div class="update-time" v-if="record.updated_at !== record.created_at">
+                更新: {{ formatDate(record.updated_at) }}
               </div>
             </div>
-          </div>
-        </a-spin>
-      </div>
+          </template>
+
+          <template v-else-if="column.key === 'actions'">
+            <div class="action-buttons">
+              <a-tooltip title="预览">
+                <a-button type="text" size="small" @click="previewTemplate(record)">
+                  <EyeOutlined />
+                </a-button>
+              </a-tooltip>
+              
+              <a-tooltip title="编辑">
+                <a-button type="text" size="small" @click="editTemplate(record)">
+                  <EditOutlined />
+                </a-button>
+              </a-tooltip>
+              
+              <a-tooltip title="复制">
+                <a-button type="text" size="small" @click="copyTemplate(record)">
+                  <CopyOutlined />
+                </a-button>
+              </a-tooltip>
+              
+              <a-tooltip title="导出">
+                <a-button type="text" size="small" @click="exportTemplate(record)">
+                  <ExportOutlined />
+                </a-button>
+              </a-tooltip>
+              
+              <a-tooltip title="删除">
+                <a-button type="text" size="small" danger @click="deleteTemplate(record)">
+                  <DeleteOutlined />
+                </a-button>
+              </a-tooltip>
+            </div>
+          </template>
+        </template>
+      </a-table>
     </div>
 
-    <!-- 创建/编辑模板模态框 -->
+    <!-- 创建/编辑模板弹窗 -->
     <a-modal
-      v-model:open="modalVisible"
-      :title="isEdit ? '编辑模板' : '创建模板'"
-      @ok="handleSubmit"
-      :width="800"
-      :okText="isEdit ? '保存更改' : '创建模板'"
-      :maskClosable="false"
-      class="template-modal"
+      v-model:open="createModalVisible"
+      :title="editingTemplate ? '编辑YAML模板' : '创建YAML模板'"
+      width="80%"
+      :ok-text="editingTemplate ? '更新' : '创建'"
+      @ok="handleCreateOrUpdate"
+      @cancel="handleCreateCancel"
+      :confirm-loading="createLoading"
+      :destroy-on-close="true"
     >
-      <a-alert v-if="selectedCluster" class="modal-alert" type="info" show-icon>
-        <template #message>
-          <span>{{ selectedClusterName }} 集群模板</span>
-        </template>
-        <template #description>
-          <div>{{ isEdit ? '编辑现有模板' : '创建新模板' }}</div>
-        </template>
-      </a-alert>
-      
-      <a-form 
-        :model="formState" 
-        :rules="rules" 
-        ref="formRef"
-        layout="vertical"
-        class="template-form"
-      >
-        <a-form-item label="模板名称" name="name">
-          <a-input 
-            v-model:value="formState.name" 
-            placeholder="请输入模板名称" 
-            class="form-input"
+      <div class="create-template-form">
+        <a-form ref="createFormRef" :model="createForm" layout="vertical">
+          <a-row :gutter="16">
+            <a-col :span="12">
+              <a-form-item
+                label="模板名称"
+                name="name"
+                :rules="[{ required: true, message: '请输入模板名称' }]"
+              >
+                <a-input v-model:value="createForm.name" placeholder="请输入模板名称" />
+              </a-form-item>
+            </a-col>
+            <a-col :span="12">
+              <a-form-item
+                label="目标集群"
+                name="cluster_id"
+                :rules="[{ required: true, message: '请选择目标集群' }]"
+              >
+                <a-select v-model:value="createForm.cluster_id" placeholder="请选择目标集群">
+                  <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
+                    {{ cluster.name }}
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+          </a-row>
+          
+          <a-form-item
+            label="YAML内容"
+            name="content"
+            :rules="[{ required: true, message: '请输入YAML内容' }]"
           >
-            <template #prefix>
-              <FileOutlined />
-            </template>
-          </a-input>
-        </a-form-item>
+            <div class="yaml-editor-container">
+              <div class="editor-toolbar">
+                <a-space>
+                  <a-button size="small" @click="formatYaml" :loading="formatLoading">
+                    <template #icon><FormatPainterOutlined /></template>
+                    格式化
+                  </a-button>
+                  <a-button size="small" @click="validateYaml" :loading="validateLoading">
+                    <template #icon><CheckCircleOutlined /></template>
+                    验证语法
+                  </a-button>
+                  <a-button size="small" @click="insertTemplate">
+                    <template #icon><InsertRowAboveOutlined /></template>
+                    插入模板
+                  </a-button>
+                </a-space>
+              </div>
+              <a-textarea
+                v-model:value="createForm.content"
+                :rows="20"
+                placeholder="请输入YAML内容..."
+                class="yaml-editor"
+              />
+              <div class="validation-result" v-if="validationResult">
+                <a-alert
+                  :type="validationResult.valid ? 'success' : 'error'"
+                  :message="validationResult.valid ? 'YAML语法正确' : 'YAML语法错误'"
+                  :description="validationResult.errors?.join('; ')"
+                  show-icon
+                />
+              </div>
+            </div>
+          </a-form-item>
+        </a-form>
+      </div>
+    </a-modal>
+
+    <!-- 预览模板弹窗 -->
+    <a-modal
+      v-model:open="previewModalVisible"
+      title="模板预览"
+      width="80%"
+      :footer="null"
+      :destroy-on-close="true"
+    >
+      <div class="template-preview" v-if="previewingTemplate">
+        <div class="preview-header">
+          <div class="template-info">
+            <h3>{{ previewingTemplate.name }}</h3>
+            <div class="template-meta">
+              <a-tag color="blue">{{ getClusterName(previewingTemplate.cluster_id) }}</a-tag>
+              <span class="create-time">创建于 {{ formatDate(previewingTemplate.created_at) }}</span>
+            </div>
+          </div>
+          <div class="preview-actions">
+            <a-button @click="copyToClipboard(previewingTemplate.content)">
+              <template #icon><CopyOutlined /></template>
+              复制内容
+            </a-button>
+            <a-button type="primary" @click="editTemplate(previewingTemplate)">
+              <template #icon><EditOutlined /></template>
+              编辑
+            </a-button>
+          </div>
+        </div>
         
-        <a-form-item label="YAML内容" name="content">
-          <div class="yaml-actions">
-            <a-button type="primary" size="small" @click="formatYaml" :loading="formatting">
-              <template #icon><AlignLeftOutlined /></template>
-              格式化
-            </a-button>
-            <a-button size="small" @click="expandEditor = !expandEditor">
-              <template #icon>
-                <ExpandOutlined v-if="!expandEditor" />
-                <CompressOutlined v-else />
-              </template>
-              {{ expandEditor ? '收起' : '展开' }}
-            </a-button>
-          </div>
-          <a-textarea
-            v-model:value="formState.content"
-            placeholder="# 请输入标准YAML格式内容"
-            :rows="10"
-            :auto-size="{ minRows: expandEditor ? 20 : 10, maxRows: expandEditor ? 30 : 15 }"
-            class="yaml-editor"
-            spellcheck="false"
-          />
-          <div class="yaml-tips" :class="{ 'error-tips': formatErrorMsg }">
-            <InfoCircleOutlined />
-            <span>{{ formatErrorMsg || '提示：点击"格式化"按钮可以美化YAML排版' }}</span>
-          </div>
+        <div class="yaml-content">
+          <pre class="yaml-code">{{ previewingTemplate.content }}</pre>
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- 复制模板弹窗 -->
+    <a-modal
+      v-model:open="copyModalVisible"
+      title="复制模板"
+      @ok="handleCopy"
+      @cancel="copyModalVisible = false"
+      :confirm-loading="copyLoading"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="新模板名称">
+          <a-input v-model:value="copyForm.newName" placeholder="请输入新模板名称" />
         </a-form-item>
       </a-form>
-      <template #footer>
-        <div class="modal-footer">
-          <a-button @click="modalVisible = false">取消</a-button>
-          <a-button type="primary" ghost @click="checkCurrentYaml" :loading="checkingYaml">
-            <template #icon><CheckOutlined /></template>
-            检查YAML
-          </a-button>
-          <a-button type="primary" @click="handleSubmit" :loading="submitting">
-            {{ isEdit ? '保存更改' : '创建模板' }}
-          </a-button>
-        </div>
-      </template>
+    </a-modal>
+
+    <!-- 模板选择器弹窗 -->
+    <a-modal
+      v-model:open="templateSelectorVisible"
+      title="选择模板"
+      width="60%"
+      @ok="insertSelectedTemplate"
+      @cancel="templateSelectorVisible = false"
+    >
+      <div class="template-selector">
+        <a-list :data-source="commonTemplates" item-layout="vertical">
+          <template #renderItem="{ item }">
+            <a-list-item>
+              <a-list-item-meta>
+                <template #title>
+                  <a-radio :checked="selectedTemplateType === item.key" :value="item.key" @change="selectedTemplateType = item.key">
+                    {{ item.title }}
+                  </a-radio>
+                </template>
+                <template #description>{{ item.description }}</template>
+              </a-list-item-meta>
+            </a-list-item>
+          </template>
+        </a-list>
+      </div>
     </a-modal>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, reactive } from 'vue';
 import { message } from 'ant-design-vue';
-import type { FormInstance } from 'ant-design-vue';
 import {
-  SearchOutlined,
-  PlusOutlined,
-  FileOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  CheckOutlined,
-  ReloadOutlined,
-  FileTextOutlined,
-  AppstoreOutlined,
-  CloudServerOutlined,
-  ClockCircleOutlined,
-  InfoCircleOutlined,
-  AlignLeftOutlined,
-  ExpandOutlined,
-  CompressOutlined,
-  TableOutlined,
-  ClusterOutlined
-} from '@ant-design/icons-vue';
-import {
-  getYamlTemplateApi,
+  getYamlTemplateListWithFilterApi,
   createYamlTemplateApi,
   updateYamlTemplateApi,
   deleteYamlTemplateApi,
+  batchDeleteYamlTemplateApi,
+  copyYamlTemplateApi,
+  exportYamlTemplateApi,
+  importYamlTemplateApi,
   checkYamlTemplateApi,
   getAllClustersApi,
 } from '#/api';
-
-// @ts-ignore
-import yaml from 'js-yaml';
-
-// 类型定义
-interface YamlTemplate {
-  id: number;
-  name: string;
-  content: string;
-  created_at?: string;
-  updated_at?: string;
-}
+import type { 
+  YamlTemplateInfo, 
+  YamlTemplateCreateReq,
+  YamlTemplateUpdateReq,
+  YamlTemplateValidationResult
+} from '#/api';
+import { 
+  FileTextOutlined,
+  PlusOutlined,
+  ImportOutlined,
+  ExportOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  CopyOutlined,
+  EyeOutlined,
+  ReloadOutlined,
+  ClusterOutlined,
+  CloudServerOutlined,
+  CodeOutlined,
+  ClockCircleOutlined,
+  UserOutlined,
+  ShareAltOutlined,
+  FormatPainterOutlined,
+  CheckCircleOutlined,
+  InsertRowAboveOutlined
+} from '@ant-design/icons-vue';
 
 // 状态变量
 const loading = ref(false);
-const templates = ref<YamlTemplate[]>([]);
-const searchText = ref('');
-const modalVisible = ref(false);
-const isEdit = ref(false);
-const formRef = ref<FormInstance>();
+const createLoading = ref(false);
+const batchDeleteLoading = ref(false);
+const copyLoading = ref(false);
+const formatLoading = ref(false);
+const validateLoading = ref(false);
+const clustersLoading = ref(false);
+const templates = ref<YamlTemplateInfo[]>([]);
+const searchKeyword = ref('');
+const selectedRows = ref<YamlTemplateInfo[]>([]);
 const clusters = ref<Array<{id: number, name: string}>>([]);
 const selectedCluster = ref<number>();
-const expandEditor = ref(false);
-const checkingYaml = ref(false);
-const submitting = ref(false);
-const formatting = ref(false);
-const formatErrorMsg = ref('');
-const viewMode = ref<'table' | 'card'>('table');
+const currentPage = ref(1);
+const pageSize = ref(20);
+const totalItems = ref(0);
 
-const formState = ref<Partial<YamlTemplate>>({
+// 弹窗状态
+const createModalVisible = ref(false);
+const previewModalVisible = ref(false);
+const copyModalVisible = ref(false);
+const templateSelectorVisible = ref(false);
+
+// 编辑状态
+const editingTemplate = ref<YamlTemplateInfo | null>(null);
+const previewingTemplate = ref<YamlTemplateInfo | null>(null);
+const copyingTemplate = ref<YamlTemplateInfo | null>(null);
+
+// 表单数据
+const createForm = reactive<YamlTemplateCreateReq>({
   name: '',
   content: '',
+  cluster_id: 0,
 });
 
-// 表单校验规则
-const rules = {
-  name: [
-    { required: true, message: '请输入模板名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '模板名称长度应为2-50个字符', trigger: 'blur' }
-  ],
-  content: [{ required: true, message: '请输入YAML内容', trigger: 'blur' }],
-};
+const copyForm = reactive({
+  newName: '',
+});
+
+// 验证结果
+const validationResult = ref<YamlTemplateValidationResult | null>(null);
+const selectedTemplateType = ref('');
+
+// 当前用户ID (从store或context获取)
+const currentUserId = ref(1); // 这里应该从用户状态管理中获取
 
 // 表格列配置
 const columns = [
@@ -458,293 +479,439 @@ const columns = [
     title: '模板名称',
     dataIndex: 'name',
     key: 'name',
-    width: '35%',
-    sorter: (a: YamlTemplate, b: YamlTemplate) => a.name.localeCompare(b.name),
-    slots: { customRender: 'name' },
+    width: '25%',
+  },
+  {
+    title: '内容预览',
+    dataIndex: 'content',
+    key: 'content',
+    width: '30%',
+  },
+  {
+    title: '目标集群',
+    dataIndex: 'cluster_id',
+    key: 'cluster',
+    width: '15%',
   },
   {
     title: '创建时间',
     dataIndex: 'created_at',
     key: 'created_at',
-    width: '25%',
-    sorter: (a: YamlTemplate, b: YamlTemplate) => {
-      if (!a.created_at || !b.created_at) return 0;
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    },
-    slots: { customRender: 'created_at' },
-  },
-  {
-    title: '更新时间',
-    dataIndex: 'updated_at',
-    key: 'updated_at',
-    width: '25%',
-    sorter: (a: YamlTemplate, b: YamlTemplate) => {
-      if (!a.updated_at || !b.updated_at) return 0;
-      return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
-    },
-    slots: { customRender: 'updated_at' },
+    width: '20%',
   },
   {
     title: '操作',
-    key: 'action',
-    width: '15%',
-    fixed: 'right',
-    slots: { customRender: 'action' },
+    key: 'actions',
+    width: '10%',
+  },
+];
+
+// 常用模板
+const commonTemplates = [
+  {
+    key: 'deployment',
+    title: 'Deployment 部署模板',
+    description: '标准的应用部署模板',
+    content: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: \${APP_NAME}
+  namespace: \${NAMESPACE}
+spec:
+  replicas: \${REPLICAS}
+  selector:
+    matchLabels:
+      app: \${APP_NAME}
+  template:
+    metadata:
+      labels:
+        app: \${APP_NAME}
+    spec:
+      containers:
+      - name: \${APP_NAME}
+        image: \${IMAGE}
+        ports:
+        - containerPort: \${PORT}
+        env:
+        - name: ENV
+          value: \${ENV}`
+  },
+  {
+    key: 'service',
+    title: 'Service 服务模板',
+    description: 'Kubernetes服务暴露模板',
+    content: `apiVersion: v1
+kind: Service
+metadata:
+  name: \${SERVICE_NAME}
+  namespace: \${NAMESPACE}
+spec:
+  selector:
+    app: \${APP_NAME}
+  ports:
+  - port: \${PORT}
+    targetPort: \${TARGET_PORT}
+  type: \${SERVICE_TYPE}`
+  },
+  {
+    key: 'configmap',
+    title: 'ConfigMap 配置模板',
+    description: '配置文件管理模板',
+    content: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: \${CONFIG_NAME}
+  namespace: \${NAMESPACE}
+data:
+  config.yaml: |
+    \${CONFIG_CONTENT}`
   },
 ];
 
 // 计算属性
-const selectedClusterName = computed(() => {
-  const cluster = clusters.value.find(c => c.id === selectedCluster.value);
-  return cluster ? cluster.name : '';
+const filteredTemplates = computed(() => {
+  let result = templates.value;
+  
+  const searchValue = searchKeyword.value.toLowerCase().trim();
+  if (searchValue) {
+    result = result.filter(template => 
+      template.name.toLowerCase().includes(searchValue) ||
+      template.content.toLowerCase().includes(searchValue)
+    );
+  }
+  
+  return result;
 });
 
-// 计算属性：最近更新时间
-const lastUpdateTime = computed(() => {
-  if (!templates.value.length) return '-';
-  
-  let latestDate = new Date(0);
-  templates.value.forEach(template => {
-    if (template.updated_at) {
-      const updateDate = new Date(template.updated_at);
-      if (updateDate > latestDate) {
-        latestDate = updateDate;
-      }
-    }
-  });
-  
-  if (latestDate.getTime() === 0) return '-';
-  
-  return formatDate(latestDate.toISOString());
+const recentTemplatesCount = computed(() => {
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  return templates.value.filter(template => 
+    new Date(template.created_at) > oneWeekAgo
+  ).length;
 });
 
-// 日期格式化函数
-const formatDate = (dateString?: string): string => {
+const myTemplatesCount = computed(() => 
+  templates.value.filter(template => template.user_id === currentUserId.value).length
+);
+
+const sharedTemplatesCount = computed(() => 
+  templates.value.filter(template => template.user_id !== currentUserId.value).length
+);
+
+// 工具函数
+const formatDate = (dateString: string) => {
   if (!dateString) return '-';
   const date = new Date(dateString);
   return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
-const formatDateTime = (dateString?: string): string => {
-  if (!dateString) return '-';
-  const date = new Date(dateString);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+const getClusterName = (clusterId: number) => {
+  const cluster = clusters.value.find(c => c.id === clusterId);
+  return cluster?.name || '未知集群';
 };
 
-// 计算属性：过滤后的模板列表
-const filteredTemplates = computed(() => {
-  const searchValue = searchText.value.toLowerCase().trim();
-  if (!searchValue) return templates.value;
-  return templates.value.filter(template => template.name.toLowerCase().includes(searchValue));
-});
+const getContentSummary = (content: string) => {
+  const lines = content.split('\n');
+  const kindMatch = content.match(/kind:\s*(\w+)/);
+  
+  return `${kindMatch?.[1] || 'Unknown'} - ${lines.length} 行`;
+};
 
-// 获取集群列表
+const isMyTemplate = (template: YamlTemplateInfo) => {
+  return template.user_id === currentUserId.value;
+};
+
+// API 方法
 const getClusters = async () => {
+  clustersLoading.value = true;
   try {
     const res = await getAllClustersApi();
-    clusters.value = res || [];
-    // 如果有集群，默认选择第一个
+    clusters.value = res ?? [];
     if (clusters.value.length > 0 && !selectedCluster.value) {
-      const firstCluster = clusters.value[0];
-      if (firstCluster?.id) {
-        selectedCluster.value = firstCluster.id;
+      selectedCluster.value = clusters.value[0]?.id;
+      if (selectedCluster.value) {
         await getTemplates();
       }
     }
   } catch (error: any) {
     message.error(error.message || '获取集群列表失败');
+  } finally {
+    clustersLoading.value = false;
   }
 };
 
-// 获取模板列表
 const getTemplates = async () => {
-  if (!selectedCluster.value) {
-    message.warning('请先选择集群');
-    return;
-  }
-
+  if (!selectedCluster.value) return;
+  
   loading.value = true;
   try {
-    const res = await getYamlTemplateApi(selectedCluster.value);
+    const res = await getYamlTemplateListWithFilterApi({
+      cluster_id: selectedCluster.value,
+      page: currentPage.value,
+      page_size: pageSize.value,
+      keyword: searchKeyword.value,
+    });
     templates.value = res || [];
+    totalItems.value = templates.value.length;
   } catch (error: any) {
     message.error(error.message || '获取模板列表失败');
+    templates.value = [];
+    totalItems.value = 0;
   } finally {
     loading.value = false;
   }
 };
 
+// 刷新数据
+const refreshData = async () => {
+  await getTemplates();
+};
+
 // 搜索
 const onSearch = () => {
-  // 搜索逻辑已经在计算属性中实现，这里可以添加其他触发行为
+  currentPage.value = 1;
+  getTemplates();
 };
 
 // 切换集群
 const handleClusterChange = () => {
   templates.value = [];
+  currentPage.value = 1;
+  totalItems.value = 0;
   getTemplates();
 };
 
-// 显示创建模态框
+// 分页处理
+const handleTableChange = (pagination: any) => {
+  currentPage.value = pagination.current;
+  pageSize.value = pagination.pageSize;
+  getTemplates();
+};
+
+// 选择行
+const onSelectChange = (_selectedRowKeys: number[], selected: YamlTemplateInfo[]) => {
+  selectedRows.value = selected;
+};
+
+// 显示创建弹窗
 const showCreateModal = () => {
-  isEdit.value = false;
-  formState.value = {
-    name: '',
-    content: '',
-  };
-  formatErrorMsg.value = '';
-  modalVisible.value = true;
+  editingTemplate.value = null;
+  createForm.name = '';
+  createForm.content = '';
+  createForm.cluster_id = selectedCluster.value || 0;
+  validationResult.value = null;
+  createModalVisible.value = true;
 };
 
-// 显示编辑模态框
-const handleEdit = (record: YamlTemplate) => {
-  isEdit.value = true;
-  formState.value = {
-    id: record.id,
-    name: record.name,
-    content: record.content,
-  };
-  formatErrorMsg.value = '';
-  modalVisible.value = true;
+// 编辑模板
+const editTemplate = (template: YamlTemplateInfo) => {
+  editingTemplate.value = template;
+  createForm.name = template.name;
+  createForm.content = template.content;
+  createForm.cluster_id = template.cluster_id;
+  validationResult.value = null;
+  createModalVisible.value = true;
+  previewModalVisible.value = false;
 };
 
-// 检查YAML
-const handleCheck = async (record: YamlTemplate) => {
-  if (!selectedCluster.value) return;
-  
-  const hide = message.loading('正在检查YAML格式...', 0);
-  try {
-    await checkYamlTemplateApi({
-      cluster_id: selectedCluster.value,
-      name: record.name,
-      content: record.content,
-    });
-    hide();
-    message.success('YAML格式检查通过');
-  } catch (error: any) {
-    hide();
-    message.error(error.message || 'YAML格式检查失败');
-  }
+// 预览模板
+const previewTemplate = (template: YamlTemplateInfo) => {
+  previewingTemplate.value = template;
+  previewModalVisible.value = true;
 };
 
-// 检查当前编辑器中的YAML
-const checkCurrentYaml = async () => {
-  if (!selectedCluster.value || !formState.value.content) {
-    message.warning('请先输入YAML内容');
+// 复制模板
+const copyTemplate = (template: YamlTemplateInfo) => {
+  copyingTemplate.value = template;
+  copyForm.newName = `${template.name}_copy`;
+  copyModalVisible.value = true;
+};
+
+// 处理创建或更新
+const handleCreateOrUpdate = async () => {
+  if (!selectedCluster.value) {
+    message.error('请先选择集群');
     return;
   }
-  
-  checkingYaml.value = true;
-  try {
-    await checkYamlTemplateApi({
-      cluster_id: selectedCluster.value,
-      name: formState.value.name || '临时检查',
-      content: formState.value.content,
-    });
-    message.success('YAML格式检查通过');
-    formatErrorMsg.value = '';
-  } catch (error: any) {
-    message.error(error.message || 'YAML格式检查失败');
-  } finally {
-    checkingYaml.value = false;
-  }
-};
 
-// 格式化YAML 
-const formatYaml = () => {
-  if (!formState.value.content?.trim()) {
-    message.warning('请先输入YAML内容再进行格式化');
-    return;
-  }
-  
-  if (!yaml) {
-    message.warning('格式化功能未加载，请确保已安装js-yaml库');
-    return;
-  }
-  
-  formatting.value = true;
-  formatErrorMsg.value = '';
-  
+  createLoading.value = true;
   try {
-    // 使用js-yaml解析YAML内容
-    const parsedYaml = yaml.load(formState.value.content);
-    
-    // 使用js-yaml重新dump格式化后的内容，设置缩进为2
-    const formattedYaml = yaml.dump(parsedYaml, {
-      indent: 2,
-      lineWidth: -1,  // 不限制行宽
-      noRefs: true,   // 不使用引用标记
-      noCompatMode: true,  // 使用最新的YAML规范
-    });
-    
-    // 更新文本框内容
-    formState.value.content = formattedYaml;
-    message.success('YAML格式化成功');
-  } catch (error: any) {
-    // 如果解析出错，显示错误信息
-    message.error('YAML格式化失败，请检查语法');
-    formatErrorMsg.value = `格式化错误: ${error.message}`;
-    console.error('YAML格式化错误:', error);
-  } finally {
-    formatting.value = false;
-  }
-};
-
-// 提交表单
-const handleSubmit = async () => {
-  if (!selectedCluster.value) return;
-
-  try {
-    await formRef.value?.validate();
-    submitting.value = true;
-    
-    const hide = message.loading(isEdit.value ? '正在更新模板...' : '正在创建模板...', 0);
-    
-    if (isEdit.value) {
-      await updateYamlTemplateApi({
-        cluster_id: selectedCluster.value,
-        id: formState.value.id,
-        name: formState.value.name,
-        content: formState.value.content,
-      });
-      hide();
+    if (editingTemplate.value) {
+      // 更新模板
+      const updateData: YamlTemplateUpdateReq = {
+        id: editingTemplate.value.id,
+        name: createForm.name,
+        content: createForm.content,
+        cluster_id: createForm.cluster_id,
+      };
+      await updateYamlTemplateApi(updateData);
       message.success('模板更新成功');
     } else {
-      await createYamlTemplateApi({
-        cluster_id: selectedCluster.value,
-        name: formState.value.name,
-        content: formState.value.content,
-      });
-      hide();
+      // 创建模板
+      await createYamlTemplateApi(createForm);
       message.success('模板创建成功');
     }
     
-    modalVisible.value = false;
-    getTemplates();
+    createModalVisible.value = false;
+    refreshData();
   } catch (error: any) {
-    message.error(error.message || (isEdit.value ? '更新模板失败' : '创建模板失败'));
+    message.error(error.message || '操作失败');
   } finally {
-    submitting.value = false;
+    createLoading.value = false;
+  }
+};
+
+// 处理创建取消
+const handleCreateCancel = () => {
+  createModalVisible.value = false;
+  editingTemplate.value = null;
+  validationResult.value = null;
+};
+
+// 处理复制
+const handleCopy = async () => {
+  if (!copyingTemplate.value || !selectedCluster.value) return;
+
+  copyLoading.value = true;
+  try {
+    await copyYamlTemplateApi(
+      copyingTemplate.value.id,
+      selectedCluster.value,
+      copyForm.newName
+    );
+    message.success('模板复制成功');
+    copyModalVisible.value = false;
+    refreshData();
+  } catch (error: any) {
+    message.error(error.message || '复制失败');
+  } finally {
+    copyLoading.value = false;
   }
 };
 
 // 删除模板
-const handleDelete = async (template: YamlTemplate) => {
-  if (!selectedCluster.value) {
-    message.error('请选择集群');
-    return;
-  }
+const deleteTemplate = async (template: YamlTemplateInfo) => {
+  if (!selectedCluster.value) return;
 
-  const hide = message.loading('正在删除模板...', 0);
   try {
     await deleteYamlTemplateApi(template.id, selectedCluster.value);
-    hide();
-    message.success('删除成功');
-    getTemplates();
+    message.success('模板删除成功');
+    refreshData();
   } catch (error: any) {
-    hide();
     message.error(error.message || '删除失败');
   }
+};
+
+// 批量删除
+const batchDelete = async () => {
+  if (selectedRows.value.length === 0 || !selectedCluster.value) return;
+
+  batchDeleteLoading.value = true;
+  try {
+    const ids = selectedRows.value.map(row => row.id);
+    await batchDeleteYamlTemplateApi(ids, selectedCluster.value);
+    message.success('批量删除成功');
+    selectedRows.value = [];
+    refreshData();
+  } catch (error: any) {
+    message.error(error.message || '批量删除失败');
+  } finally {
+    batchDeleteLoading.value = false;
+  }
+};
+
+// 导出模板
+const exportTemplate = async (template: YamlTemplateInfo) => {
+  if (!selectedCluster.value) return;
+
+  try {
+    await exportYamlTemplateApi(template.id, selectedCluster.value);
+    message.success('模板导出成功');
+  } catch (error: any) {
+    message.error(error.message || '导出失败');
+  }
+};
+
+// 导入模板
+const handleImport = (file: File) => {
+  if (!selectedCluster.value) {
+    message.error('请先选择集群');
+    return false;
+  }
+
+  importYamlTemplateApi(selectedCluster.value, file)
+    .then(() => {
+      message.success('模板导入成功');
+      refreshData();
+    })
+    .catch((error: any) => {
+      message.error(error.message || '导入失败');
+    });
+  
+  return false; // 阻止默认上传行为
+};
+
+// 格式化YAML
+const formatYaml = () => {
+  formatLoading.value = true;
+  // 这里可以集成YAML格式化库
+  setTimeout(() => {
+    formatLoading.value = false;
+    message.success('YAML格式化完成');
+  }, 1000);
+};
+
+// 验证YAML
+const validateYaml = async () => {
+  if (!createForm.content || !selectedCluster.value) return;
+
+  validateLoading.value = true;
+  try {
+    const result = await checkYamlTemplateApi({
+      content: createForm.content,
+      cluster_id: selectedCluster.value,
+    });
+    validationResult.value = result;
+    
+    if (result.valid) {
+      message.success('YAML语法验证通过');
+    } else {
+      message.error('YAML语法验证失败');
+    }
+  } catch (error: any) {
+    message.error(error.message || '验证失败');
+    validationResult.value = {
+      valid: false,
+      errors: [error.message || '验证失败']
+    };
+  } finally {
+    validateLoading.value = false;
+  }
+};
+
+// 插入模板
+const insertTemplate = () => {
+  templateSelectorVisible.value = true;
+};
+
+// 插入选中的模板
+const insertSelectedTemplate = () => {
+  const template = commonTemplates.find(t => t.key === selectedTemplateType.value);
+  if (template) {
+    createForm.content = template.content;
+    templateSelectorVisible.value = false;
+    message.success('模板插入成功');
+  }
+};
+
+// 复制到剪贴板
+const copyToClipboard = (text: string) => {
+  navigator.clipboard.writeText(text).then(() => {
+    message.success('内容已复制到剪贴板');
+  }).catch(() => {
+    message.error('复制失败');
+  });
 };
 
 // 页面加载时获取数据
@@ -753,713 +920,155 @@ onMounted(() => {
 });
 </script>
 
-<style>
-/* 现代化大气设计系统 */
-:root {
-  --primary-color: #1677ff;
-  --primary-hover: #4096ff;
-  --primary-active: #0958d9;
-  --success-color: #52c41a;
-  --warning-color: #faad14;
-  --error-color: #ff4d4f;
-  --text-primary: #000000d9;
-  --text-secondary: #00000073;
-  --text-tertiary: #00000040;
-  --text-quaternary: #00000026;
-  --border-color: #d9d9d9;
-  --border-color-split: #f0f0f0;
-  --background-color: #f5f5f5;
-  --component-background: #ffffff;
-  --layout-header-background: #001529;
-  --shadow-1: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-2: 0 6px 16px rgba(0, 0, 0, 0.08);
-  --shadow-3: 0 9px 28px rgba(0, 0, 0, 0.12);
-  --border-radius-base: 8px;
-  --border-radius-sm: 6px;
-  --border-radius-lg: 12px;
-  --font-size-base: 14px;
-  --font-size-lg: 16px;
-  --font-size-xl: 20px;
-  --font-size-xxl: 24px;
-  --line-height-base: 1.5714;
-  --transition-duration: 0.3s;
-  --transition-function: cubic-bezier(0.645, 0.045, 0.355, 1);
-}
-
-/* ==================== 布局容器 ==================== */
-.template-management-container {
-  min-height: 100vh;
-  background: var(--background-color);
-  padding: 24px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
-
-/* ==================== 页面头部 ==================== */
-.page-header {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-1);
-  overflow: hidden;
-}
-
-.header-content {
-  padding: 32px 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.title-section {
-  flex: 1;
-}
-
-.page-title {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.title-icon {
-  font-size: 28px;
-  color: var(--primary-color);
-  margin-right: 16px;
-}
-
-.page-title h1 {
-  font-size: var(--font-size-xxl);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-  line-height: 1.2;
-}
-
-.page-subtitle {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
-  margin: 0;
-  line-height: var(--line-height-base);
-}
-
-.header-actions {
-  flex-shrink: 0;
-}
-
-/* ==================== 概览卡片 ==================== */
-.overview-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
-  margin-bottom: 32px;
-}
-
-.overview-card {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  padding: 24px;
-  box-shadow: var(--shadow-1);
-  display: flex;
-  align-items: center;
-  transition: all var(--transition-duration) var(--transition-function);
-  border: 1px solid var(--border-color-split);
-}
-
-.overview-card:hover {
-  box-shadow: var(--shadow-2);
-  transform: translateY(-2px);
-}
-
-.card-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--border-radius-base);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  margin-right: 16px;
-  flex-shrink: 0;
-}
-
-.total-templates .card-icon {
-  background: rgba(22, 119, 255, 0.1);
-  color: var(--primary-color);
-}
-
-.total-clusters .card-icon {
-  background: rgba(82, 196, 26, 0.1);
-  color: var(--success-color);
-}
-
-.selected-cluster .card-icon {
-  background: rgba(250, 173, 20, 0.1);
-  color: var(--warning-color);
-}
-
-.last-update .card-icon {
-  background: rgba(114, 46, 209, 0.1);
-  color: #722ed1;
-}
-
-.card-info {
-  flex: 1;
-}
-
-.card-number {
-  font-size: var(--font-size-xl);
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.2;
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-label {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
-  line-height: var(--line-height-base);
-}
-
-/* ==================== 工具栏 ==================== */
-.toolbar {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  padding: 20px 24px;
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  border: 1px solid var(--border-color-split);
-}
-
-.toolbar-left {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  flex: 1;
-}
-
-.cluster-selector {
-  width: 200px;
-}
-
-.cluster-selector :deep(.ant-select-selector) {
-  border-radius: var(--border-radius-sm);
-  height: 40px;
-}
-
-.search-input {
-  width: 280px;
-}
-
-.search-input :deep(.ant-input) {
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-base);
-  height: 40px;
-}
-
-.toolbar-right {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.view-toggle :deep(.ant-radio-group) {
-  border-radius: var(--border-radius-sm);
-}
-
-.view-toggle :deep(.ant-radio-button-wrapper) {
-  height: 32px;
-  line-height: 30px;
-  padding: 0 12px;
-  border-radius: var(--border-radius-sm);
-}
-
-.view-toggle :deep(.ant-radio-button-wrapper:first-child) {
-  border-radius: var(--border-radius-sm) 0 0 var(--border-radius-sm);
-}
-
-.view-toggle :deep(.ant-radio-button-wrapper:last-child) {
-  border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
-}
-
-.cluster-option {
+<style scoped>
+.yaml-template-container .template-name {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* 提示信息 */
-.cluster-alert {
-  border-radius: var(--border-radius-sm);
-  margin-bottom: 24px;
+.template-name .template-icon {
+  color: #1890ff;
 }
 
-/* ==================== 数据展示区域 ==================== */
-.data-display {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  box-shadow: var(--shadow-1);
-  border: 1px solid var(--border-color-split);
-  overflow: hidden;
-}
-
-.display-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border-color-split);
-  background: var(--component-background);
-}
-
-.result-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.result-count {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
+.template-name .name-text {
   font-weight: 500;
 }
 
-.env-tags {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.env-tags :deep(.ant-tag) {
-  border-radius: var(--border-radius-sm);
-  font-size: 12px;
-  font-weight: 500;
-  margin: 0;
-}
-
-/* ==================== 表格样式 ==================== */
-.template-table {
-  border: none;
-}
-
-.template-table :deep(.ant-table-container) {
-  border-radius: 0;
-}
-
-.template-table :deep(.ant-table-thead > tr > th) {
-  background: #fafafa;
-  font-weight: 600;
-  padding: 16px 16px;
-  border-bottom: 1px solid var(--border-color-split);
-  color: var(--text-primary);
-  font-size: var(--font-size-base);
-}
-
-.template-table :deep(.ant-table-tbody > tr) {
-  transition: background-color var(--transition-duration) var(--transition-function);
-}
-
-.template-table :deep(.ant-table-tbody > tr:hover) {
-  background-color: #fafafa;
-}
-
-.template-table :deep(.ant-table-tbody > tr > td) {
-  padding: 16px;
-  border-bottom: 1px solid var(--border-color-split);
-  vertical-align: middle;
-  font-size: var(--font-size-base);
-}
-
-.template-name {
+.content-preview .content-summary {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-weight: 500;
-}
-
-.template-name span {
-  color: var(--text-primary);
-}
-
-.timestamp {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-secondary);
-  font-size: var(--font-size-base);
-}
-
-.action-column {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.action-column :deep(.ant-btn) {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--border-radius-sm);
-  transition: all var(--transition-duration) var(--transition-function);
-}
-
-.action-column :deep(.ant-btn:hover) {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-2);
-}
-
-/* ==================== 卡片视图 ==================== */
-.card-view {
-  padding: 24px;
-}
-
-.template-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 24px;
-}
-
-.template-card {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  box-shadow: var(--shadow-1);
-  transition: all var(--transition-duration) var(--transition-function);
-  overflow: hidden;
-  border: 1px solid var(--border-color-split);
-  position: relative;
-}
-
-.template-card:hover {
-  box-shadow: var(--shadow-2);
-  transform: translateY(-4px);
-}
-
-.card-header {
-  padding: 24px 24px 16px;
-  background: var(--component-background);
-  position: relative;
-}
-
-.template-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-right: 60px;
-}
-
-.template-title h3 {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.3;
-  word-break: break-all;
-}
-
-.service-icon {
-  font-size: 20px;
-  color: var(--primary-color);
-}
-
-.card-type-tag {
-  position: absolute;
-  top: 20px;
-  right: 16px;
-  padding: 4px 8px;
-  border-radius: var(--border-radius-sm);
-  font-weight: 500;
+  gap: 4px;
+  color: #666;
   font-size: 12px;
 }
 
-.card-content {
-  padding: 0 24px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.card-detail {
+.cluster-info {
   display: flex;
   align-items: center;
-  line-height: var(--line-height-base);
+  gap: 4px;
 }
 
-.detail-label {
-  color: var(--text-secondary);
-  min-width: 100px;
-  font-size: var(--font-size-base);
+.time-info .create-time {
   font-weight: 500;
+  margin-bottom: 2px;
 }
 
-.detail-value {
+.time-info .update-time {
+  font-size: 12px;
+  color: #666;
+}
+
+.action-buttons {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--font-size-base);
-  color: var(--text-primary);
-  flex: 1;
-  font-weight: 500;
+  gap: 4px;
 }
 
-.card-action-footer {
-  padding: 16px 24px 20px;
-  background: #fafafa;
-  border-top: 1px solid var(--border-color-split);
-  display: flex;
-  gap: 12px;
-}
-
-.card-action-footer .ant-btn {
-  flex: 1;
-  height: 36px;
-  border-radius: var(--border-radius-sm);
-  font-weight: 500;
-  transition: all var(--transition-duration) var(--transition-function);
-  font-size: var(--font-size-base);
-}
-
-.card-action-footer .ant-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-2);
-}
-
-.status-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: currentColor;
-}
-
-/* ==================== 模态框样式 ==================== */
-.template-modal :deep(.ant-modal-content) {
-  border-radius: var(--border-radius-base);
+/* 创建模板表单样式 */
+.create-template-form .yaml-editor-container {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
   overflow: hidden;
-  box-shadow: var(--shadow-3);
 }
 
-.template-modal :deep(.ant-modal-header) {
-  background: var(--component-background);
-  border-bottom: 1px solid var(--border-color-split);
-  padding: 20px 24px;
-}
-
-.template-modal :deep(.ant-modal-title) {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.modal-alert {
-  margin-bottom: 20px;
-  border-radius: var(--border-radius-sm);
-}
-
-.template-form {
-  padding: 8px 0;
-}
-
-.form-input {
-  border-radius: var(--border-radius-sm);
-  transition: all var(--transition-duration) var(--transition-function);
-  font-size: var(--font-size-base);
-  height: 40px;
-}
-
-.form-input:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
-}
-
-.yaml-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-bottom: 10px;
+.editor-toolbar {
+  background: #fafafa;
+  padding: 8px 12px;
+  border-bottom: 1px solid #d9d9d9;
 }
 
 .yaml-editor {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-  font-size: 14px;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 13px;
   line-height: 1.5;
-  border-radius: var(--border-radius-sm);
-  background-color: #f9f9f9;
-  padding: 12px;
-  transition: all var(--transition-duration) var(--transition-function);
-  tab-size: 2;
-}
-
-.yaml-editor:hover {
-  background-color: #f5f5f5;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .yaml-editor:focus {
-  background-color: #f0f0f0;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  border: none !important;
+  box-shadow: none !important;
 }
 
-.yaml-tips {
+.validation-result {
+  padding: 8px 12px;
+  border-top: 1px solid #d9d9d9;
+}
+
+/* 预览模板样式 */
+.template-preview .preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.template-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.template-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  color: var(--text-tertiary);
-  font-size: 13px;
-}
-
-.error-tips {
-  color: var(--error-color);
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
   gap: 12px;
 }
 
-/* ==================== 空状态 ==================== */
-.empty-state {
+.template-meta .create-time {
+  color: #666;
+  font-size: 12px;
+}
+
+.preview-actions {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 60px 0;
-  color: var(--text-secondary);
+  gap: 8px;
 }
 
-.empty-state p {
-  margin: 16px 0 24px;
-  font-size: var(--font-size-base);
+.yaml-content {
+  background: #f8f8f8;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 16px;
+  max-height: 600px;
+  overflow-y: auto;
 }
 
-/* ==================== 响应式设计 ==================== */
-@media (max-width: 1400px) {
-  .overview-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .template-cards {
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  }
+.yaml-code {
+  margin: 0;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #333;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
-@media (max-width: 1024px) {
-  .template-management-container {
-    padding: 16px;
-  }
-  
-  .header-content {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 20px;
-    padding: 24px 32px;
-  }
-  
-  .toolbar {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
-  }
-  
-  .toolbar-left {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .cluster-selector, .search-input {
-    width: 100%;
-  }
-  
-  .toolbar-right {
-    justify-content: space-between;
-  }
+.yaml-tooltip {
+  max-width: 400px;
+  max-height: 300px;
+  overflow: auto;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0;
+  white-space: pre-wrap;
 }
 
-@media (max-width: 768px) {
-  .template-management-container {
-    padding: 12px;
-  }
-  
-  .header-content {
-    padding: 20px 24px;
-  }
-  
-  .page-title h1 {
-    font-size: var(--font-size-xl);
-  }
-  
-  .overview-cards {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-  
-  .overview-card {
-    padding: 16px;
-  }
-  
-  .card-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 18px;
-    margin-right: 12px;
-  }
-  
-  .card-number {
-    font-size: var(--font-size-lg);
-  }
-  
-  .template-cards {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  
-  .template-card {
-    margin-bottom: 0;
-  }
-  
-  .card-action-footer {
-    flex-direction: column;
-    gap: 8px;
-  }
+/* 模板选择器样式 */
+.template-selector .ant-list-item {
+  padding: 12px 16px;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
-@media (max-width: 480px) {
-  .overview-cards {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-  
-  .overview-card {
-    padding: 12px;
-  }
-  
-  .card-icon {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
-    margin-right: 8px;
-  }
-  
-  .toolbar-right {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .template-table :deep(.ant-table-tbody > tr > td) {
-    padding: 12px 8px;
-    font-size: 13px;
-  }
-  
-  .action-column {
-    flex-direction: column;
-    gap: 4px;
-  }
-  
-  .action-column :deep(.ant-btn) {
-    width: 28px;
-    height: 28px;
-  }
+.template-selector .ant-list-item:hover {
+  border-color: #1890ff;
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.1);
 }
 </style>

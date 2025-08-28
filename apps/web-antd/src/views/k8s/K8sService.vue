@@ -11,6 +11,10 @@
           <p class="page-subtitle">管理和监控集群中的所有Service资源</p>
         </div>
         <div class="header-actions">
+          <a-button type="primary" size="large" @click="isCreateModalVisible = true">
+            <template #icon><PlusOutlined /></template>
+            创建服务
+          </a-button>
           <a-button type="primary" size="large" @click="refreshData" :loading="loading">
             <template #icon><ReloadOutlined /></template>
             刷新数据
@@ -36,24 +40,24 @@
           <CheckCircleOutlined />
         </div>
         <div class="card-info">
-          <div class="card-number">{{ loadBalancerCount }}</div>
-          <div class="card-label">LoadBalancer</div>
+          <div class="card-number">{{ activeServices }}</div>
+          <div class="card-label">活跃服务</div>
         </div>
       </div>
       
       <div class="overview-card env-types">
         <div class="card-icon">
-          <CloudServerOutlined />
+          <PartitionOutlined />
         </div>
         <div class="card-info">
-          <div class="card-number">{{ clusterIPCount }}</div>
-          <div class="card-label">ClusterIP</div>
+          <div class="card-number">{{ Object.keys(serviceTypeDistribution).length }}</div>
+          <div class="card-label">服务类型</div>
         </div>
       </div>
       
       <div class="overview-card resource-usage">
         <div class="card-icon">
-          <PartitionOutlined />
+          <GlobalOutlined />
         </div>
         <div class="card-info">
           <div class="card-number">{{ selectedNamespace }}</div>
@@ -95,6 +99,20 @@
               {{ ns }}
             </span>
           </a-select-option>
+        </a-select>
+
+        <a-select
+          v-model:value="filterServiceType"
+          placeholder="服务类型"
+          class="env-filter type-selector"
+          allow-clear
+          @change="handleTypeFilterChange"
+        >
+          <template #suffixIcon><ApiOutlined /></template>
+          <a-select-option value="ClusterIP">ClusterIP</a-select-option>
+          <a-select-option value="NodePort">NodePort</a-select-option>
+          <a-select-option value="LoadBalancer">LoadBalancer</a-select-option>
+          <a-select-option value="ExternalName">ExternalName</a-select-option>
         </a-select>
         
         <a-input-search
@@ -141,10 +159,10 @@
         <div class="result-info">
           <span class="result-count">共 {{ filteredServices.length }} 个Service</span>
           <div class="env-tags">
-            <a-tag color="blue">ClusterIP {{ clusterIPCount }}</a-tag>
-            <a-tag color="green" v-if="nodePortCount > 0">NodePort {{ nodePortCount }}</a-tag>
-            <a-tag color="purple" v-if="loadBalancerCount > 0">LoadBalancer {{ loadBalancerCount }}</a-tag>
-            <a-tag color="orange" v-if="externalNameCount > 0">ExternalName {{ externalNameCount }}</a-tag>
+            <a-tag v-for="(count, type) in serviceTypeDistribution" :key="type" :color="getServiceTypeColor(type)">
+              {{ type }} {{ count }}
+            </a-tag>
+            <a-tag color="blue">{{ selectedNamespace }}</a-tag>
           </div>
         </div>
       </div>
@@ -157,23 +175,23 @@
         :row-selection="rowSelection"
         :loading="loading"
         row-key="uid"
-        :pagination="{ 
-          pageSize: 12, 
-          showSizeChanger: true, 
+        :pagination="{
+          current: currentPage,
+          pageSize: pageSize,
+          total: totalItems,
+          showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total: number) => `共 ${total} 条数据`,
+          showTotal: (total: number, range: number[]) => `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
           pageSizeOptions: ['12', '24', '48', '96']
         }"
+        @change="handleTableChange"
         class="cluster-table services-table"
       >
         <!-- Service名称列 -->
-        <template #name="{ text, record }">
+        <template #name="{ text }">
           <div class="cluster-name service-name">
             <ApiOutlined />
             <span>{{ text }}</span>
-            <a-tag v-if="isLoadBalancerReady(record)" color="success" class="lb-tag">
-              <CheckCircleOutlined /> LB Ready
-            </a-tag>
           </div>
         </template>
 
@@ -184,36 +202,50 @@
           </a-tag>
         </template>
         
-        <!-- Service类型列 -->
+        <!-- 类型列 -->
         <template #type="{ text }">
-          <a-tag :color="getServiceTypeColor(text)" class="env-tag service-type-tag">
+          <a-tag :color="getServiceTypeColor(text)" class="type-tag">
             {{ text }}
           </a-tag>
         </template>
 
-        <!-- Cluster IP列 -->
-        <template #clusterIP="{ text }">
-          <div class="timestamp ip-address">
-            <CloudServerOutlined />
+        <!-- 集群IP列 -->
+        <template #cluster_ip="{ text }">
+          <div class="ip-address">
+            <GlobalOutlined />
             <span>{{ text }}</span>
           </div>
         </template>
 
-        <!-- Ports列 -->
-        <template #ports="{ text }">
-          <div class="port-list">
-            <a-tag v-for="(port, index) in text" :key="index" class="port-tag">
-              {{ port.port }}:{{ port.targetPort }}/{{ port.protocol }}
+        <!-- 端口列 -->
+        <template #ports="{ record }">
+          <div class="ports-info">
+            <a-tag v-for="port in record.ports.slice(0, 2)" :key="`${port.port}-${port.protocol}`" color="blue" class="port-tag">
+              {{ port.port }}{{ port.target_port ? ':' + port.target_port : '' }}/{{ port.protocol }}
+            </a-tag>
+            <a-tag v-if="record.ports.length > 2" color="default">
+              +{{ record.ports.length - 2 }}
             </a-tag>
           </div>
         </template>
 
+        <!-- 端点列 -->
+        <template #endpoints="{ record }">
+          <div class="endpoints-info">
+            <a-badge :count="record.endpoints?.length || 0" :number-style="{ backgroundColor: '#52c41a' }">
+              <a-button type="link" size="small" @click="viewEndpoints(record)">
+                端点
+              </a-button>
+            </a-badge>
+          </div>
+        </template>
+
         <!-- 创建时间列 -->
-        <template #creationTimestamp="{ text }">
+        <template #creationTimestamp="{ record }">
           <div class="timestamp">
             <ClockCircleOutlined />
-            <a-tooltip :title="formatDateTime(text)">
-              <span>{{ formatDate(text) }}</span>
+            <a-tooltip :title="formatDateTime(record.creation_timestamp)">
+              <span>{{ formatDate(record.creation_timestamp) }}</span>
             </a-tooltip>
           </div>
         </template>
@@ -222,20 +254,44 @@
         <template #action="{ record }">
           <div class="action-column">
             <a-tooltip title="查看 YAML">
-              <a-button type="primary" ghost shape="circle" @click="viewServiceYaml(record)">
+              <a-button type="primary" ghost shape="circle" size="small" @click="viewServiceYaml(record)">
                 <template #icon><CodeOutlined /></template>
+              </a-button>
+            </a-tooltip>
+
+            <a-tooltip title="端点详情">
+              <a-button type="primary" ghost shape="circle" size="small" @click="viewEndpoints(record)">
+                <template #icon><LinkOutlined /></template>
+              </a-button>
+            </a-tooltip>
+
+            <a-tooltip title="端口转发">
+              <a-button type="primary" ghost shape="circle" size="small" @click="showPortForward(record)">
+                <template #icon><SwapOutlined /></template>
+              </a-button>
+            </a-tooltip>
+
+            <a-tooltip title="连通性测试">
+              <a-button type="primary" ghost shape="circle" size="small" @click="testConnectivity(record)" :loading="testingConnectivity[record.uid]">
+                <template #icon><ExperimentOutlined /></template>
+              </a-button>
+            </a-tooltip>
+
+            <a-tooltip title="编辑服务">
+              <a-button type="primary" ghost shape="circle" size="small" @click="handleEdit(record)">
+                <template #icon><EditOutlined /></template>
               </a-button>
             </a-tooltip>
             
             <a-tooltip title="删除服务">
               <a-popconfirm
-                title="确定要删除该 Service 吗?"
+                title="确定要删除该服务吗?"
                 description="此操作不可撤销"
                 @confirm="handleDelete(record)"
                 ok-text="确定"
                 cancel-text="取消"
               >
-                <a-button type="primary" danger ghost shape="circle">
+                <a-button type="primary" danger ghost shape="circle" size="small">
                   <template #icon><DeleteOutlined /></template>
                 </a-button>
               </a-popconfirm>
@@ -267,15 +323,15 @@
           </a-empty>
           <div v-else class="cluster-cards service-cards">
             <a-checkbox-group v-model:value="selectedCardIds" class="card-checkbox-group">
-              <div v-for="service in filteredServices" :key="service.metadata.uid" class="cluster-card service-card">
+              <div v-for="service in filteredServices" :key="service.uid" class="cluster-card service-card">
                 <div class="card-header">
-                  <a-checkbox :value="service.metadata.uid" class="card-checkbox" />
+                  <a-checkbox :value="service.uid" class="card-checkbox" />
                   <div class="service-title">
                     <ApiOutlined class="service-icon" />
-                    <h3>{{ service.metadata.name }}</h3>
+                    <h3>{{ service.name }}</h3>
                   </div>
-                  <a-tag :color="getServiceTypeColor(service.spec.type)" class="card-type-tag env-tag">
-                    {{ service.spec.type }}
+                  <a-tag :color="getServiceTypeColor(service.type)" class="card-type-tag type-tag">
+                    {{ service.type }}
                   </a-tag>
                 </div>
                 
@@ -284,34 +340,35 @@
                     <span class="detail-label">命名空间:</span>
                     <span class="detail-value">
                       <AppstoreOutlined />
-                      {{ service.metadata.namespace }}
+                      {{ service.namespace }}
                     </span>
                   </div>
                   <div class="card-detail">
-                    <span class="detail-label">Cluster IP:</span>
+                    <span class="detail-label">集群IP:</span>
                     <span class="detail-value">
-                      <CloudServerOutlined />
-                      {{ service.spec.clusterIP }}
+                      <GlobalOutlined />
+                      {{ service.cluster_ip }}
                     </span>
+                  </div>
+                  <div class="card-detail">
+                    <span class="detail-label">端口:</span>
+                    <span class="detail-value">
+                      <a-tag v-for="port in service.ports.slice(0, 2)" :key="`${port.port}-${port.protocol}`" color="blue" size="small">
+                        {{ port.port }}/{{ port.protocol }}
+                      </a-tag>
+                      <span v-if="service.ports.length > 2">+{{ service.ports.length - 2 }}</span>
+                    </span>
+                  </div>
+                  <div class="card-detail">
+                    <span class="detail-label">端点:</span>
+                    <span class="detail-value">{{ service.endpoints?.length || 0 }}</span>
                   </div>
                   <div class="card-detail">
                     <span class="detail-label">创建时间:</span>
                     <span class="detail-value">
                       <ClockCircleOutlined />
-                      {{ formatDate(service.metadata.creationTimestamp) }}
+                      {{ formatDate(service.creation_timestamp) }}
                     </span>
-                  </div>
-                  <div class="card-ports card-detail">
-                    <span class="detail-label">端口映射:</span>
-                    <div class="detail-value port-tags">
-                      <a-tag 
-                        v-for="(port, index) in service.spec.ports" 
-                        :key="index"
-                        class="port-tag"
-                      >
-                        {{ port.port }}:{{ port.targetPort }}/{{ port.protocol }}
-                      </a-tag>
-                    </div>
                   </div>
                 </div>
                 
@@ -320,8 +377,16 @@
                     <template #icon><CodeOutlined /></template>
                     YAML
                   </a-button>
+                  <a-button type="primary" ghost size="small" @click="viewEndpoints(service)">
+                    <template #icon><LinkOutlined /></template>
+                    端点
+                  </a-button>
+                  <a-button type="primary" ghost size="small" @click="handleEdit(service)">
+                    <template #icon><EditOutlined /></template>
+                    编辑
+                  </a-button>
                   <a-popconfirm
-                    title="确定要删除该 Service 吗?"
+                    title="确定要删除该服务吗?"
                     @confirm="handleDelete(service)"
                     ok-text="确定"
                     cancel-text="取消"
@@ -349,10 +414,10 @@
     >
       <a-alert v-if="currentService" class="modal-alert" type="info" show-icon>
         <template #message>
-          <span>{{ currentService.metadata.name }} ({{ currentService.metadata.namespace }})</span>
+          <span>{{ currentService.name }} ({{ currentService.namespace }})</span>
         </template>
         <template #description>
-          <div>类型: {{ currentService.spec.type }} | 创建于: {{ formatDate(currentService.metadata.creationTimestamp) }}</div>
+          <div>类型: {{ currentService.type }} | 集群IP: {{ currentService.cluster_ip }}</div>
         </template>
       </a-alert>
       
@@ -364,19 +429,115 @@
       </div>
       <pre class="yaml-editor">{{ serviceYaml }}</pre>
     </a-modal>
+
+    <!-- 端点详情模态框 -->
+    <a-modal
+      v-model:open="endpointsModalVisible"
+      title="Service 端点详情"
+      width="800px"
+      class="cluster-modal"
+      :footer="null"
+    >
+      <a-alert v-if="currentService" class="modal-alert" type="info" show-icon>
+        <template #message>
+          <span>{{ currentService.name }} ({{ currentService.namespace }})</span>
+        </template>
+        <template #description>
+          <div>端点总数: {{ serviceEndpoints.length }}</div>
+        </template>
+      </a-alert>
+
+      <a-table 
+        :data-source="serviceEndpoints" 
+        :columns="[
+          { title: 'IP地址', dataIndex: 'ip', key: 'ip' },
+          { title: '端口', dataIndex: 'port', key: 'port', width: '100px' },
+          { title: '协议', dataIndex: 'protocol', key: 'protocol', width: '100px' },
+          { title: '状态', key: 'ready', width: '100px' },
+          { title: '节点', dataIndex: 'node_name', key: 'node_name' }
+        ]"
+        :loading="endpointsLoading"
+        :pagination="false"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'ready'">
+            <a-tag :color="record.ready ? 'green' : 'red'">
+              {{ record.ready ? '就绪' : '未就绪' }}
+            </a-tag>
+          </template>
+        </template>
+      </a-table>
+    </a-modal>
+
+    <!-- 端口转发模态框 -->
+    <a-modal
+      v-model:open="portForwardModalVisible"
+      title="Service 端口转发"
+      @ok="confirmPortForward"
+      @cancel="portForwardModalVisible = false"
+      :confirmLoading="loading"
+      class="cluster-modal"
+    >
+      <a-alert v-if="currentService" class="modal-alert" type="info" show-icon>
+        <template #message>
+          <span>{{ currentService.name }} ({{ currentService.namespace }})</span>
+        </template>
+        <template #description>
+          <div>配置端口转发规则</div>
+        </template>
+      </a-alert>
+
+      <a-form layout="vertical">
+        <a-form-item label="端口映射" required>
+          <div v-for="(mapping, index) in portMappings" :key="index" class="port-mapping-item">
+            <a-input-number 
+              v-model:value="mapping.local_port" 
+              placeholder="本地端口" 
+              :min="1" 
+              :max="65535" 
+              style="width: 120px"
+            />
+            <span style="margin: 0 8px;">→</span>
+            <a-input-number 
+              v-model:value="mapping.remote_port" 
+              placeholder="远程端口" 
+              :min="1" 
+              :max="65535" 
+              style="width: 120px"
+            />
+            <a-button type="link" danger @click="removePortMapping(index)" v-if="portMappings.length > 1">
+              <template #icon><DeleteOutlined /></template>
+            </a-button>
+          </div>
+          <a-button type="dashed" @click="addPortMapping" block>
+            <template #icon><PlusOutlined /></template>
+            添加端口映射
+          </a-button>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { message } from 'ant-design-vue';
-import { useRoute } from 'vue-router';
 import {
-  getServiceListApi,
+  getServiceListWithFilterApi,
   getServiceYamlApi,
   deleteServiceApi,
+  batchDeleteServiceApi,
+  getServiceEndpointsApi,
+  portForwardServiceApi,
+  testServiceConnectivityApi,
   getAllClustersApi,
   getNamespacesByClusterIdApi,
+} from '#/api';
+import type { 
+  ServiceInfo, 
+  ServiceListReq,
+  ServiceEndpoint,
+  PortForwardPort 
 } from '#/api';
 import { 
   CloudServerOutlined, 
@@ -390,57 +551,47 @@ import {
   CheckCircleOutlined,
   CopyOutlined,
   ClusterOutlined,
-  PartitionOutlined
+  PartitionOutlined,
+  GlobalOutlined,
+  PlusOutlined,
+  EditOutlined,
+  LinkOutlined,
+  SwapOutlined,
+  ExperimentOutlined
 } from '@ant-design/icons-vue';
 
-// 类型定义
-interface ServicePort {
-  name: string;
-  protocol: string;
-  port: number;
-  targetPort: number;
-}
-
-interface Service {
-  metadata: {
-    name: string;
-    namespace: string;
-    uid: string;
-    creationTimestamp: string;
-  };
-  spec: {
-    type: string;
-    clusterIP: string;
-    ports: ServicePort[];
-    selector: Record<string, string>;
-  };
-  status: {
-    loadBalancer: Record<string, any>;
-  };
-}
-
 // 状态变量
-const route = useRoute();
 const loading = ref(false);
 const clustersLoading = ref(false);
 const namespacesLoading = ref(false);
-const services = ref<Service[]>([]);
+const endpointsLoading = ref(false);
+const services = ref<ServiceInfo[]>([]);
 const searchText = ref('');
-const selectedRows = ref<Service[]>([]);
+const filterServiceType = ref<string | undefined>(undefined);
+const selectedRows = ref<ServiceInfo[]>([]);
 const namespaces = ref<string[]>(['default']);
 const selectedNamespace = ref<string>('default');
 const viewYamlModalVisible = ref(false);
+const endpointsModalVisible = ref(false);
+const portForwardModalVisible = ref(false);
 const serviceYaml = ref('');
 const clusters = ref<Array<{id: number, name: string}>>([]);
 const selectedCluster = ref<number>();
 const viewMode = ref<'table' | 'card'>('table');
-const currentService = ref<Service | null>(null);
+const currentService = ref<ServiceInfo | null>(null);
 const selectedCardIds = ref<string[]>([]);
+const currentPage = ref(1);
+const pageSize = ref(12);
+const totalItems = ref(0);
+const isCreateModalVisible = ref(false);
+const serviceEndpoints = ref<ServiceEndpoint[]>([]);
+const testingConnectivity = ref<Record<string, boolean>>({});
+const portMappings = ref<PortForwardPort[]>([{ local_port: 8080, remote_port: 80 }]);
 
 // 根据卡片选择更新 selectedRows
 watch(selectedCardIds, (newValue) => {
   selectedRows.value = services.value.filter(service => 
-    newValue.includes(service.metadata.uid)
+    newValue.includes(service.uid)
   );
 });
 
@@ -448,23 +599,23 @@ watch(selectedCardIds, (newValue) => {
 const columns = [
   {
     title: 'Service 名称',
-    dataIndex: ['metadata', 'name'],
+    dataIndex: 'name',
     key: 'name',
     slots: { customRender: 'name' },
-    width: '20%',
-    sorter: (a: Service, b: Service) => a.metadata.name.localeCompare(b.metadata.name),
+    width: '16%',
+    sorter: (a: ServiceInfo, b: ServiceInfo) => a.name.localeCompare(b.name),
   },
   {
     title: '命名空间',
-    dataIndex: ['metadata', 'namespace'],
+    dataIndex: 'namespace',
     key: 'namespace',
     width: '12%',
     slots: { customRender: 'namespace' },
-    sorter: (a: Service, b: Service) => a.metadata.namespace.localeCompare(b.metadata.namespace),
+    sorter: (a: ServiceInfo, b: ServiceInfo) => a.namespace.localeCompare(b.namespace),
   },
   {
     title: '类型',
-    dataIndex: ['spec', 'type'],
+    dataIndex: 'type',
     key: 'type',
     width: '10%',
     slots: { customRender: 'type' },
@@ -474,34 +625,39 @@ const columns = [
       { text: 'LoadBalancer', value: 'LoadBalancer' },
       { text: 'ExternalName', value: 'ExternalName' },
     ],
-    onFilter: (value: string, record: Service) => record.spec.type === value,
+    onFilter: (value: string, record: ServiceInfo) => record.type === value,
   },
   {
-    title: 'Cluster IP',
-    dataIndex: ['spec', 'clusterIP'],
-    key: 'clusterIP',
-    width: '15%',
-    slots: { customRender: 'clusterIP' },
+    title: '集群IP',
+    dataIndex: 'cluster_ip',
+    key: 'cluster_ip',
+    width: '12%',
+    slots: { customRender: 'cluster_ip' },
   },
   {
-    title: '端口映射',
-    dataIndex: ['spec', 'ports'],
+    title: '端口',
     key: 'ports',
-    width: '20%',
+    width: '15%',
     slots: { customRender: 'ports' },
   },
   {
+    title: '端点',
+    key: 'endpoints',
+    width: '8%',
+    slots: { customRender: 'endpoints' },
+  },
+  {
     title: '创建时间',
-    dataIndex: ['metadata', 'creationTimestamp'],
+    dataIndex: 'creation_timestamp',
     key: 'creationTimestamp',
-    width: '15%',
-    sorter: (a: Service, b: Service) => new Date(a.metadata.creationTimestamp).getTime() - new Date(b.metadata.creationTimestamp).getTime(),
+    width: '12%',
+    sorter: (a: ServiceInfo, b: ServiceInfo) => new Date(a.creation_timestamp).getTime() - new Date(b.creation_timestamp).getTime(),
     slots: { customRender: 'creationTimestamp' },
   },
   {
     title: '操作',
     key: 'action',
-    width: '12%',
+    width: '15%',
     fixed: 'right',
     slots: { customRender: 'action' },
   },
@@ -510,47 +666,61 @@ const columns = [
 // 计算属性：过滤后的Service列表
 const filteredServices = computed(() => {
   const searchValue = searchText.value.toLowerCase().trim();
-  if (!searchValue) return services.value;
-  return services.value.filter(svc => 
-    svc.metadata.name.toLowerCase().includes(searchValue) ||
-    svc.spec.type.toLowerCase().includes(searchValue) ||
-    svc.spec.clusterIP.toLowerCase().includes(searchValue)
-  );
+  let filtered = services.value;
+  
+  // 按名称搜索
+  if (searchValue) {
+    filtered = filtered.filter(service => 
+      service.name.toLowerCase().includes(searchValue)
+    );
+  }
+  
+  // 按类型过滤
+  if (filterServiceType.value) {
+    filtered = filtered.filter(service => service.type === filterServiceType.value);
+  }
+  
+  return filtered;
 });
 
-// 计算属性：Service类型统计
-const loadBalancerCount = computed(() => 
-  services.value.filter(svc => svc.spec.type === 'LoadBalancer').length
+// 计算属性：活跃服务数量
+const activeServices = computed(() => 
+  services.value.filter(service => service.endpoints && service.endpoints.length > 0).length
 );
 
-const clusterIPCount = computed(() => 
-  services.value.filter(svc => svc.spec.type === 'ClusterIP').length
-);
+// 服务类型分布统计
+const serviceTypeDistribution = computed(() => {
+  const distribution: Record<string, number> = {};
+  services.value.forEach(service => {
+    const type = service.type || 'Unknown';
+    if (!distribution[type]) {
+      distribution[type] = 0;
+    }
+    distribution[type]++;
+  });
+  return distribution;
+});
 
-const nodePortCount = computed(() => 
-  services.value.filter(svc => svc.spec.type === 'NodePort').length
-);
-
-const externalNameCount = computed(() => 
-  services.value.filter(svc => svc.spec.type === 'ExternalName').length
-);
-
-// 生成服务类型的颜色
+// 获取服务类型颜色
 const getServiceTypeColor = (type: string) => {
-  switch (type) {
-    case 'ClusterIP': return 'blue';
-    case 'NodePort': return 'green';
-    case 'LoadBalancer': return 'purple';
-    case 'ExternalName': return 'orange';
-    default: return 'default';
-  }
+  const typeColors: Record<string, string> = {
+    ClusterIP: 'blue',
+    NodePort: 'green',
+    LoadBalancer: 'orange',
+    ExternalName: 'purple',
+  };
+  return typeColors[type] || 'default';
 };
 
-// 检查负载均衡器是否就绪
-const isLoadBalancerReady = (service: Service) => {
-  return service.spec.type === 'LoadBalancer' && 
-         service.status?.loadBalancer?.ingress && 
-         service.status.loadBalancer.ingress.length > 0;
+// 表格选择配置
+const rowSelection = {
+  onChange: (_: string[], selectedRowsData: ServiceInfo[]) => {
+    selectedRows.value = selectedRowsData;
+    selectedCardIds.value = selectedRowsData.map(row => row.uid);
+  },
+  getCheckboxProps: (_: ServiceInfo) => ({
+    disabled: false,
+  }),
 };
 
 // 格式化日期
@@ -565,17 +735,6 @@ const formatDateTime = (dateString: string): string => {
   if (!dateString) return '-';
   const date = new Date(dateString);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-};
-
-// 表格选择配置
-const rowSelection = {
-  onChange: (selectedRowKeys: string[], selectedRowsData: Service[]) => {
-    selectedRows.value = selectedRowsData;
-    selectedCardIds.value = selectedRowsData.map(row => row.metadata.uid);
-  },
-  getCheckboxProps: (record: Service) => ({
-    disabled: false, // 可以根据条件禁用某些行的选择
-  }),
 };
 
 // 复制YAML
@@ -598,7 +757,7 @@ const getClusters = async () => {
       selectedCluster.value = clusters.value[0]?.id;
       if (selectedCluster.value) {
         await getNamespaces();
-        await getServices();
+        await getServices(1, pageSize.value);
       }
     }
   } catch (error: any) {
@@ -631,8 +790,8 @@ const getNamespaces = async () => {
   }
 };
 
-// 获取Service列表
-const getServices = async () => {
+// 获取Service列表（支持分页）
+const getServices = async (page = 1, size = pageSize.value) => {
   if (!selectedCluster.value || !selectedNamespace.value) {
     message.warning('请先选择集群和命名空间');
     return;
@@ -640,12 +799,30 @@ const getServices = async () => {
   
   loading.value = true;
   try {
-    const res = await getServiceListApi(selectedCluster.value, selectedNamespace.value);
+    const params: ServiceListReq = {
+      cluster_id: selectedCluster.value,
+      namespace: selectedNamespace.value,
+      page,
+      page_size: size
+    };
+    
+    if (filterServiceType.value) {
+      params.type = filterServiceType.value;
+    }
+    
+    const res = await getServiceListWithFilterApi(params);
     services.value = res || [];
+    
+    // 默认设置总数为当前数据长度（如果API未返回分页信息）
+    totalItems.value = services.value.length;
+    
+    currentPage.value = page;
     selectedRows.value = [];
     selectedCardIds.value = [];
   } catch (error: any) {
     message.error(error.message || '获取Service列表失败');
+    services.value = [];
+    totalItems.value = 0;
   } finally {
     loading.value = false;
   }
@@ -653,20 +830,26 @@ const getServices = async () => {
 
 // 刷新数据
 const refreshData = () => {
-  getServices();
+  getServices(currentPage.value, pageSize.value);
 };
 
 // 搜索
 const onSearch = () => {
-  // 搜索逻辑已经在计算属性中实现，这里可以添加其他触发行为
+  // 搜索逻辑已经在计算属性中实现
+};
+
+// 类型筛选变化
+const handleTypeFilterChange = () => {
+  currentPage.value = 1;
+  getServices(1, pageSize.value);
 };
 
 // 查看Service YAML
-const viewServiceYaml = async (service: Service) => {
+const viewServiceYaml = async (service: ServiceInfo) => {
   if (!selectedCluster.value) return;
   try {
     currentService.value = service;
-    const res = await getServiceYamlApi(selectedCluster.value, service.metadata.name, service.metadata.namespace);
+    const res = await getServiceYamlApi(selectedCluster.value, service.name, service.namespace);
     serviceYaml.value = typeof res === 'string' ? res : JSON.stringify(res, null, 2);
     viewYamlModalVisible.value = true;
   } catch (error: any) {
@@ -674,14 +857,99 @@ const viewServiceYaml = async (service: Service) => {
   }
 };
 
+// 查看端点
+const viewEndpoints = async (service: ServiceInfo) => {
+  if (!selectedCluster.value) return;
+  try {
+    currentService.value = service;
+    endpointsLoading.value = true;
+    const endpoints = await getServiceEndpointsApi(selectedCluster.value, service.namespace, service.name);
+    serviceEndpoints.value = endpoints || [];
+    endpointsModalVisible.value = true;
+  } catch (error: any) {
+    message.error(error.message || '获取端点信息失败');
+  } finally {
+    endpointsLoading.value = false;
+  }
+};
+
+// 显示端口转发
+const showPortForward = (service: ServiceInfo) => {
+  currentService.value = service;
+  // 初始化端口映射，使用服务的第一个端口
+  if (service.ports && service.ports.length > 0) {
+    const firstPort = service.ports[0];
+    if (firstPort) {
+      portMappings.value = [{
+        local_port: firstPort.port,
+        remote_port: firstPort.port
+      }];
+    }
+  }
+  portForwardModalVisible.value = true;
+};
+
+// 确认端口转发
+const confirmPortForward = async () => {
+  if (!currentService.value || !selectedCluster.value) return;
+  
+  try {
+    loading.value = true;
+    await portForwardServiceApi(
+      selectedCluster.value,
+      currentService.value.namespace,
+      currentService.value.name,
+      portMappings.value
+    );
+    
+    message.success('端口转发已配置');
+    portForwardModalVisible.value = false;
+  } catch (error: any) {
+    message.error(error.message || '端口转发配置失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 添加端口映射
+const addPortMapping = () => {
+  portMappings.value.push({ local_port: 8080, remote_port: 80 });
+};
+
+// 移除端口映射
+const removePortMapping = (index: number) => {
+  portMappings.value.splice(index, 1);
+};
+
+// 连通性测试
+const testConnectivity = async (service: ServiceInfo) => {
+  if (!selectedCluster.value) return;
+  
+  testingConnectivity.value[service.uid] = true;
+  try {
+    await testServiceConnectivityApi(selectedCluster.value, service.namespace, service.name);
+    message.success(`Service ${service.name} 连通性测试通过`);
+  } catch (error: any) {
+    message.error(error.message || '连通性测试失败');
+  } finally {
+    testingConnectivity.value[service.uid] = false;
+  }
+};
+
+// 编辑服务
+const handleEdit = (_: ServiceInfo) => {
+  // 编辑功能
+  message.info('编辑功能开发中...');
+};
+
 // 删除Service
-const handleDelete = async (service: Service) => {
+const handleDelete = async (service: ServiceInfo) => {
   if (!selectedCluster.value) return;
   
   try {
-    await deleteServiceApi(selectedCluster.value, service.metadata.namespace, service.metadata.name);
+    await deleteServiceApi(selectedCluster.value, service.namespace, service.name);
     message.success('Service删除成功');
-    getServices();
+    getServices(currentPage.value, pageSize.value);
   } catch (error: any) {
     message.error(error.message || '删除Service失败');
   }
@@ -693,15 +961,16 @@ const handleBatchDelete = async () => {
   
   try {
     loading.value = true;
-    const promises = selectedRows.value.map(service => 
-      deleteServiceApi(selectedCluster.value!, service.metadata.namespace, service.metadata.name)
-    );
+    await batchDeleteServiceApi({
+      cluster_id: selectedCluster.value,
+      namespace: selectedNamespace.value,
+      names: selectedRows.value.map(s => s.name)
+    });
     
-    await Promise.all(promises);
     message.success(`成功删除 ${selectedRows.value.length} 个服务`);
     selectedRows.value = [];
     selectedCardIds.value = [];
-    getServices();
+    getServices(currentPage.value, pageSize.value);
   } catch (error: any) {
     message.error(error.message || '批量删除失败');
   } finally {
@@ -711,15 +980,25 @@ const handleBatchDelete = async () => {
 
 // 切换命名空间
 const handleNamespaceChange = () => {
-  getServices();
+  currentPage.value = 1;
+  getServices(1, pageSize.value);
 };
 
 // 切换集群
 const handleClusterChange = () => {
   selectedNamespace.value = 'default';
   services.value = [];
+  currentPage.value = 1;
+  totalItems.value = 0;
   getNamespaces();
-  getServices();
+  getServices(1, pageSize.value);
+};
+
+// 分页处理
+const handleTableChange = (pagination: any) => {
+  currentPage.value = pagination.current;
+  pageSize.value = pagination.pageSize;
+  getServices(pagination.current, pagination.pageSize);
 };
 
 // 页面加载时获取数据
@@ -729,320 +1008,25 @@ onMounted(() => {
 </script>
 
 <style>
-/* 现代化大气设计系统 */
-:root {
-  --primary-color: #1677ff;
-  --primary-hover: #4096ff;
-  --primary-active: #0958d9;
-  --success-color: #52c41a;
-  --warning-color: #faad14;
-  --error-color: #ff4d4f;
-  --text-primary: #000000d9;
-  --text-secondary: #00000073;
-  --text-tertiary: #00000040;
-  --text-quaternary: #00000026;
-  --border-color: #d9d9d9;
-  --border-color-split: #f0f0f0;
-  --background-color: #f5f5f5;
-  --component-background: #ffffff;
-  --layout-header-background: #001529;
-  --shadow-1: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-2: 0 6px 16px rgba(0, 0, 0, 0.08);
-  --shadow-3: 0 9px 28px rgba(0, 0, 0, 0.12);
-  --border-radius-base: 8px;
-  --border-radius-sm: 6px;
-  --border-radius-lg: 12px;
-  --font-size-base: 14px;
-  --font-size-lg: 16px;
-  --font-size-xl: 20px;
-  --font-size-xxl: 24px;
-  --line-height-base: 1.5714;
-  --transition-duration: 0.3s;
-  --transition-function: cubic-bezier(0.645, 0.045, 0.355, 1);
-}
-
-/* ==================== 布局容器 ==================== */
-.cluster-management-container {
-  min-height: 100vh;
-  background: var(--background-color);
-  padding: 24px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
-
-/* ==================== 页面头部 ==================== */
-.page-header {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-1);
-  overflow: hidden;
-}
-
-.header-content {
-  padding: 32px 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.title-section {
-  flex: 1;
-}
-
-.page-title {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.title-icon {
-  font-size: 28px;
-  color: var(--primary-color);
-  margin-right: 16px;
-}
-
-.page-title h1 {
-  font-size: var(--font-size-xxl);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-  line-height: 1.2;
-}
-
-.page-subtitle {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
-  margin: 0;
-  line-height: var(--line-height-base);
-}
-
-.header-actions {
-  flex-shrink: 0;
-}
-
-/* ==================== 概览卡片 ==================== */
-.overview-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
-  margin-bottom: 32px;
-}
-
-.overview-card {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  padding: 24px;
-  box-shadow: var(--shadow-1);
-  display: flex;
-  align-items: center;
-  transition: all var(--transition-duration) var(--transition-function);
-  border: 1px solid var(--border-color-split);
-}
-
-.overview-card:hover {
-  box-shadow: var(--shadow-2);
-  transform: translateY(-2px);
-}
-
-.card-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--border-radius-base);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  margin-right: 16px;
-  flex-shrink: 0;
-}
-
-.total-clusters .card-icon {
-  background: rgba(22, 119, 255, 0.1);
-  color: var(--primary-color);
-}
-
-.running-clusters .card-icon {
-  background: rgba(82, 196, 26, 0.1);
-  color: var(--success-color);
-}
-
-.env-types .card-icon {
-  background: rgba(250, 173, 20, 0.1);
-  color: var(--warning-color);
-}
-
-.resource-usage .card-icon {
-  background: rgba(114, 46, 209, 0.1);
-  color: #722ed1;
-}
-
-.card-info {
-  flex: 1;
-}
-
-.card-number {
-  font-size: var(--font-size-xl);
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.2;
+/* 继承现有样式系统 */
+/* 端口标签样式 */
+.port-tag {
+  margin-right: 4px;
   margin-bottom: 4px;
 }
 
-.card-label {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
-  line-height: var(--line-height-base);
-}
-
-/* ==================== 工具栏 ==================== */
-.toolbar {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  padding: 20px 24px;
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-1);
+.ports-info {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  border: 1px solid var(--border-color-split);
-}
-
-.toolbar-left {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  flex: 1;
-}
-
-.search-input {
-  width: 320px;
-}
-
-.search-input :deep(.ant-input) {
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-base);
-  height: 40px;
-}
-
-.env-filter {
-  width: 160px;
-}
-
-.env-filter :deep(.ant-select-selector) {
-  border-radius: var(--border-radius-sm);
-  height: 40px;
-}
-
-.toolbar-right {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.view-toggle :deep(.ant-radio-group) {
-  border-radius: var(--border-radius-sm);
-}
-
-.view-toggle :deep(.ant-radio-button-wrapper) {
-  height: 32px;
-  line-height: 30px;
-  padding: 0 12px;
-  border-radius: var(--border-radius-sm);
-}
-
-.view-toggle :deep(.ant-radio-button-wrapper:first-child) {
-  border-radius: var(--border-radius-sm) 0 0 var(--border-radius-sm);
-}
-
-.view-toggle :deep(.ant-radio-button-wrapper:last-child) {
-  border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
-}
-
-.cluster-option, .namespace-option {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* ==================== 数据展示区域 ==================== */
-.data-display {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  box-shadow: var(--shadow-1);
-  border: 1px solid var(--border-color-split);
-  overflow: hidden;
-}
-
-.display-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border-color-split);
-  background: var(--component-background);
-}
-
-.result-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.result-count {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.env-tags {
-  display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 4px;
 }
 
-.env-tags :deep(.ant-tag) {
-  border-radius: var(--border-radius-sm);
-  font-size: 12px;
-  font-weight: 500;
-  margin: 0;
-}
-
-/* ==================== 表格样式 ==================== */
-.cluster-table {
-  border: none;
-}
-
-.cluster-table :deep(.ant-table-container) {
-  border-radius: 0;
-}
-
-.cluster-table :deep(.ant-table-thead > tr > th) {
-  background: #fafafa;
-  font-weight: 600;
-  padding: 16px 16px;
-  border-bottom: 1px solid var(--border-color-split);
-  color: var(--text-primary);
-  font-size: var(--font-size-base);
-}
-
-.cluster-table :deep(.ant-table-tbody > tr) {
-  transition: background-color var(--transition-duration) var(--transition-function);
-}
-
-.cluster-table :deep(.ant-table-tbody > tr:hover) {
-  background-color: #fafafa;
-}
-
-.cluster-table :deep(.ant-table-tbody > tr > td) {
-  padding: 16px;
-  border-bottom: 1px solid var(--border-color-split);
-  vertical-align: middle;
-  font-size: var(--font-size-base);
-}
-
-.cluster-name {
+.endpoints-info {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  justify-content: center;
+}
+
+.type-tag {
   font-weight: 500;
 }
 
@@ -1053,410 +1037,29 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.service-icon {
-  color: var(--primary-color);
-  font-size: 20px;
+.service-cards .service-card {
+  border: 1px solid var(--border-color-split);
 }
 
-.lb-tag {
-  margin-left: 8px;
-}
-
-.namespace-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #e6f7ff;
-  color: #1890ff;
-  border: 1px solid #91d5ff;
-  font-size: 13px;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.env-tag, .service-type-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 500;
-  padding: 4px 12px;
-  border-radius: var(--border-radius-base);
-  font-size: 12px;
-  border: none;
-}
-
-.port-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.port-tag {
-  margin: 0 !important;
-  border-radius: 12px;
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  padding: 2px 8px;
-}
-
-.timestamp {
+.port-mapping-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--text-secondary);
-  font-size: var(--font-size-base);
+  margin-bottom: 8px;
 }
 
-.ip-address {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: 'Courier New', monospace;
-  color: #595959;
+.port-mapping-item:last-child {
+  margin-bottom: 0;
 }
 
+/* 操作按钮样式优化 */
 .action-column {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .action-column :deep(.ant-btn) {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--border-radius-sm);
-  transition: all var(--transition-duration) var(--transition-function);
-}
-
-.action-column :deep(.ant-btn:hover) {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-2);
-}
-
-/* ==================== 卡片视图 ==================== */
-.card-view {
-  padding: 24px;
-}
-
-.cluster-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 24px;
-}
-
-.card-checkbox-group {
-  display: contents;
-}
-
-.cluster-card {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  box-shadow: var(--shadow-1);
-  transition: all var(--transition-duration) var(--transition-function);
-  overflow: hidden;
-  border: 1px solid var(--border-color-split);
-  position: relative;
-}
-
-.cluster-card:hover {
-  box-shadow: var(--shadow-2);
-  transform: translateY(-4px);
-}
-
-.card-header {
-  padding: 24px 24px 16px;
-  background: var(--component-background);
-  position: relative;
-}
-
-.service-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-right: 60px;
-}
-
-.service-title h3 {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.3;
-}
-
-.card-type-tag {
-  position: absolute;
-  top: 20px;
-  right: 48px;
-  padding: 4px 8px;
-  border-radius: var(--border-radius-sm);
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.card-checkbox {
-  position: absolute;
-  top: 20px;
-  right: 16px;
-}
-
-.card-content {
-  padding: 0 24px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.card-detail {
-  display: flex;
-  align-items: center;
-  line-height: var(--line-height-base);
-}
-
-.detail-label {
-  color: var(--text-secondary);
-  min-width: 100px;
-  font-size: var(--font-size-base);
-  font-weight: 500;
-}
-
-.detail-value {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--font-size-base);
-  color: var(--text-primary);
-  flex: 1;
-  font-weight: 500;
-}
-
-.card-ports {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.port-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.card-action-footer {
-  padding: 16px 24px 20px;
-  background: #fafafa;
-  border-top: 1px solid var(--border-color-split);
-  display: flex;
-  gap: 12px;
-}
-
-.card-action-footer .ant-btn {
-  flex: 1;
-  height: 36px;
-  border-radius: var(--border-radius-sm);
-  font-weight: 500;
-  transition: all var(--transition-duration) var(--transition-function);
-  font-size: var(--font-size-base);
-}
-
-.card-action-footer .ant-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-2);
-}
-
-/* ==================== 模态框样式 ==================== */
-.cluster-modal :deep(.ant-modal-content) {
-  border-radius: var(--border-radius-base);
-  overflow: hidden;
-  box-shadow: var(--shadow-3);
-}
-
-.cluster-modal :deep(.ant-modal-header) {
-  background: var(--component-background);
-  border-bottom: 1px solid var(--border-color-split);
-  padding: 20px 24px;
-}
-
-.cluster-modal :deep(.ant-modal-title) {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.modal-alert {
-  margin-bottom: 20px;
-  border-radius: var(--border-radius-sm);
-}
-
-/* YAML模态框样式 */
-.yaml-modal {
-  font-family: "Consolas", "Monaco", monospace;
-}
-
-.yaml-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 10px;
-}
-
-.yaml-editor {
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  padding: 16px;
-  background-color: #fafafa;
-  border-radius: 4px;
-  border: 1px solid #f0f0f0;
-  overflow: auto;
-  max-height: 500px;
-  margin: 0;
-}
-
-/* ==================== 空状态 ==================== */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 60px 0;
-  color: var(--text-secondary);
-}
-
-.empty-state p {
-  margin: 16px 0 24px;
-  font-size: var(--font-size-base);
-}
-
-/* ==================== 响应式设计 ==================== */
-@media (max-width: 1400px) {
-  .overview-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .cluster-cards {
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  }
-}
-
-@media (max-width: 1024px) {
-  .cluster-management-container {
-    padding: 16px;
-  }
-  
-  .header-content {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 20px;
-    padding: 24px 32px;
-  }
-  
-  .toolbar {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
-  }
-  
-  .toolbar-left {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .search-input {
-    width: 100%;
-  }
-  
-  .env-filter {
-    width: 100%;
-  }
-  
-  .toolbar-right {
-    justify-content: space-between;
-  }
-}
-
-@media (max-width: 768px) {
-  .cluster-management-container {
-    padding: 12px;
-  }
-  
-  .header-content {
-    padding: 20px 24px;
-  }
-  
-  .page-title h1 {
-    font-size: var(--font-size-xl);
-  }
-  
-  .overview-cards {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-  
-  .overview-card {
-    padding: 16px;
-  }
-  
-  .card-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 18px;
-    margin-right: 12px;
-  }
-  
-  .card-number {
-    font-size: var(--font-size-lg);
-  }
-  
-  .cluster-cards {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  
-  .cluster-card {
-    margin-bottom: 0;
-  }
-  
-  .card-action-footer {
-    flex-direction: column;
-    gap: 8px;
-  }
-}
-
-@media (max-width: 480px) {
-  .overview-cards {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-  
-  .overview-card {
-    padding: 12px;
-  }
-  
-  .card-icon {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
-    margin-right: 8px;
-  }
-  
-  .toolbar-right {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .cluster-table :deep(.ant-table-tbody > tr > td) {
-    padding: 12px 8px;
-    font-size: 13px;
-  }
-  
-  .action-column {
-    flex-direction: column;
-    gap: 4px;
-  }
-  
-  .action-column :deep(.ant-btn) {
-    width: 28px;
-    height: 28px;
-  }
+  min-width: 28px;
 }
 </style>

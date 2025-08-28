@@ -422,6 +422,7 @@ import {
   getNamespacesByClusterIdApi,
   getAllClustersApi
 } from '#/api';
+import type { PodInfo } from '#/api';
 import {
   SyncOutlined,
   DeleteOutlined,
@@ -443,15 +444,12 @@ import {
   GlobalOutlined
 } from '@ant-design/icons-vue';
 
-// 类型定义
-interface Pod {
-  name: string;
-  namespace: string;
-  status: string;
-  containers: string[];
-  age: string;
-  ip: string;
+// 使用API中的PodInfo类型
+interface PodWithIP extends PodInfo {
+  ip?: string;
 }
+
+type Pod = PodWithIP;
 
 // 状态变量
 const loading = ref(false);
@@ -534,7 +532,7 @@ const columns = [
 // 计算属性
 const filteredPods = computed(() => {
   const searchValue = searchText.value.toLowerCase().trim();
-  return pods.value.filter(pod => pod.name.toLowerCase().includes(searchValue));
+  return pods.value.filter((pod: Pod) => pod.name.toLowerCase().includes(searchValue));
 });
 
 const selectedClusterName = computed(() => {
@@ -543,35 +541,37 @@ const selectedClusterName = computed(() => {
 });
 
 const runningPodsCount = computed(() =>
-  pods.value.filter(pod => pod.status === 'Running').length
+  pods.value.filter((pod: Pod) => pod.status === 'Running').length
 );
 
-const runningPodsPercentage = computed(() =>
-  pods.value.length > 0 ? Math.round((runningPodsCount.value / pods.value.length) * 100) : 0
-);
+// 运行中的Pod百分比
+// const runningPodsPercentage = computed(() =>
+//   pods.value.length > 0 ? Math.round((runningPodsCount.value / pods.value.length) * 100) : 0
+// );
 
 const problemPodsCount = computed(() =>
-  pods.value.filter(pod => ['Failed', 'Unknown', 'Pending'].includes(pod.status)).length
+  pods.value.filter((pod: Pod) => ['Failed', 'Unknown', 'Pending'].includes(pod.status)).length
 );
 
-const problemPodsPercentage = computed(() =>
-  pods.value.length > 0 ? Math.round((problemPodsCount.value / pods.value.length) * 100) : 0
-);
+// 问题Pod的百分比
+// const problemPodsPercentage = computed(() =>
+//   pods.value.length > 0 ? Math.round((problemPodsCount.value / pods.value.length) * 100) : 0
+// );
 
 // 根据卡片选择更新 selectedRows
 watch(selectedCardIds, (newValue) => {
-  selectedRows.value = pods.value.filter(pod =>
+  selectedRows.value = pods.value.filter((pod: Pod) =>
     newValue.includes(pod.name)
   );
 });
 
 // 表格选择配置
 const rowSelection = {
-  onChange: (_selectedRowKeys: string[], selectedRowsData: Pod[]) => {
+  onChange: (_: string[], selectedRowsData: Pod[]) => {
     selectedRows.value = selectedRowsData;
     selectedCardIds.value = selectedRowsData.map(row => row.name);
   },
-  getCheckboxProps: (_record: Pod) => ({
+  getCheckboxProps: (_: Pod) => ({
     disabled: false, // 可以根据条件禁用某些行的选择
   }),
 };
@@ -712,7 +712,7 @@ const viewPodLogs = async (pod: Pod) => {
     if (res) {
       containers.value = res.map((container: { name: string }) => container.name);
 
-      // 如果有容器，自动选择第一个并获取日志
+      // 如果有容器，选择第一个并获取日志
       if (containers.value.length > 0) {
         selectedContainer.value = containers.value[0] ?? '';
         await fetchPodLogs();
@@ -781,7 +781,7 @@ const handleBatchDelete = async () => {
 
   try {
     loading.value = true;
-    const promises = selectedRows.value.map(pod =>
+    const promises = selectedRows.value.map((pod: Pod) =>
       deletePodApi(selectedCluster.value!, pod.name, pod.namespace)
     );
 

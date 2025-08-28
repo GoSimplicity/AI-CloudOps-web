@@ -849,7 +849,7 @@
 import { computed, ref, reactive, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { message, Modal } from 'ant-design-vue';
-import type { GetNodeDetailRes } from '#/api';
+import type { NodeDetails, NodesItems } from '#/api';
 import {
   addNodeLabelApi,
   deleteNodeLabelApi,
@@ -857,6 +857,11 @@ import {
   getNodeListApi,
   addNodeTaintApi,
   checkTaintYamlApi,
+  cordonNodeApi,
+  uncordonNodeApi,
+  drainNodeApi,
+  getNodeResourcesApi,
+  getNodeEventsApi,
 } from '#/api';
 
 // 导入图标
@@ -890,43 +895,20 @@ import {
   DashboardOutlined,
 } from '@ant-design/icons-vue';
 
-// 自定义节点类型接口
-interface NodeItem {
-  name: string;
-  cluster_id: number;
-  status: string;
-  ip: string;
-  roles?: string;
-  age: string;
-  schedulable?: boolean;
-  labels?: string[];
-  taints?: string[];
-}
-
-// 节点事件类型接口
-interface NodeEvent {
-  reason: string;
-  message: string;
-  first_time: number;
-  last_time: number;
-  count: number;
-  type: string;
-  component: string;
-  object: string;
-}
+// 使用导入的API类型，无需重复定义
 
 // 状态和常量
 const route = useRoute();
 const loading = ref(false);
 const detailsLoading = ref(false);
 const submitLoading = ref(false);
-const nodes = ref<NodeItem[]>([]);
+const nodes = ref<NodesItems[]>([]);
 const searchText = ref('');
 const statusFilter = ref<string>('');
 const roleFilter = ref<string>('');
-const selectedNodeDetails = ref<GetNodeDetailRes | null>(null);
+const selectedNodeDetails = ref<NodeDetails | null>(null);
 const selectedRowKeys = ref<string[]>([]);
-const selectedNode = ref<NodeItem | null>(null);
+const selectedNode = ref<NodesItems | null>(null);
 
 // 模态框控制
 const isAddLabelModalVisible = ref(false);
@@ -979,7 +961,7 @@ const filteredData = computed(() => {
     result = result.filter((node) => {
       return node.name.toLowerCase().includes(searchValue) || 
              node.ip.toLowerCase().includes(searchValue) || 
-             (node.roles && typeof node.roles === 'string' && node.roles.toLowerCase().includes(searchValue));
+             (node.roles && Array.isArray(node.roles) && node.roles.some(role => role.toLowerCase().includes(searchValue)));
     });
   }
   
@@ -991,8 +973,8 @@ const filteredData = computed(() => {
   // 角色过滤
   if (roleFilter.value) {
     result = result.filter((node) => {
-      return node.roles && typeof node.roles === 'string' && 
-             node.roles.toLowerCase().includes(roleFilter.value.toLowerCase());
+      return node.roles && Array.isArray(node.roles) && 
+             node.roles.some(role => role.toLowerCase().includes(roleFilter.value.toLowerCase()));
     });
   }
   
@@ -1016,7 +998,7 @@ const columns = [
     dataIndex: 'name', 
     key: 'name', 
     width: '15%',
-    sorter: (a: NodeItem, b: NodeItem) => a.name.localeCompare(b.name),
+    sorter: (a: NodesItems, b: NodesItems) => a.name.localeCompare(b.name),
     slots: { customRender: 'name' },
   },
   { 
@@ -1030,7 +1012,7 @@ const columns = [
       { text: '异常', value: 'NotReady' },
       { text: '未知', value: 'Unknown' },
     ],
-    onFilter: (value: string, record: NodeItem) => record.status === value,
+    onFilter: (value: string, record: NodesItems) => record.status === value,
   },
   { 
     title: 'IP 地址', 
@@ -1074,7 +1056,7 @@ const columns = [
   },
 ];
 
-// ====== 工具函数 ======
+// 工具函数
 // 状态颜色映射
 const getStatusColor = (status: string | undefined): string => {
   if (!status) return 'default';
@@ -1149,7 +1131,7 @@ const getTaintColor = (taint: string): string => {
 };
 
 // 获取节点标签
-const getNodeLabels = (node: NodeItem): string[] => {
+const getNodeLabels = (node: NodesItems): string[] => {
   if (!node || !node.labels || !Array.isArray(node.labels)) return [];
   
   // 只显示前3个标签，完整列表在详情中显示
@@ -1169,7 +1151,7 @@ const filterNodeOption = (input: string, option: any): boolean => {
   return option.value.toLowerCase().indexOf(input.toLowerCase()) >= 0;
 };
 
-// ====== 数据操作函数 ======
+// 数据操作函数
 // 获取节点列表
 const getNodes = async (): Promise<void> => {
   loading.value = true;
@@ -1205,34 +1187,77 @@ const handleSearch = (value: string): void => {
 
 // 处理筛选变化
 const handleFilterChange = (): void => {
-  // 状态和角色筛选器变化时会自动通过计算属性更新表格数据
+  // 状态和角色筛选器变化时通过计算属性更新表格数据
 };
 
 // 选择表格行
-const onSelectChange = (keys: string[], rows: NodeItem[]): void => {
+const onSelectChange = (keys: string[], rows: NodesItems[]): void => {
   selectedRowKeys.value = keys;
-  selectedNode.value = rows.length > 0 ? rows[0] as NodeItem : null;
+  selectedNode.value = rows.length > 0 ? rows[0] as NodesItems : null;
 };
 
-// 打开用户选择的节点详情
-const handleCordon = (record: NodeItem): void => {
+// 进入维护模式（先封锁后排空）
+const handleCordon = (record: NodesItems): void => {
+  const cluster_id = Number(route.query.cluster_id);
+  if (isNaN(cluster_id)) {
+    message.error('无效的集群ID');
+    return;
+  }
+
   Modal.confirm({
     title: '确认进入维护模式',
-    content: `是否确认将节点 ${record.name} 设置为维护模式？这将阻止新的 Pod 被调度到该节点。`,
+    content: `是否确认将节点 ${record.name} 设置为维护模式？这将：\n1. 封锁节点阻止新Pod调度\n2. 驱逐现有Pod到其他节点`,
     okText: '确认',
     cancelText: '取消',
-    onOk: () => {
-      handleToggleSchedule(record, false);
+    onOk: async () => {
+      try {
+        submitLoading.value = true;
+        
+        // 先封锁节点
+        await cordonNodeApi({ cluster_id, node_name: record.name });
+        message.success(`节点 ${record.name} 已被封锁`);
+        
+        // 再排空节点
+        await drainNodeApi({ 
+          cluster_id, 
+          node_name: record.name,
+          ignore_daemonsets: true,
+          delete_local_data: true,
+          grace_period_seconds: 60
+        });
+        message.success(`节点 ${record.name} 已进入维护模式`);
+        
+        // 刷新数据
+        getNodes();
+        
+        // 如果当前有节点详情打开，刷新详情
+        if (selectedNodeDetails.value && selectedNodeDetails.value.name === record.name) {
+          refreshNodeDetails(selectedNodeDetails.value);
+        }
+      } catch (error: any) {
+        message.error(error.message || '进入维护模式失败');
+      } finally {
+        submitLoading.value = false;
+      }
     }
   });
 };
 
 // 获取节点详情
-const handleViewDetails = async (record: NodeItem): Promise<void> => {
+const handleViewDetails = async (record: NodesItems): Promise<void> => {
   detailsLoading.value = true;
   try {
-    const res = await getNodeDetailsApi(record.name, String(record.cluster_id));
-    selectedNodeDetails.value = res;
+    const [nodeDetails, resourceUsage, events] = await Promise.all([
+      getNodeDetailsApi(record.name, String(record.cluster_id)),
+      getNodeResourcesApi(record.cluster_id, record.name).catch(() => null),
+      getNodeEventsApi(record.cluster_id, record.name).catch(() => null)
+    ]);
+    
+    selectedNodeDetails.value = {
+      ...nodeDetails,
+      resourceUsage,
+      events: events || nodeDetails.events || []
+    };
     isViewDetailsModalVisible.value = true;
   } catch (error: any) {
     message.error(error.message || '获取节点详情失败');
@@ -1242,13 +1267,22 @@ const handleViewDetails = async (record: NodeItem): Promise<void> => {
 };
 
 // 刷新节点详情
-const refreshNodeDetails = async (node: GetNodeDetailRes): Promise<void> => {
+const refreshNodeDetails = async (node: NodeDetails): Promise<void> => {
   if (!node) return;
   
   detailsLoading.value = true;
   try {
-    const res = await getNodeDetailsApi(node.name, String(node.cluster_id));
-    selectedNodeDetails.value = res;
+    const [nodeDetails, resourceUsage, events] = await Promise.all([
+      getNodeDetailsApi(node.name, String(node.cluster_id)),
+      getNodeResourcesApi(node.cluster_id, node.name).catch(() => null),
+      getNodeEventsApi(node.cluster_id, node.name).catch(() => null)
+    ]);
+    
+    selectedNodeDetails.value = {
+      ...nodeDetails,
+      resourceUsage,
+      events: events || nodeDetails.events || []
+    };
     message.success('节点详情刷新成功');
   } catch (error: any) {
     message.error(error.message || '刷新节点详情失败');
@@ -1258,7 +1292,7 @@ const refreshNodeDetails = async (node: GetNodeDetailRes): Promise<void> => {
 };
 
 // 打开添加标签操作
-const handleAddLabel = (record: NodeItem | GetNodeDetailRes | null = null): void => {
+const handleAddLabel = (record: NodesItems | NodeDetails | null = null): void => {
   if (record) {
     labelForm.nodeName = record.name;
   }
@@ -1399,7 +1433,7 @@ const handleDeleteLabel = async (): Promise<void> => {
 };
 
 
-const handleAddTaint = (record: NodeItem | GetNodeDetailRes | null = null): void => {
+const handleAddTaint = (record: NodesItems | NodeDetails | null = null): void => {
   if (record) {
     taintForm.nodeName = record.name;
   }
@@ -1436,7 +1470,7 @@ const handleSubmitAddTaint = async (): Promise<void> => {
 };
 
 
-const handleDeleteTaint = (record: NodeItem | GetNodeDetailRes | null = null): void => {
+const handleDeleteTaint = (record: NodesItems | NodeDetails | null = null): void => {
   if (record) {
     deleteTaintForm.nodeName = record.name;
   }
@@ -1569,7 +1603,7 @@ const handleClearTaints = (): void => {
 };
 
 // 启用/禁用调度
-const handleToggleSchedule = (record: NodeItem | GetNodeDetailRes | null = null, newState: boolean | null = null): void => {
+const handleToggleSchedule = (record: NodesItems | NodeDetails | null = null, newState: boolean | null = null): void => {
   // 如果没有传入节点，检查是否有选中节点
   if (!record) {
     if (!selectedNode.value) {
@@ -1579,17 +1613,29 @@ const handleToggleSchedule = (record: NodeItem | GetNodeDetailRes | null = null,
     record = selectedNode.value;
   }
   
-  const schedulable = newState !== null ? newState : !(record as NodeItem).schedulable;
+  const cluster_id = Number(route.query.cluster_id);
+  if (isNaN(cluster_id)) {
+    message.error('无效的集群ID');
+    return;
+  }
+  
+  const schedulable = newState !== null ? newState : !(record as NodesItems).schedulable;
   const action = schedulable ? '启用' : '禁用';
   
   Modal.confirm({
     title: `确认${action}节点调度`,
-    content: `确定要${action}节点 ${record.name} 的调度功能吗？`,
+    content: `确定要${action}节点 ${record.name} 的调度功能吗？${!schedulable ? '这将阻止新的Pod被调度到该节点。' : ''}`,
     okText: '确认',
     cancelText: '取消',
     onOk: async () => {
       try {
-        // 实现启用/禁用调度的逻辑，这里可能需要调用API
+        // 调用对应的API
+        if (schedulable) {
+          await uncordonNodeApi({ cluster_id, node_name: record.name });
+        } else {
+          await cordonNodeApi({ cluster_id, node_name: record.name });
+        }
+        
         message.success(`已${action}节点 ${record.name} 的调度功能`);
         
         // 刷新数据
@@ -1606,10 +1652,10 @@ const handleToggleSchedule = (record: NodeItem | GetNodeDetailRes | null = null,
   });
 };
 
-// ====== 模态框控制 ======
+// 模态框控制
 // 弹出删除标签模态框
-const showDeleteLabelModal = (record: NodeItem): void => {
-  selectedNodeDetails.value = record as unknown as GetNodeDetailRes;
+const showDeleteLabelModal = (record: NodesItems): void => {
+  selectedNodeDetails.value = record as unknown as NodeDetails;
   isDeleteLabelModalVisible.value = true;
 };
 

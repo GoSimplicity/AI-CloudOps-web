@@ -11,6 +11,10 @@
           <p class="page-subtitle">管理和监控集群中的所有Deployment资源</p>
         </div>
         <div class="header-actions">
+          <a-button type="primary" size="large" @click="isCreateModalVisible = true">
+            <template #icon><PlusOutlined /></template>
+            创建部署
+          </a-button>
           <a-button type="primary" size="large" @click="refreshData" :loading="loading">
             <template #icon><ReloadOutlined /></template>
             刷新数据
@@ -156,13 +160,16 @@
         :row-selection="rowSelection"
         :loading="loading"
         row-key="uid"
-        :pagination="{ 
-          pageSize: 12, 
-          showSizeChanger: true, 
+        :pagination="{
+          current: currentPage,
+          pageSize: pageSize,
+          total: totalItems,
+          showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total: number) => `共 ${total} 条数据`,
+          showTotal: (total: number, range: number[]) => `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
           pageSizeOptions: ['12', '24', '48', '96']
         }"
+        @change="handleTableChange"
         class="cluster-table deployments-table"
       >
         <!-- Deployment名称列 -->
@@ -170,6 +177,13 @@
           <div class="cluster-name deployment-name">
             <RocketOutlined />
             <span>{{ text }}</span>
+          </div>
+        </template>
+
+        <!-- 副本列 -->
+        <template #replicas="{ record }">
+          <div class="replicas-info">
+            <a-tag color="blue">{{ record.available_replicas || 0 }}/{{ record.replicas || 0 }}</a-tag>
           </div>
         </template>
 
@@ -184,7 +198,7 @@
         <template #status="{ record }">
           <div class="status-wrapper">
             <a-tag :color="getStatusColor(record)" class="status-tag">
-              {{ record.status?.availableReplicas || 0 }}/{{ record.status?.replicas || 0 }} 副本
+              {{ record.available_replicas || 0 }}/{{ record.replicas || 0 }} 副本
             </a-tag>
             <a-progress 
               :percent="getStatusPercent(record)" 
@@ -198,19 +212,19 @@
         </template>
 
         <!-- 镜像列 -->
-        <template #image="{ text }">
+        <template #image="{ record }">
           <div class="timestamp image-tag">
             <ContainerOutlined />
-            <span class="image-text">{{ text }}</span>
+            <span class="image-text">{{ record.images?.[0] || '-' }}</span>
           </div>
         </template>
 
         <!-- 创建时间列 -->
-        <template #creationTimestamp="{ text }">
+        <template #creationTimestamp="{ record }">
           <div class="timestamp">
             <ClockCircleOutlined />
-            <a-tooltip :title="formatDateTime(text)">
-              <span>{{ formatDate(text) }}</span>
+            <a-tooltip :title="formatDateTime(record.creation_timestamp)">
+              <span>{{ formatDate(record.creation_timestamp) }}</span>
             </a-tooltip>
           </div>
         </template>
@@ -219,8 +233,20 @@
         <template #action="{ record }">
           <div class="action-column">
             <a-tooltip title="查看 YAML">
-              <a-button type="primary" ghost shape="circle" @click="viewDeploymentYaml(record)">
+              <a-button type="primary" ghost shape="circle" size="small" @click="viewDeploymentYaml(record)">
                 <template #icon><CodeOutlined /></template>
+              </a-button>
+            </a-tooltip>
+
+            <a-tooltip title="扩缩容">
+              <a-button type="primary" ghost shape="circle" size="small" @click="handleScale(record)">
+                <template #icon><ScaleOutlined /></template>
+              </a-button>
+            </a-tooltip>
+
+            <a-tooltip title="历史版本">
+              <a-button type="primary" ghost shape="circle" size="small" @click="viewHistory(record)">
+                <template #icon><HistoryOutlined /></template>
               </a-button>
             </a-tooltip>
             
@@ -231,10 +257,16 @@
                 ok-text="确定"
                 cancel-text="取消"
               >
-                <a-button type="primary" ghost shape="circle">
+                <a-button type="primary" ghost shape="circle" size="small">
                   <template #icon><SyncOutlined /></template>
                 </a-button>
               </a-popconfirm>
+            </a-tooltip>
+
+            <a-tooltip title="暂停/恢复">
+              <a-button type="primary" ghost shape="circle" size="small" @click="handlePauseResume(record)" :loading="isPauseResumeLoading">
+                <template #icon><PlayCircleOutlined v-if="record.status === 'Paused'" /><PauseCircleOutlined v-else /></template>
+              </a-button>
             </a-tooltip>
             
             <a-tooltip title="删除 Deployment">
@@ -245,7 +277,7 @@
                 ok-text="确定"
                 cancel-text="取消"
               >
-                <a-button type="primary" danger ghost shape="circle">
+                <a-button type="primary" danger ghost shape="circle" size="small">
                   <template #icon><DeleteOutlined /></template>
                 </a-button>
               </a-popconfirm>
@@ -277,15 +309,15 @@
           </a-empty>
           <div v-else class="cluster-cards deployment-cards">
             <a-checkbox-group v-model:value="selectedCardIds" class="card-checkbox-group">
-              <div v-for="deployment in filteredDeployments" :key="deployment.metadata.uid" class="cluster-card deployment-card">
+              <div v-for="deployment in filteredDeployments" :key="deployment.uid" class="cluster-card deployment-card">
                 <div class="card-header">
-                  <a-checkbox :value="deployment.metadata.uid" class="card-checkbox" />
+                  <a-checkbox :value="deployment.uid" class="card-checkbox" />
                   <div class="service-title deployment-title">
                     <RocketOutlined class="service-icon deployment-icon" />
-                    <h3>{{ deployment.metadata.name }}</h3>
+                    <h3>{{ deployment.name }}</h3>
                   </div>
                   <a-tag :color="getStatusColor(deployment)" class="card-type-tag env-tag card-status-tag">
-                    {{ deployment.status?.availableReplicas || 0 }}/{{ deployment.status?.replicas || 0 }}
+                    {{ deployment.available_replicas || 0 }}/{{ deployment.replicas || 0 }}
                   </a-tag>
                 </div>
                 
@@ -294,21 +326,21 @@
                     <span class="detail-label">命名空间:</span>
                     <span class="detail-value">
                       <AppstoreOutlined />
-                      {{ deployment.metadata.namespace }}
+                      {{ deployment.namespace }}
                     </span>
                   </div>
                   <div class="card-detail">
                     <span class="detail-label">镜像:</span>
                     <span class="detail-value">
                       <ContainerOutlined />
-                      {{ deployment.spec?.template?.spec?.containers?.[0]?.image }}
+                      {{ deployment.images?.[0] || '-' }}
                     </span>
                   </div>
                   <div class="card-detail">
                     <span class="detail-label">创建时间:</span>
                     <span class="detail-value">
                       <ClockCircleOutlined />
-                      {{ formatDate(deployment.metadata.creationTimestamp) }}
+                      {{ formatDate(deployment.creation_timestamp) }}
                     </span>
                   </div>
                   <div class="card-status card-detail">
@@ -329,6 +361,10 @@
                   <a-button type="primary" ghost size="small" @click="viewDeploymentYaml(deployment)">
                     <template #icon><CodeOutlined /></template>
                     YAML
+                  </a-button>
+                  <a-button type="primary" ghost size="small" @click="handleScale(deployment)">
+                    <template #icon><ScaleOutlined /></template>
+                    扩缩容
                   </a-button>
                   <a-button type="primary" ghost size="small" @click="handleRestart(deployment)">
                     <template #icon><SyncOutlined /></template>
@@ -363,10 +399,10 @@
     >
       <a-alert v-if="currentDeployment" class="modal-alert" type="info" show-icon>
         <template #message>
-          <span>{{ currentDeployment.metadata.name }} ({{ currentDeployment.metadata.namespace }})</span>
+          <span>{{ currentDeployment.name }} ({{ currentDeployment.namespace }})</span>
         </template>
         <template #description>
-          <div>状态: {{ currentDeployment.status.availableReplicas || 0 }}/{{ currentDeployment.status.replicas || 0 }} | 创建于: {{ formatDate(currentDeployment.metadata.creationTimestamp) }}</div>
+          <div>状态: {{ currentDeployment.available_replicas || 0 }}/{{ currentDeployment.replicas || 0 }} | 创建于: {{ formatDate(currentDeployment.creation_timestamp) }}</div>
         </template>
       </a-alert>
       
@@ -378,6 +414,83 @@
       </div>
       <pre class="yaml-editor">{{ deploymentYaml }}</pre>
     </a-modal>
+
+    <!-- 扩缩容模态框 -->
+    <a-modal
+      v-model:open="isScaleModalVisible"
+      title="扩缩容 Deployment"
+      @ok="confirmScale"
+      @cancel="isScaleModalVisible = false"
+      :confirmLoading="loading"
+      class="cluster-modal"
+    >
+      <a-alert v-if="selectedDeploymentForScale" class="modal-alert" type="info" show-icon>
+        <template #message>
+          <span>{{ selectedDeploymentForScale.name }} ({{ selectedDeploymentForScale.namespace }})</span>
+        </template>
+        <template #description>
+          <div>当前副本数: {{ selectedDeploymentForScale.replicas }}</div>
+        </template>
+      </a-alert>
+
+      <a-form layout="vertical">
+        <a-form-item label="目标副本数" required>
+          <a-input-number 
+            v-model:value="scaleForm.replicas" 
+            :min="0" 
+            :max="100" 
+            style="width: 100%" 
+            placeholder="请输入目标副本数"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 历史版本模态框 -->
+    <a-modal
+      v-model:open="isHistoryModalVisible"
+      title="历史版本"
+      width="800px"
+      :footer="null"
+      class="cluster-modal"
+    >
+      <a-alert v-if="currentDeployment" class="modal-alert" type="info" show-icon>
+        <template #message>
+          <span>{{ currentDeployment.name }} ({{ currentDeployment.namespace }})</span>
+        </template>
+        <template #description>
+          <div>查看历史版本记录</div>
+        </template>
+      </a-alert>
+
+      <a-table 
+        :data-source="deploymentHistory" 
+        :columns="[
+          { title: '版本', dataIndex: 'revision', key: 'revision', width: '15%' },
+          { title: '变更原因', dataIndex: 'change_cause', key: 'change_cause', ellipsis: true },
+          { title: '创建时间', dataIndex: 'creation_timestamp', key: 'creation_timestamp', width: '25%' },
+          { title: '操作', key: 'action', width: '15%' }
+        ]"
+        :loading="loading"
+        :pagination="false"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'creation_timestamp'">
+            {{ formatDateTime(record.creation_timestamp) }}
+          </template>
+          <template v-else-if="column.key === 'action'">
+            <a-button 
+              type="primary" 
+              size="small" 
+              @click="rollbackToVersion(record.revision)"
+              :loading="loading"
+            >
+              回滚
+            </a-button>
+          </template>
+        </template>
+      </a-table>
+    </a-modal>
   </div>
 </template>
 
@@ -387,11 +500,30 @@ import { message } from 'ant-design-vue';
 import { useRoute } from 'vue-router';
 import {
   getDeployListApi,
+  getDeploymentListWithFilterApi,
   getDeployYamlApi,
   deleteDeployApi,
   restartDeployApi,
+  createDeploymentApi,
+  updateDeploymentApi,
+  scaleDeploymentApi,
+  rollbackDeploymentApi,
+  getDeploymentHistoryApi,
+  getDeploymentEventsApi,
+  pauseDeploymentApi,
+  resumeDeploymentApi,
+  batchDeleteDeploymentApi,
+  batchRestartDeploymentApi,
   getAllClustersApi,
   getNamespacesByClusterIdApi,
+} from '#/api';
+import type { 
+  DeploymentInfo, 
+  DeploymentListReq,
+  DeploymentCreateReq,
+  DeploymentUpdateReq,
+  DeploymentScaleReq,
+  DeploymentHistory 
 } from '#/api';
 import { 
   CloudServerOutlined, 
@@ -408,51 +540,45 @@ import {
   ClusterOutlined,
   PartitionOutlined,
   SyncOutlined,
-  ContainerOutlined
+  ContainerOutlined,
+  PlusOutlined,
+  ExpandOutlined as ScaleOutlined,
+  HistoryOutlined,
+  PlayCircleOutlined,
+  PauseCircleOutlined
 } from '@ant-design/icons-vue';
 
-// 类型定义
-interface Container {
-  name: string;
-  image: string;
-}
-
-interface Deployment {
-  metadata: {
-    name: string;
-    namespace: string;
-    uid: string;
-    creationTimestamp: string;
-  };
-  spec: {
-    replicas: number;
-    selector: {
-      matchLabels: Record<string, string>;
-    };
-    template: {
-      metadata: {
-        labels: Record<string, string>;
-      };
-      spec: {
-        containers: Container[];
-      };
-    };
-  };
-  status: {
-    replicas: number;
-    availableReplicas: number;
-    updatedReplicas: number;
-  };
-}
+// 使用API中定义的类型
+type Deployment = DeploymentInfo;
 
 // 状态变量
 const route = useRoute();
 const loading = ref(false);
 const clustersLoading = ref(false);
 const namespacesLoading = ref(false);
-const deployments = ref<Deployment[]>([]);
+const deployments = ref<DeploymentInfo[]>([]);
+const currentPage = ref(1);
+const pageSize = ref(12);
+const totalItems = ref(0);
+const isCreateModalVisible = ref(false);
+const isScaleModalVisible = ref(false);
+const isHistoryModalVisible = ref(false);
+const isPauseResumeLoading = ref(false);
+const scaleForm = ref({
+  replicas: 1
+});
+const createForm = ref<Partial<DeploymentCreateReq>>({
+  name: '',
+  namespace: '',
+  replicas: 1,
+  image: '',
+  labels: {},
+  annotations: {}
+});
+const deploymentHistory = ref<DeploymentHistory[]>([]);
+const selectedDeploymentForScale = ref<DeploymentInfo | null>(null);
 const searchText = ref('');
-const selectedRows = ref<Deployment[]>([]);
+const selectedRows = ref<DeploymentInfo[]>([]);
 const namespaces = ref<string[]>(['default']);
 const selectedNamespace = ref<string>('default');
 const viewYamlModalVisible = ref(false);
@@ -460,13 +586,13 @@ const deploymentYaml = ref('');
 const clusters = ref<Array<{id: number, name: string}>>([]);
 const selectedCluster = ref<number>();
 const viewMode = ref<'table' | 'card'>('table');
-const currentDeployment = ref<Deployment | null>(null);
+const currentDeployment = ref<DeploymentInfo | null>(null);
 const selectedCardIds = ref<string[]>([]);
 
 // 根据卡片选择更新 selectedRows
 watch(selectedCardIds, (newValue) => {
   selectedRows.value = deployments.value.filter(deployment => 
-    newValue.includes(deployment.metadata.uid)
+    newValue.includes(deployment.uid)
   );
 });
 
@@ -474,19 +600,19 @@ watch(selectedCardIds, (newValue) => {
 const columns = [
   {
     title: 'Deployment 名称',
-    dataIndex: ['metadata', 'name'],
+    dataIndex: 'name',
     key: 'name',
     slots: { customRender: 'name' },
-    width: '20%',
-    sorter: (a: Deployment, b: Deployment) => a.metadata.name.localeCompare(b.metadata.name),
+    width: '18%',
+    sorter: (a: DeploymentInfo, b: DeploymentInfo) => a.name.localeCompare(b.name),
   },
   {
     title: '命名空间',
-    dataIndex: ['metadata', 'namespace'],
+    dataIndex: 'namespace',
     key: 'namespace',
     width: '12%',
     slots: { customRender: 'namespace' },
-    sorter: (a: Deployment, b: Deployment) => a.metadata.namespace.localeCompare(b.metadata.namespace),
+    sorter: (a: DeploymentInfo, b: DeploymentInfo) => a.namespace.localeCompare(b.namespace),
   },
   {
     title: '状态',
@@ -495,24 +621,30 @@ const columns = [
     slots: { customRender: 'status' },
   },
   {
+    title: '副本',
+    key: 'replicas',
+    width: '10%',
+    slots: { customRender: 'replicas' },
+  },
+  {
     title: '镜像',
-    dataIndex: ['spec', 'template', 'spec', 'containers', 0, 'image'],
+    dataIndex: 'images',
     key: 'image',
-    width: '25%',
+    width: '22%',
     slots: { customRender: 'image' },
   },
   {
     title: '创建时间',
-    dataIndex: ['metadata', 'creationTimestamp'],
+    dataIndex: 'creation_timestamp',
     key: 'creationTimestamp',
-    width: '15%',
-    sorter: (a: Deployment, b: Deployment) => new Date(a.metadata.creationTimestamp).getTime() - new Date(b.metadata.creationTimestamp).getTime(),
+    width: '13%',
+    sorter: (a: DeploymentInfo, b: DeploymentInfo) => new Date(a.creation_timestamp).getTime() - new Date(b.creation_timestamp).getTime(),
     slots: { customRender: 'creationTimestamp' },
   },
   {
     title: '操作',
     key: 'action',
-    width: '15%',
+    width: '20%',
     fixed: 'right',
     slots: { customRender: 'action' },
   },
@@ -523,33 +655,33 @@ const filteredDeployments = computed(() => {
   const searchValue = searchText.value.toLowerCase().trim();
   if (!searchValue) return deployments.value;
   return deployments.value.filter(deploy => 
-    deploy.metadata.name.toLowerCase().includes(searchValue) || 
-    (deploy.spec.template.spec.containers[0]?.image || '').toLowerCase().includes(searchValue)
+    deploy.name.toLowerCase().includes(searchValue) || 
+    deploy.images.some(img => img.toLowerCase().includes(searchValue))
   );
 });
 
 // 计算属性：健康和问题部署统计
 const healthyDeployments = computed(() => 
   deployments.value.filter(deploy => {
-    const available = deploy.status?.availableReplicas || 0;
-    const total = deploy.status?.replicas || 0;
+    const available = deploy.available_replicas || 0;
+    const total = deploy.replicas || 0;
     return total > 0 && available === total;
   }).length
 );
 
 const problemDeployments = computed(() => 
   deployments.value.filter(deploy => {
-    const available = deploy.status?.availableReplicas || 0;
-    const total = deploy.status?.replicas || 0;
+    const available = deploy.available_replicas || 0;
+    const total = deploy.replicas || 0;
     return total > 0 && available < total;
   }).length
 );
 
 // 获取状态颜色
-const getStatusColor = (deployment: Deployment) => {
-  if (!deployment.status.replicas) return 'default';
-  const available = deployment.status.availableReplicas || 0;
-  const total = deployment.status.replicas || 0;
+const getStatusColor = (deployment: DeploymentInfo) => {
+  if (!deployment.replicas) return 'default';
+  const available = deployment.available_replicas || 0;
+  const total = deployment.replicas || 0;
   
   if (available === 0) return 'error';
   if (available < total) return 'warning';
@@ -557,19 +689,19 @@ const getStatusColor = (deployment: Deployment) => {
 };
 
 // 获取进度条百分比
-const getStatusPercent = (deployment: Deployment) => {
-  if (!deployment.status.replicas) return 0;
-  const available = deployment.status.availableReplicas || 0;
-  const total = deployment.status.replicas || 0;
+const getStatusPercent = (deployment: DeploymentInfo) => {
+  if (!deployment.replicas) return 0;
+  const available = deployment.available_replicas || 0;
+  const total = deployment.replicas || 0;
   
   return Math.round((available / total) * 100);
 };
 
 // 获取进度条状态
-const getProgressStatus = (deployment: Deployment) => {
-  if (!deployment.status.replicas) return 'normal';
-  const available = deployment.status.availableReplicas || 0;
-  const total = deployment.status.replicas || 0;
+const getProgressStatus = (deployment: DeploymentInfo) => {
+  if (!deployment.replicas) return 'normal';
+  const available = deployment.available_replicas || 0;
+  const total = deployment.replicas || 0;
   
   if (available === 0) return 'exception';
   if (available < total) return 'active';
@@ -592,11 +724,11 @@ const formatDateTime = (dateString: string): string => {
 
 // 表格选择配置
 const rowSelection = {
-  onChange: (selectedRowKeys: string[], selectedRowsData: Deployment[]) => {
+  onChange: (selectedRowKeys: string[], selectedRowsData: DeploymentInfo[]) => {
     selectedRows.value = selectedRowsData;
-    selectedCardIds.value = selectedRowsData.map(row => row.metadata.uid);
+    selectedCardIds.value = selectedRowsData.map(row => row.uid);
   },
-  getCheckboxProps: (record: Deployment) => ({
+  getCheckboxProps: (record: DeploymentInfo) => ({
     disabled: false, // 可以根据条件禁用某些行的选择
   }),
 };
@@ -621,7 +753,7 @@ const getClusters = async () => {
       selectedCluster.value = clusters.value[0]?.id;
       if (selectedCluster.value) {
         await getNamespaces();
-        await getDeployments();
+        await getDeployments(1, pageSize.value);
       }
     }
   } catch (error: any) {
@@ -654,8 +786,8 @@ const getNamespaces = async () => {
   }
 };
 
-// 获取Deployment列表
-const getDeployments = async () => {
+// 获取Deployment列表（支持分页）
+const getDeployments = async (page = 1, size = pageSize.value) => {
   if (!selectedCluster.value || !selectedNamespace.value) {
     message.warning('请先选择集群和命名空间');
     return;
@@ -663,12 +795,29 @@ const getDeployments = async () => {
   
   loading.value = true;
   try {
-    const res = await getDeployListApi(selectedCluster.value, selectedNamespace.value);
-    deployments.value = res || [];
+    const params: DeploymentListReq = {
+      cluster_id: selectedCluster.value,
+      namespace: selectedNamespace.value,
+      page,
+      page_size: size
+    };
+    const res = await getDeploymentListWithFilterApi(params);
+    deployments.value = (res as any)?.data || res || [];
+    
+    // 如果API返回分页信息，更新总数
+    if ((res as any)?.total !== undefined) {
+      totalItems.value = (res as any).total;
+    } else {
+      totalItems.value = deployments.value.length;
+    }
+    
+    currentPage.value = page;
     selectedRows.value = [];
     selectedCardIds.value = [];
   } catch (error: any) {
     message.error(error.message || '获取Deployment列表失败');
+    deployments.value = [];
+    totalItems.value = 0;
   } finally {
     loading.value = false;
   }
@@ -676,7 +825,112 @@ const getDeployments = async () => {
 
 // 刷新数据
 const refreshData = () => {
-  getDeployments();
+  getDeployments(currentPage.value, pageSize.value);
+};
+
+// 扩缩容Deployment
+const handleScale = (deployment: DeploymentInfo) => {
+  selectedDeploymentForScale.value = deployment;
+  scaleForm.value.replicas = deployment.replicas;
+  isScaleModalVisible.value = true;
+};
+
+const confirmScale = async () => {
+  if (!selectedDeploymentForScale.value || !selectedCluster.value) return;
+  
+  try {
+    loading.value = true;
+    await scaleDeploymentApi({
+      cluster_id: selectedCluster.value,
+      namespace: selectedDeploymentForScale.value.namespace,
+      name: selectedDeploymentForScale.value.name,
+      replicas: scaleForm.value.replicas
+    });
+    
+    message.success('扩缩容操作成功');
+    isScaleModalVisible.value = false;
+    getDeployments(currentPage.value, pageSize.value);
+  } catch (error: any) {
+    message.error(error.message || '扩缩容操作失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 暂停/恢复Deployment
+const handlePauseResume = async (deployment: DeploymentInfo) => {
+  if (!selectedCluster.value) return;
+  
+  isPauseResumeLoading.value = true;
+  try {
+    // 这里可能需要根据部署状态判断是暂停还是恢复
+    const isPaused = deployment.status === 'Paused';
+    
+    if (isPaused) {
+      await resumeDeploymentApi(selectedCluster.value, deployment.namespace, deployment.name);
+      message.success('部署已恢复');
+    } else {
+      await pauseDeploymentApi(selectedCluster.value, deployment.namespace, deployment.name);
+      message.success('部署已暂停');
+    }
+    
+    getDeployments(currentPage.value, pageSize.value);
+  } catch (error: any) {
+    message.error(error.message || '操作失败');
+  } finally {
+    isPauseResumeLoading.value = false;
+  }
+};
+
+// 查看历史版本
+const viewHistory = async (deployment: DeploymentInfo) => {
+  if (!selectedCluster.value) return;
+  
+  try {
+    loading.value = true;
+    currentDeployment.value = deployment;
+    const history = await getDeploymentHistoryApi(
+      selectedCluster.value,
+      deployment.namespace,
+      deployment.name
+    );
+    deploymentHistory.value = history || [];
+    isHistoryModalVisible.value = true;
+  } catch (error: any) {
+    message.error(error.message || '获取历史版本失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 回滚到指定版本
+const rollbackToVersion = async (revision: number) => {
+  if (!currentDeployment.value || !selectedCluster.value) return;
+  
+  try {
+    loading.value = true;
+    await rollbackDeploymentApi({
+      cluster_id: selectedCluster.value,
+      namespace: currentDeployment.value.namespace,
+      name: currentDeployment.value.name,
+      revision
+    });
+    
+    message.success('回滚操作成功');
+    isHistoryModalVisible.value = false;
+    getDeployments(currentPage.value, pageSize.value);
+  } catch (error: any) {
+    message.error(error.message || '回滚操作失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 分页处理
+const handleTableChange = (pagination: any) => {
+  currentPage.value = pagination.current;
+  pageSize.value = pagination.pageSize;
+  getDeployments(pagination.current, pagination.pageSize);
 };
 
 // 搜索
@@ -685,11 +939,11 @@ const onSearch = () => {
 };
 
 // 查看Deployment YAML
-const viewDeploymentYaml = async (deployment: Deployment) => {
+const viewDeploymentYaml = async (deployment: DeploymentInfo) => {
   if (!selectedCluster.value) return;
   try {
     currentDeployment.value = deployment;
-    const res = await getDeployYamlApi(selectedCluster.value, deployment.metadata.name, deployment.metadata.namespace);
+    const res = await getDeployYamlApi(selectedCluster.value, deployment.name, deployment.namespace);
     deploymentYaml.value = typeof res === 'string' ? res : JSON.stringify(res, null, 2);
     viewYamlModalVisible.value = true;
   } catch (error: any) {
@@ -698,26 +952,26 @@ const viewDeploymentYaml = async (deployment: Deployment) => {
 };
 
 // 删除Deployment
-const handleDelete = async (deployment: Deployment) => {
+const handleDelete = async (deployment: DeploymentInfo) => {
   if (!selectedCluster.value) return;
   
   try {
-    await deleteDeployApi(selectedCluster.value, deployment.metadata.namespace, deployment.metadata.name);
+    await deleteDeployApi(selectedCluster.value, deployment.namespace, deployment.name);
     message.success('Deployment删除成功');
-    getDeployments();
+    getDeployments(currentPage.value, pageSize.value);
   } catch (error: any) {
     message.error(error.message || '删除Deployment失败');
   }
 };
 
 // 重启Deployment
-const handleRestart = async (deployment: Deployment) => {
+const handleRestart = async (deployment: DeploymentInfo) => {
   if (!selectedCluster.value) return;
   
   try {
-    await restartDeployApi(selectedCluster.value, deployment.metadata.namespace, deployment.metadata.name);
+    await restartDeployApi(selectedCluster.value, deployment.namespace, deployment.name);
     message.success('Deployment重启成功');
-    getDeployments();
+    getDeployments(currentPage.value, pageSize.value);
   } catch (error: any) {
     message.error(error.message || '重启Deployment失败');
   }
@@ -729,15 +983,17 @@ const handleBatchDelete = async () => {
   
   try {
     loading.value = true;
-    const promises = selectedRows.value.map(deployment => 
-      deleteDeployApi(selectedCluster.value!, deployment.metadata.namespace, deployment.metadata.name)
-    );
+    // 使用批量删除API
+    await batchDeleteDeploymentApi({
+      cluster_id: selectedCluster.value,
+      namespace: selectedNamespace.value,
+      names: selectedRows.value.map(d => d.name)
+    });
     
-    await Promise.all(promises);
     message.success(`成功删除 ${selectedRows.value.length} 个部署`);
     selectedRows.value = [];
     selectedCardIds.value = [];
-    getDeployments();
+    getDeployments(currentPage.value, pageSize.value);
   } catch (error: any) {
     message.error(error.message || '批量删除失败');
   } finally {
@@ -747,15 +1003,18 @@ const handleBatchDelete = async () => {
 
 // 切换命名空间
 const handleNamespaceChange = () => {
-  getDeployments();
+  currentPage.value = 1;
+  getDeployments(1, pageSize.value);
 };
 
 // 切换集群
 const handleClusterChange = () => {
   selectedNamespace.value = 'default';
   deployments.value = [];
+  currentPage.value = 1;
+  totalItems.value = 0;
   getNamespaces();
-  getDeployments();
+  getDeployments(1, pageSize.value);
 };
 
 // 页面加载时获取数据

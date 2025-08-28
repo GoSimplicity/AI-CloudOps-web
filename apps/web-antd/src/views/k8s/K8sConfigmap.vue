@@ -1,16 +1,20 @@
 <template>
-  <div class="configmap-management-container">
+  <div class="cluster-management-container configmap-management-container">
     <!-- 页面头部 -->
     <div class="page-header">
       <div class="header-content">
         <div class="title-section">
           <div class="page-title">
-            <ProfileOutlined class="title-icon" />
-            <h1>ConfigMap 资源管理</h1>
+            <SettingOutlined class="title-icon" />
+            <h1>Kubernetes ConfigMap 管理</h1>
           </div>
-          <p class="page-subtitle">管理和监控您的 Kubernetes 配置资源</p>
+          <p class="page-subtitle">管理和监控集群中的所有配置映射资源</p>
         </div>
         <div class="header-actions">
+          <a-button type="primary" size="large" @click="isCreateModalVisible = true">
+            <template #icon><PlusOutlined /></template>
+            创建配置
+          </a-button>
           <a-button type="primary" size="large" @click="refreshData" :loading="loading">
             <template #icon><ReloadOutlined /></template>
             刷新数据
@@ -21,43 +25,43 @@
 
     <!-- 数据概览卡片 -->
     <div class="overview-cards">
-      <div class="overview-card total-configmaps">
+      <div class="overview-card total-clusters">
         <div class="card-icon">
-          <ProfileOutlined />
+          <SettingOutlined />
         </div>
         <div class="card-info">
-          <div class="card-number">{{ filteredConfigMaps.length }}</div>
-          <div class="card-label">配置总数</div>
+          <div class="card-number">{{ configmaps.length }}</div>
+          <div class="card-label">ConfigMap 总数</div>
         </div>
       </div>
       
-      <div class="overview-card selected-cluster">
+      <div class="overview-card running-clusters">
         <div class="card-icon">
-          <ClusterOutlined />
+          <CheckCircleOutlined />
         </div>
         <div class="card-info">
-          <div class="card-number">{{ selectedCluster ? clusters.find(c => c.id === selectedCluster)?.name || '-' : '-' }}</div>
-          <div class="card-label">当前集群</div>
+          <div class="card-number">{{ configmapsWithData }}</div>
+          <div class="card-label">有数据配置</div>
         </div>
       </div>
       
-      <div class="overview-card selected-namespace">
+      <div class="overview-card env-types">
+        <div class="card-icon">
+          <FileTextOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ totalDataKeys }}</div>
+          <div class="card-label">数据键总数</div>
+        </div>
+      </div>
+      
+      <div class="overview-card resource-usage">
         <div class="card-icon">
           <PartitionOutlined />
         </div>
         <div class="card-info">
-          <div class="card-number">{{ selectedNamespace || '-' }}</div>
+          <div class="card-number">{{ selectedNamespace }}</div>
           <div class="card-label">命名空间</div>
-        </div>
-      </div>
-      
-      <div class="overview-card config-items">
-        <div class="card-icon">
-          <AppstoreOutlined />
-        </div>
-        <div class="card-info">
-          <div class="card-number">{{ totalConfigItems }}</div>
-          <div class="card-label">配置项总数</div>
         </div>
       </div>
     </div>
@@ -68,10 +72,9 @@
         <a-select
           v-model:value="selectedCluster"
           placeholder="选择集群"
-          class="cluster-selector"
+          class="env-filter cluster-selector"
           :loading="clustersLoading"
           @change="handleClusterChange"
-          allow-clear
         >
           <template #suffixIcon><ClusterOutlined /></template>
           <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
@@ -85,10 +88,9 @@
         <a-select
           v-model:value="selectedNamespace"
           placeholder="选择命名空间"
-          class="namespace-selector"
+          class="env-filter namespace-selector"
           :loading="namespacesLoading"
           @change="handleNamespaceChange"
-          allow-clear
         >
           <template #suffixIcon><PartitionOutlined /></template>
           <a-select-option v-for="ns in namespaces" :key="ns" :value="ns">
@@ -101,7 +103,7 @@
         
         <a-input-search
           v-model:value="searchText"
-          placeholder="搜索 ConfigMap 名称"
+          placeholder="搜索 ConfigMap 名称或数据键"
           class="search-input"
           @search="onSearch"
           allow-clear
@@ -126,6 +128,16 @@
         
         <a-button 
           type="primary" 
+          @click="handleBatchBackup" 
+          :disabled="!selectedRows.length"
+          v-if="selectedRows.length > 0"
+        >
+          <template #icon><SaveOutlined /></template>
+          备份 ({{ selectedRows.length }})
+        </a-button>
+        
+        <a-button 
+          type="primary" 
           danger 
           @click="handleBatchDelete" 
           :disabled="!selectedRows.length"
@@ -141,14 +153,10 @@
     <div class="data-display">
       <div class="display-header" v-if="filteredConfigMaps.length > 0">
         <div class="result-info">
-          <span class="result-count">共 {{ filteredConfigMaps.length }} 个配置</span>
-          <div class="env-tags" v-if="selectedCluster && selectedNamespace">
-            <a-tag color="blue">
-              {{ clusters.find(c => c.id === selectedCluster)?.name || '未知集群' }}
-            </a-tag>
-            <a-tag color="green">
-              {{ selectedNamespace }}
-            </a-tag>
+          <span class="result-count">共 {{ filteredConfigMaps.length }} 个ConfigMap</span>
+          <div class="env-tags">
+            <a-tag color="green">有数据 {{ configmapsWithData }}</a-tag>
+            <a-tag color="blue">{{ selectedNamespace }}</a-tag>
           </div>
         </div>
       </div>
@@ -161,57 +169,54 @@
         :row-selection="rowSelection"
         :loading="loading"
         row-key="uid"
-        :pagination="{ 
-          pageSize: 12, 
-          showSizeChanger: true, 
+        :pagination="{
+          current: currentPage,
+          pageSize: pageSize,
+          total: totalItems,
+          showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total: number) => `共 ${total} 条数据`,
+          showTotal: (total: number, range: number[]) => `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
           pageSizeOptions: ['12', '24', '48', '96']
         }"
-        class="configmap-table"
+        @change="handleTableChange"
+        class="cluster-table configmaps-table"
       >
         <!-- ConfigMap名称列 -->
         <template #name="{ text }">
-          <div class="configmap-name">
-            <ProfileOutlined />
+          <div class="cluster-name configmap-name">
+            <SettingOutlined />
             <span>{{ text }}</span>
           </div>
         </template>
+
+        <!-- 命名空间列 -->
+        <template #namespace="{ text }">
+          <a-tag class="env-tag namespace-tag">
+            <AppstoreOutlined /> {{ text }}
+          </a-tag>
+        </template>
         
-        <!-- 数据条目列 -->
-        <template #dataCount="{ record }">
-          <a-badge 
-            :count="Object.keys(record.data || {}).length" 
-            :number-style="{ backgroundColor: '#1890ff' }"
-          />
+        <!-- 数据键数量列 -->
+        <template #data_count="{ text }">
+          <a-badge :count="text" :number-style="{ backgroundColor: text > 0 ? '#52c41a' : '#d9d9d9' }">
+            <span>{{ text }} 个键</span>
+          </a-badge>
         </template>
 
-        <!-- 配置项预览列 -->
-        <template #dataPreview="{ record }">
-          <div class="data-preview">
-            <a-tag 
-              v-for="(item, index) in Object.entries(record.data || {}).slice(0, 3)" 
-              :key="index" 
-              color="blue"
-              class="data-key-tag"
-            >
-              {{ item[0] }}
-            </a-tag>
-            <a-tag v-if="Object.keys(record.data || {}).length > 3" color="default">
-              +{{ Object.keys(record.data || {}).length - 3 }}
-            </a-tag>
-            <span v-if="!record.data || Object.keys(record.data).length === 0" class="empty-data">
-              无数据项
-            </span>
+        <!-- 大小列 -->
+        <template #size="{ text }">
+          <div class="size-info">
+            <FileTextOutlined />
+            <span>{{ text }}</span>
           </div>
         </template>
 
         <!-- 创建时间列 -->
-        <template #creationTimestamp="{ text }">
+        <template #creationTimestamp="{ record }">
           <div class="timestamp">
             <ClockCircleOutlined />
-            <a-tooltip :title="formatDateTime(text)">
-              {{ formatDate(text) }}
+            <a-tooltip :title="formatDateTime(record.creation_timestamp)">
+              <span>{{ formatDate(record.creation_timestamp) }}</span>
             </a-tooltip>
           </div>
         </template>
@@ -219,27 +224,45 @@
         <!-- 操作列 -->
         <template #action="{ record }">
           <div class="action-column">
-            <a-tooltip title="查看 YAML">
-              <a-button type="primary" ghost shape="circle" @click="viewConfigMapYaml(record)">
-                <template #icon><CodeOutlined /></template>
-              </a-button>
-            </a-tooltip>
-            
-            <a-tooltip title="查看配置详情">
-              <a-button type="primary" ghost shape="circle" @click="viewConfigDetail(record)">
+            <a-tooltip title="查看数据">
+              <a-button type="primary" ghost shape="circle" size="small" @click="viewConfigMapData(record)">
                 <template #icon><EyeOutlined /></template>
               </a-button>
             </a-tooltip>
+
+            <a-tooltip title="查看 YAML">
+              <a-button type="primary" ghost shape="circle" size="small" @click="viewConfigMapYaml(record)">
+                <template #icon><CodeOutlined /></template>
+              </a-button>
+            </a-tooltip>
+
+            <a-tooltip title="使用情况">
+              <a-button type="primary" ghost shape="circle" size="small" @click="viewUsage(record)">
+                <template #icon><LinkOutlined /></template>
+              </a-button>
+            </a-tooltip>
+
+            <a-tooltip title="备份">
+              <a-button type="primary" ghost shape="circle" size="small" @click="backupConfigMap(record)">
+                <template #icon><SaveOutlined /></template>
+              </a-button>
+            </a-tooltip>
+
+            <a-tooltip title="编辑">
+              <a-button type="primary" ghost shape="circle" size="small" @click="handleEdit(record)">
+                <template #icon><EditOutlined /></template>
+              </a-button>
+            </a-tooltip>
             
-            <a-tooltip title="删除配置">
+            <a-tooltip title="删除">
               <a-popconfirm
-                title="确定要删除该 ConfigMap 吗?"
-                description="此操作不可撤销"
+                title="确定要删除该ConfigMap吗?"
+                description="此操作不可撤销，可能影响使用此配置的应用"
                 @confirm="handleDelete(record)"
                 ok-text="确定"
                 cancel-text="取消"
               >
-                <a-button type="primary" danger ghost shape="circle">
+                <a-button type="primary" danger ghost shape="circle" size="small">
                   <template #icon><DeleteOutlined /></template>
                 </a-button>
               </a-popconfirm>
@@ -250,8 +273,8 @@
         <!-- 空状态 -->
         <template #emptyText>
           <div class="empty-state">
-            <ProfileOutlined style="font-size: 48px; color: #d9d9d9; margin-bottom: 16px" />
-            <p>暂无配置数据</p>
+            <SettingOutlined style="font-size: 48px; color: #d9d9d9; margin-bottom: 16px" />
+            <p>暂无ConfigMap数据</p>
             <a-button type="primary" @click="refreshData">刷新数据</a-button>
           </div>
         </template>
@@ -260,88 +283,72 @@
       <!-- 卡片视图 -->
       <div v-else class="card-view">
         <a-spin :spinning="loading">
-          <a-empty v-if="filteredConfigMaps.length === 0" description="暂无配置数据">
+          <a-empty v-if="filteredConfigMaps.length === 0" description="暂无ConfigMap数据">
             <template #image>
-              <ProfileOutlined style="font-size: 64px; color: #d9d9d9;" />
+              <SettingOutlined style="font-size: 64px; color: #d9d9d9;" />
             </template>
             <template #description>
-              <span style="color: #999;">暂无配置数据</span>
+              <span style="color: #999;">暂无ConfigMap数据</span>
             </template>
             <a-button type="primary" @click="refreshData">刷新数据</a-button>
           </a-empty>
-          <div v-else class="configmap-cards">
+          <div v-else class="cluster-cards configmap-cards">
             <a-checkbox-group v-model:value="selectedCardIds" class="card-checkbox-group">
-              <div v-for="configmap in filteredConfigMaps" :key="configmap.metadata.uid" class="configmap-card">
+              <div v-for="configmap in filteredConfigMaps" :key="configmap.uid" class="cluster-card configmap-card">
                 <div class="card-header">
-                  <a-checkbox :value="configmap.metadata.uid" class="card-checkbox" />
+                  <a-checkbox :value="configmap.uid" class="card-checkbox" />
                   <div class="service-title configmap-title">
-                    <ProfileOutlined class="service-icon" />
-                    <h3>{{ configmap.metadata.name }}</h3>
+                    <SettingOutlined class="service-icon" />
+                    <h3>{{ configmap.name }}</h3>
                   </div>
-                  <a-tag color="blue" class="card-type-tag">
-                    <span class="status-dot"></span>
-                    ConfigMap
-                  </a-tag>
+                  <a-badge :count="configmap.data_count" :number-style="{ backgroundColor: '#52c41a' }" class="card-badge">
+                    <div></div>
+                  </a-badge>
                 </div>
                 
                 <div class="card-content">
-                  <div class="card-detail namespace-detail">
+                  <div class="card-detail">
                     <span class="detail-label">命名空间:</span>
                     <span class="detail-value">
-                      {{ configmap.metadata.namespace || '-' }}
+                      <AppstoreOutlined />
+                      {{ configmap.namespace }}
                     </span>
                   </div>
-                  <div class="card-detail datacount-detail">
-                    <span class="detail-label">配置项数量:</span>
+                  <div class="card-detail">
+                    <span class="detail-label">数据键:</span>
+                    <span class="detail-value">{{ configmap.data_count }} 个</span>
+                  </div>
+                  <div class="card-detail">
+                    <span class="detail-label">大小:</span>
                     <span class="detail-value">
-                      <a-badge 
-                        :count="Object.keys(configmap.data || {}).length" 
-                        :number-style="{ backgroundColor: '#1890ff' }"
-                      />
+                      <FileTextOutlined />
+                      {{ configmap.size }}
                     </span>
                   </div>
-                  <div class="card-detail keys-detail">
-                    <span class="detail-label">配置项:</span>
-                    <div class="detail-value">
-                      <div class="data-keys">
-                        <a-tag 
-                          v-for="(_, key, index) in configmap.data" 
-                          :key="index" 
-                          color="blue"
-                          class="data-key-tag"
-                          v-show="index < 5"
-                        >
-                          {{ key }}
-                        </a-tag>
-                        <a-tag v-if="Object.keys(configmap.data || {}).length > 5" color="default">
-                          +{{ Object.keys(configmap.data || {}).length - 5 }}
-                        </a-tag>
-                        <span v-if="!configmap.data || Object.keys(configmap.data).length === 0" class="empty-data">
-                          无数据项
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="card-detail created-detail">
+                  <div class="card-detail">
                     <span class="detail-label">创建时间:</span>
                     <span class="detail-value">
                       <ClockCircleOutlined />
-                      {{ formatDate(configmap.metadata.creationTimestamp) }}
+                      {{ formatDate(configmap.creation_timestamp) }}
                     </span>
                   </div>
                 </div>
                 
                 <div class="card-footer card-action-footer">
+                  <a-button type="primary" ghost size="small" @click="viewConfigMapData(configmap)">
+                    <template #icon><EyeOutlined /></template>
+                    数据
+                  </a-button>
                   <a-button type="primary" ghost size="small" @click="viewConfigMapYaml(configmap)">
                     <template #icon><CodeOutlined /></template>
                     YAML
                   </a-button>
-                  <a-button type="primary" ghost size="small" @click="viewConfigDetail(configmap)">
-                    <template #icon><EyeOutlined /></template>
-                    查看配置
+                  <a-button type="primary" ghost size="small" @click="handleEdit(configmap)">
+                    <template #icon><EditOutlined /></template>
+                    编辑
                   </a-button>
                   <a-popconfirm
-                    title="确定要删除该 ConfigMap 吗?"
+                    title="确定要删除该ConfigMap吗?"
                     @confirm="handleDelete(configmap)"
                     ok-text="确定"
                     cancel-text="取消"
@@ -359,59 +366,189 @@
       </div>
     </div>
 
-    <!-- 查看 ConfigMap YAML 模态框 -->
+    <!-- 查看数据模态框 -->
     <a-modal
-      v-model:open="viewYamlModalVisible"
-      title="ConfigMap YAML 配置"
-      :width="800"
-      class="configmap-modal"
+      v-model:open="dataModalVisible"
+      title="ConfigMap 数据"
+      width="900px"
+      class="cluster-modal data-modal"
       :footer="null"
     >
       <a-alert v-if="currentConfigMap" class="modal-alert" type="info" show-icon>
-        <template #message>{{ currentConfigMap.metadata.name }} ({{ currentConfigMap.metadata.namespace }})</template>
-        <template #description>配置项数量: {{ Object.keys(currentConfigMap.data || {}).length }} | 创建于: {{ formatDateTime(currentConfigMap.metadata.creationTimestamp) }}</template>
+        <template #message>
+          <span>{{ currentConfigMap.name }} ({{ currentConfigMap.namespace }})</span>
+        </template>
+        <template #description>
+          <div>数据键: {{ currentConfigMap.data_count }} 个 | 大小: {{ currentConfigMap.size }}</div>
+        </template>
       </a-alert>
+      
+      <div class="data-actions">
+        <a-button type="primary" size="small" @click="copyData">
+          <template #icon><CopyOutlined /></template>
+          复制所有数据
+        </a-button>
+        <a-button type="primary" size="small" @click="downloadData">
+          <template #icon><DownloadOutlined /></template>
+          下载数据
+        </a-button>
+      </div>
+
+      <div class="configmap-data-view">
+        <a-collapse v-if="configmapData && Object.keys(configmapData).length > 0">
+          <a-collapse-panel 
+            v-for="(value, key) in configmapData" 
+            :key="key" 
+            :header="key"
+            class="data-panel"
+          >
+            <template #extra>
+              <a-button type="link" size="small" @click="copyDataKey(key, value)" @click.stop>
+                <template #icon><CopyOutlined /></template>
+              </a-button>
+            </template>
+            <pre class="data-content">{{ value }}</pre>
+          </a-collapse-panel>
+        </a-collapse>
+        <a-empty v-else description="暂无数据" />
+      </div>
+    </a-modal>
+
+    <!-- 查看 YAML 模态框 -->
+    <a-modal
+      v-model:open="viewYamlModalVisible"
+      title="ConfigMap YAML 配置"
+      width="900px"
+      class="cluster-modal yaml-modal"
+      :footer="null"
+    >
+      <a-alert v-if="currentConfigMap" class="modal-alert" type="info" show-icon>
+        <template #message>
+          <span>{{ currentConfigMap.name }} ({{ currentConfigMap.namespace }})</span>
+        </template>
+        <template #description>
+          <div>数据键: {{ currentConfigMap.data_count }} 个</div>
+        </template>
+      </a-alert>
+      
       <div class="yaml-actions">
         <a-button type="primary" size="small" @click="copyYaml">
           <template #icon><CopyOutlined /></template>
           复制
         </a-button>
       </div>
-      <pre class="yaml-editor">{{ configMapYaml }}</pre>
+      <pre class="yaml-editor">{{ configmapYaml }}</pre>
     </a-modal>
 
-    <!-- 查看配置详情模态框 -->
+    <!-- 使用情况模态框 -->
     <a-modal
-      v-model:open="configDetailModalVisible"
-      title="ConfigMap 配置详情"
-      :width="800"
-      class="configmap-modal"
+      v-model:open="usageModalVisible"
+      title="ConfigMap 使用情况"
+      width="800px"
+      class="cluster-modal"
       :footer="null"
     >
       <a-alert v-if="currentConfigMap" class="modal-alert" type="info" show-icon>
-        <template #message>{{ currentConfigMap.metadata.name }} ({{ currentConfigMap.metadata.namespace }})</template>
-        <template #description>配置项数量: {{ Object.keys(currentConfigMap.data || {}).length }} | 创建于: {{ formatDateTime(currentConfigMap.metadata.creationTimestamp) }}</template>
+        <template #message>
+          <span>{{ currentConfigMap.name }} ({{ currentConfigMap.namespace }})</span>
+        </template>
+        <template #description>
+          <div>查看哪些资源使用了此ConfigMap</div>
+        </template>
       </a-alert>
-      
-      <a-tabs v-if="currentConfigMap && currentConfigMap.data">
-        <a-tab-pane 
-          v-for="(value, key, index) in currentConfigMap.data" 
-          :key="index" 
-          :tab="key"
-        >
-          <div class="config-detail-content">
-            <div class="config-actions">
-              <a-button type="primary" size="small" @click="copyConfigValue(value)">
-                <template #icon><CopyOutlined /></template>
-                复制内容
+
+      <div class="usage-content">
+        <a-descriptions bordered size="small">
+          <a-descriptions-item label="使用的Pods" :span="3">
+            <a-tag v-for="pod in configmapUsage.pods" :key="pod" color="blue" class="usage-tag">
+              {{ pod }}
+            </a-tag>
+            <span v-if="!configmapUsage.pods?.length" class="no-usage">无</span>
+          </a-descriptions-item>
+          <a-descriptions-item label="使用的Deployments" :span="3">
+            <a-tag v-for="deployment in configmapUsage.deployments" :key="deployment" color="green" class="usage-tag">
+              {{ deployment }}
+            </a-tag>
+            <span v-if="!configmapUsage.deployments?.length" class="no-usage">无</span>
+          </a-descriptions-item>
+          <a-descriptions-item label="使用的Services" :span="3">
+            <a-tag v-for="service in configmapUsage.services" :key="service" color="orange" class="usage-tag">
+              {{ service }}
+            </a-tag>
+            <span v-if="!configmapUsage.services?.length" class="no-usage">无</span>
+          </a-descriptions-item>
+        </a-descriptions>
+      </div>
+    </a-modal>
+
+    <!-- 创建ConfigMap模态框 -->
+    <a-modal
+      v-model:open="isCreateModalVisible"
+      title="创建 ConfigMap"
+      width="800px"
+      @ok="handleCreate"
+      @cancel="resetCreateForm"
+      :confirmLoading="loading"
+      class="cluster-modal"
+    >
+      <a-form :model="createForm" layout="vertical">
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="ConfigMap 名称" required>
+              <a-input v-model:value="createForm.name" placeholder="请输入ConfigMap名称" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="命名空间" required>
+              <a-select v-model:value="createForm.namespace" placeholder="请选择命名空间">
+                <a-select-option v-for="ns in namespaces" :key="ns" :value="ns">
+                  {{ ns }}
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-form-item label="数据">
+          <div class="data-entries">
+            <div v-for="(entry, index) in createForm.dataEntries" :key="index" class="data-entry">
+              <a-input 
+                v-model:value="entry.key" 
+                placeholder="键名" 
+                style="width: 30%; margin-right: 8px;"
+              />
+              <a-textarea 
+                v-model:value="entry.value" 
+                placeholder="键值" 
+                style="width: 60%; margin-right: 8px;" 
+                :auto-size="{ minRows: 1, maxRows: 4 }"
+              />
+              <a-button type="link" danger @click="removeDataEntry(index)" v-if="createForm.dataEntries.length > 1">
+                <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
-            <pre class="config-value-editor">{{ value }}</pre>
+            <a-button type="dashed" @click="addDataEntry" block>
+              <template #icon><PlusOutlined /></template>
+              添加数据项
+            </a-button>
           </div>
-        </a-tab-pane>
-      </a-tabs>
-      
-      <a-empty v-else description="无配置数据" />
+        </a-form-item>
+
+        <a-form-item label="从文件创建">
+          <a-upload
+            :file-list="fileList"
+            :before-upload="handleBeforeUpload"
+            @remove="handleRemoveFile"
+            multiple
+          >
+            <a-button>
+              <template #icon><UploadOutlined /></template>
+              选择文件
+            </a-button>
+          </a-upload>
+          <div class="upload-tip">支持上传多个配置文件，文件名将作为键名</div>
+        </a-form-item>
+      </a-form>
     </a-modal>
   </div>
 </template>
@@ -420,68 +557,89 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import {
-  getConfigMapListApi,
+  getConfigMapListWithFilterApi,
   getConfigMapYamlApi,
   deleteConfigMapApi,
+  batchDeleteConfigMapApi,
+  createConfigMapApi,
+  getConfigMapDataApi,
+  getConfigMapUsageApi,
+  backupConfigMapApi,
+  createConfigMapFromFileApi,
   getAllClustersApi,
   getNamespacesByClusterIdApi,
+} from '#/api';
+import type { 
+  ConfigMapInfo, 
+  ConfigMapListReq,
+  ConfigMapCreateReq,
+  ConfigMapUsageInfo,
+  ConfigMapBackupReq 
 } from '#/api';
 import { 
   CloudServerOutlined, 
   TableOutlined, 
   AppstoreOutlined, 
-  SearchOutlined,
   ReloadOutlined,
   DeleteOutlined,
-  EyeOutlined, 
   CodeOutlined,
-  ProfileOutlined,
+  SettingOutlined,
   ClockCircleOutlined,
+  CheckCircleOutlined,
   CopyOutlined,
   ClusterOutlined,
-  PartitionOutlined
+  PartitionOutlined,
+  PlusOutlined,
+  EditOutlined,
+  EyeOutlined,
+  LinkOutlined,
+  SaveOutlined,
+  FileTextOutlined,
+  DownloadOutlined,
+  UploadOutlined
 } from '@ant-design/icons-vue';
-
-// 类型定义
-interface ConfigMap {
-  metadata: {
-    name: string;
-    namespace: string;
-    uid: string;
-    creationTimestamp: string;
-  };
-  data: Record<string, string>;
-}
 
 // 状态变量
 const loading = ref(false);
 const clustersLoading = ref(false);
 const namespacesLoading = ref(false);
-const configMaps = ref<ConfigMap[]>([]);
+const configmaps = ref<ConfigMapInfo[]>([]);
 const searchText = ref('');
-const selectedRows = ref<ConfigMap[]>([]);
+const selectedRows = ref<ConfigMapInfo[]>([]);
 const namespaces = ref<string[]>(['default']);
 const selectedNamespace = ref<string>('default');
+const dataModalVisible = ref(false);
 const viewYamlModalVisible = ref(false);
-const configDetailModalVisible = ref(false);
-const configMapYaml = ref('');
+const usageModalVisible = ref(false);
+const isCreateModalVisible = ref(false);
+const configmapYaml = ref('');
+const configmapData = ref<Record<string, string>>({});
+const configmapUsage = ref<ConfigMapUsageInfo>({ pods: [], deployments: [], services: [] });
 const clusters = ref<Array<{id: number, name: string}>>([]);
 const selectedCluster = ref<number>();
 const viewMode = ref<'table' | 'card'>('table');
-const currentConfigMap = ref<ConfigMap | null>(null);
+const currentConfigMap = ref<ConfigMapInfo | null>(null);
 const selectedCardIds = ref<string[]>([]);
+const currentPage = ref(1);
+const pageSize = ref(12);
+const totalItems = ref(0);
+const fileList = ref<any[]>([]);
 
-// 计算属性：配置项总数
-const totalConfigItems = computed(() => {
-  return configMaps.value.reduce((total, cm) => {
-    return total + Object.keys(cm.data || {}).length;
-  }, 0);
+// 创建表单
+const createForm = ref<{
+  name: string;
+  namespace: string;
+  dataEntries: Array<{ key: string; value: string }>;
+}>({
+  name: '',
+  namespace: 'default',
+  dataEntries: [{ key: '', value: '' }]
 });
 
 // 根据卡片选择更新 selectedRows
 watch(selectedCardIds, (newValue) => {
-  selectedRows.value = configMaps.value.filter(configmap => 
-    newValue.includes(configmap.metadata.uid)
+  selectedRows.value = configmaps.value.filter(configmap => 
+    newValue.includes(configmap.uid)
   );
 });
 
@@ -489,45 +647,47 @@ watch(selectedCardIds, (newValue) => {
 const columns = [
   {
     title: 'ConfigMap 名称',
-    dataIndex: ['metadata', 'name'],
+    dataIndex: 'name',
     key: 'name',
     slots: { customRender: 'name' },
     width: '20%',
-    sorter: (a: ConfigMap, b: ConfigMap) => a.metadata.name.localeCompare(b.metadata.name),
+    sorter: (a: ConfigMapInfo, b: ConfigMapInfo) => a.name.localeCompare(b.name),
   },
   {
     title: '命名空间',
-    dataIndex: ['metadata', 'namespace'],
+    dataIndex: 'namespace',
     key: 'namespace',
-    width: '15%',
-    sorter: (a: ConfigMap, b: ConfigMap) => a.metadata.namespace.localeCompare(b.metadata.namespace),
+    width: '12%',
+    slots: { customRender: 'namespace' },
+    sorter: (a: ConfigMapInfo, b: ConfigMapInfo) => a.namespace.localeCompare(b.namespace),
   },
   {
-    title: '配置项数量',
-    key: 'dataCount',
+    title: '数据键数',
+    dataIndex: 'data_count',
+    key: 'data_count',
     width: '10%',
-    slots: { customRender: 'dataCount' },
-    sorter: (a: ConfigMap, b: ConfigMap) => 
-      Object.keys(a.data || {}).length - Object.keys(b.data || {}).length,
+    slots: { customRender: 'data_count' },
+    sorter: (a: ConfigMapInfo, b: ConfigMapInfo) => (a.data_count || 0) - (b.data_count || 0),
   },
   {
-    title: '配置项预览',
-    key: 'dataPreview',
-    width: '25%',
-    slots: { customRender: 'dataPreview' },
+    title: '大小',
+    dataIndex: 'size',
+    key: 'size',
+    width: '10%',
+    slots: { customRender: 'size' },
   },
   {
     title: '创建时间',
-    dataIndex: ['metadata', 'creationTimestamp'],
+    dataIndex: 'creation_timestamp',
     key: 'creationTimestamp',
     width: '15%',
-    sorter: (a: ConfigMap, b: ConfigMap) => new Date(a.metadata.creationTimestamp).getTime() - new Date(b.metadata.creationTimestamp).getTime(),
+    sorter: (a: ConfigMapInfo, b: ConfigMapInfo) => new Date(a.creation_timestamp).getTime() - new Date(b.creation_timestamp).getTime(),
     slots: { customRender: 'creationTimestamp' },
   },
   {
     title: '操作',
     key: 'action',
-    width: '15%',
+    width: '18%',
     fixed: 'right',
     slots: { customRender: 'action' },
   },
@@ -536,15 +696,35 @@ const columns = [
 // 计算属性：过滤后的ConfigMap列表
 const filteredConfigMaps = computed(() => {
   const searchValue = searchText.value.toLowerCase().trim();
-  if (!searchValue) return configMaps.value;
-  return configMaps.value.filter(cm => 
-    cm.metadata.name.toLowerCase().includes(searchValue) ||
-    cm.metadata.namespace.toLowerCase().includes(searchValue)
+  if (!searchValue) return configmaps.value;
+  return configmaps.value.filter(configmap => 
+    configmap.name.toLowerCase().includes(searchValue)
   );
 });
 
-// 日期格式化
-const formatDate = (dateString: string): string => {
+// 计算属性：有数据的ConfigMap数量
+const configmapsWithData = computed(() => 
+  configmaps.value.filter(cm => cm.data_count && cm.data_count > 0).length
+);
+
+// 计算属性：总数据键数
+const totalDataKeys = computed(() => 
+  configmaps.value.reduce((total, cm) => total + (cm.data_count || 0), 0)
+);
+
+// 表格选择配置
+const rowSelection = {
+  onChange: (_: string[], selectedRowsData: ConfigMapInfo[]) => {
+    selectedRows.value = selectedRowsData;
+    selectedCardIds.value = selectedRowsData.map(row => row.uid);
+  },
+  getCheckboxProps: (_: ConfigMapInfo) => ({
+    disabled: false,
+  }),
+};
+
+// 格式化日期
+const formatDate = (dateString: string) => {
   if (!dateString) return '-';
   const date = new Date(dateString);
   return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -557,32 +737,47 @@ const formatDateTime = (dateString: string): string => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
 };
 
-// 表格选择配置
-const rowSelection = {
-  onChange: (_selectedRowKeys: string[], selectedRowsData: ConfigMap[]) => {
-    selectedRows.value = selectedRowsData;
-    selectedCardIds.value = selectedRowsData.map(row => row.metadata.uid);
-  },
-};
-
 // 复制YAML
 const copyYaml = async () => {
   try {
-    await navigator.clipboard.writeText(configMapYaml.value);
+    await navigator.clipboard.writeText(configmapYaml.value);
     message.success('YAML 已复制到剪贴板');
   } catch (err) {
     message.error('复制失败，请手动选择并复制');
   }
 };
 
-// 复制配置值
-const copyConfigValue = async (value: string) => {
+// 复制数据
+const copyData = async () => {
   try {
-    await navigator.clipboard.writeText(value);
-    message.success('配置内容已复制到剪贴板');
+    await navigator.clipboard.writeText(JSON.stringify(configmapData.value, null, 2));
+    message.success('数据已复制到剪贴板');
   } catch (err) {
     message.error('复制失败，请手动选择并复制');
   }
+};
+
+// 复制数据键
+const copyDataKey = async (key: string, value: string) => {
+  try {
+    await navigator.clipboard.writeText(value);
+    message.success(`数据键 "${key}" 已复制到剪贴板`);
+  } catch (err) {
+    message.error('复制失败，请手动选择并复制');
+  }
+};
+
+// 下载数据
+const downloadData = () => {
+  const dataStr = JSON.stringify(configmapData.value, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(dataBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${currentConfigMap.value?.name}-configmap-data.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+  message.success('数据下载成功');
 };
 
 // 获取集群列表
@@ -590,11 +785,13 @@ const getClusters = async () => {
   clustersLoading.value = true;
   try {
     const res = await getAllClustersApi();
-    clusters.value = res || [];
-    if (clusters.value.length > 0 && clusters.value[0]?.id) {
-      selectedCluster.value = clusters.value[0].id;
-      await getNamespaces();
-      await getConfigMaps();
+    clusters.value = res ?? [];
+    if (clusters.value.length > 0 && !selectedCluster.value) {
+      selectedCluster.value = clusters.value[0]?.id;
+      if (selectedCluster.value) {
+        await getNamespaces();
+        await getConfigMaps(1, pageSize.value);
+      }
     }
   } catch (error: any) {
     message.error(error.message || '获取集群列表失败');
@@ -626,8 +823,8 @@ const getNamespaces = async () => {
   }
 };
 
-// 获取ConfigMap列表
-const getConfigMaps = async () => {
+// 获取ConfigMap列表（支持分页）
+const getConfigMaps = async (page = 1, size = pageSize.value) => {
   if (!selectedCluster.value || !selectedNamespace.value) {
     message.warning('请先选择集群和命名空间');
     return;
@@ -635,12 +832,26 @@ const getConfigMaps = async () => {
   
   loading.value = true;
   try {
-    const res = await getConfigMapListApi(selectedCluster.value, selectedNamespace.value);
-    configMaps.value = res || [];
+    const params: ConfigMapListReq = {
+      cluster_id: selectedCluster.value,
+      namespace: selectedNamespace.value,
+      page,
+      page_size: size
+    };
+    
+    const res = await getConfigMapListWithFilterApi(params);
+    configmaps.value = res || [];
+    
+    // 默认设置总数为当前数据长度（如果API未返回分页信息）
+    totalItems.value = configmaps.value.length;
+    
+    currentPage.value = page;
     selectedRows.value = [];
     selectedCardIds.value = [];
   } catch (error: any) {
     message.error(error.message || '获取ConfigMap列表失败');
+    configmaps.value = [];
+    totalItems.value = 0;
   } finally {
     loading.value = false;
   }
@@ -648,41 +859,115 @@ const getConfigMaps = async () => {
 
 // 刷新数据
 const refreshData = () => {
-  getConfigMaps();
+  getConfigMaps(currentPage.value, pageSize.value);
 };
 
 // 搜索
 const onSearch = () => {
-  // 搜索逻辑已经在计算属性中实现，这里可以添加其他触发行为
+  // 搜索逻辑已经在计算属性中实现
+};
+
+// 查看ConfigMap数据
+const viewConfigMapData = async (configmap: ConfigMapInfo) => {
+  if (!selectedCluster.value) return;
+  try {
+    currentConfigMap.value = configmap;
+    const res = await getConfigMapDataApi({
+      cluster_id: selectedCluster.value,
+      namespace: configmap.namespace,
+      name: configmap.name
+    });
+    configmapData.value = res || {};
+    dataModalVisible.value = true;
+  } catch (error: any) {
+    message.error(error.message || '获取ConfigMap数据失败');
+  }
 };
 
 // 查看ConfigMap YAML
-const viewConfigMapYaml = async (configMap: ConfigMap) => {
+const viewConfigMapYaml = async (configmap: ConfigMapInfo) => {
   if (!selectedCluster.value) return;
   try {
-    currentConfigMap.value = configMap;
-    const res = await getConfigMapYamlApi(selectedCluster.value, configMap.metadata.name, configMap.metadata.namespace);
-    configMapYaml.value = typeof res === 'string' ? res : JSON.stringify(res, null, 2);
+    currentConfigMap.value = configmap;
+    const res = await getConfigMapYamlApi(selectedCluster.value, configmap.name, configmap.namespace);
+    configmapYaml.value = typeof res === 'string' ? res : JSON.stringify(res, null, 2);
     viewYamlModalVisible.value = true;
   } catch (error: any) {
     message.error(error.message || '获取ConfigMap YAML失败');
   }
 };
 
-// 查看配置详情
-const viewConfigDetail = (configMap: ConfigMap) => {
-  currentConfigMap.value = configMap;
-  configDetailModalVisible.value = true;
+// 查看使用情况
+const viewUsage = async (configmap: ConfigMapInfo) => {
+  if (!selectedCluster.value) return;
+  try {
+    currentConfigMap.value = configmap;
+    const usage = await getConfigMapUsageApi(selectedCluster.value, configmap.namespace, configmap.name);
+    configmapUsage.value = usage || { pods: [], deployments: [], services: [] };
+    usageModalVisible.value = true;
+  } catch (error: any) {
+    message.error(error.message || '获取使用情况失败');
+  }
+};
+
+// 备份ConfigMap
+const backupConfigMap = async (configmap: ConfigMapInfo) => {
+  if (!selectedCluster.value) return;
+  try {
+    const backupData: ConfigMapBackupReq = {
+      cluster_id: selectedCluster.value,
+      namespace: configmap.namespace,
+      names: [configmap.name],
+      backup_name: `${configmap.name}-backup-${Date.now()}`,
+      description: `备份ConfigMap ${configmap.name}`
+    };
+    
+    await backupConfigMapApi(backupData);
+    message.success(`ConfigMap ${configmap.name} 备份成功`);
+  } catch (error: any) {
+    message.error(error.message || '备份失败');
+  }
+};
+
+// 批量备份
+const handleBatchBackup = async () => {
+  if (!selectedRows.value.length || !selectedCluster.value) return;
+  
+  try {
+    loading.value = true;
+    const backupData: ConfigMapBackupReq = {
+      cluster_id: selectedCluster.value,
+      namespace: selectedNamespace.value,
+      names: selectedRows.value.map(cm => cm.name),
+      backup_name: `batch-backup-${Date.now()}`,
+      description: `批量备份 ${selectedRows.value.length} 个ConfigMap`
+    };
+    
+    await backupConfigMapApi(backupData);
+    message.success(`成功备份 ${selectedRows.value.length} 个ConfigMap`);
+    selectedRows.value = [];
+    selectedCardIds.value = [];
+  } catch (error: any) {
+    message.error(error.message || '批量备份失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 编辑ConfigMap
+const handleEdit = (_: ConfigMapInfo) => {
+  // 编辑功能
+  message.info('编辑功能开发中...');
 };
 
 // 删除ConfigMap
-const handleDelete = async (configMap: ConfigMap) => {
+const handleDelete = async (configmap: ConfigMapInfo) => {
   if (!selectedCluster.value) return;
   
   try {
-    await deleteConfigMapApi(selectedCluster.value, configMap.metadata.namespace, configMap.metadata.name);
+    await deleteConfigMapApi(selectedCluster.value, configmap.namespace, configmap.name);
     message.success('ConfigMap删除成功');
-    getConfigMaps();
+    getConfigMaps(currentPage.value, pageSize.value);
   } catch (error: any) {
     message.error(error.message || '删除ConfigMap失败');
   }
@@ -694,15 +979,16 @@ const handleBatchDelete = async () => {
   
   try {
     loading.value = true;
-    const promises = selectedRows.value.map(configMap => 
-      deleteConfigMapApi(selectedCluster.value!, configMap.metadata.namespace, configMap.metadata.name)
-    );
+    await batchDeleteConfigMapApi({
+      cluster_id: selectedCluster.value,
+      namespace: selectedNamespace.value,
+      names: selectedRows.value.map(cm => cm.name)
+    });
     
-    await Promise.all(promises);
-    message.success(`成功删除 ${selectedRows.value.length} 个配置`);
+    message.success(`成功删除 ${selectedRows.value.length} 个ConfigMap`);
     selectedRows.value = [];
     selectedCardIds.value = [];
-    getConfigMaps();
+    getConfigMaps(currentPage.value, pageSize.value);
   } catch (error: any) {
     message.error(error.message || '批量删除失败');
   } finally {
@@ -710,17 +996,107 @@ const handleBatchDelete = async () => {
   }
 };
 
+// 创建ConfigMap
+const handleCreate = async () => {
+  if (!selectedCluster.value) return;
+  
+  try {
+    loading.value = true;
+    
+    // 构建数据对象
+    const data: Record<string, string> = {};
+    createForm.value.dataEntries.forEach(entry => {
+      if (entry.key && entry.value) {
+        data[entry.key] = entry.value;
+      }
+    });
+    
+    if (fileList.value.length > 0) {
+      // 使用文件创建
+      await createConfigMapFromFileApi(
+        selectedCluster.value,
+        createForm.value.namespace,
+        createForm.value.name,
+        fileList.value
+      );
+    } else {
+      // 使用表单数据创建
+      const createData: ConfigMapCreateReq = {
+        cluster_id: selectedCluster.value,
+        namespace: createForm.value.namespace,
+        name: createForm.value.name,
+        data
+      };
+      
+      await createConfigMapApi(createData);
+    }
+    
+    message.success('ConfigMap创建成功');
+    isCreateModalVisible.value = false;
+    resetCreateForm();
+    getConfigMaps(currentPage.value, pageSize.value);
+  } catch (error: any) {
+    message.error(error.message || '创建ConfigMap失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 重置创建表单
+const resetCreateForm = () => {
+  createForm.value = {
+    name: '',
+    namespace: selectedNamespace.value,
+    dataEntries: [{ key: '', value: '' }]
+  };
+  fileList.value = [];
+};
+
+// 添加数据项
+const addDataEntry = () => {
+  createForm.value.dataEntries.push({ key: '', value: '' });
+};
+
+// 移除数据项
+const removeDataEntry = (index: number) => {
+  createForm.value.dataEntries.splice(index, 1);
+};
+
+// 文件上传前处理
+const handleBeforeUpload = (file: any) => {
+  fileList.value.push(file);
+  return false;
+};
+
+// 移除文件
+const handleRemoveFile = (file: any) => {
+  const index = fileList.value.indexOf(file);
+  if (index > -1) {
+    fileList.value.splice(index, 1);
+  }
+};
+
 // 切换命名空间
 const handleNamespaceChange = () => {
-  getConfigMaps();
+  currentPage.value = 1;
+  getConfigMaps(1, pageSize.value);
 };
 
 // 切换集群
 const handleClusterChange = () => {
   selectedNamespace.value = 'default';
-  configMaps.value = [];
+  configmaps.value = [];
+  currentPage.value = 1;
+  totalItems.value = 0;
   getNamespaces();
-  getConfigMaps();
+  getConfigMaps(1, pageSize.value);
+};
+
+// 分页处理
+const handleTableChange = (pagination: any) => {
+  currentPage.value = pagination.current;
+  pageSize.value = pagination.pageSize;
+  getConfigMaps(pagination.current, pagination.pageSize);
 };
 
 // 页面加载时获取数据
@@ -730,728 +1106,100 @@ onMounted(() => {
 </script>
 
 <style>
-/* 现代化大气设计系统 */
-:root {
-  --primary-color: #1677ff;
-  --primary-hover: #4096ff;
-  --primary-active: #0958d9;
-  --success-color: #52c41a;
-  --warning-color: #faad14;
-  --error-color: #ff4d4f;
-  --text-primary: #000000d9;
-  --text-secondary: #00000073;
-  --text-tertiary: #00000040;
-  --text-quaternary: #00000026;
-  --border-color: #d9d9d9;
-  --border-color-split: #f0f0f0;
-  --background-color: #f5f5f5;
-  --component-background: #ffffff;
-  --layout-header-background: #001529;
-  --shadow-1: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-2: 0 6px 16px rgba(0, 0, 0, 0.08);
-  --shadow-3: 0 9px 28px rgba(0, 0, 0, 0.12);
-  --border-radius-base: 8px;
-  --border-radius-sm: 6px;
-  --border-radius-lg: 12px;
-  --font-size-base: 14px;
-  --font-size-lg: 16px;
-  --font-size-xl: 20px;
-  --font-size-xxl: 24px;
-  --line-height-base: 1.5714;
-  --transition-duration: 0.3s;
-  --transition-function: cubic-bezier(0.645, 0.045, 0.355, 1);
-}
-
-/* ==================== 布局容器 ==================== */
-.configmap-management-container {
-  min-height: 100vh;
-  background: var(--background-color);
-  padding: 24px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
-
-/* ==================== 页面头部 ==================== */
-.page-header {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-1);
-  overflow: hidden;
-}
-
-.header-content {
-  padding: 32px 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.title-section {
-  flex: 1;
-}
-
-.page-title {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.title-icon {
-  font-size: 28px;
-  color: var(--primary-color);
-  margin-right: 16px;
-}
-
-.page-title h1 {
-  font-size: var(--font-size-xxl);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-  line-height: 1.2;
-}
-
-.page-subtitle {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
-  margin: 0;
-  line-height: var(--line-height-base);
-}
-
-.header-actions {
-  flex-shrink: 0;
-}
-
-/* ==================== 概览卡片 ==================== */
-.overview-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
-  margin-bottom: 32px;
-}
-
-.overview-card {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  padding: 24px;
-  box-shadow: var(--shadow-1);
-  display: flex;
-  align-items: center;
-  transition: all var(--transition-duration) var(--transition-function);
-  border: 1px solid var(--border-color-split);
-}
-
-.overview-card:hover {
-  box-shadow: var(--shadow-2);
-  transform: translateY(-2px);
-}
-
-.card-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--border-radius-base);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  margin-right: 16px;
-  flex-shrink: 0;
-}
-
-.total-configmaps .card-icon {
-  background: rgba(22, 119, 255, 0.1);
-  color: var(--primary-color);
-}
-
-.selected-cluster .card-icon {
-  background: rgba(82, 196, 26, 0.1);
-  color: var(--success-color);
-}
-
-.selected-namespace .card-icon {
-  background: rgba(250, 173, 20, 0.1);
-  color: var(--warning-color);
-}
-
-.config-items .card-icon {
-  background: rgba(114, 46, 209, 0.1);
-  color: #722ed1;
-}
-
-.card-info {
-  flex: 1;
-}
-
-.card-number {
-  font-size: var(--font-size-xl);
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.2;
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-label {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
-  line-height: var(--line-height-base);
-}
-
-/* ==================== 工具栏 ==================== */
-.toolbar {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  padding: 20px 24px;
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  border: 1px solid var(--border-color-split);
-}
-
-.toolbar-left {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  flex: 1;
-}
-
-.cluster-selector, .namespace-selector {
-  width: 200px;
-}
-
-.cluster-selector :deep(.ant-select-selector),
-.namespace-selector :deep(.ant-select-selector) {
-  border-radius: var(--border-radius-sm);
-  height: 40px;
-}
-
-.search-input {
-  width: 280px;
-}
-
-.search-input :deep(.ant-input) {
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-base);
-  height: 40px;
-}
-
-.toolbar-right {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.view-toggle :deep(.ant-radio-group) {
-  border-radius: var(--border-radius-sm);
-}
-
-.view-toggle :deep(.ant-radio-button-wrapper) {
-  height: 32px;
-  line-height: 30px;
-  padding: 0 12px;
-  border-radius: var(--border-radius-sm);
-}
-
-.view-toggle :deep(.ant-radio-button-wrapper:first-child) {
-  border-radius: var(--border-radius-sm) 0 0 var(--border-radius-sm);
-}
-
-.view-toggle :deep(.ant-radio-button-wrapper:last-child) {
-  border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
-}
-
-.cluster-option, .namespace-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* ==================== 数据展示区域 ==================== */
-.data-display {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  box-shadow: var(--shadow-1);
-  border: 1px solid var(--border-color-split);
-  overflow: hidden;
-}
-
-.display-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border-color-split);
-  background: var(--component-background);
-}
-
-.result-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.result-count {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.env-tags {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.env-tags :deep(.ant-tag) {
-  border-radius: var(--border-radius-sm);
-  font-size: 12px;
-  font-weight: 500;
-  margin: 0;
-}
-
-/* ==================== 表格样式 ==================== */
-.configmap-table {
-  border: none;
-}
-
-.configmap-table :deep(.ant-table-container) {
-  border-radius: 0;
-}
-
-.configmap-table :deep(.ant-table-thead > tr > th) {
-  background: #fafafa;
-  font-weight: 600;
-  padding: 16px 16px;
-  border-bottom: 1px solid var(--border-color-split);
-  color: var(--text-primary);
-  font-size: var(--font-size-base);
-}
-
-.configmap-table :deep(.ant-table-tbody > tr) {
-  transition: background-color var(--transition-duration) var(--transition-function);
-}
-
-.configmap-table :deep(.ant-table-tbody > tr:hover) {
-  background-color: #fafafa;
-}
-
-.configmap-table :deep(.ant-table-tbody > tr > td) {
-  padding: 16px;
-  border-bottom: 1px solid var(--border-color-split);
-  vertical-align: middle;
-  font-size: var(--font-size-base);
-}
+/* 继承现有样式系统 */
 
 .configmap-name {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   font-weight: 500;
 }
 
-.configmap-name span {
-  color: var(--text-primary);
-}
-
-.data-preview {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  max-width: 300px;
-}
-
-.data-key-tag {
-  margin: 0 !important;
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  max-width: 120px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.empty-data {
-  color: var(--text-tertiary);
-  font-style: italic;
-  font-size: 12px;
-}
-
-.timestamp {
+.size-info {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--text-secondary);
-  font-size: var(--font-size-base);
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
 }
 
-.action-column {
+.data-entries {
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  padding: 16px;
+  background: #fafafa;
+}
+
+.data-entry {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.data-entry:last-child {
+  margin-bottom: 0;
+}
+
+.configmap-data-view {
+  margin-top: 16px;
+}
+
+.data-panel {
+  margin-bottom: 8px;
+}
+
+.data-content {
+  background: #f5f5f5;
+  border-radius: 4px;
+  padding: 12px;
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.data-actions {
   display: flex;
   gap: 8px;
+  margin-bottom: 16px;
+}
+
+.usage-content {
+  margin-top: 16px;
+}
+
+.usage-tag {
+  margin-bottom: 4px;
+}
+
+.no-usage {
+  color: #999;
+  font-style: italic;
+}
+
+.upload-tip {
+  margin-top: 8px;
+  color: #666;
+  font-size: 12px;
+}
+
+.card-badge {
+  position: absolute;
+  top: 16px;
+  right: 40px;
+}
+
+/* 操作按钮样式优化 */
+.action-column {
+  display: flex;
+  gap: 4px;
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .action-column :deep(.ant-btn) {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--border-radius-sm);
-  transition: all var(--transition-duration) var(--transition-function);
-}
-
-.action-column :deep(.ant-btn:hover) {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-2);
-}
-
-/* ==================== 卡片视图 ==================== */
-.card-view {
-  padding: 24px;
-}
-
-.configmap-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 24px;
-}
-
-.card-checkbox-group {
-  display: contents;
-}
-
-.configmap-card {
-  background: var(--component-background);
-  border-radius: var(--border-radius-base);
-  box-shadow: var(--shadow-1);
-  transition: all var(--transition-duration) var(--transition-function);
-  overflow: hidden;
-  border: 1px solid var(--border-color-split);
-  position: relative;
-}
-
-.configmap-card:hover {
-  box-shadow: var(--shadow-2);
-  transform: translateY(-4px);
-}
-
-.card-header {
-  padding: 24px 24px 16px;
-  background: var(--component-background);
-  position: relative;
-}
-
-.configmap-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-right: 60px;
-}
-
-.configmap-title h3 {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.3;
-}
-
-.service-icon {
-  font-size: 20px;
-  color: var(--primary-color);
-}
-
-.card-type-tag {
-  position: absolute;
-  top: 20px;
-  right: 48px;
-  padding: 4px 8px;
-  border-radius: var(--border-radius-sm);
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.card-checkbox {
-  position: absolute;
-  top: 20px;
-  right: 16px;
-}
-
-.card-content {
-  padding: 0 24px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.card-detail {
-  display: flex;
-  align-items: flex-start;
-  line-height: var(--line-height-base);
-}
-
-.detail-label {
-  color: var(--text-secondary);
-  min-width: 100px;
-  font-size: var(--font-size-base);
-  font-weight: 500;
-}
-
-.detail-value {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--font-size-base);
-  color: var(--text-primary);
-  flex: 1;
-  font-weight: 500;
-}
-
-.data-keys {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.card-action-footer {
-  padding: 16px 24px 20px;
-  background: #fafafa;
-  border-top: 1px solid var(--border-color-split);
-  display: flex;
-  gap: 12px;
-}
-
-.card-action-footer .ant-btn {
-  flex: 1;
-  height: 36px;
-  border-radius: var(--border-radius-sm);
-  font-weight: 500;
-  transition: all var(--transition-duration) var(--transition-function);
-  font-size: var(--font-size-base);
-}
-
-.card-action-footer .ant-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-2);
-}
-
-.status-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: currentColor;
-}
-
-/* ==================== 模态框样式 ==================== */
-.configmap-modal :deep(.ant-modal-content) {
-  border-radius: var(--border-radius-base);
-  overflow: hidden;
-  box-shadow: var(--shadow-3);
-}
-
-.configmap-modal :deep(.ant-modal-header) {
-  background: var(--component-background);
-  border-bottom: 1px solid var(--border-color-split);
-  padding: 20px 24px;
-}
-
-.configmap-modal :deep(.ant-modal-title) {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.modal-alert {
-  margin-bottom: 20px;
-  border-radius: var(--border-radius-sm);
-}
-
-.yaml-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 10px;
-}
-
-.yaml-editor {
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  padding: 16px;
-  background-color: #fafafa;
-  border-radius: var(--border-radius-sm);
-  border: 1px solid var(--border-color-split);
-  overflow: auto;
-  max-height: 500px;
-  margin: 0;
-  white-space: pre;
-}
-
-.config-detail-content {
-  padding: 10px 0;
-}
-
-.config-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 10px;
-}
-
-.config-value-editor {
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  padding: 16px;
-  background-color: #fafafa;
-  border-radius: var(--border-radius-sm);
-  border: 1px solid var(--border-color-split);
-  overflow: auto;
-  max-height: 400px;
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-/* ==================== 空状态 ==================== */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 60px 0;
-  color: var(--text-secondary);
-}
-
-.empty-state p {
-  margin: 16px 0 24px;
-  font-size: var(--font-size-base);
-}
-
-/* ==================== 响应式设计 ==================== */
-@media (max-width: 1400px) {
-  .overview-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .configmap-cards {
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  }
-}
-
-@media (max-width: 1024px) {
-  .configmap-management-container {
-    padding: 16px;
-  }
-  
-  .header-content {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 20px;
-    padding: 24px 32px;
-  }
-  
-  .toolbar {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
-  }
-  
-  .toolbar-left {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .cluster-selector, .namespace-selector, .search-input {
-    width: 100%;
-  }
-  
-  .toolbar-right {
-    justify-content: space-between;
-  }
-}
-
-@media (max-width: 768px) {
-  .configmap-management-container {
-    padding: 12px;
-  }
-  
-  .header-content {
-    padding: 20px 24px;
-  }
-  
-  .page-title h1 {
-    font-size: var(--font-size-xl);
-  }
-  
-  .overview-cards {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-  
-  .overview-card {
-    padding: 16px;
-  }
-  
-  .card-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 18px;
-    margin-right: 12px;
-  }
-  
-  .card-number {
-    font-size: var(--font-size-lg);
-  }
-  
-  .configmap-cards {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  
-  .configmap-card {
-    margin-bottom: 0;
-  }
-  
-  .card-action-footer {
-    flex-direction: column;
-    gap: 8px;
-  }
-}
-
-@media (max-width: 480px) {
-  .overview-cards {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-  
-  .overview-card {
-    padding: 12px;
-  }
-  
-  .card-icon {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
-    margin-right: 8px;
-  }
-  
-  .toolbar-right {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .configmap-table :deep(.ant-table-tbody > tr > td) {
-    padding: 12px 8px;
-    font-size: 13px;
-  }
-  
-  .action-column {
-    flex-direction: column;
-    gap: 4px;
-  }
-  
-  .action-column :deep(.ant-btn) {
-    width: 28px;
-    height: 28px;
-  }
+  min-width: 28px;
 }
 </style>
