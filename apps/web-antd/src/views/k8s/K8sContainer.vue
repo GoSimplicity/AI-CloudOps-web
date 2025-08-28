@@ -1173,9 +1173,6 @@ const batchRestart = async () => {
 </script>
 
 <style scoped>
-/* 复用现有样式，添加容器特定的样式 */
-@import url('./k8s-common.css');
-
 .container-management-container {
   background: #f5f5f5;
   min-height: calc(100vh - 64px);

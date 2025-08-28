@@ -38,7 +38,7 @@ const routes: RouteRecordRaw[] = [
         path: '/k8s_node',
         component: () => import('#/views/k8s/K8sNode.vue'),
         meta: {
-          order: 3,
+          hideInMenu: true,
           icon: 'lucide:server',
           title: '节点管理',
         },
