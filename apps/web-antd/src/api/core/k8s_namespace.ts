@@ -1,167 +1,104 @@
 import { requestClient } from '#/api/request';
+import type { KeyValueList } from './k8s_cluster';
 
-// 命名空间相关接口和类型定义
-
-export interface NamespaceDetails {
-  name: string;
-  uid: string;
-  status: string;
-  creation_time: string;
-  labels: string[];
-  annotations: string[];
+// K8s命名空间接口
+export interface K8sNamespace {
+  cluster_id: number; // 所属集群ID
+  name: string; // 命名空间名称
+  uid?: string; // 命名空间UID
+  status?: string; // 命名空间状态
+  phase?: string; // 命名空间阶段
+  labels?: KeyValueList; // 标签
+  annotations?: KeyValueList; // 注解
 }
 
+// 命名空间列表查询请求
+export interface K8sNamespaceListReq {
+  page?: number; // 页码
+  size?: number; // 每页数量
+  search?: string; // 搜索
+  cluster_id: number; // 集群ID，必填
+  status?: string; // 状态过滤
+  labels?: KeyValueList; // 标签
+}
+
+// 创建命名空间请求
 export interface CreateNamespaceReq {
-  cluster_id: number;
-  namespace: string;
-  labels: string[];
-  annotations: string[];
+  cluster_id: number; // 集群ID，必填
+  name: string; // 命名空间名称，必填
+  labels?: KeyValueList; // 标签
+  annotations?: KeyValueList; // 注解
 }
 
+// 更新命名空间请求
 export interface UpdateNamespaceReq {
-  cluster_id: number;
-  namespace: string;
-  labels: string[];
-  annotations: string[];
+  cluster_id: number; // 集群ID，必填
+  name: string; // 命名空间名称，必填
+  labels?: KeyValueList; // 标签
+  annotations?: KeyValueList; // 注解
 }
 
-export interface NamespaceListReq {
-  cluster_id: number;
-  label_selector?: string;
-  field_selector?: string;
-  status?: string;
-  page?: number;
-  page_size?: number;
+// 删除命名空间请求
+export interface DeleteNamespaceReq {
+  cluster_id: number; // 集群ID，必填
+  name: string; // 命名空间名称，必填
+  grace_period_seconds?: number; // 优雅删除时间（秒）
+  force: 1 | 2; // 是否强制删除
 }
 
-export interface NamespaceDeleteReq {
-  cluster_id: number;
-  name: string;
-  grace_period_seconds?: number;
-  force?: boolean;
-}
-
-export interface NamespaceBatchDeleteReq {
-  cluster_id: number;
-  names: string[];
-  grace_period_seconds?: number;
-  force?: boolean;
-}
-
-export interface NamespaceResource {
-  type: string;
-  name: string;
-  namespace: string;
-  status: string;
-  creation_time: string;
-}
-
-export interface NamespaceEvent {
-  reason: string;
-  message: string;
-  type: string;
-  first_timestamp: string;
-  last_timestamp: string;
-  count: number;
-  source: string;
-}
-
-export interface ResourceQuota {
-  cpu_request?: string;
-  cpu_limit?: string;
-  memory_request?: string;
-  memory_limit?: string;
-  storage_request?: string;
-  persistent_volume_claims?: string;
-  pods?: string;
-  services?: string;
-  secrets?: string;
-  configmaps?: string;
-}
-
-// 命名空间相关API函数
-
-/**
- * 获取所有命名空间列表
- */
-export async function getAllNamespacesApi() {
-  return requestClient.get<string[]>('/k8s/namespaces/list');
+// 获取命名空间详情请求
+export interface GetNamespaceDetailsReq {
+  cluster_id: number; // 集群ID，必填
+  name: string; // 命名空间名称，必填
 }
 
 /**
- * 根据集群ID获取命名空间列表
+ * 获取命名空间列表
  */
-export async function getNamespacesByClusterIdApi(id: number) {
-  return requestClient.get(`/k8s/namespaces/select/${id}`);
+export async function getNamespacesListApi(
+  clusterId: number,
+  params?: K8sNamespaceListReq,
+) {
+  return requestClient.get(`/k8s/namespaces/${clusterId}/list`, { params });
 }
 
 /**
  * 创建命名空间
  */
-export async function createNamespaceApi(data: CreateNamespaceReq) {
-  return requestClient.post('/k8s/namespaces/create', data);
+export async function createNamespaceApi(
+  clusterId: number,
+  data: CreateNamespaceReq,
+) {
+  return requestClient.post(`/k8s/namespaces/${clusterId}/create`, data);
 }
 
 /**
  * 删除命名空间
  */
-export async function deleteNamespaceApi(id: number, name: string) {
-  return requestClient.delete(`/k8s/namespaces/delete/${id}?name=${name}`);
+export async function deleteNamespaceApi(
+  clusterId: number,
+  name: string,
+  data?: DeleteNamespaceReq,
+) {
+  return requestClient.delete(`/k8s/namespaces/${clusterId}/${name}/delete`, {
+    data,
+  });
 }
 
 /**
- * 批量删除命名空间
+ * 获取命名空间详情
  */
-export async function batchDeleteNamespaceApi(data: NamespaceBatchDeleteReq) {
-  return requestClient.delete('/k8s/namespaces/batch_delete', { data });
-}
-
-/**
- * 获取命名空间详细信息
- */
-export async function getNamespaceDetailsApi(id: number, name: string) {
-  return requestClient.get<NamespaceDetails>(
-    `/k8s/namespaces/${id}?name=${name}`,
-  );
+export async function getNamespaceDetailsApi(clusterId: number, name: string) {
+  return requestClient.get(`/k8s/namespaces/${clusterId}/${name}/details`);
 }
 
 /**
  * 更新命名空间
  */
-export async function updateNamespaceApi(data: UpdateNamespaceReq) {
-  return requestClient.post('/k8s/namespaces/update', data);
-}
-
-/**
- * 获取命名空间中的资源
- */
-export async function getNamespaceResourcesApi(id: number, name: string) {
-  return requestClient.get<NamespaceResource[]>(
-    `/k8s/namespaces/${id}/resources?name=${name}`,
-  );
-}
-
-/**
- * 获取命名空间事件
- */
-export async function getNamespaceEventsApi(id: number, name: string) {
-  return requestClient.get<NamespaceEvent[]>(`/k8s/namespaces/${id}/events?name=${name}`);
-}
-
-/**
- * 设置命名空间资源配额
- */
-export async function setNamespaceQuotaApi(cluster_id: number, name: string, quota: ResourceQuota) {
-  return requestClient.post('/k8s/namespaces/quota', {
-    cluster_id,
-    name,
-    resource_quota: quota,
-  });
-}
-
-/**
- * 获取命名空间资源配额
- */
-export async function getNamespaceQuotaApi(cluster_id: number, name: string) {
-  return requestClient.get(`/k8s/namespaces/${cluster_id}/quota?name=${name}`);
+export async function updateNamespaceApi(
+  clusterId: number,
+  name: string,
+  data: UpdateNamespaceReq,
+) {
+  return requestClient.put(`/k8s/namespaces/${clusterId}/${name}/update`, data);
 }

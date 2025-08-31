@@ -376,7 +376,7 @@ import {
   cleanupEventsApi,
   exportEventsApi,
   getResourceEventsApi,
-  getAllClustersApi,
+  getClustersListApi,
   getNamespacesByClusterIdApi
 } from '#/api';
 import type { 
@@ -576,7 +576,7 @@ const formatDateTime = (timestamp: string) => {
 const getClusters = async () => {
   clustersLoading.value = true;
   try {
-    const res = await getAllClustersApi();
+    const res = await getClustersListApi();
     clusters.value = res ?? [];
     if (clusters.value.length > 0 && !selectedCluster.value) {
       selectedCluster.value = clusters.value[0]?.id;
@@ -782,7 +782,6 @@ onMounted(() => {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* ==================== 页面头部 ==================== */
 .page-header {
   background: #ffffff;
   border-radius: 8px;
