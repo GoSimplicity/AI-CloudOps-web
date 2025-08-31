@@ -11,7 +11,7 @@
           <p class="page-subtitle">监控和管理集群中的所有事件信息</p>
         </div>
         <div class="header-actions">
-          <a-button type="primary" size="large" @click="getEventStatistics" :loading="statisticsLoading">
+          <a-button type="primary" size="large" @click="loadEventStatistics" :loading="statisticsLoading">
             <template #icon><BarChartOutlined /></template>
             查看统计
           </a-button>
@@ -24,13 +24,13 @@
     </div>
 
     <!-- 数据概览卡片 -->
-    <div class="overview-cards" v-if="statistics">
+    <div class="overview-cards" v-if="summary">
       <div class="overview-card total-clusters">
         <div class="card-icon">
           <ActivityOutlined />
         </div>
         <div class="card-info">
-          <div class="card-number">{{ statistics.total_count || 0 }}</div>
+          <div class="card-number">{{ summary.total_events || 0 }}</div>
           <div class="card-label">事件总数</div>
         </div>
       </div>
@@ -40,7 +40,7 @@
           <CheckCircleOutlined />
         </div>
         <div class="card-info">
-          <div class="card-number">{{ statistics.normal_count || 0 }}</div>
+          <div class="card-number">{{ summary.normal_events || 0 }}</div>
           <div class="card-label">正常事件</div>
         </div>
       </div>
@@ -50,7 +50,7 @@
           <WarningOutlined />
         </div>
         <div class="card-info">
-          <div class="card-number">{{ statistics.warning_count || 0 }}</div>
+          <div class="card-number">{{ summary.warning_events || 0 }}</div>
           <div class="card-label">警告事件</div>
         </div>
       </div>
@@ -60,8 +60,72 @@
           <HistoryOutlined />
         </div>
         <div class="card-info">
-          <div class="card-number">{{ statistics.recent_count || 0 }}</div>
-          <div class="card-label">近期事件</div>
+          <div class="card-number">{{ summary.unique_events || 0 }}</div>
+          <div class="card-label">唯一事件</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 事件趋势图表 -->
+    <div class="chart-container" v-if="eventTrends.length > 0">
+      <div class="chart-header">
+        <h3><BarChartOutlined /> 事件趋势分析</h3>
+        <div class="chart-actions">
+          <a-radio-group v-model:value="trendInterval" @change="handleTrendIntervalChange">
+            <a-radio-button value="1h">1小时</a-radio-button>
+            <a-radio-button value="6h">6小时</a-radio-button>
+            <a-radio-button value="1d">1天</a-radio-button>
+          </a-radio-group>
+        </div>
+      </div>
+      <div class="chart-content">
+        <div class="trend-chart" ref="trendChartRef"></div>
+      </div>
+    </div>
+
+    <!-- 热门事件类型分布 -->
+    <div class="stats-grid" v-if="summary && summary.top_reasons.length > 0">
+      <div class="stats-card">
+        <h4><TagOutlined /> 热门事件原因</h4>
+        <div class="reason-list">
+          <div 
+            v-for="reason in summary.top_reasons.slice(0, 10)" 
+            :key="reason.name"
+            class="reason-item"
+          >
+            <span class="reason-name">{{ reason.name }}</span>
+            <div class="reason-stats">
+              <span class="reason-count">{{ reason.count }}</span>
+              <div class="reason-bar">
+                <div 
+                  class="reason-bar-fill"
+                  :style="{ width: `${reason.percentage}%` }"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-card">
+        <h4><AppstoreOutlined /> 热门对象类型</h4>
+        <div class="object-list">
+          <div 
+            v-for="object in summary.top_objects.slice(0, 10)" 
+            :key="object.name"
+            class="object-item"
+          >
+            <span class="object-name">{{ object.name }}</span>
+            <div class="object-stats">
+              <span class="object-count">{{ object.count }}</span>
+              <div class="object-bar">
+                <div 
+                  class="object-bar-fill"
+                  :style="{ width: `${object.percentage}%` }"
+                ></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -112,6 +176,17 @@
       </div>
       
       <div class="toolbar-right">
+        <!-- 返回按钮 - 仅在查看相关事件时显示 -->
+        <a-button 
+          v-if="isViewingRelatedEvents" 
+          @click="handleBackToAllEvents" 
+          type="default"
+          class="back-button"
+        >
+          <template #icon><ArrowLeftOutlined /></template>
+          返回全部事件
+        </a-button>
+        
         <a-select
           v-model:value="selectedEventType"
           placeholder="事件类型"
@@ -148,6 +223,23 @@
     
     <!-- 数据展示区域 -->
     <div class="data-display">
+      <!-- 相关事件提示 -->
+      <div class="related-events-banner" v-if="isViewingRelatedEvents && relatedEventSource">
+        <a-alert 
+          type="info" 
+          show-icon 
+          :closable="false"
+          class="related-events-alert"
+        >
+          <template #message>
+            <span>正在查看 <strong>{{ relatedEventSource.kind }}/{{ relatedEventSource.name }}</strong> 在命名空间 <strong>{{ relatedEventSource.namespace }}</strong> 中的相关事件</span>
+          </template>
+          <template #description>
+            <span>共找到 {{ total }} 个相关事件</span>
+          </template>
+        </a-alert>
+      </div>
+      
       <div class="display-header" v-if="filteredEvents.length > 0">
         <div class="result-info">
           <span class="result-count">共 {{ total }} 个事件</span>
@@ -155,6 +247,7 @@
             <a-tag color="green" v-if="normalEventsCount > 0">正常 {{ normalEventsCount }}</a-tag>
             <a-tag color="orange" v-if="warningEventsCount > 0">警告 {{ warningEventsCount }}</a-tag>
             <a-tag color="blue" v-if="selectedNamespace">{{ selectedNamespace }}</a-tag>
+            <a-tag color="purple" v-if="isViewingRelatedEvents">相关事件</a-tag>
           </div>
         </div>
       </div>
@@ -180,15 +273,15 @@
         <!-- 事件类型列 -->
         <template #type="{ text }">
           <a-tag :color="getEventTypeColor(text)" class="status-tag event-type-tag">
-            <CheckCircleOutlined v-if="text === 'Normal'" />
+            <CheckCircleOutlined v-if="text === EventType.Normal" />
             <ExclamationCircleOutlined v-else />
-            {{ text }}
+            {{ getEventTypeText(text) }}
           </a-tag>
         </template>
 
         <!-- 原因列 -->
         <template #reason="{ text }">
-          <span class="event-reason">{{ text }}</span>
+          <span class="event-reason">{{ getEventReasonText(text) }}</span>
         </template>
 
         <!-- 消息列 -->
@@ -202,18 +295,18 @@
         <template #object="{ record }">
           <div class="object-info">
             <a-tag class="env-tag object-tag">
-              <component :is="getObjectIcon(record.object_kind)" />
-              {{ record.object_kind }}
+              <component :is="getObjectIcon(record.involved_object.kind)" />
+              {{ record.involved_object.kind }}
             </a-tag>
-            <span class="object-name">{{ record.object_name }}</span>
+            <span class="object-name">{{ record.involved_object.name }}</span>
           </div>
         </template>
 
         <!-- 命名空间列 -->
-        <template #namespace="{ text }">
-          <a-tag v-if="text" class="env-tag namespace-tag">
+        <template #namespace="{ record }">
+          <a-tag v-if="record.involved_object.namespace" class="env-tag namespace-tag">
             <PartitionOutlined />
-            {{ text }}
+            {{ record.involved_object.namespace }}
           </a-tag>
           <span v-else class="text-placeholder">-</span>
         </template>
@@ -270,12 +363,12 @@
       class="cluster-modal event-detail-modal"
     >
       <div v-if="currentEvent" class="event-details">
-        <a-alert class="modal-alert" :type="currentEvent.type === 'Normal' ? 'info' : 'warning'" show-icon>
+        <a-alert class="modal-alert" :type="currentEvent.type === EventType.Normal ? 'info' : 'warning'" show-icon>
           <template #message>
-            <span>{{ currentEvent.reason }}</span>
+            <span>{{ getEventReasonText(currentEvent.reason) }}</span>
           </template>
           <template #description>
-            <div>类型: {{ currentEvent.type }} | 对象: {{ currentEvent.object_kind }}/{{ currentEvent.object_name }}</div>
+            <div>类型: {{ getEventTypeText(currentEvent.type) }} | 对象: {{ currentEvent.involved_object.kind }}/{{ currentEvent.involved_object.name }}</div>
           </template>
         </a-alert>
 
@@ -286,13 +379,17 @@
               <div class="detail-label">事件类型:</div>
               <div class="detail-value">
                 <a-tag :color="getEventTypeColor(currentEvent.type)" class="status-tag">
-                  {{ currentEvent.type }}
+                  {{ getEventTypeText(currentEvent.type) }}
                 </a-tag>
               </div>
             </div>
             <div class="detail-item">
               <div class="detail-label">事件原因:</div>
-              <div class="detail-value">{{ currentEvent.reason }}</div>
+              <div class="detail-value">{{ getEventReasonText(currentEvent.reason) }}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">严重程度:</div>
+              <div class="detail-value">{{ currentEvent.severity }}</div>
             </div>
             <div class="detail-item">
               <div class="detail-label">发生次数:</div>
@@ -306,15 +403,39 @@
             <h4><CodeOutlined /> 对象信息</h4>
             <div class="detail-item">
               <div class="detail-label">对象类型:</div>
-              <div class="detail-value">{{ currentEvent.object_kind }}</div>
+              <div class="detail-value">{{ currentEvent.involved_object.kind }}</div>
             </div>
             <div class="detail-item">
               <div class="detail-label">对象名称:</div>
-              <div class="detail-value">{{ currentEvent.object_name }}</div>
+              <div class="detail-value">{{ currentEvent.involved_object.name }}</div>
             </div>
             <div class="detail-item">
               <div class="detail-label">命名空间:</div>
-              <div class="detail-value">{{ currentEvent.object_namespace || '-' }}</div>
+              <div class="detail-value">{{ currentEvent.involved_object.namespace || '-' }}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">对象 UID:</div>
+              <div class="detail-value">{{ currentEvent.involved_object.uid || '-' }}</div>
+            </div>
+          </div>
+
+          <div class="detail-card">
+            <h4><SettingOutlined /> 事件源信息</h4>
+            <div class="detail-item">
+              <div class="detail-label">组件:</div>
+              <div class="detail-value">{{ currentEvent.source.component }}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">主机:</div>
+              <div class="detail-value">{{ currentEvent.source.host }}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">首次时间:</div>
+              <div class="detail-value">{{ formatDateTime(currentEvent.first_timestamp) }}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">最后时间:</div>
+              <div class="detail-value">{{ formatDateTime(currentEvent.last_timestamp) }}</div>
             </div>
           </div>
         </div>
@@ -370,20 +491,31 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
-import { 
-  getEventsApi,
-  getEventStatisticsApi,
-  cleanupEventsApi,
-  exportEventsApi,
-  getResourceEventsApi,
-  getClustersListApi,
-  getNamespacesByClusterIdApi
-} from '#/api';
+import {
+  getEventList,
+  getEventsByPod,
+  getEventsByDeployment,
+  getEventsByService,
+  getEventStatistics,
+  getEventSummary,
+  getEventTrends,
+  cleanupOldEvents,
+  EventType,
+  EventReason
+} from '#/api/core/k8s_event';
 import type { 
-  EventInfo, 
-  EventListReq,
-  EventStatistics 
-} from '#/api';
+  K8sEvent,
+  GetEventListReq,
+  EventStatistics,
+  EventSummary,
+  GetEventStatisticsReq,
+  GetEventSummaryReq,
+  GetEventTrendsReq,
+  CleanupOldEventsReq,
+  EventTrend
+} from '#/api/core/k8s_event';
+import { getClustersListApi } from '#/api/core/k8s_cluster';
+import { getNamespacesListApi } from '#/api/core/k8s_namespace';
 import { 
   AppstoreOutlined as ActivityOutlined,
   BarChartOutlined,
@@ -407,7 +539,8 @@ import {
   DatabaseOutlined,
   InboxOutlined as BoxOutlined,
   ForkOutlined as NetworkOutlined,
-  SettingOutlined
+  SettingOutlined,
+  ArrowLeftOutlined
 } from '@ant-design/icons-vue';
 
 // 状态变量
@@ -417,10 +550,16 @@ const clustersLoading = ref(false);
 const namespacesLoading = ref(false);
 const exportLoading = ref(false);
 const cleanupLoading = ref(false);
-const events = ref<EventInfo[]>([]);
+const events = ref<K8sEvent[]>([]);
 const clusters = ref<Array<{id: number, name: string}>>([]);
 const namespaces = ref<string[]>([]);
 const statistics = ref<EventStatistics | null>(null);
+const summary = ref<EventSummary | null>(null);
+const eventTrends = ref<EventTrend[]>([]);
+
+// 图表相关状态
+const trendInterval = ref('1h');
+const trendChartRef = ref<HTMLElement>();
 
 // 筛选和分页状态
 const selectedCluster = ref<number>();
@@ -435,8 +574,13 @@ const total = ref(0);
 // 模态框状态
 const eventDetailsVisible = ref(false);
 const cleanupModalVisible = ref(false);
-const currentEvent = ref<EventInfo | null>(null);
+const currentEvent = ref<K8sEvent | null>(null);
 const cleanupDays = ref(30);
+
+// 相关事件状态
+const isViewingRelatedEvents = ref(false);
+const originalEvents = ref<K8sEvent[]>([]);
+const relatedEventSource = ref<{kind: string, name: string, namespace: string} | null>(null);
 
 // 表格列配置
 const columns = [
@@ -447,10 +591,10 @@ const columns = [
     width: '8%',
     slots: { customRender: 'type' },
     filters: [
-      { text: '正常', value: 'Normal' },
-      { text: '警告', value: 'Warning' },
+      { text: '正常', value: EventType.Normal },
+      { text: '警告', value: EventType.Warning },
     ],
-    onFilter: (value: string, record: EventInfo) => record.type === value,
+    onFilter: (value: number, record: K8sEvent) => record.type === value,
   },
   {
     title: '原因',
@@ -458,7 +602,7 @@ const columns = [
     key: 'reason',
     width: '12%',
     slots: { customRender: 'reason' },
-    sorter: (a: EventInfo, b: EventInfo) => a.reason.localeCompare(b.reason),
+    sorter: (a: K8sEvent, b: K8sEvent) => String(a.reason).localeCompare(String(b.reason)),
   },
   {
     title: '消息',
@@ -475,7 +619,6 @@ const columns = [
   },
   {
     title: '命名空间',
-    dataIndex: 'object_namespace',
     key: 'namespace',
     width: '10%',
     slots: { customRender: 'namespace' },
@@ -486,7 +629,7 @@ const columns = [
     key: 'count',
     width: '8%',
     slots: { customRender: 'count' },
-    sorter: (a: EventInfo, b: EventInfo) => a.count - b.count,
+    sorter: (a: K8sEvent, b: K8sEvent) => a.count - b.count,
   },
   {
     title: '最后时间',
@@ -494,7 +637,7 @@ const columns = [
     key: 'lastTime',
     width: '12%',
     slots: { customRender: 'lastTime' },
-    sorter: (a: EventInfo, b: EventInfo) => new Date(a.last_timestamp).getTime() - new Date(b.last_timestamp).getTime(),
+    sorter: (a: K8sEvent, b: K8sEvent) => new Date(a.last_timestamp).getTime() - new Date(b.last_timestamp).getTime(),
   },
   {
     title: '操作',
@@ -512,9 +655,9 @@ const filteredEvents = computed(() => {
   if (searchText.value) {
     const searchValue = searchText.value.toLowerCase().trim();
     result = result.filter(event => 
-      event.reason.toLowerCase().includes(searchValue) ||
+      String(event.reason).toLowerCase().includes(searchValue) ||
       event.message.toLowerCase().includes(searchValue) ||
-      event.object_name.toLowerCase().includes(searchValue)
+      event.involved_object.name.toLowerCase().includes(searchValue)
     );
   }
   
@@ -522,12 +665,43 @@ const filteredEvents = computed(() => {
 });
 
 // 计算属性：事件统计
-const normalEventsCount = computed(() => events.value.filter(e => e.type === 'Normal').length);
-const warningEventsCount = computed(() => events.value.filter(e => e.type === 'Warning').length);
+const normalEventsCount = computed(() => events.value.filter(e => e.type === EventType.Normal).length);
+const warningEventsCount = computed(() => events.value.filter(e => e.type === EventType.Warning).length);
 
 // 工具函数
-const getEventTypeColor = (type: string) => {
-  return type === 'Normal' ? 'green' : 'orange';
+const getEventTypeColor = (type: EventType) => {
+  return type === EventType.Normal ? 'green' : 'orange';
+};
+
+const getEventTypeText = (type: EventType) => {
+  return type === EventType.Normal ? 'Normal' : 'Warning';
+};
+
+const getEventReasonText = (reason: EventReason) => {
+  const reasonMap: Record<EventReason, string> = {
+    [EventReason.BackOff]: 'BackOff',
+    [EventReason.Pulled]: 'Pulled',
+    [EventReason.Created]: 'Created',
+    [EventReason.Deleted]: 'Deleted',
+    [EventReason.Updated]: 'Updated',
+    [EventReason.Restarted]: 'Restarted',
+    [EventReason.Started]: 'Started',
+    [EventReason.Stopped]: 'Stopped',
+    [EventReason.Failed]: 'Failed',
+    [EventReason.Succeeded]: 'Succeeded',
+    [EventReason.Unknown]: 'Unknown',
+    [EventReason.Warning]: 'Warning',
+    [EventReason.Error]: 'Error',
+    [EventReason.Fatal]: 'Fatal',
+    [EventReason.Panic]: 'Panic',
+    [EventReason.Timeout]: 'Timeout',
+    [EventReason.Cancelled]: 'Cancelled',
+    [EventReason.Interrupted]: 'Interrupted',
+    [EventReason.Aborted]: 'Aborted',
+    [EventReason.Ignored]: 'Ignored',
+    [EventReason.Other]: 'Other',
+  };
+  return reasonMap[reason] || 'Unknown';
 };
 
 const getObjectIcon = (kind: string) => {
@@ -577,16 +751,46 @@ const getClusters = async () => {
   clustersLoading.value = true;
   try {
     const res = await getClustersListApi();
-    clusters.value = res ?? [];
+    // 处理API返回的数据结构
+    if (Array.isArray(res)) {
+      clusters.value = res.map((cluster: any) => ({
+        id: cluster.id,
+        name: cluster.name
+      }));
+    } else if (res && res.items) {
+      clusters.value = res.items.map((cluster: any) => ({
+        id: cluster.id,
+        name: cluster.name
+      }));
+    } else {
+      clusters.value = [];
+    }
+    
     if (clusters.value.length > 0 && !selectedCluster.value) {
       selectedCluster.value = clusters.value[0]?.id;
       if (selectedCluster.value) {
         await getNamespaces();
         await getEvents();
+        await loadEventStatistics();
       }
     }
   } catch (error: any) {
     message.error(error.message || '获取集群列表失败');
+    // 如果API调用失败，使用模拟数据作为后备
+    clusters.value = [
+      { id: 1, name: '开发集群' },
+      { id: 2, name: '测试集群' },
+      { id: 3, name: '生产集群' }
+    ];
+    
+    if (clusters.value.length > 0 && !selectedCluster.value) {
+      selectedCluster.value = clusters.value[0]?.id;
+      if (selectedCluster.value) {
+        await getNamespaces();
+        await getEvents();
+        await loadEventStatistics();
+      }
+    }
   } finally {
     clustersLoading.value = false;
   }
@@ -597,8 +801,15 @@ const getNamespaces = async () => {
 
   namespacesLoading.value = true;
   try {
-    const res = await getNamespacesByClusterIdApi(selectedCluster.value);
-    namespaces.value = res.map((ns: { name: string }) => ns.name);
+    const res = await getNamespacesListApi(selectedCluster.value);
+    // 根据API返回结构处理数据
+    if (Array.isArray(res)) {
+      namespaces.value = res.map((ns: any) => ns.name || ns);
+    } else if (res && res.items) {
+      namespaces.value = res.items.map((ns: any) => ns.name || ns);
+    } else {
+      namespaces.value = [];
+    }
   } catch (error: any) {
     message.error(error.message || '获取命名空间列表失败');
     namespaces.value = [];
@@ -615,18 +826,28 @@ const getEvents = async () => {
 
   loading.value = true;
   try {
-    const params: EventListReq = {
+    const params: GetEventListReq = {
       cluster_id: selectedCluster.value,
       namespace: selectedNamespace.value || undefined,
-      type: selectedEventType.value as any || undefined,
+      event_type: selectedEventType.value || undefined,
       limit_days: limitDays.value,
-      page: currentPage.value,
-      page_size: pageSize.value
+      limit: pageSize.value,
+      // 注意: continue 参数用于分页，这里可能需要根据具体实现调整
     };
     
-    const res = await getEventsApi(params);
-    events.value = Array.isArray(res) ? res : (res as any)?.data || [];
-    total.value = (res as any)?.total || events.value.length;
+    const res = await getEventList(params);
+    
+    // 处理API返回的数据结构
+    if (res && typeof res === 'object' && 'items' in res) {
+      events.value = (res as any).items || [];
+      total.value = (res as any).total || events.value.length;
+    } else if (Array.isArray(res)) {
+      events.value = res;
+      total.value = res.length;
+    } else {
+      events.value = [];
+      total.value = 0;
+    }
     
     message.success('事件数据加载成功');
   } catch (error: any) {
@@ -638,7 +859,7 @@ const getEvents = async () => {
   }
 };
 
-const getEventStatistics = async () => {
+const loadEventStatistics = async () => {
   if (!selectedCluster.value) {
     message.warning('请先选择集群');
     return;
@@ -646,12 +867,31 @@ const getEventStatistics = async () => {
 
   statisticsLoading.value = true;
   try {
-    const res = await getEventStatisticsApi(
-      selectedCluster.value,
-      selectedNamespace.value || undefined,
-      limitDays.value
-    );
+    const params: GetEventStatisticsReq = {
+      cluster_id: selectedCluster.value,
+      namespace: selectedNamespace.value || undefined,
+      start_time: new Date(Date.now() - limitDays.value * 24 * 60 * 60 * 1000).toISOString(),
+      end_time: new Date().toISOString(),
+      group_by: 'type'
+    };
+    
+    const res = await getEventStatistics(params);
     statistics.value = res;
+    
+    // 同时获取事件汇总信息
+    const summaryParams: GetEventSummaryReq = {
+      cluster_id: selectedCluster.value,
+      namespace: selectedNamespace.value || undefined,
+      start_time: params.start_time,
+      end_time: params.end_time
+    };
+    
+    const summaryRes = await getEventSummary(summaryParams);
+    summary.value = summaryRes;
+    
+    // 获取事件趋势数据
+    await getEventTrendsData();
+    
     message.success('事件统计加载成功');
   } catch (error: any) {
     message.error(error.message || '获取事件统计失败');
@@ -660,9 +900,31 @@ const getEventStatistics = async () => {
   }
 };
 
+const getEventTrendsData = async () => {
+  if (!selectedCluster.value) return;
+
+  try {
+    const params: GetEventTrendsReq = {
+      cluster_id: selectedCluster.value,
+      namespace: selectedNamespace.value || undefined,
+      start_time: new Date(Date.now() - limitDays.value * 24 * 60 * 60 * 1000).toISOString(),
+      end_time: new Date().toISOString(),
+      interval: trendInterval.value,
+      event_type: selectedEventType.value || undefined
+    };
+    
+    const res = await getEventTrends(params);
+    eventTrends.value = res || [];
+  } catch (error: any) {
+    console.error('获取事件趋势失败:', error);
+    eventTrends.value = [];
+  }
+};
+
 // 事件处理函数
 const refreshData = () => {
   getEvents();
+  loadEventStatistics();
 };
 
 const handleClusterChange = () => {
@@ -671,18 +933,43 @@ const handleClusterChange = () => {
   currentPage.value = 1;
   total.value = 0;
   statistics.value = null;
+  summary.value = null;
+  
+  // 重置相关事件状态
+  isViewingRelatedEvents.value = false;
+  originalEvents.value = [];
+  relatedEventSource.value = null;
+  
   getNamespaces();
   getEvents();
+  loadEventStatistics();
 };
 
 const handleNamespaceChange = () => {
   currentPage.value = 1;
+  
+  // 重置相关事件状态
+  isViewingRelatedEvents.value = false;
+  originalEvents.value = [];
+  relatedEventSource.value = null;
+  
   getEvents();
 };
 
 const handleFilterChange = () => {
   currentPage.value = 1;
+  
+  // 重置相关事件状态
+  isViewingRelatedEvents.value = false;
+  originalEvents.value = [];
+  relatedEventSource.value = null;
+  
   getEvents();
+  loadEventStatistics();
+};
+
+const handleTrendIntervalChange = () => {
+  getEventTrendsData();
 };
 
 const handleSearch = () => {
@@ -695,28 +982,107 @@ const handleTableChange = (pagination: any) => {
   getEvents();
 };
 
-const showEventDetails = (event: EventInfo) => {
+const showEventDetails = (event: K8sEvent) => {
   currentEvent.value = event;
   eventDetailsVisible.value = true;
 };
 
-const showRelatedEvents = async (event: EventInfo) => {
-  if (!selectedCluster.value || !event.object_namespace) return;
+const showRelatedEvents = async (event: K8sEvent) => {
+  if (!selectedCluster.value || !event.involved_object.namespace) return;
   
   try {
     loading.value = true;
-    const relatedEvents = await getResourceEventsApi(
-      selectedCluster.value,
-      event.object_namespace,
-      event.object_kind,
-      event.object_name
-    );
-    events.value = relatedEvents || [];
+    
+    // 保存原始事件数据
+    if (!isViewingRelatedEvents.value) {
+      originalEvents.value = [...events.value];
+      isViewingRelatedEvents.value = true;
+      relatedEventSource.value = {
+        kind: event.involved_object.kind,
+        name: event.involved_object.name,
+        namespace: event.involved_object.namespace
+      };
+    }
+    
+    let relatedEvents: K8sEvent[] = [];
+    
+    // 根据对象类型选择不同的 API
+    switch (event.involved_object.kind) {
+      case 'Pod':
+        relatedEvents = await getEventsByPod({
+          cluster_id: selectedCluster.value,
+          namespace: event.involved_object.namespace,
+          pod_name: event.involved_object.name
+        });
+        break;
+      case 'Deployment':
+        relatedEvents = await getEventsByDeployment({
+          cluster_id: selectedCluster.value,
+          namespace: event.involved_object.namespace,
+          deployment_name: event.involved_object.name
+        });
+        break;
+      case 'Service':
+        relatedEvents = await getEventsByService({
+          cluster_id: selectedCluster.value,
+          namespace: event.involved_object.namespace,
+          service_name: event.involved_object.name
+        });
+        break;
+      default:
+        // 其他类型的对象，使用通用的事件查询
+        const params: GetEventListReq = {
+          cluster_id: selectedCluster.value,
+          namespace: event.involved_object.namespace,
+          involved_object_kind: event.involved_object.kind,
+          involved_object_name: event.involved_object.name
+        };
+        const eventRes = await getEventList(params);
+        // 处理API返回的数据结构
+        if (Array.isArray(eventRes)) {
+          relatedEvents = eventRes;
+        } else if (eventRes && typeof eventRes === 'object' && 'items' in eventRes) {
+          relatedEvents = (eventRes as any).items || [];
+        } else {
+          relatedEvents = [];
+        }
+        break;
+    }
+    
+    // 确保相关事件是数组
+    const relatedEventsArray = Array.isArray(relatedEvents) ? relatedEvents : [];
+    events.value = relatedEventsArray;
     total.value = events.value.length;
     eventDetailsVisible.value = false;
-    message.success(`已加载 ${event.object_name} 相关事件`);
+    message.success(`已加载 ${event.involved_object.name} 相关事件`);
   } catch (error: any) {
     message.error(error.message || '获取相关事件失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleBackToAllEvents = async () => {
+  try {
+    loading.value = true;
+    
+    // 恢复原始事件数据
+    if (originalEvents.value.length > 0) {
+      events.value = [...originalEvents.value];
+      total.value = events.value.length;
+    } else {
+      // 如果没有保存的原始数据，重新获取所有事件
+      await getEvents();
+    }
+    
+    // 重置相关事件状态
+    isViewingRelatedEvents.value = false;
+    originalEvents.value = [];
+    relatedEventSource.value = null;
+    
+    message.success('已返回全部事件');
+  } catch (error: any) {
+    message.error(error.message || '返回全部事件失败');
   } finally {
     loading.value = false;
   }
@@ -727,14 +1093,54 @@ const handleExportEvents = async () => {
 
   exportLoading.value = true;
   try {
-    const params: EventListReq = {
+    const params: GetEventListReq = {
       cluster_id: selectedCluster.value,
       namespace: selectedNamespace.value || undefined,
-      type: selectedEventType.value as any || undefined,
+      event_type: selectedEventType.value || undefined,
       limit_days: limitDays.value
     };
     
-    await exportEventsApi(params);
+    // 获取所有事件数据进行导出
+    const allEventsRes = await getEventList(params);
+    
+    // 处理API返回的数据结构
+    let eventList: K8sEvent[] = [];
+    if (Array.isArray(allEventsRes)) {
+      eventList = allEventsRes;
+    } else if (allEventsRes && typeof allEventsRes === 'object' && 'items' in allEventsRes) {
+      eventList = (allEventsRes as any).items || [];
+    }
+    
+    // 创建 CSV 内容
+    const csvHeaders = ['类型', '原因', '消息', '对象类型', '对象名称', '命名空间', '次数', '首次时间', '最后时间'];
+    const csvRows = [csvHeaders.join(',')];
+    eventList.forEach((event) => {
+      const row = [
+        getEventTypeText(event.type),
+        getEventReasonText(event.reason),
+        `"${event.message.replace(/"/g, '""')}"`,
+        event.involved_object.kind,
+        event.involved_object.name,
+        event.involved_object.namespace,
+        event.count.toString(),
+        event.first_timestamp,
+        event.last_timestamp
+      ];
+      csvRows.push(row.join(','));
+    });
+    
+    // 下载 CSV 文件
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `k8s-events-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
     message.success('事件导出成功');
   } catch (error: any) {
     message.error(error.message || '导出事件失败');
@@ -752,11 +1158,17 @@ const confirmCleanup = async () => {
 
   cleanupLoading.value = true;
   try {
-    await cleanupEventsApi(
-      selectedCluster.value,
-      selectedNamespace.value || undefined,
-      cleanupDays.value
-    );
+    const beforeTime = new Date(Date.now() - cleanupDays.value * 24 * 60 * 60 * 1000).toISOString();
+    
+    const params: CleanupOldEventsReq = {
+      cluster_id: selectedCluster.value,
+      namespace: selectedNamespace.value || undefined,
+      before_time: beforeTime,
+      event_type: selectedEventType.value || undefined,
+      dry_run: false
+    };
+    
+    await cleanupOldEvents(params);
     message.success('历史事件清理成功');
     cleanupModalVisible.value = false;
     getEvents();
@@ -959,6 +1371,45 @@ onMounted(() => {
   overflow: hidden;
 }
 
+/* ==================== 相关事件提示 ==================== */
+.related-events-banner {
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #f6ffed;
+}
+
+.related-events-alert {
+  border-radius: 6px;
+  border: 1px solid #b7eb8f;
+}
+
+.related-events-alert :deep(.ant-alert-message) {
+  font-weight: 500;
+  color: #000000d9;
+}
+
+.related-events-alert :deep(.ant-alert-description) {
+  color: #00000073;
+  font-size: 13px;
+}
+
+/* ==================== 返回按钮样式 ==================== */
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  border-color: #d9d9d9;
+  color: #000000d9;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+.back-button:hover {
+  border-color: #1677ff;
+  color: #1677ff;
+  transform: translateX(-2px);
+}
+
 .display-header {
   padding: 16px 24px;
   border-bottom: 1px solid #f0f0f0;
@@ -983,7 +1434,6 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-/* ==================== 表格样式 ==================== */
 .cluster-table {
   border: none;
 }
@@ -1008,7 +1458,6 @@ onMounted(() => {
   font-size: 14px;
 }
 
-/* ==================== 事件特定样式 ==================== */
 .event-type-tag {
   display: inline-flex;
   align-items: center;
@@ -1095,7 +1544,6 @@ onMounted(() => {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
-/* ==================== 模态框样式 ==================== */
 .cluster-modal :deep(.ant-modal-content) {
   border-radius: 8px;
   overflow: hidden;
@@ -1200,6 +1648,123 @@ onMounted(() => {
   font-size: 14px;
 }
 
+/* ==================== 图表容器 ==================== */
+.chart-container {
+  background: #ffffff;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+}
+
+.chart-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chart-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #000000d9;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chart-content {
+  padding: 20px 24px;
+}
+
+.trend-chart {
+  height: 300px;
+  width: 100%;
+}
+
+/* ==================== 统计网格 ==================== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.stats-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+}
+
+.stats-card h4 {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #000000d9;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reason-list, .object-list {
+  space: 12px 0;
+}
+
+.reason-item, .object-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.reason-item:last-child, .object-item:last-child {
+  border-bottom: none;
+}
+
+.reason-name, .object-name {
+  font-size: 14px;
+  color: #000000d9;
+  font-weight: 500;
+  min-width: 120px;
+}
+
+.reason-stats, .object-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.reason-count, .object-count {
+  font-size: 14px;
+  color: #000000d9;
+  font-weight: 600;
+  min-width: 40px;
+  text-align: right;
+}
+
+.reason-bar, .object-bar {
+  flex: 1;
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+  max-width: 150px;
+}
+
+.reason-bar-fill, .object-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1677ff 0%, #69c0ff 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
 /* ==================== 响应式设计 ==================== */
 @media (max-width: 1400px) {
   .overview-cards {
@@ -1207,6 +1772,10 @@ onMounted(() => {
   }
   
   .details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
     grid-template-columns: 1fr;
   }
 }

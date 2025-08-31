@@ -253,13 +253,13 @@
               :percent="record.cluster_stats.resource_stats.cpu_utilization" 
               :size="'small'" 
               :stroke-color="getProgressColor(record.cluster_stats.resource_stats.cpu_utilization)"
-              :format="(percent: number) => `CPU: ${percent}%`"
+              :format="(percent: number) => `CPU: ${Math.round(percent)}%`"
             />
             <a-progress 
               :percent="record.cluster_stats.resource_stats.memory_utilization" 
               :size="'small'" 
               :stroke-color="getProgressColor(record.cluster_stats.resource_stats.memory_utilization)"
-              :format="(percent: number) => `内存: ${percent}%`"
+              :format="(percent: number) => `内存: ${Math.round(percent)}%`"
               style="margin-top: 4px"
             />
           </div>
@@ -598,7 +598,7 @@
             <a-col :span="8">
               <a-statistic
                 title="内存使用"
-                :value="currentStats.resource_stats?.memory_utilization || 0"
+                :value="Math.round(currentStats.resource_stats?.memory_utilization || 0)"
                 suffix="%"
               />
               <div class="resource-detail">
@@ -835,7 +835,7 @@ const averageResourceUsage = computed(() => {
   
   const totalUsage = validClusters.reduce((sum, c) => {
     const stats = c.cluster_stats!.resource_stats!;
-    return sum + (stats.cpu_utilization + stats.memory_utilization) / 2;
+    return sum + (Math.round(stats.cpu_utilization || 0) + Math.round(stats.memory_utilization || 0)) / 2;
   }, 0);
   
   return Math.round(totalUsage / validClusters.length);
