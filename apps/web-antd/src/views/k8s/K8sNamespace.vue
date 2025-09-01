@@ -111,17 +111,6 @@
           </a-select>
         </div>
 
-        <div class="view-toggle">
-          <a-radio-group v-model:value="viewMode" button-style="solid" size="small">
-            <a-radio-button value="table">
-              <TableOutlined />
-            </a-radio-button>
-            <a-radio-button value="card">
-              <AppstoreOutlined />
-            </a-radio-button>
-          </a-radio-group>
-        </div>
-
         <a-button @click="refreshData" :loading="loading">
           <template #icon>
             <ReloadOutlined />
@@ -153,7 +142,7 @@
       </div>
 
       <!-- 表格视图 -->
-      <a-table v-if="viewMode === 'table'" :columns="columns" :data-source="filteredNamespaces"
+      <a-table :columns="columns" :data-source="filteredNamespaces"
         :row-selection="rowSelection" :loading="loading" row-key="uid"         :pagination="{
           current: currentPage,
           pageSize: pageSize,
@@ -244,101 +233,6 @@
           </div>
         </template>
       </a-table>
-
-      <!-- 卡片视图 -->
-      <div v-else class="card-view">
-        <a-spin :spinning="loading">
-          <a-empty v-if="filteredNamespaces.length === 0" description="暂无命名空间数据">
-            <template #image>
-              <AppstoreOutlined style="font-size: 64px; color: #d9d9d9;" />
-            </template>
-            <template #description>
-              <span style="color: #999;">暂无命名空间数据</span>
-            </template>
-            <a-button type="primary" @click="refreshData">刷新数据</a-button>
-          </a-empty>
-          <div v-else>
-            <div class="cluster-cards namespace-cards">
-              <a-checkbox-group v-model:value="selectedCardIds" class="card-checkbox-group">
-                <div v-for="namespace in filteredNamespaces" :key="namespace.uid" class="cluster-card namespace-card">
-                  <div class="card-header">
-                    <a-checkbox :value="namespace.uid" class="card-checkbox"
-                      :disabled="isSystemNamespace(namespace.name)" />
-                    <div class="service-title namespace-title">
-                      <AppstoreOutlined class="service-icon" />
-                      <h3>{{ namespace.name }}</h3>
-                      <div class="namespace-tags">
-                        <a-tag v-if="namespace.name === 'kube-system'" color="red" size="small">系统</a-tag>
-                        <a-tag v-if="namespace.name === 'default'" color="blue" size="small">默认</a-tag>
-                      </div>
-                    </div>
-                    <a-badge :status="namespace.status === 'Active' ? 'success' : 'processing'" class="card-badge" />
-                  </div>
-
-                  <div class="card-content">
-                    <div class="card-detail">
-                      <span class="detail-label">状态:</span>
-                      <span class="detail-value">
-                        <a-badge :status="namespace.status === 'Active' ? 'success' : 'processing'"
-                          :text="namespace.status" />
-                      </span>
-                    </div>
-                    <div class="card-detail">
-                      <span class="detail-label">标签:</span>
-                      <span class="detail-value">
-                        <a-tag v-for="label in namespace.labels?.slice(0, 1)" :key="label" color="geekblue"
-                          size="small">
-                          {{ label }}
-                        </a-tag>
-                        <span v-if="namespace.labels && namespace.labels.length > 1" class="more-labels">
-                          +{{ namespace.labels.length - 1 }}
-                        </span>
-                        <span v-if="!namespace.labels?.length" class="no-labels">无</span>
-                      </span>
-                    </div>
-                    <div class="card-detail">
-                      <span class="detail-label">阶段:</span>
-                      <span class="detail-value">
-                        <ClockCircleOutlined />
-                        {{ namespace.phase || '-' }}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div class="card-footer card-action-footer">
-                    <a-button type="primary" ghost size="small" @click="viewDetails(namespace)">
-                      <template #icon>
-                        <EyeOutlined />
-                      </template>
-                      详情
-                    </a-button>
-
-                    <a-popconfirm title="确定要删除该命名空间吗?" @confirm="handleDelete(namespace)" ok-text="确定" cancel-text="取消"
-                      :disabled="isSystemNamespace(namespace.name)">
-                      <a-button type="primary" danger ghost size="small" :disabled="isSystemNamespace(namespace.name)">
-                        <template #icon>
-                          <DeleteOutlined />
-                        </template>
-                        删除
-                      </a-button>
-                    </a-popconfirm>
-                  </div>
-                </div>
-              </a-checkbox-group>
-            </div>
-
-            <!-- 卡片视图分页 -->
-            <div class="card-pagination">
-              <a-pagination v-model:current="currentPage" v-model:page-size="pageSize" :total="totalItems"
-                :show-size-changer="true" :show-quick-jumper="true"
-                :show-total="(total: number, range: number[]) => `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`"
-                :page-size-options="['10', '20', '30', '50']"
-                @change="(page: number, size: number) => handleTableChange({ current: page, pageSize: size })"
-                @show-size-change="(current: number, size: number) => handleTableChange({ current, pageSize: size })" />
-            </div>
-          </div>
-        </a-spin>
-      </div>
     </div>
 
     <!-- 创建命名空间模态框 -->
@@ -608,7 +502,6 @@ interface NamespaceDetails {
 
 import {
   CloudServerOutlined,
-  TableOutlined,
   AppstoreOutlined,
   ReloadOutlined,
   DeleteOutlined,
@@ -620,7 +513,8 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   TagOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  DeploymentUnitOutlined
 } from '@ant-design/icons-vue';
 
 // 基本状态变量
@@ -636,9 +530,7 @@ const isCreateModalVisible = ref(false);
 const editModalVisible = ref(false);
 const clusters = ref<K8sCluster[]>([]);
 const selectedCluster = ref<number>();
-const viewMode = ref<'table' | 'card'>('table');
 const currentNamespace = ref<NamespaceDetails | null>(null);
-const selectedCardIds = ref<string[]>([]);
 const currentPage = ref(1);
 const pageSize = ref(10);
 const totalItems = ref(0);
@@ -705,12 +597,7 @@ const createFormRules = {
   ]
 };
 
-// 根据卡片选择更新 selectedRows
-watch(selectedCardIds, (newValue) => {
-  selectedRows.value = namespaces.value.filter(ns =>
-    newValue.includes(ns.uid || '')
-  );
-});
+
 
 // 监听搜索和筛选变化，重置分页并重新获取数据
 watch([searchText, statusFilter], () => {
@@ -784,7 +671,6 @@ const runningClusters = computed(() =>
 const rowSelection = {
   onChange: (_: string[], selectedRowsData: NamespaceDetails[]) => {
     selectedRows.value = selectedRowsData;
-    selectedCardIds.value = selectedRowsData.map(row => row.uid || '').filter(Boolean);
   },
   getCheckboxProps: (record: NamespaceDetails) => ({
     disabled: isSystemNamespace(record.name),
@@ -1021,7 +907,6 @@ const getNamespaces = async () => {
     namespaces.value = namespaceDetails;
     totalItems.value = responseTotal;
     selectedRows.value = [];
-    selectedCardIds.value = [];
   } catch (error: any) {
     message.error(error.message || '获取命名空间列表失败');
     namespaces.value = [];
@@ -1113,7 +998,6 @@ const handleBatchDelete = () => {
         }
 
         selectedRows.value = [];
-        selectedCardIds.value = [];
         await getNamespaces();
       } catch (error: any) {
         message.error(error.message || '批量删除操作失败');
@@ -1748,127 +1632,7 @@ onMounted(() => {
   gap: 4px;
 }
 
-/* 卡片视图 */
-.card-view {
-  padding: 24px;
-}
 
-.namespace-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
-}
-
-.card-checkbox-group {
-  width: 100%;
-}
-
-.namespace-card {
-  background: #fff;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 20px;
-  transition: all 0.3s;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.namespace-card:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-  border-color: #1677ff;
-}
-
-.card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.card-checkbox {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 2;
-}
-
-.namespace-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  margin-right: 24px;
-}
-
-.service-icon {
-  font-size: 18px;
-  color: #1677ff;
-  flex-shrink: 0;
-}
-
-.namespace-title h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-  line-height: 1.2;
-}
-
-.card-badge {
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-.card-content {
-  margin-bottom: 16px;
-}
-
-.card-detail {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.card-detail:last-child {
-  margin-bottom: 0;
-}
-
-.detail-label {
-  color: #00000073;
-  font-weight: 500;
-}
-
-.detail-value {
-  color: #000000d9;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.more-labels {
-  color: #00000040;
-  font-size: 12px;
-  margin-left: 4px;
-}
-
-.no-labels {
-  color: #00000040;
-  font-style: italic;
-}
-
-.card-action-footer {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  border-top: 1px solid #f0f0f0;
-  padding-top: 12px;
-  margin-top: 16px;
-}
 
 .empty-state {
   text-align: center;
@@ -1881,14 +1645,7 @@ onMounted(() => {
   font-size: 16px;
 }
 
-.card-pagination {
-  margin-top: 24px;
-  display: flex;
-  justify-content: center;
-  padding: 20px 0;
-  border-top: 1px solid #f0f0f0;
-  background: #fafafa;
-}
+
 
 /* 模态框样式 */
 .cluster-modal :deep(.ant-modal-content) {
@@ -2149,17 +1906,11 @@ onMounted(() => {
     width: 100%;
   }
   
-  .namespace-cards {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  }
+
 }
 
 @media (max-width: 768px) {
   .overview-cards {
-    grid-template-columns: 1fr;
-  }
-  
-  .namespace-cards {
     grid-template-columns: 1fr;
   }
   
@@ -2171,10 +1922,6 @@ onMounted(() => {
   
   .page-size-selector {
     margin-right: 0;
-    justify-content: center;
-  }
-  
-  .view-toggle {
     justify-content: center;
   }
   
@@ -2207,24 +1954,7 @@ onMounted(() => {
   }
   
 
-  
-  .card-action-footer {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .card-detail {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-  
-  .namespace-title {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    margin-right: 12px;
-  }
+
   
   .action-column {
     flex-direction: column;
