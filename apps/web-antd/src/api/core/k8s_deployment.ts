@@ -95,14 +95,14 @@ export interface DeploymentStrategy {
 
 // Deployment规格
 export interface DeploymentSpec {
-  replicas?: number;                        // 副本数量
-  selector?: LabelSelector;                 // 标签选择器
-  template?: PodTemplateSpec;               // Pod模板
-  strategy?: DeploymentStrategy;            // 部署策略
-  min_ready_seconds?: number;               // 最小就绪时间
-  revision_history_limit?: number;          // 历史版本限制
-  paused?: boolean;                         // 是否暂停
-  progress_deadline_seconds?: number;       // 进度截止时间
+  replicas?: number;                       // 副本数量 (*int32)
+  selector?: LabelSelector;                // 标签选择器 (*metav1.LabelSelector)
+  template?: PodTemplateSpec;              // Pod模板 (*corev1.PodTemplateSpec)
+  strategy?: DeploymentStrategy;           // 部署策略 (*appsv1.DeploymentStrategy)
+  min_ready_seconds?: number;              // 最小就绪时间 (*int32)
+  revision_history_limit?: number;         // 历史版本限制 (*int32)
+  paused?: boolean;                        // 是否暂停 (*bool)
+  progress_deadline_seconds?: number;      // 进度截止时间 (*int32)
 }
 
 // Kubernetes Deployment实体
@@ -189,15 +189,16 @@ export interface GetDeploymentYamlReq {
 
 // 创建Deployment请求
 export interface CreateDeploymentReq {
-  cluster_id: number;                    // 集群ID
-  name: string;                         // Deployment名称
-  namespace: string;                    // 命名空间
-  replicas: number;                     // 副本数量
-  images: string[];                     // 容器镜像列表
-  labels?: Record<string, string>;      // 标签
+  cluster_id: number;                   // 集群ID (required)
+  name: string;                        // Deployment名称 (required)
+  namespace: string;                   // 命名空间 (required)
+  replicas: number;                    // 副本数量 (required, int32)
+  images?: string[];                   // 容器镜像列表 (兼容旧接口)
+  containers?: Container[];            // 容器配置列表 (新接口)
+  labels?: Record<string, string>;     // 标签
   annotations?: Record<string, string>; // 注解
-  spec?: DeploymentSpec;                // Deployment规格
-  yaml?: string;                        // YAML内容
+  spec?: DeploymentSpec;               // Deployment规格
+  yaml?: string;                       // YAML内容
 }
 
 // 更新Deployment请求

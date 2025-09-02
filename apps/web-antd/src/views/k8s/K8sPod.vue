@@ -420,7 +420,7 @@ import {
   getPodYamlApi,
   deletePodApi,
   getNamespacesByClusterIdApi,
-  getAllClustersApi
+  getClustersListApi
 } from '#/api';
 import type { PodInfo } from '#/api';
 import {
@@ -639,7 +639,7 @@ const getNamespaces = async () => {
 const getClusters = async () => {
   clustersLoading.value = true;
   try {
-    const res = await getAllClustersApi();
+    const res = await getClustersListApi();
     clusters.value = res || [];
 
     // 如果有集群数据，默认选择第一个

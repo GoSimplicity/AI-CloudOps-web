@@ -1,167 +1,58 @@
 <template>
-  <div class="cluster-management-container statefulset-management-container">
+  <div class="statefulset-management-container">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="title-section">
-          <div class="page-title">
-            <DeploymentUnitOutlined class="title-icon" />
-            <h1>Kubernetes StatefulSet 管理</h1>
-          </div>
-          <p class="page-subtitle">管理和监控集群中的有状态应用集合</p>
-        </div>
-        <div class="header-actions">
-          <a-button type="primary" size="large" @click="isCreateModalVisible = true">
-            <template #icon><PlusOutlined /></template>
-            创建 StatefulSet
-          </a-button>
-          <a-button type="primary" size="large" @click="refreshData" :loading="loading">
-            <template #icon><ReloadOutlined /></template>
-            刷新数据
-          </a-button>
-        </div>
-      </div>
-    </div>
+    <K8sPageHeader
+      title="Kubernetes StatefulSet 管理"
+      subtitle="管理和监控集群中的有状态应用集合"
+      :title-icon="DeploymentUnitOutlined"
+    >
+      <template #actions>
+        <a-button type="primary" size="large" @click="showCreateModal">
+          <template #icon><PlusOutlined /></template>
+          创建 StatefulSet
+        </a-button>
+        <a-button type="primary" size="large" @click="refreshData" :loading="loading">
+          <template #icon><ReloadOutlined /></template>
+          刷新数据
+        </a-button>
+      </template>
+    </K8sPageHeader>
 
     <!-- 数据概览卡片 -->
-    <div class="overview-cards">
-      <div class="overview-card total-clusters">
-        <div class="card-icon">
-          <DeploymentUnitOutlined />
-        </div>
-        <div class="card-info">
-          <div class="card-number">{{ statefulSets.length }}</div>
-          <div class="card-label">StatefulSet 总数</div>
-        </div>
-      </div>
-      
-      <div class="overview-card running-clusters">
-        <div class="card-icon">
-          <CheckCircleOutlined />
-        </div>
-        <div class="card-info">
-          <div class="card-number">{{ runningCount }}</div>
-          <div class="card-label">运行中</div>
-        </div>
-      </div>
-      
-      <div class="overview-card env-types">
-        <div class="card-icon">
-          <NodeIndexOutlined />
-        </div>
-        <div class="card-info">
-          <div class="card-number">{{ desiredReplicas }}</div>
-          <div class="card-label">期望 Pod 数</div>
-        </div>
-      </div>
-      
-      <div class="overview-card resource-usage">
-        <div class="card-icon">
-          <DatabaseOutlined />
-        </div>
-        <div class="card-info">
-          <div class="card-number">{{ readyReplicas }}</div>
-          <div class="card-label">就绪 Pod 数</div>
-        </div>
-      </div>
-    </div>
+    <K8sOverviewCards :cards="overviewCards" />
 
     <!-- 操作工具栏 -->
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <a-select
-          v-model:value="selectedCluster"
-          placeholder="选择集群"
-          class="env-filter cluster-selector"
-          :loading="clustersLoading"
-          @change="handleClusterChange"
-        >
-          <template #suffixIcon><ClusterOutlined /></template>
-          <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
-            <span class="cluster-option">
-              <CloudServerOutlined />
-              {{ cluster.name }}
-            </span>
-          </a-select-option>
-        </a-select>
-        
-        <a-select
-          v-model:value="selectedNamespace"
-          placeholder="选择命名空间"
-          class="env-filter namespace-selector"
-          :loading="namespacesLoading"
-          @change="handleNamespaceChange"
-        >
-          <template #suffixIcon><PartitionOutlined /></template>
-          <a-select-option v-for="ns in namespaces" :key="ns" :value="ns">
-            <span class="namespace-option">
-              <AppstoreOutlined />
-              {{ ns }}
-            </span>
-          </a-select-option>
-        </a-select>
-
-        <a-select
-          v-model:value="statusFilter"
-          placeholder="状态筛选"
-          class="env-filter"
-          allow-clear
-          @change="handleFilterChange"
-        >
-          <template #suffixIcon><FilterOutlined /></template>
-          <a-select-option value="Running">运行中</a-select-option>
-          <a-select-option value="Pending">等待中</a-select-option>
-          <a-select-option value="Failed">失败</a-select-option>
-        </a-select>
-        
-        <a-input-search
-          v-model:value="searchText"
-          placeholder="搜索 StatefulSet 名称"
-          class="search-input"
-          @search="onSearch"
-          allow-clear
-        />
-      </div>
-      
-      <div class="toolbar-right">
-        <div class="view-toggle">
-          <a-radio-group v-model:value="viewMode" button-style="solid" size="small">
-            <a-radio-button value="table">
-              <TableOutlined />
-            </a-radio-button>
-            <a-radio-button value="card">
-              <AppstoreOutlined />
-            </a-radio-button>
-          </a-radio-group>
+    <K8sToolbar
+      v-model:selectedCluster="selectedCluster"
+      v-model:selectedNamespace="selectedNamespace"
+      v-model:searchText="searchText"
+      :clusters="runningClusters"
+      :namespaces="namespaces"
+      :clustersLoading="clustersLoading"
+      :namespacesLoading="namespacesLoading"
+      :refreshLoading="loading"
+      :selectedRows="selectedRows"
+      :showBatchDelete="true"
+      searchPlaceholder="搜索 StatefulSet 名称"
+      @clusterChange="handleClusterChange"
+      @namespaceChange="handleNamespaceChange"
+      @search="refreshData"
+      @refresh="refreshData"
+      @batchDelete="handleBatchDelete"
+    >
+      <template #right>
+        <div class="page-size-selector">
+          <span class="selector-label">每页显示:</span>
+          <a-select v-model:value="pageSize" size="small" style="width: 80px" @change="handlePageSizeChange">
+            <a-select-option :value="12">12</a-select-option>
+            <a-select-option :value="24">24</a-select-option>
+            <a-select-option :value="48">48</a-select-option>
+            <a-select-option :value="96">96</a-select-option>
+          </a-select>
         </div>
-        
-        <a-button @click="refreshData" :loading="loading">
-          <template #icon><ReloadOutlined /></template>
-        </a-button>
-        
-        <a-button 
-          type="primary" 
-          @click="handleBatchRestart" 
-          :disabled="!selectedRows.length"
-          v-if="selectedRows.length > 0"
-        >
-          <template #icon><RedoOutlined /></template>
-          重启 ({{ selectedRows.length }})
-        </a-button>
-        
-        <a-button 
-          type="primary" 
-          danger 
-          @click="handleBatchDelete" 
-          :disabled="!selectedRows.length"
-          v-if="selectedRows.length > 0"
-        >
-          <template #icon><DeleteOutlined /></template>
-          删除 ({{ selectedRows.length }})
-        </a-button>
-      </div>
-    </div>
-    
+      </template>
+    </K8sToolbar>
+
     <!-- 数据展示区域 -->
     <div class="data-display">
       <div class="display-header" v-if="filteredStatefulSets.length > 0">
@@ -176,7 +67,6 @@
 
       <!-- 表格视图 -->
       <a-table
-        v-if="viewMode === 'table'"
         :columns="columns"
         :data-source="filteredStatefulSets"
         :row-selection="rowSelection"
@@ -192,14 +82,22 @@
           pageSizeOptions: ['12', '24', '48', '96']
         }"
         @change="handleTableChange"
-        class="cluster-table statefulSets-table"
+        class="cluster-table statefulsets-table"
       >
         <!-- StatefulSet名称列 -->
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'name'">
-            <div class="statefulSet-name">
+            <div class="statefulset-name">
               <DeploymentUnitOutlined />
               <span>{{ record.name }}</span>
+            </div>
+          </template>
+
+          <!-- 服务名称列 -->
+          <template v-else-if="column.key === 'serviceName'">
+            <div class="service-name">
+              <CloudServerOutlined />
+              <span>{{ record.service_name || '-' }}</span>
             </div>
           </template>
 
@@ -220,19 +118,15 @@
 
           <!-- 状态列 -->
           <template v-else-if="column.key === 'status'">
-            <a-badge 
-              :status="getStatusBadgeType(record.status)" 
-              :text="record.status"
-              class="status-badge"
-            />
+            <K8sStatusTag :status="record.status" type="statefulset" />
           </template>
 
           <!-- 创建时间列 -->
-          <template v-else-if="column.key === 'creationTimestamp'">
+          <template v-else-if="column.key === 'createdAt'">
             <div class="timestamp">
               <ClockCircleOutlined />
-              <a-tooltip :title="formatDateTime(record.creation_timestamp)">
-                <span>{{ formatDate(record.creation_timestamp) }}</span>
+              <a-tooltip :title="formatDateTime(record.created_at)">
+                <span>{{ formatDate(record.created_at) }}</span>
               </a-tooltip>
             </div>
           </template>
@@ -252,9 +146,9 @@
                 </a-button>
               </a-tooltip>
 
-              <a-tooltip title="查看历史">
-                <a-button type="primary" ghost shape="circle" size="small" @click="viewHistory(record)">
-                  <template #icon><HistoryOutlined /></template>
+              <a-tooltip title="扩缩容">
+                <a-button type="primary" ghost shape="circle" size="small" @click="scaleStatefulSet(record)">
+                  <template #icon><ExpandAltOutlined /></template>
                 </a-button>
               </a-tooltip>
 
@@ -264,28 +158,24 @@
                 </a-button>
                 <template #overlay>
                   <a-menu>
-                    <a-menu-item key="edit" @click="handleEdit(record)">
+                    <a-menu-item key="metrics" @click="viewMetrics(record)">
+                      <BarChartOutlined />
+                      查看指标
+                    </a-menu-item>
+                    <a-menu-item key="events" @click="viewEvents(record)">
+                      <HistoryOutlined />
+                      查看事件
+                    </a-menu-item>
+                    <a-menu-item key="pods" @click="viewPods(record)">
+                      <AppstoreOutlined />
+                      查看Pod
+                    </a-menu-item>
+                    <a-menu-divider />
+                    <a-menu-item key="edit" @click="editStatefulSet(record)">
                       <EditOutlined />
                       编辑
                     </a-menu-item>
-                    <a-menu-item key="restart" @click="handleRestart(record)">
-                      <RedoOutlined />
-                      重启
-                    </a-menu-item>
-                    <a-menu-item key="pause" @click="handlePause(record)" v-if="!record.paused">
-                      <PauseCircleOutlined />
-                      暂停更新
-                    </a-menu-item>
-                    <a-menu-item key="resume" @click="handleResume(record)" v-if="record.paused">
-                      <PlayCircleOutlined />
-                      恢复更新
-                    </a-menu-item>
-                    <a-menu-item key="rollback" @click="handleRollback(record)">
-                      <RollbackOutlined />
-                      回滚
-                    </a-menu-item>
-                    <a-menu-divider />
-                    <a-menu-item key="delete" @click="handleDelete(record)" danger>
+                    <a-menu-item key="delete" @click="deleteStatefulSet(record)" danger>
                       <DeleteOutlined />
                       删除
                     </a-menu-item>
@@ -305,504 +195,227 @@
           </div>
         </template>
       </a-table>
-
-      <!-- 卡片视图 -->
-      <div v-else class="card-view">
-        <a-spin :spinning="loading">
-          <a-empty v-if="filteredStatefulSets.length === 0" description="暂无StatefulSet数据">
-            <template #image>
-              <DeploymentUnitOutlined style="font-size: 64px; color: #d9d9d9;" />
-            </template>
-            <template #description>
-              <span style="color: #999;">暂无StatefulSet数据</span>
-            </template>
-            <a-button type="primary" @click="refreshData">刷新数据</a-button>
-          </a-empty>
-          <div v-else class="cluster-cards statefulSet-cards">
-            <a-checkbox-group v-model:value="selectedCardIds" class="card-checkbox-group">
-              <div v-for="statefulSet in filteredStatefulSets" :key="statefulSet.uid" class="cluster-card statefulSet-card">
-                <div class="card-header">
-                  <a-checkbox :value="statefulSet.uid" class="card-checkbox" />
-                  <div class="service-title statefulSet-title">
-                    <DeploymentUnitOutlined class="service-icon" />
-                    <h3>{{ statefulSet.name }}</h3>
-                  </div>
-                  <a-badge 
-                    :status="getStatusBadgeType(statefulSet.status)" 
-                    class="card-badge"
-                  />
-                </div>
-                
-                <div class="card-content">
-                  <div class="card-detail">
-                    <span class="detail-label">命名空间:</span>
-                    <span class="detail-value">
-                      <a-tag color="blue" size="small">{{ statefulSet.namespace }}</a-tag>
-                    </span>
-                  </div>
-                  <div class="card-detail">
-                    <span class="detail-label">Pod状态:</span>
-                    <span class="detail-value">
-                      <a-progress
-                        :percent="getPodReadyPercentage(statefulSet)"
-                        size="small"
-                        :status="getPodReadyPercentage(statefulSet) === 100 ? 'success' : 'active'"
-                        style="width: 80px; margin-right: 8px"
-                      />
-                      {{ statefulSet.ready_replicas || 0 }}/{{ statefulSet.replicas || 0 }}
-                    </span>
-                  </div>
-                  <div class="card-detail">
-                    <span class="detail-label">状态:</span>
-                    <span class="detail-value">
-                      <a-badge 
-                        :status="getStatusBadgeType(statefulSet.status)" 
-                        :text="statefulSet.status"
-                      />
-                    </span>
-                  </div>
-                  <div class="card-detail">
-                    <span class="detail-label">镜像:</span>
-                    <span class="detail-value">
-                      <a-tooltip v-if="statefulSet.images?.length" :title="statefulSet.images.join(', ')">
-                        <a-tag color="green" size="small">{{ statefulSet.images.length }} 个</a-tag>
-                      </a-tooltip>
-                      <span v-else>-</span>
-                    </span>
-                  </div>
-                  <div class="card-detail">
-                    <span class="detail-label">创建时间:</span>
-                    <span class="detail-value">
-                      <ClockCircleOutlined />
-                      {{ formatDate(statefulSet.creation_timestamp) }}
-                    </span>
-                  </div>
-                </div>
-                
-                <div class="card-footer card-action-footer">
-                  <a-button type="primary" ghost size="small" @click="viewDetails(statefulSet)">
-                    <template #icon><EyeOutlined /></template>
-                    详情
-                  </a-button>
-                  <a-button type="primary" ghost size="small" @click="viewYaml(statefulSet)">
-                    <template #icon><CodeOutlined /></template>
-                    YAML
-                  </a-button>
-                  <a-button type="primary" ghost size="small" @click="handleRestart(statefulSet)">
-                    <template #icon><RedoOutlined /></template>
-                    重启
-                  </a-button>
-                  <a-popconfirm
-                    title="确定要删除该StatefulSet吗?"
-                    description="删除StatefulSet将删除其管理的所有Pod，此操作不可撤销！"
-                    @confirm="handleDelete(statefulSet)"
-                    ok-text="确定"
-                    cancel-text="取消"
-                  >
-                    <a-button type="primary" danger ghost size="small">
-                      <template #icon><DeleteOutlined /></template>
-                      删除
-                    </a-button>
-                  </a-popconfirm>
-                </div>
-              </div>
-            </a-checkbox-group>
-          </div>
-        </a-spin>
-      </div>
     </div>
 
-    <!-- 创建StatefulSet模态框 -->
-    <a-modal
-      v-model:open="isCreateModalVisible"
-      title="创建StatefulSet"
-      @ok="handleCreateConfirm"
-      @cancel="handleCreateCancel"
-      :confirmLoading="loading"
-      class="cluster-modal statefulSet-modal"
-      width="800px"
-    >
-      <a-alert class="modal-alert" type="info" show-icon>
-        <template #message>创建新的StatefulSet</template>
-        <template #description>StatefulSet确保在每个节点上运行Pod的副本</template>
-      </a-alert>
+    <!-- StatefulSet创建模态框 -->
+    <ServiceCreateModal
+      v-model:visible="isCreateModalVisible"
+      :clusters="runningClusters"
+      :clustersLoading="clustersLoading"
+      :loading="createLoading"
+      type="statefulset"
+      @create="handleCreate"
+    />
 
-      <a-form :model="createForm" layout="vertical" class="cluster-form statefulSet-form">
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item
-              label="StatefulSet名称"
-              name="name"
-              :rules="[
-                { required: true, message: '请输入StatefulSet名称' },
-                { pattern: /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, message: '名称只能包含小写字母、数字和连字符' }
-              ]"
-            >
-              <a-input
-                v-model:value="createForm.name"
-                placeholder="请输入StatefulSet名称"
-                class="form-input"
-              >
-                <template #prefix><DeploymentUnitOutlined /></template>
-              </a-input>
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item
-              label="容器镜像"
-              name="image"
-              :rules="[{ required: true, message: '请输入容器镜像' }]"
-            >
-              <a-input
-                v-model:value="createForm.image"
-                placeholder="例如: nginx:latest"
-                class="form-input"
-              />
-            </a-form-item>
-          </a-col>
-        </a-row>
-
-        <a-form-item label="端口配置 (可选)">
-          <div class="port-config">
-            <div v-for="(port, index) in createForm.ports" :key="index" class="port-row">
-              <a-input
-                v-model:value="port.name"
-                placeholder="端口名称"
-                style="width: 25%"
-                class="form-input"
-              />
-              <a-input-number
-                v-model:value="port.container_port"
-                placeholder="容器端口"
-                style="width: 25%"
-                :min="1"
-                :max="65535"
-                class="form-input"
-              />
-              <a-select
-                v-model:value="port.protocol"
-                placeholder="协议"
-                style="width: 25%"
-                class="form-input"
-              >
-                <a-select-option value="TCP">TCP</a-select-option>
-                <a-select-option value="UDP">UDP</a-select-option>
-              </a-select>
-              <a-button
-                type="text"
-                danger
-                @click="removePort(index)"
-                v-if="createForm.ports.length > 1"
-                style="width: 20%"
-              >
-                删除
-              </a-button>
-              <a-button
-                type="text"
-                @click="addPort"
-                v-else
-                style="width: 20%"
-              >
-                添加
-              </a-button>
-            </div>
-            <a-button
-              v-if="createForm.ports.length > 1"
-              type="dashed"
-              @click="addPort"
-              style="width: 100%; margin-top: 8px"
-            >
-              <template #icon><PlusOutlined /></template>
-              添加端口
-            </a-button>
-          </div>
-        </a-form-item>
-
-        <a-form-item label="环境变量 (可选)">
-          <div class="env-config">
-            <div v-for="(env, index) in createForm.env" :key="index" class="env-row">
-              <a-input
-                v-model:value="env.name"
-                placeholder="变量名"
-                style="width: 40%"
-                class="form-input"
-              />
-              <a-input
-                v-model:value="env.value"
-                placeholder="变量值"
-                style="width: 40%"
-                class="form-input"
-              />
-              <a-button
-                type="text"
-                danger
-                @click="removeEnv(index)"
-                v-if="createForm.env.length > 1"
-                style="width: 15%"
-              >
-                删除
-              </a-button>
-              <a-button
-                type="text"
-                @click="addEnv"
-                v-else
-                style="width: 15%"
-              >
-                添加
-              </a-button>
-            </div>
-            <a-button
-              v-if="createForm.env.length > 1"
-              type="dashed"
-              @click="addEnv"
-              style="width: 100%; margin-top: 8px"
-            >
-              <template #icon><PlusOutlined /></template>
-              添加环境变量
-            </a-button>
-          </div>
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <!-- StatefulSet详情模态框 -->
-    <a-modal
-      v-model:open="detailsModalVisible"
-      title="StatefulSet详情"
-      width="900px"
-      :footer="null"
-      class="cluster-modal statefulSet-detail-modal"
-    >
-      <div v-if="currentStatefulSet" class="statefulSet-details">
-        <a-alert class="modal-alert" type="info" show-icon>
-          <template #message>{{ currentStatefulSet.name }}</template>
-          <template #description>
-            状态: {{ currentStatefulSet.status }} | Pod: {{ currentStatefulSet.ready_replicas || 0 }}/{{ currentStatefulSet.replicas || 0 }}
-          </template>
-        </a-alert>
-
-        <a-tabs default-active-key="1">
-          <a-tab-pane key="1" tab="基本信息">
-            <div class="details-grid">
-              <div class="detail-card">
-                <h4><DeploymentUnitOutlined /> 基本信息</h4>
-                <div class="detail-item">
-                  <div class="detail-label">名称:</div>
-                  <div class="detail-value">{{ currentStatefulSet.name }}</div>
-                </div>
-                <div class="detail-item">
-                  <div class="detail-label">命名空间:</div>
-                  <div class="detail-value">{{ currentStatefulSet.namespace }}</div>
-                </div>
-                <div class="detail-item">
-                  <div class="detail-label">状态:</div>
-                  <div class="detail-value">
-                    <a-badge 
-                      :status="getStatusBadgeType(currentStatefulSet.status)" 
-                      :text="currentStatefulSet.status"
-                    />
-                  </div>
-                </div>
-                <div class="detail-item">
-                  <div class="detail-label">创建时间:</div>
-                  <div class="detail-value">{{ formatDateTime(currentStatefulSet.creation_timestamp) }}</div>
-                </div>
-              </div>
-
-              <div class="detail-card">
-                <h4><NodeIndexOutlined /> Pod状态</h4>
-                <div class="detail-item">
-                  <div class="detail-label">期望副本数:</div>
-                  <div class="detail-value">{{ currentStatefulSet.replicas || 0 }}</div>
-                </div>
-                <div class="detail-item">
-                  <div class="detail-label">就绪副本数:</div>
-                  <div class="detail-value">{{ currentStatefulSet.ready_replicas || 0 }}</div>
-                </div>
-                <div class="detail-item">
-                  <div class="detail-label">就绪率:</div>
-                  <div class="detail-value">
-                    <a-progress 
-                      :percent="getPodReadyPercentage(currentStatefulSet)" 
-                      size="small"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </a-tab-pane>
-
-          <a-tab-pane key="2" tab="容器镜像">
-            <div class="images-list">
-              <a-empty v-if="!currentStatefulSet.images?.length" description="暂无镜像信息" />
-              <div v-for="image in currentStatefulSet.images" :key="image" class="image-item">
-                <a-tag color="green">{{ image }}</a-tag>
-                <a-button type="text" size="small" @click="copyToClipboard(image)">
-                  <template #icon><CopyOutlined /></template>
-                  复制
-                </a-button>
-              </div>
-            </div>
-          </a-tab-pane>
-
-          <a-tab-pane key="3" tab="事件" @click="loadStatefulSetEvents">
-            <div class="events-container">
-              <a-spin :spinning="eventsLoading">
-                <a-timeline>
-                  <a-timeline-item 
-                    v-for="(event, index) in statefulSetEvents" 
-                    :key="index"
-                    :color="event.type === 'Normal' ? 'green' : 'red'"
-                  >
-                    <div class="event-card">
-                      <div class="event-header">
-                        <span class="event-reason">{{ event.reason }}</span>
-                        <span class="event-time">{{ formatDateTime(event.lastTimestamp) }}</span>
-                      </div>
-                      <div class="event-message">{{ event.message }}</div>
-                      <div class="event-meta">
-                        <span><strong>类型:</strong> {{ event.type }}</span>
-                        <span><strong>来源:</strong> {{ event.source }}</span>
-                        <span><strong>次数:</strong> {{ event.count }}</span>
-                      </div>
-                    </div>
-                  </a-timeline-item>
-                </a-timeline>
-                <a-empty v-if="!statefulSetEvents.length && !eventsLoading" description="暂无事件" />
-              </a-spin>
-            </div>
-          </a-tab-pane>
-        </a-tabs>
-      </div>
-    </a-modal>
+    <!-- StatefulSet编辑模态框 -->
+    <ServiceEditModal
+      v-model:visible="isEditModalVisible"
+      :service="currentStatefulSet"
+      :loading="updateLoading"
+      type="statefulset"
+      @update="handleUpdate"
+    />
 
     <!-- YAML查看模态框 -->
-    <a-modal
-      v-model:open="yamlModalVisible"
-      title="StatefulSet YAML配置"
-      width="800px"
-      :footer="null"
-      class="yaml-modal"
-    >
-      <div class="yaml-content">
-        <div class="yaml-actions">
-          <a-button type="primary" @click="copyYamlToClipboard" size="small">
-            <template #icon><CopyOutlined /></template>
-            复制YAML
-          </a-button>
-        </div>
-        <pre class="yaml-display"><code>{{ currentYaml }}</code></pre>
-      </div>
-    </a-modal>
+    <StatefulSetYamlModal
+      :visible="isYamlModalVisible"
+      :statefulSet="currentStatefulSet"
+      :yaml="yamlContent"
+      :loading="yamlLoading"
+      @close="closeYamlModal"
+    />
 
-    <!-- 历史版本模态框 -->
-    <a-modal
-      v-model:open="historyModalVisible"
-      title="StatefulSet历史版本"
-      width="700px"
-      :footer="null"
-      class="history-modal"
-    >
-      <div class="history-content">
-        <a-spin :spinning="historyLoading">
-          <a-table
-            :columns="[
-              { title: '版本', dataIndex: 'revision', key: 'revision', width: '20%' },
-              { title: '变更原因', dataIndex: 'changeReason', key: 'changeReason', width: '40%' },
-              { title: '创建时间', dataIndex: 'creationTimestamp', key: 'creationTimestamp', width: '30%' },
-              { title: '操作', key: 'action', width: '10%' }
-            ]"
-            :data-source="historyVersions"
-            :pagination="false"
-            row-key="revision"
-          >
-            <template #bodyCell="{ column, record }">
-              <template v-if="column.key === 'action'">
-                <a-button type="primary" ghost size="small" @click="rollbackToVersion(record.revision)">
-                  回滚
-                </a-button>
-              </template>
-            </template>
-          </a-table>
-          <a-empty v-if="!historyVersions.length && !historyLoading" description="暂无历史版本" />
-        </a-spin>
-      </div>
-    </a-modal>
+    <!-- 扩缩容模态框 -->
+    <StatefulSetScaleModal
+      :visible="isScaleModalVisible"
+      :statefulSet="currentStatefulSet"
+      :loading="scaleLoading"
+      @close="closeScaleModal"
+      @scale="handleScale"
+    />
+
+    <!-- 指标展示模态框 -->
+    <StatefulSetMetricsModal
+      :visible="isMetricsModalVisible"
+      :statefulSet="currentStatefulSet"
+      :metrics="currentMetrics"
+      :loading="metricsLoading"
+      @close="closeMetricsModal"
+    />
+
+    <!-- 事件展示模态框 -->
+    <StatefulSetEventsModal
+      :visible="isEventsModalVisible"
+      :statefulSet="currentStatefulSet"
+      :events="currentEvents"
+      :loading="eventsLoading"
+      @close="closeEventsModal"
+    />
+
+    <!-- Pod列表模态框 -->
+    <StatefulSetPodsModal
+      :visible="isPodsModalVisible"
+      :statefulSet="currentStatefulSet"
+      :pods="currentPods"
+      :loading="podsLoading"
+      @close="closePodsModal"
+    />
+
+    <!-- 详情模态框 -->
+    <ServiceDetailModal
+      v-model:visible="isDetailModalVisible"
+      :service="currentStatefulSet"
+      type="statefulset"
+    />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { message } from 'ant-design-vue';
+import { computed, onMounted } from 'vue'
 import {
-  getWorkloadListApi,
-  restartWorkloadApi,
-  pauseWorkloadApi,
-  resumeWorkloadApi,
-  getWorkloadYamlApi,
-  getWorkloadEventsApi,
-  batchOperateWorkloadsApi,
-  getAllClustersApi,
-  getNamespacesByClusterIdApi,
-} from '#/api';
-import type { 
-  WorkloadInfo, 
-  WorkloadListReq,
-  ContainerPort,
-  EnvVar
-} from '#/api';
-import { 
-  CloudServerOutlined, 
-  TableOutlined, 
-  AppstoreOutlined, 
-  ReloadOutlined,
-  DeleteOutlined,
-  CodeOutlined,
   DeploymentUnitOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined,
-  NodeIndexOutlined,
-  DatabaseOutlined,
-  CopyOutlined,
-  ClusterOutlined,
-  PartitionOutlined,
   PlusOutlined,
-  EditOutlined,
+  ReloadOutlined,
+  CloudServerOutlined,
+  ClockCircleOutlined,
   EyeOutlined,
-  HistoryOutlined,
-  FilterOutlined,
-  RedoOutlined,
+  CodeOutlined,
+  ExpandAltOutlined,
   MoreOutlined,
-  PauseCircleOutlined,
-  PlayCircleOutlined,
-  RollbackOutlined
-} from '@ant-design/icons-vue';
+  BarChartOutlined,
+  HistoryOutlined,
+  AppstoreOutlined,
+  EditOutlined,
+  DeleteOutlined
+} from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { useStatefulSetManagement } from './composables/useStatefulSetManagement'
+import {
+  K8sPageHeader,
+  K8sOverviewCards,
+  K8sToolbar,
+  K8sStatusTag,
+  ServiceCreateModal,
+  ServiceEditModal,
+  ServiceDetailModal,
+  StatefulSetYamlModal,
+  StatefulSetScaleModal,
+  StatefulSetMetricsModal,
+  StatefulSetEventsModal,
+  StatefulSetPodsModal
+} from './components'
 
-// 状态变量
-const loading = ref(false);
-const clustersLoading = ref(false);
-const namespacesLoading = ref(false);
-const statefulSets = ref<WorkloadInfo[]>([]);
-const searchText = ref('');
-const statusFilter = ref<string>();
-const selectedRows = ref<WorkloadInfo[]>([]);
-const namespaces = ref<string[]>(['default']);
-const selectedNamespace = ref<string>('default');
-const isCreateModalVisible = ref(false);
-const clusters = ref<Array<{id: number, name: string}>>([]);
-const selectedCluster = ref<number>();
-const viewMode = ref<'table' | 'card'>('table');
-const selectedCardIds = ref<string[]>([]);
-const currentPage = ref(1);
-const pageSize = ref(12);
-const totalItems = ref(0);
+// 使用StatefulSet管理组合函数
+const {
+  // 数据状态
+  statefulSets,
+  filteredStatefulSets,
+  runningClusters,
+  namespaces,
+  selectedRows,
+  currentStatefulSet,
+  currentMetrics,
+  currentEvents,
+  currentPods,
+  yamlContent,
+  
+  // 加载状态
+  loading,
+  clustersLoading,
+  namespacesLoading,
+  createLoading,
+  updateLoading,
+  yamlLoading,
+  scaleLoading,
+  metricsLoading,
+  eventsLoading,
+  podsLoading,
+  
+  // 模态框状态
+  isCreateModalVisible,
+  isEditModalVisible,
+  isDetailModalVisible,
+  isYamlModalVisible,
+  isScaleModalVisible,
+  isMetricsModalVisible,
+  isEventsModalVisible,
+  isPodsModalVisible,
+  
+  // 筛选状态
+  selectedCluster,
+  selectedNamespace,
+  searchText,
+  pageSize,
+  currentPage,
+  
+  // 方法
+  refreshData,
+  handleClusterChange,
+  handleNamespaceChange,
+  handlePageSizeChange,
+  handleTableChange,
+  handleBatchDelete,
+  showCreateModal,
+  handleCreate,
+  editStatefulSet,
+  handleUpdate,
+  deleteStatefulSet,
+  viewDetails,
+  viewYaml,
+  closeYamlModal,
+  scaleStatefulSet,
+  closeScaleModal,
+  handleScale,
+  viewMetrics,
+  closeMetricsModal,
+  viewEvents,
+  closeEventsModal,
+  viewPods,
+  closePodsModal
+} = useStatefulSetManagement()
 
-// 根据卡片选择更新 selectedRows
-watch(selectedCardIds, (newValue) => {
-  selectedRows.value = statefulSets.value.filter(ds => 
-    newValue.includes(ds.uid)
-  );
-});
+// 计算属性
+const totalItems = computed(() => filteredStatefulSets.value.length)
+
+const runningCount = computed(() => 
+  statefulSets.value.filter(s => s.status === 'Running').length
+)
+
+const desiredReplicas = computed(() => 
+  statefulSets.value.reduce((sum, s) => sum + (s.replicas || 0), 0)
+)
+
+const readyReplicas = computed(() => 
+  statefulSets.value.reduce((sum, s) => sum + (s.ready_replicas || 0), 0)
+)
+
+// 概览卡片数据
+const overviewCards = computed(() => [
+  {
+    title: 'StatefulSet 总数',
+    value: statefulSets.value.length,
+    icon: DeploymentUnitOutlined,
+    color: 'blue'
+  },
+  {
+    title: '运行中',
+    value: runningCount.value,
+    icon: 'CheckCircleOutlined',
+    color: 'green'
+  },
+  {
+    title: '期望 Pod 数',
+    value: desiredReplicas.value,
+    icon: 'NodeIndexOutlined',
+    color: 'orange'
+  },
+  {
+    title: '就绪 Pod 数',
+    value: readyReplicas.value,
+    icon: 'DatabaseOutlined',
+    color: 'purple'
+  }
+])
 
 // 表格列配置
 const columns = [
@@ -810,682 +423,86 @@ const columns = [
     title: 'StatefulSet 名称',
     dataIndex: 'name',
     key: 'name',
-    width: '20%',
-    sorter: (a: WorkloadInfo, b: WorkloadInfo) => a.name.localeCompare(b.name),
+    width: 200,
+    sorter: (a: any, b: any) => a.name.localeCompare(b.name),
+    fixed: 'left'
   },
   {
     title: '命名空间',
     dataIndex: 'namespace',
     key: 'namespace',
-    width: '15%',
-    sorter: (a: WorkloadInfo, b: WorkloadInfo) => a.namespace.localeCompare(b.namespace),
+    width: 150,
+    sorter: (a: any, b: any) => a.namespace.localeCompare(b.namespace)
   },
   {
-    title: 'Pod 状态',
+    title: '服务名称',
+    dataIndex: 'service_name',
+    key: 'serviceName',
+    width: 150
+  },
+  {
+    title: 'Pod状态',
     dataIndex: 'podStatus',
     key: 'podStatus',
-    width: '25%',
+    width: 180,
+    sorter: (a: any, b: any) => {
+      const aReady = (a.ready_replicas || 0) / (a.replicas || 1)
+      const bReady = (b.ready_replicas || 0) / (b.replicas || 1)
+      return aReady - bReady
+    }
   },
   {
     title: '状态',
     dataIndex: 'status',
     key: 'status',
-    width: '10%',
-    sorter: (a: WorkloadInfo, b: WorkloadInfo) => a.status.localeCompare(b.status),
+    width: 120,
+    sorter: (a: any, b: any) => a.status.localeCompare(b.status)
   },
   {
     title: '创建时间',
-    dataIndex: 'creation_timestamp',
-    key: 'creationTimestamp',
-    width: '15%',
-    sorter: (a: WorkloadInfo, b: WorkloadInfo) => new Date(a.creation_timestamp).getTime() - new Date(b.creation_timestamp).getTime(),
+    dataIndex: 'created_at',
+    key: 'createdAt',
+    width: 150,
+    sorter: (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
   },
   {
     title: '操作',
     key: 'action',
-    width: '15%',
-    fixed: 'right',
-  },
-];
-
-// 计算属性
-const filteredStatefulSets = computed(() => {
-  let result = statefulSets.value;
-  
-  if (statusFilter.value) {
-    result = result.filter(ds => ds.status === statusFilter.value);
+    width: 200,
+    fixed: 'right'
   }
-  
-  const searchValue = searchText.value.toLowerCase().trim();
-  if (searchValue) {
-    result = result.filter(ds => 
-      ds.name.toLowerCase().includes(searchValue)
-    );
-  }
-  
-  return result;
-});
+]
 
-const runningCount = computed(() => 
-  statefulSets.value.filter(sts => sts.status === 'Running').length
-);
-
-const desiredReplicas = computed(() => 
-  statefulSets.value.reduce((total, sts) => total + (sts.replicas || 0), 0)
-);
-
-const readyReplicas = computed(() => 
-  statefulSets.value.reduce((total, sts) => total + (sts.ready_replicas || 0), 0)
-);
-
-// 表格选择配置
+// 表格行选择配置
 const rowSelection = {
-  onChange: (_: string[], selectedRowsData: WorkloadInfo[]) => {
-    selectedRows.value = selectedRowsData;
-    selectedCardIds.value = selectedRowsData.map(row => row.uid);
-  },
-  getCheckboxProps: (_: WorkloadInfo) => ({
-    disabled: false,
-  }),
-};
+  selectedRowKeys: computed(() => selectedRows.value.map(row => row.uid)),
+  onChange: (selectedRowKeys: string[], selectedRowsData: any[]) => {
+    selectedRows.value = selectedRowsData
+  }
+}
 
-// 格式化日期
+// 获取Pod就绪百分比
+const getPodReadyPercentage = (record: any) => {
+  const ready = record.ready_replicas || 0
+  const total = record.replicas || 1
+  return Math.round((ready / total) * 100)
+}
+
+// 时间格式化函数
 const formatDate = (dateString: string) => {
-  if (!dateString) return '-';
-  const date = new Date(dateString);
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-};
+  if (!dateString) return '-'
+  const date = new Date(dateString)
+  return `${date.getMonth() + 1}月${date.getDate()}日`
+}
 
-// API 方法
-const getClusters = async () => {
-  clustersLoading.value = true;
-  try {
-    const res = await getAllClustersApi();
-    clusters.value = res ?? [];
-    if (clusters.value.length > 0 && !selectedCluster.value) {
-      selectedCluster.value = clusters.value[0]?.id;
-      if (selectedCluster.value) {
-        await getNamespaces();
-        await getStatefulSets(1, pageSize.value);
-      }
-    }
-  } catch (error: any) {
-    message.error(error.message || '获取集群列表失败');
-  } finally {
-    clustersLoading.value = false;
-  }
-};
+const formatDateTime = (dateString: string) => {
+  if (!dateString) return '-'
+  const date = new Date(dateString)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`
+}
 
-const getNamespaces = async () => {
-  if (!selectedCluster.value) {
-    message.warning('请先选择集群');
-    return;
-  }
-
-  namespacesLoading.value = true;
-  try {
-    const res = await getNamespacesByClusterIdApi(selectedCluster.value);
-    namespaces.value = res.map((ns: { name: string }) => ns.name);
-    if (namespaces.value.length > 0) {
-      selectedNamespace.value = namespaces.value[0] || 'default';
-    }
-  } catch (error: any) {
-    message.error(error.message || '获取命名空间列表失败');
-    namespaces.value = ['default'];
-    selectedNamespace.value = 'default';
-  } finally {
-    namespacesLoading.value = false;
-  }
-};
-
-const getStatefulSets = async (page = 1, size = pageSize.value) => {
-  if (!selectedCluster.value) {
-    message.warning('请先选择集群');
-    return;
-  }
-  
-  loading.value = true;
-  try {
-    const params: WorkloadListReq = {
-      cluster_id: selectedCluster.value,
-      kind: 'StatefulSet',
-      page,
-      page_size: size,
-      status: statusFilter.value
-    };
-    
-    if (selectedNamespace.value) {
-      params.namespace = selectedNamespace.value;
-    }
-    
-    const res = await getWorkloadListApi(params);
-    statefulSets.value = res || [];
-    totalItems.value = statefulSets.value.length;
-    currentPage.value = page;
-    selectedRows.value = [];
-    selectedCardIds.value = [];
-  } catch (error: any) {
-    message.error(error.message || '获取StatefulSet列表失败');
-    statefulSets.value = [];
-    totalItems.value = 0;
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 刷新数据
-const refreshData = () => {
-  getStatefulSets(currentPage.value, pageSize.value);
-};
-
-// 搜索
-const onSearch = () => {
-  // 搜索逻辑已经在计算属性中实现
-};
-
-// 筛选处理
-const handleFilterChange = () => {
-  currentPage.value = 1;
-  getStatefulSets(1, pageSize.value);
-};
-
-// 批量重启
-const handleBatchRestart = async () => {
-  if (!selectedRows.value.length || !selectedCluster.value) return;
-  
-  try {
-    loading.value = true;
-    await batchOperateWorkloadsApi({
-      cluster_id: selectedCluster.value,
-      namespace: selectedNamespace.value,
-      workloads: selectedRows.value.map(sts => ({
-        name: sts.name,
-        kind: 'StatefulSet'
-      })),
-      operation: 'restart'
-    });
-    
-    message.success(`成功重启 ${selectedRows.value.length} 个StatefulSet`);
-    selectedRows.value = [];
-    selectedCardIds.value = [];
-    getStatefulSets(currentPage.value, pageSize.value);
-  } catch (error: any) {
-    message.error(error.message || '批量重启失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 批量删除StatefulSet
-const handleBatchDelete = async () => {
-  if (!selectedRows.value.length || !selectedCluster.value) return;
-  
-  try {
-    loading.value = true;
-    await batchOperateWorkloadsApi({
-      cluster_id: selectedCluster.value,
-      namespace: selectedNamespace.value,
-      workloads: selectedRows.value.map(sts => ({
-        name: sts.name,
-        kind: 'StatefulSet'
-      })),
-      operation: 'delete'
-    });
-    
-    message.success(`成功删除 ${selectedRows.value.length} 个StatefulSet`);
-    selectedRows.value = [];
-    selectedCardIds.value = [];
-    getStatefulSets(currentPage.value, pageSize.value);
-  } catch (error: any) {
-    message.error(error.message || '批量删除失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 切换命名空间
-const handleNamespaceChange = () => {
-  currentPage.value = 1;
-  getStatefulSets(1, pageSize.value);
-};
-
-// 切换集群
-const handleClusterChange = () => {
-  selectedNamespace.value = 'default';
-  statefulSets.value = [];
-  currentPage.value = 1;
-  totalItems.value = 0;
-  getNamespaces();
-  getStatefulSets(1, pageSize.value);
-};
-
-// 分页处理
-const handleTableChange = (pagination: any) => {
-  currentPage.value = pagination.current;
-  pageSize.value = pagination.pageSize;
-  getStatefulSets(pagination.current, pagination.pageSize);
-};
-
-// 新增状态变量
-const detailsModalVisible = ref(false);
-const yamlModalVisible = ref(false);
-const historyModalVisible = ref(false);
-const eventsLoading = ref(false);
-const historyLoading = ref(false);
-const currentStatefulSet = ref<WorkloadInfo | null>(null);
-const currentYaml = ref('');
-const statefulSetEvents = ref<any[]>([]);
-const historyVersions = ref<any[]>([]);
-
-// 创建表单
-const createForm = ref<{
-  name: string;
-  image: string;
-  ports: ContainerPort[];
-  env: EnvVar[];
-}>({
-  name: '',
-  image: '',
-  ports: [{ container_port: 80, protocol: 'TCP' }],
-  env: [{ name: '', value: '' }]
-});
-
-// 工具方法
-const getPodReadyPercentage = (statefulSet: WorkloadInfo) => {
-  if (!statefulSet.replicas) return 0;
-  return Math.round(((statefulSet.ready_replicas || 0) / statefulSet.replicas) * 100);
-};
-
-const getStatusBadgeType = (status: string) => {
-  switch (status) {
-    case 'Running':
-      return 'success';
-    case 'Pending':
-      return 'processing';
-    case 'Failed':
-      return 'error';
-    default:
-      return 'default';
-  }
-};
-
-const formatDateTime = (dateString: string): string => {
-  if (!dateString) return '-';
-  const date = new Date(dateString);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-};
-
-// 表单操作方法
-const addPort = () => {
-  createForm.value.ports.push({ container_port: 80, protocol: 'TCP' });
-};
-
-const removePort = (index: number) => {
-  createForm.value.ports.splice(index, 1);
-};
-
-const addEnv = () => {
-  createForm.value.env.push({ name: '', value: '' });
-};
-
-const removeEnv = (index: number) => {
-  createForm.value.env.splice(index, 1);
-};
-
-// 创建StatefulSet
-const handleCreateConfirm = async () => {
-  if (!selectedCluster.value || !selectedNamespace.value) {
-    message.warning('请先选择集群和命名空间');
-    return;
-  }
-
-  if (!createForm.value.name || !createForm.value.image) {
-    message.warning('请填写必要信息');
-    return;
-  }
-
-  try {
-    loading.value = true;
-    // Note: StatefulSet creation would need specific implementation
-    message.info('StatefulSet创建功能开发中...');
-
-    message.success('StatefulSet创建成功');
-    isCreateModalVisible.value = false;
-    resetCreateForm();
-    getStatefulSets(currentPage.value, pageSize.value);
-  } catch (error: any) {
-    message.error(error.message || 'StatefulSet创建失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleCreateCancel = () => {
-  isCreateModalVisible.value = false;
-  resetCreateForm();
-};
-
-const resetCreateForm = () => {
-  createForm.value = {
-    name: '',
-    image: '',
-    ports: [{ container_port: 80, protocol: 'TCP' }],
-    env: [{ name: '', value: '' }]
-  };
-};
-
-// StatefulSet操作方法
-const viewDetails = async (statefulSet: WorkloadInfo) => {
-  currentStatefulSet.value = statefulSet;
-  detailsModalVisible.value = true;
-};
-
-const viewYaml = async (statefulSet: WorkloadInfo) => {
-  try {
-    loading.value = true;
-    const yaml = await getWorkloadYamlApi(selectedCluster.value!, statefulSet.namespace, 'StatefulSet', statefulSet.name);
-    currentYaml.value = yaml;
-    yamlModalVisible.value = true;
-  } catch (error: any) {
-    message.error(error.message || '获取YAML失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-const viewHistory = async (statefulSet: WorkloadInfo) => {
-  try {
-    historyLoading.value = true;
-    currentStatefulSet.value = statefulSet;
-    // History functionality would need specific implementation
-    const history: any[] = [];
-    historyVersions.value = history || [];
-    historyModalVisible.value = true;
-  } catch (error: any) {
-    message.error(error.message || '获取历史版本失败');
-  } finally {
-    historyLoading.value = false;
-  }
-};
-
-const handleEdit = (_: WorkloadInfo) => {
-  message.info('编辑功能开发中...');
-};
-
-const handleRestart = async (statefulSet: WorkloadInfo) => {
-  try {
-    loading.value = true;
-    await restartWorkloadApi(selectedCluster.value!, statefulSet.namespace, 'StatefulSet', statefulSet.name);
-    message.success('StatefulSet重启成功');
-    getStatefulSets(currentPage.value, pageSize.value);
-  } catch (error: any) {
-    message.error(error.message || 'StatefulSet重启失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handlePause = async (statefulSet: WorkloadInfo) => {
-  try {
-    loading.value = true;
-    await pauseWorkloadApi(selectedCluster.value!, statefulSet.namespace, 'StatefulSet', statefulSet.name);
-    message.success('StatefulSet更新已暂停');
-    getStatefulSets(currentPage.value, pageSize.value);
-  } catch (error: any) {
-    message.error(error.message || '暂停更新失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleResume = async (statefulSet: WorkloadInfo) => {
-  try {
-    loading.value = true;
-    await resumeWorkloadApi(selectedCluster.value!, statefulSet.namespace, 'StatefulSet', statefulSet.name);
-    message.success('StatefulSet更新已恢复');
-    getStatefulSets(currentPage.value, pageSize.value);
-  } catch (error: any) {
-    message.error(error.message || '恢复更新失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleRollback = async (_: WorkloadInfo) => {
-  try {
-    loading.value = true;
-    // Rollback functionality would need specific implementation
-    message.info('回滚功能开发中...');
-    message.success('StatefulSet回滚成功');
-    getStatefulSets(currentPage.value, pageSize.value);
-  } catch (error: any) {
-    message.error(error.message || 'StatefulSet回滚失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleDelete = async (statefulSet: WorkloadInfo) => {
-  try {
-    loading.value = true;
-    await batchOperateWorkloadsApi({
-      cluster_id: selectedCluster.value!,
-      namespace: statefulSet.namespace,
-      workloads: [{ name: statefulSet.name, kind: 'StatefulSet' }],
-      operation: 'delete'
-    });
-    message.success('StatefulSet删除成功');
-    getStatefulSets(currentPage.value, pageSize.value);
-  } catch (error: any) {
-    message.error(error.message || 'StatefulSet删除失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 事件加载
-const loadStatefulSetEvents = async () => {
-  if (!currentStatefulSet.value) return;
-  
-  try {
-    eventsLoading.value = true;
-    const events = await getWorkloadEventsApi(
-      selectedCluster.value!,
-      currentStatefulSet.value.namespace,
-      'StatefulSet',
-      currentStatefulSet.value.name
-    );
-    statefulSetEvents.value = events || [];
-  } catch (error: any) {
-    message.error(error.message || '获取事件失败');
-  } finally {
-    eventsLoading.value = false;
-  }
-};
-
-// 版本回滚
-const rollbackToVersion = async (revision: number) => {
-  if (!currentStatefulSet.value) return;
-  
-  try {
-    loading.value = true;
-    // Rollback functionality would need specific implementation
-    message.info('版本回滚功能开发中...');
-    message.success(`成功回滚到版本 ${revision}`);
-    historyModalVisible.value = false;
-    getStatefulSets(currentPage.value, pageSize.value);
-  } catch (error: any) {
-    message.error(error.message || '版本回滚失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 复制功能
-const copyToClipboard = async (text: string) => {
-  try {
-    await navigator.clipboard.writeText(text);
-    message.success('已复制到剪贴板');
-  } catch (error) {
-    message.error('复制失败');
-  }
-};
-
-const copyYamlToClipboard = async () => {
-  await copyToClipboard(currentYaml.value);
-};
-
-// 页面加载时获取数据
+// 组件挂载时初始化数据
 onMounted(() => {
-  getClusters();
-});
+  refreshData()
+})
 </script>
-
-<style>
-/* 继承现有样式系统 */
-
-.statefulSet-name {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 500;
-}
-
-.pod-status-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pod-numbers {
-  font-weight: 500;
-  color: #666;
-  font-size: 12px;
-}
-
-.port-config, .env-config {
-  border: 1px solid #f0f0f0;
-  border-radius: 6px;
-  padding: 12px;
-  background: #fafafa;
-}
-
-.port-row, .env-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.port-row:last-child, .env-row:last-child {
-  margin-bottom: 0;
-}
-
-.images-list {
-  padding: 16px;
-}
-
-.image-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.image-item:last-child {
-  border-bottom: none;
-}
-
-.yaml-content {
-  position: relative;
-}
-
-.yaml-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 1;
-}
-
-.yaml-display {
-  background: #2d3748;
-  color: #e2e8f0;
-  padding: 16px;
-  border-radius: 6px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  max-height: 500px;
-  overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.history-content {
-  min-height: 200px;
-}
-
-.event-card {
-  padding: 12px;
-  background: #f9f9f9;
-  border-radius: 6px;
-  margin-bottom: 8px;
-}
-
-.event-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.event-reason {
-  font-weight: 600;
-  color: #1890ff;
-}
-
-.event-time {
-  font-size: 12px;
-  color: #999;
-}
-
-.event-message {
-  margin-bottom: 8px;
-  color: #333;
-}
-
-.event-meta {
-  display: flex;
-  gap: 16px;
-  font-size: 12px;
-  color: #666;
-}
-
-.statefulSet-cards .cluster-card {
-  margin-bottom: 16px;
-}
-
-.statefulSet-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.statefulSet-title h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.card-action-footer {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.card-action-footer .ant-btn {
-  flex: 1;
-  min-width: 80px;
-}
-</style>
