@@ -467,7 +467,7 @@ import {
   getRCAConfig,
   getRCAInfo,
   type RCAHealthResponse,
-} from '../../api/core/rca';
+} from '../../api/core/aiops/rca';
 import type { ServiceReadyResponse, ServiceConfigResponse, ServiceInfoResponse } from '../../api/core/common';
 
 const loading = ref(false);

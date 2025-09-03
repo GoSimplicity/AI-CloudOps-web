@@ -298,7 +298,7 @@ import {
   type PredictionServiceHealthResponse,
   type ModelInfoResponse,
   PredictionType
-} from '#/api/core/predict';
+} from '#/api/core/aiops/predict';
 
 const loading = ref(false);
 const autoRefresh = ref(true);

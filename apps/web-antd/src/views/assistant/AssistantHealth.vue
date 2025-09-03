@@ -234,7 +234,7 @@ import {
   type ServiceHealthResponse,
   type ServiceReadyResponse,
   type ClearCacheResponse
-} from '#/api/core/assistant';
+} from '#/api/core/aiops/assistant';
 
 // 响应式数据
 const healthLoading = ref(false);

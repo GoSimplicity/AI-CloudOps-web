@@ -154,7 +154,7 @@
 import { ref, watch } from 'vue';
 import { FormOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import type { FormInstance } from 'ant-design-vue';
-import type { FormField } from '#/api/core/workorder_form_design';
+import type { FormField } from '#/api/core/workorder/workorder_form_design';
 
 interface Props {
   fields: FormField[];

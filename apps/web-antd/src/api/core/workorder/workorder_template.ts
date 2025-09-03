@@ -1,5 +1,5 @@
 import { requestClient } from '#/api/request';
-import type { WorkorderProcessItem } from './workorder_process';
+import type { WorkorderProcessItem } from '../workorder_process';
 import type { WorkorderFormDesignItem } from './workorder_form_design';
 import type { WorkorderCategoryItem } from './workorder_category';
 

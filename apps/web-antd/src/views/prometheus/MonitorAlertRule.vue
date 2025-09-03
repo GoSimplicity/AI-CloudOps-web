@@ -650,17 +650,17 @@ import {
   type MonitorAlertRule,
   type CreateMonitorAlertRuleReq,
   type UpdateMonitorAlertRuleReq,
-} from '#/api/core/prometheus_alert_rule';
+} from '#/api/core/prometheus/prometheus_alert_rule';
 import {
   getMonitorAlertManagerPoolListApi,
   getMonitorAlertManagerPoolApi,
   type MonitorAlertManagerPool,
-} from '#/api/core/prometheus_alert_pool';
+} from '#/api/core/prometheus/prometheus_alert_pool';
 import {
   getMonitorSendGroupListApi,
   getMonitorSendGroupDetailApi,
   type MonitorSendGroup,
-} from '#/api/core/prometheus_send_group';
+} from '#/api/core/prometheus/prometheus_send_group';
 
 const ENABLE_STATUS = {
   ENABLED: 1,

@@ -34,8 +34,9 @@ export interface ServiceAccountListReq {
   namespace?: string;
   label_selector?: string;
   field_selector?: string;
+  search?: string;
   page?: number;
-  page_size?: number;
+  size?: number;
 }
 
 export interface ServiceAccountCreateReq {
@@ -100,7 +101,7 @@ export interface ServiceAccountTokenResp {
  * 获取ServiceAccount列表
  */
 export function getServiceAccountListApi(params: ServiceAccountListReq) {
-  return requestClient.get<ServiceAccountInfo[]>('/v1/k8s/serviceaccount/list', {
+  return requestClient.get('/k8s/serviceaccount/list', {
     params,
   });
 }
@@ -109,7 +110,7 @@ export function getServiceAccountListApi(params: ServiceAccountListReq) {
  * 获取ServiceAccount详情
  */
 export function getServiceAccountDetailsApi(cluster_id: number, namespace: string, name: string) {
-  return requestClient.get<ServiceAccountDetails>('/v1/k8s/serviceaccount/details', {
+  return requestClient.get<ServiceAccountDetails>('/k8s/serviceaccount/details', {
     params: { cluster_id, namespace, name },
   });
 }
@@ -118,35 +119,35 @@ export function getServiceAccountDetailsApi(cluster_id: number, namespace: strin
  * 创建ServiceAccount
  */
 export function createServiceAccountApi(data: ServiceAccountCreateReq) {
-  return requestClient.post('/v1/k8s/serviceaccount/create', data);
+  return requestClient.post('/k8s/serviceaccount/create', data);
 }
 
 /**
  * 更新ServiceAccount
  */
 export function updateServiceAccountApi(data: ServiceAccountUpdateReq) {
-  return requestClient.put('/v1/k8s/serviceaccount/update', data);
+  return requestClient.put('/k8s/serviceaccount/update', data);
 }
 
 /**
  * 删除ServiceAccount
  */
 export function deleteServiceAccountApi(data: ServiceAccountDeleteReq) {
-  return requestClient.delete('/v1/k8s/serviceaccount/delete', { data });
+  return requestClient.delete('/k8s/serviceaccount/delete', { data });
 }
 
 /**
  * 批量删除ServiceAccount
  */
 export function batchDeleteServiceAccountApi(data: ServiceAccountBatchDeleteReq) {
-  return requestClient.delete('/v1/k8s/serviceaccount/batch-delete', { data });
+  return requestClient.delete('/k8s/serviceaccount/batch-delete', { data });
 }
 
 /**
  * 获取ServiceAccount统计信息
  */
 export function getServiceAccountStatisticsApi(cluster_id: number, namespace?: string) {
-  return requestClient.get<ServiceAccountStatistics>('/v1/k8s/serviceaccount/statistics', {
+  return requestClient.get<ServiceAccountStatistics>('/k8s/serviceaccount/statistics', {
     params: { cluster_id, namespace },
   });
 }
@@ -155,14 +156,14 @@ export function getServiceAccountStatisticsApi(cluster_id: number, namespace?: s
  * 获取ServiceAccount令牌
  */
 export function getServiceAccountTokenApi(data: ServiceAccountTokenReq) {
-  return requestClient.post<ServiceAccountTokenResp>('/v1/k8s/serviceaccount/token', data);
+  return requestClient.post<ServiceAccountTokenResp>('/k8s/serviceaccount/token', data);
 }
 
 /**
  * 获取ServiceAccount YAML
  */
 export function getServiceAccountYamlApi(cluster_id: number, namespace: string, name: string) {
-  return requestClient.get<{ yaml: string }>('/v1/k8s/serviceaccount/yaml', {
+  return requestClient.get<{ yaml: string }>('/k8s/serviceaccount/yaml', {
     params: { cluster_id, namespace, name },
   });
 }
@@ -171,7 +172,7 @@ export function getServiceAccountYamlApi(cluster_id: number, namespace: string, 
  * 更新ServiceAccount YAML
  */
 export function updateServiceAccountYamlApi(cluster_id: number, namespace: string, name: string, yaml: string) {
-  return requestClient.put('/v1/k8s/serviceaccount/yaml', {
+  return requestClient.put('/k8s/serviceaccount/yaml', {
     cluster_id,
     namespace, 
     name,

@@ -1,91 +1,38 @@
 <template>
   <div class="cluster-management-container namespace-management-container">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="title-section">
-          <div class="page-title">
-            <AppstoreOutlined class="title-icon" />
-            <h1>Kubernetes 命名空间管理</h1>
-          </div>
-          <p class="page-subtitle">管理和监控集群中的所有命名空间资源</p>
-        </div>
-        <div class="header-actions">
-          <a-button type="primary" size="large" @click="isCreateModalVisible = true">
-            <template #icon>
-              <PlusOutlined />
-            </template>
-            创建命名空间
-          </a-button>
-          <a-button type="primary" size="large" @click="refreshData" :loading="loading">
-            <template #icon>
-              <ReloadOutlined />
-            </template>
-            刷新数据
-          </a-button>
-        </div>
-      </div>
-    </div>
+    <K8sPageHeader
+      title="命名空间管理"
+      subtitle="管理和监控集群中的所有命名空间资源"
+      :title-icon="AppstoreOutlined"
+      @refresh="refreshData"
+      :loading="loading"
+    >
+      <template #actions>
+        <a-button type="primary" @click="isCreateModalVisible = true">
+          <template #icon><PlusOutlined /></template>
+          创建命名空间
+        </a-button>
+        <a-button @click="refreshData" :loading="loading">
+          <template #icon><ReloadOutlined /></template>
+          刷新数据
+        </a-button>
+      </template>
+    </K8sPageHeader>
 
-    <!-- 数据概览卡片 -->
-    <div class="overview-cards">
-      <div class="overview-card total-clusters">
-        <div class="card-icon">
-          <AppstoreOutlined />
-        </div>
-        <div class="card-info">
-          <div class="card-number">{{ totalItems }}</div>
-          <div class="card-label">命名空间总数</div>
-        </div>
-      </div>
-
-      <div class="overview-card running-clusters">
-        <div class="card-icon">
-          <CheckCircleOutlined />
-        </div>
-        <div class="card-info">
-          <div class="card-number">{{ activeNamespaces }}</div>
-          <div class="card-label">活跃状态</div>
-        </div>
-      </div>
-
-      <div class="overview-card env-types">
-        <div class="card-icon">
-          <DeploymentUnitOutlined />
-        </div>
-        <div class="card-info">
-          <div class="card-number">{{ namespaces.length }}</div>
-          <div class="card-label">当前页数量</div>
-        </div>
-      </div>
-
-      <div class="overview-card resource-usage">
-        <div class="card-icon">
-          <ClusterOutlined />
-        </div>
-        <div class="card-info">
-          <div class="card-number">{{ clusters.find(c => c.id === selectedCluster)?.name || '-' }}</div>
-          <div class="card-label">当前集群</div>
-        </div>
-      </div>
-    </div>
+    <!-- 概览卡片 -->
+    <K8sOverviewCards :cards="overviewCards" />
 
     <!-- 操作工具栏 -->
     <div class="toolbar">
       <div class="toolbar-left">
-        <a-select v-model:value="selectedCluster" placeholder="选择集群" class="env-filter cluster-selector"
-          :loading="clustersLoading" @change="handleClusterChange">
-          <template #suffixIcon>
-            <ClusterOutlined />
-          </template>
-          <a-select-option v-for="cluster in runningClusters" :key="cluster.id" :value="cluster.id">
-            <span class="cluster-option">
-              <CloudServerOutlined />
-              {{ cluster.name }}
-              <a-tag color="green" size="small">运行中</a-tag>
-            </span>
-          </a-select-option>
-        </a-select>
+        <K8sClusterSelector
+          v-model:value="selectedCluster"
+          :clusters="runningClusters"
+          :loading="clustersLoading"
+          @change="handleClusterChange"
+          placeholder="选择集群"
+        />
 
         <a-select v-model:value="statusFilter" placeholder="状态筛选" class="env-filter" allow-clear
           @change="handleFilterChange">
@@ -472,21 +419,25 @@
 import { ref, computed, onMounted, watch, h } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
+  K8sPageHeader,
+  K8sOverviewCards,
+  K8sClusterSelector,
+  // K8sStatusTag
+} from './components';
+import {
   getNamespacesListApi,
   createNamespaceApi,
   deleteNamespaceApi,
   getNamespaceDetailsApi,
-  updateNamespaceApi,
-  getClustersListApi,
-} from '#/api';
+  updateNamespaceApi
+} from '#/api/core/k8s/k8s_namespace';
 import {
+  getClustersListApi,
   ClusterStatus,
-} from '#/api';
-import type {
-  K8sCluster,
-  KeyValueList,
-  KeyValue,
-} from '#/api';
+  type K8sCluster,
+  type KeyValueList,
+  type KeyValue
+} from '#/api/core/k8s/k8s_cluster';
 
 // 本地类型定义（用于页面显示）
 interface NamespaceDetails {
@@ -501,7 +452,7 @@ interface NamespaceDetails {
 
 
 import {
-  CloudServerOutlined,
+  // CloudServerOutlined,
   AppstoreOutlined,
   ReloadOutlined,
   DeleteOutlined,
@@ -516,6 +467,34 @@ import {
   InfoCircleOutlined,
   DeploymentUnitOutlined
 } from '@ant-design/icons-vue';
+
+// 添加概览卡片的计算属性
+const overviewCards = computed(() => [
+  {
+    label: '命名空间总数',
+    value: totalItems.value,
+    icon: AppstoreOutlined,
+    type: 'total'
+  },
+  {
+    label: '活跃状态',
+    value: activeNamespaces.value,
+    icon: CheckCircleOutlined,
+    type: 'running'
+  },
+  {
+    label: '当前页数量',
+    value: namespaces.value.length,
+    icon: DeploymentUnitOutlined,
+    type: 'warning'
+  },
+  {
+    label: '当前集群',
+    value: clusters.value.find(c => c.id === selectedCluster.value)?.name || '-',
+    icon: ClusterOutlined,
+    type: 'total'
+  }
+]);
 
 // 基本状态变量
 const loading = ref(false);

@@ -317,22 +317,22 @@ import {
 import { debounce } from 'lodash-es';
 
 // API导入
-import { getUserList, type GetUserListReq } from '#/api/core/user';
+import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 import {
   type CreateWorkorderProcessReq,
   type ProcessConnection,
   ProcessStatus,
   createWorkorderProcess
-} from '#/api/core/workorder_process';
+} from '#/api/core/workorder/workorder_process';
 import {
   type WorkorderCategoryItem,
   listWorkorderCategory
-} from '#/api/core/workorder_category';
+} from '#/api/core/workorder/workorder_category';
 import {
   type WorkorderFormDesignItem,
   listWorkorderFormDesign,
   FormDesignStatus
-} from '#/api/core/workorder_form_design';
+} from '#/api/core/workorder/workorder_form_design';
 
 
 interface UserInfo {

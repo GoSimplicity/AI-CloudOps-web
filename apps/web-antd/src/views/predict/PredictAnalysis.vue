@@ -240,7 +240,7 @@ import {
   type MemoryPredictionRequest,
   type DiskPredictionRequest,
   PredictionGranularity
-} from '#/api/core/predict';
+} from '#/api/core/aiops/predict';
 
 const analyzing = ref(false);
 const activeChartTab = ref('trend');

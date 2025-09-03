@@ -1,140 +1,174 @@
 <template>
-  <div class="overview-cards">
-    <div 
-      v-for="(card, index) in cards" 
-      :key="index"
+  <div class="k8s-overview-cards">
+    <div
+      v-for="card in cards"
+      :key="card.label"
       class="overview-card"
-      :class="card.className"
+      :class="card.type"
     >
       <div class="card-icon">
         <component :is="card.icon" />
       </div>
       <div class="card-info">
-        <div class="card-number">{{ card.number }}</div>
+        <div class="card-number">{{ card.value }}</div>
         <div class="card-label">{{ card.label }}</div>
+      </div>
+      <div v-if="card.trend" class="card-trend" :class="card.trend.type">
+        <component :is="getTrendIcon(card.trend.type)" />
+        <span>{{ card.trend.value }}</span>
       </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
-import type { Component } from 'vue'
+<script lang="ts" setup>
+import { 
+  ArrowUpOutlined, 
+  ArrowDownOutlined, 
+  MinusOutlined 
+} from '@ant-design/icons-vue'
 
-interface CardItem {
-  icon: Component
-  number: string | number
+interface CardTrend {
+  type: 'up' | 'down' | 'stable'
+  value: string
+}
+
+interface OverviewCard {
   label: string
-  className?: string
+  value: string | number
+  icon: any
+  type?: string
+  trend?: CardTrend
 }
 
 interface Props {
-  cards: CardItem[]
+  cards: OverviewCard[]
 }
 
 defineProps<Props>()
+
+const getTrendIcon = (type: string) => {
+  const iconMap = {
+    'up': ArrowUpOutlined,
+    'down': ArrowDownOutlined,
+    'stable': MinusOutlined
+  }
+  return iconMap[type as keyof typeof iconMap] || MinusOutlined
+}
 </script>
 
 <style scoped>
-.overview-cards {
+.k8s-overview-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .overview-card {
-  background: #fff;
-  border-radius: 8px;
+  position: relative;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  display: flex;
-  align-items: center;
-  transition: all 0.3s;
+  background: white;
+  border-radius: 8px;
   border: 1px solid #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
 }
 
 .overview-card:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
 }
 
 .card-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #f6f8ff;
+  border-radius: 8px;
   font-size: 20px;
-  margin-right: 16px;
+  color: #1677ff;
 }
 
 .card-info {
-  flex: 1;
+  margin-right: 50px;
 }
 
 .card-number {
-  font-size: 20px;
+  font-size: 32px;
   font-weight: 600;
+  color: #262626;
   margin-bottom: 4px;
+  line-height: 1;
 }
 
 .card-label {
   font-size: 14px;
-  color: #00000073;
+  color: #8c8c8c;
+  font-weight: 400;
 }
 
-/* 特定卡片样式 */
-.overview-card.total-clusters .card-icon {
-  background: rgba(22, 119, 255, 0.1);
-  color: #1677ff;
+.card-trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.overview-card.running-clusters .card-icon {
-  background: rgba(82, 196, 26, 0.1);
+.card-trend.up {
   color: #52c41a;
 }
 
-.overview-card.env-types .card-icon {
-  background: rgba(114, 46, 209, 0.1);
-  color: #722ed1;
+.card-trend.down {
+  color: #ff4d4f;
 }
 
-.overview-card.resource-usage .card-icon {
-  background: rgba(22, 119, 255, 0.1);
-  color: #1677ff;
+.card-trend.stable {
+  color: #8c8c8c;
 }
 
-/* 响应式设计 */
+/* 不同类型的卡片样式 */
+.overview-card.total {
+  border-left: 4px solid #1677ff;
+}
+
+.overview-card.running {
+  border-left: 4px solid #52c41a;
+}
+
+.overview-card.warning {
+  border-left: 4px solid #faad14;
+}
+
+.overview-card.error {
+  border-left: 4px solid #ff4d4f;
+}
+
 @media (max-width: 768px) {
-  .overview-cards {
-    grid-template-columns: repeat(2, 1fr);
+  .k8s-overview-cards {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
-  }
-}
-
-@media (max-width: 480px) {
-  .overview-cards {
-    grid-template-columns: 1fr;
   }
   
   .overview-card {
-    padding: 20px;
-  }
-  
-  .card-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 18px;
-    margin-right: 12px;
+    padding: 16px;
   }
   
   .card-number {
-    font-size: 18px;
+    font-size: 24px;
   }
   
-  .card-label {
-    font-size: 13px;
+  .card-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
   }
 }
 </style>

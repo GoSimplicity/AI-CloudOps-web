@@ -924,11 +924,11 @@ import {
   getAllEventTypes,
   getAllNotificationChannels,
   getAllRecipientTypes
-} from '#/api/core/workorder_notification';
-import { listWorkorderProcess, type WorkorderProcessItem } from '#/api/core/workorder_process';
-import { listWorkorderTemplate, type WorkorderTemplateItem } from '#/api/core/workorder_template';
-import { listWorkorderCategory, type WorkorderCategoryItem } from '#/api/core/workorder_category';
-import { getUserList, type User } from '#/api/core/user';
+} from '#/api/core/workorder/workorder_notification';
+import { listWorkorderProcess, type WorkorderProcessItem } from '#/api/core/workorder/workorder_process';
+import { listWorkorderTemplate, type WorkorderTemplateItem } from '#/api/core/workorder/workorder_template';
+import { listWorkorderCategory, type WorkorderCategoryItem } from '#/api/core/workorder/workorder_category';
+import { getUserList, type User } from '#/api/core/system/user';
 
 // 表单ref
 const formRef = ref<FormInstance>();

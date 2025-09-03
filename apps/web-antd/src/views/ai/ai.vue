@@ -292,7 +292,7 @@ import {
   refreshKnowledgeBase,
   assistantHealth,
   getSessionInfo
-} from '#/api/core/assistant';
+} from '#/api/core/aiops/assistant';
 
 // 状态管理
 const isFloatWindowVisible = ref(false);

@@ -277,7 +277,7 @@ import {
   type ListWorkorderInstanceTimelineReq,
   TimelineAction,
   listWorkorderInstanceTimeline
-} from '#/api/core/workorder_instance_time_line'
+} from '#/api/core/workorder/workorder_instance_time_line'
 
 // 图标组件
 const IconComponent = ({ icon }: { icon: string }) => {

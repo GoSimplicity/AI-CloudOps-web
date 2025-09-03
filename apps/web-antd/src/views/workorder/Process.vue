@@ -286,18 +286,18 @@ import {
   createWorkorderProcess,
   updateWorkorderProcess,
   deleteWorkorderProcess
-} from '#/api/core/workorder_process';
+} from '#/api/core/workorder/workorder_process';
 
 import { 
   type WorkorderCategoryItem, 
   listWorkorderCategory 
-} from '#/api/core/workorder_category';
+} from '#/api/core/workorder/workorder_category';
 
 import { 
   type WorkorderFormDesignItem, 
   listWorkorderFormDesign,
   FormDesignStatus
-} from '#/api/core/workorder_form_design';
+} from '#/api/core/workorder/workorder_form_design';
 
 import ProcessBasicConfig from './components/ProcessBasicConfig.vue';
 

@@ -1,5 +1,13 @@
 import { requestClient } from '#/api/request';
 
+// Service类型枚举
+export enum ServiceTypeEnum {
+  ClusterIP = 'ClusterIP',
+  NodePort = 'NodePort', 
+  LoadBalancer = 'LoadBalancer',
+  ExternalName = 'ExternalName'
+}
+
 // K8s Service状态枚举
 export enum K8sSvcStatus {
   Running = 1, // 运行中

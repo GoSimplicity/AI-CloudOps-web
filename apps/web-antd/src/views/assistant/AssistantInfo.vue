@@ -151,7 +151,7 @@ import {
   getAssistantConfig,
   type ServiceInfoResponse,
   type ServiceConfigResponse
-} from '#/api/core/assistant';
+} from '#/api/core/aiops/assistant';
 
 // 响应式数据
 const loading = ref(false);

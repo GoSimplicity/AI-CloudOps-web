@@ -1,8 +1,8 @@
 import { requestClient } from '#/api/request';
-import type { WorkorderInstanceCommentItem } from './workorder_instance_comment';
-import type { WorkorderInstanceFlowItem } from './workorder_instance_flow';
-import type { WorkorderInstanceTimelineItem } from './workorder_instance_time_line';
-import type { WorkorderProcessItem } from './workorder_process';
+import type { WorkorderInstanceCommentItem } from '../workorder_instance_comment';
+import type { WorkorderInstanceFlowItem } from '../workorder_instance_flow';
+import type { WorkorderInstanceTimelineItem } from '../workorder_instance_time_line';
+import type { WorkorderProcessItem } from '../workorder_process';
 
 // 工单状态常量
 export const InstanceStatus = {

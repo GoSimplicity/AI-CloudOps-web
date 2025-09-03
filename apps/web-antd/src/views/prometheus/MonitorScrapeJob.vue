@@ -502,9 +502,9 @@ import {
   type GetMonitorScrapeJobListReq,
   type CreateMonitorScrapeJobReq,
   type UpdateMonitorScrapeJobReq
-} from '#/api/core/prometheus_scrape_job';
-import { getMonitorScrapePoolListApi } from '#/api/core/prometheus_scrape_pool';
-import { getTreeList, type TreeNode } from '#/api/core/tree_node';
+} from '#/api/core/prometheus/prometheus_scrape_job';
+import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_scrape_pool';
+import { getTreeList, type TreeNode } from '#/api/core/tree/tree_node';
 
 // 采集池接口
 interface Pool {

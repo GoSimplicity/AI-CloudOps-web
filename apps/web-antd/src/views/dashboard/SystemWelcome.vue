@@ -183,8 +183,8 @@ import {
   WarningOutlined,
   CloseCircleOutlined 
 } from '@ant-design/icons-vue';
-import { getSystemInfoApi, getSystemMetricsApi, refreshSystemInfoApi } from '#/api/core/system';
-import type { System } from '#/api/core/system';
+import { getSystemInfoApi, getSystemMetricsApi, refreshSystemInfoApi } from '#/api/core/system/system';
+import type { System } from '#/api/core/system/system';
 import type { ECharts } from 'echarts';
 // 时间显示
 const currentTime = ref('');

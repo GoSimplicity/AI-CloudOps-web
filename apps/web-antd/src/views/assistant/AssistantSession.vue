@@ -264,7 +264,7 @@ import {
 import { 
   getSessionInfo,
   type SessionInfoResponse
-} from '#/api/core/assistant';
+} from '#/api/core/aiops/assistant';
 
 // 响应式数据
 const router = useRouter();

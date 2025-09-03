@@ -273,8 +273,8 @@ import {
   type GetInstanceCommentsTreeReq,
   createWorkorderInstanceComment,
   getInstanceCommentsTree
-} from '#/api/core/workorder_instance_comment'
-import type { WorkorderInstanceItem } from '#/api/core/workorder_instance'
+} from '#/api/core/workorder/workorder_instance_comment'
+import type { WorkorderInstanceItem } from '#/api/core/workorder/workorder_instance'
 
 // 图标组件
 const IconComponent = ({ icon }: { icon: string }) => {

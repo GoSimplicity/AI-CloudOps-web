@@ -347,9 +347,9 @@ import {
   type ListWorkorderInstanceFlowReq,
   FlowAction,
   listWorkorderInstanceFlow
-} from '#/api/core/workorder_instance_flow'
+} from '#/api/core/workorder/workorder_instance_flow'
 
-import { InstanceStatus } from '#/api/core/workorder_instance'
+import { InstanceStatus } from '#/api/core/workorder/workorder_instance'
 
 // 图标组件
 const IconComponent = ({ icon }: { icon: string }) => {

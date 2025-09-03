@@ -554,10 +554,10 @@ import {
   type GetMonitorSendGroupListReq,
   type CreateMonitorSendGroupReq,
   type UpdateMonitorSendGroupReq
-} from '#/api/core/prometheus_send_group';
-import { getUserList } from '#/api/core/user';
-import { getMonitorScrapePoolListApi, type MonitorScrapePool } from '#/api/core/prometheus_scrape_pool';
-import { getMonitorOnDutyGroupListApi, type MonitorOnDutyGroup } from '#/api/core/prometheus_onduty';
+} from '#/api/core/prometheus/prometheus_send_group';
+import { getUserList } from '#/api/core/system/user';
+import { getMonitorScrapePoolListApi, type MonitorScrapePool } from '#/api/core/prometheus/prometheus_scrape_pool';
+import { getMonitorOnDutyGroupListApi, type MonitorOnDutyGroup } from '#/api/core/prometheus/prometheus_onduty';
 
 // 修复类型定义
 interface UserOption {

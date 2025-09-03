@@ -251,7 +251,7 @@ import {
   type PredictionResponse,
   type ScalingRecommendation,
   type CostAnalysis
-} from '#/api/core/predict';
+} from '#/api/core/aiops/predict';
 
 // 响应式数据
 const loading = ref(false);

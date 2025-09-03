@@ -571,10 +571,10 @@ import {
   type UpdateTreeNodeReq,
   TreeNodeStatus,
   TreeNodeMemberType
-} from '#/api/core/tree_node';
+} from '#/api/core/tree/tree_node';
 
-import { getUserList, type GetUserListReq } from '#/api/core/user';
-import { getTreeLocalList, type GetTreeLocalResourceListReq, type TreeLocalResource, ResourceStatus } from '#/api/core/tree_local';
+import { getUserList, type GetUserListReq } from '#/api/core/system/user';
+import { getTreeLocalList, type GetTreeLocalResourceListReq, type TreeLocalResource, ResourceStatus } from '#/api/core/tree/tree_local';
 
 // 为了兼容后端返回的节点详情结构，定义本地扩展类型
 type NodeUser = { id: number; real_name: string; email?: string };

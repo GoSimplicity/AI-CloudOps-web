@@ -1,147 +1,150 @@
 <template>
   <a-select
-    v-model:value="selectedValue"
-    placeholder="选择集群"
-    class="env-filter cluster-selector"
+    :value="value"
+    :placeholder="placeholder"
     :loading="loading"
+    :disabled="disabled"
+    class="k8s-cluster-selector"
     @change="handleChange"
+    allow-clear
   >
     <template #suffixIcon>
       <ClusterOutlined />
     </template>
-    <a-select-option 
-      v-for="cluster in filteredClusters" 
-      :key="cluster?.id || cluster?.name || Math.random()" 
-      :value="cluster.id"
-      v-show="cluster?.id !== undefined && cluster?.id !== null"
+    <a-select-option
+      v-for="cluster in clusters"
+      :key="cluster.id"
+      :value="cluster.id!"
     >
-      <span class="cluster-option">
-        <CloudServerOutlined />
-        {{ cluster?.name || 'Unknown' }}
-        <a-tag 
-          v-if="showStatus && cluster?.status" 
-          :color="getStatusColor(cluster.status)" 
-          size="small"
-        >
-          {{ getStatusText(cluster.status) }}
-        </a-tag>
-      </span>
+      <div class="cluster-option">
+        <div class="cluster-info">
+          <CloudServerOutlined class="cluster-icon" />
+          <span class="cluster-name">{{ cluster.name }}</span>
+        </div>
+        <div class="cluster-meta">
+          <a-tag 
+            v-if="cluster.env"
+            :color="getEnvColor(cluster.env)" 
+            size="small"
+          >
+            {{ getEnvText(cluster.env) }}
+          </a-tag>
+          <a-tag 
+            :color="getStatusColor(cluster.status)" 
+            size="small"
+          >
+            {{ getStatusText(cluster.status) }}
+          </a-tag>
+        </div>
+      </div>
     </a-select-option>
   </a-select>
 </template>
 
-<script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { ClusterOutlined, CloudServerOutlined } from '@ant-design/icons-vue'
-
-interface Cluster {
-  id: number
-  name: string
-  status: string | number
-}
+<script lang="ts" setup>
+import { 
+  ClusterOutlined, 
+  CloudServerOutlined 
+} from '@ant-design/icons-vue'
+import { 
+  Env, 
+  ClusterStatus,
+  type K8sCluster
+} from '#/api/core/k8s/k8s_cluster'
 
 interface Props {
-  clusters: Cluster[]
+  value?: number
+  clusters: K8sCluster[]
   loading?: boolean
-  showStatus?: boolean
-  onlyRunning?: boolean
-  modelValue?: number | string
+  disabled?: boolean
+  placeholder?: string
 }
 
 interface Emits {
-  (e: 'update:modelValue', value: number | string): void
-  (e: 'change', value: number | string, cluster?: Cluster): void
+  (e: 'update:value', value: number): void
+  (e: 'change', value: number): void
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  loading: false,
-  showStatus: true,
-  onlyRunning: false
-})
-
+defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-const selectedValue = ref(props.modelValue)
-
-const filteredClusters = computed(() => {
-  // 确保 clusters 是数组且过滤掉无效项
-  const validClusters = Array.isArray(props.clusters) 
-    ? props.clusters.filter((cluster: any) => cluster && cluster.id !== null && cluster.id !== undefined)
-    : []
-  
-  if (props.onlyRunning) {
-    // 支持数字状态值 (ClusterStatus.Running = 1) 和字符串状态值
-    return validClusters.filter(cluster => 
-      cluster.status === 'Running' || cluster.status === 1 || cluster.status === 'running'
-    )
-  }
-  return validClusters
-})
-
-const getStatusColor = (status: string | number) => {
-  switch (status) {
-    case 'Running':
-    case 1:
-      return 'green'
-    case 'Stopped':
-    case 2:
-      return 'red'
-    case 'Starting':
-    case 3:
-      return 'blue'
-    case 'Stopping':
-      return 'orange'
-    default:
-      return 'gray'
-  }
+const handleChange = (value: number) => {
+  emit('update:value', value)
+  emit('change', value)
 }
 
-const getStatusText = (status: string | number) => {
-  switch (status) {
-    case 'Running':
-    case 1:
-      return '运行中'
-    case 'Stopped':
-    case 2:
-      return '已停止'
-    case 'Starting':
-    case 3:
-      return '启动中'
-    case 'Stopping':
-      return '停止中'
-    default:
-      return '未知'
+const getEnvColor = (env: Env | undefined) => {
+  if (!env) return 'default'
+  const colorMap = {
+    [Env.Prod]: 'red',
+    [Env.Dev]: 'blue', 
+    [Env.Stage]: 'orange',
+    [Env.Rc]: 'green',
+    [Env.Press]: 'purple'
   }
+  return colorMap[env] || 'default'
 }
 
-const handleChange = (value: number | string) => {
-  selectedValue.value = value
-  emit('update:modelValue', value)
-  // 确保比较时类型一致
-  const clusterId = typeof value === 'string' ? parseInt(value) : value
-  const cluster = props.clusters.find(c => c.id === clusterId)
-  emit('change', value, cluster)
+const getEnvText = (env: Env | undefined) => {
+  if (!env) return '未知'
+  const textMap = {
+    [Env.Prod]: '生产',
+    [Env.Dev]: '开发',
+    [Env.Stage]: '预发',
+    [Env.Rc]: '测试', 
+    [Env.Press]: '灰度'
+  }
+  return textMap[env] || '未知'
 }
 
-// 监听外部modelValue变化
-watch(() => props.modelValue, (newValue) => {
-  selectedValue.value = newValue
-})
+const getStatusColor = (status: ClusterStatus) => {
+  const colorMap = {
+    [ClusterStatus.Running]: 'green',
+    [ClusterStatus.Stopped]: 'default',
+    [ClusterStatus.Error]: 'red'
+  }
+  return colorMap[status] || 'default'
+}
+
+const getStatusText = (status: ClusterStatus) => {
+  const textMap = {
+    [ClusterStatus.Running]: '运行中',
+    [ClusterStatus.Stopped]: '已停止',
+    [ClusterStatus.Error]: '异常'
+  }
+  return textMap[status] || '未知'
+}
 </script>
 
 <style scoped>
-.env-filter,
-.cluster-selector {
-  width: 160px;
+.k8s-cluster-selector {
+  min-width: 280px;
 }
 
 .cluster-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.cluster-info {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.cluster-option svg {
-  color: #1890ff;
+.cluster-icon {
+  color: #1677ff;
+}
+
+.cluster-name {
+  font-weight: 500;
+  color: #262626;
+}
+
+.cluster-meta {
+  display: flex;
+  gap: 4px;
 }
 </style>

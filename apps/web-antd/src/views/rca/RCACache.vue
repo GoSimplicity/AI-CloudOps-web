@@ -346,7 +346,7 @@ import {
   clearNamespaceCache,
   clearOperationCache,
   type RCACacheStatsResponse,
-} from '#/api/core/rca';
+} from '#/api/core/aiops/rca';
 
 // 响应式数据
 const loadingStats = ref(false);

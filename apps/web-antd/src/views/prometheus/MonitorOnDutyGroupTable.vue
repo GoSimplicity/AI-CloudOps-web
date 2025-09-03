@@ -383,7 +383,7 @@ import {
   type MonitorOnDutyGroup,
   type CreateMonitorOnDutyGroupChangeReq,
   type GetMonitorOnDutyHistoryReq,
-} from '#/api/core/prometheus_onduty';
+} from '#/api/core/prometheus/prometheus_onduty';
 
 // 定义接口 - 修复API响应结构
 interface Day {

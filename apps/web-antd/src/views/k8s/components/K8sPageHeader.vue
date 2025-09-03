@@ -1,45 +1,55 @@
 <template>
-  <div class="page-header">
+  <div class="k8s-page-header">
     <div class="header-content">
       <div class="title-section">
         <div class="page-title">
           <component :is="titleIcon" class="title-icon" />
           <h1>{{ title }}</h1>
         </div>
-        <p class="page-subtitle">{{ subtitle }}</p>
+        <p v-if="subtitle" class="page-subtitle">{{ subtitle }}</p>
       </div>
       <div class="header-actions">
-        <slot name="actions" />
+        <slot name="actions">
+          <a-button @click="$emit('refresh')" :loading="loading">
+            <template #icon><ReloadOutlined /></template>
+            刷新
+          </a-button>
+        </slot>
       </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
-import type { Component } from 'vue'
+<script lang="ts" setup>
+import { ReloadOutlined } from '@ant-design/icons-vue'
 
 interface Props {
   title: string
-  subtitle: string
-  titleIcon: Component
+  subtitle?: string
+  titleIcon?: any
+  loading?: boolean
 }
 
 defineProps<Props>()
+
+defineEmits<{
+  refresh: []
+}>()
 </script>
 
 <style scoped>
-.page-header {
-  background: #fff;
-  border-radius: 8px;
+.k8s-page-header {
   margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .header-content {
-  padding: 32px 40px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  padding: 24px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .title-section {
@@ -49,57 +59,49 @@ defineProps<Props>()
 .page-title {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin: 0 0 8px 0;
 }
 
 .title-icon {
-  font-size: 28px;
+  font-size: 24px;
   color: #1677ff;
-  margin-right: 16px;
 }
 
 .page-title h1 {
+  margin: 0;
   font-size: 24px;
   font-weight: 600;
-  margin: 0;
+  color: #262626;
 }
 
 .page-subtitle {
-  font-size: 14px;
-  color: #00000073;
   margin: 0;
+  font-size: 14px;
+  color: #8c8c8c;
+  line-height: 1.5;
 }
 
 .header-actions {
   display: flex;
+  gap: 12px;
   align-items: center;
-  gap: 16px;
-}
-
-/* 响应式设计 */
-@media (max-width: 1024px) {
-  .header-content {
-    flex-direction: column;
-    gap: 20px;
-  }
-  
-  .header-actions {
-    justify-content: flex-end;
-  }
 }
 
 @media (max-width: 768px) {
   .header-content {
-    padding: 20px 16px;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
   
   .page-title h1 {
     font-size: 20px;
-  }
-  
-  .title-icon {
-    font-size: 24px;
-    margin-right: 12px;
   }
 }
 </style>

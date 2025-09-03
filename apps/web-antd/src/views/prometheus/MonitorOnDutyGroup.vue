@@ -855,9 +855,9 @@ import {
   type GetMonitorOnDutyHistoryReq,
   type GetMonitorOnDutyGroupListReq,
   type GetMonitorOnDutyGroupChangeListReq,
-} from '#/api/core/prometheus_onduty';
+} from '#/api/core/prometheus/prometheus_onduty';
 import dayjs, { type Dayjs } from 'dayjs';
-import { getUserList, type GetUserListReq } from '#/api/core/user';
+import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 
 
 const router = useRouter();

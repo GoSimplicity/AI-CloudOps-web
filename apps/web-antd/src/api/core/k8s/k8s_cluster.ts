@@ -280,3 +280,6 @@ export async function checkClusterHealthApi(id: number) {
 export async function getClusterStatsApi(id: number) {
   return requestClient.get(`/k8s/clusters/${id}/stats`);
 }
+
+// 兼容性别名
+export const listK8sClusters = getClustersListApi;

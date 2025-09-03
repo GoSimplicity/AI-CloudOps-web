@@ -170,7 +170,7 @@ import {
   type RefreshKnowledgeResponse,
   type UploadKnowledgeResponse,
   type AddDocumentResponse
-} from '#/api/core/assistant';
+} from '#/api/core/aiops/assistant';
 
 // 响应式数据
 const refreshing = ref(false);
