@@ -42,15 +42,6 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
-        name: 'AssistantHealth',
-        path: '/assistant/health',
-        component: () => import('#/views/assistant/AssistantHealth.vue'),
-        meta: {
-          icon: 'lucide:heart-pulse',
-          title: '健康检查',
-        },
-      },
-      {
         name: 'AssistantInfo',
         path: '/assistant/info',
         component: () => import('#/views/assistant/AssistantInfo.vue'),

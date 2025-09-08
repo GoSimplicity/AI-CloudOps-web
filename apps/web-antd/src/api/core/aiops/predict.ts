@@ -268,7 +268,7 @@ export interface ServiceInfoResponse {
   description: string;
   capabilities: string[];
   endpoints: Record<string, string>;
-  constraints: Record<string, any>;
+  constraints?: Record<string, any>;
   status: string;
 }
 
@@ -277,7 +277,7 @@ export interface ServiceReadyResponse {
   ready: boolean;
   service: string;
   timestamp: string;
-  message: string;
+  message?: string;
 }
 
 // QPS预测API

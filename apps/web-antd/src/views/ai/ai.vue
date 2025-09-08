@@ -289,9 +289,7 @@ import DOMPurify from 'dompurify';
 import {
   assistantQuery,
   clearAssistantCache,
-  refreshKnowledgeBase,
-  assistantHealth,
-  getSessionInfo
+  refreshKnowledgeBase
 } from '#/api/core/aiops/assistant';
 
 // 状态管理
@@ -470,8 +468,6 @@ const chatMessages = reactive([
 const toggleFloatWindow = () => {
   isFloatWindowVisible.value = !isFloatWindowVisible.value;
   if (isFloatWindowVisible.value) {
-    // 检查服务健康状态
-    checkServiceHealth();
     nextTick(() => {
       scrollToBottom();
     });
@@ -568,18 +564,7 @@ const stopResize = () => {
   document.removeEventListener('mouseup', stopResize);
 };
 
-// 检查服务健康状态
-const checkServiceHealth = async () => {
-  try {
-    await assistantHealth();
-    isConnected.value = true;
-    return true;
-  } catch (error) {
-    console.warn('服务健康检查失败:', error);
-    isConnected.value = false;
-    return false;
-  }
-};
+
 
 // 初始化聊天记录
 const initChatMessages = () => {

@@ -53,6 +53,9 @@ export interface ServiceReadyResponse {
   service: string;
   timestamp: string;
   message?: string;
+  initialized?: boolean;
+  healthy?: boolean;
+  status?: string;
 }
 
 // 服务健康检查响应模型
