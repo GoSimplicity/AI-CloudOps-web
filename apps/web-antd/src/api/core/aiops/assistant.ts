@@ -112,8 +112,8 @@ export interface AddDocumentResponse {
 }
 
 // 智能助手问答
-export async function assistantQuery(data: AssistantRequest) {
-  return requestClientAIOps.post('/assistant/query', data);
+export async function assistantQuery(data: AssistantRequest, config?: any) {
+  return requestClientAIOps.post('/assistant/query', data, config);
 }
 
 // 获取会话信息

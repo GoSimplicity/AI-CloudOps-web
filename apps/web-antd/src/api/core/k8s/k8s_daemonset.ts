@@ -50,9 +50,9 @@ export interface K8sDaemonSet {
 }
 
 export interface DaemonSetSpec {
-  selector?: any;                             // 标签选择器
-  template?: any;                             // Pod模板
-  update_strategy?: any;                      // 更新策略
+  selector?: Record<string, unknown>;                             // 标签选择器
+  template?: Record<string, unknown>;                             // Pod模板
+  update_strategy?: Record<string, unknown>;                      // 更新策略
   min_ready_seconds?: number;                 // 最小就绪时间
   revision_history_limit?: number;            // 历史版本限制
 }

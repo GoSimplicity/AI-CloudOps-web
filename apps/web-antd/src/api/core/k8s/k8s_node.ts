@@ -9,136 +9,93 @@ export enum NodeStatus {
   Error = 5               // 异常
 }
 
-// 节点资源信息结构
-export interface NodeResource {
-  used: string;     // 已使用量
-  total: string;    // 总量
-  percent: number;  // 使用百分比
-  requests: string; // 请求量
-  limits: string;   // 限制量
-}
-
-// 节点事件
-export interface NodeEvent {
-  type: string;            // 事件类型 (Normal, Warning)
-  reason: string;          // 事件原因
-  message: string;         // 事件消息
-  component: string;       // 事件来源组件
-  host: string;            // 主机
-  first_timestamp: string; // 首次发生时间
-  last_timestamp: string;  // 最后发生时间
-  count: number;           // 发生次数
-}
-
-// 节点条件
-export interface NodeCondition {
-  type: string;              // 条件类型
-  status: string;            // 条件状态
-  lastHeartbeatTime: string; // 最后心跳时间
-  lastTransitionTime: string; // 最后转换时间
-  reason: string;            // 原因
-  message: string;           // 消息
-}
-
-// 节点污点
+// 节点污点接口
 export interface NodeTaint {
   key: string;    // 污点键
   value: string;  // 污点值
   effect: string; // 污点效果
 }
 
-// Kubernetes 节点
+// 节点条件接口
+export interface NodeCondition {
+  type: string;               // 条件类型
+  status: string;             // 条件状态
+  lastHeartbeatTime?: string; // 最后心跳时间
+  lastTransitionTime?: string; // 最后转换时间
+  reason?: string;            // 原因
+  message?: string;           // 消息
+}
+
+// 节点污点接口（K8s原生）
+export interface CoreTaint {
+  key: string;
+  value?: string;
+  effect: string;
+  timeAdded?: string;
+}
+
+// K8s节点接口
 export interface K8sNode {
-  name: string;                        // 节点名称
-  cluster_id: number;                  // 所属集群ID
-  status: NodeStatus;                  // 节点状态
-  schedulable: number;                 // 节点是否可调度 (1: 可调度, 2: 不可调度)
-  roles: string[];                     // 节点角色，例如 master, worker
-  age: string;                         // 节点存在时间，例如 5d
-  internal_ip: string;                 // 节点内部IP
-  external_ip: string;                 // 节点外部IP（如果有）
-  hostname: string;                    // 主机名
-  cpu: NodeResource;                   // CPU 资源信息
-  memory: NodeResource;                // 内存资源信息
-  storage: NodeResource;               // 存储资源信息
-  pods: NodeResource;                  // Pod 资源信息
-  ephemeral_storage: NodeResource;     // 临时存储信息
-  kubelet_version: string;             // Kubelet 版本
-  kube_proxy_version: string;          // KubeProxy 版本
-  container_runtime: string;           // 容器运行时
-  operating_system: string;            // 操作系统
-  architecture: string;                // 系统架构
-  kernel_version: string;              // 内核版本
-  os_image: string;                    // 操作系统镜像
-  labels: Record<string, string>;      // 节点标签
+  name: string;                     // 节点名称
+  cluster_id: number;               // 所属集群ID
+  status: NodeStatus;               // 节点状态
+  schedulable: number;              // 节点是否可调度 (1: 可调度, 2: 不可调度)
+  roles: string[];                  // 节点角色，例如 master, worker
+  age: string;                      // 节点存在时间，例如 5d
+  internal_ip: string;              // 节点内部IP
+  external_ip: string;              // 节点外部IP（如果有）
+  hostname: string;                 // 主机名
+  kubelet_version: string;          // Kubelet 版本
+  kube_proxy_version: string;       // KubeProxy 版本
+  container_runtime: string;        // 容器运行时
+  operating_system: string;         // 操作系统
+  architecture: string;             // 系统架构
+  kernel_version: string;           // 内核版本
+  os_image: string;                 // 操作系统镜像
+  labels: Record<string, string>;   // 节点标签
   annotations: Record<string, string>; // 节点注解
-  conditions: NodeCondition[];         // 节点条件
-  taints: NodeTaint[];                 // 节点污点
-  events: NodeEvent[];                 // 节点相关事件
-  created_at: string;                  // 创建时间
-  updated_at: string;                  // 更新时间
+  conditions: NodeCondition[];      // 节点条件
+  taints: CoreTaint[];              // 节点污点
+  created_at: string;               // 创建时间
+  updated_at: string;               // 更新时间
 }
 
-// 节点污点实体
-export interface NodeTaintEntity {
-  key: string;    // 污点键
-  value: string;  // 污点值
-  effect: string; // 污点效果: NoSchedule, PreferNoSchedule, NoExecute
+// 分页基础请求接口
+export interface ListReq {
+  page?: number;      // 页码
+  size?: number; // 每页大小
+  search?: string;   // 关键词搜索
 }
 
-// 节点指标信息
-export interface NodeMetrics {
-  node_name: string;  // 节点名称
-  timestamp: string;  // 采集时间
-  window: string;     // 时间窗口
-  usage: Record<string, string>; // 资源使用量
+// 获取节点列表请求接口
+export interface GetK8sNodeListReq extends ListReq {
+  cluster_id: number;         // 集群ID
+  status?: NodeStatus;        // 状态过滤
+  label_selector?: string;    // 标签选择器
 }
 
-// 获取节点列表请求
-export interface GetK8sNodeListReq {
-  page?: number;
-  size?: number;
-  search?: string;
-  cluster_id: number;        // 集群ID
-  status?: NodeStatus[];     // 状态过滤
-  label_selector?: string;   // 标签选择器
-}
-
-// 获取节点详情请求
+// 获取节点详情请求接口
 export interface GetK8sNodeDetailReq {
   cluster_id: number; // 集群ID
   node_name: string;  // 节点名称
 }
 
-// 添加节点标签请求
+// 添加节点标签请求接口
 export interface AddLabelNodesReq {
-  cluster_id: number;                // 集群ID
-  node_name: string;                 // 节点名称
-  labels: Record<string, string>;    // 要添加的标签
-  overwrite: number;                 // 是否覆盖已存在的标签 (1: 是, 2: 否)
+  cluster_id: number;                 // 集群ID
+  node_name: string;                  // 节点名称
+  labels: Record<string, string>;     // 要添加的标签
+  overwrite: number;                  // 是否覆盖已存在的标签 (1: 是, 2: 否)
 }
 
-// 删除节点标签请求
+// 删除节点标签请求接口
 export interface DeleteLabelNodesReq {
   cluster_id: number; // 集群ID
   node_name: string;  // 节点名称
   label_keys: string[]; // 要删除的标签键
 }
 
-// 获取节点资源请求
-export interface GetK8sNodeResourceReq {
-  cluster_id: number; // 集群ID
-  node_name?: string; // 节点名称（可选，为空则获取所有节点）
-}
-
-// 获取节点事件请求
-export interface GetK8sNodeEventsReq {
-  cluster_id: number; // 集群ID
-  node_name: string;  // 节点名称
-  limit?: number;     // 事件数量限制
-}
-
-// 驱逐节点请求
+// 驱逐节点请求接口
 export interface DrainK8sNodeReq {
   cluster_id: number;          // 集群ID
   node_name: string;           // 节点名称
@@ -149,133 +106,115 @@ export interface DrainK8sNodeReq {
   timeout_seconds?: number;    // 超时时间(秒)
 }
 
-// 禁止节点调度请求
+// 禁止节点调度请求接口
 export interface K8sNodeCordonReq {
   cluster_id: number; // 集群ID
   node_name: string;  // 节点名称
 }
 
-// 解除节点调度限制请求
+// 解除节点调度限制请求接口
 export interface K8sNodeUncordonReq {
   cluster_id: number; // 集群ID
   node_name: string;  // 节点名称
 }
 
-// 切换节点调度状态请求
-export interface SwitchK8sNodeScheduleReq {
-  cluster_id: number; // 集群ID
-  node_name: string;  // 节点名称
-  enable: number;     // 是否启用调度 (1: 启用, 2: 禁用)
-}
-
-// 获取节点污点请求
+// 获取节点污点请求接口
 export interface GetK8sNodeTaintsReq {
   cluster_id: number; // 集群ID
   node_name: string;  // 节点名称
 }
 
-// 添加节点污点请求
+// 添加节点污点请求接口
 export interface AddK8sNodeTaintsReq {
-  cluster_id: number;        // 集群ID
-  node_name: string;         // 节点名称
-  taints: NodeTaintEntity[]; // 要添加的污点
+  cluster_id: number; // 集群ID
+  node_name: string;  // 节点名称
+  taints: CoreTaint[]; // 要添加的污点
 }
 
-// 删除节点污点请求
+// 删除节点污点请求接口
 export interface DeleteK8sNodeTaintsReq {
   cluster_id: number; // 集群ID
   node_name: string;  // 节点名称
   taint_keys: string[]; // 要删除的污点键
 }
 
-// 检查污点YAML配置请求
-export interface CheckK8sTaintYamlReq {
+// 检查污点YAML配置请求接口
+export interface CheckTaintYamlReq {
   cluster_id: number; // 集群ID
   node_name: string;  // 节点名称
   yaml_data: string;  // YAML数据
 }
 
-// 获取节点指标请求
-export interface GetK8sNodeMetricsReq {
+// 切换节点调度状态请求接口
+export interface SwitchK8sNodeScheduleReq {
   cluster_id: number; // 集群ID
-  node_names?: string[]; // 节点名称列表（可选）
+  node_name: string;  // 节点名称
+  enable: number;     // 是否启用调度 (1: 启用, 2: 禁用)
 }
 
 // 获取节点列表
 export const getK8sNodeList = (params: GetK8sNodeListReq) => {
-  return requestClient.get(`/k8s/nodes/${params.cluster_id}/list`, { params });
+  return requestClient.get(`/k8s/clusters/${params.cluster_id}/nodes`, { params });
 };
 
 // 获取节点详情
 export const getK8sNodeDetail = (params: GetK8sNodeDetailReq) => {
-  return requestClient.get(`/k8s/nodes/${params.cluster_id}/${params.node_name}/detail`);
-};
-
-// 获取节点资源使用情况
-export const getK8sNodeResource = (params: GetK8sNodeResourceReq) => {
-  return requestClient.get(`/k8s/nodes/${params.cluster_id}/${params.node_name}/resource`);
-};
-
-// 获取节点事件
-export const getK8sNodeEvents = (params: GetK8sNodeEventsReq) => {
-  return requestClient.get(`/k8s/nodes/${params.cluster_id}/${params.node_name}/events`, { params });
-};
-
-// 获取节点指标信息
-export const getK8sNodeMetrics = (params: GetK8sNodeMetricsReq) => {
-  return requestClient.get(`/k8s/nodes/${params.cluster_id}/metrics`, { params });
+  return requestClient.get(`/k8s/clusters/${params.cluster_id}/nodes/${params.node_name}`);
 };
 
 // 添加节点标签
-export const addK8sLabelNodes = (params: AddLabelNodesReq) => {
-  return requestClient.post(`/k8s/nodes/${params.cluster_id}/${params.node_name}/labels/add`, params);
+export const addK8sNodeLabels = (params: AddLabelNodesReq) => {
+  const { cluster_id, node_name, ...data } = params;
+  return requestClient.post(`/k8s/clusters/${cluster_id}/nodes/${node_name}/labels`, data);
 };
 
 // 删除节点标签
-export const deleteK8sLabelNodes = (params: DeleteLabelNodesReq) => {
-  return requestClient.delete(`/k8s/nodes/${params.cluster_id}/${params.node_name}/labels/delete`, { data: params });
+export const deleteK8sNodeLabels = (params: DeleteLabelNodesReq) => {
+  const { cluster_id, node_name, ...data } = params;
+  return requestClient.delete(`/k8s/clusters/${cluster_id}/nodes/${node_name}/labels`, { data });
 };
 
-// 驱逐节点Pod
+// 驱逐节点
 export const drainK8sNode = (params: DrainK8sNodeReq) => {
-  return requestClient.post(`/k8s/nodes/${params.cluster_id}/${params.node_name}/drain`, params);
+  const { cluster_id, node_name, ...data } = params;
+  return requestClient.post(`/k8s/clusters/${cluster_id}/nodes/${node_name}/drain`, data);
 };
 
 // 禁止节点调度
 export const cordonK8sNode = (params: K8sNodeCordonReq) => {
-  return requestClient.post(`/k8s/nodes/${params.cluster_id}/${params.node_name}/cordon`, params);
+  return requestClient.post(`/k8s/clusters/${params.cluster_id}/nodes/${params.node_name}/cordon`);
 };
 
 // 解除节点调度限制
 export const uncordonK8sNode = (params: K8sNodeUncordonReq) => {
-  return requestClient.post(`/k8s/nodes/${params.cluster_id}/${params.node_name}/uncordon`, params);
+  return requestClient.post(`/k8s/clusters/${params.cluster_id}/nodes/${params.node_name}/uncordon`);
 };
 
 // 切换节点调度状态
 export const switchK8sNodeSchedule = (params: SwitchK8sNodeScheduleReq) => {
-  return requestClient.post(`/k8s/nodes/${params.cluster_id}/${params.node_name}/schedule/switch`, params);
+  const { cluster_id, node_name, ...data } = params;
+  return requestClient.post(`/k8s/clusters/${cluster_id}/nodes/${node_name}/schedule/switch`, data);
 };
 
-// 获取节点污点列表
+// 获取节点污点
 export const getK8sNodeTaints = (params: GetK8sNodeTaintsReq) => {
-  return requestClient.get(`/k8s/nodes/${params.cluster_id}/${params.node_name}/taints`);
+  return requestClient.get(`/k8s/clusters/${params.cluster_id}/nodes/${params.node_name}/taints`);
 };
 
 // 添加节点污点
 export const addK8sNodeTaints = (params: AddK8sNodeTaintsReq) => {
-  return requestClient.post(`/k8s/nodes/${params.cluster_id}/${params.node_name}/taints/add`, params);
+  const { cluster_id, node_name, ...data } = params;
+  return requestClient.post(`/k8s/clusters/${cluster_id}/nodes/${node_name}/taints`, data);
 };
 
 // 删除节点污点
 export const deleteK8sNodeTaints = (params: DeleteK8sNodeTaintsReq) => {
-  return requestClient.delete(`/k8s/nodes/${params.cluster_id}/${params.node_name}/taints/delete`, { data: params });
+  const { cluster_id, node_name, ...data } = params;
+  return requestClient.delete(`/k8s/clusters/${cluster_id}/nodes/${node_name}/taints`, { data });
 };
 
 // 检查污点YAML配置
-export const checkK8sTaintYaml = (params: CheckK8sTaintYamlReq) => {
-  return requestClient.post(`/k8s/nodes/${params.cluster_id}/${params.node_name}/taints/check`, params);
+export const checkK8sNodeTaintYaml = (params: CheckTaintYamlReq) => {
+  const { cluster_id, node_name, ...data } = params;
+  return requestClient.post(`/k8s/clusters/${cluster_id}/nodes/${node_name}/taints/check`, data);
 };
-
-// 兼容性别名
-export const listK8sNodes = getK8sNodeList;
-export const deleteK8sNode = drainK8sNode;

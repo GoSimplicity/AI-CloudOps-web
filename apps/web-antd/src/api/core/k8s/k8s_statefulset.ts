@@ -44,12 +44,12 @@ export interface K8sStatefulSet {
 
 export interface StatefulSetSpec {
   replicas?: number;                          // 副本数量
-  selector?: any;                             // 标签选择器
-  template?: any;                             // Pod模板
-  volume_claim_templates?: any[];             // 卷声明模板
+  selector?: Record<string, unknown>;                             // 标签选择器
+  template?: Record<string, unknown>;                             // Pod模板
+  volume_claim_templates?: Record<string, unknown>[];             // 卷声明模板
   service_name: string;                       // 服务名称
   pod_management_policy?: string;             // Pod管理策略
-  update_strategy?: any;                      // 更新策略
+  update_strategy?: Record<string, unknown>;                      // 更新策略
   revision_history_limit?: number;            // 历史版本限制
   min_ready_seconds?: number;                 // 最小就绪时间
 }
