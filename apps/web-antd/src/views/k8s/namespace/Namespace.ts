@@ -138,6 +138,15 @@ export function useNamespacePage() {
   }));
 
   // helpers
+  const validateClusterId = (record: any): number | null => {
+    const clusterId = record.cluster_id || filterClusterId.value;
+    if (!clusterId || clusterId === 0) {
+      message.error('无效的集群ID，请重新选择集群');
+      return null;
+    }
+    return clusterId;
+  };
+
   const getEnvText = (env?: Env | string) => {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? parseInt(env) : env;
@@ -153,16 +162,27 @@ export function useNamespacePage() {
 
   // 转换函数：Record<string, string> -> KeyValueList
   const recordToKeyValueList = (record: Record<string, string>): KeyValueList => {
-    return Object.entries(record).map(([key, value]) => ({ key, value }));
+    return Object.entries(record).map(([key, value]: [string, string]) => ({ key, value }));
   };
 
-  // 转换函数：KeyValueList -> Record<string, string>
-  const keyValueListToRecord = (list?: KeyValueList): Record<string, string> => {
-    if (!list) return {};
-    return list.reduce((acc, { key, value }) => {
-      acc[key] = value;
-      return acc;
-    }, {} as Record<string, string>);
+  // 转换函数：KeyValueList 或对象 -> Record<string, string>
+  const keyValueListToRecord = (data?: KeyValueList | Record<string, string>): Record<string, string> => {
+    if (!data) return {};
+    
+    // 如果已经是对象格式，直接返回
+    if (typeof data === 'object' && !Array.isArray(data)) {
+      return data as Record<string, string>;
+    }
+    
+    // 如果是数组格式，进行转换
+    if (Array.isArray(data)) {
+      return data.reduce((acc, { key, value }) => {
+        acc[key] = value;
+        return acc;
+      }, {} as Record<string, string>);
+    }
+    
+    return {};
   };
 
   const getStatusText = (status?: string) => {
@@ -257,7 +277,12 @@ export function useNamespacePage() {
         labels: Object.keys(filterLabels.value).length > 0 ? recordToKeyValueList(filterLabels.value) : undefined,
       };
       const res = await getNamespacesListApi(filterClusterId.value, params);
-      namespaces.value = res?.items || [];
+      // 确保每个namespace对象都有正确的cluster_id
+      const namespacesWithClusterId = (res?.items || []).map((namespace: any) => ({
+        ...namespace,
+        cluster_id: namespace.cluster_id || filterClusterId.value || 0
+      }));
+      namespaces.value = namespacesWithClusterId;
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取命名空间列表失败');
@@ -269,15 +294,18 @@ export function useNamespacePage() {
 
   // 查看详情
   const showNamespaceDetail = async (record: K8sNamespace) => {
+    const clusterId = validateClusterId(record);
+    if (!clusterId) return;
+    
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
-      const res = await getNamespaceDetailsApi(record.cluster_id, record.name);
-      currentNamespaceDetail.value = res || record;
+      const res = await getNamespaceDetailsApi(clusterId, record.name);
+      currentNamespaceDetail.value = res || { ...record, cluster_id: clusterId };
     } catch (err) {
       message.error('获取命名空间详情失败');
       console.error(err);
-      currentNamespaceDetail.value = record;
+      currentNamespaceDetail.value = { ...record, cluster_id: clusterId };
     } finally {
       detailLoading.value = false;
     }
@@ -423,13 +451,19 @@ export function useNamespacePage() {
       centered: true,
       onOk: async () => {
         try {
+          const clusterId = record.cluster_id || filterClusterId.value;
+          if (!clusterId || clusterId === 0) {
+            message.error('无效的集群ID，请重新选择集群');
+            return;
+          }
+          
           const params: DeleteNamespaceReq = {
-            cluster_id: record.cluster_id,
+            cluster_id: clusterId,
             name: record.name,
             force: 1, // 强制删除
             grace_period_seconds: 0,
           };
-          await deleteNamespaceApi(record.cluster_id, record.name, params);
+          await deleteNamespaceApi(clusterId, record.name, params);
           message.success('✅ 命名空间强制删除成功');
           await fetchNamespaces();
         } catch (err) {

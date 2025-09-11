@@ -265,8 +265,8 @@
 
 /* 集群选择器样式 (复用筛选框样式) */
 .k8s-cluster-selector {
-  width: 100%;
-  min-width: 0;
+  width: 200px;
+  min-width: 180px;
   height: 36px;
   border-radius: 6px;
   border: 1px solid #d9d9d9;
@@ -298,6 +298,36 @@
   display: flex !important;
   align-items: center !important;
   height: 100% !important;
+}
+
+/* 集群选择器下拉选项优化 */
+.k8s-cluster-selector .ant-select-item {
+  max-width: 300px;
+}
+
+.k8s-cluster-selector .ant-select-item-option-content > div {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  max-width: 100% !important;
+  overflow: hidden;
+}
+
+.k8s-cluster-selector .ant-select-item-option-content > div > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 8px;
+  font-weight: 500;
+}
+
+.k8s-cluster-selector .ant-select-item-option-content .ant-tag {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 1px 6px;
+  margin: 0;
 }
 
 /* ==================== 工具栏响应式设计 ==================== */
@@ -348,6 +378,11 @@
     min-width: 200px;
     max-width: 300px;
   }
+
+  .k8s-cluster-selector {
+    width: 180px;
+    min-width: 160px;
+  }
 }
 
 /* 小屏幕 (平板竖屏) */
@@ -370,6 +405,11 @@
   .k8s-filter-select {
     width: 120px;
     min-width: 110px;
+  }
+
+  .k8s-cluster-selector {
+    width: 140px;
+    min-width: 120px;
   }
 
   .k8s-search-group {
@@ -414,6 +454,11 @@
   }
 
   .k8s-filter-select {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .k8s-cluster-selector {
     width: 100%;
     min-width: 100%;
   }

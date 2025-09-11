@@ -1,0 +1,554 @@
+/* ==================== DaemonSet 特定样式 ==================== */
+
+/* DaemonSet 表格样式 */
+.daemonset-table :deep(.ant-table-tbody > tr > td) {
+  vertical-align: middle;
+}
+
+/* DaemonSet Pod 显示样式 */
+.daemonset-pods {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  min-width: 100px;
+}
+
+.pods-text {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #52c41a;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 4px;
+  padding: 2px 8px;
+  display: inline-block;
+}
+
+/* DaemonSet 镜像显示样式 */
+.daemonset-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.image-tag {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  color: #fa8c16;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin: 0;
+  transition: all 0.2s ease;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-tag:hover {
+  background: #e6f7ff;
+  border-color: #69c0ff;
+  transform: scale(1.05);
+  max-width: none;
+  white-space: normal;
+  z-index: 10;
+  position: relative;
+}
+
+/* DaemonSet 节点信息显示样式 */
+.daemonset-node-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.node-info-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.node-info-label {
+  font-weight: 500;
+  color: #8c8c8c;
+  min-width: 50px;
+}
+
+.node-info-value {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-weight: 600;
+  color: #262626;
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 3px;
+  padding: 1px 4px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* 标签过滤器样式 - 统一化 */
+.daemonset-labels-filter {
+  position: relative;
+}
+
+.daemonset-labels-filter .k8s-toolbar-btn {
+  height: 36px;
+  border-radius: 6px;
+  font-weight: 500;
+  border: 1px solid #d9d9d9;
+  background: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.daemonset-labels-filter .k8s-toolbar-btn:hover {
+  background: #f0f0f0;
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+.daemonset-labels-filter .active-filters {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 80px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+/* DaemonSet 更新策略标签样式 */
+.ant-tag[color="cyan"] {
+  background: #e6fffb;
+  border-color: #87e8de;
+  color: #13c2c2;
+}
+
+/* YAML 编辑器样式 - 统一化 */
+.yaml-textarea {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  background: #fafafa;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+}
+
+.yaml-textarea:focus {
+  background: #ffffff;
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+/* DaemonSet 详情模态框样式增强 */
+.k8s-detail-content .daemonset-images .image-tag {
+  margin-bottom: 4px;
+}
+
+/* DaemonSet Pod 表格样式 */
+.daemonset-pods-table {
+  margin-top: 16px;
+}
+
+.daemonset-pods-table .ant-table-small .ant-table-tbody > tr > td {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.daemonset-pods-table .ant-table-small .ant-table-thead > tr > th {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fafafa;
+}
+
+/* 标签过滤模态框样式 - 统一化 */
+.labels-filter-form {
+  padding: 8px;
+}
+
+.labels-filter-form .current-filters {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #f6ffed;
+  border-radius: 8px;
+  border: 1px solid #e6f7ff;
+}
+
+.labels-filter-form .current-filters h4,
+.labels-filter-form .add-filter-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 12px;
+}
+
+.labels-filter-form .filter-tags {
+  margin-bottom: 16px;
+}
+
+.labels-filter-form .add-filter-section {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.labels-filter-form .filter-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* DaemonSet 表单样式增强 */
+.k8s-form .daemonset-config-section {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fff7e6;
+}
+
+.k8s-form .daemonset-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.k8s-form .daemonset-config-header h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  color: #262626;
+}
+
+.k8s-form .daemonset-config-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.k8s-form .daemonset-config-item:hover {
+  border-color: #d9d9d9;
+}
+
+.k8s-form .daemonset-config-item .ant-input,
+.k8s-form .daemonset-config-item .ant-select,
+.k8s-form .daemonset-config-item .ant-input-number {
+  height: 32px;
+  font-size: 12px;
+}
+
+.k8s-form .daemonset-config-item .ant-btn {
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+/* DaemonSet 调度配置样式 */
+.schedule-config-section {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  background: #f0f5ff;
+  margin-top: 8px;
+}
+
+.schedule-empty-state {
+  text-align: center;
+  color: #8c8c8c;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* DaemonSet 状态指示器样式 */
+.daemonset-status-running {
+  color: #52c41a;
+}
+
+.daemonset-status-error {
+  color: #ff4d4f;
+}
+
+.daemonset-status-updating {
+  color: #1890ff;
+}
+
+/* DaemonSet 更新策略指示器样式 */
+.daemonset-strategy-rolling {
+  background: #e6f7ff;
+  color: #1890ff;
+  border-color: #91d5ff;
+}
+
+.daemonset-strategy-recreate {
+  background: #fff7e6;
+  color: #fa8c16;
+  border-color: #ffd591;
+}
+
+/* 进度条样式优化 */
+.daemonset-pods .ant-progress-line {
+  margin: 0;
+}
+
+.daemonset-pods .ant-progress-outer {
+  margin-right: 0;
+}
+
+.daemonset-pods .ant-progress-inner {
+  background: #f0f0f0;
+  border-radius: 10px;
+}
+
+/* 节点信息响应式样式 */
+.daemonset-node-info .node-info-item:nth-child(1) .node-info-value {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.daemonset-node-info .node-info-item:nth-child(2) .node-info-value {
+  background: #fff2f0;
+  border-color: #ffccc7;
+  color: #ff4d4f;
+}
+
+.daemonset-node-info .node-info-item:nth-child(3) .node-info-value {
+  background: #fff7e6;
+  border-color: #ffd591;
+  color: #fa8c16;
+}
+
+/* 响应式设计 - DaemonSet 特定 */
+@media (max-width: 768px) {
+  .daemonset-images {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  
+  .daemonset-pods {
+    align-items: flex-start;
+    gap: 2px;
+  }
+  
+  .daemonset-node-info {
+    gap: 1px;
+  }
+  
+  .node-info-item {
+    font-size: 10px;
+  }
+  
+  .image-tag {
+    font-size: 10px;
+    max-width: 120px;
+  }
+  
+  .pods-text {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 576px) {
+  .k8s-form .daemonset-config-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .daemonset-labels-filter {
+    width: 100%;
+  }
+  
+  .daemonset-labels-filter .active-filters {
+    position: static;
+    margin-top: 8px;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
+  }
+  
+  .labels-filter-form .filter-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .daemonset-labels-filter .k8s-toolbar-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .daemonset-node-info {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+/* 标签过滤器滚动条样式 */
+.daemonset-labels-filter .active-filters::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.daemonset-labels-filter .active-filters::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.daemonset-labels-filter .active-filters::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.daemonset-labels-filter .active-filters::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Pod 模态框特定样式 */
+.daemonset-pods-modal .ant-modal-body {
+  padding: 16px;
+}
+
+.daemonset-pods-modal .k8s-table {
+  margin: -8px;
+}
+
+/* DaemonSet 详情卡片样式增强 */
+.k8s-detail-content .ant-card-small > .ant-card-head {
+  min-height: 40px;
+  padding: 8px 16px;
+}
+
+.k8s-detail-content .ant-card-small > .ant-card-head > .ant-card-head-wrapper > .ant-card-head-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.k8s-detail-content .ant-card-small > .ant-card-body {
+  padding: 12px 16px;
+}
+
+/* DaemonSet 工具提示样式 */
+.daemonset-tooltip {
+  max-width: 300px;
+}
+
+.daemonset-tooltip .ant-tooltip-inner {
+  background: #fff;
+  color: #333;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.daemonset-tooltip .ant-tooltip-arrow::before {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+}
+
+/* 版本历史表格样式 */
+.daemonset-history-table .ant-table-small .ant-table-tbody > tr > td {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.daemonset-history-table .ant-table-small .ant-table-thead > tr > th {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fafafa;
+}
+
+/* 回滚模态框特定样式 */
+.rollback-modal .ant-form-item-label {
+  font-weight: 600;
+}
+
+.rollback-modal .ant-input-number {
+  width: 100%;
+}
+
+/* DaemonSet 特殊说明样式 */
+.daemonset-description {
+  background: #f0f2f5;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 16px 0;
+  font-size: 13px;
+  color: #595959;
+  line-height: 1.5;
+}
+
+.daemonset-description .description-title {
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 8px;
+}
+
+.daemonset-description .description-content {
+  margin-bottom: 0;
+}
+
+/* 打印样式 */
+@media print {
+  .daemonset-images .image-tag,
+  .daemonset-pods .pods-text,
+  .node-info-value {
+    background: white !important;
+    border: 1px solid #ddd !important;
+    color: #333 !important;
+  }
+  
+  .yaml-textarea {
+    background: white !important;
+    border: 1px solid #ddd !important;
+  }
+  
+  .daemonset-labels-filter,
+  .labels-filter-form {
+    display: none !important;
+  }
+}

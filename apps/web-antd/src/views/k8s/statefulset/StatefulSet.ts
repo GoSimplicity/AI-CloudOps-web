@@ -2,29 +2,31 @@ import { ref, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 import {
-  type K8sDeployment,
-  type GetDeploymentListReq,
-  type CreateDeploymentReq,
-  type CreateDeploymentByYamlReq,
-  type UpdateDeploymentReq,
-  type UpdateDeploymentByYamlReq,
-  K8sDeploymentStatus,
-  getDeploymentListApi,
-  getDeploymentDetailsApi,
-  getDeploymentYamlApi,
-  createDeploymentApi,
-  createDeploymentByYamlApi,
-  updateDeploymentApi,
-  updateDeploymentByYamlApi,
-  deleteDeploymentApi,
-  restartDeploymentApi,
-  scaleDeploymentApi,
-  pauseDeploymentApi,
-  resumeDeploymentApi,
-  rollbackDeploymentApi,
-  getDeploymentPodsApi,
-  getDeploymentHistoryApi,
-} from '#/api/core/k8s/k8s_deployment';
+  type K8sStatefulSet,
+  type K8sStatefulSetHistory,
+  type GetStatefulSetListReq,
+  type CreateStatefulSetReq,
+  type CreateStatefulSetByYamlReq,
+  type UpdateStatefulSetReq,
+  type UpdateStatefulSetByYamlReq,
+  type ScaleStatefulSetReq,
+  type RestartStatefulSetReq,
+  type RollbackStatefulSetReq,
+  K8sStatefulSetStatus,
+  getStatefulSetListApi,
+  getStatefulSetDetailsApi,
+  getStatefulSetYamlApi,
+  createStatefulSetApi,
+  createStatefulSetByYamlApi,
+  updateStatefulSetApi,
+  updateStatefulSetByYamlApi,
+  deleteStatefulSetApi,
+  restartStatefulSetApi,
+  scaleStatefulSetApi,
+  rollbackStatefulSetApi,
+  getStatefulSetPodsApi,
+  getStatefulSetHistoryApi,
+} from '#/api/core/k8s/k8s_statefulset';
 import {
   type K8sCluster,
   type ListClustersReq,
@@ -38,21 +40,22 @@ import {
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
 
-export function useDeploymentPage() {
+export function useStatefulSetPage() {
   // state
-  const deployments = ref<K8sDeployment[]>([]);
+  const statefulSets = ref<K8sStatefulSet[]>([]);
   const clusters = ref<K8sCluster[]>([]);
   const namespaces = ref<K8sNamespace[]>([]);
   const loading = ref(false);
   const clustersLoading = ref(false);
   const namespacesLoading = ref(false);
   const searchText = ref('');
-  const filterStatus = ref<K8sDeploymentStatus | undefined>(undefined);
+  const filterStatus = ref<K8sStatefulSetStatus | undefined>(undefined);
   const filterClusterId = ref<number | undefined>(undefined);
   const filterNamespace = ref<string | undefined>(undefined);
+  const filterServiceName = ref<string | undefined>(undefined);
   const filterLabels = ref<Record<string, string>>({});
   const selectedRowKeys = ref<string[]>([]);
-  const selectedRows = ref<K8sDeployment[]>([]);
+  const selectedRows = ref<K8sStatefulSet[]>([]);
   const currentPage = ref(1);
   const pageSize = ref(10);
   const total = ref(0);
@@ -65,6 +68,7 @@ export function useDeploymentPage() {
 
   // form refs
   const formRef = ref<FormInstance>();
+  const editFormRef = ref<FormInstance>();
   const scaleFormRef = ref<FormInstance>();
   const rollbackFormRef = ref<FormInstance>();
   const yamlFormRef = ref<FormInstance>();
@@ -84,17 +88,18 @@ export function useDeploymentPage() {
   const detailLoading = ref(false);
 
   // current operation target
-  const currentOperationDeployment = ref<K8sDeployment | null>(null);
-  const currentDeploymentDetail = ref<K8sDeployment | null>(null);
+  const currentOperationStatefulSet = ref<K8sStatefulSet | null>(null);
+  const currentStatefulSetDetail = ref<K8sStatefulSet | null>(null);
   const currentYamlContent = ref('');
-  const deploymentPods = ref<any[]>([]);
-  const deploymentHistory = ref<any[]>([]);
+  const statefulSetPods = ref<any[]>([]);
+  const statefulSetHistory = ref<K8sStatefulSetHistory[]>([]);
 
   // form models
   const createFormModel = ref<{
     name: string;
     namespace: string;
     replicas: number;
+    service_name: string;
     images: string[];
     labels: Record<string, string>;
     annotations: Record<string, string>;
@@ -102,6 +107,7 @@ export function useDeploymentPage() {
     name: '',
     namespace: '',
     replicas: 1,
+    service_name: '',
     images: [''],
     labels: {},
     annotations: {},
@@ -111,16 +117,18 @@ export function useDeploymentPage() {
     name: string;
     namespace: string;
     replicas: number;
+    service_name: string;
     images: string[];
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
+    labels: KeyValueList;
+    annotations: KeyValueList;
   }>({
     name: '',
     namespace: '',
     replicas: 1,
+    service_name: '',
     images: [''],
-    labels: {},
-    annotations: {},
+    labels: [],
+    annotations: [],
   });
 
   const scaleFormModel = ref<{
@@ -150,9 +158,9 @@ export function useDeploymentPage() {
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 Deployment 名称', trigger: 'blur' },
-      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'Deployment 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
-      { max: 63, message: 'Deployment 名称长度不能超过63个字符', trigger: 'blur' }
+      { required: true, message: '请输入 StatefulSet 名称', trigger: 'blur' },
+      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'StatefulSet 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
+      { max: 63, message: 'StatefulSet 名称长度不能超过63个字符', trigger: 'blur' }
     ],
     namespace: [
       { required: true, message: '请选择命名空间', trigger: 'change' }
@@ -160,6 +168,10 @@ export function useDeploymentPage() {
     replicas: [
       { required: true, message: '请输入副本数量', trigger: 'blur' },
       { type: 'number', min: 0, max: 100, message: '副本数量必须在0-100之间', trigger: 'blur' }
+    ],
+    service_name: [
+      { required: true, message: '请输入服务名称', trigger: 'blur' },
+      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: '服务名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' }
     ]
   };
 
@@ -191,21 +203,36 @@ export function useDeploymentPage() {
     ]
   };
 
+  const editFormRules: Record<string, Rule[]> = {
+    name: [
+      { required: true, message: '请输入 StatefulSet 名称', trigger: 'blur' },
+      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'StatefulSet 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
+      { max: 63, message: 'StatefulSet 名称长度不能超过63个字符', trigger: 'blur' }
+    ],
+    namespace: [
+      { required: true, message: '请选择命名空间', trigger: 'change' }
+    ],
+    replicas: [
+      { required: true, message: '请输入副本数量', trigger: 'blur' },
+      { type: 'number', min: 0, max: 100, message: '副本数量必须在0-100之间', trigger: 'blur' }
+    ]
+  };
+
   // computed
-  const filteredDeployments = computed(() => {
-    return deployments.value;
+  const filteredStatefulSets = computed(() => {
+    return statefulSets.value;
   });
 
   const rowSelection = computed(() => ({
     selectedRowKeys: selectedRowKeys.value,
-    onChange: (keys: string[], rows: K8sDeployment[]) => {
+    onChange: (keys: string[], rows: K8sStatefulSet[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
   }));
 
   // helpers
-  const validateClusterId = (record: K8sDeployment): number | null => {
+  const validateClusterId = (record: K8sStatefulSet): number | null => {
     const clusterId = record.cluster_id || filterClusterId.value;
     if (!clusterId || clusterId === 0) {
       message.error('无效的集群ID，请重新选择集群');
@@ -227,22 +254,22 @@ export function useDeploymentPage() {
     return map[value] || '未知环境';
   };
 
-  const getStatusText = (status?: K8sDeploymentStatus) => {
-    const map: Record<K8sDeploymentStatus, string> = {
-      [K8sDeploymentStatus.Running]: '运行中',
-      [K8sDeploymentStatus.Stopped]: '已停止',
-      [K8sDeploymentStatus.Paused]: '已暂停',
-      [K8sDeploymentStatus.Error]: '异常',
+  const getStatusText = (status?: K8sStatefulSetStatus) => {
+    const map: Record<K8sStatefulSetStatus, string> = {
+      [K8sStatefulSetStatus.Running]: '运行中',
+      [K8sStatefulSetStatus.Stopped]: '已停止',
+      [K8sStatefulSetStatus.Updating]: '更新中',
+      [K8sStatefulSetStatus.Error]: '异常',
     };
     return status !== undefined ? map[status] || '未知' : '未知';
   };
 
-  const getStatusColor = (status?: K8sDeploymentStatus) => {
-    const map: Record<K8sDeploymentStatus, string> = {
-      [K8sDeploymentStatus.Running]: 'success',
-      [K8sDeploymentStatus.Stopped]: 'default',
-      [K8sDeploymentStatus.Paused]: 'warning',
-      [K8sDeploymentStatus.Error]: 'error',
+  const getStatusColor = (status?: K8sStatefulSetStatus) => {
+    const map: Record<K8sStatefulSetStatus, string> = {
+      [K8sStatefulSetStatus.Running]: 'success',
+      [K8sStatefulSetStatus.Stopped]: 'default',
+      [K8sStatefulSetStatus.Updating]: 'processing',
+      [K8sStatefulSetStatus.Error]: 'error',
     };
     return status !== undefined ? map[status] || 'default' : 'default';
   };
@@ -273,8 +300,8 @@ export function useDeploymentPage() {
   };
 
   // cluster operations
-  const clearDeployments = () => {
-    deployments.value = [];
+  const clearStatefulSets = () => {
+    statefulSets.value = [];
     selectedRowKeys.value = [];
     selectedRows.value = [];
   };
@@ -308,9 +335,9 @@ export function useDeploymentPage() {
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
           message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
-          // 自动加载该集群的命名空间和Deployment数据
+          // 自动加载该集群的命名空间和StatefulSet数据
           await fetchNamespaces();
-          await fetchDeployments();
+          await fetchStatefulSets();
         }
       }
     } catch (err) {
@@ -351,35 +378,36 @@ export function useDeploymentPage() {
   };
 
   // crud operations
-  const fetchDeployments = async () => {
+  const fetchStatefulSets = async () => {
     if (!filterClusterId.value || filterClusterId.value === 0) {
       message.warning('请先选择有效的集群');
-      deployments.value = [];
+      statefulSets.value = [];
       total.value = 0;
       return;
     }
 
     try {
       loading.value = true;
-      const params: GetDeploymentListReq = {
+      const params: GetStatefulSetListReq = {
         page: currentPage.value,
         size: pageSize.value,
         search: searchText.value || undefined,
         cluster_id: filterClusterId.value,
         namespace: filterNamespace.value || undefined,
-        status: filterStatus.value || undefined,
-        labels: Object.keys(filterLabels.value).length > 0 ? filterLabels.value : undefined,
+        status: filterStatus.value?.toString() || undefined,
+        service_name: filterServiceName.value || undefined,
+        labels: Object.keys(filterLabels.value).length > 0 ? recordToKeyValueList(filterLabels.value) : undefined,
       };
-      const res = await getDeploymentListApi(filterClusterId.value, params);
-      // 确保每个deployment对象都有正确的cluster_id
-      const deploymentsWithClusterId = (res?.items || []).map((deployment: K8sDeployment) => ({
-        ...deployment,
-        cluster_id: deployment.cluster_id || filterClusterId.value || 0
+      const res = await getStatefulSetListApi(filterClusterId.value, params);
+      // 确保每个statefulSet对象都有正确的cluster_id
+      const statefulSetsWithClusterId = (res?.items || []).map((statefulSet: K8sStatefulSet) => ({
+        ...statefulSet,
+        cluster_id: statefulSet.cluster_id || filterClusterId.value || 0
       }));
-      deployments.value = deploymentsWithClusterId;
+      statefulSets.value = statefulSetsWithClusterId;
       total.value = res?.total || 0;
     } catch (err) {
-      message.error('获取 Deployment 列表失败');
+      message.error('获取 StatefulSet 列表失败');
       console.error(err);
     } finally {
       loading.value = false;
@@ -387,40 +415,40 @@ export function useDeploymentPage() {
   };
 
   // 查看详情
-  const showDeploymentDetail = async (record: K8sDeployment) => {
+  const showStatefulSetDetail = async (record: K8sStatefulSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
-      const res = await getDeploymentDetailsApi(clusterId, record.namespace, record.name);
+      const res = await getStatefulSetDetailsApi(clusterId, record.namespace, record.name);
       
-      // 转换标签和注解格式：从对象转为数组
+      // 处理详情数据
       const processedDetail = res ? {
         ...res,
         cluster_id: clusterId,
-        labels: res.labels ? recordToKeyValueList(res.labels) : [],
-        annotations: res.annotations ? recordToKeyValueList(res.annotations) : []
+        labels: res.labels,
+        annotations: res.annotations
       } : { 
         ...record, 
         cluster_id: clusterId,
-        labels: record.labels ? recordToKeyValueList(record.labels) : [],
-        annotations: record.annotations ? recordToKeyValueList(record.annotations) : []
+        labels: record.labels,
+        annotations: record.annotations
       };
       
-      currentDeploymentDetail.value = processedDetail;
+      currentStatefulSetDetail.value = processedDetail;
     } catch (err) {
-      message.error('获取 Deployment 详情失败');
+      message.error('获取 StatefulSet 详情失败');
       console.error(err);
       // 错误时也要处理格式转换
       const fallbackDetail = { 
         ...record, 
         cluster_id: clusterId,
-        labels: record.labels ? recordToKeyValueList(record.labels) : [],
-        annotations: record.annotations ? recordToKeyValueList(record.annotations) : []
+        labels: record.labels,
+        annotations: record.annotations
       };
-      currentDeploymentDetail.value = fallbackDetail;
+      currentStatefulSetDetail.value = fallbackDetail;
     } finally {
       detailLoading.value = false;
     }
@@ -428,23 +456,23 @@ export function useDeploymentPage() {
 
   const closeDetailModal = () => {
     isDetailModalVisible.value = false;
-    currentDeploymentDetail.value = null;
+    currentStatefulSetDetail.value = null;
   };
 
   // YAML 操作
-  const showYamlModal = async (record: K8sDeployment) => {
+  const showYamlModal = async (record: K8sStatefulSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
     try {
       submitLoading.value = true;
-      currentOperationDeployment.value = { ...record, cluster_id: clusterId };
-      const res = await getDeploymentYamlApi(clusterId, record.namespace, record.name);
+      currentOperationStatefulSet.value = { ...record, cluster_id: clusterId };
+      const res = await getStatefulSetYamlApi(clusterId, record.namespace, record.name);
       currentYamlContent.value = res?.yaml || '';
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (err) {
-      message.error('获取 Deployment YAML 失败');
+      message.error('获取 StatefulSet YAML 失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -453,49 +481,53 @@ export function useDeploymentPage() {
 
   const closeYamlModal = () => {
     isYamlModalVisible.value = false;
-    currentOperationDeployment.value = null;
+    currentOperationStatefulSet.value = null;
     currentYamlContent.value = '';
     yamlFormModel.value.yaml = '';
   };
 
   const submitYamlForm = async () => {
-    if (!yamlFormRef.value || !currentOperationDeployment.value) return;
+    if (!yamlFormRef.value || !currentOperationStatefulSet.value) return;
     
     try {
       await yamlFormRef.value.validate();
       submitLoading.value = true;
       
-      const params: Omit<UpdateDeploymentByYamlReq, 'cluster_id' | 'namespace' | 'name'> = {
+      const params: UpdateStatefulSetByYamlReq = {
+        cluster_id: currentOperationStatefulSet.value.cluster_id,
+        namespace: currentOperationStatefulSet.value.namespace,
+        name: currentOperationStatefulSet.value.name,
         yaml: yamlFormModel.value.yaml,
       };
       
-      await updateDeploymentByYamlApi(
-        currentOperationDeployment.value.cluster_id,
-        currentOperationDeployment.value.namespace,
-        currentOperationDeployment.value.name,
+      await updateStatefulSetByYamlApi(
+        currentOperationStatefulSet.value.cluster_id,
+        currentOperationStatefulSet.value.namespace,
+        currentOperationStatefulSet.value.name,
         params
       );
-      message.success('🎉 Deployment YAML 更新成功');
+      message.success('🎉 StatefulSet YAML 更新成功');
       isYamlModalVisible.value = false;
-      await fetchDeployments();
+      await fetchStatefulSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ Deployment YAML 更新失败');
+      message.error('❌ StatefulSet YAML 更新失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
     }
   };
 
-  // 创建 Deployment
+  // 创建 StatefulSet
   const openCreateModal = () => {
     createFormModel.value = {
       name: '',
       namespace: '',
       replicas: 1,
+      service_name: '',
       images: [''],
       labels: {},
       annotations: {},
@@ -507,7 +539,7 @@ export function useDeploymentPage() {
     isCreateModalVisible.value = false;
   };
 
-  // 通过 YAML 创建 Deployment
+  // 通过 YAML 创建 StatefulSet
   const openCreateYamlModal = () => {
     createYamlFormModel.value.yaml = '';
     isCreateYamlModalVisible.value = true;
@@ -525,28 +557,31 @@ export function useDeploymentPage() {
       await formRef.value.validate();
       submitLoading.value = true;
       
-      const params: Omit<CreateDeploymentReq, 'cluster_id'> = {
+      const params: CreateStatefulSetReq = {
+        cluster_id: filterClusterId.value,
         name: createFormModel.value.name,
         namespace: createFormModel.value.namespace,
         replicas: createFormModel.value.replicas,
+        service_name: createFormModel.value.service_name,
         images: createFormModel.value.images.filter(img => img.trim()),
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
+        labels: Object.keys(createFormModel.value.labels).length > 0 ? recordToKeyValueList(createFormModel.value.labels) : undefined,
+        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? recordToKeyValueList(createFormModel.value.annotations) : undefined,
         spec: {
           replicas: createFormModel.value.replicas,
+          service_name: createFormModel.value.service_name,
         },
       };
       
-      await createDeploymentApi(filterClusterId.value, params);
-      message.success('🎉 Deployment 创建成功');
+      await createStatefulSetApi(filterClusterId.value, params);
+      message.success('🎉 StatefulSet 创建成功');
       isCreateModalVisible.value = false;
-      await fetchDeployments();
+      await fetchStatefulSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ Deployment 创建失败');
+      message.error('❌ StatefulSet 创建失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -560,270 +595,249 @@ export function useDeploymentPage() {
       await createYamlFormRef.value.validate();
       submitLoading.value = true;
       
-      const params: Omit<CreateDeploymentByYamlReq, 'cluster_id'> = {
+      const params: CreateStatefulSetByYamlReq = {
+        cluster_id: filterClusterId.value,
         yaml: createYamlFormModel.value.yaml,
       };
       
-      await createDeploymentByYamlApi(filterClusterId.value, params);
-      message.success('🎉 Deployment YAML 创建成功');
+      await createStatefulSetByYamlApi(filterClusterId.value, params);
+      message.success('🎉 StatefulSet YAML 创建成功');
       isCreateYamlModalVisible.value = false;
-      await fetchDeployments();
+      await fetchStatefulSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ Deployment YAML 创建失败');
+      message.error('❌ StatefulSet YAML 创建失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
     }
   };
 
-  // 编辑 Deployment
-  const openEditModal = (record: K8sDeployment) => {
-    currentOperationDeployment.value = record;
-    editFormModel.value = {
-      name: record.name,
-      namespace: record.namespace,
-      replicas: record.replicas,
-      images: record.images || [''],
-      labels: record.labels || {},
-      annotations: record.annotations || {},
-    };
-    isEditModalVisible.value = true;
-  };
-
-  const closeEditModal = () => {
-    isEditModalVisible.value = false;
-    currentOperationDeployment.value = null;
-  };
-
-  const submitEditForm = async () => {
-    if (!formRef.value || !currentOperationDeployment.value) return;
-    
-    try {
-      await formRef.value.validate();
-      submitLoading.value = true;
-      
-      const params: Omit<UpdateDeploymentReq, 'cluster_id' | 'namespace' | 'name'> = {
-        replicas: editFormModel.value.replicas,
-        images: editFormModel.value.images.filter(img => img.trim()),
-        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
-        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
-        spec: {
-          replicas: editFormModel.value.replicas,
-        },
-      };
-      
-      await updateDeploymentApi(
-        currentOperationDeployment.value.cluster_id,
-        currentOperationDeployment.value.namespace,
-        currentOperationDeployment.value.name,
-        params
-      );
-      message.success('🎉 Deployment 更新成功');
-      isEditModalVisible.value = false;
-      await fetchDeployments();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
-        return;
-      }
-      message.error('❌ Deployment 更新失败');
-      console.error(err);
-    } finally {
-      submitLoading.value = false;
-    }
-  };
-
-  // 删除 Deployment
-  const deleteDeployment = (record: K8sDeployment) => {
+  // 删除 StatefulSet
+  const deleteStatefulSet = (record: K8sStatefulSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
     Modal.confirm({
-      title: '删除 Deployment',
-      content: `确定要删除 Deployment "${record.name}" 吗？此操作不可逆！`,
+      title: '删除 StatefulSet',
+      content: `确定要删除 StatefulSet "${record.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
       cancelText: '取消',
       centered: true,
       onOk: async () => {
         try {
-          await deleteDeploymentApi(clusterId, record.namespace, record.name);
-          message.success('✅ Deployment 删除成功');
-          await fetchDeployments();
+          await deleteStatefulSetApi(clusterId, record.namespace, record.name);
+          message.success('✅ StatefulSet 删除成功');
+          await fetchStatefulSets();
         } catch (err) {
-          message.error('❌ Deployment 删除失败');
+          message.error('❌ StatefulSet 删除失败');
           console.error(err);
         }
       },
     });
   };
 
-  // 重启 Deployment
-  const restartDeployment = (record: K8sDeployment) => {
+  // 重启 StatefulSet
+  const restartStatefulSet = (record: K8sStatefulSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
     Modal.confirm({
-      title: '重启 Deployment',
-      content: `确定要重启 Deployment "${record.name}" 吗？这将重启所有 Pod。`,
+      title: '重启 StatefulSet',
+      content: `确定要重启 StatefulSet "${record.name}" 吗？这将重启所有 Pod。`,
       okText: '确认重启',
       okType: 'primary',
       cancelText: '取消',
       centered: true,
       onOk: async () => {
         try {
-          await restartDeploymentApi(clusterId, record.namespace, record.name);
-          message.success('✅ Deployment 重启成功');
-          await fetchDeployments();
+          const params: RestartStatefulSetReq = {
+            cluster_id: clusterId,
+            namespace: record.namespace,
+            name: record.name,
+          };
+          await restartStatefulSetApi(clusterId, record.namespace, record.name, params);
+          message.success('✅ StatefulSet 重启成功');
+          await fetchStatefulSets();
         } catch (err) {
-          message.error('❌ Deployment 重启失败');
+          message.error('❌ StatefulSet 重启失败');
           console.error(err);
         }
       },
     });
   };
 
-  // 伸缩 Deployment
-  const openScaleModal = (record: K8sDeployment) => {
+  // 编辑 StatefulSet
+  const openEditModal = (record: K8sStatefulSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
-    currentOperationDeployment.value = { ...record, cluster_id: clusterId };
-    scaleFormModel.value.replicas = record.replicas;
-    isScaleModalVisible.value = true;
+    currentOperationStatefulSet.value = { ...record, cluster_id: clusterId };
+    
+    // 填充编辑表单数据
+    editFormModel.value = {
+      name: record.name,
+      namespace: record.namespace,
+      replicas: record.replicas,
+      service_name: record.service_name || '',
+      images: record.images || [],
+      labels: recordToKeyValueList(keyValueListToRecord(record.labels)),
+      annotations: recordToKeyValueList(keyValueListToRecord(record.annotations)),
+    };
+    
+    isEditModalVisible.value = true;
   };
 
-  const closeScaleModal = () => {
-    isScaleModalVisible.value = false;
-    currentOperationDeployment.value = null;
+  const closeEditModal = () => {
+    isEditModalVisible.value = false;
+    currentOperationStatefulSet.value = null;
+    editFormModel.value = {
+      name: '',
+      namespace: '',
+      replicas: 1,
+      service_name: '',
+      images: [''],
+      labels: [],
+      annotations: [],
+    };
   };
 
-  const submitScaleForm = async () => {
-    if (!scaleFormRef.value || !currentOperationDeployment.value) return;
+  const submitEditForm = async () => {
+    if (!editFormRef.value || !currentOperationStatefulSet.value) return;
     
     try {
-      await scaleFormRef.value.validate();
+      await editFormRef.value.validate();
       submitLoading.value = true;
       
-      const params = {
-        replicas: scaleFormModel.value.replicas,
+      const params: UpdateStatefulSetReq = {
+        cluster_id: currentOperationStatefulSet.value.cluster_id,
+        name: editFormModel.value.name,
+        namespace: editFormModel.value.namespace,
+        replicas: editFormModel.value.replicas,
+        images: editFormModel.value.images.filter(img => img.trim()),
+        labels: editFormModel.value.labels.length > 0 ? keyValueListToRecord(editFormModel.value.labels) : undefined,
+        annotations: editFormModel.value.annotations.length > 0 ? keyValueListToRecord(editFormModel.value.annotations) : undefined,
       };
       
-      await scaleDeploymentApi(
-        currentOperationDeployment.value.cluster_id,
-        currentOperationDeployment.value.namespace,
-        currentOperationDeployment.value.name,
+      await updateStatefulSetApi(
+        currentOperationStatefulSet.value.cluster_id,
+        currentOperationStatefulSet.value.namespace,
+        currentOperationStatefulSet.value.name,
         params
       );
-      message.success('🎉 Deployment 伸缩成功');
-      isScaleModalVisible.value = false;
-      await fetchDeployments();
+      message.success('🎉 StatefulSet 更新成功');
+      isEditModalVisible.value = false;
+      await fetchStatefulSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ Deployment 伸缩失败');
+      message.error('❌ StatefulSet 更新失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
     }
   };
 
-  // 暂停/恢复 Deployment
-  const pauseDeployment = (record: K8sDeployment) => {
+  // 伸缩 StatefulSet
+  const openScaleModal = (record: K8sStatefulSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
-    Modal.confirm({
-      title: '暂停 Deployment',
-      content: `确定要暂停 Deployment "${record.name}" 吗？`,
-      okText: '确认暂停',
-      okType: 'primary',
-      cancelText: '取消',
-      centered: true,
-      onOk: async () => {
-        try {
-          await pauseDeploymentApi(clusterId, record.namespace, record.name);
-          message.success('✅ Deployment 暂停成功');
-          await fetchDeployments();
-        } catch (err) {
-          message.error('❌ Deployment 暂停失败');
-          console.error(err);
-        }
-      },
-    });
+    currentOperationStatefulSet.value = { ...record, cluster_id: clusterId };
+    scaleFormModel.value.replicas = record.replicas;
+    isScaleModalVisible.value = true;
   };
 
-  const resumeDeployment = (record: K8sDeployment) => {
-    const clusterId = validateClusterId(record);
-    if (!clusterId) return;
-    
-    Modal.confirm({
-      title: '恢复 Deployment',
-      content: `确定要恢复 Deployment "${record.name}" 吗？`,
-      okText: '确认恢复',
-      okType: 'primary',
-      cancelText: '取消',
-      centered: true,
-      onOk: async () => {
-        try {
-          await resumeDeploymentApi(clusterId, record.namespace, record.name);
-          message.success('✅ Deployment 恢复成功');
-          await fetchDeployments();
-        } catch (err) {
-          message.error('❌ Deployment 恢复失败');
-          console.error(err);
-        }
-      },
-    });
+  const closeScaleModal = () => {
+    isScaleModalVisible.value = false;
+    currentOperationStatefulSet.value = null;
   };
 
-  // 回滚 Deployment
-  const openRollbackModal = (record: K8sDeployment) => {
+  const submitScaleForm = async () => {
+    if (!scaleFormRef.value || !currentOperationStatefulSet.value) return;
+    
+    try {
+      await scaleFormRef.value.validate();
+      submitLoading.value = true;
+      
+      const params: ScaleStatefulSetReq = {
+        cluster_id: currentOperationStatefulSet.value.cluster_id,
+        namespace: currentOperationStatefulSet.value.namespace,
+        name: currentOperationStatefulSet.value.name,
+        replicas: scaleFormModel.value.replicas,
+      };
+      
+      await scaleStatefulSetApi(
+        currentOperationStatefulSet.value.cluster_id,
+        currentOperationStatefulSet.value.namespace,
+        currentOperationStatefulSet.value.name,
+        params
+      );
+      message.success('🎉 StatefulSet 伸缩成功');
+      isScaleModalVisible.value = false;
+      await fetchStatefulSets();
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'errorFields' in err) {
+        message.warning('请检查表单填写是否正确');
+        return;
+      }
+      message.error('❌ StatefulSet 伸缩失败');
+      console.error(err);
+    } finally {
+      submitLoading.value = false;
+    }
+  };
+
+  // 回滚 StatefulSet
+  const openRollbackModal = (record: K8sStatefulSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
-    currentOperationDeployment.value = { ...record, cluster_id: clusterId };
+    currentOperationStatefulSet.value = { ...record, cluster_id: clusterId };
     rollbackFormModel.value.revision = 1;
     isRollbackModalVisible.value = true;
   };
 
   const closeRollbackModal = () => {
     isRollbackModalVisible.value = false;
-    currentOperationDeployment.value = null;
+    currentOperationStatefulSet.value = null;
   };
 
   const submitRollbackForm = async () => {
-    if (!rollbackFormRef.value || !currentOperationDeployment.value) return;
+    if (!rollbackFormRef.value || !currentOperationStatefulSet.value) return;
     
     try {
       await rollbackFormRef.value.validate();
       submitLoading.value = true;
       
-      const params = {
+      const params: RollbackStatefulSetReq = {
+        cluster_id: currentOperationStatefulSet.value.cluster_id,
+        namespace: currentOperationStatefulSet.value.namespace,
+        name: currentOperationStatefulSet.value.name,
         revision: rollbackFormModel.value.revision,
       };
       
-      await rollbackDeploymentApi(
-        currentOperationDeployment.value.cluster_id,
-        currentOperationDeployment.value.namespace,
-        currentOperationDeployment.value.name,
+      await rollbackStatefulSetApi(
+        currentOperationStatefulSet.value.cluster_id,
+        currentOperationStatefulSet.value.namespace,
+        currentOperationStatefulSet.value.name,
         params
       );
-      message.success('🎉 Deployment 回滚成功');
+      message.success('🎉 StatefulSet 回滚成功');
       isRollbackModalVisible.value = false;
-      await fetchDeployments();
+      await fetchStatefulSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ Deployment 回滚失败');
+      message.error('❌ StatefulSet 回滚失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -831,15 +845,15 @@ export function useDeploymentPage() {
   };
 
   // 查看 Pod 列表
-  const showPodModal = async (record: K8sDeployment) => {
+  const showPodModal = async (record: K8sStatefulSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
     try {
       submitLoading.value = true;
-      currentOperationDeployment.value = { ...record, cluster_id: clusterId };
-      const res = await getDeploymentPodsApi(clusterId, record.namespace, record.name);
-      deploymentPods.value = res?.items || [];
+      currentOperationStatefulSet.value = { ...record, cluster_id: clusterId };
+      const res = await getStatefulSetPodsApi(clusterId, record.namespace, record.name);
+      statefulSetPods.value = res?.items || [];
       isPodModalVisible.value = true;
     } catch (err) {
       message.error('获取 Pod 列表失败');
@@ -851,20 +865,20 @@ export function useDeploymentPage() {
 
   const closePodModal = () => {
     isPodModalVisible.value = false;
-    currentOperationDeployment.value = null;
-    deploymentPods.value = [];
+    currentOperationStatefulSet.value = null;
+    statefulSetPods.value = [];
   };
 
   // 查看版本历史
-  const showHistoryModal = async (record: K8sDeployment) => {
+  const showHistoryModal = async (record: K8sStatefulSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
     try {
       submitLoading.value = true;
-      currentOperationDeployment.value = { ...record, cluster_id: clusterId };
-      const res = await getDeploymentHistoryApi(clusterId, record.namespace, record.name);
-      deploymentHistory.value = res?.items || [];
+      currentOperationStatefulSet.value = { ...record, cluster_id: clusterId };
+      const res = await getStatefulSetHistoryApi(clusterId, record.namespace, record.name);
+      statefulSetHistory.value = res?.items || [];
       isHistoryModalVisible.value = true;
     } catch (err) {
       message.error('获取版本历史失败');
@@ -876,8 +890,8 @@ export function useDeploymentPage() {
 
   const closeHistoryModal = () => {
     isHistoryModalVisible.value = false;
-    currentOperationDeployment.value = null;
-    deploymentHistory.value = [];
+    currentOperationStatefulSet.value = null;
+    statefulSetHistory.value = [];
   };
 
   // 标签过滤管理
@@ -885,20 +899,20 @@ export function useDeploymentPage() {
     if (key && key.trim()) {
       filterLabels.value[key.trim()] = value;
       currentPage.value = 1;
-      fetchDeployments();
+      fetchStatefulSets();
     }
   };
 
   const removeFilterLabel = (key: string) => {
     delete filterLabels.value[key];
     currentPage.value = 1;
-    fetchDeployments();
+    fetchStatefulSets();
   };
 
   const clearFilterLabels = () => {
     filterLabels.value = {};
     currentPage.value = 1;
-    fetchDeployments();
+    fetchStatefulSets();
   };
 
   // 批量操作
@@ -907,30 +921,35 @@ export function useDeploymentPage() {
     
     Modal.confirm({
       title: `批量${operation}`,
-      content: `确定要对选中的 ${selectedRows.value.length} 个 Deployment 执行${operation}操作吗？`,
+      content: `确定要对选中的 ${selectedRows.value.length} 个 StatefulSet 执行${operation}操作吗？`,
       okText: '确认执行',
       okType: operation === '删除' ? 'danger' : 'primary',
       cancelText: '取消',
       centered: true,
       onOk: async () => {
         try {
-          for (const deployment of selectedRows.value) {
-            const clusterId = deployment.cluster_id || filterClusterId.value;
+          for (const statefulSet of selectedRows.value) {
+            const clusterId = statefulSet.cluster_id || filterClusterId.value;
             if (!clusterId) {
-              message.error(`Deployment "${deployment.name}" 缺少有效的集群ID，跳过操作`);
+              message.error(`StatefulSet "${statefulSet.name}" 缺少有效的集群ID，跳过操作`);
               continue;
             }
             
             if (operation === '删除') {
-              await deleteDeploymentApi(clusterId, deployment.namespace, deployment.name);
+              await deleteStatefulSetApi(clusterId, statefulSet.namespace, statefulSet.name);
             } else if (operation === '重启') {
-              await restartDeploymentApi(clusterId, deployment.namespace, deployment.name);
+              const params: RestartStatefulSetReq = {
+                cluster_id: clusterId,
+                namespace: statefulSet.namespace,
+                name: statefulSet.name,
+              };
+              await restartStatefulSetApi(clusterId, statefulSet.namespace, statefulSet.name, params);
             }
           }
           message.success(`✅ 批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
-          await fetchDeployments();
+          await fetchStatefulSets();
         } catch (err) {
           message.error(`❌ 批量${operation}失败`);
           console.error(err);
@@ -974,7 +993,7 @@ export function useDeploymentPage() {
     if (size && size !== pageSize.value) {
       pageSize.value = size;
     }
-    await fetchDeployments();
+    await fetchStatefulSets();
   };
 
   // 表单字段操作
@@ -988,25 +1007,35 @@ export function useDeploymentPage() {
     }
   };
 
-  const addLabelField = () => {
-    // 标签字段通过模态框单独管理
+  const addEditImageField = () => {
+    editFormModel.value.images.push('');
+  };
+
+  const removeEditImageField = (index: number) => {
+    if (editFormModel.value.images.length > 1) {
+      editFormModel.value.images.splice(index, 1);
+    }
   };
 
   const removeLabelField = (key: string) => {
     delete createFormModel.value.labels[key];
   };
 
-  const addAnnotationField = () => {
-    // 注解字段通过模态框单独管理
-  };
-
   const removeAnnotationField = (key: string) => {
     delete createFormModel.value.annotations[key];
   };
 
+  const removeEditLabelField = (key: string) => {
+    editFormModel.value.labels = editFormModel.value.labels.filter(item => item.key !== key);
+  };
+
+  const removeEditAnnotationField = (key: string) => {
+    editFormModel.value.annotations = editFormModel.value.annotations.filter(item => item.key !== key);
+  };
+
   return {
     // state
-    deployments,
+    statefulSets,
     clusters,
     namespaces,
     loading,
@@ -1016,6 +1045,7 @@ export function useDeploymentPage() {
     filterStatus,
     filterClusterId,
     filterNamespace,
+    filterServiceName,
     filterLabels,
     selectedRowKeys,
     selectedRows,
@@ -1031,6 +1061,7 @@ export function useDeploymentPage() {
     
     // form refs
     formRef,
+    editFormRef,
     scaleFormRef,
     rollbackFormRef,
     yamlFormRef,
@@ -1050,11 +1081,11 @@ export function useDeploymentPage() {
     detailLoading,
     
     // operation targets
-    currentOperationDeployment,
-    currentDeploymentDetail,
+    currentOperationStatefulSet,
+    currentStatefulSetDetail,
     currentYamlContent,
-    deploymentPods,
-    deploymentHistory,
+    statefulSetPods,
+    statefulSetHistory,
     
     // form models
     createFormModel,
@@ -1066,13 +1097,14 @@ export function useDeploymentPage() {
     
     // form rules
     createFormRules,
+    editFormRules,
     scaleFormRules,
     rollbackFormRules,
     yamlFormRules,
     createYamlFormRules,
     
     // computed
-    filteredDeployments,
+    filteredStatefulSets,
     rowSelection,
     
     // helpers
@@ -1086,14 +1118,14 @@ export function useDeploymentPage() {
     // operations
     fetchClusters,
     fetchNamespaces,
-    fetchDeployments,
-    clearDeployments,
+    fetchStatefulSets,
+    clearStatefulSets,
     clearNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
     
     // detail operations
-    showDeploymentDetail,
+    showStatefulSetDetail,
     closeDetailModal,
     
     // YAML operations
@@ -1114,11 +1146,9 @@ export function useDeploymentPage() {
     closeEditModal,
     submitEditForm,
     
-    // deployment operations
-    deleteDeployment,
-    restartDeployment,
-    pauseDeployment,
-    resumeDeployment,
+    // statefulSet operations
+    deleteStatefulSet,
+    restartStatefulSet,
     
     // scale operations
     openScaleModal,
@@ -1153,12 +1183,14 @@ export function useDeploymentPage() {
     // form field operations
     addImageField,
     removeImageField,
-    addLabelField,
+    addEditImageField,
+    removeEditImageField,
     removeLabelField,
-    addAnnotationField,
     removeAnnotationField,
+    removeEditLabelField,
+    removeEditAnnotationField,
     
     // constants
-    K8sDeploymentStatus,
+    K8sStatefulSetStatus,
   };
 }

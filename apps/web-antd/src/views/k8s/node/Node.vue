@@ -169,10 +169,12 @@
 
         <template #labels="{ text }">
           <div class="k8s-labels-display">
-            <a-tag v-for="(value, key) in (text || {})" :key="key" class="k8s-label-item" v-if="Object.keys(text || {}).length <= 3">
-              {{ key }}: {{ value }}
-            </a-tag>
-            <a-tooltip v-if="Object.keys(text || {}).length > 3" :title="Object.entries(text || {}).map(([k, v]) => `${k}: ${v}`).join('\n')">
+            <a-tooltip v-for="(value, key) in Object.entries(text || {}).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
+              <a-tag class="k8s-label-item">
+                {{ key }}: {{ value }}
+              </a-tag>
+            </a-tooltip>
+            <a-tooltip v-if="Object.keys(text || {}).length > 3" :title="Object.entries(text || {}).map(([k, v]: any) => `${k}: ${v}`).join('\n')">
               <a-tag class="k8s-label-item">
                 {{ Object.keys(text || {}).length }} 个标签
               </a-tag>
@@ -539,9 +541,11 @@
             <a-col :xs="24" :lg="12">
               <a-card title="标签信息" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display">
-                  <div v-for="(value, key) in (currentNodeDetail.labels || {})" :key="key" class="k8s-label-item" style="margin-bottom: 8px;">
-                    {{ key }}: {{ value }}
-                  </div>
+                  <a-tooltip v-for="(value, key) in (currentNodeDetail.labels || {})" :key="key" :title="`${key}: ${value}`">
+                    <div class="k8s-label-item" style="margin-bottom: 8px;">
+                      {{ key }}: {{ value }}
+                    </div>
+                  </a-tooltip>
                   <span v-if="!currentNodeDetail.labels || Object.keys(currentNodeDetail.labels).length === 0" class="k8s-no-data">
                     暂无标签
                   </span>

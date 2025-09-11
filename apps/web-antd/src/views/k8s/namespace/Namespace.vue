@@ -186,9 +186,11 @@
 
         <template #labels="{ text }">
           <div class="k8s-labels-display">
-            <a-tag v-for="label in (text || []).slice(0, 3)" :key="label.key" class="k8s-label-item">
-              {{ label.key }}: {{ label.value }}
-            </a-tag>
+            <a-tooltip v-for="label in (text || []).slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
+              <a-tag class="k8s-label-item">
+                {{ label.key }}: {{ label.value }}
+              </a-tag>
+            </a-tooltip>
             <a-tooltip v-if="(text || []).length > 3" :title="(text || []).map((item: any) => `${item.key}: ${item.value}`).join('\n')">
               <a-tag class="k8s-label-item">
                 {{ (text || []).length }} 个标签
@@ -504,9 +506,11 @@
             <a-col :xs="24" :lg="12">
               <a-card title="标签信息" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display">
-                  <div v-for="label in (currentNamespaceDetail.labels || [])" :key="label.key" class="k8s-label-item" style="margin-bottom: 8px;">
-                    {{ label.key }}: {{ label.value }}
-                  </div>
+                  <a-tooltip v-for="label in (currentNamespaceDetail.labels || [])" :key="label.key" :title="`${label.key}: ${label.value}`">
+                    <div class="k8s-label-item" style="margin-bottom: 8px;">
+                      {{ label.key }}: {{ label.value }}
+                    </div>
+                  </a-tooltip>
                   <span v-if="!currentNamespaceDetail.labels || currentNamespaceDetail.labels.length === 0" class="k8s-no-data">
                     暂无标签
                   </span>
@@ -519,9 +523,11 @@
             <a-col :xs="24" :lg="12">
               <a-card title="注解信息" class="k8s-detail-card" size="small">
                 <div class="k8s-annotations-display">
-                  <div v-for="annotation in (currentNamespaceDetail.annotations || [])" :key="annotation.key" class="k8s-annotation-item" style="margin-bottom: 8px;">
-                    {{ annotation.key }}: {{ annotation.value }}
-                  </div>
+                  <a-tooltip v-for="annotation in (currentNamespaceDetail.annotations || [])" :key="annotation.key" :title="`${annotation.key}: ${annotation.value}`" placement="top">
+                    <a-tag class="k8s-annotation-item" style="margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                      {{ annotation.key }}: {{ annotation.value }}
+                    </a-tag>
+                  </a-tooltip>
                   <span v-if="!currentNamespaceDetail.annotations || currentNamespaceDetail.annotations.length === 0" class="k8s-no-data">
                     暂无注解
                   </span>

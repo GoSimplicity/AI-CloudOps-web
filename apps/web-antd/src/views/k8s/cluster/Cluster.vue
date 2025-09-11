@@ -149,13 +149,12 @@
 
         <template #tags="{ text }">
           <div class="k8s-labels-display">
-            <a-tag v-for="tag in (text || []).slice(0, 3)" :key="tag.key" class="k8s-label-item" v-if="(text || []).length <= 3">
-              {{ tag.key }}: {{ tag.value }}
-            </a-tag>
-            <a-tag v-for="tag in (text || []).slice(0, 3)" :key="tag.key" class="k8s-label-item" v-if="(text || []).length > 3">
-              {{ tag.key }}: {{ tag.value }}
-            </a-tag>
-            <a-tooltip v-if="(text || []).length > 3" :title="(text || []).map(tag => `${tag.key}: ${tag.value}`).join('\n')">
+            <a-tooltip v-for="tag in (text || []).slice(0, 3)" :key="tag.key" :title="`${tag.key}: ${tag.value}`">
+              <a-tag class="k8s-label-item">
+                {{ tag.key }}: {{ tag.value }}
+              </a-tag>
+            </a-tooltip>
+            <a-tooltip v-if="(text || []).length > 3" :title="(text || []).map((tag: any) => `${tag.key}: ${tag.value}`).join('\n')">
               <a-tag class="k8s-label-item">
                 {{ (text || []).length }} 个标签
               </a-tag>
@@ -530,9 +529,11 @@
             <a-col :xs="24" :lg="12">
               <a-card title="标签信息" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display">
-                  <div v-for="tag in (currentClusterDetail.tags || [])" :key="tag.key" class="k8s-label-item" style="margin-bottom: 8px;">
-                    {{ tag.key }}: {{ tag.value }}
-                  </div>
+                  <a-tooltip v-for="tag in (currentClusterDetail.tags || [])" :key="tag.key" :title="`${tag.key}: ${tag.value}`">
+                    <div class="k8s-label-item" style="margin-bottom: 8px;">
+                      {{ tag.key }}: {{ tag.value }}
+                    </div>
+                  </a-tooltip>
                   <span v-if="!currentClusterDetail.tags || currentClusterDetail.tags.length === 0" class="k8s-no-data">
                     暂无标签
                   </span>

@@ -2,29 +2,29 @@ import { ref, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 import {
-  type K8sDeployment,
-  type GetDeploymentListReq,
-  type CreateDeploymentReq,
-  type CreateDeploymentByYamlReq,
-  type UpdateDeploymentReq,
-  type UpdateDeploymentByYamlReq,
-  K8sDeploymentStatus,
-  getDeploymentListApi,
-  getDeploymentDetailsApi,
-  getDeploymentYamlApi,
-  createDeploymentApi,
-  createDeploymentByYamlApi,
-  updateDeploymentApi,
-  updateDeploymentByYamlApi,
-  deleteDeploymentApi,
-  restartDeploymentApi,
-  scaleDeploymentApi,
-  pauseDeploymentApi,
-  resumeDeploymentApi,
-  rollbackDeploymentApi,
-  getDeploymentPodsApi,
-  getDeploymentHistoryApi,
-} from '#/api/core/k8s/k8s_deployment';
+  type K8sDaemonSet,
+  type K8sDaemonSetHistory,
+  type GetDaemonSetListReq,
+  type CreateDaemonSetReq,
+  type CreateDaemonSetByYamlReq,
+  type UpdateDaemonSetReq,
+  type UpdateDaemonSetByYamlReq,
+  type RestartDaemonSetReq,
+  type RollbackDaemonSetReq,
+  K8sDaemonSetStatus,
+  getDaemonSetListApi,
+  getDaemonSetDetailsApi,
+  getDaemonSetYamlApi,
+  createDaemonSetApi,
+  createDaemonSetByYamlApi,
+  updateDaemonSetApi,
+  updateDaemonSetByYamlApi,
+  deleteDaemonSetApi,
+  restartDaemonSetApi,
+  rollbackDaemonSetApi,
+  getDaemonSetPodsApi,
+  getDaemonSetHistoryApi,
+} from '#/api/core/k8s/k8s_daemonset';
 import {
   type K8sCluster,
   type ListClustersReq,
@@ -38,21 +38,21 @@ import {
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
 
-export function useDeploymentPage() {
+export function useDaemonSetPage() {
   // state
-  const deployments = ref<K8sDeployment[]>([]);
+  const daemonSets = ref<K8sDaemonSet[]>([]);
   const clusters = ref<K8sCluster[]>([]);
   const namespaces = ref<K8sNamespace[]>([]);
   const loading = ref(false);
   const clustersLoading = ref(false);
   const namespacesLoading = ref(false);
   const searchText = ref('');
-  const filterStatus = ref<K8sDeploymentStatus | undefined>(undefined);
+  const filterStatus = ref<K8sDaemonSetStatus | undefined>(undefined);
   const filterClusterId = ref<number | undefined>(undefined);
   const filterNamespace = ref<string | undefined>(undefined);
   const filterLabels = ref<Record<string, string>>({});
   const selectedRowKeys = ref<string[]>([]);
-  const selectedRows = ref<K8sDeployment[]>([]);
+  const selectedRows = ref<K8sDaemonSet[]>([]);
   const currentPage = ref(1);
   const pageSize = ref(10);
   const total = ref(0);
@@ -65,7 +65,7 @@ export function useDeploymentPage() {
 
   // form refs
   const formRef = ref<FormInstance>();
-  const scaleFormRef = ref<FormInstance>();
+  const editFormRef = ref<FormInstance>();
   const rollbackFormRef = ref<FormInstance>();
   const yamlFormRef = ref<FormInstance>();
   const createYamlFormRef = ref<FormInstance>();
@@ -75,7 +75,6 @@ export function useDeploymentPage() {
   const isCreateYamlModalVisible = ref(false);
   const isEditModalVisible = ref(false);
   const isDetailModalVisible = ref(false);
-  const isScaleModalVisible = ref(false);
   const isRollbackModalVisible = ref(false);
   const isYamlModalVisible = ref(false);
   const isPodModalVisible = ref(false);
@@ -84,24 +83,22 @@ export function useDeploymentPage() {
   const detailLoading = ref(false);
 
   // current operation target
-  const currentOperationDeployment = ref<K8sDeployment | null>(null);
-  const currentDeploymentDetail = ref<K8sDeployment | null>(null);
+  const currentOperationDaemonSet = ref<K8sDaemonSet | null>(null);
+  const currentDaemonSetDetail = ref<K8sDaemonSet | null>(null);
   const currentYamlContent = ref('');
-  const deploymentPods = ref<any[]>([]);
-  const deploymentHistory = ref<any[]>([]);
+  const daemonSetPods = ref<any[]>([]);
+  const daemonSetHistory = ref<K8sDaemonSetHistory[]>([]);
 
   // form models
   const createFormModel = ref<{
     name: string;
     namespace: string;
-    replicas: number;
     images: string[];
     labels: Record<string, string>;
     annotations: Record<string, string>;
   }>({
     name: '',
     namespace: '',
-    replicas: 1,
     images: [''],
     labels: {},
     annotations: {},
@@ -110,23 +107,15 @@ export function useDeploymentPage() {
   const editFormModel = ref<{
     name: string;
     namespace: string;
-    replicas: number;
-    images: string[];
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
+    image: string;
+    labels: KeyValueList;
+    annotations: KeyValueList;
   }>({
     name: '',
     namespace: '',
-    replicas: 1,
-    images: [''],
-    labels: {},
-    annotations: {},
-  });
-
-  const scaleFormModel = ref<{
-    replicas: number;
-  }>({
-    replicas: 1,
+    image: '',
+    labels: [],
+    annotations: [],
   });
 
   const rollbackFormModel = ref<{
@@ -150,23 +139,12 @@ export function useDeploymentPage() {
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
-      { required: true, message: '请输入 Deployment 名称', trigger: 'blur' },
-      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'Deployment 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
-      { max: 63, message: 'Deployment 名称长度不能超过63个字符', trigger: 'blur' }
+      { required: true, message: '请输入 DaemonSet 名称', trigger: 'blur' },
+      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'DaemonSet 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
+      { max: 63, message: 'DaemonSet 名称长度不能超过63个字符', trigger: 'blur' }
     ],
     namespace: [
       { required: true, message: '请选择命名空间', trigger: 'change' }
-    ],
-    replicas: [
-      { required: true, message: '请输入副本数量', trigger: 'blur' },
-      { type: 'number', min: 0, max: 100, message: '副本数量必须在0-100之间', trigger: 'blur' }
-    ]
-  };
-
-  const scaleFormRules: Record<string, Rule[]> = {
-    replicas: [
-      { required: true, message: '请输入副本数量', trigger: 'blur' },
-      { type: 'number', min: 0, max: 100, message: '副本数量必须在0-100之间', trigger: 'blur' }
     ]
   };
 
@@ -192,20 +170,20 @@ export function useDeploymentPage() {
   };
 
   // computed
-  const filteredDeployments = computed(() => {
-    return deployments.value;
+  const filteredDaemonSets = computed(() => {
+    return daemonSets.value;
   });
 
   const rowSelection = computed(() => ({
     selectedRowKeys: selectedRowKeys.value,
-    onChange: (keys: string[], rows: K8sDeployment[]) => {
+    onChange: (keys: string[], rows: K8sDaemonSet[]) => {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
   }));
 
   // helpers
-  const validateClusterId = (record: K8sDeployment): number | null => {
+  const validateClusterId = (record: K8sDaemonSet): number | null => {
     const clusterId = record.cluster_id || filterClusterId.value;
     if (!clusterId || clusterId === 0) {
       message.error('无效的集群ID，请重新选择集群');
@@ -227,22 +205,20 @@ export function useDeploymentPage() {
     return map[value] || '未知环境';
   };
 
-  const getStatusText = (status?: K8sDeploymentStatus) => {
-    const map: Record<K8sDeploymentStatus, string> = {
-      [K8sDeploymentStatus.Running]: '运行中',
-      [K8sDeploymentStatus.Stopped]: '已停止',
-      [K8sDeploymentStatus.Paused]: '已暂停',
-      [K8sDeploymentStatus.Error]: '异常',
+  const getStatusText = (status?: K8sDaemonSetStatus) => {
+    const map: Record<K8sDaemonSetStatus, string> = {
+      [K8sDaemonSetStatus.Running]: '运行中',
+      [K8sDaemonSetStatus.Error]: '异常',
+      [K8sDaemonSetStatus.Updating]: '更新中',
     };
     return status !== undefined ? map[status] || '未知' : '未知';
   };
 
-  const getStatusColor = (status?: K8sDeploymentStatus) => {
-    const map: Record<K8sDeploymentStatus, string> = {
-      [K8sDeploymentStatus.Running]: 'success',
-      [K8sDeploymentStatus.Stopped]: 'default',
-      [K8sDeploymentStatus.Paused]: 'warning',
-      [K8sDeploymentStatus.Error]: 'error',
+  const getStatusColor = (status?: K8sDaemonSetStatus) => {
+    const map: Record<K8sDaemonSetStatus, string> = {
+      [K8sDaemonSetStatus.Running]: 'success',
+      [K8sDaemonSetStatus.Error]: 'error',
+      [K8sDaemonSetStatus.Updating]: 'processing',
     };
     return status !== undefined ? map[status] || 'default' : 'default';
   };
@@ -273,8 +249,8 @@ export function useDeploymentPage() {
   };
 
   // cluster operations
-  const clearDeployments = () => {
-    deployments.value = [];
+  const clearDaemonSets = () => {
+    daemonSets.value = [];
     selectedRowKeys.value = [];
     selectedRows.value = [];
   };
@@ -308,9 +284,9 @@ export function useDeploymentPage() {
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
           message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
-          // 自动加载该集群的命名空间和Deployment数据
+          // 自动加载该集群的命名空间和DaemonSet数据
           await fetchNamespaces();
-          await fetchDeployments();
+          await fetchDaemonSets();
         }
       }
     } catch (err) {
@@ -351,35 +327,37 @@ export function useDeploymentPage() {
   };
 
   // crud operations
-  const fetchDeployments = async () => {
+  const fetchDaemonSets = async () => {
     if (!filterClusterId.value || filterClusterId.value === 0) {
       message.warning('请先选择有效的集群');
-      deployments.value = [];
+      daemonSets.value = [];
       total.value = 0;
       return;
     }
 
     try {
       loading.value = true;
-      const params: GetDeploymentListReq = {
+      const params: GetDaemonSetListReq = {
         page: currentPage.value,
         size: pageSize.value,
         search: searchText.value || undefined,
         cluster_id: filterClusterId.value,
         namespace: filterNamespace.value || undefined,
-        status: filterStatus.value || undefined,
-        labels: Object.keys(filterLabels.value).length > 0 ? filterLabels.value : undefined,
+        status: filterStatus.value?.toString() || undefined,
+        labels: Object.keys(filterLabels.value).length > 0 
+          ? Object.entries(filterLabels.value).map(([key, value]: [string, string]) => ({ key, value }))
+          : undefined,
       };
-      const res = await getDeploymentListApi(filterClusterId.value, params);
-      // 确保每个deployment对象都有正确的cluster_id
-      const deploymentsWithClusterId = (res?.items || []).map((deployment: K8sDeployment) => ({
-        ...deployment,
-        cluster_id: deployment.cluster_id || filterClusterId.value || 0
+      const res = await getDaemonSetListApi(filterClusterId.value, params);
+      // 确保每个daemonSet对象都有正确的cluster_id
+      const daemonSetsWithClusterId = (res?.items || []).map((daemonSet: K8sDaemonSet) => ({
+        ...daemonSet,
+        cluster_id: daemonSet.cluster_id || filterClusterId.value || 0
       }));
-      deployments.value = deploymentsWithClusterId;
+      daemonSets.value = daemonSetsWithClusterId;
       total.value = res?.total || 0;
     } catch (err) {
-      message.error('获取 Deployment 列表失败');
+      message.error('获取 DaemonSet 列表失败');
       console.error(err);
     } finally {
       loading.value = false;
@@ -387,40 +365,34 @@ export function useDeploymentPage() {
   };
 
   // 查看详情
-  const showDeploymentDetail = async (record: K8sDeployment) => {
+  const showDaemonSetDetail = async (record: K8sDaemonSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
-      const res = await getDeploymentDetailsApi(clusterId, record.namespace, record.name);
+      const res = await getDaemonSetDetailsApi(clusterId, record.namespace, record.name);
       
-      // 转换标签和注解格式：从对象转为数组
+      // 处理详情数据
       const processedDetail = res ? {
         ...res,
-        cluster_id: clusterId,
-        labels: res.labels ? recordToKeyValueList(res.labels) : [],
-        annotations: res.annotations ? recordToKeyValueList(res.annotations) : []
+        cluster_id: clusterId
       } : { 
         ...record, 
-        cluster_id: clusterId,
-        labels: record.labels ? recordToKeyValueList(record.labels) : [],
-        annotations: record.annotations ? recordToKeyValueList(record.annotations) : []
+        cluster_id: clusterId
       };
       
-      currentDeploymentDetail.value = processedDetail;
+      currentDaemonSetDetail.value = processedDetail;
     } catch (err) {
-      message.error('获取 Deployment 详情失败');
+      message.error('获取 DaemonSet 详情失败');
       console.error(err);
-      // 错误时也要处理格式转换
+      // 错误时设置fallback数据
       const fallbackDetail = { 
         ...record, 
-        cluster_id: clusterId,
-        labels: record.labels ? recordToKeyValueList(record.labels) : [],
-        annotations: record.annotations ? recordToKeyValueList(record.annotations) : []
+        cluster_id: clusterId
       };
-      currentDeploymentDetail.value = fallbackDetail;
+      currentDaemonSetDetail.value = fallbackDetail;
     } finally {
       detailLoading.value = false;
     }
@@ -428,23 +400,23 @@ export function useDeploymentPage() {
 
   const closeDetailModal = () => {
     isDetailModalVisible.value = false;
-    currentDeploymentDetail.value = null;
+    currentDaemonSetDetail.value = null;
   };
 
   // YAML 操作
-  const showYamlModal = async (record: K8sDeployment) => {
+  const showYamlModal = async (record: K8sDaemonSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
     try {
       submitLoading.value = true;
-      currentOperationDeployment.value = { ...record, cluster_id: clusterId };
-      const res = await getDeploymentYamlApi(clusterId, record.namespace, record.name);
+      currentOperationDaemonSet.value = { ...record, cluster_id: clusterId };
+      const res = await getDaemonSetYamlApi(clusterId, record.namespace, record.name);
       currentYamlContent.value = res?.yaml || '';
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (err) {
-      message.error('获取 Deployment YAML 失败');
+      message.error('获取 DaemonSet YAML 失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -453,49 +425,51 @@ export function useDeploymentPage() {
 
   const closeYamlModal = () => {
     isYamlModalVisible.value = false;
-    currentOperationDeployment.value = null;
+    currentOperationDaemonSet.value = null;
     currentYamlContent.value = '';
     yamlFormModel.value.yaml = '';
   };
 
   const submitYamlForm = async () => {
-    if (!yamlFormRef.value || !currentOperationDeployment.value) return;
+    if (!yamlFormRef.value || !currentOperationDaemonSet.value) return;
     
     try {
       await yamlFormRef.value.validate();
       submitLoading.value = true;
       
-      const params: Omit<UpdateDeploymentByYamlReq, 'cluster_id' | 'namespace' | 'name'> = {
+      const params: UpdateDaemonSetByYamlReq = {
+        cluster_id: currentOperationDaemonSet.value.cluster_id,
+        namespace: currentOperationDaemonSet.value.namespace,
+        name: currentOperationDaemonSet.value.name,
         yaml: yamlFormModel.value.yaml,
       };
       
-      await updateDeploymentByYamlApi(
-        currentOperationDeployment.value.cluster_id,
-        currentOperationDeployment.value.namespace,
-        currentOperationDeployment.value.name,
+      await updateDaemonSetByYamlApi(
+        currentOperationDaemonSet.value.cluster_id,
+        currentOperationDaemonSet.value.namespace,
+        currentOperationDaemonSet.value.name,
         params
       );
-      message.success('🎉 Deployment YAML 更新成功');
+      message.success('🎉 DaemonSet YAML 更新成功');
       isYamlModalVisible.value = false;
-      await fetchDeployments();
+      await fetchDaemonSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ Deployment YAML 更新失败');
+      message.error('❌ DaemonSet YAML 更新失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
     }
   };
 
-  // 创建 Deployment
+  // 创建 DaemonSet
   const openCreateModal = () => {
     createFormModel.value = {
       name: '',
       namespace: '',
-      replicas: 1,
       images: [''],
       labels: {},
       annotations: {},
@@ -507,7 +481,7 @@ export function useDeploymentPage() {
     isCreateModalVisible.value = false;
   };
 
-  // 通过 YAML 创建 Deployment
+  // 通过 YAML 创建 DaemonSet
   const openCreateYamlModal = () => {
     createYamlFormModel.value.yaml = '';
     isCreateYamlModalVisible.value = true;
@@ -525,28 +499,25 @@ export function useDeploymentPage() {
       await formRef.value.validate();
       submitLoading.value = true;
       
-      const params: Omit<CreateDeploymentReq, 'cluster_id'> = {
+      const params: CreateDaemonSetReq = {
+        cluster_id: filterClusterId.value,
         name: createFormModel.value.name,
         namespace: createFormModel.value.namespace,
-        replicas: createFormModel.value.replicas,
         images: createFormModel.value.images.filter(img => img.trim()),
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
-        spec: {
-          replicas: createFormModel.value.replicas,
-        },
+        labels: Object.keys(createFormModel.value.labels).length > 0 ? recordToKeyValueList(createFormModel.value.labels) : undefined,
+        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? recordToKeyValueList(createFormModel.value.annotations) : undefined,
       };
       
-      await createDeploymentApi(filterClusterId.value, params);
-      message.success('🎉 Deployment 创建成功');
+      await createDaemonSetApi(filterClusterId.value, params);
+      message.success('🎉 DaemonSet 创建成功');
       isCreateModalVisible.value = false;
-      await fetchDeployments();
+      await fetchDaemonSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ Deployment 创建失败');
+      message.error('❌ DaemonSet 创建失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -560,270 +531,182 @@ export function useDeploymentPage() {
       await createYamlFormRef.value.validate();
       submitLoading.value = true;
       
-      const params: Omit<CreateDeploymentByYamlReq, 'cluster_id'> = {
+      const params: CreateDaemonSetByYamlReq = {
+        cluster_id: filterClusterId.value,
         yaml: createYamlFormModel.value.yaml,
       };
       
-      await createDeploymentByYamlApi(filterClusterId.value, params);
-      message.success('🎉 Deployment YAML 创建成功');
+      await createDaemonSetByYamlApi(filterClusterId.value, params);
+      message.success('🎉 DaemonSet YAML 创建成功');
       isCreateYamlModalVisible.value = false;
-      await fetchDeployments();
+      await fetchDaemonSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ Deployment YAML 创建失败');
+      message.error('❌ DaemonSet YAML 创建失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
     }
   };
 
-  // 编辑 Deployment
-  const openEditModal = (record: K8sDeployment) => {
-    currentOperationDeployment.value = record;
-    editFormModel.value = {
-      name: record.name,
-      namespace: record.namespace,
-      replicas: record.replicas,
-      images: record.images || [''],
-      labels: record.labels || {},
-      annotations: record.annotations || {},
-    };
-    isEditModalVisible.value = true;
-  };
-
-  const closeEditModal = () => {
-    isEditModalVisible.value = false;
-    currentOperationDeployment.value = null;
-  };
-
-  const submitEditForm = async () => {
-    if (!formRef.value || !currentOperationDeployment.value) return;
-    
-    try {
-      await formRef.value.validate();
-      submitLoading.value = true;
-      
-      const params: Omit<UpdateDeploymentReq, 'cluster_id' | 'namespace' | 'name'> = {
-        replicas: editFormModel.value.replicas,
-        images: editFormModel.value.images.filter(img => img.trim()),
-        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
-        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
-        spec: {
-          replicas: editFormModel.value.replicas,
-        },
-      };
-      
-      await updateDeploymentApi(
-        currentOperationDeployment.value.cluster_id,
-        currentOperationDeployment.value.namespace,
-        currentOperationDeployment.value.name,
-        params
-      );
-      message.success('🎉 Deployment 更新成功');
-      isEditModalVisible.value = false;
-      await fetchDeployments();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
-        return;
-      }
-      message.error('❌ Deployment 更新失败');
-      console.error(err);
-    } finally {
-      submitLoading.value = false;
-    }
-  };
-
-  // 删除 Deployment
-  const deleteDeployment = (record: K8sDeployment) => {
+  // 删除 DaemonSet
+  const deleteDaemonSet = (record: K8sDaemonSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
     Modal.confirm({
-      title: '删除 Deployment',
-      content: `确定要删除 Deployment "${record.name}" 吗？此操作不可逆！`,
+      title: '删除 DaemonSet',
+      content: `确定要删除 DaemonSet "${record.name}" 吗？此操作不可逆！`,
       okText: '确认删除',
       okType: 'danger',
       cancelText: '取消',
       centered: true,
       onOk: async () => {
         try {
-          await deleteDeploymentApi(clusterId, record.namespace, record.name);
-          message.success('✅ Deployment 删除成功');
-          await fetchDeployments();
+          await deleteDaemonSetApi(clusterId, record.namespace, record.name);
+          message.success('✅ DaemonSet 删除成功');
+          await fetchDaemonSets();
         } catch (err) {
-          message.error('❌ Deployment 删除失败');
+          message.error('❌ DaemonSet 删除失败');
           console.error(err);
         }
       },
     });
   };
 
-  // 重启 Deployment
-  const restartDeployment = (record: K8sDeployment) => {
+  // 重启 DaemonSet
+  const restartDaemonSet = (record: K8sDaemonSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
     Modal.confirm({
-      title: '重启 Deployment',
-      content: `确定要重启 Deployment "${record.name}" 吗？这将重启所有 Pod。`,
+      title: '重启 DaemonSet',
+      content: `确定要重启 DaemonSet "${record.name}" 吗？这将重启所有 Pod。`,
       okText: '确认重启',
       okType: 'primary',
       cancelText: '取消',
       centered: true,
       onOk: async () => {
         try {
-          await restartDeploymentApi(clusterId, record.namespace, record.name);
-          message.success('✅ Deployment 重启成功');
-          await fetchDeployments();
+          const params: RestartDaemonSetReq = {
+            cluster_id: clusterId,
+            namespace: record.namespace,
+            name: record.name,
+          };
+          await restartDaemonSetApi(clusterId, record.namespace, record.name, params);
+          message.success('✅ DaemonSet 重启成功');
+          await fetchDaemonSets();
         } catch (err) {
-          message.error('❌ Deployment 重启失败');
+          message.error('❌ DaemonSet 重启失败');
           console.error(err);
         }
       },
     });
   };
 
-  // 伸缩 Deployment
-  const openScaleModal = (record: K8sDeployment) => {
+  // 编辑 DaemonSet
+  const openEditModal = (record: K8sDaemonSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
-    currentOperationDeployment.value = { ...record, cluster_id: clusterId };
-    scaleFormModel.value.replicas = record.replicas;
-    isScaleModalVisible.value = true;
+    currentOperationDaemonSet.value = { ...record, cluster_id: clusterId };
+    editFormModel.value = {
+      name: record.name,
+      namespace: record.namespace,
+      image: record.images?.[0] || '',
+      labels: recordToKeyValueList(keyValueListToRecord(record.labels)),
+      annotations: recordToKeyValueList(keyValueListToRecord(record.annotations)),
+    };
+    isEditModalVisible.value = true;
   };
 
-  const closeScaleModal = () => {
-    isScaleModalVisible.value = false;
-    currentOperationDeployment.value = null;
+  const closeEditModal = () => {
+    isEditModalVisible.value = false;
+    currentOperationDaemonSet.value = null;
   };
 
-  const submitScaleForm = async () => {
-    if (!scaleFormRef.value || !currentOperationDeployment.value) return;
+  const submitEditForm = async () => {
+    if (!editFormRef.value || !currentOperationDaemonSet.value) return;
     
     try {
-      await scaleFormRef.value.validate();
+      await editFormRef.value.validate();
       submitLoading.value = true;
       
-      const params = {
-        replicas: scaleFormModel.value.replicas,
+      const params: UpdateDaemonSetReq = {
+        cluster_id: currentOperationDaemonSet.value.cluster_id,
+        images: editFormModel.value.image ? [editFormModel.value.image] : undefined,
+        labels: editFormModel.value.labels.length > 0 ? keyValueListToRecord(editFormModel.value.labels) : undefined,
+        annotations: editFormModel.value.annotations.length > 0 ? keyValueListToRecord(editFormModel.value.annotations) : undefined,
       };
       
-      await scaleDeploymentApi(
-        currentOperationDeployment.value.cluster_id,
-        currentOperationDeployment.value.namespace,
-        currentOperationDeployment.value.name,
+      await updateDaemonSetApi(
+        currentOperationDaemonSet.value.cluster_id,
+        currentOperationDaemonSet.value.namespace,
+        currentOperationDaemonSet.value.name,
         params
       );
-      message.success('🎉 Deployment 伸缩成功');
-      isScaleModalVisible.value = false;
-      await fetchDeployments();
+      message.success('🎉 DaemonSet 更新成功');
+      isEditModalVisible.value = false;
+      await fetchDaemonSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ Deployment 伸缩失败');
+      message.error('❌ DaemonSet 更新失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
     }
   };
 
-  // 暂停/恢复 Deployment
-  const pauseDeployment = (record: K8sDeployment) => {
+  // 回滚 DaemonSet
+  const openRollbackModal = (record: K8sDaemonSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
-    Modal.confirm({
-      title: '暂停 Deployment',
-      content: `确定要暂停 Deployment "${record.name}" 吗？`,
-      okText: '确认暂停',
-      okType: 'primary',
-      cancelText: '取消',
-      centered: true,
-      onOk: async () => {
-        try {
-          await pauseDeploymentApi(clusterId, record.namespace, record.name);
-          message.success('✅ Deployment 暂停成功');
-          await fetchDeployments();
-        } catch (err) {
-          message.error('❌ Deployment 暂停失败');
-          console.error(err);
-        }
-      },
-    });
-  };
-
-  const resumeDeployment = (record: K8sDeployment) => {
-    const clusterId = validateClusterId(record);
-    if (!clusterId) return;
-    
-    Modal.confirm({
-      title: '恢复 Deployment',
-      content: `确定要恢复 Deployment "${record.name}" 吗？`,
-      okText: '确认恢复',
-      okType: 'primary',
-      cancelText: '取消',
-      centered: true,
-      onOk: async () => {
-        try {
-          await resumeDeploymentApi(clusterId, record.namespace, record.name);
-          message.success('✅ Deployment 恢复成功');
-          await fetchDeployments();
-        } catch (err) {
-          message.error('❌ Deployment 恢复失败');
-          console.error(err);
-        }
-      },
-    });
-  };
-
-  // 回滚 Deployment
-  const openRollbackModal = (record: K8sDeployment) => {
-    const clusterId = validateClusterId(record);
-    if (!clusterId) return;
-    
-    currentOperationDeployment.value = { ...record, cluster_id: clusterId };
+    currentOperationDaemonSet.value = { ...record, cluster_id: clusterId };
     rollbackFormModel.value.revision = 1;
     isRollbackModalVisible.value = true;
   };
 
   const closeRollbackModal = () => {
     isRollbackModalVisible.value = false;
-    currentOperationDeployment.value = null;
+    currentOperationDaemonSet.value = null;
   };
 
   const submitRollbackForm = async () => {
-    if (!rollbackFormRef.value || !currentOperationDeployment.value) return;
+    if (!rollbackFormRef.value || !currentOperationDaemonSet.value) return;
     
     try {
       await rollbackFormRef.value.validate();
       submitLoading.value = true;
       
-      const params = {
+      const params: RollbackDaemonSetReq = {
+        cluster_id: currentOperationDaemonSet.value.cluster_id,
+        namespace: currentOperationDaemonSet.value.namespace,
+        name: currentOperationDaemonSet.value.name,
         revision: rollbackFormModel.value.revision,
       };
       
-      await rollbackDeploymentApi(
-        currentOperationDeployment.value.cluster_id,
-        currentOperationDeployment.value.namespace,
-        currentOperationDeployment.value.name,
+      await rollbackDaemonSetApi(
+        currentOperationDaemonSet.value.cluster_id,
+        currentOperationDaemonSet.value.namespace,
+        currentOperationDaemonSet.value.name,
         params
       );
-      message.success('🎉 Deployment 回滚成功');
+      message.success('🎉 DaemonSet 回滚成功');
       isRollbackModalVisible.value = false;
-      await fetchDeployments();
+      await fetchDaemonSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ Deployment 回滚失败');
+      message.error('❌ DaemonSet 回滚失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -831,15 +714,15 @@ export function useDeploymentPage() {
   };
 
   // 查看 Pod 列表
-  const showPodModal = async (record: K8sDeployment) => {
+  const showPodModal = async (record: K8sDaemonSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
     try {
       submitLoading.value = true;
-      currentOperationDeployment.value = { ...record, cluster_id: clusterId };
-      const res = await getDeploymentPodsApi(clusterId, record.namespace, record.name);
-      deploymentPods.value = res?.items || [];
+      currentOperationDaemonSet.value = { ...record, cluster_id: clusterId };
+      const res = await getDaemonSetPodsApi(clusterId, record.namespace, record.name);
+      daemonSetPods.value = res?.items || [];
       isPodModalVisible.value = true;
     } catch (err) {
       message.error('获取 Pod 列表失败');
@@ -851,20 +734,20 @@ export function useDeploymentPage() {
 
   const closePodModal = () => {
     isPodModalVisible.value = false;
-    currentOperationDeployment.value = null;
-    deploymentPods.value = [];
+    currentOperationDaemonSet.value = null;
+    daemonSetPods.value = [];
   };
 
   // 查看版本历史
-  const showHistoryModal = async (record: K8sDeployment) => {
+  const showHistoryModal = async (record: K8sDaemonSet) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
     try {
       submitLoading.value = true;
-      currentOperationDeployment.value = { ...record, cluster_id: clusterId };
-      const res = await getDeploymentHistoryApi(clusterId, record.namespace, record.name);
-      deploymentHistory.value = res?.items || [];
+      currentOperationDaemonSet.value = { ...record, cluster_id: clusterId };
+      const res = await getDaemonSetHistoryApi(clusterId, record.namespace, record.name);
+      daemonSetHistory.value = res?.items || [];
       isHistoryModalVisible.value = true;
     } catch (err) {
       message.error('获取版本历史失败');
@@ -876,8 +759,8 @@ export function useDeploymentPage() {
 
   const closeHistoryModal = () => {
     isHistoryModalVisible.value = false;
-    currentOperationDeployment.value = null;
-    deploymentHistory.value = [];
+    currentOperationDaemonSet.value = null;
+    daemonSetHistory.value = [];
   };
 
   // 标签过滤管理
@@ -885,20 +768,20 @@ export function useDeploymentPage() {
     if (key && key.trim()) {
       filterLabels.value[key.trim()] = value;
       currentPage.value = 1;
-      fetchDeployments();
+      fetchDaemonSets();
     }
   };
 
   const removeFilterLabel = (key: string) => {
     delete filterLabels.value[key];
     currentPage.value = 1;
-    fetchDeployments();
+    fetchDaemonSets();
   };
 
   const clearFilterLabels = () => {
     filterLabels.value = {};
     currentPage.value = 1;
-    fetchDeployments();
+    fetchDaemonSets();
   };
 
   // 批量操作
@@ -907,30 +790,35 @@ export function useDeploymentPage() {
     
     Modal.confirm({
       title: `批量${operation}`,
-      content: `确定要对选中的 ${selectedRows.value.length} 个 Deployment 执行${operation}操作吗？`,
+      content: `确定要对选中的 ${selectedRows.value.length} 个 DaemonSet 执行${operation}操作吗？`,
       okText: '确认执行',
       okType: operation === '删除' ? 'danger' : 'primary',
       cancelText: '取消',
       centered: true,
       onOk: async () => {
         try {
-          for (const deployment of selectedRows.value) {
-            const clusterId = deployment.cluster_id || filterClusterId.value;
+          for (const daemonSet of selectedRows.value) {
+            const clusterId = daemonSet.cluster_id || filterClusterId.value;
             if (!clusterId) {
-              message.error(`Deployment "${deployment.name}" 缺少有效的集群ID，跳过操作`);
+              message.error(`DaemonSet "${daemonSet.name}" 缺少有效的集群ID，跳过操作`);
               continue;
             }
             
             if (operation === '删除') {
-              await deleteDeploymentApi(clusterId, deployment.namespace, deployment.name);
+              await deleteDaemonSetApi(clusterId, daemonSet.namespace, daemonSet.name);
             } else if (operation === '重启') {
-              await restartDeploymentApi(clusterId, deployment.namespace, deployment.name);
+              const params: RestartDaemonSetReq = {
+                cluster_id: clusterId,
+                namespace: daemonSet.namespace,
+                name: daemonSet.name,
+              };
+              await restartDaemonSetApi(clusterId, daemonSet.namespace, daemonSet.name, params);
             }
           }
           message.success(`✅ 批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
-          await fetchDeployments();
+          await fetchDaemonSets();
         } catch (err) {
           message.error(`❌ 批量${operation}失败`);
           console.error(err);
@@ -974,7 +862,7 @@ export function useDeploymentPage() {
     if (size && size !== pageSize.value) {
       pageSize.value = size;
     }
-    await fetchDeployments();
+    await fetchDaemonSets();
   };
 
   // 表单字段操作
@@ -988,25 +876,26 @@ export function useDeploymentPage() {
     }
   };
 
-  const addLabelField = () => {
-    // 标签字段通过模态框单独管理
-  };
-
   const removeLabelField = (key: string) => {
     delete createFormModel.value.labels[key];
-  };
-
-  const addAnnotationField = () => {
-    // 注解字段通过模态框单独管理
   };
 
   const removeAnnotationField = (key: string) => {
     delete createFormModel.value.annotations[key];
   };
 
+  // 编辑模态框专用的移除方法
+  const removeEditLabelField = (key: string) => {
+    editFormModel.value.labels = editFormModel.value.labels.filter(label => label.key !== key);
+  };
+
+  const removeEditAnnotationField = (key: string) => {
+    editFormModel.value.annotations = editFormModel.value.annotations.filter(annotation => annotation.key !== key);
+  };
+
   return {
     // state
-    deployments,
+    daemonSets,
     clusters,
     namespaces,
     loading,
@@ -1031,7 +920,7 @@ export function useDeploymentPage() {
     
     // form refs
     formRef,
-    scaleFormRef,
+    editFormRef,
     rollbackFormRef,
     yamlFormRef,
     createYamlFormRef,
@@ -1041,7 +930,6 @@ export function useDeploymentPage() {
     isCreateYamlModalVisible,
     isEditModalVisible,
     isDetailModalVisible,
-    isScaleModalVisible,
     isRollbackModalVisible,
     isYamlModalVisible,
     isPodModalVisible,
@@ -1050,29 +938,27 @@ export function useDeploymentPage() {
     detailLoading,
     
     // operation targets
-    currentOperationDeployment,
-    currentDeploymentDetail,
+    currentOperationDaemonSet,
+    currentDaemonSetDetail,
     currentYamlContent,
-    deploymentPods,
-    deploymentHistory,
+    daemonSetPods,
+    daemonSetHistory,
     
     // form models
     createFormModel,
     editFormModel,
-    scaleFormModel,
     rollbackFormModel,
     yamlFormModel,
     createYamlFormModel,
     
     // form rules
     createFormRules,
-    scaleFormRules,
     rollbackFormRules,
     yamlFormRules,
     createYamlFormRules,
     
     // computed
-    filteredDeployments,
+    filteredDaemonSets,
     rowSelection,
     
     // helpers
@@ -1086,14 +972,14 @@ export function useDeploymentPage() {
     // operations
     fetchClusters,
     fetchNamespaces,
-    fetchDeployments,
-    clearDeployments,
+    fetchDaemonSets,
+    clearDaemonSets,
     clearNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
     
     // detail operations
-    showDeploymentDetail,
+    showDaemonSetDetail,
     closeDetailModal,
     
     // YAML operations
@@ -1109,23 +995,14 @@ export function useDeploymentPage() {
     closeCreateYamlModal,
     submitCreateYamlForm,
     
-    // edit operations
+    // daemonSet operations
+    deleteDaemonSet,
+    restartDaemonSet,
+    
+    // rollback operations
     openEditModal,
     closeEditModal,
     submitEditForm,
-    
-    // deployment operations
-    deleteDeployment,
-    restartDeployment,
-    pauseDeployment,
-    resumeDeployment,
-    
-    // scale operations
-    openScaleModal,
-    closeScaleModal,
-    submitScaleForm,
-    
-    // rollback operations
     openRollbackModal,
     closeRollbackModal,
     submitRollbackForm,
@@ -1153,12 +1030,12 @@ export function useDeploymentPage() {
     // form field operations
     addImageField,
     removeImageField,
-    addLabelField,
     removeLabelField,
-    addAnnotationField,
     removeAnnotationField,
+    removeEditLabelField,
+    removeEditAnnotationField,
     
     // constants
-    K8sDeploymentStatus,
+    K8sDaemonSetStatus,
   };
 }

@@ -53,36 +53,36 @@ const routes: RouteRecordRaw[] = [
           title: '部署管理',
         },
       },
-      // {
-      //   name: 'K8sStatefulSet',
-      //   path: '/k8s_statefulset',
-      //   component: () => import('#/views/k8s/K8sStatefulSet.vue'),
-      //   meta: {
-      //     order: 7,
-      //     icon: 'lucide:layers',
-      //     title: '有状态应用管理',
-      //   },
-      // },
-      // {
-      //   name: 'K8sDaemonSet',
-      //   path: '/k8s_daemonset',
-      //   component: () => import('#/views/k8s/K8sDaemonSet.vue'),
-      //   meta: {
-      //     order: 8,
-      //     icon: 'lucide:shield',
-      //     title: 'DaemonSet管理',
-      //   },
-      // },
-      // {
-      //   name: 'K8sService',
-      //   path: '/k8s_service',
-      //   component: () => import('#/views/k8s/K8sService.vue'),
-      //   meta: {
-      //     order: 9,
-      //     icon: 'lucide:network',
-      //     title: '服务管理',
-      //   },
-      // },
+      {
+        name: 'K8sStatefulSet',
+        path: '/k8s_statefulset',
+        component: () => import('#/views/k8s/statefulset/StatefulSet.vue'),
+        meta: {
+          order: 7,
+          icon: 'lucide:layers',
+          title: '有状态应用管理',
+        },
+      },
+      {
+        name: 'K8sDaemonSet',
+        path: '/k8s_daemonset',
+        component: () => import('#/views/k8s/daemonset/DaemonSet.vue'),
+        meta: {
+          order: 8,
+          icon: 'lucide:shield',
+          title: 'DaemonSet管理',
+        },
+      },
+      {
+        name: 'K8sService',
+        path: '/k8s_service',
+        component: () => import('#/views/k8s/service/Service.vue'),
+        meta: {
+          order: 9,
+          icon: 'lucide:network',
+          title: '服务管理',
+        },
+      },
     ],
   },
 ];

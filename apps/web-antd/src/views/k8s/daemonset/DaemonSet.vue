@@ -6,10 +6,10 @@
         <a-col :xs="24" :sm="24" :md="16" :lg="16" :xl="18">
           <div class="k8s-title-section">
             <div class="k8s-page-title">
-              <DeploymentUnitOutlined class="k8s-title-icon" />
+              <HddOutlined class="k8s-title-icon" />
               <div>
-                <h1>Deployment 管理</h1>
-                <p class="k8s-page-subtitle">管理和监控集群中的所有 Kubernetes Deployment</p>
+                <h1>DaemonSet 管理</h1>
+                <p class="k8s-page-subtitle">管理和监控集群中的所有 Kubernetes DaemonSet</p>
               </div>
             </div>
           </div>
@@ -18,9 +18,9 @@
           <div class="k8s-header-actions">
             <a-button type="primary" @click="openCreateModal" :disabled="!filterClusterId">
               <template #icon><PlusOutlined /></template>
-              创建 Deployment
+              创建 DaemonSet
             </a-button>
-            <a-button @click="fetchDeployments" :loading="loading">
+            <a-button @click="fetchDaemonSets" :loading="loading">
               <template #icon><ReloadOutlined /></template>
               刷新数据
             </a-button>
@@ -95,14 +95,13 @@
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
-            <a-select-option :value="K8sDeploymentStatus.Running">✅ 运行中</a-select-option>
-            <a-select-option :value="K8sDeploymentStatus.Stopped">⏹️ 已停止</a-select-option>
-            <a-select-option :value="K8sDeploymentStatus.Paused">⏸️ 已暂停</a-select-option>
-            <a-select-option :value="K8sDeploymentStatus.Error">❌ 异常</a-select-option>
+            <a-select-option :value="K8sDaemonSetStatus.Running">✅ 运行中</a-select-option>
+            <a-select-option :value="K8sDaemonSetStatus.Error">❌ 异常</a-select-option>
+            <a-select-option :value="K8sDaemonSetStatus.Updating">🔄 更新中</a-select-option>
           </a-select>
           
           <!-- 标签过滤器 -->
-          <div class="deployment-labels-filter">
+          <div class="daemonset-labels-filter">
             <a-button type="dashed" @click="openLabelsFilter" class="k8s-toolbar-btn">
               <template #icon><TagsOutlined /></template>
               标签过滤 
@@ -129,7 +128,7 @@
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
-            placeholder="🔍 搜索 Deployment 名称" 
+            placeholder="🔍 搜索 DaemonSet 名称" 
             class="k8s-search-input" 
             @pressEnter="onSearch"
             @input="onSearch"
@@ -156,7 +155,7 @@
           </a-button>
           
           <a-button 
-            @click="fetchDeployments" 
+            @click="fetchDaemonSets" 
             :loading="loading"
             class="k8s-toolbar-btn"
             title="刷新数据"
@@ -169,7 +168,7 @@
             @click="openCreateYamlModal" 
             :disabled="!filterClusterId"
             class="k8s-toolbar-btn"
-            title="通过YAML创建Deployment"
+            title="通过YAML创建DaemonSet"
           >
             <template #icon><FileTextOutlined /></template>
             YAML 创建
@@ -182,7 +181,7 @@
             :disabled="!selectedRows.length" 
             v-if="selectedRows.length > 0"
             class="k8s-toolbar-btn"
-            title="批量删除选中的 Deployment"
+            title="批量删除选中的 DaemonSet"
           >
             <template #icon><DeleteOutlined /></template>
             删除 ({{ selectedRows.length }})
@@ -193,7 +192,7 @@
             :disabled="!selectedRows.length" 
             v-if="selectedRows.length > 0"
             class="k8s-toolbar-btn"
-            title="批量重启选中的 Deployment"
+            title="批量重启选中的 DaemonSet"
           >
             <template #icon><RedoOutlined /></template>
             重启 ({{ selectedRows.length }})
@@ -206,7 +205,7 @@
     <div class="k8s-data-display">
       <a-table
         :columns="columns"
-        :data-source="filteredDeployments"
+        :data-source="filteredDaemonSets"
         :row-selection="rowSelection"
         :loading="loading"
         row-key="name"
@@ -220,39 +219,63 @@
           pageSizeOptions: ['10', '20', '30', '50']
         }"
         @change="handleTableChange"
-        class="k8s-table deployment-table"
+        class="k8s-table daemonset-table"
         :scroll="{ x: 1600 }"
       >
         <template #status="{ text }">
           <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
         </template>
 
-        <template #replicas="{ record }">
-          <div class="deployment-replicas">
-            <span class="replicas-text">
-              {{ record.ready_replicas }}/{{ record.replicas }}
+        <template #pods="{ record }">
+          <div class="daemonset-pods">
+            <span class="pods-text">
+              {{ record.number_ready }}/{{ record.desired_number_scheduled }}
             </span>
             <a-progress 
-              :percent="record.replicas > 0 ? Math.round((record.ready_replicas / record.replicas) * 100) : 0" 
+              :percent="record.desired_number_scheduled > 0 ? Math.round((record.number_ready / record.desired_number_scheduled) * 100) : 0" 
               size="small" 
               :show-info="false"
-              :status="record.ready_replicas === record.replicas ? 'success' : 'active'"
+              :status="record.number_ready === record.desired_number_scheduled ? 'success' : 'active'"
               style="margin-top: 4px; max-width: 100px;"
             />
           </div>
         </template>
 
         <template #images="{ text }">
-          <div class="deployment-images">
-            <a-tag v-for="(image, index) in (Array.isArray(text) ? text : []).slice(0, 2)" :key="index" class="image-tag">
-              {{ image.split('/').pop()?.split(':')[0] || image }}
-            </a-tag>
+          <div class="daemonset-images">
+            <a-tooltip v-for="(image, index) in (Array.isArray(text) ? text : []).slice(0, 2)" :key="index" :title="image">
+              <a-tag class="image-tag">
+                {{ image.split('/').pop()?.split(':')[0] || image }}
+              </a-tag>
+            </a-tooltip>
             <a-tooltip v-if="(Array.isArray(text) ? text : []).length > 2" :title="(Array.isArray(text) ? text : []).join('\n')">
               <a-tag class="image-tag">
                 +{{ (Array.isArray(text) ? text : []).length - 2 }} 更多
               </a-tag>
             </a-tooltip>
             <span v-if="!text || !Array.isArray(text) || text.length === 0" class="k8s-no-data">-</span>
+          </div>
+        </template>
+
+        <template #update_strategy="{ text }">
+          <a-tag color="cyan" v-if="text">{{ text }}</a-tag>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
+        <template #node_info="{ record }">
+          <div class="daemonset-node-info">
+            <div class="node-info-item">
+              <span class="node-info-label">可用:</span>
+              <span class="node-info-value">{{ record.number_available || 0 }}</span>
+            </div>
+            <div class="node-info-item">
+              <span class="node-info-label">不可用:</span>
+              <span class="node-info-value">{{ record.number_unavailable || 0 }}</span>
+            </div>
+            <div class="node-info-item">
+              <span class="node-info-label">错误调度:</span>
+              <span class="node-info-value">{{ record.number_misscheduled || 0 }}</span>
+            </div>
           </div>
         </template>
 
@@ -292,15 +315,10 @@
           </div>
         </template>
 
-        <template #strategy="{ text }">
-          <a-tag color="geekblue" v-if="text">{{ text }}</a-tag>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
         <template #actions="{ record }">
           <div class="k8s-action-column">
             <a-tooltip title="查看详情">
-              <a-button title="查看详情" @click="showDeploymentDetail(record)">
+              <a-button title="查看详情" @click="showDaemonSetDetail(record)">
                 <template #icon><EyeOutlined /></template>
               </a-button>
             </a-tooltip>
@@ -309,24 +327,14 @@
                 <template #icon><FileTextOutlined /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="伸缩">
-              <a-button title="伸缩" @click="openScaleModal(record)">
-                <template #icon><ExpandOutlined /></template>
+            <a-tooltip title="编辑">
+              <a-button title="编辑" @click="openEditModal(record)">
+                <template #icon><EditOutlined /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="重启">
-              <a-button title="重启" @click="restartDeployment(record)">
+              <a-button title="重启" @click="restartDaemonSet(record)">
                 <template #icon><RedoOutlined /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="record.status === K8sDeploymentStatus.Running" title="暂停">
-              <a-button title="暂停" @click="pauseDeployment(record)">
-                <template #icon><PauseCircleOutlined /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="record.status === K8sDeploymentStatus.Paused" title="恢复">
-              <a-button title="恢复" @click="resumeDeployment(record)">
-                <template #icon><PlayCircleOutlined /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="回滚">
@@ -348,7 +356,7 @@
               <a-button 
                 title="删除" 
                 class="ant-btn-dangerous" 
-                @click="deleteDeployment(record)"
+                @click="deleteDaemonSet(record)"
               >
                 <template #icon><DeleteOutlined /></template>
               </a-button>
@@ -358,18 +366,18 @@
 
         <template #emptyText>
           <div class="k8s-empty-state">
-            <DeploymentUnitOutlined />
-            <p>暂无 Deployment 数据</p>
+            <HddOutlined />
+            <p>暂无 DaemonSet 数据</p>
             <p>请先选择集群</p>
           </div>
         </template>
       </a-table>
     </div>
 
-    <!-- 创建 Deployment 模态框 -->
+    <!-- 创建 DaemonSet 模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      title="创建 Deployment"
+      title="创建 DaemonSet"
       @ok="submitCreateForm"
       @cancel="closeCreateModal"
       :confirmLoading="submitLoading"
@@ -386,10 +394,10 @@
         class="k8s-form"
         :rules="createFormRules"
       >
-        <a-form-item label="Deployment 名称" name="name" :required="true">
+        <a-form-item label="DaemonSet 名称" name="name" :required="true">
           <a-input 
             v-model:value="createFormModel.name" 
-            placeholder="请输入 Deployment 名称（例如：my-app）" 
+            placeholder="请输入 DaemonSet 名称（例如：my-daemonset）" 
             class="k8s-form-input"
             :maxlength="63"
           />
@@ -419,16 +427,6 @@
               </a-button>
             </a-select-option>
           </a-select>
-        </a-form-item>
-
-        <a-form-item label="副本数量" name="replicas" :required="true">
-          <a-input-number 
-            v-model:value="createFormModel.replicas" 
-            :min="0" 
-            :max="100" 
-            class="k8s-form-input"
-            placeholder="副本数量"
-          />
         </a-form-item>
 
         <a-form-item label="容器镜像">
@@ -532,10 +530,10 @@
       </a-form>
     </a-modal>
 
-    <!-- 通过 YAML 创建 Deployment 模态框 -->
+    <!-- 通过 YAML 创建 DaemonSet 模态框 -->
     <a-modal
       v-model:open="isCreateYamlModalVisible"
-      title="通过 YAML 创建 Deployment"
+      title="通过 YAML 创建 DaemonSet"
       @ok="submitCreateYamlForm"
       @cancel="closeCreateYamlModal"
       :confirmLoading="submitLoading"
@@ -555,7 +553,7 @@
         <a-form-item name="yaml">
           <a-textarea 
             v-model:value="createYamlFormModel.yaml" 
-            placeholder="请输入 Deployment YAML 内容" 
+            placeholder="请输入 DaemonSet YAML 内容" 
             :rows="20"
             class="yaml-textarea"
           />
@@ -566,7 +564,7 @@
     <!-- 详情模态框 -->
     <a-modal
       v-model:open="isDetailModalVisible"
-      title="Deployment 详情"
+      title="DaemonSet 详情"
       :footer="null"
       @cancel="closeDetailModal"
       width="1000px"
@@ -574,50 +572,54 @@
       destroyOnClose
     >
       <a-spin :spinning="detailLoading">
-        <div v-if="currentDeploymentDetail" class="k8s-detail-content">
+        <div v-if="currentDaemonSetDetail" class="k8s-detail-content">
           <a-row :gutter="[24, 16]">
             <a-col :xs="24" :lg="12">
               <a-card title="基本信息" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">Deployment 名称:</span>
-                  <span class="k8s-detail-value">{{ currentDeploymentDetail.name }}</span>
+                  <span class="k8s-detail-label">DaemonSet 名称:</span>
+                  <span class="k8s-detail-value">{{ currentDaemonSetDetail.name }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">命名空间:</span>
-                  <span class="k8s-detail-value">{{ currentDeploymentDetail.namespace }}</span>
+                  <span class="k8s-detail-value">{{ currentDaemonSetDetail.namespace }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">状态:</span>
-                  <a-badge :status="getStatusColor(currentDeploymentDetail.status)" :text="getStatusText(currentDeploymentDetail.status)" />
+                  <a-badge :status="getStatusColor(currentDaemonSetDetail.status)" :text="getStatusText(currentDaemonSetDetail.status)" />
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">集群ID:</span>
-                  <span class="k8s-detail-value">{{ currentDeploymentDetail.cluster_id }}</span>
+                  <span class="k8s-detail-value">{{ currentDaemonSetDetail.cluster_id }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">UID:</span>
-                  <span class="k8s-detail-value">{{ currentDeploymentDetail.uid || '-' }}</span>
+                  <span class="k8s-detail-value">{{ currentDaemonSetDetail.uid || '-' }}</span>
                 </div>
               </a-card>
             </a-col>
             
             <a-col :xs="24" :lg="12">
-              <a-card title="副本信息" class="k8s-detail-card" size="small">
+              <a-card title="Pod 调度信息" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">期望副本数:</span>
-                  <span class="k8s-detail-value">{{ currentDeploymentDetail.replicas }}</span>
+                  <span class="k8s-detail-label">期望调度数:</span>
+                  <span class="k8s-detail-value">{{ currentDaemonSetDetail.desired_number_scheduled }}</span>
                 </div>
                 <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">就绪副本数:</span>
-                  <span class="k8s-detail-value">{{ currentDeploymentDetail.ready_replicas }}</span>
+                  <span class="k8s-detail-label">当前调度数:</span>
+                  <span class="k8s-detail-value">{{ currentDaemonSetDetail.current_number_scheduled }}</span>
                 </div>
                 <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">可用副本数:</span>
-                  <span class="k8s-detail-value">{{ currentDeploymentDetail.available_replicas }}</span>
+                  <span class="k8s-detail-label">就绪 Pod 数:</span>
+                  <span class="k8s-detail-value">{{ currentDaemonSetDetail.number_ready }}</span>
                 </div>
                 <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">更新副本数:</span>
-                  <span class="k8s-detail-value">{{ currentDeploymentDetail.updated_replicas }}</span>
+                  <span class="k8s-detail-label">可用 Pod 数:</span>
+                  <span class="k8s-detail-value">{{ currentDaemonSetDetail.number_available }}</span>
+                </div>
+                <div class="k8s-detail-item">
+                  <span class="k8s-detail-label">不可用 Pod 数:</span>
+                  <span class="k8s-detail-value">{{ currentDaemonSetDetail.number_unavailable }}</span>
                 </div>
               </a-card>
             </a-col>
@@ -625,29 +627,31 @@
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px;">
             <a-col :xs="24" :lg="12">
-              <a-card title="部署策略" class="k8s-detail-card" size="small">
+              <a-card title="更新策略" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">策略类型:</span>
-                  <span class="k8s-detail-value">{{ currentDeploymentDetail.strategy || '-' }}</span>
+                  <span class="k8s-detail-value">{{ currentDaemonSetDetail.update_strategy || '-' }}</span>
                 </div>
                 <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">最大不可用:</span>
-                  <span class="k8s-detail-value">{{ currentDeploymentDetail.max_unavailable || '-' }}</span>
+                  <span class="k8s-detail-label">历史版本限制:</span>
+                  <span class="k8s-detail-value">{{ currentDaemonSetDetail.revision_history_limit || '-' }}</span>
                 </div>
                 <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">最大超出:</span>
-                  <span class="k8s-detail-value">{{ currentDeploymentDetail.max_surge || '-' }}</span>
+                  <span class="k8s-detail-label">更新策略:</span>
+                  <span class="k8s-detail-value">{{ currentDaemonSetDetail.update_strategy || 'RollingUpdate' }}</span>
                 </div>
               </a-card>
             </a-col>
 
             <a-col :xs="24" :lg="12">
               <a-card title="容器镜像" class="k8s-detail-card" size="small">
-                <div class="deployment-images">
-                  <a-tag v-for="(image, index) in (currentDeploymentDetail.images || [])" :key="index" class="image-tag" style="margin-bottom: 8px;">
-                    {{ image }}
-                  </a-tag>
-                  <span v-if="!currentDeploymentDetail.images || currentDeploymentDetail.images.length === 0" class="k8s-no-data">
+                <div class="daemonset-images">
+                  <a-tooltip v-for="(image, index) in (currentDaemonSetDetail.images || [])" :key="index" :title="image">
+                    <a-tag class="image-tag" style="margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;">
+                      {{ image }}
+                    </a-tag>
+                  </a-tooltip>
+                  <span v-if="!currentDaemonSetDetail.images || currentDaemonSetDetail.images.length === 0" class="k8s-no-data">
                     暂无镜像信息
                   </span>
                 </div>
@@ -659,14 +663,33 @@
             <a-col :xs="24" :lg="12">
               <a-card title="标签信息" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display">
-                  <a-tooltip v-for="label in (currentDeploymentDetail.labels || [])" :key="label.key" :title="`${label.key}: ${label.value}`" placement="top">
-                    <a-tag class="k8s-label-item" style="margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                      {{ label.key }}: {{ label.value }}
-                    </a-tag>
-                  </a-tooltip>
-                  <span v-if="!currentDeploymentDetail.labels || currentDeploymentDetail.labels.length === 0" class="k8s-no-data">
-                    暂无标签
-                  </span>
+                  <template v-if="Array.isArray(currentDaemonSetDetail.labels)">
+                    <!-- 数组格式 -->
+                    <a-tooltip v-for="label in currentDaemonSetDetail.labels" :key="label.key" :title="`${label.key}: ${label.value}`">
+                      <div class="k8s-label-item" style="margin-bottom: 8px; display: inline-block; max-width: 100%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; margin-right: 8px;">
+                        {{ label.key }}: {{ label.value }}
+                      </div>
+                    </a-tooltip>
+                    <span v-if="currentDaemonSetDetail.labels.length === 0" class="k8s-no-data">
+                      暂无标签
+                    </span>
+                  </template>
+                  <template v-else-if="currentDaemonSetDetail.labels && typeof currentDaemonSetDetail.labels === 'object'">
+                    <!-- 对象格式 -->
+                    <a-tooltip v-for="[key, value] in Object.entries(currentDaemonSetDetail.labels)" :key="key" :title="`${key}: ${value}`">
+                      <div class="k8s-label-item" style="margin-bottom: 8px; display: inline-block; max-width: 100%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; margin-right: 8px;">
+                        {{ key }}: {{ value }}
+                      </div>
+                    </a-tooltip>
+                    <span v-if="Object.keys(currentDaemonSetDetail.labels).length === 0" class="k8s-no-data">
+                      暂无标签
+                    </span>
+                  </template>
+                  <template v-else>
+                    <span class="k8s-no-data">
+                      暂无标签
+                    </span>
+                  </template>
                 </div>
               </a-card>
             </a-col>
@@ -674,14 +697,33 @@
             <a-col :xs="24" :lg="12">
               <a-card title="注解信息" class="k8s-detail-card" size="small">
                 <div class="k8s-annotations-display">
-                  <a-tooltip v-for="annotation in (currentDeploymentDetail.annotations || [])" :key="annotation.key" :title="`${annotation.key}: ${annotation.value}`" placement="top">
-                    <a-tag class="k8s-annotation-item" style="margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                      {{ annotation.key }}: {{ annotation.value }}
-                    </a-tag>
-                  </a-tooltip>
-                  <span v-if="!currentDeploymentDetail.annotations || currentDeploymentDetail.annotations.length === 0" class="k8s-no-data">
-                    暂无注解
-                  </span>
+                  <template v-if="Array.isArray(currentDaemonSetDetail.annotations)">
+                    <!-- 数组格式 -->
+                    <a-tooltip v-for="annotation in currentDaemonSetDetail.annotations" :key="annotation.key" :title="`${annotation.key}: ${annotation.value}`">
+                      <div class="k8s-annotation-item" style="margin-bottom: 8px; display: inline-block; max-width: 100%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; margin-right: 8px;">
+                        {{ annotation.key }}: {{ annotation.value }}
+                      </div>
+                    </a-tooltip>
+                    <span v-if="currentDaemonSetDetail.annotations.length === 0" class="k8s-no-data">
+                      暂无注解
+                    </span>
+                  </template>
+                  <template v-else-if="currentDaemonSetDetail.annotations && typeof currentDaemonSetDetail.annotations === 'object'">
+                    <!-- 对象格式 -->
+                    <a-tooltip v-for="[key, value] in Object.entries(currentDaemonSetDetail.annotations)" :key="key" :title="`${key}: ${value}`">
+                      <div class="k8s-annotation-item" style="margin-bottom: 8px; display: inline-block; max-width: 100%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; margin-right: 8px;">
+                        {{ key }}: {{ value }}
+                      </div>
+                    </a-tooltip>
+                    <span v-if="Object.keys(currentDaemonSetDetail.annotations).length === 0" class="k8s-no-data">
+                      暂无注解
+                    </span>
+                  </template>
+                  <template v-else>
+                    <span class="k8s-no-data">
+                      暂无注解
+                    </span>
+                  </template>
                 </div>
               </a-card>
             </a-col>
@@ -690,44 +732,126 @@
       </a-spin>
     </a-modal>
 
-    <!-- 伸缩模态框 -->
+    <!-- 编辑模态框 -->
     <a-modal
-      v-model:open="isScaleModalVisible"
-      title="伸缩 Deployment"
-      @ok="submitScaleForm"
-      @cancel="closeScaleModal"
+      v-model:open="isEditModalVisible"
+      title="编辑 DaemonSet"
+      @ok="submitEditForm"
+      @cancel="closeEditModal"
       :confirmLoading="submitLoading"
-      width="500px"
+      width="800px"
       :maskClosable="false"
       destroyOnClose
-      okText="确认伸缩"
+      okText="确认更新"
       cancelText="取消"
+      okType="primary"
     >
       <a-form 
-        ref="scaleFormRef"
-        :model="scaleFormModel" 
+        ref="editFormRef"
+        :model="editFormModel" 
         layout="vertical" 
         class="k8s-form"
-        :rules="scaleFormRules"
       >
-        <a-alert
-          message="伸缩操作"
-          :description="`即将对 Deployment '${currentOperationDeployment?.name}' 进行伸缩操作`"
-          type="info"
-          show-icon
-          style="margin-bottom: 24px;"
-        />
-        
-        <a-form-item label="副本数量" name="replicas" :required="true">
-          <a-input-number 
-            v-model:value="scaleFormModel.replicas" 
-            :min="0" 
-            :max="100" 
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="名称" name="name">
+              <a-input 
+                v-model:value="editFormModel.name" 
+                class="k8s-form-input"
+                disabled
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="命名空间" name="namespace">
+              <a-input 
+                v-model:value="editFormModel.namespace" 
+                class="k8s-form-input"
+                disabled
+              />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-form-item label="镜像" name="image">
+          <a-input 
+            v-model:value="editFormModel.image" 
             class="k8s-form-input"
-            placeholder="请输入副本数量"
+            placeholder="请输入容器镜像"
           />
-          <div style="color: #999; font-size: 12px; margin-top: 4px;">
-            当前副本数：{{ currentOperationDeployment?.replicas }}
+        </a-form-item>
+
+        <a-form-item label="标签配置（可选）" name="labels">
+          <div class="k8s-key-value-inputs">
+            <div v-if="!editFormModel.labels || editFormModel.labels.length === 0" style="text-align: center; color: #999; padding: 16px;">
+              暂无标签，点击下方按钮添加
+            </div>
+            <div v-for="(label, index) in editFormModel.labels" :key="index" class="k8s-key-value-row">
+              <a-input 
+                v-model:value="label.key" 
+                placeholder="标签键" 
+                class="k8s-form-input"
+                :maxlength="200"
+              />
+              <a-input 
+                v-model:value="label.value" 
+                placeholder="标签值" 
+                class="k8s-form-input"
+                :maxlength="200"
+              />
+              <a-button type="text" danger @click="() => removeEditLabelField(label.key)" size="small">
+                <template #icon><DeleteOutlined /></template>
+              </a-button>
+            </div>
+            <div class="add-input-row" style="margin-top: 8px;">
+              <a-input
+                v-model:value="newEditLabelKey"
+                placeholder="输入标签键"
+                style="flex: 1; margin-right: 8px;"
+                @press-enter="addNewEditLabel"
+              />
+              <a-button type="primary" @click="addNewEditLabel" :disabled="!newEditLabelKey.trim()">
+                <template #icon><PlusOutlined /></template>
+                添加
+              </a-button>
+            </div>
+          </div>
+        </a-form-item>
+
+        <a-form-item label="注解配置（可选）" name="annotations">
+          <div class="k8s-key-value-inputs">
+            <div v-if="!editFormModel.annotations || editFormModel.annotations.length === 0" style="text-align: center; color: #999; padding: 16px;">
+              暂无注解，点击下方按钮添加
+            </div>
+            <div v-for="(annotation, index) in editFormModel.annotations" :key="index" class="k8s-key-value-row">
+              <a-input 
+                v-model:value="annotation.key" 
+                placeholder="注解键" 
+                class="k8s-form-input"
+                :maxlength="500"
+              />
+              <a-input 
+                v-model:value="annotation.value" 
+                placeholder="注解值" 
+                class="k8s-form-input"
+                :maxlength="500"
+              />
+              <a-button type="text" danger @click="() => removeEditAnnotationField(annotation.key)" size="small">
+                <template #icon><DeleteOutlined /></template>
+              </a-button>
+            </div>
+            <div class="add-input-row" style="margin-top: 8px;">
+              <a-input
+                v-model:value="newEditAnnotationKey"
+                placeholder="输入注解键"
+                style="flex: 1; margin-right: 8px;"
+                @press-enter="addNewEditAnnotation"
+              />
+              <a-button type="primary" @click="addNewEditAnnotation" :disabled="!newEditAnnotationKey.trim()">
+                <template #icon><PlusOutlined /></template>
+                添加
+              </a-button>
+            </div>
           </div>
         </a-form-item>
       </a-form>
@@ -736,7 +860,7 @@
     <!-- 回滚模态框 -->
     <a-modal
       v-model:open="isRollbackModalVisible"
-      title="回滚 Deployment"
+      title="回滚 DaemonSet"
       @ok="submitRollbackForm"
       @cancel="closeRollbackModal"
       :confirmLoading="submitLoading"
@@ -756,7 +880,7 @@
       >
         <a-alert
           message="⚠️ 警告"
-          :description="`即将回滚 Deployment '${currentOperationDeployment?.name}' 到指定版本`"
+          :description="`即将回滚 DaemonSet '${currentOperationDaemonSet?.name}' 到指定版本`"
           type="warning"
           show-icon
           style="margin-bottom: 24px;"
@@ -779,7 +903,7 @@
     <!-- YAML 模态框 -->
     <a-modal
       v-model:open="isYamlModalVisible"
-      :title="`查看/编辑 ${currentOperationDeployment?.name} YAML`"
+      :title="`查看/编辑 ${currentOperationDaemonSet?.name} YAML`"
       @ok="submitYamlForm"
       @cancel="closeYamlModal"
       :confirmLoading="submitLoading"
@@ -810,7 +934,7 @@
     <!-- Pod 列表模态框 -->
     <a-modal
       v-model:open="isPodModalVisible"
-      :title="`${currentOperationDeployment?.name} Pod 列表`"
+      :title="`${currentOperationDaemonSet?.name} Pod 列表`"
       :footer="null"
       @cancel="closePodModal"
       width="1000px"
@@ -818,7 +942,7 @@
       destroyOnClose
     >
       <a-table
-        :data-source="deploymentPods"
+        :data-source="daemonSetPods"
         :pagination="false"
         :loading="submitLoading"
         size="small"
@@ -832,13 +956,14 @@
         </a-table-column>
         <a-table-column title="重启次数" dataIndex="restart_count" key="restart_count" />
         <a-table-column title="创建时间" dataIndex="created_at" key="created_at" />
+        <a-table-column title="节点名称" dataIndex="node_name" key="node_name" />
       </a-table>
     </a-modal>
 
     <!-- 版本历史模态框 -->
     <a-modal
       v-model:open="isHistoryModalVisible"
-      :title="`${currentOperationDeployment?.name} 版本历史`"
+      :title="`${currentOperationDaemonSet?.name} 版本历史`"
       :footer="null"
       @cancel="closeHistoryModal"
       width="800px"
@@ -846,7 +971,7 @@
       destroyOnClose
     >
       <a-table
-        :data-source="deploymentHistory"
+        :data-source="daemonSetHistory"
         :pagination="false"
         :loading="submitLoading"
         size="small"
@@ -929,8 +1054,8 @@
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { useDeploymentPage } from './Deployment';
-import { rollbackDeploymentApi } from '#/api/core/k8s/k8s_deployment';
+import { useDaemonSetPage } from './DaemonSet';
+import { rollbackDaemonSetApi } from '#/api/core/k8s/k8s_daemonset';
 import { 
   PlusOutlined, 
   ReloadOutlined, 
@@ -939,16 +1064,15 @@ import {
   DeploymentUnitOutlined,
   AppstoreOutlined,
   EyeOutlined,
+  EditOutlined,
   TagsOutlined,
   SearchOutlined,
   FileTextOutlined,
-  ExpandOutlined,
   RedoOutlined,
-  PauseCircleOutlined,
-  PlayCircleOutlined,
   RollbackOutlined,
   ContainerOutlined,
   HistoryOutlined,
+  HddOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -973,8 +1097,8 @@ const {
   // modal state
   isCreateModalVisible,
   isCreateYamlModalVisible,
+  isEditModalVisible,
   isDetailModalVisible,
-  isScaleModalVisible,
   isRollbackModalVisible,
   isYamlModalVisible,
   isPodModalVisible,
@@ -983,34 +1107,33 @@ const {
   detailLoading,
   
   // operation targets
-  currentOperationDeployment,
-  currentDeploymentDetail,
-  deploymentPods,
-  deploymentHistory,
+  currentOperationDaemonSet,
+  currentDaemonSetDetail,
+  daemonSetPods,
+  daemonSetHistory,
   
   // form models
   createFormModel,
+  editFormModel,
   createYamlFormModel,
-  scaleFormModel,
   rollbackFormModel,
   yamlFormModel,
   
   // form refs
   formRef,
-  scaleFormRef,
+  editFormRef,
   rollbackFormRef,
   yamlFormRef,
   createYamlFormRef,
   
   // form rules
   createFormRules,
-  scaleFormRules,
   rollbackFormRules,
   yamlFormRules,
   createYamlFormRules,
   
   // computed
-  filteredDeployments,
+  filteredDaemonSets,
   rowSelection,
   
   // helpers
@@ -1021,14 +1144,14 @@ const {
   // operations
   fetchClusters,
   fetchNamespaces,
-  fetchDeployments,
-  clearDeployments,
+  fetchDaemonSets,
+  clearDaemonSets,
   clearNamespaces,
   loadMoreClusters,
   loadMoreNamespaces,
   
   // detail operations
-  showDeploymentDetail,
+  showDaemonSetDetail,
   closeDetailModal,
   
   // YAML operations
@@ -1044,16 +1167,14 @@ const {
   closeCreateYamlModal,
   submitCreateYamlForm,
   
-  // deployment operations
-  deleteDeployment,
-  restartDeployment,
-  pauseDeployment,
-  resumeDeployment,
+  // daemonSet operations
+  deleteDaemonSet,
+  restartDaemonSet,
   
-  // scale operations
-  openScaleModal,
-  closeScaleModal,
-  submitScaleForm,
+  // edit operations
+  openEditModal,
+  closeEditModal,
+  submitEditForm,
   
   // rollback operations
   openRollbackModal,
@@ -1084,14 +1205,18 @@ const {
   removeImageField,
   removeLabelField,
   removeAnnotationField,
+  removeEditLabelField,
+  removeEditAnnotationField,
   
   // constants
-  K8sDeploymentStatus,
-} = useDeploymentPage();
+  K8sDaemonSetStatus,
+} = useDaemonSetPage();
 
 // 添加新标签/注解的方法
 const newLabelKey = ref('');
 const newAnnotationKey = ref('');
+const newEditLabelKey = ref('');
+const newEditAnnotationKey = ref('');
 
 const addNewLabel = () => {
   if (newLabelKey.value && newLabelKey.value.trim()) {
@@ -1107,20 +1232,35 @@ const addNewAnnotation = () => {
   }
 };
 
+// 编辑模态框专用的方法
+const addNewEditLabel = () => {
+  if (newEditLabelKey.value && newEditLabelKey.value.trim()) {
+    editFormModel.value.labels.push({ key: newEditLabelKey.value.trim(), value: '' });
+    newEditLabelKey.value = '';
+  }
+};
+
+const addNewEditAnnotation = () => {
+  if (newEditAnnotationKey.value && newEditAnnotationKey.value.trim()) {
+    editFormModel.value.annotations.push({ key: newEditAnnotationKey.value.trim(), value: '' });
+    newEditAnnotationKey.value = '';
+  }
+};
+
 const onSearch = () => {
   currentPage.value = 1;
-  fetchDeployments();
+  fetchDaemonSets();
 };
 
 const handleFilterChange = () => {
   currentPage.value = 1;
-  fetchDeployments();
+  fetchDaemonSets();
 };
 
 const handleClusterChange = () => {
   currentPage.value = 1;
   clearNamespaces();
-  clearDeployments();
+  clearDaemonSets();
   
   if (filterClusterId.value) {
     const selectedCluster = clusters.value.find(c => c.id === filterClusterId.value);
@@ -1128,9 +1268,9 @@ const handleClusterChange = () => {
       message.info(`已切换到集群: ${selectedCluster.name}`);
     }
     fetchNamespaces(true); // 重置命名空间分页
-    fetchDeployments();
+    fetchDaemonSets();
   } else {
-    message.info('已清空 Deployment 列表，请选择集群查看 Deployment');
+    message.info('已清空 DaemonSet 列表，请选择集群查看 DaemonSet');
   }
 };
 
@@ -1155,11 +1295,12 @@ const columns = [
   { title: '名称', dataIndex: 'name', key: 'name', width: '15%' },
   { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '12%' },
   { title: '状态', dataIndex: 'status', key: 'status', width: '8%', slots: { customRender: 'status' } },
-  { title: '副本数', key: 'replicas', width: '10%', slots: { customRender: 'replicas' } },
-  { title: '策略', dataIndex: 'strategy', key: 'strategy', width: '8%', slots: { customRender: 'strategy' } },
+  { title: 'Pod 数量', key: 'pods', width: '12%', slots: { customRender: 'pods' } },
+  { title: '更新策略', dataIndex: 'update_strategy', key: 'update_strategy', width: '10%', slots: { customRender: 'update_strategy' } },
+  { title: '节点信息', key: 'node_info', width: '15%', slots: { customRender: 'node_info' } },
   { title: '镜像', dataIndex: 'images', key: 'images', width: '15%', slots: { customRender: 'images' } },
   { title: '标签', dataIndex: 'labels', key: 'labels', width: '12%', slots: { customRender: 'labels' } },
-  { title: '操作', key: 'actions', width: '20%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: '操作', key: 'actions', width: '18%', fixed: 'right', slots: { customRender: 'actions' } },
 ];
 
 // 标签过滤器状态
@@ -1201,41 +1342,46 @@ const resetFilters = () => {
   filterNamespace.value = undefined;
   clearFilterLabels();
   currentPage.value = 1;
-  clearDeployments();
+  clearDaemonSets();
   clearNamespaces();
   message.success('已重置所有筛选条件');
 };
 
 // 快速回滚到指定版本
 const rollbackToVersion = (revision: number) => {
-  if (!currentOperationDeployment.value) return;
+  if (!currentOperationDaemonSet.value) return;
   
   Modal.confirm({
     title: '回滚确认',
-    content: `确定要将 Deployment "${currentOperationDeployment.value.name}" 回滚到版本 ${revision} 吗？`,
+    content: `确定要将 DaemonSet "${currentOperationDaemonSet.value.name}" 回滚到版本 ${revision} 吗？`,
     okText: '确认回滚',
     okType: 'primary',
     cancelText: '取消',
     centered: true,
       onOk: async () => {
         try {
-          const clusterId = currentOperationDeployment.value!.cluster_id || filterClusterId.value;
+          const clusterId = currentOperationDaemonSet.value!.cluster_id || filterClusterId.value;
           if (!clusterId || clusterId === 0) {
             message.error('无效的集群ID，请重新选择集群');
             return;
           }
           
-          await rollbackDeploymentApi(
+          await rollbackDaemonSetApi(
             clusterId,
-            currentOperationDeployment.value!.namespace,
-            currentOperationDeployment.value!.name,
-            { revision }
+            currentOperationDaemonSet.value!.namespace,
+            currentOperationDaemonSet.value!.name,
+            {
+              cluster_id: clusterId,
+              namespace: currentOperationDaemonSet.value!.namespace,
+              name: currentOperationDaemonSet.value!.name,
+              revision
+            }
           );
-          message.success(`🎉 Deployment 回滚到版本 ${revision} 成功`);
+          message.success(`🎉 DaemonSet 回滚到版本 ${revision} 成功`);
           closeHistoryModal();
-          await fetchDeployments();
+          await fetchDaemonSets();
         } catch (err) {
-          message.error(`❌ Deployment 回滚到版本 ${revision} 失败`);
+          message.error(`❌ DaemonSet 回滚到版本 ${revision} 失败`);
           console.error(err);
         }
       },
@@ -1251,4 +1397,4 @@ onMounted(async () => {
 @import '../shared/k8s-common.css';
 </style>
 
-<style scoped src="./Deployment.css"></style>
+<style scoped src="./DaemonSet.css"></style>

@@ -128,6 +128,15 @@ export function useNodePage() {
   }));
 
   // helpers
+  const validateClusterId = (record: any): number | null => {
+    const clusterId = record.cluster_id || filterClusterId.value;
+    if (!clusterId || clusterId === 0) {
+      message.error('无效的集群ID，请重新选择集群');
+      return null;
+    }
+    return clusterId;
+  };
+
   const getEnvText = (env?: Env | string) => {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? parseInt(env) : env;
@@ -232,7 +241,12 @@ export function useNodePage() {
         status: filterStatus.value ? filterStatus.value : undefined,
       };
       const res = await getK8sNodeList(params);
-      nodes.value = res?.items || [];
+      // 确保每个node对象都有正确的cluster_id
+      const nodesWithClusterId = (res?.items || []).map((node: any) => ({
+        ...node,
+        cluster_id: node.cluster_id || filterClusterId.value || 0
+      }));
+      nodes.value = nodesWithClusterId;
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取节点列表失败');
@@ -244,19 +258,22 @@ export function useNodePage() {
 
   // 查看详情
   const showNodeDetail = async (record: K8sNode) => {
+    const clusterId = validateClusterId(record);
+    if (!clusterId) return;
+    
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
       const params: GetK8sNodeDetailReq = {
-        cluster_id: record.cluster_id,
+        cluster_id: clusterId,
         node_name: record.name,
       };
       const res = await getK8sNodeDetail(params);
-      currentNodeDetail.value = res || record;
+      currentNodeDetail.value = res || { ...record, cluster_id: clusterId };
     } catch (err) {
       message.error('获取节点详情失败');
       console.error(err);
-      currentNodeDetail.value = record;
+      currentNodeDetail.value = { ...record, cluster_id: clusterId };
     } finally {
       detailLoading.value = false;
     }
@@ -392,16 +409,22 @@ export function useNodePage() {
       centered: true,
       onOk: async () => {
         try {
+          const clusterId = record.cluster_id || filterClusterId.value;
+          if (!clusterId || clusterId === 0) {
+            message.error('无效的集群ID，请重新选择集群');
+            return;
+          }
+          
           if (enable === 1) {
             const params: K8sNodeUncordonReq = {
-              cluster_id: record.cluster_id,
+              cluster_id: clusterId,
               node_name: record.name,
             };
             await uncordonK8sNode(params);
             message.success('✅ 节点调度已启用');
           } else {
             const params: K8sNodeCordonReq = {
-              cluster_id: record.cluster_id,
+              cluster_id: clusterId,
               node_name: record.name,
             };
             await cordonK8sNode(params);
