@@ -266,7 +266,7 @@ import {
   deleteWorkorderCategory,
   listWorkorderCategory,
   detailWorkorderCategory
-} from '#/api/core/workorder_category';
+} from '#/api/core/workorder/workorder_category';
 
 /**
  * 表格列配置

@@ -1,5 +1,5 @@
-import { requestClientAIOps } from '../request';
-import type { ServiceConfigResponse, ServiceInfoResponse, ServiceReadyResponse } from './common';
+import { requestClientAIOps } from '../../request';
+import type { ServiceConfigResponse, ServiceInfoResponse, ServiceReadyResponse } from '../common';
 
 /**
  * 严重程度级别枚举

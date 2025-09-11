@@ -32,15 +32,6 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
-        name: 'RCAHealth',
-        path: '/rca/health',
-        component: () => import('#/views/rca/RCAHealth.vue'),
-        meta: {
-          icon: 'lucide:heart-pulse',
-          title: '服务监控',
-        },
-      },
-      {
         name: 'RCACache',
         path: '/rca/cache',
         component: () => import('#/views/rca/RCACache.vue'),

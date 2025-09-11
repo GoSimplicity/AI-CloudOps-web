@@ -327,13 +327,13 @@ import type {
   EventPatternsResponse,
   ErrorSummaryResponse,
   RCAAnalysisResponse
-} from '#/api/core/rca';
+} from '#/api/core/aiops/rca';
 import {
   quickDiagnosis,
   getEventPatterns,
   getErrorSummary,
   analyzeRootCause
-} from '#/api/core/rca';
+} from '#/api/core/aiops/rca';
 
 // 响应式数据
 const loading = ref(false);

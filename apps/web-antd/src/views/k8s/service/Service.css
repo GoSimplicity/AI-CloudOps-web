@@ -1,0 +1,524 @@
+/* ==================== Service 特定样式 ==================== */
+
+/* Service 表格样式 */
+.service-table :deep(.ant-table-tbody > tr > td) {
+  vertical-align: middle;
+}
+
+/* Service 端口显示样式 */
+.service-ports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.port-tag {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  background: #f0f7ff;
+  border: 1px solid #adc6ff;
+  color: #2f54eb;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin: 0;
+  transition: all 0.2s ease;
+}
+
+.port-tag:hover {
+  background: #e6f7ff;
+  border-color: #69c0ff;
+  transform: scale(1.05);
+}
+
+/* Service IP 显示样式 */
+.service-ip {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1890ff;
+  background: #f0f7ff;
+  border: 1px solid #d6e4ff;
+  border-radius: 4px;
+  padding: 2px 8px;
+  display: inline-block;
+}
+
+/* Service 外部 IP 显示样式 */
+.service-external-ips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.ip-tag {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  margin: 0;
+  transition: all 0.2s ease;
+}
+
+.ip-tag:hover {
+  transform: scale(1.05);
+}
+
+/* Service 地址显示样式 */
+.service-addresses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.service-addresses .ant-tag {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Service 标签过滤器样式 */
+.service-labels-filter {
+  position: relative;
+}
+
+.service-labels-filter .k8s-toolbar-btn {
+  height: 36px;
+  border-radius: 6px;
+  font-weight: 500;
+  border: 1px solid #d9d9d9;
+  background: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.service-labels-filter .k8s-toolbar-btn:hover {
+  background: #f0f0f0;
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+.service-labels-filter .active-filters {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 80px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+/* Service 类型标签样式增强 */
+.ant-tag[color="blue"] {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+  color: #1890ff;
+}
+
+.ant-tag[color="green"] {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.ant-tag[color="orange"] {
+  background: #fff7e6;
+  border-color: #ffd591;
+  color: #fa8c16;
+}
+
+.ant-tag[color="purple"] {
+  background: #f9f0ff;
+  border-color: #d3adf7;
+  color: #722ed1;
+}
+
+/* YAML 编辑器样式 */
+.yaml-textarea {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  background: #fafafa;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+}
+
+.yaml-textarea:focus {
+  background: #ffffff;
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+/* 端口配置表单样式 */
+.port-config-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #fafafa;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.port-config-row:hover {
+  border-color: #d9d9d9;
+}
+
+.port-config-row .ant-input,
+.port-config-row .ant-select,
+.port-config-row .ant-input-number {
+  height: 32px;
+}
+
+.port-config-row .ant-select :deep(.ant-select-selector),
+.port-config-row .ant-input-number :deep(.ant-input-number-input) {
+  height: 30px;
+}
+
+/* Service 详情模态框样式增强 */
+.k8s-detail-content .service-ports .port-tag {
+  margin-bottom: 4px;
+}
+
+.k8s-detail-content .service-external-ips .ip-tag {
+  margin-bottom: 4px;
+}
+
+/* Service 端点表格样式 */
+.service-endpoints-table {
+  margin-top: 16px;
+}
+
+.service-endpoints-table .ant-table-small .ant-table-tbody > tr > td {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.service-endpoints-table .ant-table-small .ant-table-thead > tr > th {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fafafa;
+}
+
+/* 标签过滤模态框样式 */
+.labels-filter-form {
+  padding: 8px;
+}
+
+.labels-filter-form .current-filters {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #f6ffed;
+  border-radius: 8px;
+  border: 1px solid #e6f7ff;
+}
+
+.labels-filter-form .current-filters h4,
+.labels-filter-form .add-filter-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 12px;
+}
+
+.labels-filter-form .filter-tags {
+  margin-bottom: 16px;
+}
+
+.labels-filter-form .add-filter-section {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.labels-filter-form .filter-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Service 表单样式增强 */
+.k8s-form .port-config-section {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fafafa;
+}
+
+.k8s-form .port-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.k8s-form .port-config-header h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  color: #262626;
+}
+
+.k8s-form .port-config-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.k8s-form .port-config-item:hover {
+  border-color: #d9d9d9;
+}
+
+.k8s-form .port-config-item .ant-input,
+.k8s-form .port-config-item .ant-select,
+.k8s-form .port-config-item .ant-input-number {
+  height: 32px;
+  font-size: 12px;
+}
+
+.k8s-form .port-config-item .ant-input-number {
+  width: 80px;
+}
+
+.k8s-form .port-config-item .ant-select {
+  width: 80px;
+}
+
+.k8s-form .port-config-item .ant-btn {
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+/* Service 选择器配置样式 */
+.selector-config-section {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  background: #f0f7ff;
+  margin-top: 8px;
+}
+
+.selector-empty-state {
+  text-align: center;
+  color: #8c8c8c;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* Service 状态指示器样式 */
+.service-status-running {
+  color: #52c41a;
+}
+
+.service-status-stopped {
+  color: #8c8c8c;
+}
+
+.service-status-error {
+  color: #ff4d4f;
+}
+
+/* Service 类型指示器样式 */
+.service-type-clusterip {
+  background: #e6f7ff;
+  color: #1890ff;
+  border-color: #91d5ff;
+}
+
+.service-type-nodeport {
+  background: #f6ffed;
+  color: #52c41a;
+  border-color: #b7eb8f;
+}
+
+.service-type-loadbalancer {
+  background: #fff7e6;
+  color: #fa8c16;
+  border-color: #ffd591;
+}
+
+.service-type-externalname {
+  background: #f9f0ff;
+  color: #722ed1;
+  border-color: #d3adf7;
+}
+
+/* 响应式设计 - Service 特定 */
+@media (max-width: 768px) {
+  .service-ports {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  
+  .service-external-ips {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  
+  .service-addresses {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  
+  .port-tag,
+  .ip-tag {
+    font-size: 10px;
+  }
+  
+  .service-ip {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 576px) {
+  .k8s-form .port-config-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .k8s-form .port-config-item .ant-input-number,
+  .k8s-form .port-config-item .ant-select {
+    width: 100%;
+  }
+  
+  .service-labels-filter {
+    width: 100%;
+  }
+  
+  .service-labels-filter .active-filters {
+    position: static;
+    margin-top: 8px;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
+  }
+  
+  .labels-filter-form .filter-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .service-labels-filter .k8s-toolbar-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* 标签过滤器滚动条样式 */
+.service-labels-filter .active-filters::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.service-labels-filter .active-filters::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.service-labels-filter .active-filters::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.service-labels-filter .active-filters::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 端点模态框特定样式 */
+.service-endpoints-modal .ant-modal-body {
+  padding: 16px;
+}
+
+.service-endpoints-modal .k8s-table {
+  margin: -8px;
+}
+
+/* Service 详情卡片样式增强 */
+.k8s-detail-content .ant-card-small > .ant-card-head {
+  min-height: 40px;
+  padding: 8px 16px;
+}
+
+.k8s-detail-content .ant-card-small > .ant-card-head > .ant-card-head-wrapper > .ant-card-head-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.k8s-detail-content .ant-card-small > .ant-card-body {
+  padding: 12px 16px;
+}
+
+/* Service 工具提示样式 */
+.service-tooltip {
+  max-width: 300px;
+}
+
+.service-tooltip .ant-tooltip-inner {
+  background: #fff;
+  color: #333;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.service-tooltip .ant-tooltip-arrow::before {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+}
+
+/* 打印样式 */
+@media print {
+  .service-ports .port-tag,
+  .service-external-ips .ip-tag,
+  .service-ip {
+    background: white !important;
+    border: 1px solid #ddd !important;
+    color: #333 !important;
+  }
+  
+  .yaml-textarea {
+    background: white !important;
+    border: 1px solid #ddd !important;
+  }
+  
+  .service-labels-filter,
+  .labels-filter-form {
+    display: none !important;
+  }
+}

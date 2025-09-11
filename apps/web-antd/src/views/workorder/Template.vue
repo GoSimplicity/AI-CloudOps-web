@@ -466,22 +466,22 @@ import {
   createWorkorderTemplate,
   updateWorkorderTemplate,
   deleteWorkorderTemplate
-} from '#/api/core/workorder_template';
+} from '#/api/core/workorder/workorder_template';
 
 import {
   type WorkorderCategoryItem,
   listWorkorderCategory
-} from '#/api/core/workorder_category';
+} from '#/api/core/workorder/workorder_category';
 
 import {
   type WorkorderProcessItem,
   listWorkorderProcess
-} from '#/api/core/workorder_process';
+} from '#/api/core/workorder/workorder_process';
 
 import {
   type WorkorderFormDesignItem,
   listWorkorderFormDesign
-} from '#/api/core/workorder_form_design';
+} from '#/api/core/workorder/workorder_form_design';
 
 // 列定义 - 修复嵌套数据显示问题
 const columns = [

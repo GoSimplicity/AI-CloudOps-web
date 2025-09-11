@@ -224,7 +224,7 @@ import {
   type EventAlertClaimReq,
   type EventAlertUnSilenceReq,
   MonitorAlertEventStatus,
-} from '#/api/core/prometheus_alert_event';
+} from '#/api/core/prometheus/prometheus_alert_event';
 
 // 响应式对话框宽度
 const previewDialogWidth = computed(() => {

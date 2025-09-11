@@ -1,0 +1,606 @@
+/* 工具栏右侧按钮优化 */
+.k8s-toolbar-right .ant-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 命名空间详情模态框样式 - 统一为 node 页面的样式 */
+.k8s-detail-content {
+  padding: 8px;
+}
+
+.k8s-detail-card {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e8e8e8;
+}
+
+.k8s-detail-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.k8s-detail-label {
+  font-weight: 600;
+  color: #555;
+  min-width: 120px;
+}
+
+.k8s-detail-value {
+  color: #262626;
+  flex: 1;
+  word-break: break-all;
+  line-height: 1.6;
+}
+
+.k8s-detail-content .ant-table-small .ant-table-tbody > tr > td {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.k8s-detail-content .ant-table-small .ant-table-thead > tr > th {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 标签和注解显示 - 统一为 node 页面的样式 */
+.k8s-labels-display,
+.k8s-annotations-display {
+  min-height: 30px;
+}
+
+.k8s-labels-display .k8s-label-item {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  color: #1677ff;
+  font-size: 12px;
+  border-radius: 6px;
+  margin: 2px 4px 2px 0;
+  padding: 2px 6px;
+  display: inline-block;
+  word-break: break-all;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.k8s-system-label {
+  background: #f0f2ff;
+  color: #1677ff;
+  border: 1px solid #d6e4ff;
+  font-weight: 600;
+}
+
+.k8s-user-label {
+  background: #f0f2ff;
+  color: #1677ff;
+  border: 1px solid #d6e4ff;
+  font-weight: 600;
+}
+
+.k8s-annotation-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.k8s-annotation-key {
+  background: #f0f2ff;
+  color: #1677ff;
+  border: 1px solid #d6e4ff;
+  font-weight: 600;
+}
+
+.k8s-annotation-separator,
+.k8s-label-separator {
+  color: #999;
+  font-weight: normal;
+}
+
+.k8s-no-data {
+  color: #999;
+  font-style: italic;
+  text-align: center;
+  height: 40px;
+  line-height: 40px;
+}
+
+/* 命名空间配置区域 */
+.k8s-config-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.k8s-config-textarea {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+/* YAML配置模态框样式 */
+.yaml-modal-content {
+  padding: 8px;
+}
+
+.yaml-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  margin-bottom: 12px;
+}
+
+.namespace-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.namespace-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.yaml-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.yaml-content {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #e8e8e8;
+}
+
+.yaml-textarea {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  resize: none;
+}
+
+/* 命名空间表格列样式 */
+.namespace-table :deep(.ant-table-tbody td[data-index="0"]) {
+  font-weight: 600;
+  color: #1677ff;
+}
+
+.namespace-table :deep(.ant-table-tbody td[data-index="3"]) {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  color: #666;
+}
+
+.namespace-table :deep(.ant-table-tbody td[data-index="4"]) {
+  font-weight: 500;
+  color: #52c41a;
+}
+
+.namespace-yaml-column .ant-btn {
+  height: 32px;
+  border-radius: 6px;
+  font-size: 12px;
+  padding: 0 12px;
+}
+
+/* 集群选择器样式优化 */
+.k8s-cluster-selector {
+  width: 200px;
+  min-width: 180px;
+  max-width: 250px;
+  flex-shrink: 0;
+}
+
+.k8s-cluster-selector :deep(.ant-select-selector) {
+  height: 36px !important;
+  padding: 0 12px;
+  border: 1px solid #d9d9d9;
+  background: #fff;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex !important;
+  align-items: center !important;
+  line-height: 1 !important;
+}
+
+.k8s-cluster-selector:hover :deep(.ant-select-selector) {
+  border-color: #40a9ff;
+}
+
+.k8s-cluster-selector.ant-select-focused :deep(.ant-select-selector) {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* 集群选择器下拉选项样式 */
+.k8s-cluster-selector :deep(.ant-select-selection-item) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: calc(100% - 20px);
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+}
+
+/* 占位符文本对齐 */
+.k8s-cluster-selector :deep(.ant-select-selection-placeholder) {
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+}
+
+/* 下拉框选项内容优化 */
+.k8s-cluster-selector :deep(.ant-select-dropdown) {
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.k8s-cluster-selector :deep(.ant-select-item) {
+  padding: 8px 12px;
+}
+
+/* 下拉选项内容垂直居中 */
+.k8s-cluster-selector :deep(.ant-select-item-option-content) {
+  display: flex !important;
+  align-items: center !important;
+  line-height: 1.4 !important;
+}
+
+.k8s-cluster-selector :deep(.ant-select-item-option-content > div) {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.k8s-cluster-selector :deep(.ant-select-item-option-content > div > span) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+  display: inline-block;
+  line-height: 1.4 !important;
+  vertical-align: middle !important;
+}
+
+/* 命名空间标签过滤器 */
+.namespace-labels-filter {
+  position: relative;
+}
+
+.namespace-labels-filter .k8s-toolbar-btn {
+  height: 36px;
+  border-radius: 6px;
+  font-weight: 500;
+  border: 1px solid #d9d9d9;
+  background: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.namespace-labels-filter .k8s-toolbar-btn:hover {
+  background: #f0f0f0;
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+.namespace-labels-filter .active-filters {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 80px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 系统命名空间样式 */
+.namespace-table :deep(.ant-table-tbody > tr[data-row-key="default"]),
+.namespace-table :deep(.ant-table-tbody > tr[data-row-key="kube-system"]),
+.namespace-table :deep(.ant-table-tbody > tr[data-row-key="kube-public"]),
+.namespace-table :deep(.ant-table-tbody > tr[data-row-key="kube-node-lease"]) {
+  background-color: #fff7e6;
+}
+
+/* 命名空间状态样式 */
+.namespace-table :deep(.ant-table-tbody > tr[data-namespace-status="Terminating"]) {
+  background-color: #fff2f0;
+}
+
+/* 标签过滤器样式 */
+.labels-filter-form {
+  padding: 8px;
+}
+
+.current-filters {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #f6ffed;
+  border-radius: 8px;
+  border: 1px solid #e6f7ff;
+}
+
+.filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.add-filter-section {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px dashed #d9d9d9;
+}
+
+.filter-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #e8e8e8;
+}
+
+/* 删除表单样式 */
+.delete-config-form {
+  margin-top: 16px;
+}
+
+.delete-config-form .ant-radio-wrapper {
+  padding: 8px;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  background: #fafafa;
+  margin-bottom: 6px;
+}
+
+/* 表单输入行样式 */
+.add-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: #f8f9fa;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+}
+
+/* 系统标签样式 */
+.k8s-detail-content .system-labels .k8s-label-item {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  color: #389e0d;
+}
+
+/* 特殊状态指示器 */
+.namespace-table :deep(.ant-table-tbody > tr[data-namespace-phase="Active"]) {
+  border-left: 2px solid #52c41a;
+}
+
+.namespace-table :deep(.ant-table-tbody > tr[data-namespace-phase="Terminating"]) {
+  border-left: 2px solid #ff4d4f;
+}
+
+/* 表格布局修复 */
+.namespace-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.namespace-table :deep(.ant-table-container) {
+  overflow: visible;
+}
+
+.namespace-table :deep(.ant-table-tbody > tr > td) {
+  vertical-align: top;
+  word-wrap: break-word;
+  word-break: break-all;
+}
+
+.namespace-table :deep(.ant-table-thead > tr > th),
+.namespace-table :deep(.ant-table-tbody > tr > td) {
+  padding: 12px 16px;
+}
+
+/* 确保表格内容正常显示 */
+.k8s-data-display {
+  overflow: visible !important;
+  position: relative;
+  z-index: 1;
+}
+
+.k8s-data-display .ant-table-wrapper {
+  overflow: visible;
+}
+
+.k8s-data-display .ant-table {
+  overflow: visible;
+}
+
+/* 修复表格行显示问题 */
+.namespace-table :deep(.ant-table-tbody > tr) {
+  display: table-row !important;
+}
+
+.namespace-table :deep(.ant-table-tbody > tr > td) {
+  display: table-cell !important;
+  position: relative;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* 修复表格头部显示 */
+.namespace-table :deep(.ant-table-thead > tr > th) {
+  position: relative;
+  background: #fafafa !important;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .detail-label {
+    min-width: auto;
+  }
+}
+
+@media (max-width: 576px) {
+  .yaml-header {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+  
+  .yaml-actions {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* 滚动条样式 */
+.config-textarea::-webkit-scrollbar,
+.yaml-textarea::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.config-textarea::-webkit-scrollbar-track,
+.yaml-textarea::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.config-textarea::-webkit-scrollbar-thumb,
+.yaml-textarea::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+/* 响应式优化 */
+/* 大屏幕优化 */
+@media (min-width: 1200px) {
+  .k8s-cluster-selector {
+    width: 220px;
+    max-width: 280px;
+  }
+  
+  .namespace-labels-filter .active-filters {
+    max-width: 300px;
+  }
+}
+
+/* 中等屏幕优化 */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .k8s-cluster-selector {
+    width: 180px;
+    min-width: 160px;
+    max-width: 200px;
+  }
+  
+  .k8s-selector-label {
+    font-size: 12px;
+  }
+}
+
+/* 小屏幕优化 */
+@media (max-width: 767px) {
+  .detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .detail-label {
+    min-width: auto;
+  }
+  
+  .k8s-cluster-selector {
+    width: 100%;
+    max-width: none;
+    min-width: 120px;
+  }
+  
+  .namespace-labels-filter {
+    width: 100%;
+  }
+  
+  .namespace-labels-filter .active-filters {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    max-height: 60px;
+    margin-top: 8px;
+    box-shadow: none;
+    border: 1px solid #e8e8e8;
+  }
+  
+  .filter-input-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .k8s-action-column .ant-btn {
+    margin-bottom: 4px;
+  }
+}
+
+/* 超小屏幕优化 */
+@media (max-width: 575px) {
+  .k8s-cluster-selector {
+    min-width: 100%;
+  }
+  
+  .namespace-labels-filter .k8s-toolbar-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .k8s-selector-label {
+    font-size: 11px;
+  }
+}

@@ -471,9 +471,9 @@ import {
   getRoleApisApi,
   type Role,
   type ListRolesReq,
-} from '#/api/core/system';
+} from '#/api/core/system/system';
 
-import { listApisApi } from '#/api/core/api';
+import { listApisApi } from '#/api/core/system/api';
 
 // 表单引用
 const formRef = ref<FormInstance>();

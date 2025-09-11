@@ -200,7 +200,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, nextTick } from 'vue';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue';
-import { FormFieldType, type FormField } from '#/api/core/workorder_form_design';
+import { FormFieldType, type FormField } from '#/api/core/workorder/workorder_form_design';
 
 interface Props {
   field: FormField;

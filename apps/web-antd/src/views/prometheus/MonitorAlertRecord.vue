@@ -513,9 +513,9 @@ import {
   deleteMonitorRecordRuleApi,
   getMonitorRecordRuleApi,
   type MonitorRecordRule,
-} from '#/api/core/prometheus_alert_record';
-import { getMonitorScrapePoolListApi } from '#/api/core/prometheus_scrape_pool';
-import { promqlExprCheckApi } from '#/api/core/prometheus_alert_rule';
+} from '#/api/core/prometheus/prometheus_alert_record';
+import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_scrape_pool';
+import { promqlExprCheckApi } from '#/api/core/prometheus/prometheus_alert_rule';
 
 // 定义 Pool 类型
 interface Pool {

@@ -639,9 +639,9 @@ import {
   type ListWorkorderFormDesignReq,
   type CreateWorkorderFormDesignReq,
   type UpdateWorkorderFormDesignReq
-} from '#/api/core/workorder_form_design';
-import type { WorkorderCategoryItem } from '#/api/core/workorder_category';
-import { listWorkorderCategory } from '#/api/core/workorder_category';
+} from '#/api/core/workorder/workorder_form_design';
+import type { WorkorderCategoryItem } from '#/api/core/workorder/workorder_category';
+import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
 
 const formDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {

@@ -539,12 +539,12 @@ import {
   type GetMonitorConfigListParams,
   type CreateMonitorConfigParams,
   type UpdateMonitorConfigParams
-} from '#/api/core/prometheus_config';
+} from '#/api/core/prometheus/prometheus_config';
 
 import {
   getMonitorScrapePoolListApi,
   type MonitorScrapePool
-} from '#/api/core/prometheus_scrape_pool';
+} from '#/api/core/prometheus/prometheus_scrape_pool';
 
 // 实例池接口
 type PoolOption = Pick<MonitorScrapePool, 'id' | 'name'>;

@@ -448,9 +448,9 @@ import {
   type GetAlertManagerPoolListParams,
   type CreateMonitorAlertManagerPoolReq,
   type UpdateMonitorAlertManagerPoolReq,
-} from '#/api/core/prometheus_alert_pool';
+} from '#/api/core/prometheus/prometheus_alert_pool';
 
-import { getUserList, type GetUserListReq } from '#/api/core/user';
+import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 
 // 动态表单项接口
 interface DynamicItem {

@@ -633,8 +633,8 @@ import {
   type BindTreeLocalResourceReq,
   type UnBindTreeLocalResourceReq,
   type TreeNode,
-} from '#/api/core/tree_local';
-import { getTreeList } from '#/api/core/tree_node';
+} from '#/api/core/tree/tree_local';
+import { getTreeList } from '#/api/core/tree/tree_node';
 
 const loading = ref(false);
 const detailLoading = ref(false);

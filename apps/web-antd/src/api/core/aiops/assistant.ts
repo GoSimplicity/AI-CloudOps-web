@@ -53,6 +53,9 @@ export interface ServiceReadyResponse {
   service: string;
   timestamp: string;
   message?: string;
+  initialized?: boolean;
+  healthy?: boolean;
+  status?: string;
 }
 
 // 服务健康检查响应模型
@@ -109,8 +112,8 @@ export interface AddDocumentResponse {
 }
 
 // 智能助手问答
-export async function assistantQuery(data: AssistantRequest) {
-  return requestClientAIOps.post('/assistant/query', data);
+export async function assistantQuery(data: AssistantRequest, config?: any) {
+  return requestClientAIOps.post('/assistant/query', data, config);
 }
 
 // 获取会话信息

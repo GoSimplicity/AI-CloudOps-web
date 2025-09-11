@@ -283,7 +283,7 @@ import {
   getApiStatisticsApi,
   type CreateApiReq,
   type UpdateApiReq
-} from '#/api/core/api';
+} from '#/api/core/system/api';
 
 interface ApiInfo {
   id: number;

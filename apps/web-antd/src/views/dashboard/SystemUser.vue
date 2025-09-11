@@ -426,13 +426,13 @@ import {
   type UserSignUpReq,
   type UpdateProfileReq,
   type GetUserListReq
-} from '#/api/core/user';
+} from '#/api/core/system/user';
 import { 
   assignRolesToUserApi,
   revokeRolesFromUserApi,
   getUserRolesApi,
   listRolesApi
-} from '#/api/core/system';
+} from '#/api/core/system/system';
 
 // 类型定义
 interface UserStatistics {

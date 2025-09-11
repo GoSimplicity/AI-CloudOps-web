@@ -502,7 +502,7 @@ import {
   type GetMonitorScrapePoolListReq,
   type CreateMonitorScrapePoolReq,
   type UpdateMonitorScrapePoolReq
-} from '#/api/core/prometheus_scrape_pool';
+} from '#/api/core/prometheus/prometheus_scrape_pool';
 
 // 动态表单项接口
 interface DynamicItem {

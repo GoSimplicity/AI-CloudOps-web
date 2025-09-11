@@ -380,9 +380,9 @@ import {
   type ListAuditLogsRequest,
   type SearchAuditLogsRequest,
   type AdvancedSearchOptions
-} from '#/api/core/audit';
+} from '#/api/core/system/audit';
 
-import { getUserDetailApi } from '#/api/core/user';
+import { getUserDetailApi } from '#/api/core/system/user';
 
 // 扩展审计日志类型，包含用户信息
 interface AuditLogWithUser extends AuditLog {

@@ -507,13 +507,101 @@
           />
           <div class="template-help">
             <a-alert
-              message="支持模板变量"
-              description="可以在消息中使用 {变量名} 的格式插入动态内容"
+              message="📋 AI-CloudOps 通知系统支持的模板变量"
               type="info"
               show-icon
               banner
               style="margin-top: 8px;"
-            />
+            >
+              <template #description>
+                <div class="template-variables-help">
+                  <div class="variable-group">
+                    <strong>🎯 核心业务变量</strong>
+                    <div class="variable-list">
+                      <span class="variable-item">{subject} - 通知主题</span>
+                      <span class="variable-item">{content} - 通知内容</span>
+                      <span class="variable-item">{recipient_name} - 接收人姓名</span>
+                      <span class="variable-item">{recipient_addr} - 接收人地址（邮箱/手机号）</span>
+                    </div>
+                  </div>
+                  
+                  <div class="variable-group">
+                    <strong>🏢 工单相关变量</strong>
+                    <div class="variable-list">
+                      <span class="variable-item">{workorder_id} - 工单ID (数字格式)</span>
+                      <span class="variable-item">{serial_number} - 工单编号 (WO-123456 格式)</span>
+                      <span class="variable-item">{title} - 工单标题</span>
+                      <span class="variable-item">{description} - 工单描述</span>
+                      <span class="variable-item">{status} - 工单状态</span>
+                    </div>
+                  </div>
+                  
+                  <div class="variable-group">
+                    <strong>⚡ 优先级变量</strong>
+                    <div class="variable-list">
+                      <span class="variable-item">{priority_level} - 优先级等级 (1, 2, 3)</span>
+                      <span class="variable-item">{priority_text} - 优先级文本 (高, 中, 低)</span>
+                      <span class="variable-item">{priority_icon} - 优先级图标</span>
+                    </div>
+                  </div>
+                  
+                  <div class="variable-group">
+                    <strong>📅 时间相关变量</strong>
+                    <div class="variable-list">
+                      <span class="variable-item">{notification_time} - 通知时间</span>
+                      <span class="variable-item">{notification_date} - 通知日期</span>
+                      <span class="variable-item">{notification_year} - 年份</span>
+                      <span class="variable-item">{notification_month} - 月份</span>
+                      <span class="variable-item">{notification_day} - 日期</span>
+                    </div>
+                  </div>
+                  
+                  <div class="variable-group">
+                    <strong>🎭 事件类型变量</strong>
+                    <div class="variable-list">
+                      <span class="variable-item">{event_type} - 事件类型文本</span>
+                      <span class="variable-item">{event_type_text} - 事件类型文本</span>
+                      <span class="variable-item">{event_type_icon} - 事件类型图标</span>
+                    </div>
+                  </div>
+                  
+                  <div class="variable-group">
+                    <strong>🏢 企业信息变量</strong>
+                    <div class="variable-list">
+                      <span class="variable-item">{company_name} - 公司名称 (AI-CloudOps)</span>
+                      <span class="variable-item">{platform_name} - 平台名称</span>
+                      <span class="variable-item">{department} - 部门名称</span>
+                      <span class="variable-item">{service_hotline} - 服务热线</span>
+                    </div>
+                  </div>
+                  
+                  <div class="variable-group">
+                    <strong>👥 人员相关变量</strong>
+                    <div class="variable-list">
+                      <span class="variable-item">{operator_name} - 操作人员姓名</span>
+                      <span class="variable-item">{assignee_name} - 指派人员姓名</span>
+                      <span class="variable-item">{created_time} - 创建时间</span>
+                      <span class="variable-item">{updated_time} - 更新时间</span>
+                    </div>
+                  </div>
+                  
+                  <div class="variable-group">
+                    <strong>🔧 自定义变量</strong>
+                    <div class="variable-list">
+                      <span class="variable-item">{custom_content} - 自定义内容</span>
+                    </div>
+                  </div>
+                  
+                  <div class="variable-deprecated">
+                    <strong>❌ 不再支持的变量</strong>
+                    <div class="variable-list deprecated">
+                      <span class="variable-item">{instanceTitle} → 请使用 {title}</span>
+                      <span class="variable-item">{currentTime} → 请使用 {notification_time}</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </a-alert>
           </div>
         </a-form-item>
 
@@ -836,11 +924,11 @@ import {
   getAllEventTypes,
   getAllNotificationChannels,
   getAllRecipientTypes
-} from '#/api/core/workorder_notification';
-import { listWorkorderProcess, type WorkorderProcessItem } from '#/api/core/workorder_process';
-import { listWorkorderTemplate, type WorkorderTemplateItem } from '#/api/core/workorder_template';
-import { listWorkorderCategory, type WorkorderCategoryItem } from '#/api/core/workorder_category';
-import { getUserList, type User } from '#/api/core/user';
+} from '#/api/core/workorder/workorder_notification';
+import { listWorkorderProcess, type WorkorderProcessItem } from '#/api/core/workorder/workorder_process';
+import { listWorkorderTemplate, type WorkorderTemplateItem } from '#/api/core/workorder/workorder_template';
+import { listWorkorderCategory, type WorkorderCategoryItem } from '#/api/core/workorder/workorder_category';
+import { getUserList, type User } from '#/api/core/system/user';
 
 // 表单ref
 const formRef = ref<FormInstance>();
@@ -1000,7 +1088,7 @@ const notificationDialog = reactive({
     recipientUsers: [] as string[],
     recipientRoles: [] as string[],
     recipientDepts: [] as string[],
-    messageTemplate: '您好！\n\n工单通知：{instanceTitle}\n\n详情请查看系统。\n\n时间：{currentTime}',
+    messageTemplate: '您好 {recipient_name}！\n\n工单通知：{title}\n工单编号：{serial_number}\n优先级：{priority_text}\n状态：{status}\n\n详情请查看系统。\n\n通知时间：{notification_time}\n平台：{platform_name}',
     subjectTemplate: '',
     scheduledTime: undefined as any,
     repeatInterval: undefined as number | undefined,
@@ -1239,9 +1327,31 @@ const formatFullDateTime = (dateStr?: string): string => {
 
 const getPreviewMessage = (notification: Notification): string => {
   return (notification.message_template || '')
-    .replace('{instanceTitle}', '示例工单标题')
-    .replace('{operatorName}', '系统管理员')
-    .replace('{currentTime}', dayjs().format('YYYY-MM-DD HH:mm:ss'));
+    .replace('{title}', '示例工单标题')
+    .replace('{serial_number}', 'WO-202401001')
+    .replace('{workorder_id}', '123456')
+    .replace('{recipient_name}', '张三')
+    .replace('{recipient_addr}', 'zhangsan@example.com')
+    .replace('{priority_text}', '高')
+    .replace('{priority_level}', '1')
+    .replace('{status}', '待处理')
+    .replace('{description}', '这是一个示例工单描述')
+    .replace('{operator_name}', '系统管理员')
+    .replace('{assignee_name}', '李四')
+    .replace('{event_type}', '工单创建')
+    .replace('{event_type_text}', '工单创建')
+    .replace('{notification_time}', dayjs().format('YYYY-MM-DD HH:mm:ss'))
+    .replace('{notification_date}', dayjs().format('YYYY-MM-DD'))
+    .replace('{notification_year}', dayjs().format('YYYY'))
+    .replace('{notification_month}', dayjs().format('MM'))
+    .replace('{notification_day}', dayjs().format('DD'))
+    .replace('{company_name}', 'AI-CloudOps')
+    .replace('{platform_name}', '智能运维管理平台')
+    .replace('{department}', '技术运维部')
+    .replace('{service_hotline}', '400-000-0000')
+    .replace('{custom_content}', '自定义内容示例')
+    .replace('{created_time}', dayjs().subtract(1, 'hour').format('YYYY-MM-DD HH:mm:ss'))
+    .replace('{updated_time}', dayjs().format('YYYY-MM-DD HH:mm:ss'));
 };
 
 // 添加缺失的函数
@@ -1582,7 +1692,7 @@ const handleCreateNotification = (): void => {
     recipientUsers: [],
     recipientRoles: [],
     recipientDepts: [],
-    messageTemplate: '您好！\n\n工单通知：{instanceTitle}\n\n详情请查看系统。\n\n时间：{currentTime}',
+    messageTemplate: '您好 {recipient_name}！\n\n工单通知：{title}\n工单编号：{serial_number}\n优先级：{priority_text}\n状态：{status}\n\n详情请查看系统。\n\n通知时间：{notification_time}\n平台：{platform_name}',
     subjectTemplate: '',
     scheduledTime: undefined,
     repeatInterval: undefined,
@@ -1699,13 +1809,51 @@ const handleTestSend = (record: Notification): void => {
     okText: '发送',
     cancelText: '取消',
     onOk: async () => {
+      let loadingMessage: any = null;
       try {
-        const loadingMessage = message.loading('正在发送测试通知...', 0);
-        await testSendNotification({ notification_id: record.id! });
-        loadingMessage();
+        loadingMessage = message.loading('正在发送测试通知...', 0);
+        
+        // 添加超时处理
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('请求超时')), 30000); // 30秒超时
+        });
+        
+        const sendPromise = testSendNotification({ notification_id: record.id! });
+        
+        await Promise.race([sendPromise, timeoutPromise]);
+        
+        // 确保关闭loading
+        if (loadingMessage) {
+          loadingMessage();
+          loadingMessage = null;
+        }
+        
         message.success('测试通知发送成功');
-      } catch (error) {
-        message.error('测试通知发送失败');
+      } catch (error: any) {
+        // 确保关闭loading
+        if (loadingMessage) {
+          loadingMessage();
+          loadingMessage = null;
+        }
+        
+        let errorMessage = '测试通知发送失败';
+        if (error.message) {
+          if (error.message.includes('timeout') || error.message.includes('超时')) {
+            errorMessage = '测试发送超时，请检查网络连接或稍后重试';
+          } else if (error.message.includes('network') || error.message.includes('网络')) {
+            errorMessage = '网络连接异常，请检查网络后重试';
+          } else if (error.message.includes('404')) {
+            errorMessage = '通知配置不存在或已被删除';
+          } else if (error.message.includes('403')) {
+            errorMessage = '没有权限执行此操作';
+          } else if (error.message.includes('500')) {
+            errorMessage = '服务器内部错误，请联系管理员';
+          } else {
+            errorMessage = `发送失败: ${error.message}`;
+          }
+        }
+        
+        message.error(errorMessage);
         console.error('Failed to send test notification:', error);
       }
     }
@@ -1718,7 +1866,7 @@ const handleManualSend = (record: Notification): void => {
   manualSendDialog.form = {
     channels: record.channels || [],
     recipient: '',
-    subject: `表单通知 - ${getFormName(record.template_id)}`,
+    subject: `AI-CloudOps 工单通知 - {title}`,
     content: getPreviewMessage(record)
   };
   
@@ -1744,14 +1892,45 @@ const handleDuplicateNotification = async (record: Notification): Promise<void> 
     return;
   }
   
+  const loadingMessage = message.loading('正在复制通知配置...', 0);
+  
   try {
-    const res = await duplicateNotification(record.id!);
+    // 添加超时处理
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('请求超时')), 30000); // 30秒超时
+    });
+    
+    const duplicatePromise = duplicateNotification(record.id!);
+    
+    const res = await Promise.race([duplicatePromise, timeoutPromise]);
+    
+    loadingMessage();
+    
     if (res && res.id) {
       message.success('复制通知配置成功');
       loadNotifications();
+    } else {
+      message.error('复制失败：服务器返回异常数据');
     }
-  } catch (error) {
-    message.error('复制配置失败');
+  } catch (error: any) {
+    loadingMessage();
+    
+    let errorMessage = '复制配置失败';
+    if (error.message) {
+      if (error.message.includes('timeout') || error.message.includes('超时')) {
+        errorMessage = '复制超时，请稍后重试';
+      } else if (error.message.includes('404')) {
+        errorMessage = '通知配置不存在或已被删除';
+      } else if (error.message.includes('403')) {
+        errorMessage = '没有权限执行此操作';
+      } else if (error.message.includes('500')) {
+        errorMessage = '服务器内部错误，请联系管理员';
+      } else {
+        errorMessage = `复制失败: ${error.message}`;
+      }
+    }
+    
+    message.error(errorMessage);
     console.error('Failed to duplicate notification:', error);
   }
 };
@@ -1769,12 +1948,50 @@ const handleDeleteNotification = (record: Notification): void => {
     okType: 'danger',
     cancelText: '取消',
     onOk: async () => {
+      let loadingMessage: any = null;
       try {
-        await deleteNotification(record.id!);
+        loadingMessage = message.loading('正在删除通知配置...', 0);
+        
+        // 添加超时处理
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('请求超时')), 30000); // 30秒超时
+        });
+        
+        const deletePromise = deleteNotification(record.id!);
+        
+        await Promise.race([deletePromise, timeoutPromise]);
+        
+        if (loadingMessage) {
+          loadingMessage();
+          loadingMessage = null;
+        }
+        
         message.success('通知配置已删除');
         loadNotifications();
-      } catch (error) {
-        message.error('删除失败');
+      } catch (error: any) {
+        if (loadingMessage) {
+          loadingMessage();
+          loadingMessage = null;
+        }
+        
+        let errorMessage = '删除失败';
+        if (error.message) {
+          if (error.message.includes('timeout') || error.message.includes('超时')) {
+            errorMessage = '删除超时，请稍后重试';
+          } else if (error.message.includes('404')) {
+            errorMessage = '通知配置不存在或已被删除';
+          } else if (error.message.includes('403')) {
+            errorMessage = '没有权限执行此操作';
+          } else if (error.message.includes('409')) {
+            errorMessage = '配置正在使用中，无法删除';
+          } else if (error.message.includes('500')) {
+            errorMessage = '服务器内部错误，请联系管理员';
+          } else {
+            errorMessage = `删除失败: ${error.message}`;
+          }
+        }
+        
+        message.error(errorMessage);
         console.error('Failed to delete notification:', error);
       }
     }
@@ -1993,12 +2210,45 @@ const saveManualSend = async (): Promise<void> => {
       content: manualSendDialog.form.content.trim()
     };
     
-    await sendNotificationManually(sendData);
+    // 添加超时处理
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('请求超时')), 30000); // 30秒超时
+    });
+    
+    const sendPromise = sendNotificationManually(sendData);
+    
+    await Promise.race([sendPromise, timeoutPromise]);
+    
     message.success('通知发送成功');
     manualSendDialogVisible.value = false;
+    
+    // 重置表单
+    manualSendDialog.form = {
+      channels: [],
+      recipient: '',
+      subject: '',
+      content: ''
+    };
 
-  } catch (error) {
-    message.error('发送失败');
+  } catch (error: any) {
+    let errorMessage = '发送失败';
+    if (error.message) {
+      if (error.message.includes('timeout') || error.message.includes('超时')) {
+        errorMessage = '发送超时，请检查网络连接或稍后重试';
+      } else if (error.message.includes('network') || error.message.includes('网络')) {
+        errorMessage = '网络连接异常，请检查网络后重试';
+      } else if (error.message.includes('403')) {
+        errorMessage = '没有权限执行此操作';
+      } else if (error.message.includes('500')) {
+        errorMessage = '服务器内部错误，请联系管理员';
+      } else if (error.message.includes('validation') || error.message.includes('验证')) {
+        errorMessage = '数据验证失败，请检查输入内容';
+      } else {
+        errorMessage = `发送失败: ${error.message}`;
+      }
+    }
+    
+    message.error(errorMessage);
     console.error('Failed to send manual notification:', error);
   } finally {
     manualSendDialog.saving = false;
@@ -2482,6 +2732,85 @@ onMounted(() => {
 
 .notification-config-modal :deep(.ant-checkbox-wrapper) {
   margin-bottom: 8px;
+}
+
+/* 模板变量帮助信息样式 */
+.template-variables-help {
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.variable-group {
+  margin-bottom: 12px;
+}
+
+.variable-group strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #1f2937;
+  font-size: 13px;
+}
+
+.variable-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 4px 8px;
+  margin-left: 12px;
+}
+
+.variable-item {
+  display: block;
+  padding: 2px 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+  color: #495057;
+  border-left: 3px solid #e9ecef;
+  transition: all 0.2s ease;
+}
+
+.variable-item:hover {
+  background: #e9ecef;
+  border-left-color: #1890ff;
+  color: #1890ff;
+}
+
+.variable-deprecated {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.variable-list.deprecated .variable-item {
+  background: #fff2f0;
+  border-left-color: #ff4d4f;
+  color: #ff4d4f;
+  text-decoration: line-through;
+}
+
+.variable-list.deprecated .variable-item:hover {
+  background: #ffebe6;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .variable-list {
+    grid-template-columns: 1fr;
+    gap: 2px 4px;
+  }
+  
+  .template-variables-help {
+    max-height: 200px;
+    font-size: 11px;
+  }
+  
+  .variable-item {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
 }
 
 /* 统计卡片动画 */

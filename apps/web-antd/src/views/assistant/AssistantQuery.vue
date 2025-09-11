@@ -221,8 +221,8 @@ import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { assistantQuery } from '#/api/core/assistant';
-import type { AssistantRequest, AssistantResponse } from '#/api/core/assistant';
+import { assistantQuery } from '#/api/core/aiops/assistant';
+import type { AssistantRequest, AssistantResponse } from '#/api/core/aiops/assistant';
 
 // 路由
 const router = useRouter();

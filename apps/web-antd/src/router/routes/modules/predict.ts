@@ -31,15 +31,6 @@ const routes: RouteRecordRaw[] = [
           title: '智能分析',
         },
       },
-      {
-        name: 'PredictHealth',
-        path: '/predict/health',
-        component: () => import('#/views/predict/PredictHealth.vue'),
-        meta: {
-          icon: 'lucide:heart',
-          title: '服务监控',
-        },
-      },
     ],
   },
 ];

@@ -28,20 +28,20 @@
         </div>
 
         <div class="header-actions">
-          <button class="action-button minimize-btn" @click="minimizeWindow" title="最小化">
+          <button class="action-button minimize-btn" @mousedown.stop @click="minimizeWindow" title="最小化">
             <Minus :size="16" />
           </button>
-          <button class="action-button resize-btn" @click="toggleWindowSize" :title="isExpanded ? '缩小' : '放大'">
+          <button class="action-button resize-btn" @mousedown.stop @click="toggleWindowSize" :title="isExpanded ? '缩小' : '放大'">
             <Minimize2 v-if="isExpanded" :size="16" />
             <Maximize2 v-else :size="16" />
           </button>
-          <button class="action-button clear-btn" @click="clearChat" title="清空聊天">
+          <button class="action-button clear-btn" @mousedown.stop @click="clearChat" title="清空聊天">
             <Trash2 :size="16" />
           </button>
-          <button class="action-button refresh-btn" @click="refreshKnowledge" title="刷新知识库" :disabled="isRefreshing">
+          <button class="action-button refresh-btn" @mousedown.stop @click="refreshKnowledge" title="刷新知识库" :disabled="isRefreshing">
             <RefreshCw :size="16" :class="{ 'spinning': isRefreshing }" />
           </button>
-          <button class="action-button close-btn" @click="closeWindow" title="关闭">
+          <button class="action-button close-btn" @mousedown.stop @click="closeWindow" title="关闭">
             <X :size="16" />
           </button>
         </div>
@@ -78,6 +78,34 @@
               MCP
             </button>
           </div>
+
+          <!-- 会话切换器 -->
+          <div class="session-switcher" @click.stop>
+            <button class="session-button" @click="showSessionsPanel = !showSessionsPanel" :title="currentSessionName">
+              会话：{{ currentSessionName }}
+            </button>
+            <div v-if="showSessionsPanel" class="session-panel">
+              <div class="sessions-header">
+                <span>会话列表</span>
+                <button class="sessions-new" @click="createNewSession" title="新建会话">
+                  <Plus :size="12" />
+                </button>
+              </div>
+              <div class="sessions-list">
+                <div v-for="s in sessions" :key="s.localId" class="session-item" :class="{ active: s.localId === currentLocalSessionId }" @click="switchToSession(s.localId)">
+                  <span class="session-name">{{ s.name }}</span>
+                  <div class="session-actions">
+                    <button class="session-action-btn" title="重命名" @click.stop="renameSession(s.localId)">
+                      <Edit2 :size="12" />
+                    </button>
+                    <button class="session-action-btn" title="删除" @click.stop="deleteSession(s.localId)">
+                      <Trash2 :size="12" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         
         <div class="message-count">
@@ -89,13 +117,14 @@
       <div v-if="errorMessage" class="error-banner">
         <AlertCircle :size="16" />
         <span>{{ errorMessage }}</span>
+        <button v-if="lastFailedQuestion && !sending" @click="retryLast" class="error-retry">重试</button>
         <button @click="errorMessage = ''" class="error-close">
           <X :size="14" />
         </button>
       </div>
 
       <!-- 消息内容区域 -->
-      <div class="chat-messages" ref="messagesContainer">
+      <div class="chat-messages" ref="messagesContainer" @click="onMessagesClick">
         <div v-for="(msg, index) in chatMessages" :key="`msg-${index}-${msg.time}`" :class="['message', msg.type]">
           <div class="message-wrapper">
             <div class="avatar">
@@ -173,8 +202,17 @@
                 <button class="message-action-btn" @click="copyMessage(msg.content)" title="复制">
                   <Copy :size="12" />
                 </button>
+                <button class="message-action-btn" @click="regenerateAnswer(index)" :disabled="sending" title="重新生成">
+                  <RefreshCw :size="12" />
+                </button>
                 <button class="message-action-btn" @click="toggleLike(index)" title="点赞">
                   <ThumbsUp :size="12" :class="{ 'liked': msg.liked }" />
+                </button>
+              </div>
+
+              <div class="message-actions" v-if="msg.type === 'user'">
+                <button class="message-action-btn" @click="resendMessage(index)" :disabled="sending" title="重发">
+                  <RotateCcw :size="12" />
                 </button>
               </div>
             </div>
@@ -197,14 +235,18 @@
       <div class="chat-input" v-if="!isMinimized">
         <div class="textarea-container">
           <div class="input-wrapper">
-            <textarea v-model="globalInputMessage" placeholder="请输入您的问题..." :disabled="sending"
-              @keydown="handleEnterKey" class="message-input" rows="1" ref="messageInput"></textarea>
+            <textarea v-model="globalInputMessage" placeholder="请输入您的问题...（Enter发送，Shift+Enter换行）" :disabled="sending"
+              @keydown="handleEnterKey" @input="onInputChange" @compositionstart="onCompositionStart" @compositionend="onCompositionEnd" class="message-input" rows="1" ref="messageInput"></textarea>
 
             <div class="input-actions">
               <!-- 高级选项按钮 -->
               <button class="advanced-options-btn" @click="showAdvancedOptions = !showAdvancedOptions" title="高级选项"
                 :class="{ 'active': showAdvancedOptions }">
                 <Settings2 :size="16" />
+              </button>
+
+              <button v-if="sending" class="stop-button" @click="cancelGeneration" title="停止生成">
+                <Square :size="16" />
               </button>
 
               <button class="send-button" :disabled="!globalInputMessage.trim() || sending" @click="handleSearch"
@@ -238,7 +280,7 @@
         </div>
 
         <div class="input-hints">
-          <span class="hint-item">Shift+Enter发送</span>
+          <span class="hint-item">Enter发送 / Shift+Enter换行</span>
           <div class="mode-info">
             <span class="mode-indicator" :class="currentMode === 1 ? 'rag' : 'mcp'">
               {{ currentMode === 1 ? 'RAG模式' : 'MCP模式' }}
@@ -281,7 +323,11 @@ import {
   Minimize2,
   RefreshCw,
   AlertCircle,
-  Settings2
+  Settings2,
+  Plus,
+  Edit2,
+  RotateCcw,
+  Square
 } from 'lucide-vue-next';
 import { message } from 'ant-design-vue';
 import { marked } from 'marked';
@@ -289,10 +335,8 @@ import DOMPurify from 'dompurify';
 import {
   assistantQuery,
   clearAssistantCache,
-  refreshKnowledgeBase,
-  assistantHealth,
-  getSessionInfo
-} from '#/api/core/assistant';
+  refreshKnowledgeBase
+} from '#/api/core/aiops/assistant';
 
 // 状态管理
 const isFloatWindowVisible = ref(false);
@@ -310,6 +354,108 @@ const messagesContainer = ref(null);
 const floatWindow = ref(null);
 const messageInput = ref(null);
 const sessionId = ref('');
+const lastFailedQuestion = ref('');
+const abortController = ref(null);
+const showSessionsPanel = ref(false);
+const currentLocalSessionId = ref('');
+const sessions = ref([]);
+const currentSessionName = computed(() => {
+  const s = sessions.value.find(s => s.localId === currentLocalSessionId.value);
+  return s?.name || '默认会话';
+});
+
+// 中文输入法组合输入状态
+const isComposing = ref(false);
+const lastCompositionEndAt = ref(0);
+
+// 本地持久化
+const UI_STATE_KEY = 'aiAssistantUIState';
+const CHAT_STATE_KEY = 'aiAssistantChatState';
+const SESSIONS_KEY = 'aiAssistantSessions';
+
+const persistState = () => {
+  try {
+    const uiState = {
+      windowPosition: { x: windowPosition.x, y: windowPosition.y },
+      windowSize: { width: windowSize.width, height: windowSize.height },
+      isMinimized: isMinimized.value,
+      isExpanded: isExpanded.value,
+      currentMode: currentMode.value,
+      showAdvancedOptions: showAdvancedOptions.value
+    };
+    localStorage.setItem(UI_STATE_KEY, JSON.stringify(uiState));
+
+    const MAX_MSG = 50;
+    const chatState = {
+      sessionId: sessionId.value,
+      isConnected: isConnected.value,
+      chatHistory: Array.isArray(chatHistory.value) ? chatHistory.value.slice(-MAX_MSG) : [],
+      chatMessages: (() => {
+        try {
+          const plain = JSON.parse(JSON.stringify(chatMessages));
+          return plain.slice(-MAX_MSG);
+        } catch {
+          return [];
+        }
+      })()
+    };
+    localStorage.setItem(CHAT_STATE_KEY, JSON.stringify(chatState));
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify({ sessions: sessions.value, currentLocalSessionId: currentLocalSessionId.value }));
+  } catch (e) {
+    console.warn('持久化失败', e);
+  }
+};
+
+const loadState = () => {
+  try {
+    const uiRaw = localStorage.getItem(UI_STATE_KEY);
+    if (uiRaw) {
+      const ui = JSON.parse(uiRaw);
+      if (ui?.windowPosition) {
+        windowPosition.x = Math.max(0, Math.min(window.innerWidth - 320, Number(ui.windowPosition.x) || 0));
+        windowPosition.y = Math.max(0, Math.min(window.innerHeight - 100, Number(ui.windowPosition.y) || 0));
+      }
+      if (ui?.windowSize) {
+        windowSize.width = Math.max(320, Math.min(600, Number(ui.windowSize.width) || 380));
+        windowSize.height = Math.max(400, Math.min(800, Number(ui.windowSize.height) || 600));
+      }
+      isMinimized.value = !!ui?.isMinimized;
+      isExpanded.value = !!ui?.isExpanded;
+      currentMode.value = ui?.currentMode === 2 ? 2 : 1;
+      showAdvancedOptions.value = !!ui?.showAdvancedOptions;
+    }
+
+    const chatRaw = localStorage.getItem(CHAT_STATE_KEY);
+    if (chatRaw) {
+      const chat = JSON.parse(chatRaw);
+      sessionId.value = chat?.sessionId || '';
+      isConnected.value = !!chat?.isConnected;
+      chatHistory.value = Array.isArray(chat?.chatHistory) ? chat.chatHistory : [];
+      const msgs = Array.isArray(chat?.chatMessages) ? chat.chatMessages : [];
+      if (msgs.length > 0) {
+        chatMessages.length = 0;
+        msgs.forEach(m => chatMessages.push(m));
+      } else {
+        initChatMessages();
+      }
+    } else {
+      initChatMessages();
+    }
+
+    const sesRaw = localStorage.getItem(SESSIONS_KEY);
+    if (sesRaw) {
+      const ses = JSON.parse(sesRaw);
+      sessions.value = Array.isArray(ses.sessions) ? ses.sessions : [];
+      currentLocalSessionId.value = ses.currentLocalSessionId || '';
+    }
+    if (!sessions.value.length) {
+      createNewSession(true);
+    }
+  } catch (e) {
+    console.warn('加载持久化状态失败', e);
+    initChatMessages();
+  }
+};
 
 // 模式管理 - 1=RAG模式，2=MCP模式
 const currentMode = ref(1); // 默认为RAG模式
@@ -470,19 +616,20 @@ const chatMessages = reactive([
 const toggleFloatWindow = () => {
   isFloatWindowVisible.value = !isFloatWindowVisible.value;
   if (isFloatWindowVisible.value) {
-    // 检查服务健康状态
-    checkServiceHealth();
     nextTick(() => {
+      if (messageInput.value) {
+        messageInput.value.focus();
+      }
+      autoResizeTextarea();
       scrollToBottom();
     });
-  } else {
-    resetWindow();
   }
+  persistState();
 };
 
 const closeWindow = () => {
   isFloatWindowVisible.value = false;
-  resetWindow();
+  persistState();
 };
 
 const minimizeWindow = () => {
@@ -568,18 +715,7 @@ const stopResize = () => {
   document.removeEventListener('mouseup', stopResize);
 };
 
-// 检查服务健康状态
-const checkServiceHealth = async () => {
-  try {
-    await assistantHealth();
-    isConnected.value = true;
-    return true;
-  } catch (error) {
-    console.warn('服务健康检查失败:', error);
-    isConnected.value = false;
-    return false;
-  }
-};
+
 
 // 初始化聊天记录
 const initChatMessages = () => {
@@ -591,6 +727,26 @@ const initChatMessages = () => {
   });
 };
 
+// 模拟流式渲染工具
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const simulateStreamResponse = async (messageObj, fullText) => {
+  if (!fullText) return;
+  const total = fullText.length;
+  const step = total > 2000 ? 60 : total > 1000 ? 40 : total > 300 ? 20 : 8;
+  const delay = total > 2000 ? 8 : total > 1000 ? 12 : total > 300 ? 16 : 22;
+  let index = 0;
+  while (index < total) {
+    if (!sending.value) break;
+    const next = Math.min(total, index + step);
+    messageObj.content += fullText.slice(index, next);
+    index = next;
+    await nextTick();
+    scrollToBottom();
+    await sleep(delay);
+  }
+};
+
 // 发送消息
 const sendMessage = async (value) => {
   const trimmedValue = value.trim();
@@ -600,6 +756,7 @@ const sendMessage = async (value) => {
   }
 
   globalInputMessage.value = '';
+  lastFailedQuestion.value = '';
 
   // 添加用户消息到聊天记录
   const userMessage = {
@@ -645,33 +802,33 @@ const sendMessage = async (value) => {
 
     console.log('发送查询请求:', queryParams);
 
-    const response = await assistantQuery(queryParams);
+    // 支持取消
+    if (abortController.value) {
+      try { abortController.value.abort(); } catch {}
+    }
+    abortController.value = new AbortController();
+    const signal = abortController.value.signal;
+    const response = await assistantQuery(queryParams, { signal });
     console.log('查询响应:', response);
 
     if (response?.answer) {
 
       const lastMessage = chatMessages[chatMessages.length - 1];
       if (lastMessage) {
-        lastMessage.content = response.answer;
-
-        // 添加消息来源（处理新的数据结构）
         if (response.source_documents && response.source_documents.length > 0) {
           lastMessage.sources = response.source_documents;
         }
-
-        // 添加后续问题推荐
         if (response.follow_up_questions && response.follow_up_questions.length > 0) {
           lastMessage.followUpQuestions = response.follow_up_questions;
         }
-
-        // 处理评分信息（如果API返回）
         if (response.relevance_score !== undefined && response.relevance_score !== null) {
           lastMessage.relevanceScore = response.relevance_score;
         }
-
         if (response.recall_rate !== undefined && response.recall_rate !== null) {
           lastMessage.recallRate = response.recall_rate;
         }
+
+        await simulateStreamResponse(lastMessage, response.answer);
       }
 
       // 保存/更新会话ID
@@ -687,13 +844,16 @@ const sendMessage = async (value) => {
 
       chatHistory.value.push({
         role: 'assistant',
-        content: response.answer
+        content: chatMessages[chatMessages.length - 1]?.content || response.answer
       });
+      errorMessage.value = '';
+      lastFailedQuestion.value = '';
 
     } else {
       throw new Error('AI响应格式不正确');
     }
   } catch (error) {
+    lastFailedQuestion.value = trimmedValue;
 
     if (chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.type === 'ai' && !chatMessages[chatMessages.length - 1]?.content) {
       chatMessages.pop();
@@ -705,21 +865,13 @@ const sendMessage = async (value) => {
     }
 
     // 使用新的错误处理机制
-    const errorType = handleApiError(error, 'AI查询');
-    
-    // 根据错误类型决定是否重试
-    if (errorType === 'network_error' || errorType === 'server_error') {
-      // 对于网络错误和服务器错误，提供重试选项
-      setTimeout(() => {
-        if (confirm('查询失败，是否重试？')) {
-          sendMessage(trimmedValue);
-        }
-      }, 1000);
-    }
+    handleApiError(error, 'AI查询');
   } finally {
     sending.value = false;
+    abortController.value = null;
     await nextTick();
     scrollToBottom();
+    persistState();
   }
 };
 
@@ -792,6 +944,7 @@ const clearChat = async () => {
     initChatMessages();
 
     message.success('聊天记录已清空');
+    persistState();
   } catch (error) {
     console.error('清空聊天错误:', error);
     // 即使出错也要清空本地记录
@@ -800,6 +953,7 @@ const clearChat = async () => {
     isConnected.value = false;
     initChatMessages();
     message.warning('清空完成，但可能存在部分错误');
+    persistState();
   }
 };
 
@@ -902,12 +1056,149 @@ const handleSearch = () => {
   sendMessage(msg);
 };
 
+// 输入框自适应高度
+const autoResizeTextarea = () => {
+  const el = messageInput.value;
+  if (!el) return;
+  el.style.height = 'auto';
+  const maxHeight = 160;
+  el.style.height = Math.min(el.scrollHeight, maxHeight) + 'px';
+};
+
+const onInputChange = () => {
+  autoResizeTextarea();
+};
+
+const onCompositionStart = () => {
+  isComposing.value = true;
+};
+
+const onCompositionEnd = () => {
+  isComposing.value = false;
+  lastCompositionEndAt.value = Date.now();
+};
+
+const retryLast = () => {
+  if (lastFailedQuestion.value && !sending.value) {
+    errorMessage.value = '';
+    const q = lastFailedQuestion.value;
+    lastFailedQuestion.value = '';
+    sendMessage(q);
+  }
+};
+
 const copyMessage = async (content) => {
   try {
     await navigator.clipboard.writeText(content);
     message.success('已复制到剪贴板');
   } catch (err) {
     message.error('复制失败');
+  }
+};
+// 重新生成 AI 回答（基于上一条用户消息）
+const regenerateAnswer = async (aiIndex) => {
+  if (sending.value) return;
+  // 找到 aiIndex 之前最近的用户消息
+  for (let i = aiIndex - 1; i >= 0; i--) {
+    const msg = chatMessages[i];
+    if (msg && msg.type === 'user' && msg.content) {
+      return sendMessage(msg.content);
+    }
+  }
+  message.warning('未找到可重试的用户消息');
+};
+
+// 重发某条用户消息
+const resendMessage = async (index) => {
+  if (sending.value) return;
+  const msg = chatMessages[index];
+  if (msg?.type === 'user' && msg.content) {
+    return sendMessage(msg.content);
+  }
+  message.warning('只能重发用户消息');
+};
+
+// 停止生成
+const cancelGeneration = () => {
+  if (abortController.value) {
+    try { abortController.value.abort(); } catch {}
+    abortController.value = null;
+    sending.value = false;
+    message.info('已取消');
+  }
+};
+
+// 会话管理
+const createNewSession = (silent = false) => {
+  const newSession = {
+    localId: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `会话 ${sessions.value.length + 1}`,
+    createdAt: Date.now(),
+  };
+  sessions.value.push(newSession);
+  currentLocalSessionId.value = newSession.localId;
+  // 重置服务端会话，但保留本地消息历史的第一条欢迎消息
+  sessionId.value = '';
+  chatHistory.value = [];
+  isConnected.value = false;
+  initChatMessages();
+  persistState();
+  if (!silent) message.success('已新建会话');
+};
+
+const switchToSession = (localId) => {
+  if (currentLocalSessionId.value === localId) return;
+  currentLocalSessionId.value = localId;
+  // 简化：不同会话共用一份显示数据，此处只清会话ID并保留历史（可按需扩展为多会话独立历史存储）
+  sessionId.value = '';
+  isConnected.value = false;
+  message.success('已切换会话');
+  persistState();
+};
+
+const renameSession = (localId) => {
+  const s = sessions.value.find(s => s.localId === localId);
+  if (!s) return;
+  const name = prompt('重命名会话', s.name);
+  if (name && name.trim()) {
+    s.name = name.trim();
+    persistState();
+  }
+};
+
+const deleteSession = (localId) => {
+  const idx = sessions.value.findIndex(s => s.localId === localId);
+  if (idx === -1) return;
+  if (!confirm('确认删除该会话？')) return;
+  sessions.value.splice(idx, 1);
+  if (currentLocalSessionId.value === localId) {
+    if (sessions.value.length === 0) {
+      createNewSession(true);
+    } else {
+      currentLocalSessionId.value = sessions.value[0].localId;
+    }
+  }
+  persistState();
+};
+
+// 事件委托：代码块复制（移除 window 全局依赖）
+const onMessagesClick = (e) => {
+  const target = e.target;
+  if (target && target.closest && target.closest('.code-copy-btn')) {
+    const button = target.closest('.code-copy-btn');
+    const pre = button.closest('pre');
+    const code = pre?.getAttribute('data-code');
+    if (code) {
+      navigator.clipboard.writeText(code).then(() => {
+        const original = button.innerHTML;
+        button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"></polyline></svg>';
+        button.style.color = '#10b981';
+        setTimeout(() => {
+          button.innerHTML = original;
+          button.style.color = '';
+        }, 2000);
+      }).catch(() => message.error('复制失败'));
+    }
   }
 };
 
@@ -965,7 +1256,7 @@ marked.setOptions({
     return `<pre class="language-${lang || 'text'}" data-code="${escapedCode}">
       <div class="code-header">
         <span class="code-lang">${lang || 'text'}</span>
-        <button class="code-copy-btn" onclick="copyCode(this)" title="复制代码">
+        <button class="code-copy-btn" type="button" title="复制代码">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="m5 15-4-4 4-4"></path>
@@ -1002,7 +1293,7 @@ const renderMarkdown = (content) => {
       ],
       ALLOWED_ATTR: [
         'href', 'target', 'rel', 'src', 'alt', 'title', 'class', 'style',
-        'data-code', 'onclick', 'width', 'height', 'viewBox', 'fill', 'stroke', 'stroke-width',
+        'data-code', 'width', 'height', 'viewBox', 'fill', 'stroke', 'stroke-width',
         'x', 'y', 'rx', 'ry', 'd', 'points'
       ],
       ALLOWED_CLASSES: {
@@ -1030,7 +1321,11 @@ const scrollToBottom = () => {
 };
 
 const handleEnterKey = (e) => {
-  if (e.shiftKey && e.key === 'Enter') {
+  // 若处于中文输入法组合输入中，或刚结束组合输入的短时间窗口内，不触发发送
+  if (e.isComposing || e.keyCode === 229 || isComposing.value || (Date.now() - lastCompositionEndAt.value) < 20) {
+    return;
+  }
+  if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     handleSearch();
   }
@@ -1045,6 +1340,9 @@ const handleKeydown = (e) => {
   if (e.ctrlKey && e.key === '/') {
     e.preventDefault();
     toggleFloatWindow();
+  } else if (e.key === 'Escape' && isFloatWindowVisible.value) {
+    e.preventDefault();
+    closeWindow();
   }
 };
 
@@ -1053,7 +1351,28 @@ watch(chatMessages, () => {
   nextTick(() => {
     scrollToBottom();
   });
+  persistState();
 }, { deep: true });
+
+watch(chatHistory, () => {
+  persistState();
+});
+
+watch(sessionId, () => {
+  persistState();
+});
+
+watch(windowPosition, () => {
+  persistState();
+}, { deep: true });
+
+watch(windowSize, () => {
+  persistState();
+}, { deep: true });
+
+watch([isMinimized, isExpanded, currentMode, showAdvancedOptions], () => {
+  persistState();
+});
 
 // 全局复制代码函数
 window.copyCode = function(button) {
@@ -1081,9 +1400,17 @@ window.copyCode = function(button) {
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
 
-  // 设置初始位置
-  windowPosition.x = window.innerWidth - windowSize.width - 50;
-  windowPosition.y = 100;
+  loadState();
+
+  // 如果未持久化过，则设置初始位置到右下角附近
+  if (!localStorage.getItem(UI_STATE_KEY)) {
+    windowPosition.x = window.innerWidth - windowSize.width - 50;
+    windowPosition.y = 100;
+  }
+
+  nextTick(() => {
+    autoResizeTextarea();
+  });
 });
 
 onBeforeUnmount(() => {
@@ -1415,6 +1742,23 @@ onBeforeUnmount(() => {
 
 .error-close:hover {
   background: rgba(239, 68, 68, 0.1);
+}
+
+.error-retry {
+  background: transparent;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-left: auto;
+  margin-right: 8px;
+  transition: all 0.2s ease;
+}
+
+.error-retry:hover {
+  background: rgba(239, 68, 68, 0.08);
 }
 
 
@@ -2167,6 +2511,24 @@ onBeforeUnmount(() => {
   transform: none;
 }
 
+.stop-button {
+  background: transparent;
+  border: 1px solid #ef4444;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #ef4444;
+}
+
+.stop-button:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
 .loading-spinner {
   width: 16px;
   height: 16px;
@@ -2230,6 +2592,125 @@ onBeforeUnmount(() => {
   height: 16px;
   cursor: nw-resize;
   background: linear-gradient(-45deg, transparent 30%, #4a5568 30%, #4a5568 40%, transparent 40%, transparent 60%, #4a5568 60%, #4a5568 70%, transparent 70%);
+}
+
+/* 会话切换器 */
+.session-switcher {
+  position: relative;
+}
+
+.session-button {
+  background: transparent;
+  border: 1px solid #4a5568;
+  color: #9ca3af;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.session-button:hover {
+  color: #3b82f6;
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.session-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  width: 220px;
+  z-index: 10001;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+}
+
+.sessions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid #374151;
+  color: #d1d5db;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.sessions-new {
+  background: transparent;
+  border: 1px solid #4a5568;
+  color: #9ca3af;
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sessions-new:hover {
+  color: #3b82f6;
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.sessions-list {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #e5e7eb;
+}
+
+.session-item:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.session-item.active {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.session-name {
+  font-size: 12px;
+  flex: 1;
+}
+
+.session-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.session-action-btn {
+  background: transparent;
+  border: 1px solid #4a5568;
+  color: #9ca3af;
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.session-action-btn:hover {
+  color: #3b82f6;
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
 }
 
 /* 响应式调整 */

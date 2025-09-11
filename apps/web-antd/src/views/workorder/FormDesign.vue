@@ -440,9 +440,9 @@ import {
   type FormSchema,
   type CreateWorkorderFormDesignReq,
   createWorkorderFormDesign,
-} from '#/api/core/workorder_form_design';
-import type { WorkorderCategoryItem, ListWorkorderCategoryReq } from '#/api/core/workorder_category';
-import { listWorkorderCategory } from '#/api/core/workorder_category';
+} from '#/api/core/workorder/workorder_form_design';
+import type { WorkorderCategoryItem, ListWorkorderCategoryReq } from '#/api/core/workorder/workorder_category';
+import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
 
 // 响应式数据
 const showDesigner = ref(true);

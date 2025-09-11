@@ -1051,7 +1051,7 @@ import {
   returnWorkorderInstance,
   getAvailableActions,
   getCurrentStep
-} from '#/api/core/workorder_instance';
+} from '#/api/core/workorder/workorder_instance';
 
 // 导入新的组件
 import WorkorderComments from './components/WorkorderComments.vue'
@@ -1061,7 +1061,7 @@ import WorkorderFlow from './components/WorkorderFlow.vue'
 import {
   type GetUserListReq,
   getUserList
-} from '#/api/core/user';
+} from '#/api/core/system/user';
 
 interface UserListItem {
   id: number;
@@ -1077,7 +1077,7 @@ import {
   type ProcessDefinition,
   listWorkorderProcess,
   detailWorkorderProcess
-} from '#/api/core/workorder_process';
+} from '#/api/core/workorder/workorder_process';
 
 import {
   type WorkorderFormDesignItem,
@@ -1085,21 +1085,21 @@ import {
   type FormField,
   FormFieldType,
   detailWorkorderFormDesign
-} from '#/api/core/workorder_form_design';
+} from '#/api/core/workorder/workorder_form_design';
 
 import {
   type WorkorderTemplateItem,
   type ListWorkorderTemplateReq,
   listWorkorderTemplate,
   detailWorkorderTemplate
-} from '#/api/core/workorder_template';
+} from '#/api/core/workorder/workorder_template';
 
 // 导入通知相关API
 import {
   type NotificationLog,
   type ListSendLogReq,
   getSendLogs
-} from '#/api/core/workorder_notification';
+} from '#/api/core/workorder/workorder_notification';
 
 
 
