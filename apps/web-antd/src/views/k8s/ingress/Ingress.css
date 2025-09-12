@@ -1,0 +1,678 @@
+/* ==================== Ingress 特定样式 ==================== */
+
+/* Ingress 表格样式 */
+.ingress-table :deep(.ant-table-tbody > tr > td) {
+  vertical-align: middle;
+}
+
+/* Ingress 主机显示样式 */
+.ingress-hosts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.host-tag {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  margin: 0;
+  transition: all 0.2s ease;
+}
+
+.host-tag:hover {
+  transform: scale(1.05);
+}
+
+/* Ingress 类名显示样式 */
+.ingress-class {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1890ff;
+  background: #f0f7ff;
+  border: 1px solid #d6e4ff;
+  border-radius: 4px;
+  padding: 2px 8px;
+  display: inline-block;
+}
+
+/* Ingress 负载均衡器显示样式 */
+.ingress-load-balancer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.lb-tag {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  margin: 0;
+  transition: all 0.2s ease;
+}
+
+.lb-tag:hover {
+  transform: scale(1.05);
+}
+
+/* Ingress 规则显示样式 */
+.ingress-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.rule-tag {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  margin: 0;
+  transition: all 0.2s ease;
+}
+
+.rule-tag:hover {
+  transform: scale(1.05);
+}
+
+/* Ingress TLS 显示样式 */
+.ingress-tls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.tls-tag {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  margin: 0;
+  transition: all 0.2s ease;
+}
+
+.tls-tag:hover {
+  transform: scale(1.05);
+}
+
+/* Ingress 标签过滤器样式 */
+.ingress-labels-filter {
+  position: relative;
+}
+
+.ingress-labels-filter .k8s-toolbar-btn {
+  height: 36px;
+  border-radius: 6px;
+  font-weight: 500;
+  border: 1px solid #d9d9d9;
+  background: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.ingress-labels-filter .k8s-toolbar-btn:hover {
+  background: #f0f0f0;
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+.ingress-labels-filter .active-filters {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 80px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+/* Ingress 状态标签样式增强 */
+.ant-tag[color="blue"] {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+  color: #1890ff;
+}
+
+.ant-tag[color="green"] {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.ant-tag[color="orange"] {
+  background: #fff7e6;
+  border-color: #ffd591;
+  color: #fa8c16;
+}
+
+.ant-tag[color="purple"] {
+  background: #f9f0ff;
+  border-color: #d3adf7;
+  color: #722ed1;
+}
+
+/* YAML 编辑器样式 */
+.yaml-textarea {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  background: #fafafa;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+}
+
+.yaml-textarea:focus {
+  background: #ffffff;
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+/* Ingress 规则配置表单样式 */
+.rule-config-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #fafafa;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.rule-config-row:hover {
+  border-color: #d9d9d9;
+}
+
+.rule-config-row .ant-input,
+.rule-config-row .ant-select,
+.rule-config-row .ant-input-number {
+  height: 32px;
+}
+
+.rule-config-row .ant-select :deep(.ant-select-selector),
+.rule-config-row .ant-input-number :deep(.ant-input-number-input) {
+  height: 30px;
+}
+
+/* TLS 配置表单样式 */
+.tls-config-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #f0f7ff;
+  border-radius: 6px;
+  border: 1px solid #d6e4ff;
+}
+
+.tls-config-row:hover {
+  border-color: #adc6ff;
+}
+
+.tls-config-row .ant-input,
+.tls-config-row .ant-select {
+  height: 32px;
+}
+
+.tls-config-row .ant-select :deep(.ant-select-selector) {
+  height: 30px;
+}
+
+/* Ingress 详情模态框样式增强 */
+.k8s-detail-content .ingress-hosts .host-tag {
+  margin-bottom: 4px;
+}
+
+.k8s-detail-content .ingress-load-balancer .lb-tag {
+  margin-bottom: 4px;
+}
+
+.k8s-detail-content .ingress-rules .rule-tag {
+  margin-bottom: 4px;
+}
+
+.k8s-detail-content .ingress-tls .tls-tag {
+  margin-bottom: 4px;
+}
+
+/* Ingress 规则表格样式 */
+.ingress-rules-table {
+  margin-top: 16px;
+}
+
+.ingress-rules-table .ant-table-small .ant-table-tbody > tr > td {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.ingress-rules-table .ant-table-small .ant-table-thead > tr > th {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fafafa;
+}
+
+/* TLS 表格样式 */
+.ingress-tls-table {
+  margin-top: 16px;
+}
+
+.ingress-tls-table .ant-table-small .ant-table-tbody > tr > td {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.ingress-tls-table .ant-table-small .ant-table-thead > tr > th {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fafafa;
+}
+
+/* 标签过滤模态框样式 */
+.labels-filter-form {
+  padding: 8px;
+}
+
+.labels-filter-form .current-filters {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #f6ffed;
+  border-radius: 8px;
+  border: 1px solid #e6f7ff;
+}
+
+.labels-filter-form .current-filters h4,
+.labels-filter-form .add-filter-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 12px;
+}
+
+.labels-filter-form .filter-tags {
+  margin-bottom: 16px;
+}
+
+.labels-filter-form .add-filter-section {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.labels-filter-form .filter-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Ingress 表单样式增强 */
+.k8s-form .ingress-rule-config-section {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  background: #f6ffed;
+}
+
+.k8s-form .ingress-rule-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.k8s-form .ingress-rule-config-header h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  color: #262626;
+}
+
+.k8s-form .ingress-rule-config-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.k8s-form .ingress-rule-config-item:hover {
+  border-color: #d9d9d9;
+}
+
+.k8s-form .ingress-rule-config-item .ant-input,
+.k8s-form .ingress-rule-config-item .ant-select {
+  height: 32px;
+  font-size: 12px;
+}
+
+.k8s-form .ingress-rule-config-item .ant-select {
+  width: 120px;
+}
+
+.k8s-form .ingress-rule-config-item .ant-btn {
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+/* Ingress TLS 配置样式 */
+.tls-config-section {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  background: #f0f7ff;
+  margin-top: 8px;
+}
+
+.tls-empty-state {
+  text-align: center;
+  color: #8c8c8c;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* Ingress 状态指示器样式 */
+.ingress-status-running {
+  color: #52c41a;
+}
+
+.ingress-status-pending {
+  color: #faad14;
+}
+
+.ingress-status-failed {
+  color: #ff4d4f;
+}
+
+/* Ingress 主机指示器样式 */
+.ingress-host-tag {
+  background: #e6f7ff;
+  color: #1890ff;
+  border-color: #91d5ff;
+}
+
+.ingress-host-tag:hover {
+  background: #bae7ff;
+  border-color: #69c0ff;
+}
+
+/* Ingress 路径指示器样式 */
+.ingress-path-tag {
+  background: #f6ffed;
+  color: #52c41a;
+  border-color: #b7eb8f;
+}
+
+.ingress-path-tag:hover {
+  background: #d9f7be;
+  border-color: #95de64;
+}
+
+/* Ingress 负载均衡器指示器样式 */
+.ingress-lb-tag {
+  background: #fff7e6;
+  color: #fa8c16;
+  border-color: #ffd591;
+}
+
+.ingress-lb-tag:hover {
+  background: #ffe7ba;
+  border-color: #ffc069;
+}
+
+/* Ingress TLS 指示器样式 */
+.ingress-tls-tag {
+  background: #f9f0ff;
+  color: #722ed1;
+  border-color: #d3adf7;
+}
+
+.ingress-tls-tag:hover {
+  background: #efdbff;
+  border-color: #b37feb;
+}
+
+/* 响应式设计 - Ingress 特定 */
+@media (max-width: 768px) {
+  .ingress-hosts {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  
+  .ingress-load-balancer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  
+  .ingress-rules {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  
+  .ingress-tls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  
+  .host-tag,
+  .lb-tag,
+  .rule-tag,
+  .tls-tag {
+    font-size: 10px;
+  }
+  
+  .ingress-class {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 576px) {
+  .k8s-form .ingress-rule-config-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .k8s-form .ingress-rule-config-item .ant-select {
+    width: 100%;
+  }
+  
+  .k8s-form .tls-config-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .ingress-labels-filter {
+    width: 100%;
+  }
+  
+  .ingress-labels-filter .active-filters {
+    position: static;
+    margin-top: 8px;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
+  }
+  
+  .labels-filter-form .filter-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .ingress-labels-filter .k8s-toolbar-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* 标签过滤器滚动条样式 */
+.ingress-labels-filter .active-filters::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ingress-labels-filter .active-filters::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.ingress-labels-filter .active-filters::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.ingress-labels-filter .active-filters::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Ingress 详情卡片样式增强 */
+.k8s-detail-content .ant-card-small > .ant-card-head {
+  min-height: 40px;
+  padding: 8px 16px;
+}
+
+.k8s-detail-content .ant-card-small > .ant-card-head > .ant-card-head-wrapper > .ant-card-head-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.k8s-detail-content .ant-card-small > .ant-card-body {
+  padding: 12px 16px;
+}
+
+/* Ingress 工具提示样式 */
+.ingress-tooltip {
+  max-width: 300px;
+}
+
+.ingress-tooltip .ant-tooltip-inner {
+  background: #fff;
+  color: #333;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.ingress-tooltip .ant-tooltip-arrow::before {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+}
+
+/* Ingress 规则路径样式 */
+.ingress-path-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.path-type-exact {
+  background: #fff2f0;
+  color: #ff4d4f;
+  border-color: #ffccc7;
+}
+
+.path-type-prefix {
+  background: #f6ffed;
+  color: #52c41a;
+  border-color: #b7eb8f;
+}
+
+.path-type-implementation {
+  background: #fff7e6;
+  color: #fa8c16;
+  border-color: #ffd591;
+}
+
+/* Ingress 主机名验证样式 */
+.ingress-host-input.valid {
+  border-color: #52c41a;
+}
+
+.ingress-host-input.invalid {
+  border-color: #ff4d4f;
+}
+
+.ingress-host-help {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-top: 4px;
+}
+
+/* Ingress 路径验证样式 */
+.ingress-path-input.valid {
+  border-color: #52c41a;
+}
+
+.ingress-path-input.invalid {
+  border-color: #ff4d4f;
+}
+
+/* Ingress Secret 名称样式 */
+.ingress-secret-name {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  color: #722ed1;
+  background: #f9f0ff;
+  border: 1px solid #d3adf7;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+/* 打印样式 */
+@media print {
+  .ingress-hosts .host-tag,
+  .ingress-load-balancer .lb-tag,
+  .ingress-rules .rule-tag,
+  .ingress-tls .tls-tag,
+  .ingress-class,
+  .ingress-secret-name {
+    background: white !important;
+    border: 1px solid #ddd !important;
+    color: #333 !important;
+  }
+  
+  .yaml-textarea {
+    background: white !important;
+    border: 1px solid #ddd !important;
+  }
+  
+  .ingress-labels-filter,
+  .labels-filter-form {
+    display: none !important;
+  }
+}

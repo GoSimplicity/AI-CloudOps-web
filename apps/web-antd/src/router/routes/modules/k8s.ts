@@ -20,7 +20,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 1,
           icon: 'lucide:database',
-          title: '集群管理',
+          title: 'cluster管理',
         },
       },
       {
@@ -30,7 +30,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 2,
           icon: 'lucide:folder',
-          title: '命名空间管理',
+          title: 'namespace管理',
         },
       },
       {
@@ -40,7 +40,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 3,
           icon: 'lucide:server',
-          title: '节点管理',
+          title: 'node管理',
         },
       },
       {
@@ -50,7 +50,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 6,
           icon: 'lucide:rocket',
-          title: '部署管理',
+          title: 'deployment管理',
         },
       },
       {
@@ -60,7 +60,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 7,
           icon: 'lucide:layers',
-          title: '有状态应用管理',
+          title: 'statefulset管理',
         },
       },
       {
@@ -80,7 +80,17 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 9,
           icon: 'lucide:network',
-          title: '服务管理',
+          title: 'service管理',
+        },
+      },
+      {
+        name: 'K8sIngress',
+        path: '/k8s_ingress',
+        component: () => import('#/views/k8s/ingress/Ingress.vue'),
+        meta: {
+          order: 10,
+          icon: 'lucide:shield-check',
+          title: 'Ingress管理',
         },
       },
     ],
