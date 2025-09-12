@@ -251,15 +251,6 @@ export interface DeletePodReq {
   force?: boolean; // 是否强制删除
 }
 
-// BatchDeletePodsReq 批量删除Pod请求
-export interface BatchDeletePodsReq {
-  cluster_id: number; // 集群ID
-  namespace: string; // 命名空间
-  names: string[]; // Pod名称列表
-  grace_period_seconds?: number; // 优雅删除时间（秒）
-  force?: boolean; // 是否强制删除
-}
-
 // GetPodsByNodeReq 根据节点获取Pod列表请求
 export interface GetPodsByNodeReq {
   cluster_id: number; // 集群ID
@@ -367,11 +358,6 @@ export const updateK8sPodByYaml = (data: UpdatePodByYamlReq) => {
 // 删除Pod
 export const deleteK8sPod = (params: DeletePodReq) => {
   return requestClient.delete(`/k8s/pod/${params.cluster_id}/${params.namespace}/${params.name}/delete`, { params });
-};
-
-// 批量删除Pod
-export const batchDeleteK8sPods = (data: BatchDeletePodsReq) => {
-  return requestClient.delete(`/k8s/pod/${data.cluster_id}/${data.namespace}/batch-delete`, { data });
 };
 
 // 根据节点获取Pod列表

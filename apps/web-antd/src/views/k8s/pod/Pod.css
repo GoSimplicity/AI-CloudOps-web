@@ -1,0 +1,885 @@
+/* Pod 页面特定样式 */
+
+/* 就绪状态显示样式 */
+.pod-ready {
+  min-width: 80px;
+}
+
+.pod-ready .ready-text {
+  font-weight: 600;
+  color: #262626;
+  font-size: 13px;
+}
+
+.pod-ready .ant-progress {
+  margin-top: 4px;
+}
+
+.pod-ready .ant-progress-bg {
+  height: 6px !important;
+}
+
+.pod-ready .ant-progress-inner {
+  border-radius: 3px;
+  background-color: #f0f0f0;
+}
+
+/* Pod IP地址样式 */
+.pod-ip {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  color: #389e0d;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+/* Pod 表格样式 */
+.pod-table :deep(.ant-table-tbody td[data-index="0"]) {
+  font-weight: 600;
+  color: #1677ff;
+}
+
+.pod-table :deep(.ant-table-tbody td[data-index="1"]) {
+  font-weight: 500;
+  color: #52c41a;
+}
+
+.pod-table :deep(.ant-table-tbody td[data-index="2"]) {
+  text-align: center;
+}
+
+.pod-table :deep(.ant-table-tbody td[data-index="3"]) {
+  text-align: center;
+}
+
+.pod-table :deep(.ant-table-tbody td[data-index="4"]) {
+  text-align: center;
+}
+
+.pod-table :deep(.ant-table-tbody td[data-index="5"]) {
+  text-align: center;
+}
+
+/* 操作列按钮布局优化 */
+.pod-table .k8s-action-column {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  min-width: 220px;
+}
+
+.pod-table .k8s-action-column .ant-btn {
+  height: 32px;
+  width: 32px;
+  min-width: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+/* 日志查看按钮 - 绿色主题 */
+.pod-table .ant-btn[title*="日志"] {
+  background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.pod-table .ant-btn[title*="日志"]:hover {
+  background: linear-gradient(135deg, #d9f7be 0%, #b7eb8f 100%);
+  border-color: #95de64;
+  color: #389e0d;
+  box-shadow: 0 6px 16px rgba(82, 196, 26, 0.25);
+}
+
+/* 执行命令按钮 - 紫色主题 */
+.pod-table .ant-btn[title*="命令"] {
+  background: linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%);
+  border-color: #d3adf7;
+  color: #722ed1;
+}
+
+.pod-table .ant-btn[title*="命令"]:hover {
+  background: linear-gradient(135deg, #efdbff 0%, #d3adf7 100%);
+  border-color: #b37feb;
+  color: #531dab;
+  box-shadow: 0 6px 16px rgba(114, 46, 209, 0.25);
+}
+
+.pod-table .ant-btn[title*="命令"]:disabled {
+  background: #f5f5f5 !important;
+  border-color: #e8e8e8 !important;
+  color: #bfbfbf !important;
+  opacity: 0.6;
+}
+
+/* 端口转发按钮 - 青色主题 */
+.pod-table .ant-btn[title*="转发"] {
+  background: linear-gradient(135deg, #e6fffb 0%, #b5f5ec 100%);
+  border-color: #87e8de;
+  color: #13c2c2;
+}
+
+.pod-table .ant-btn[title*="转发"]:hover {
+  background: linear-gradient(135deg, #b5f5ec 0%, #87e8de 100%);
+  border-color: #5cdbd3;
+  color: #08979c;
+  box-shadow: 0 6px 16px rgba(19, 194, 194, 0.25);
+}
+
+.pod-table .ant-btn[title*="转发"]:disabled {
+  background: #f5f5f5 !important;
+  border-color: #e8e8e8 !important;
+  color: #bfbfbf !important;
+  opacity: 0.6;
+}
+
+/* 文件管理按钮 - 橙色主题 */
+.pod-table .ant-btn[title*="文件"] {
+  background: linear-gradient(135deg, #fff7e6 0%, #ffd591 100%);
+  border-color: #ffec3d;
+  color: #fa8c16;
+}
+
+.pod-table .ant-btn[title*="文件"]:hover {
+  background: linear-gradient(135deg, #ffd591 0%, #ffc53d 100%);
+  border-color: #fadb14;
+  color: #d46b08;
+  box-shadow: 0 6px 16px rgba(250, 140, 22, 0.25);
+}
+
+.pod-table .ant-btn[title*="文件"]:disabled {
+  background: #f5f5f5 !important;
+  border-color: #e8e8e8 !important;
+  color: #bfbfbf !important;
+  opacity: 0.6;
+}
+
+/* YAML 操作按钮 - 蓝紫色主题 */
+.pod-table .ant-btn[title*="YAML"] {
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+  border-color: #91d5ff;
+  color: #1890ff;
+}
+
+.pod-table .ant-btn[title*="YAML"]:hover {
+  background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
+  border-color: #69c0ff;
+  color: #096dd9;
+  box-shadow: 0 6px 16px rgba(24, 144, 255, 0.25);
+}
+
+/* 重启次数标签样式 */
+.pod-table .ant-tag[data-restarts] {
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 2px 8px;
+  border: 1px solid;
+  font-size: 12px;
+}
+
+/* QoS等级标签样式 */
+.pod-table .ant-tag[data-qos="Guaranteed"] {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.pod-table .ant-tag[data-qos="Burstable"] {
+  background: #fff7e6;
+  border-color: #ffd591;
+  color: #fa8c16;
+}
+
+.pod-table .ant-tag[data-qos="BestEffort"] {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+  color: #1890ff;
+}
+
+/* Pod 详情模态框样式 */
+.pod-detail-modal .k8s-detail-content {
+  padding: 12px;
+}
+
+.pod-detail-modal .k8s-detail-card {
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.pod-detail-modal .k8s-detail-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.pod-detail-modal .k8s-detail-label {
+  font-weight: 600;
+  color: #555;
+  min-width: 120px;
+}
+
+.pod-detail-modal .k8s-detail-value {
+  color: #262626;
+  flex: 1;
+  word-break: break-all;
+}
+
+/* 容器配置样式 */
+.pod-containers-config {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fafafa;
+  min-height: 120px;
+}
+
+.container-config-item {
+  background: #ffffff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.container-config-item:hover {
+  border-color: #d9d9d9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.container-config-item:last-child {
+  margin-bottom: 0;
+}
+
+.container-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.container-header span {
+  font-weight: 600;
+  color: #262626;
+  font-size: 14px;
+}
+
+.container-header .ant-btn {
+  height: 24px;
+  border-radius: 4px;
+}
+
+/* 环境变量配置样式 */
+.env-vars-config {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 12px;
+  min-height: 60px;
+}
+
+.env-var-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 4px;
+  background: #ffffff;
+  border-radius: 4px;
+  border: 1px solid #f0f0f0;
+}
+
+.env-var-row:last-child {
+  margin-bottom: 0;
+}
+
+.env-var-row .ant-input {
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.env-var-row .ant-btn {
+  height: 28px;
+  width: 28px;
+  min-width: 28px;
+  border-radius: 4px;
+}
+
+/* 端口配置样式 */
+.ports-config {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 12px;
+  min-height: 60px;
+}
+
+.port-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 4px;
+  background: #ffffff;
+  border-radius: 4px;
+  border: 1px solid #f0f0f0;
+}
+
+.port-row:last-child {
+  margin-bottom: 0;
+}
+
+.port-row .ant-input,
+.port-row .ant-input-number,
+.port-row .ant-select {
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.port-row .ant-btn {
+  height: 28px;
+  width: 28px;
+  min-width: 28px;
+  border-radius: 4px;
+}
+
+/* 端口转发配置样式 */
+.port-forward-config {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+}
+
+.port-forward-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
+}
+
+.port-forward-row:hover {
+  border-color: #d9d9d9;
+}
+
+.port-forward-row:last-child {
+  margin-bottom: 0;
+}
+
+.port-forward-row span {
+  font-weight: 600;
+  color: #1677ff;
+  font-size: 16px;
+}
+
+.port-forward-row .ant-input-number {
+  border-radius: 6px;
+}
+
+.port-forward-row .ant-btn {
+  height: 28px;
+  width: 28px;
+  min-width: 28px;
+  border-radius: 4px;
+}
+
+/* 日志查看样式 */
+.pod-logs-content {
+  max-height: 70vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.logs-controls {
+  flex-shrink: 0;
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.logs-controls .ant-select,
+.logs-controls .ant-input-number {
+  width: 100%;
+  border-radius: 6px;
+}
+
+.logs-controls .ant-checkbox {
+  font-size: 12px;
+}
+
+.logs-display {
+  flex: 1;
+  overflow: hidden;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.logs-content {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  background: #ffffff;
+  color: #333;
+  padding: 16px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 50vh;
+  overflow-y: auto;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+.logs-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.logs-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.logs-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.logs-content::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* 文件管理样式 */
+.file-manager-content {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  min-height: 300px;
+}
+
+/* 标签过滤器样式 */
+.pod-labels-filter {
+  position: relative;
+}
+
+.pod-labels-filter .k8s-toolbar-btn {
+  height: 36px;
+  border-radius: 6px;
+  font-weight: 500;
+  border: 1px solid #d9d9d9;
+  background: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.pod-labels-filter .k8s-toolbar-btn:hover {
+  background: #f0f0f0;
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+.pod-labels-filter .active-filters {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 80px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 标签过滤器模态框样式 */
+.labels-filter-form {
+  padding: 8px;
+}
+
+.labels-filter-form .current-filters {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #f6ffed;
+  border-radius: 8px;
+  border: 1px solid #e6f7ff;
+}
+
+.labels-filter-form .filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.labels-filter-form .add-filter-section {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px dashed #d9d9d9;
+}
+
+.labels-filter-form .filter-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #e8e8e8;
+}
+
+/* YAML 编辑器样式 */
+.yaml-textarea {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  resize: none;
+  color: #333;
+}
+
+.yaml-textarea:focus {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  background: #fff;
+}
+
+/* 添加输入行样式 */
+.add-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: #f8f9fa;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .pod-table .k8s-action-column {
+    flex-direction: column;
+    gap: 4px;
+    min-width: 140px;
+  }
+  
+  .pod-table .k8s-action-column .ant-btn {
+    width: 100%;
+    height: 28px;
+    min-width: 120px;
+    justify-content: center;
+  }
+  
+  .pod-ready .ant-progress {
+    max-width: 60px;
+  }
+  
+  .pod-labels-filter .active-filters {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    max-height: 60px;
+    margin-top: 8px;
+    box-shadow: none;
+    border: 1px solid #e8e8e8;
+  }
+  
+  .container-config-item {
+    padding: 12px;
+  }
+  
+  .env-var-row,
+  .port-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .port-forward-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .port-forward-row span {
+    text-align: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .pod-table .k8s-action-column .ant-btn {
+    height: 26px;
+    font-size: 12px;
+  }
+  
+  .pod-ready .ready-text {
+    font-size: 11px;
+  }
+  
+  .pod-ip {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+  
+  .labels-filter-form .filter-input-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .pod-labels-filter .k8s-toolbar-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .container-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .logs-controls .ant-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .logs-controls .ant-col {
+    width: 100% !important;
+  }
+}
+
+/* 滚动条样式 */
+.yaml-textarea::-webkit-scrollbar,
+.pod-labels-filter .active-filters::-webkit-scrollbar,
+.pod-containers-config::-webkit-scrollbar,
+.env-vars-config::-webkit-scrollbar,
+.ports-config::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.yaml-textarea::-webkit-scrollbar-track,
+.pod-labels-filter .active-filters::-webkit-scrollbar-track,
+.pod-containers-config::-webkit-scrollbar-track,
+.env-vars-config::-webkit-scrollbar-track,
+.ports-config::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.yaml-textarea::-webkit-scrollbar-thumb,
+.pod-labels-filter .active-filters::-webkit-scrollbar-thumb,
+.pod-containers-config::-webkit-scrollbar-thumb,
+.env-vars-config::-webkit-scrollbar-thumb,
+.ports-config::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.yaml-textarea::-webkit-scrollbar-thumb:hover,
+.pod-labels-filter .active-filters::-webkit-scrollbar-thumb:hover,
+.pod-containers-config::-webkit-scrollbar-thumb:hover,
+.env-vars-config::-webkit-scrollbar-thumb:hover,
+.ports-config::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* 状态指示器优化 */
+.pod-table :deep(.ant-badge-status-dot) {
+  width: 8px;
+  height: 8px;
+}
+
+.pod-table :deep(.ant-badge-status-text) {
+  margin-left: 8px;
+  font-weight: 500;
+}
+
+/* Pod 特有的状态样式 */
+.pod-table :deep(.ant-table-tbody > tr[data-pod-status="Pending"]) {
+  border-left: 3px solid #faad14;
+}
+
+.pod-table :deep(.ant-table-tbody > tr[data-pod-status="Running"]) {
+  border-left: 3px solid #52c41a;
+}
+
+.pod-table :deep(.ant-table-tbody > tr[data-pod-status="Succeeded"]) {
+  border-left: 3px solid #52c41a;
+}
+
+.pod-table :deep(.ant-table-tbody > tr[data-pod-status="Failed"]) {
+  border-left: 3px solid #ff4d4f;
+}
+
+.pod-table :deep(.ant-table-tbody > tr[data-pod-status="Unknown"]) {
+  border-left: 3px solid #d9d9d9;
+}
+
+/* 动画效果 */
+@keyframes podPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.pod-table .ant-btn[title*="命令"]:active,
+.pod-table .ant-btn[title*="日志"]:active {
+  animation: podPulse 0.3s ease-in-out;
+}
+
+.pod-ready .ant-progress-bg {
+  transition: all 0.3s ease;
+}
+
+/* 成功状态的进度条 */
+.pod-ready .ant-progress-success-bg {
+  background: linear-gradient(90deg, #52c41a 0%, #73d13d 100%);
+}
+
+/* 警告状态的进度条 */
+.pod-ready .ant-progress-bg[style*="percent: 50"] {
+  background: #faad14;
+}
+
+/* Pod 阶段标签颜色映射 */
+.pod-table .ant-tag[color="success"] {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.pod-table .ant-tag[color="warning"] {
+  background: #fff7e6;
+  border-color: #ffd591;
+  color: #fa8c16;
+}
+
+.pod-table .ant-tag[color="error"] {
+  background: #fff2f0;
+  border-color: #ffccc7;
+  color: #ff4d4f;
+}
+
+.pod-table .ant-tag[color="default"] {
+  background: #f5f5f5;
+  border-color: #d9d9d9;
+  color: #595959;
+}
+
+/* Pod 容器状态表格 */
+.pod-detail-modal .k8s-table .ant-table-small .ant-table-tbody > tr > td {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.pod-detail-modal .k8s-table .ant-table-small .ant-table-thead > tr > th {
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 容器配置表单优化 */
+.container-config-item .ant-form-item {
+  margin-bottom: 12px;
+}
+
+.container-config-item .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.container-config-item .ant-form-item-label > label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.container-config-item h5 {
+  font-size: 12px;
+  font-weight: 600;
+  color: #595959;
+  margin: 0 0 8px 0;
+}
+
+/* 执行命令模态框样式 */
+.exec-command-modal .k8s-form .ant-select {
+  width: 100%;
+}
+
+/* 特殊强调样式 */
+.pod-running {
+  color: #52c41a !important;
+  font-weight: 600;
+}
+
+.pod-failed {
+  color: #ff4d4f !important;
+  font-weight: 600;
+}
+
+.pod-pending {
+  color: #faad14 !important;
+  font-weight: 600;
+}
+
+/* 节点标签特殊样式 */
+.pod-table .ant-tag[color="cyan"] {
+  background: #e6fffb;
+  border-color: #87e8de;
+  color: #08979c;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pod-table .ant-tag[color="cyan"]:hover {
+  background: #b5f5ec;
+  border-color: #5cdbd3;
+  color: #006d75;
+  transform: scale(1.05);
+}
+
+/* 打印样式 */
+@media print {
+  .pod-logs-content {
+    max-height: none;
+  }
+  
+  .logs-content {
+    max-height: none;
+    overflow: visible;
+  }
+  
+  .container-config-item {
+    break-inside: avoid;
+  }
+}

@@ -93,6 +93,16 @@ const routes: RouteRecordRaw[] = [
           title: 'Ingress管理',
         },
       },
+      {
+        name: 'K8sPod',
+        path: '/k8s_pod',
+        component: () => import('#/views/k8s/pod/Pod.vue'),
+        meta: {
+          order: 11,
+          icon: 'lucide:separator-vertical',
+          title: 'pod管理',
+        },
+      },
     ],
   },
 ];
