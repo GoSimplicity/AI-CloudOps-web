@@ -1,6 +1,12 @@
-import { ref, computed } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+import { Terminal } from 'xterm';
+import { FitAddon } from 'xterm-addon-fit';
+import { WebLinksAddon } from 'xterm-addon-web-links';
+import 'xterm/css/xterm.css';
+import { useAccessStore } from '@vben/stores';
+import { useAppConfig } from '@vben/hooks';
 import {
   type K8sPod,
   type PodContainer,
@@ -33,7 +39,6 @@ import {
   deleteK8sPod,
   getK8sPodsByNode,
   getK8sPodContainers,
-  getK8sPodLogs,
   execK8sPod,
   forwardK8sPodPort,
   uploadK8sPodFile,
@@ -100,6 +105,15 @@ export function usePodPage() {
   const submitLoading = ref(false);
   const detailLoading = ref(false);
   const logsLoading = ref(false);
+  const isLogsStreaming = ref(false);
+  const logsStreamConnection = ref<{ close: () => void } | null>(null);
+  
+  // 终端相关状态
+  const isTerminalConnected = ref(false);
+  const terminalLoading = ref(false);
+  const terminal = ref<Terminal | null>(null);
+  const terminalConnection = ref<{ sendCommand: (cmd: string) => void; close: () => void } | null>(null);
+  const fitAddon = ref<FitAddon | null>(null);
 
   // current operation target
   const currentOperationPod = ref<K8sPod | null>(null);
@@ -838,24 +852,285 @@ export function usePodPage() {
   };
 
   const closeLogsModal = () => {
+    console.log('关闭日志模态框');
+    // 停止SSE连接
+    stopLogsStream();
     isLogsModalVisible.value = false;
     currentOperationPod.value = null;
     podLogs.value = '';
     podContainers.value = [];
     selectedContainer.value = '';
+    // 重置表单模型
+    logsFormModel.value = {
+      container: '',
+      follow: false,
+      previous: false,
+      since_seconds: 0,
+      since_time: '',
+      timestamps: true,
+      tail_lines: 100,
+      limit_bytes: 0
+    };
   };
 
-  const fetchPodLogs = async () => {
+  const fetchPodLogs = () => {
     if (!currentOperationPod.value || !logsFormModel.value.container) return;
     
+    // 直接启动实时流模式
+    startLogsStream();
+  };
+
+  // SSE流式获取Pod日志 - 移动到Pod.ts中的业务逻辑
+  const streamK8sPodLogs = (
+    params: GetPodLogsReq,
+    onMessage: (data: string) => void,
+    onError?: (error: Event) => void,
+    onOpen?: () => void,
+    onClose?: () => void
+  ) => {
+    // 获取当前用户的访问令牌
+    const accessStore = useAccessStore();
+    const currentToken = accessStore.accessToken;
+    
+    // 获取应用配置中的API URL
+    const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
+    const baseURL = apiURL || `${window.location.origin}/api`;
+    const queryParams = new URLSearchParams();
+    
+    // 添加查询参数
+    if (params.follow !== undefined) queryParams.append('follow', params.follow.toString());
+    if (params.previous !== undefined) queryParams.append('previous', params.previous.toString());
+    if (params.since_seconds !== undefined) queryParams.append('since_seconds', params.since_seconds.toString());
+    if (params.since_time) queryParams.append('since_time', params.since_time);
+    if (params.timestamps !== undefined) queryParams.append('timestamps', params.timestamps.toString());
+    if (params.tail_lines !== undefined) queryParams.append('tail_lines', params.tail_lines.toString());
+    if (params.limit_bytes !== undefined) queryParams.append('limit_bytes', params.limit_bytes.toString());
+
+    const url = `${baseURL}/k8s/pod/${params.cluster_id}/${params.namespace}/${params.pod_name}/containers/${params.container}/logs?${queryParams.toString()}`;
+    
+    // 验证URL格式
     try {
+      new URL(url, window.location.origin);
+    } catch (urlError) {
+      console.error('Invalid SSE URL:', url, urlError);
+      onError?.(new Event('error'));
+      return {
+        eventSource: null as any,
+        close: () => {}
+      };
+    }
+    
+    let abortController: AbortController;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+    let isManualClose = false;
+    let reconnectAttempts = 0;
+    let reconnectTimeoutId: NodeJS.Timeout | null = null;
+
+    const scheduleReconnect = () => {
+      if (reconnectTimeoutId) {
+        clearTimeout(reconnectTimeoutId);
+        reconnectTimeoutId = null;
+      }
+      reconnectAttempts++;
+      console.log(`尝试第 ${reconnectAttempts} 次重连...`);
+      reconnectTimeoutId = setTimeout(() => {
+        console.log('开始新的SSE连接尝试...');
+        createFetchSSE();
+      }, Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 30000));
+    };
+
+    // 使用fetch API替换EventSource以支持自定义headers
+    const createFetchSSE = async () => {
+      try {
+        abortController = new AbortController();
+        
+        const headers: Record<string, string> = {
+          'Accept': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+        };
+        
+        if (currentToken) {
+          headers['Authorization'] = `Bearer ${currentToken}`;
+        }
+        
+        console.log('开始SSE连接，URL:', url);
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers,
+          signal: abortController.signal,
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => 'Unknown error');
+          console.error(`SSE连接失败 - 状态码: ${response.status}, 错误信息:`, errorText);
+          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        }
+        
+        if (!response.body) {
+          throw new Error('Response body is null');
+        }
+        
+        console.log('SSE连接建立成功');
+        reconnectAttempts = 0;
+        onOpen?.();
+        
+        reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        
+        while (true) {
+          if (isManualClose) {
+            break;
+          }
+          
+          let readResult;
+          try {
+            readResult = await reader.read();
+          } catch (readError: any) {
+            if (readError?.name === 'AbortError') {
+              console.log('Reader操作被中止');
+              break;
+            }
+            throw readError;
+          }
+          
+          const { done, value } = readResult;
+          
+          if (done) {
+            console.log('SSE流正常结束，准备自动重连');
+            scheduleReconnect();
+            break;
+          }
+          
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          
+          let currentEvent = '';
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            
+            if (trimmedLine.startsWith('event:')) {
+              currentEvent = trimmedLine.substring(6).trim();
+              continue;
+            }
+            
+            if (trimmedLine.startsWith('data:')) {
+              const data = trimmedLine.substring(5).trim();
+              
+              if (data === '[DONE]') {
+                console.log('SSE流完成标记');
+                onClose?.();
+                return;
+              }
+              
+              if (currentEvent === 'message' || currentEvent === '') {
+                if (data && data.length > 0) {
+                  onMessage(data);
+                }
+              }
+            }
+            
+            if (trimmedLine === '') {
+              currentEvent = '';
+            }
+          }
+        }
+      } catch (error: any) {
+        if (!isManualClose) {
+          console.error('SSE fetch错误:', error);
+        }
+        
+        if (error?.name === 'AbortError') {
+          console.log('连接被手动中止');
+          isManualClose = true;
+          onClose?.();
+        } else if (!isManualClose) {
+          console.warn('SSE连接错误，准备重连:', error.message);
+          onError?.(new Event('error'));
+          scheduleReconnect();
+        }
+      } finally {
+        if (reader) {
+          try {
+            await reader.cancel().catch(() => {});
+          } catch (cancelError) {
+            // 忽略cancel错误
+          }
+          reader = null;
+        }
+      }
+    };
+    
+    // 启动连接
+    createFetchSSE();
+    
+    // 创建兼容EventSource接口的对象
+    const eventSource = {
+      readyState: 1, // OPEN
+      close: async () => {
+        console.log('手动关闭SSE连接和重连机制');
+        isManualClose = true;
+        
+        if (reconnectTimeoutId) {
+          clearTimeout(reconnectTimeoutId);
+          reconnectTimeoutId = null;
+        }
+        
+        if (abortController) {
+          try {
+            abortController.abort();
+          } catch (error) {
+            console.debug('AbortController.abort() 调用时的预期错误:', error);
+          }
+        }
+        
+        if (reader) {
+          try {
+            await reader.cancel().catch(() => {});
+            reader = null;
+          } catch (error) {
+            console.debug('Reader.cancel() 调用时的预期错误:', error);
+          }
+        }
+        
+        try {
+          onClose?.();
+        } catch (error) {
+          console.debug('onClose回调错误:', error);
+        }
+      }
+    } as unknown as EventSource;
+    
+    return {
+      eventSource: eventSource as unknown as EventSource,
+      close: () => {
+        Promise.resolve(eventSource.close()).catch((error) => {
+          console.debug('关闭连接时的预期错误:', error);
+        });
+        console.log('实时日志连接已关闭');
+      }
+    };
+  };
+
+  // 开始SSE实时日志流
+  const startLogsStream = () => {
+    if (!currentOperationPod.value || !logsFormModel.value.container) return;
+    
+    // 先停止之前的连接
+    stopLogsStream();
+    
+    try {
+      isLogsStreaming.value = true;
       logsLoading.value = true;
+      
       const params: GetPodLogsReq = {
         cluster_id: currentOperationPod.value.cluster_id,
         namespace: currentOperationPod.value.namespace,
         pod_name: currentOperationPod.value.name,
         container: logsFormModel.value.container,
-        follow: logsFormModel.value.follow,
+        follow: true, // SSE模式下强制为true
         previous: logsFormModel.value.previous,
         since_seconds: logsFormModel.value.since_seconds || undefined,
         since_time: logsFormModel.value.since_time || undefined,
@@ -863,18 +1138,99 @@ export function usePodPage() {
         tail_lines: logsFormModel.value.tail_lines || undefined,
         limit_bytes: logsFormModel.value.limit_bytes || undefined,
       };
-      const res = await getK8sPodLogs(params);
-      podLogs.value = res?.items || '暂无日志';
+      
+      logsStreamConnection.value = streamK8sPodLogs(
+        params,
+        // onMessage - 接收到新的日志数据
+        (data: string) => {
+          if (data && data.trim()) {
+            // 确保每行日志都有换行符
+            const logLine = data.endsWith('\n') ? data : data + '\n';
+            podLogs.value += logLine;
+            
+            // 自动滚动到底部
+            setTimeout(() => {
+              const logsContainer = document.querySelector('.logs-content');
+              if (logsContainer) {
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+              }
+            }, 10);
+            
+            // 输出到控制台用于调试
+            console.log('收到日志数据:', data);
+          }
+        },
+        // onError - 连接错误（支持自动重连，减少用户干扰）
+        (error: Event) => {
+          console.warn('SSE连接出现问题，自动重连机制将处理:', error);
+          // 现在有自动重连机制，不需要复杂的错误处理
+          // 只在控制台记录，避免频繁打扰用户
+        },
+        // onOpen - 连接建立
+        () => {
+          console.log('实时日志连接已建立');
+          message.success('✅ 实时日志连接已建立，支持自动重连');
+          logsLoading.value = false;
+          
+          // 确保状态正确设置
+          isLogsStreaming.value = true;
+        },
+        // onClose - 连接关闭（只有在真正结束时才调用）
+        () => {
+          console.log('实时日志连接最终关闭（自动重连已停止）');
+          isLogsStreaming.value = false;
+          logsLoading.value = false;
+          logsStreamConnection.value = null;
+          
+          // 只有在模态框还开着时才提示最终关闭
+          if (isLogsModalVisible.value) {
+            message.info('📡 实时日志连接已停止');
+          }
+        }
+      );
     } catch (err) {
-      message.error('获取 Pod 日志失败');
-      console.error(err);
-      podLogs.value = '获取日志失败';
-    } finally {
+      console.error('启动实时日志失败:', err);
+      let errorMessage = '启动实时日志失败';
+      
+      if (err instanceof Error) {
+        if (err.message.includes('400')) {
+          errorMessage = '请求参数错误，请检查Pod名称和容器名称是否正确';
+        } else if (err.message.includes('404')) {
+          errorMessage = 'Pod或容器未找到，请检查名称是否正确';
+        } else if (err.message.includes('403')) {
+          errorMessage = '权限不足，请检查访问权限';
+        } else if (err.message.includes('500')) {
+          errorMessage = '服务器内部错误，请稍后重试或联系管理员';
+        } else if (err.message.includes('network') || err.message.includes('fetch')) {
+          errorMessage = '网络连接失败，请检查网络连接和服务器地址';
+        }
+      }
+      
+      message.error(errorMessage);
+      isLogsStreaming.value = false;
       logsLoading.value = false;
     }
   };
 
-  // 执行命令
+  // 停止SSE实时日志流
+  const stopLogsStream = () => {
+    console.log('停止实时日志流');
+    try {
+      if (logsStreamConnection.value) {
+        logsStreamConnection.value.close();
+        logsStreamConnection.value = null;
+      }
+    } catch (error) {
+      console.warn('停止日志流时发生错误:', error);
+    } finally {
+      // 确保状态被正确重置
+      isLogsStreaming.value = false;
+      logsLoading.value = false;
+      message.info('⏹️ 实时日志流已停止');
+    }
+  };
+
+  // 执行命令 - 使用WebSocket终端
   const showExecModal = async (record: K8sPod) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
@@ -902,11 +1258,438 @@ export function usePodPage() {
   };
 
   const closeExecModal = () => {
+    // 断开终端连接
+    disconnectTerminal();
+    
     isExecModalVisible.value = false;
     currentOperationPod.value = null;
     podContainers.value = [];
+    
+    // 重置表单
+    execFormModel.value = {
+      container: '',
+      shell: '/bin/bash'
+    };
   };
 
+  // 初始化终端
+  const initializeTerminal = async () => {
+    try {
+      // 等待DOM更新
+      await nextTick();
+      
+      const terminalElement = document.getElementById('terminal-container');
+      if (!terminalElement) {
+        throw new Error('终端容器元素未找到');
+      }
+
+      // 清理之前的终端
+      if (terminal.value) {
+        try {
+          // 先清理addon，避免dispose错误
+          if (fitAddon.value) {
+            // FitAddon没有dispose方法，直接设置为null
+            fitAddon.value = null;
+          }
+          
+          // 安全地dispose terminal
+          terminal.value.dispose();
+          terminal.value = null;
+        } catch (error) {
+          // 捕获特定的addon dispose错误
+          if (error instanceof Error && error.message.includes('Could not dispose an addon that has not been loaded')) {
+            console.warn('初始化时Addon dispose错误（已忽略）:', error.message);
+          } else {
+            console.warn('清理终端时发生错误:', error);
+          }
+          // 强制重置状态
+          terminal.value = null;
+          fitAddon.value = null;
+        }
+      }
+
+      // 创建新的终端实例
+      terminal.value = new Terminal({
+        cursorBlink: true,
+        fontSize: 14,
+        fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
+        theme: {
+          background: '#1e1e1e',
+          foreground: '#d4d4d4',
+          cursor: '#d4d4d4',
+          black: '#000000',
+          red: '#cd3131',
+          green: '#0dbc79',
+          yellow: '#e5e510',
+          blue: '#2472c8',
+          magenta: '#bc3fbc',
+          cyan: '#11a8cd',
+          white: '#e5e5e5',
+          brightBlack: '#666666',
+          brightRed: '#f14c4c',
+          brightGreen: '#23d18b',
+          brightYellow: '#f5f543',
+          brightBlue: '#3b8eea',
+          brightMagenta: '#d670d6',
+          brightCyan: '#29b8db',
+          brightWhite: '#e5e5e5'
+        },
+        cols: 120,
+        rows: 30,
+        scrollback: 1000,
+        convertEol: true
+      });
+
+      // 添加插件
+      try {
+        fitAddon.value = new FitAddon();
+        terminal.value.loadAddon(fitAddon.value);
+        
+        // 安全加载WebLinksAddon
+        const webLinksAddon = new WebLinksAddon();
+        terminal.value.loadAddon(webLinksAddon);
+      } catch (error) {
+        console.warn('加载终端插件时发生错误:', error);
+        // 如果插件加载失败，继续初始化终端
+      }
+
+      // 将终端挂载到DOM
+      terminal.value.open(terminalElement);
+      
+      // 自适应大小
+      if (fitAddon.value) {
+        fitAddon.value.fit();
+      }
+      
+      // 监听窗口大小变化
+      const resizeObserver = new ResizeObserver(() => {
+        if (fitAddon.value && terminal.value) {
+          fitAddon.value.fit();
+        }
+      });
+      resizeObserver.observe(terminalElement);
+
+      return true;
+    } catch (error) {
+      console.error('初始化终端失败:', error);
+      message.error('初始化终端失败');
+      return false;
+    }
+  };
+
+  // WebSocket终端连接 - 移动到Pod.ts中的业务逻辑
+  const execK8sPodWebSocket = (
+    params: PodExecReq,
+    onMessage: (data: string) => void,
+    onError?: (error: Event) => void,
+    onOpen?: () => void,
+    onClose?: () => void
+  ) => {
+    // 获取认证token
+    const accessStore = useAccessStore();
+    const token = accessStore.accessToken;
+    
+    if (!token) {
+      console.error('未获取到认证token');
+      onError?.(new Event('auth_error'));
+      return { 
+        sendCommand: () => {
+          console.warn('WebSocket未连接，无法发送命令');
+        },
+        close: () => {
+          // 空操作，因为没有连接可关闭
+        },
+        get readyState() {
+          return WebSocket.CLOSED;
+        }
+      };
+    }
+
+    // 构建WebSocket URL - 使用相对路径利用Vite代理
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const url = `${protocol}//${host}/api/k8s/pod/${params.cluster_id}/${params.namespace}/${params.pod_name}/containers/${params.container}/exec?token=${encodeURIComponent(token)}`;
+    
+    let socket: WebSocket | null = null;
+    let isManualClose = false;
+    let reconnectAttempts = 0;
+    let reconnectTimeoutId: NodeJS.Timeout | null = null;
+    const maxReconnectAttempts = 5;
+    const reconnectInterval = 3000; // 3秒重连间隔
+
+    const scheduleReconnect = () => {
+      if (isManualClose || reconnectAttempts >= maxReconnectAttempts) {
+        return;
+      }
+      
+      reconnectAttempts++;
+      console.log(`WebSocket连接断开，${reconnectInterval / 1000}秒后尝试第${reconnectAttempts}次重连...`);
+      
+      reconnectTimeoutId = setTimeout(() => {
+        connect();
+      }, reconnectInterval);
+    };
+
+    const connect = () => {
+      try {
+        // 清理之前的连接
+        if (socket) {
+          socket.close();
+          socket = null;
+        }
+
+        console.log('正在连接Pod终端WebSocket:', url);
+        
+        // 创建WebSocket连接
+        socket = new WebSocket(url);
+
+        socket.onopen = () => {
+          console.log('Pod执行命令WebSocket连接已建立');
+          reconnectAttempts = 0; // 重置重连计数
+          
+          // 发送初始化参数
+          const initMessage = {
+            shell: params.shell || '/bin/bash',
+            container: params.container
+          };
+          socket?.send(JSON.stringify(initMessage));
+          
+          onOpen?.();
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const data = event.data;
+            if (typeof data === 'string') {
+              // 尝试解析JSON格式的响应
+              try {
+                const parsed = JSON.parse(data);
+                // 如果是标准的终端输出格式
+                if (parsed.op === 'stdout' && parsed.data) {
+                  onMessage(parsed.data);
+                } else {
+                  // 如果不是标准格式，直接传递原始数据
+                  onMessage(data);
+                }
+              } catch (parseError) {
+                // 如果不是JSON格式，直接传递原始数据
+                onMessage(data);
+              }
+            }
+          } catch (error) {
+            console.error('处理WebSocket消息时出错:', error);
+          }
+        };
+
+        socket.onerror = (error) => {
+          console.error('Pod执行命令WebSocket连接错误:', error);
+          onError?.(error);
+        };
+
+        socket.onclose = (event) => {
+          console.log('Pod执行命令WebSocket连接关闭', event.code, event.reason);
+          socket = null;
+          
+          // 根据关闭代码提供更详细的错误信息
+          if (event.code === 1006) {
+            console.warn('WebSocket异常断开 - 可能是网络问题或服务器错误');
+          } else if (event.code === 1000) {
+            console.log('WebSocket正常关闭');
+          } else if (event.code === 1003) {
+            console.error('WebSocket协议错误');
+          } else if (event.code === 4401) {
+            console.error('WebSocket认证失败 - 请检查token是否有效');
+          }
+          
+          if (!isManualClose && !event.wasClean) {
+            // 非正常关闭且不是手动关闭，尝试重连
+            scheduleReconnect();
+          } else {
+            onClose?.();
+          }
+        };
+
+      } catch (error) {
+        console.error('创建WebSocket连接失败:', error);
+        onError?.(new Event('connection_failed'));
+      }
+    };
+
+    // 发送命令到容器
+    const sendCommand = (command: string) => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        // 直接发送字符串命令
+        socket.send(command);
+      } else {
+        console.warn('WebSocket连接未就绪，无法发送命令');
+      }
+    };
+
+    // 手动关闭连接
+    const close = () => {
+      isManualClose = true;
+      
+      // 清理重连定时器
+      if (reconnectTimeoutId) {
+        clearTimeout(reconnectTimeoutId);
+        reconnectTimeoutId = null;
+      }
+      
+      // 关闭WebSocket连接
+      if (socket) {
+        socket.close();
+        socket = null;
+      }
+    };
+
+    // 启动连接
+    connect();
+
+    return {
+      sendCommand,
+      close,
+      get readyState() {
+        return socket?.readyState;
+      }
+    };
+  };
+
+  // 连接到Pod终端
+  const connectToTerminal = async () => {
+    if (!execFormRef.value || !currentOperationPod.value) return;
+    
+    try {
+      await execFormRef.value.validate();
+      terminalLoading.value = true;
+      
+      // 初始化终端
+      const terminalInitialized = await initializeTerminal();
+      if (!terminalInitialized) {
+        return;
+      }
+
+      const params: PodExecReq = {
+        cluster_id: currentOperationPod.value.cluster_id,
+        namespace: currentOperationPod.value.namespace,
+        pod_name: currentOperationPod.value.name,
+        container: execFormModel.value.container,
+        shell: execFormModel.value.shell,
+      };
+
+      // 建立WebSocket连接
+      terminalConnection.value = execK8sPodWebSocket(
+        params,
+        // onMessage - 接收终端输出
+        (data: string) => {
+          if (terminal.value) {
+            terminal.value.write(data);
+          }
+        },
+        // onError - 连接错误
+        (error: Event) => {
+          console.error('终端连接错误:', error);
+          message.error('终端连接出现问题');
+          isTerminalConnected.value = false;
+        },
+        // onOpen - 连接建立
+        () => {
+          console.log('终端连接已建立');
+          message.success('✅ 终端连接已建立');
+          isTerminalConnected.value = true;
+          terminalLoading.value = false;
+          
+          // 监听终端输入
+          if (terminal.value && terminalConnection.value) {
+            terminal.value.onData((data) => {
+              terminalConnection.value?.sendCommand(data);
+            });
+          }
+          
+          // 发送初始化信息
+          if (terminal.value) {
+            terminal.value.writeln(`\r\n连接到 Pod: ${currentOperationPod.value?.name}`);
+            terminal.value.writeln(`容器: ${execFormModel.value.container}`);
+            terminal.value.writeln(`Shell: ${execFormModel.value.shell}`);
+            terminal.value.writeln('=' .repeat(50));
+          }
+        },
+        // onClose - 连接关闭
+        () => {
+          console.log('终端连接已关闭');
+          isTerminalConnected.value = false;
+          terminalLoading.value = false;
+          
+          if (terminal.value && isExecModalVisible.value) {
+            terminal.value.writeln('\r\n\r\n📡 连接已断开');
+            message.info('终端连接已断开');
+          }
+        }
+      );
+
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'errorFields' in err) {
+        message.warning('请检查表单填写是否正确');
+        return;
+      }
+      message.error('❌ 建立终端连接失败');
+      console.error(err);
+      isTerminalConnected.value = false;
+    } finally {
+      terminalLoading.value = false;
+    }
+  };
+
+  // 断开终端连接
+  const disconnectTerminal = () => {
+    console.log('断开终端连接');
+    
+    try {
+      // 关闭WebSocket连接
+      if (terminalConnection.value) {
+        terminalConnection.value.close();
+        terminalConnection.value = null;
+      }
+      
+      // 清理终端实例
+      if (terminal.value) {
+        try {
+          // 先清理addons，避免dispose错误
+          if (fitAddon.value) {
+            // FitAddon没有dispose方法，直接设置为null
+            fitAddon.value = null;
+          }
+          
+          // 安全地dispose terminal，捕获addon相关错误
+          terminal.value.dispose();
+          terminal.value = null;
+        } catch (error) {
+          // 捕获特定的addon dispose错误
+          if (error instanceof Error && error.message.includes('Could not dispose an addon that has not been loaded')) {
+            console.warn('Addon dispose错误（已忽略）:', error.message);
+          } else {
+            console.warn('断开终端时清理发生错误:', error);
+          }
+          // 强制重置状态，无论是否有错误
+          terminal.value = null;
+          fitAddon.value = null;
+        }
+      }
+      
+      // 确保fitAddon也被清理
+      if (fitAddon.value) {
+        fitAddon.value = null;
+      }
+      
+    } catch (error) {
+      console.warn('断开终端连接时发生错误:', error);
+    } finally {
+      // 确保状态被正确重置
+      isTerminalConnected.value = false;
+      terminalLoading.value = false;
+    }
+  };
+
+  // 保留原有的简单执行命令函数作为备用
   const executePodCommand = async () => {
     if (!execFormRef.value || !currentOperationPod.value) return;
     
@@ -924,7 +1707,6 @@ export function usePodPage() {
       await execK8sPod(params);
       message.success('🎉 命令执行成功');
       isExecModalVisible.value = false;
-      // 这里可以打开一个新的终端窗口或模态框显示命令执行结果
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查表单填写是否正确');
@@ -977,12 +1759,27 @@ export function usePodPage() {
   };
 
   // 文件管理
-  const showFileManagerModal = (record: K8sPod) => {
+  const showFileManagerModal = async (record: K8sPod) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     
     currentOperationPod.value = { ...record, cluster_id: clusterId };
-    isFileManagerModalVisible.value = true;
+    
+    try {
+      // 获取Pod容器信息
+      const containersParams: GetPodContainersReq = {
+        cluster_id: clusterId,
+        namespace: record.namespace,
+        pod_name: record.name
+      };
+      const containersRes = await getK8sPodContainers(containersParams);
+      podContainers.value = containersRes?.items || [];
+      
+      isFileManagerModalVisible.value = true;
+    } catch (err) {
+      message.error('获取容器信息失败');
+      console.error(err);
+    }
   };
 
   const closeFileManagerModal = () => {
@@ -1012,9 +1809,20 @@ export function usePodPage() {
 
   // 文件下载
   const downloadFile = async (filePath: string, container: string) => {
-    if (!currentOperationPod.value) return;
+    if (!currentOperationPod.value) {
+      message.error('未选择Pod');
+      return;
+    }
     
     try {
+      console.log('🔵 开始下载文件:', { 
+        filePath, 
+        container, 
+        pod: currentOperationPod.value.name,
+        namespace: currentOperationPod.value.namespace,
+        cluster_id: currentOperationPod.value.cluster_id
+      });
+      
       const params: PodFileDownloadReq = {
         cluster_id: currentOperationPod.value.cluster_id,
         namespace: currentOperationPod.value.namespace,
@@ -1022,20 +1830,101 @@ export function usePodPage() {
         container: container,
         file_path: filePath
       };
+      
+      console.log('🔵 下载参数:', params);
+      console.log('🔵 调用API前 - downloadK8sPodFile函数存在:', typeof downloadK8sPodFile);
+      
+      // 调用API下载文件
+      console.log('🔵 正在调用 downloadK8sPodFile API...');
       const res = await downloadK8sPodFile(params);
+      
+      console.log('🔵 API调用完成，响应类型:', typeof res);
+      console.log('🔵 API调用完成，响应:', res);
+      console.log('🔵 响应是否为Blob:', res instanceof Blob);
+      
+      // 检查响应类型
+      if (!res) {
+        throw new Error('服务器返回空响应');
+      }
+      
+      // 检查响应数据
+      let blob: Blob;
+      if (res instanceof Blob) {
+        blob = res;
+      } else if (res.data instanceof Blob) {
+        blob = res.data;
+      } else if (typeof res === 'object' && res.data) {
+        // 如果响应包装在data字段中
+        blob = new Blob([res.data], { type: 'application/octet-stream' });
+      } else {
+        // 其他情况，直接创建Blob
+        blob = new Blob([res], { type: 'application/octet-stream' });
+      }
+      
+      // 检查Blob大小
+      if (blob.size === 0) {
+        throw new Error('下载的文件为空或文件不存在');
+      }
+      
+      console.log('🔵 Blob大小:', blob.size);
+      console.log('🔵 Blob类型:', blob.type);
+      
       // 处理文件下载
-      const url = window.URL.createObjectURL(new Blob([res]));
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', filePath.split('/').pop() || 'download');
+      
+      // 获取文件名
+      const fileName = filePath.split('/').pop() || 'download';
+      link.setAttribute('download', fileName);
+      
+      console.log('🔵 准备下载文件:', fileName);
+      
+      // 添加到DOM并触发下载
       document.body.appendChild(link);
       link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      message.success('文件下载成功');
-    } catch (err) {
-      message.error('文件下载失败');
-      console.error(err);
+      
+      // 清理
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+      
+      message.success(`文件 "${fileName}" 下载成功`);
+      
+    } catch (err: any) {
+      console.error('🔴 文件下载失败:', err);
+      console.error('🔴 错误详情:', {
+        message: err?.message,
+        response: err?.response,
+        status: err?.response?.status,
+        statusText: err?.response?.statusText,
+        data: err?.response?.data,
+        config: err?.config,
+        stack: err?.stack
+      });
+      
+      // 更详细的错误处理
+      let errorMessage = '文件下载失败';
+      if (err?.response?.status) {
+        if (err.response.status === 404) {
+          errorMessage = '文件不存在或路径错误';
+        } else if (err.response.status === 403) {
+          errorMessage = '权限不足，无法访问该文件';
+        } else if (err.response.status === 500) {
+          errorMessage = '服务器内部错误';
+        } else {
+          errorMessage = `下载失败 (${err.response.status}): ${err.response.statusText || err.message}`;
+        }
+      } else if (err?.response?.data?.message) {
+        errorMessage = `下载失败: ${err.response.data.message}`;
+      } else if (err?.message) {
+        errorMessage = `下载失败: ${err.message}`;
+      } else if (typeof err === 'string') {
+        errorMessage = `下载失败: ${err}`;
+      }
+      
+      message.error(errorMessage);
     }
   };
 
@@ -1333,6 +2222,15 @@ export function usePodPage() {
     submitLoading,
     detailLoading,
     logsLoading,
+    isLogsStreaming,
+    logsStreamConnection,
+    
+    // 终端状态
+    isTerminalConnected,
+    terminalLoading,
+    terminal,
+    terminalConnection,
+    fitAddon,
     
     // operation targets
     currentOperationPod,
@@ -1410,11 +2308,16 @@ export function usePodPage() {
     showLogsModal,
     closeLogsModal,
     fetchPodLogs,
+    startLogsStream,
+    stopLogsStream,
     
     // exec operations
     showExecModal,
     closeExecModal,
     executePodCommand,
+    connectToTerminal,
+    disconnectTerminal,
+    initializeTerminal,
     
     // port forward operations
     showPortForwardModal,

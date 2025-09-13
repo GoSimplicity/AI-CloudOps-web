@@ -96,8 +96,14 @@ function createRequestClient(baseURL: string) {
   // response数据解构
   client.addResponseInterceptor({
     fulfilled: (response) => {
-      const { data: responseData, status } = response;
+      const { data: responseData, status, config } = response;
 
+      // 如果是blob响应（文件下载），直接返回blob数据
+      if (config?.responseType === 'blob' && responseData instanceof Blob) {
+        return responseData;
+      }
+
+      // 处理常规JSON响应
       const { code, data, message: msg } = responseData;
       if (status >= 200 && status < 400 && code === 0) {
         return data;

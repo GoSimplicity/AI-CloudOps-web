@@ -1,5 +1,25 @@
 /* Pod 页面特定样式 */
 
+/* 
+ * Fix for accessibility issue with Ant Design Vue modals
+ * Issue: Elements with aria-hidden="true" should not be focusable
+ * This is a known issue with Ant Design Vue focus management
+ * See: https://w3c.github.io/aria/#aria-hidden
+ */
+div[aria-hidden="true"][tabindex="0"] {
+  /* Remove focus capability from aria-hidden elements */
+  pointer-events: none !important;
+  /* Hide from tab navigation */
+  tabindex: -1 !important;
+}
+
+/* Modern browsers: use inert attribute instead of aria-hidden for better accessibility */
+@supports (inert: true) {
+  div[aria-hidden="true"][tabindex="0"] {
+    inert: true;
+  }
+}
+
 /* 就绪状态显示样式 */
 .pod-ready {
   min-width: 80px;
@@ -433,19 +453,26 @@
 }
 
 .logs-content {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 12px;
-  line-height: 1.4;
-  background: #ffffff;
-  color: #333;
-  padding: 16px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  color: #2c3e50;
+  padding: 20px;
   margin: 0;
   white-space: pre-wrap;
   word-wrap: break-word;
   max-height: 50vh;
   overflow-y: auto;
   border-radius: 8px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid #e1e8ed;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.logs-content:hover {
+  border-color: #d1d9e0;
+  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
 .logs-content::-webkit-scrollbar {
@@ -464,6 +491,38 @@
 
 .logs-content::-webkit-scrollbar-thumb:hover {
   background: #a1a1a1;
+}
+
+/* 日志空状态样式 */
+.logs-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: #999;
+  text-align: center;
+}
+
+.logs-empty-state .empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.logs-empty-state .empty-text p {
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+.logs-empty-state .empty-text p:first-child {
+  font-weight: 500;
+  color: #666;
+}
+
+.logs-empty-state .empty-text p:last-child {
+  font-size: 12px;
+  color: #999;
 }
 
 /* 文件管理样式 */
@@ -835,6 +894,140 @@
   width: 100%;
 }
 
+/* 终端模态框样式 */
+.terminal-modal .ant-modal-body {
+  padding: 16px;
+  background: #f0f2f5;
+}
+
+.terminal-container {
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+}
+
+.terminal-config {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.terminal-status-bar {
+  background: white;
+  padding: 12px 16px;
+  border-radius: 8px 8px 0 0;
+  border-bottom: 1px solid #e8e8e8;
+  margin-bottom: 0;
+}
+
+.terminal-status-bar .connection-info {
+  color: #52c41a;
+  font-weight: 500;
+}
+
+.terminal-status-bar .connecting-indicator {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.terminal-display {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+}
+
+.terminal-wrapper {
+  flex: 1;
+  padding: 8px;
+  background: #1e1e1e;
+  overflow: hidden;
+  border-radius: 0 0 8px 8px;
+}
+
+.terminal-empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
+  color: #999;
+}
+
+.terminal-empty-state .empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.terminal-empty-state .empty-text {
+  text-align: center;
+}
+
+.terminal-empty-state .empty-text p {
+  margin: 4px 0;
+  font-size: 16px;
+}
+
+.terminal-loading-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
+  color: #666;
+}
+
+.terminal-loading-state .loading-icon {
+  margin-bottom: 16px;
+}
+
+.terminal-loading-state .loading-text {
+  text-align: center;
+}
+
+.terminal-loading-state .loading-text p {
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+/* 终端内部样式调整 */
+.terminal-wrapper .xterm {
+  height: 100% !important;
+}
+
+.terminal-wrapper .xterm-viewport {
+  background-color: transparent !important;
+}
+
+.terminal-wrapper .xterm-screen {
+  background-color: transparent !important;
+}
+
+/* 终端滚动条样式 */
+.terminal-wrapper .xterm .xterm-viewport::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminal-wrapper .xterm .xterm-viewport::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.terminal-wrapper .xterm .xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.terminal-wrapper .xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
 /* 特殊强调样式 */
 .pod-running {
   color: #52c41a !important;
@@ -868,6 +1061,103 @@
   transform: scale(1.05);
 }
 
+/* 实时流日志样式 */
+.logs-content.streaming-logs {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+  color: #e8e8e8 !important;
+  border: 2px solid #52c41a !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 20px rgba(82, 196, 26, 0.15), 
+              0 0 0 1px rgba(82, 196, 26, 0.1) !important;
+  transition: all 0.3s ease;
+}
+
+/* 实时流日志中的文本样式 */
+.logs-content.streaming-logs * {
+  color: #e8e8e8 !important;
+}
+
+/* 实时流日志滚动条样式 */
+.logs-content.streaming-logs::-webkit-scrollbar-thumb {
+  background: linear-gradient(45deg, #52c41a, #73d13d) !important;
+  border-radius: 4px;
+}
+
+.logs-content.streaming-logs::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(45deg, #73d13d, #95de64) !important;
+}
+
+.logs-content.streaming-logs::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 连接状态栏样式 */
+.logs-status-bar {
+  background: linear-gradient(90deg, #f0f9ff 0%, #e6f7ff 100%);
+  border: 1px solid #91d5ff;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(145, 213, 255, 0.15);
+  transition: all 0.3s ease;
+}
+
+/* 实时流状态栏样式 */
+.logs-status-bar.streaming {
+  background: linear-gradient(90deg, #f6ffed 0%, #d9f7be 100%);
+  border: 1px solid #52c41a;
+  box-shadow: 0 2px 12px rgba(82, 196, 26, 0.2);
+  animation: streamingGlow 3s ease-in-out infinite;
+}
+
+@keyframes streamingGlow {
+  0%, 100% { 
+    box-shadow: 0 2px 12px rgba(82, 196, 26, 0.2); 
+  }
+  50% { 
+    box-shadow: 0 4px 20px rgba(82, 196, 26, 0.35); 
+  }
+}
+
+.streaming-indicator {
+  color: #52c41a;
+  font-weight: 600;
+  animation: pulse 2s infinite;
+}
+
+.streaming-indicator.active {
+  color: #389e0d;
+  text-shadow: 0 0 8px rgba(82, 196, 26, 0.3);
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+.logs-count {
+  color: #666;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* 实时流模式控制按钮样式 */
+.ant-btn.streaming-start {
+  background: linear-gradient(90deg, #52c41a 0%, #73d13d 100%);
+  border-color: #52c41a;
+  color: #fff;
+  font-weight: 500;
+}
+
+.ant-btn.streaming-stop {
+  background: linear-gradient(90deg, #ff4d4f 0%, #ff7875 100%);
+  border-color: #ff4d4f;
+  color: #fff;
+  font-weight: 500;
+}
+
 /* 打印样式 */
 @media print {
   .pod-logs-content {
@@ -881,5 +1171,9 @@
   
   .container-config-item {
     break-inside: avoid;
+  }
+  
+  .logs-status-bar {
+    display: none;
   }
 }

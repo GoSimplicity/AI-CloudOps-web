@@ -1010,11 +1010,28 @@
               <a-checkbox v-model:checked="logsFormModel.timestamps">显示时间戳</a-checkbox>
               <a-checkbox v-model:checked="logsFormModel.previous" style="margin-left: 16px;">前一个容器</a-checkbox>
             </a-col>
-            <a-col :span="8">
-              <a-button type="primary" @click="fetchPodLogs" :loading="logsLoading" :disabled="!logsFormModel.container">
-                <template #icon><ReloadOutlined /></template>
-                获取日志
+            <a-col :span="14">
+              <!-- 实时流按钮 -->
+              <a-button 
+                v-if="!isLogsStreaming" 
+                type="primary" 
+                @click="fetchPodLogs" 
+                :loading="logsLoading" 
+                :disabled="!logsFormModel.container"
+              >
+                <template #icon><PlayCircleOutlined /></template>
+                开始实时流
               </a-button>
+              <a-button 
+                v-else 
+                type="primary" 
+                danger 
+                @click="stopLogsStream"
+              >
+                <template #icon><PauseCircleOutlined /></template>
+                停止实时流
+              </a-button>
+              
               <a-button @click="podLogs = ''" style="margin-left: 8px;">
                 <template #icon><ClearOutlined /></template>
                 清空
@@ -1022,47 +1039,165 @@
             </a-col>
           </a-row>
         </div>
+        
+        <!-- 连接状态栏 -->
+        <div class="logs-status-bar">
+          <a-row justify="space-between" align="middle">
+            <a-col>
+              <a-space>
+                <a-badge 
+                  :status="isLogsStreaming ? 'processing' : 'default'" 
+                  :text="isLogsStreaming ? '实时连接中' : '未连接'"
+                />
+                <span v-if="isLogsStreaming" class="streaming-indicator">
+                  <ReloadOutlined spin /> 正在监听日志...
+                </span>
+              </a-space>
+            </a-col>
+            <a-col>
+              <span class="logs-count">
+                日志行数: {{ podLogs.split('\n').filter(line => line.trim()).length }}
+              </span>
+            </a-col>
+          </a-row>
+        </div>
+        
         <div class="logs-display">
-          <pre class="logs-content">{{ podLogs || '请选择容器并点击"获取日志"按钮' }}</pre>
+          <pre 
+            class="logs-content" 
+            :class="{ 'streaming-logs': isLogsStreaming }"
+            v-show="podLogs || isLogsStreaming"
+          >{{ podLogs || '正在连接...' }}</pre>
+          
+          <!-- 空状态提示 -->
+          <div v-show="!podLogs && !isLogsStreaming" class="logs-empty-state">
+            <div class="empty-icon">📄</div>
+            <div class="empty-text">
+              <p>暂无日志数据</p>
+              <p>请选择容器并点击"开始实时流"按钮</p>
+            </div>
+          </div>
         </div>
       </div>
     </a-modal>
 
-    <!-- 执行命令模态框 -->
+    <!-- 执行命令模态框 - 终端版本 -->
     <a-modal
       v-model:open="isExecModalVisible"
-      title="执行命令"
-      @ok="executePodCommand"
+      title="Pod 终端"
       @cancel="closeExecModal"
-      :confirmLoading="submitLoading"
-      width="600px"
+      width="1200px"
       :maskClosable="false"
       destroyOnClose
-      okText="执行"
-      cancelText="取消"
+      :footer="null"
+      class="terminal-modal"
     >
-      <a-form 
-        ref="execFormRef"
-        :model="execFormModel" 
-        layout="vertical" 
-        class="k8s-form"
-        :rules="execFormRules"
-      >
-        <a-form-item label="容器" name="container" :required="true">
-          <a-select v-model:value="execFormModel.container" placeholder="选择容器">
-            <a-select-option v-for="container in podContainers" :key="container.name" :value="container.name">
-              {{ container.name }}
-            </a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="Shell" name="shell">
-          <a-select v-model:value="execFormModel.shell">
-            <a-select-option value="/bin/bash">/bin/bash</a-select-option>
-            <a-select-option value="/bin/sh">/bin/sh</a-select-option>
-            <a-select-option value="/bin/zsh">/bin/zsh</a-select-option>
-          </a-select>
-        </a-form-item>
-      </a-form>
+      <div class="terminal-container">
+        <!-- 连接配置区域 -->
+        <div class="terminal-config" v-if="!isTerminalConnected">
+          <a-form 
+            ref="execFormRef"
+            :model="execFormModel" 
+            layout="inline" 
+            class="k8s-form"
+            :rules="execFormRules"
+          >
+            <a-form-item label="容器" name="container" :required="true">
+              <a-select v-model:value="execFormModel.container" placeholder="选择容器" style="width: 200px;">
+                <a-select-option v-for="container in podContainers" :key="container.name" :value="container.name">
+                  {{ container.name }}
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="Shell" name="shell">
+              <a-select v-model:value="execFormModel.shell" style="width: 150px;">
+                <a-select-option value="/bin/bash">/bin/bash</a-select-option>
+                <a-select-option value="/bin/sh">/bin/sh</a-select-option>
+                <a-select-option value="/bin/zsh">/bin/zsh</a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item>
+              <a-button 
+                type="primary" 
+                @click="connectToTerminal" 
+                :loading="terminalLoading"
+                :disabled="!execFormModel.container"
+              >
+                <template #icon><PlayCircleOutlined /></template>
+                连接终端
+              </a-button>
+            </a-form-item>
+          </a-form>
+        </div>
+
+        <!-- 连接状态栏 -->
+        <div class="terminal-status-bar" v-if="isTerminalConnected || terminalLoading">
+          <a-row justify="space-between" align="middle">
+            <a-col>
+              <a-space>
+                <a-badge 
+                  :status="isTerminalConnected ? 'processing' : terminalLoading ? 'default' : 'error'" 
+                  :text="isTerminalConnected ? '已连接' : terminalLoading ? '连接中...' : '未连接'"
+                />
+                <span v-if="isTerminalConnected" class="connection-info">
+                  <CodeOutlined /> {{ execFormModel.container }} ({{ execFormModel.shell }})
+                </span>
+                <span v-if="terminalLoading" class="connecting-indicator">
+                  <ReloadOutlined spin /> 正在建立连接...
+                </span>
+              </a-space>
+            </a-col>
+            <a-col>
+              <a-space>
+                <a-button 
+                  v-if="isTerminalConnected" 
+                  type="text" 
+                  size="small" 
+                  @click="disconnectTerminal"
+                  danger
+                >
+                  <template #icon><DisconnectOutlined /></template>
+                  断开连接
+                </a-button>
+                <a-tooltip title="终端支持完整的Shell交互，包括vi/nano编辑器、tab补全等">
+                  <a-button type="text" size="small">
+                    <template #icon><QuestionCircleOutlined /></template>
+                  </a-button>
+                </a-tooltip>
+              </a-space>
+            </a-col>
+          </a-row>
+        </div>
+
+        <!-- 终端显示区域 -->
+        <div class="terminal-display">
+          <div 
+            id="terminal-container" 
+            class="terminal-wrapper"
+            v-show="isTerminalConnected || terminalLoading"
+          ></div>
+          
+          <!-- 未连接状态提示 -->
+          <div v-show="!isTerminalConnected && !terminalLoading" class="terminal-empty-state">
+            <div class="empty-icon">🖥️</div>
+            <div class="empty-text">
+              <p>Pod 终端未连接</p>
+              <p>请选择容器和Shell类型，然后点击"连接终端"按钮</p>
+            </div>
+          </div>
+
+          <!-- 连接中状态 -->
+          <div v-show="terminalLoading" class="terminal-loading-state">
+            <div class="loading-icon">
+              <a-spin size="large" />
+            </div>
+            <div class="loading-text">
+              <p>正在连接到 Pod 终端...</p>
+              <p>容器: {{ execFormModel.container }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </a-modal>
 
     <!-- 端口转发模态框 -->
@@ -1099,8 +1234,8 @@
       v-model:open="isFileManagerModalVisible"
       title="文件管理"
       :footer="null"
-      @cancel="closeFileManagerModal"
-      width="800px"
+      @cancel="handleCloseFileManagerModal"
+      width="900px"
       :maskClosable="false"
       destroyOnClose
     >
@@ -1112,8 +1247,137 @@
           show-icon
           style="margin-bottom: 16px;"
         />
-        <div style="text-align: center; padding: 40px; color: #999;">
-          文件管理功能开发中，敬请期待...
+        
+        <!-- 容器选择 -->
+        <div class="file-manager-container-selection" style="margin-bottom: 24px;">
+          <h4 style="margin-bottom: 12px;">选择容器</h4>
+          <a-select 
+            v-model:value="fileManagerContainer" 
+            placeholder="请选择容器"
+            style="width: 100%;"
+            :disabled="!podContainers || podContainers.length === 0"
+            @change="handleContainerChange"
+          >
+            <a-select-option v-for="container in podContainers" :key="container.name" :value="container.name">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span>{{ container.name }}</span>
+                <a-tag :color="container.ready ? 'success' : 'error'" size="small">
+                  {{ container.ready ? '就绪' : '未就绪' }}
+                </a-tag>
+              </div>
+            </a-select-option>
+          </a-select>
+        </div>
+
+        <!-- 文件上传区域 -->
+        <div class="file-upload-section" v-if="fileManagerContainer">
+          <h4 style="margin-bottom: 12px;">文件上传</h4>
+          
+          <a-form layout="vertical" style="margin-bottom: 16px;">
+            <a-form-item label="目标路径" required>
+              <a-input 
+                v-model:value="uploadFilePath" 
+                placeholder="请输入文件上传的目标路径，如：/tmp 或 /app/data"
+                :maxlength="500"
+              />
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                文件将上传到容器中的此路径下，请确保路径存在且有写入权限
+              </div>
+            </a-form-item>
+          </a-form>
+
+          <!-- 文件上传组件 -->
+          <a-upload-dragger
+            :file-list="fileList"
+            :before-upload="beforeUpload"
+            :remove="handleRemoveFile"
+            :multiple="true"
+            :disabled="!uploadFilePath || !fileManagerContainer || uploadLoading"
+            style="margin-bottom: 16px;"
+          >
+            <p class="ant-upload-drag-icon">
+              <UploadOutlined style="font-size: 48px; color: #1890ff;" />
+            </p>
+            <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
+            <p class="ant-upload-hint">
+              支持单个或批量上传。请确保目标路径存在且容器有写入权限。
+            </p>
+          </a-upload-dragger>
+
+          <!-- 上传按钮 -->
+          <div style="text-align: center; margin-bottom: 24px;">
+            <a-button 
+              type="primary" 
+              size="large"
+              :loading="uploadLoading"
+              :disabled="fileList.length === 0 || !uploadFilePath || !fileManagerContainer"
+              @click="handleUploadFiles"
+            >
+              <template #icon><UploadOutlined /></template>
+              上传文件 ({{ fileList.length }})
+            </a-button>
+            <a-button 
+              style="margin-left: 8px;"
+              @click="clearFileList"
+              :disabled="fileList.length === 0 || uploadLoading"
+            >
+              <template #icon><ClearOutlined /></template>
+              清空列表
+            </a-button>
+          </div>
+
+          <!-- 上传进度 -->
+          <div v-if="uploadProgress.show" class="upload-progress" style="margin-bottom: 16px;">
+            <div style="margin-bottom: 8px;">
+              <span>上传进度: {{ uploadProgress.current }}/{{ uploadProgress.total }}</span>
+            </div>
+            <a-progress 
+              :percent="uploadProgress.percent" 
+              :status="uploadProgress.status"
+              :show-info="true"
+            />
+            <div v-if="uploadProgress.currentFile" style="color: #666; font-size: 12px; margin-top: 4px;">
+              正在上传: {{ uploadProgress.currentFile }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 文件下载区域 -->
+        <div class="file-download-section" v-if="fileManagerContainer">
+          <a-divider />
+          <h4 style="margin-bottom: 12px;">文件下载</h4>
+          
+          <a-form layout="inline" style="margin-bottom: 16px;">
+            <a-form-item label="文件路径">
+              <a-input 
+                v-model:value="downloadFilePath" 
+                placeholder="请输入要下载的文件完整路径，如：/tmp/file.txt"
+                style="width: 400px;"
+                :maxlength="500"
+              />
+            </a-form-item>
+            <a-form-item>
+              <a-button 
+                type="primary"
+                :loading="downloadLoading"
+                :disabled="!downloadFilePath || !fileManagerContainer"
+                @click="handleDownloadFile"
+              >
+                <template #icon><DownloadOutlined /></template>
+                下载文件
+              </a-button>
+            </a-form-item>
+          </a-form>
+          
+          <div style="color: #999; font-size: 12px;">
+            请输入容器中文件的完整路径。下载的文件将保存到您的下载文件夹中。
+          </div>
+        </div>
+
+        <!-- 无容器提示 -->
+        <div v-if="!fileManagerContainer" class="no-container-selected" style="text-align: center; padding: 40px; color: #999;">
+          <div style="font-size: 48px; margin-bottom: 16px;">📁</div>
+          <p>请先选择一个容器来进行文件管理操作</p>
         </div>
       </div>
     </a-modal>
@@ -1175,7 +1439,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { usePodPage } from './Pod';
 import { 
@@ -1197,6 +1461,12 @@ import {
   DatabaseOutlined,
   ApiOutlined,
   ClearOutlined,
+  PlayCircleOutlined,
+  PauseCircleOutlined,
+  DisconnectOutlined,
+  QuestionCircleOutlined,
+  UploadOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -1232,6 +1502,11 @@ const {
   submitLoading,
   detailLoading,
   logsLoading,
+  isLogsStreaming,
+  
+  // 终端状态
+  isTerminalConnected,
+  terminalLoading,
   
   // operation targets
   currentOperationPod,
@@ -1308,11 +1583,13 @@ const {
   showLogsModal,
   closeLogsModal,
   fetchPodLogs,
+  stopLogsStream,
   
   // exec operations
   showExecModal,
   closeExecModal,
-  executePodCommand,
+  connectToTerminal,
+  disconnectTerminal,
   
   // port forward operations
   showPortForwardModal,
@@ -1322,6 +1599,8 @@ const {
   // file operations
   showFileManagerModal,
   closeFileManagerModal,
+  uploadFile,
+  downloadFile,
   
   // filter operations
   addFilterLabel,
@@ -1533,6 +1812,176 @@ const resetFilters = () => {
 onMounted(async () => {
   await fetchClusters();
 });
+
+// 组件卸载时清理SSE连接
+onBeforeUnmount(() => {
+  stopLogsStream();
+});
+
+// 监听容器变化，自动停止之前的流
+watch(
+  () => logsFormModel.value.container,
+  (newContainer, oldContainer) => {
+    if (newContainer !== oldContainer && isLogsStreaming.value) {
+      stopLogsStream();
+      message.info('已切换容器，请重新启动实时流');
+    }
+  }
+);
+
+// 文件管理相关状态
+const fileManagerContainer = ref<string>('');
+const uploadFilePath = ref<string>('/tmp');
+const downloadFilePath = ref<string>('');
+const fileList = ref<any[]>([]);
+const uploadLoading = ref(false);
+const downloadLoading = ref(false);
+const uploadProgress = ref({
+  show: false,
+  current: 0,
+  total: 0,
+  percent: 0,
+  status: 'active' as 'active' | 'success' | 'exception',
+  currentFile: ''
+});
+
+// 文件管理相关方法
+const handleContainerChange = (containerName: string) => {
+  fileManagerContainer.value = containerName;
+  // 重置文件列表和路径
+  fileList.value = [];
+  uploadFilePath.value = '/tmp';
+  downloadFilePath.value = '';
+};
+
+const beforeUpload = (file: File) => {
+  // 检查文件大小 (限制为100MB)
+  const isLt100M = file.size / 1024 / 1024 < 100;
+  if (!isLt100M) {
+    message.error('文件大小不能超过 100MB!');
+    return false;
+  }
+  
+  // 添加到文件列表
+  fileList.value.push({
+    uid: file.name + Date.now(),
+    name: file.name,
+    status: 'done',
+    originFileObj: file
+  });
+  
+  return false; // 阻止自动上传
+};
+
+const handleRemoveFile = (file: any) => {
+  const index = fileList.value.findIndex(item => item.uid === file.uid);
+  if (index > -1) {
+    fileList.value.splice(index, 1);
+  }
+};
+
+const clearFileList = () => {
+  fileList.value = [];
+};
+
+const handleUploadFiles = async () => {
+  if (fileList.value.length === 0 || !uploadFilePath.value || !fileManagerContainer.value) {
+    message.warning('请选择文件和目标路径');
+    return;
+  }
+
+  uploadLoading.value = true;
+  uploadProgress.value = {
+    show: true,
+    current: 0,
+    total: fileList.value.length,
+    percent: 0,
+    status: 'active',
+    currentFile: ''
+  };
+
+  try {
+    for (let i = 0; i < fileList.value.length; i++) {
+      const fileItem = fileList.value[i];
+      const file = fileItem.originFileObj;
+      
+      uploadProgress.value.current = i + 1;
+      uploadProgress.value.currentFile = file.name;
+      uploadProgress.value.percent = Math.round((i / fileList.value.length) * 100);
+      
+      await uploadFile(file, uploadFilePath.value, fileManagerContainer.value);
+    }
+    
+    uploadProgress.value.percent = 100;
+    uploadProgress.value.status = 'success';
+    uploadProgress.value.currentFile = '';
+    
+    message.success(`成功上传 ${fileList.value.length} 个文件`);
+    
+    // 清空文件列表
+    setTimeout(() => {
+      fileList.value = [];
+      uploadProgress.value.show = false;
+    }, 2000);
+    
+  } catch (error) {
+    uploadProgress.value.status = 'exception';
+    message.error('文件上传失败');
+    console.error('Upload error:', error);
+  } finally {
+    uploadLoading.value = false;
+  }
+};
+
+const handleDownloadFile = async () => {
+  if (!downloadFilePath.value || !fileManagerContainer.value) {
+    message.warning('请输入文件路径和选择容器');
+    return;
+  }
+
+  if (!downloadFilePath.value.trim()) {
+    message.warning('请输入有效的文件路径');
+    return;
+  }
+
+  downloadLoading.value = true;
+  try {
+    console.log('开始下载文件...', {
+      path: downloadFilePath.value,
+      container: fileManagerContainer.value
+    });
+    
+    await downloadFile(downloadFilePath.value.trim(), fileManagerContainer.value);
+  } catch (error) {
+    console.error('Download error:', error);
+    // 错误已经在downloadFile函数中处理，这里不需要额外的错误消息
+  } finally {
+    downloadLoading.value = false;
+  }
+};
+
+// 重写文件管理模态框关闭方法，添加状态清理
+const handleCloseFileManagerModal = () => {
+  // 清理文件管理状态
+  fileManagerContainer.value = '';
+  uploadFilePath.value = '/tmp';
+  downloadFilePath.value = '';
+  fileList.value = [];
+  uploadLoading.value = false;
+  downloadLoading.value = false;
+  uploadProgress.value = {
+    show: false,
+    current: 0,
+    total: 0,
+    percent: 0,
+    status: 'active',
+    currentFile: ''
+  };
+  
+  // 调用原始的关闭方法
+  closeFileManagerModal();
+};
+
 </script>
 
 <style scoped>

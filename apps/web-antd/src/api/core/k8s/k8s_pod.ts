@@ -370,14 +370,32 @@ export const getK8sPodContainers = (params: GetPodContainersReq) => {
   return requestClient.get(`/k8s/pod/${params.cluster_id}/${params.namespace}/${params.pod_name}/containers`);
 };
 
-// 获取Pod日志
+
+// 获取Pod日志 - 简单版本，不包含复杂的SSE逻辑
 export const getK8sPodLogs = (params: GetPodLogsReq) => {
-  return requestClient.get(`/k8s/pod/${params.cluster_id}/${params.namespace}/${params.pod_name}/containers/${params.container}/logs`, { params });
+  const queryParams = new URLSearchParams();
+  if (params.follow !== undefined) queryParams.append('follow', params.follow.toString());
+  if (params.previous !== undefined) queryParams.append('previous', params.previous.toString());
+  if (params.since_seconds !== undefined) queryParams.append('since_seconds', params.since_seconds.toString());
+  if (params.since_time) queryParams.append('since_time', params.since_time);
+  if (params.timestamps !== undefined) queryParams.append('timestamps', params.timestamps.toString());
+  if (params.tail_lines !== undefined) queryParams.append('tail_lines', params.tail_lines.toString());
+  if (params.limit_bytes !== undefined) queryParams.append('limit_bytes', params.limit_bytes.toString());
+  
+  return requestClient.get(`/k8s/pod/${params.cluster_id}/${params.namespace}/${params.pod_name}/containers/${params.container}/logs`, { params: queryParams });
 };
 
-// Pod执行命令
+// Pod执行命令 - WebSocket连接，简化版本
+export const createK8sPodWebSocketConnection = (params: PodExecReq) => {
+  return requestClient.get(`/k8s/pod/${params.cluster_id}/${params.namespace}/${params.pod_name}/containers/${params.container}/exec`, { params });
+};
+
+// 保留原有的简单版本API作为备用
 export const execK8sPod = (params: PodExecReq) => {
-  return requestClient.post(`/k8s/pod/${params.cluster_id}/${params.namespace}/${params.pod_name}/containers/${params.container}/exec`, params);
+  const { cluster_id, namespace, pod_name, container, shell } = params;
+  return requestClient.post(`/k8s/pod/${cluster_id}/${namespace}/${pod_name}/containers/${container}/exec`, {
+    shell
+  });
 };
 
 // Pod端口转发
@@ -396,10 +414,23 @@ export const uploadK8sPodFile = (data: PodFileUploadReq, file: File) => {
   });
 };
 
-// Pod文件下载
+// Pod文件下载 - 修复版本，与后端API匹配
 export const downloadK8sPodFile = (params: PodFileDownloadReq) => {
-  return requestClient.get(`/k8s/pod/${params.cluster_id}/${params.namespace}/${params.pod_name}/containers/${params.container}/files/download`, {
-    responseType: 'blob',
-    params,
-  });
+  // 根据后端API路径构建URL: /api/k8s/pod/:cluster_id/:namespace/:name/containers/:container/files/download
+  const url = `/k8s/pod/${params.cluster_id}/${params.namespace}/${params.pod_name}/containers/${params.container}/files/download`;
+  
+  // 构建查询参数
+  const queryParams = new URLSearchParams();
+  queryParams.append('file_path', params.file_path);
+  
+  const config = {
+    responseType: 'blob' as const,
+    params: queryParams,
+    timeout: 300000, // 5分钟超时
+    headers: {
+      'Accept': 'application/octet-stream, */*',
+    },
+  };
+  
+  return requestClient.get(url, config);
 };
