@@ -159,7 +159,7 @@ export interface RollbackDaemonSetReq {
 }
 
 // YAML响应
-export interface K8sYaml {
+export interface K8sDaemonSetYaml {
   yaml: string; // YAML内容
 }
 

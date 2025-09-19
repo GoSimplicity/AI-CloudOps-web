@@ -103,6 +103,26 @@ const routes: RouteRecordRaw[] = [
           title: 'pod管理',
         },
       },
+      {
+        name: 'K8sConfigMap',
+        path: '/k8s_configmap',
+        component: () => import('#/views/k8s/configmap/ConfigMap.vue'),
+        meta: {
+          order: 12,
+          icon: 'lucide:settings',
+          title: 'ConfigMap管理',
+        },
+      },
+      {
+        name: 'K8sSecret',
+        path: '/k8s_secret',
+        component: () => import('#/views/k8s/secret/Secret.vue'),
+        meta: {
+          order: 13,
+          icon: 'lucide:key',
+          title: 'Secret管理',
+        },
+      },
     ],
   },
 ];

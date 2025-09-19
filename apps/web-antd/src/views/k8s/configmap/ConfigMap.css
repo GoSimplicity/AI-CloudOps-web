@@ -1,0 +1,336 @@
+/* ConfigMap 页面特定样式 */
+.configmap-table {
+  background: #fff;
+}
+
+.configmap-table :deep(.ant-table-thead > tr > th) {
+  background: #fafafa;
+  font-weight: 600;
+  color: #262626;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.configmap-table :deep(.ant-table-tbody > tr:hover > td) {
+  background: #f5f5f5;
+  transition: all 0.2s ease;
+}
+
+/* ConfigMap 数据项统计显示 */
+.configmap-data-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.configmap-data-count {
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border: 1px solid #bbdefb;
+  color: #1976d2;
+}
+
+.configmap-binary-data-count {
+  background: linear-gradient(135deg, #f3e5f5 0%, #fce4ec 100%);
+  border: 1px solid #ce93d8;
+  color: #7b1fa2;
+}
+
+/* ConfigMap 特定的键值对输入样式 */
+.configmap-key-value-inputs {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fafafa;
+  min-height: 120px;
+}
+
+.configmap-key-value-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
+}
+
+.configmap-key-value-row:hover {
+  border-color: #d9d9d9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.configmap-key-value-row:last-child {
+  margin-bottom: 0;
+}
+
+.configmap-key-value-row .ant-input,
+.configmap-key-value-row .ant-input-textarea {
+  flex: 1;
+  border-radius: 6px;
+}
+
+.configmap-key-value-row .ant-btn {
+  height: 36px;
+  min-width: 80px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+}
+
+/* ConfigMap 数据展示区域 */
+.configmap-data-display {
+  margin-top: 16px;
+}
+
+.configmap-data-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.configmap-data-item:last-child {
+  border-bottom: none;
+}
+
+.configmap-data-key {
+  font-weight: 600;
+  color: #1976d2;
+  min-width: 120px;
+  word-break: break-word;
+  margin-right: 16px;
+}
+
+.configmap-data-value {
+  flex: 1;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  background: #f5f5f5;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* ConfigMap 标签过滤器 */
+.configmap-labels-filter {
+  position: relative;
+}
+
+.configmap-labels-filter .active-filters {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+/* ConfigMap 详情模态框样式 */
+.configmap-detail-content .ant-collapse {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+}
+
+.configmap-detail-content .ant-collapse > .ant-collapse-item {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.configmap-detail-content .ant-collapse > .ant-collapse-item:last-child {
+  border-bottom: none;
+}
+
+.configmap-detail-content .ant-collapse .ant-collapse-header {
+  background: #fafafa;
+  border-radius: 6px 6px 0 0;
+  font-weight: 600;
+  color: #262626;
+  padding: 12px 16px;
+}
+
+.configmap-detail-content .ant-collapse .ant-collapse-content {
+  border-top: 1px solid #f0f0f0;
+}
+
+.configmap-detail-content .ant-collapse .ant-collapse-content > .ant-collapse-content-box {
+  padding: 0;
+}
+
+.configmap-detail-content pre {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #2c3e50;
+}
+
+/* 不可变ConfigMap标识 */
+.configmap-immutable-tag {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border: 1px solid #f39c12;
+  color: #d68910;
+  font-weight: 500;
+}
+
+/* ConfigMap 空状态 */
+.configmap-empty-state {
+  text-align: center;
+  padding: 60px 0;
+  color: #8c8c8c;
+}
+
+.configmap-empty-state .anticon {
+  font-size: 48px;
+  color: #d9d9d9;
+  margin-bottom: 16px;
+}
+
+.configmap-empty-state p {
+  margin: 12px 0;
+  font-size: 14px;
+  color: #595959;
+}
+
+.configmap-empty-state p:last-child {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+/* 数据键过滤器样式 */
+.configmap-data-key-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.configmap-data-key-filter .ant-input {
+  min-width: 150px;
+}
+
+.configmap-data-key-filter .ant-input:focus {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .configmap-key-value-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .configmap-key-value-row .ant-btn {
+    align-self: flex-end;
+    min-width: 60px;
+  }
+  
+  .configmap-data-key {
+    min-width: auto;
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 576px) {
+  .configmap-key-value-inputs {
+    padding: 12px;
+  }
+  
+  .configmap-key-value-row {
+    padding: 8px;
+  }
+  
+  .configmap-data-value {
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+}
+
+/* YAML编辑器样式增强 */
+.yaml-textarea :deep(.ant-input) {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #3c3c3c;
+}
+
+.yaml-textarea :deep(.ant-input):focus {
+  background: #1e1e1e;
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+.yaml-textarea :deep(.ant-input):hover {
+  background: #252526;
+  border-color: #464647;
+}
+
+/* 创建表单特定样式 */
+.configmap-create-form .ant-checkbox-wrapper {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.configmap-create-form .ant-checkbox-wrapper:hover .ant-checkbox-inner {
+  border-color: #1677ff;
+}
+
+.configmap-create-form .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #1677ff;
+  border-color: #1677ff;
+}
+
+/* 编辑表单只读字段样式 */
+.configmap-edit-form .ant-input:disabled {
+  background: #f5f5f5;
+  color: #8c8c8c;
+  cursor: not-allowed;
+  border-color: #e8e8e8;
+}
+
+/* 数据统计卡片样式 */
+.configmap-stats-card {
+  text-align: center;
+  padding: 20px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.configmap-stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.configmap-stats-number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1677ff;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.configmap-stats-label {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+/* 加载状态优化 */
+.configmap-table .ant-spin-nested-loading > div > .ant-spin .ant-spin-text {
+  color: #1677ff;
+  font-weight: 500;
+}
+
+.configmap-table .ant-spin-nested-loading > div > .ant-spin .ant-spin-dot-item {
+  background-color: #1677ff;
+}

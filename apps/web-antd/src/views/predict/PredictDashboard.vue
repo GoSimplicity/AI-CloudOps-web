@@ -711,8 +711,15 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  trendChart?.dispose();
-  utilizationChart?.dispose();
+  // 安全地销毁ECharts实例
+  if (trendChart && !trendChart.isDisposed()) {
+    trendChart.dispose();
+    trendChart = null;
+  }
+  if (utilizationChart && !utilizationChart.isDisposed()) {
+    utilizationChart.dispose();
+    utilizationChart = null;
+  }
   window.removeEventListener('resize', () => {});
 });
 </script>

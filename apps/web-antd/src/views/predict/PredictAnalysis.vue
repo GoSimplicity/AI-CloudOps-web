@@ -628,8 +628,15 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  trendChart?.dispose();
-  confidenceChart?.dispose();
+  // 安全地销毁ECharts实例
+  if (trendChart && !trendChart.isDisposed()) {
+    trendChart.dispose();
+    trendChart = null;
+  }
+  if (confidenceChart && !confidenceChart.isDisposed()) {
+    confidenceChart.dispose();
+    confidenceChart = null;
+  }
   window.removeEventListener('resize', () => {});
 });
 </script>

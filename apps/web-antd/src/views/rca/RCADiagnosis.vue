@@ -789,11 +789,12 @@ onMounted(() => {
 onUnmounted(() => {
   stopAutoRefresh();
   
-  if (errorTrendsChart) {
+  // 安全地销毁ECharts实例
+  if (errorTrendsChart && !errorTrendsChart.isDisposed()) {
     errorTrendsChart.dispose();
     errorTrendsChart = null;
   }
-  if (errorCategoriesChart) {
+  if (errorCategoriesChart && !errorCategoriesChart.isDisposed()) {
     errorCategoriesChart.dispose();
     errorCategoriesChart = null;
   }

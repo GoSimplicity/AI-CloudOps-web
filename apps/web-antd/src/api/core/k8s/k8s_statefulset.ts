@@ -176,7 +176,7 @@ export interface RollbackStatefulSetReq {
 }
 
 // YAML响应
-export interface K8sYaml {
+export interface K8sStatefulSetYaml {
   yaml: string; // YAML内容
 }
 

@@ -705,7 +705,7 @@ const initCharts = () => {
 const initEventsChart = () => {
   if (!eventsChartRef.value || !analysisResult.value) return;
 
-  if (eventsChart) {
+  if (eventsChart && !eventsChart.isDisposed()) {
     eventsChart.dispose();
   }
   eventsChart = echarts.init(eventsChartRef.value);
@@ -762,7 +762,7 @@ const initEventsChart = () => {
 const initClustersChart = () => {
   if (!clustersChartRef.value || !analysisResult.value) return;
 
-  if (clustersChart) {
+  if (clustersChart && !clustersChart.isDisposed()) {
     clustersChart.dispose();
   }
   clustersChart = echarts.init(clustersChartRef.value);
@@ -809,7 +809,7 @@ const initClustersChart = () => {
 const initErrorLogsChart = () => {
   if (!errorLogsChartRef.value || !analysisResult.value) return;
 
-  if (errorLogsChart) {
+  if (errorLogsChart && !errorLogsChart.isDisposed()) {
     errorLogsChart.dispose();
   }
   errorLogsChart = echarts.init(errorLogsChartRef.value);
@@ -918,9 +918,19 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  eventsChart?.dispose();
-  clustersChart?.dispose();
-  errorLogsChart?.dispose();
+  // 安全地销毁ECharts实例
+  if (eventsChart && !eventsChart.isDisposed()) {
+    eventsChart.dispose();
+    eventsChart = null;
+  }
+  if (clustersChart && !clustersChart.isDisposed()) {
+    clustersChart.dispose();
+    clustersChart = null;
+  }
+  if (errorLogsChart && !errorLogsChart.isDisposed()) {
+    errorLogsChart.dispose();
+    errorLogsChart = null;
+  }
   window.removeEventListener('resize', handleResize);
 });
 </script>

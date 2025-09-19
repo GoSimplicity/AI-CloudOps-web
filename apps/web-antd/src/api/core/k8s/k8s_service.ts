@@ -110,9 +110,9 @@ export interface ServiceEndpointItem {
 }
 
 /**
- * K8sYaml
+ * K8sServiceYaml
  */
-export interface K8sYaml {
+export interface K8sServiceYaml {
   yaml: string;
 }
 
@@ -224,61 +224,61 @@ export interface UpdateResourceByYamlReq {
  * 获取Service列表
  */
 export async function getServiceListApi(cluster_id: number, params: GetServiceListReq) {
-  return requestClient.get<GetServiceListRes>(`/k8s/clusters/${cluster_id}/services/list`, { params });
+  return requestClient.get<GetServiceListRes>(`/k8s/service/${cluster_id}/list`, { params });
 }
 
 /**
  * 获取Service详情
  */
 export async function getServiceDetailsApi(cluster_id: number, namespace: string, name: string) {
-  return requestClient.get<K8sService>(`/k8s/clusters/${cluster_id}/services/${namespace}/${name}/detail`);
+  return requestClient.get<K8sService>(`/k8s/service/${cluster_id}/${namespace}/${name}/detail`);
 }
 
 /**
  * 获取Service YAML
  */
 export async function getServiceYamlApi(cluster_id: number, namespace: string, name: string) {
-  return requestClient.get<K8sYaml>(`/k8s/clusters/${cluster_id}/services/${namespace}/${name}/detail/yaml`);
+  return requestClient.get<K8sServiceYaml>(`/k8s/service/${cluster_id}/${namespace}/${name}/detail/yaml`);
 }
 
 /**
  * 创建Service
  */
 export async function createServiceApi(cluster_id: number, data: CreateServiceReq) {
-  return requestClient.post(`/k8s/clusters/${cluster_id}/services/create`, data);
+  return requestClient.post(`/k8s/service/${cluster_id}/create`, data);
 }
 
 /**
  * 通过YAML创建Service
  */
 export async function createServiceByYamlApi(cluster_id: number, data: CreateResourceByYamlReq) {
-  return requestClient.post(`/k8s/clusters/${cluster_id}/services/create/yaml`, data);
+  return requestClient.post(`/k8s/service/${cluster_id}/create/yaml`, data);
 }
 
 /**
  * 更新Service
  */
 export async function updateServiceApi(cluster_id: number, namespace: string, name: string, data: UpdateServiceReq) {
-  return requestClient.put(`/k8s/clusters/${cluster_id}/services/${namespace}/${name}/update`, data);
+  return requestClient.put(`/k8s/service/${cluster_id}/${namespace}/${name}/update`, data);
 }
 
 /**
  * 通过YAML更新Service
  */
 export async function updateServiceByYamlApi(cluster_id: number, namespace: string, name: string, data: UpdateResourceByYamlReq) {
-  return requestClient.put(`/k8s/clusters/${cluster_id}/services/${namespace}/${name}/update/yaml`, data);
+  return requestClient.put(`/k8s/service/${cluster_id}/${namespace}/${name}/update/yaml`, data);
 }
 
 /**
  * 删除Service
  */
 export async function deleteServiceApi(cluster_id: number, namespace: string, name: string) {
-  return requestClient.delete(`/k8s/clusters/${cluster_id}/services/${namespace}/${name}/delete`);
+  return requestClient.delete(`/k8s/service/${cluster_id}/${namespace}/${name}/delete`);
 }
 
 /**
  * 获取Service端点
  */
 export async function getServiceEndpointsApi(cluster_id: number, namespace: string, name: string) {
-  return requestClient.get<ServiceEndpointItem[]>(`/k8s/clusters/${cluster_id}/services/${namespace}/${name}/endpoints`);
+  return requestClient.get<ServiceEndpointItem[]>(`/k8s/service/${cluster_id}/${namespace}/${name}/endpoints`);
 }

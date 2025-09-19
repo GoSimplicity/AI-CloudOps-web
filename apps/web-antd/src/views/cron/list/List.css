@@ -1,0 +1,75 @@
+/* Cron List 页面样式 */
+
+/* 引入共用样式 */
+@import '../../k8s/shared/k8s-common.css';
+
+.cron-schedule {
+  background: #f5f5f5;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  color: #595959;
+}
+
+.next-run-time,
+.last-run-time {
+  font-size: 12px;
+  color: #595959;
+}
+
+.run-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.run-duration {
+  font-size: 11px;
+  color: #8c8c8c;
+  font-style: italic;
+}
+
+.statistics-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  padding: 1px 0;
+}
+
+.stat-label {
+  color: #8c8c8c;
+  margin-right: 4px;
+}
+
+.stat-value {
+  color: #262626;
+  font-weight: 500;
+}
+
+.stat-item.success .stat-value {
+  color: #52c41a;
+}
+
+.stat-item.error .stat-value {
+  color: #ff4d4f;
+}
+
+.cron-table :deep(.ant-table-tbody > tr > td) {
+  vertical-align: top;
+  padding: 12px 8px;
+}
+
+.cron-table :deep(.ant-table-thead > tr > th) {
+  font-weight: 600;
+  color: #262626;
+}

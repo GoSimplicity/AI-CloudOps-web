@@ -394,6 +394,12 @@ const systemStatusText = computed(() => {
 const initMiniChart = (element: HTMLElement, data: number[], color = '#1890ff'): ECharts | undefined => {
   if (!element) return;
   
+  // 检查是否已有实例，如果有则先销毁
+  const existingInstance = echarts.getInstanceByDom(element);
+  if (existingInstance && !existingInstance.isDisposed()) {
+    existingInstance.dispose();
+  }
+  
   const chart = echarts.init(element);
   chart.setOption({
     grid: {
@@ -440,6 +446,12 @@ const initMiniChart = (element: HTMLElement, data: number[], color = '#1890ff'):
 // 初始化网络流量图表
 const initNetworkChart = () => {
   if (!networkChart.value) return;
+  
+  // 检查是否已有实例，如果有则先销毁
+  const existingInstance = echarts.getInstanceByDom(networkChart.value);
+  if (existingInstance && !existingInstance.isDisposed()) {
+    existingInstance.dispose();
+  }
   
   networkChartInstance = echarts.init(networkChart.value);
   
@@ -493,6 +505,12 @@ const initNetworkChart = () => {
 // 初始化趋势图表
 const initTrendChart = () => {
   if (!trendChart.value) return;
+  
+  // 检查是否已有实例，如果有则先销毁
+  const existingInstance = echarts.getInstanceByDom(trendChart.value);
+  if (existingInstance && !existingInstance.isDisposed()) {
+    existingInstance.dispose();
+  }
   
   trendChartInstance = echarts.init(trendChart.value);
   updateTrendChart();
@@ -1041,15 +1059,19 @@ onUnmounted(() => {
   clearInterval(timeTimer);
   clearInterval(dataTimer);
   
-  // 销毁图表实例
-  if (trendChartInstance) {
+  // 安全地销毁图表实例
+  if (trendChartInstance && !trendChartInstance.isDisposed()) {
     trendChartInstance.dispose();
+    trendChartInstance = null;
   }
-  if (networkChartInstance) {
+  if (networkChartInstance && !networkChartInstance.isDisposed()) {
     networkChartInstance.dispose();
+    networkChartInstance = null;
   }
   Object.values(miniCharts).forEach((chart: any) => {
-    chart?.dispose();
+    if (chart && !chart.isDisposed()) {
+      chart.dispose();
+    }
   });
 });
 </script>
