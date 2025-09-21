@@ -396,7 +396,6 @@ export function useConfigMapPage() {
         };
         currentConfigMapDetail.value = fallbackDetail;
       } catch (fallbackError) {
-        console.warn('处理fallback数据时出现错误:', fallbackError);
         // 最终的安全fallback
         currentConfigMapDetail.value = {
           ...record,

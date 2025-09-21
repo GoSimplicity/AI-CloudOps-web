@@ -415,7 +415,6 @@ export function useSecretPage() {
         };
         currentSecretDetail.value = fallbackDetail;
       } catch (fallbackError) {
-        console.warn('处理fallback数据时出现错误:', fallbackError);
         // 最终的安全fallback
         currentSecretDetail.value = {
           ...record,
@@ -436,6 +435,63 @@ export function useSecretPage() {
     currentSecretDetail.value = null;
   };
 
+  // Base64 解码辅助函数
+  const decodeBase64ToUtf8 = (base64Str: string): string => {
+    try {
+      // 使用 atob 解码 base64，然后转换为 UTF-8
+      const binaryStr = atob(base64Str);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+      // 使用 TextDecoder 正确处理 UTF-8 编码
+      const decoder = new TextDecoder('utf-8');
+      return decoder.decode(bytes);
+    } catch (error) {
+      return base64Str; // 如果解码失败，返回原始字符串
+    }
+  };
+
+  // 处理 Secret YAML 中的 base64 编码数据
+  const processSecretYaml = (yamlContent: string): string => {
+    if (!yamlContent) return yamlContent;
+    
+    try {
+      // 使用正则表达式匹配 data 字段下的 base64 编码值
+      const processedYaml = yamlContent.replace(
+        /^(\s*)([\w\-\.]+):\s*([A-Za-z0-9+/]+=*)$/gm,
+        (match, indent, key, value) => {
+          // 检查是否在 data 字段下且值看起来像 base64
+          if (value && value.length > 0 && /^[A-Za-z0-9+/]+=*$/.test(value)) {
+            // 检查前面的内容中是否有 data: 字段
+            const beforeMatch = yamlContent.substring(0, yamlContent.indexOf(match));
+            const dataFieldPattern = /\ndata:\s*\n/;
+            const stringDataFieldPattern = /\nstringData:\s*\n/;
+            
+            if (dataFieldPattern.test(beforeMatch) && !stringDataFieldPattern.test(beforeMatch.substring(beforeMatch.lastIndexOf('\ndata:')))) {
+              const decodedValue = decodeBase64ToUtf8(value);
+              // 如果解码后的内容包含换行符，使用多行 YAML 格式
+              if (decodedValue.includes('\n')) {
+                const indentedContent = decodedValue
+                  .split('\n')
+                  .map((line, index) => index === 0 ? line : `${indent}  ${line}`)
+                  .join('\n');
+                return `${indent}${key}: |\n${indent}  ${indentedContent}`;
+              } else {
+                return `${indent}${key}: "${decodedValue.replace(/"/g, '\\"')}"`;
+              }
+            }
+          }
+          return match;
+        }
+      );
+      
+      return processedYaml;
+    } catch (error) {
+      return yamlContent; // 如果处理失败，返回原始内容
+    }
+  };
+
   // YAML 操作
   const showYamlModal = async (record: K8sSecret) => {
     const clusterId = validateClusterId(record);
@@ -450,11 +506,27 @@ export function useSecretPage() {
         name: record.name
       };
       const res = await getSecretYamlApi(params);
-      yamlFormModel.value.yaml = res?.yaml || '';
+      
+      let originalYaml = '';
+      
+      // 尝试不同的数据获取方式
+      if (res?.data) {
+        originalYaml = res.data;
+      } else if (res?.yaml) {
+        originalYaml = res.yaml;
+      } else if (typeof res === 'string') {
+        originalYaml = res;
+      } else {
+        originalYaml = '';
+      }
+      
+      // 处理 YAML 中的 base64 编码数据
+      const processedYaml = processSecretYaml(originalYaml);
+      yamlFormModel.value.yaml = processedYaml;
+      
       isYamlModalVisible.value = true;
     } catch (err) {
       message.error('获取 Secret YAML 失败');
-      console.error(err);
     } finally {
       submitLoading.value = false;
     }
@@ -466,6 +538,80 @@ export function useSecretPage() {
     yamlFormModel.value.yaml = '';
   };
 
+  // Base64 编码辅助函数
+  const encodeUtf8ToBase64 = (str: string): string => {
+    try {
+      // 使用 TextEncoder 将字符串转换为 UTF-8 字节
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode(str);
+      
+      // 将字节数组转换为二进制字符串
+      let binaryStr = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binaryStr += String.fromCharCode(bytes[i] as number);
+      }
+      
+      // 使用 btoa 进行 base64 编码
+      return btoa(binaryStr);
+    } catch (error) {
+      return str; // 如果编码失败，返回原始字符串
+    }
+  };
+
+  // 处理提交时的 YAML，将明文数据重新编码为 base64
+  const encodeSecretYamlForSubmission = (yamlContent: string): string => {
+    if (!yamlContent) return yamlContent;
+    
+    try {
+      // 处理多行字符串（| 格式）
+      let processedYaml = yamlContent.replace(
+        /^(\s*)([\w\-\.]+):\s*\|\s*\n((?:\s{2,}.*\n?)*)/gm,
+        (match, indent, key, content) => {
+          // 检查是否在 data 字段下
+          const beforeMatch = yamlContent.substring(0, yamlContent.indexOf(match));
+          const dataFieldPattern = /\ndata:\s*\n/;
+          const stringDataFieldPattern = /\nstringData:\s*\n/;
+          
+          if (dataFieldPattern.test(beforeMatch) && !stringDataFieldPattern.test(beforeMatch.substring(beforeMatch.lastIndexOf('\ndata:')))) {
+            // 移除缩进并合并内容
+            const cleanContent = content
+              .split('\n')
+              .map((line: string) => line.replace(new RegExp(`^${indent}  `), ''))
+              .filter((line: string) => line.length > 0)
+              .join('\n');
+            
+            const encodedValue = encodeUtf8ToBase64(cleanContent);
+            return `${indent}${key}: ${encodedValue}`;
+          }
+          return match;
+        }
+      );
+      
+      // 处理带引号的字符串
+      processedYaml = processedYaml.replace(
+        /^(\s*)([\w\-\.]+):\s*"([^"]*(?:\\.[^"]*)*)"/gm,
+        (match, indent, key, value) => {
+          // 检查是否在 data 字段下
+          const beforeMatch = processedYaml.substring(0, processedYaml.indexOf(match));
+          const dataFieldPattern = /\ndata:\s*\n/;
+          const stringDataFieldPattern = /\nstringData:\s*\n/;
+          
+          if (dataFieldPattern.test(beforeMatch) && !stringDataFieldPattern.test(beforeMatch.substring(beforeMatch.lastIndexOf('\ndata:')))) {
+            // 处理转义字符
+            const unescapedValue = value.replace(/\\"/g, '"');
+            const encodedValue = encodeUtf8ToBase64(unescapedValue);
+            return `${indent}${key}: ${encodedValue}`;
+          }
+          return match;
+        }
+      );
+      
+      return processedYaml;
+    } catch (error) {
+      return yamlContent; // 如果处理失败，返回原始内容
+    }
+  };
+
   const submitYamlForm = async () => {
     if (!yamlFormRef.value || !currentOperationSecret.value) return;
     
@@ -473,11 +619,14 @@ export function useSecretPage() {
       await yamlFormRef.value.validate();
       submitLoading.value = true;
       
+      // 处理 YAML 中的明文数据，重新编码为 base64
+      const encodedYaml = encodeSecretYamlForSubmission(yamlFormModel.value.yaml);
+      
       const params: UpdateSecretByYamlReq = {
         cluster_id: currentOperationSecret.value.cluster_id,
         namespace: currentOperationSecret.value.namespace,
         name: currentOperationSecret.value.name,
-        yaml: yamlFormModel.value.yaml,
+        yaml: encodedYaml,
       };
       
       await updateSecretByYamlApi(params);

@@ -815,10 +815,34 @@
           <a-row :gutter="[24, 16]" style="margin-top: 16px;" v-if="currentSecretDetail.data && Object.keys(currentSecretDetail.data).length > 0">
             <a-col :span="24">
               <a-card title="加密数据内容" class="k8s-detail-card" size="small">
-                <div class="secret-data-masked">
-                  敏感数据已加密，共 {{ Object.keys(currentSecretDetail.data || {}).length }} 项数据键：
-                  {{ Object.keys(currentSecretDetail.data || {}).join(', ') }}
-                </div>
+                <a-alert
+                  message="敏感数据解码显示"
+                  description="以下是解码后的加密数据内容，请注意保密。"
+                  type="warning"
+                  show-icon
+                  style="margin-bottom: 16px;"
+                />
+                
+                <a-collapse class="secret-data-collapse">
+                  <a-collapse-panel 
+                    v-for="[key, value] in Object.entries(currentSecretDetail.data || {})" 
+                    :key="key" 
+                    :header="`${key} (${typeof value === 'string' ? Math.ceil(value.length * 3/4) : 0} bytes)`"
+                  >
+                    <template #extra>
+                      <a-tag color="red" size="small">敏感</a-tag>
+                    </template>
+                    <div class="secret-data-content">
+                      <pre style="background: #f5f5f5; padding: 16px; border-radius: 4px; max-height: 400px; overflow-y: auto; font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 12px; line-height: 1.4;">{{ decodeBase64Data(value) }}</pre>
+                      <div style="margin-top: 8px; text-align: right;">
+                        <a-button size="small" @click="copyToClipboard(decodeBase64Data(value))">
+                          <template #icon><CopyOutlined /></template>
+                          复制内容
+                        </a-button>
+                      </div>
+                    </div>
+                  </a-collapse-panel>
+                </a-collapse>
               </a-card>
             </a-col>
           </a-row>
@@ -872,6 +896,16 @@
       okText="保存修改"
       cancelText="取消"
     >
+      <a-alert
+        message="Secret 数据已解码显示"
+        description="为了便于查看和编辑，data 字段中的 base64 编码数据已自动解码为可读格式。保存时将自动重新编码。"
+        type="info"
+        show-icon
+        closable
+        style="margin-bottom: 16px;"
+      />
+      
+      
       <a-form 
         ref="yamlFormRef"
         :model="yamlFormModel" 
@@ -964,6 +998,7 @@ import {
   DatabaseOutlined,
   SecurityScanOutlined,
   ExclamationCircleOutlined,
+  CopyOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -1086,6 +1121,7 @@ const newEditStringDataKey = ref('');
 const newEditLabelKey = ref('');
 const newEditAnnotationKey = ref('');
 
+
 const addNewStringData = () => {
   if (newStringDataKey.value && newStringDataKey.value.trim()) {
     createFormModel.value.string_data[newStringDataKey.value.trim()] = '';
@@ -1150,6 +1186,65 @@ const formatTime = (timeStr?: string) => {
     return new Date(timeStr).toLocaleString('zh-CN');
   } catch {
     return timeStr;
+  }
+};
+
+// Base64 解码方法
+const decodeBase64Data = (base64Str?: any) => {
+  // 处理各种数据类型
+  if (!base64Str) return '';
+  
+  // 如果不是字符串，尝试转换为字符串
+  const str = typeof base64Str === 'string' ? base64Str : String(base64Str);
+  
+  // 检查是否是有效的 base64 字符串
+  if (!/^[A-Za-z0-9+/]+=*$/.test(str)) {
+    return str; // 如果不是 base64，直接返回原始值
+  }
+  
+  try {
+    // 使用 atob 解码 base64
+    const binaryStr = atob(str);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+    
+    // 先尝试 UTF-8 解码
+    try {
+      const decoder = new TextDecoder('utf-8', { fatal: true });
+      return decoder.decode(bytes);
+    } catch (utfError) {
+      // 如果 UTF-8 解码失败，尝试其他编码或直接返回二进制字符串
+      return binaryStr;
+    }
+  } catch (error) {
+    console.error('Base64 解码失败:', error, '原始数据:', str.substring(0, 100));
+    return `解码失败 (原始长度: ${str.length}): ${str.substring(0, 50)}${str.length > 50 ? '...' : ''}`;
+  }
+};
+
+// 复制到剪贴板
+const copyToClipboard = async (text: string) => {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      message.success('内容已复制到剪贴板');
+    } else {
+      // 降级方案
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      message.success('内容已复制到剪贴板');
+    }
+  } catch (error) {
+    console.error('复制失败:', error);
+    message.error('复制失败，请手动复制');
   }
 };
 
@@ -1270,6 +1365,34 @@ onMounted(async () => {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.4;
+}
+
+/* Secret 数据显示样式 */
+.secret-data-collapse :deep(.ant-collapse-header) {
+  background: #fafafa;
+  border-radius: 4px !important;
+  margin-bottom: 8px;
+}
+
+.secret-data-collapse :deep(.ant-collapse-content) {
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 0 0 4px 4px;
+  margin-bottom: 8px;
+}
+
+.secret-data-content pre {
+  max-height: 300px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* 敏感数据警告样式 */
+.secret-data-collapse :deep(.ant-tag) {
+  font-size: 10px;
+  height: 18px;
+  line-height: 16px;
+  margin-left: 8px;
 }
 </style>
 

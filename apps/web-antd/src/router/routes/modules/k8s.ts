@@ -123,6 +123,26 @@ const routes: RouteRecordRaw[] = [
           title: 'Secret管理',
         },
       },
+      {
+        name: 'K8sPV',
+        path: '/k8s_pv',
+        component: () => import('#/views/k8s/pv/PV.vue'),
+        meta: {
+          order: 14,
+          icon: 'lucide:hard-drive',
+          title: 'PV管理',
+        },
+      },
+      {
+        name: 'K8sPVC',
+        path: '/k8s_pvc',
+        component: () => import('#/views/k8s/pvc/PVC.vue'),
+        meta: {
+          order: 15,
+          icon: 'lucide:database',
+          title: 'PVC管理',
+        },
+      },
     ],
   },
 ];

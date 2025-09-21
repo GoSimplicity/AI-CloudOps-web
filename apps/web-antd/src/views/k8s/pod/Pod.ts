@@ -543,7 +543,6 @@ export function usePodPage() {
         };
         currentPodDetail.value = fallbackDetail;
       } catch (fallbackError) {
-        console.warn('处理fallback数据时出现错误:', fallbackError);
         // 最终的安全fallback
         currentPodDetail.value = {
           ...record,
@@ -852,7 +851,6 @@ export function usePodPage() {
   };
 
   const closeLogsModal = () => {
-    console.log('关闭日志模态框');
     // 停止SSE连接
     stopLogsStream();
     isLogsModalVisible.value = false;
@@ -932,9 +930,7 @@ export function usePodPage() {
         reconnectTimeoutId = null;
       }
       reconnectAttempts++;
-      console.log(`尝试第 ${reconnectAttempts} 次重连...`);
       reconnectTimeoutId = setTimeout(() => {
-        console.log('开始新的SSE连接尝试...');
         createFetchSSE();
       }, Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 30000));
     };
@@ -953,7 +949,6 @@ export function usePodPage() {
           headers['Authorization'] = `Bearer ${currentToken}`;
         }
         
-        console.log('开始SSE连接，URL:', url);
         
         const response = await fetch(url, {
           method: 'GET',
@@ -969,10 +964,7 @@ export function usePodPage() {
         
         if (!response.body) {
           throw new Error('Response body is null');
-        }
-        
-        console.log('SSE连接建立成功');
-        reconnectAttempts = 0;
+        }        reconnectAttempts = 0;
         onOpen?.();
         
         reader = response.body.getReader();
@@ -988,18 +980,14 @@ export function usePodPage() {
           try {
             readResult = await reader.read();
           } catch (readError: any) {
-            if (readError?.name === 'AbortError') {
-              console.log('Reader操作被中止');
-              break;
+            if (readError?.name === 'AbortError') {              break;
             }
             throw readError;
           }
           
           const { done, value } = readResult;
           
-          if (done) {
-            console.log('SSE流正常结束，准备自动重连');
-            scheduleReconnect();
+          if (done) {            scheduleReconnect();
             break;
           }
           
@@ -1019,9 +1007,7 @@ export function usePodPage() {
             if (trimmedLine.startsWith('data:')) {
               const data = trimmedLine.substring(5).trim();
               
-              if (data === '[DONE]') {
-                console.log('SSE流完成标记');
-                onClose?.();
+              if (data === '[DONE]') {                onClose?.();
                 return;
               }
               
@@ -1042,12 +1028,10 @@ export function usePodPage() {
           console.error('SSE fetch错误:', error);
         }
         
-        if (error?.name === 'AbortError') {
-          console.log('连接被手动中止');
-          isManualClose = true;
+        if (error?.name === 'AbortError') {          isManualClose = true;
           onClose?.();
         } else if (!isManualClose) {
-          console.warn('SSE连接错误，准备重连:', error.message);
+          // SSE连接错误，准备重连
           onError?.(new Event('error'));
           scheduleReconnect();
         }
@@ -1069,9 +1053,7 @@ export function usePodPage() {
     // 创建兼容EventSource接口的对象
     const eventSource = {
       readyState: 1, // OPEN
-      close: async () => {
-        console.log('手动关闭SSE连接和重连机制');
-        isManualClose = true;
+      close: async () => {        isManualClose = true;
         
         if (reconnectTimeoutId) {
           clearTimeout(reconnectTimeoutId);
@@ -1108,9 +1090,7 @@ export function usePodPage() {
       close: () => {
         Promise.resolve(eventSource.close()).catch((error) => {
           console.debug('关闭连接时的预期错误:', error);
-        });
-        console.log('实时日志连接已关闭');
-      }
+        });      }
     };
   };
 
@@ -1157,18 +1137,17 @@ export function usePodPage() {
             }, 10);
             
             // 输出到控制台用于调试
-            console.log('收到日志数据:', data);
           }
         },
         // onError - 连接错误（支持自动重连，减少用户干扰）
+        // onError - 连接错误（支持自动重连，减少用户干扰）
         (error: Event) => {
-          console.warn('SSE连接出现问题，自动重连机制将处理:', error);
           // 现在有自动重连机制，不需要复杂的错误处理
           // 只在控制台记录，避免频繁打扰用户
+          console.debug('SSE连接错误:', error);
         },
         // onOpen - 连接建立
         () => {
-          console.log('实时日志连接已建立');
           message.success('✅ 实时日志连接已建立，支持自动重连');
           logsLoading.value = false;
           
@@ -1177,7 +1156,6 @@ export function usePodPage() {
         },
         // onClose - 连接关闭（只有在真正结束时才调用）
         () => {
-          console.log('实时日志连接最终关闭（自动重连已停止）');
           isLogsStreaming.value = false;
           logsLoading.value = false;
           logsStreamConnection.value = null;
@@ -1214,14 +1192,13 @@ export function usePodPage() {
 
   // 停止SSE实时日志流
   const stopLogsStream = () => {
-    console.log('停止实时日志流');
     try {
       if (logsStreamConnection.value) {
         logsStreamConnection.value.close();
         logsStreamConnection.value = null;
       }
     } catch (error) {
-      console.warn('停止日志流时发生错误:', error);
+      console.debug('停止日志流时遇到错误:', error);
     } finally {
       // 确保状态被正确重置
       isLogsStreaming.value = false;
@@ -1298,9 +1275,9 @@ export function usePodPage() {
         } catch (error) {
           // 捕获特定的addon dispose错误
           if (error instanceof Error && error.message.includes('Could not dispose an addon that has not been loaded')) {
-            console.warn('初始化时Addon dispose错误（已忽略）:', error.message);
+            console.debug('预期的addon dispose错误:', error.message);
           } else {
-            console.warn('清理终端时发生错误:', error);
+            console.error('终端清理错误:', error);
           }
           // 强制重置状态
           terminal.value = null;
@@ -1348,9 +1325,7 @@ export function usePodPage() {
         // 安全加载WebLinksAddon
         const webLinksAddon = new WebLinksAddon();
         terminal.value.loadAddon(webLinksAddon);
-      } catch (error) {
-        console.warn('加载终端插件时发生错误:', error);
-        // 如果插件加载失败，继续初始化终端
+      } catch (error) {        // 如果插件加载失败，继续初始化终端
       }
 
       // 将终端挂载到DOM
@@ -1394,7 +1369,7 @@ export function usePodPage() {
       onError?.(new Event('auth_error'));
       return { 
         sendCommand: () => {
-          console.warn('WebSocket未连接，无法发送命令');
+          // WebSocket未连接，无法发送命令
         },
         close: () => {
           // 空操作，因为没有连接可关闭
@@ -1423,8 +1398,6 @@ export function usePodPage() {
       }
       
       reconnectAttempts++;
-      console.log(`WebSocket连接断开，${reconnectInterval / 1000}秒后尝试第${reconnectAttempts}次重连...`);
-      
       reconnectTimeoutId = setTimeout(() => {
         connect();
       }, reconnectInterval);
@@ -1437,14 +1410,11 @@ export function usePodPage() {
           socket.close();
           socket = null;
         }
-
-        console.log('正在连接Pod终端WebSocket:', url);
         
         // 创建WebSocket连接
         socket = new WebSocket(url);
 
         socket.onopen = () => {
-          console.log('Pod执行命令WebSocket连接已建立');
           reconnectAttempts = 0; // 重置重连计数
           
           // 发送初始化参数
@@ -1487,14 +1457,13 @@ export function usePodPage() {
         };
 
         socket.onclose = (event) => {
-          console.log('Pod执行命令WebSocket连接关闭', event.code, event.reason);
           socket = null;
           
           // 根据关闭代码提供更详细的错误信息
           if (event.code === 1006) {
-            console.warn('WebSocket异常断开 - 可能是网络问题或服务器错误');
+            console.debug('WebSocket连接异常关闭');
           } else if (event.code === 1000) {
-            console.log('WebSocket正常关闭');
+            console.debug('WebSocket正常关闭');
           } else if (event.code === 1003) {
             console.error('WebSocket协议错误');
           } else if (event.code === 4401) {
@@ -1521,7 +1490,7 @@ export function usePodPage() {
         // 直接发送字符串命令
         socket.send(command);
       } else {
-        console.warn('WebSocket连接未就绪，无法发送命令');
+        console.warn('WebSocket未连接，无法发送命令');
       }
     };
 
@@ -1593,7 +1562,6 @@ export function usePodPage() {
         },
         // onOpen - 连接建立
         () => {
-          console.log('终端连接已建立');
           message.success('✅ 终端连接已建立');
           isTerminalConnected.value = true;
           terminalLoading.value = false;
@@ -1615,7 +1583,6 @@ export function usePodPage() {
         },
         // onClose - 连接关闭
         () => {
-          console.log('终端连接已关闭');
           isTerminalConnected.value = false;
           terminalLoading.value = false;
           
@@ -1641,8 +1608,6 @@ export function usePodPage() {
 
   // 断开终端连接
   const disconnectTerminal = () => {
-    console.log('断开终端连接');
-    
     try {
       // 关闭WebSocket连接
       if (terminalConnection.value) {
@@ -1665,9 +1630,9 @@ export function usePodPage() {
         } catch (error) {
           // 捕获特定的addon dispose错误
           if (error instanceof Error && error.message.includes('Could not dispose an addon that has not been loaded')) {
-            console.warn('Addon dispose错误（已忽略）:', error.message);
+            console.debug('预期的addon dispose错误:', error.message);
           } else {
-            console.warn('断开终端时清理发生错误:', error);
+            console.error('终端清理错误:', error);
           }
           // 强制重置状态，无论是否有错误
           terminal.value = null;
@@ -1681,7 +1646,7 @@ export function usePodPage() {
       }
       
     } catch (error) {
-      console.warn('断开终端连接时发生错误:', error);
+      console.debug('断开终端连接时遇到错误:', error);
     } finally {
       // 确保状态被正确重置
       isTerminalConnected.value = false;
@@ -1815,14 +1780,6 @@ export function usePodPage() {
     }
     
     try {
-      console.log('🔵 开始下载文件:', { 
-        filePath, 
-        container, 
-        pod: currentOperationPod.value.name,
-        namespace: currentOperationPod.value.namespace,
-        cluster_id: currentOperationPod.value.cluster_id
-      });
-      
       const params: PodFileDownloadReq = {
         cluster_id: currentOperationPod.value.cluster_id,
         namespace: currentOperationPod.value.namespace,
@@ -1831,16 +1788,8 @@ export function usePodPage() {
         file_path: filePath
       };
       
-      console.log('🔵 下载参数:', params);
-      console.log('🔵 调用API前 - downloadK8sPodFile函数存在:', typeof downloadK8sPodFile);
-      
       // 调用API下载文件
-      console.log('🔵 正在调用 downloadK8sPodFile API...');
       const res = await downloadK8sPodFile(params);
-      
-      console.log('🔵 API调用完成，响应类型:', typeof res);
-      console.log('🔵 API调用完成，响应:', res);
-      console.log('🔵 响应是否为Blob:', res instanceof Blob);
       
       // 检查响应类型
       if (!res) {
@@ -1866,9 +1815,6 @@ export function usePodPage() {
         throw new Error('下载的文件为空或文件不存在');
       }
       
-      console.log('🔵 Blob大小:', blob.size);
-      console.log('🔵 Blob类型:', blob.type);
-      
       // 处理文件下载
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -1877,8 +1823,6 @@ export function usePodPage() {
       // 获取文件名
       const fileName = filePath.split('/').pop() || 'download';
       link.setAttribute('download', fileName);
-      
-      console.log('🔵 准备下载文件:', fileName);
       
       // 添加到DOM并触发下载
       document.body.appendChild(link);

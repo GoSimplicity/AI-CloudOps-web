@@ -1946,10 +1946,6 @@ const handleDownloadFile = async () => {
 
   downloadLoading.value = true;
   try {
-    console.log('开始下载文件...', {
-      path: downloadFilePath.value,
-      container: fileManagerContainer.value
-    });
     
     await downloadFile(downloadFilePath.value.trim(), fileManagerContainer.value);
   } catch (error) {
