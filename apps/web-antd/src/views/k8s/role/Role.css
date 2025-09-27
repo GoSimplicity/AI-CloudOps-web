@@ -1,0 +1,685 @@
+/* Role 特有样式 */
+
+/* ==================== Role 表格样式 ==================== */
+.role-table .ant-table-tbody > tr > td {
+  vertical-align: top;
+  padding: 12px 8px;
+}
+
+/* ==================== 策略规则显示样式 ==================== */
+.role-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 400px;
+}
+
+.role-rules .rule-item {
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 10px 12px;
+  transition: border-color 0.2s ease;
+}
+
+.role-rules .rule-item:hover {
+  border-color: #1677ff;
+}
+
+.role-rules .rule-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.role-rules .rule-verbs .ant-tag {
+  margin: 0;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  background: #1677ff;
+  color: #ffffff;
+  border: none;
+}
+
+.role-rules .rule-resources {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 20px;
+}
+
+.role-rules .rule-label {
+  font-size: 11px;
+  color: #666666;
+  font-weight: 500;
+  margin-right: 6px;
+}
+
+.role-rules .rule-resources .ant-tag {
+  margin: 0;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  background: #52c41a;
+  color: #ffffff;
+  border: none;
+}
+
+.role-rules .rule-more {
+  text-align: center;
+  padding: 6px 0;
+  margin-top: 6px;
+  border-top: 1px dashed #d9d9d9;
+}
+
+.role-rules .rule-more .ant-tag {
+  margin: 0;
+  font-size: 10px;
+  color: #999999;
+  background: #f0f0f0;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+/* 空状态样式 */
+.role-rules .k8s-no-data {
+  color: #999999;
+  font-size: 12px;
+  text-align: center;
+  padding: 12px;
+}
+
+/* ==================== 创建表单的策略规则样式 ==================== */
+.role-rules-inputs {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fafafa;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.role-rules-inputs::-webkit-scrollbar {
+  width: 6px;
+}
+
+.role-rules-inputs::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.role-rules-inputs::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+.role-rules-inputs::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+.rule-input-group {
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.rule-input-group:hover {
+  border-color: #d9d9d9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.rule-input-group:last-child {
+  margin-bottom: 0;
+}
+
+.rule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.rule-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #262626;
+}
+
+.rule-header .ant-btn {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.rule-field {
+  margin-bottom: 16px;
+}
+
+.rule-field:last-child {
+  margin-bottom: 0;
+}
+
+.rule-field-label {
+  display: block;
+  font-weight: 500;
+  font-size: 13px;
+  color: #595959;
+  margin-bottom: 8px;
+}
+
+.rule-tags-input {
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 8px;
+  background: #fafafa;
+  min-height: 80px;
+}
+
+.tags-display {
+  min-height: 32px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: flex-start;
+  padding: 4px 0;
+}
+
+.tags-display .ant-tag {
+  margin: 0;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: default;
+  transition: all 0.2s ease;
+}
+
+.tags-display .ant-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.add-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px dashed #d9d9d9;
+  transition: all 0.2s ease;
+}
+
+.add-tag-row:hover {
+  border-color: #1677ff;
+  background: #f0f7ff;
+}
+
+.add-tag-row .ant-input,
+.add-tag-row .ant-select {
+  flex: 1;
+  height: 28px;
+  border: 1px solid #e8e8e8;
+  background: #fff;
+}
+
+.add-tag-row .ant-select :deep(.ant-select-selector) {
+  height: 28px !important;
+  border: none;
+  background: transparent;
+}
+
+.add-tag-row .ant-btn {
+  height: 28px;
+  width: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+/* ==================== 详情模态框规则样式 ==================== */
+.role-rules-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.role-rules-detail::-webkit-scrollbar {
+  width: 6px;
+}
+
+.role-rules-detail::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.role-rules-detail::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+.rule-detail-item {
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  transition: border-color 0.2s ease;
+}
+
+.rule-detail-item:hover {
+  border-color: #1677ff;
+}
+
+.rule-detail-header {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.rule-detail-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #262626;
+}
+
+.rule-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rule-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.rule-detail-label {
+  font-weight: 500;
+  color: #666666;
+  min-width: 70px;
+  font-size: 12px;
+  line-height: 22px;
+}
+
+.rule-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+}
+
+.rule-detail-tags .ant-tag {
+  margin: 0;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  border: 1px solid #d9d9d9;
+}
+
+.rule-detail-tags .ant-tag-blue {
+  background: #e6f7ff;
+  color: #1677ff;
+  border-color: #91d5ff;
+}
+
+.rule-detail-tags .ant-tag-green {
+  background: #f6ffed;
+  color: #52c41a;
+  border-color: #b7eb8f;
+}
+
+.rule-detail-tags .ant-tag-orange {
+  background: #fff7e6;
+  color: #fa8c16;
+  border-color: #ffd591;
+}
+
+.rule-detail-tags .ant-tag-purple {
+  background: #f9f0ff;
+  color: #722ed1;
+  border-color: #d3adf7;
+}
+
+/* 空状态样式 */
+.rule-detail-tags .k8s-no-data {
+  color: #999999;
+  font-size: 12px;
+}
+
+/* ==================== 标签过滤器样式 ==================== */
+.role-labels-filter {
+  position: relative;
+}
+
+.role-labels-filter .active-filters {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* ==================== 响应式优化 ==================== */
+@media (max-width: 768px) {
+  .role-rules {
+    max-width: 100%;
+  }
+
+  .rule-input-group {
+    padding: 12px;
+  }
+
+  .rule-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .rule-field-label {
+    font-size: 12px;
+  }
+
+  .tags-display .ant-tag {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+
+  .add-tag-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .add-tag-row .ant-input,
+  .add-tag-row .ant-select {
+    width: 100%;
+  }
+
+  .add-tag-row .ant-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .rule-detail-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .rule-detail-label {
+    min-width: auto;
+    font-size: 11px;
+  }
+
+  .role-labels-filter .active-filters {
+    position: static;
+    margin-top: 8px;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 576px) {
+  .role-rules .rule-item {
+    padding: 6px 8px;
+  }
+
+  .role-rules .rule-verbs .ant-tag,
+  .role-rules .rule-resources .ant-tag {
+    font-size: 9px;
+    padding: 1px 3px;
+  }
+
+  .rule-input-group {
+    padding: 8px;
+  }
+
+  .rule-tags-input {
+    min-height: 60px;
+    padding: 6px;
+  }
+
+  .tags-display {
+    min-height: 24px;
+  }
+
+  .add-tag-row .ant-input,
+  .add-tag-row .ant-select {
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .add-tag-row .ant-btn {
+    height: 24px;
+    width: 24px;
+  }
+
+  .rule-detail-item {
+    padding: 8px 12px;
+  }
+
+  .rule-detail-tags .ant-tag {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+}
+
+/* ==================== 表格列宽优化 ==================== */
+.role-table .ant-table-thead > tr > th:nth-child(1) {
+  min-width: 120px;
+}
+
+.role-table .ant-table-thead > tr > th:nth-child(2) {
+  min-width: 100px;
+}
+
+.role-table .ant-table-thead > tr > th:nth-child(3) {
+  min-width: 300px;
+}
+
+.role-table .ant-table-thead > tr > th:nth-child(4) {
+  min-width: 120px;
+}
+
+.role-table .ant-table-thead > tr > th:nth-child(5) {
+  min-width: 120px;
+}
+
+.role-table .ant-table-thead > tr > th:nth-child(6) {
+  min-width: 80px;
+}
+
+.role-table .ant-table-thead > tr > th:nth-child(7) {
+  min-width: 80px;
+}
+
+/* ==================== 空状态优化 ==================== */
+.rule-tags-input:empty::before {
+  content: "暂无设置，请点击下方添加";
+  color: #bfbfbf;
+  font-style: italic;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+}
+
+/* ==================== 动画效果 ==================== */
+.rule-input-group {
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tags-display .ant-tag {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ==================== YAML文本区域样式 ==================== */
+.k8s-config-textarea {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ==================== 打印样式 ==================== */
+@media print {
+  .role-rules {
+    max-width: none;
+    break-inside: avoid;
+  }
+
+  .rule-input-group,
+  .rule-detail-item {
+    border: 1px solid #ddd;
+    break-inside: avoid;
+    margin-bottom: 8px;
+  }
+
+  .role-rules-inputs,
+  .role-rules-detail {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .add-tag-row {
+    display: none;
+  }
+
+  .k8s-config-textarea {
+    font-size: 11px;
+  }
+}
+
+/* ==================== 可访问性优化 ==================== */
+.rule-input-group:focus-within {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+.tags-display .ant-tag:focus {
+  outline: 2px solid #1677ff;
+  outline-offset: 2px;
+}
+
+.add-tag-row:focus-within {
+  border-color: #1677ff;
+  background: #f0f7ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+/* ==================== 高对比度模式支持 ==================== */
+@media (prefers-contrast: high) {
+  .role-rules .rule-item,
+  .rule-input-group,
+  .rule-detail-item {
+    border-width: 2px;
+  }
+
+  .tags-display .ant-tag,
+  .rule-detail-tags .ant-tag {
+    border-width: 2px;
+    font-weight: 600;
+  }
+
+  .rule-field-label,
+  .rule-detail-label {
+    font-weight: 700;
+  }
+}
+
+/* ==================== 标签颜色主题 ==================== */
+.tags-display .ant-tag-blue {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  color: #1890ff;
+}
+
+.tags-display .ant-tag-green {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  color: #52c41a;
+}
+
+.tags-display .ant-tag-orange {
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  color: #fa8c16;
+}
+
+.tags-display .ant-tag-purple {
+  background: #f9f0ff;
+  border: 1px solid #d3adf7;
+  color: #722ed1;
+}
+
+.rule-detail-tags .ant-tag-blue {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  color: #1890ff;
+}
+
+.rule-detail-tags .ant-tag-green {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  color: #52c41a;
+}
+
+.rule-detail-tags .ant-tag-orange {
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  color: #fa8c16;
+}
+
+.rule-detail-tags .ant-tag-purple {
+  background: #f9f0ff;
+  border: 1px solid #d3adf7;
+  color: #722ed1;
+}

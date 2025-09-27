@@ -14,23 +14,13 @@ const routes: RouteRecordRaw[] = [
     path: '/cron',
     children: [
       {
-        name: 'CronJobList',
-        path: '/cron/job/list',
-        component: () => import('#/views/cron/list/List.vue'),
+        name: 'CronJobManagement',
+        path: '/cron/management',
+        component: () => import('#/views/cron/management/Management.vue'),
         meta: {
           order: 1,
-          icon: 'lucide:list',
-          title: '定时任务列表',
-        },
-      },
-      {
-        name: 'CronJobLog',
-        path: '/cron/job/log',
-        component: () => import('#/views/cron/log/Log.vue'),
-        meta: {
-          order: 2,
-          icon: 'lucide:file-text',
-          title: '执行日志',
+          icon: 'lucide:settings',
+          title: '任务管理',
         },
       },
     ],

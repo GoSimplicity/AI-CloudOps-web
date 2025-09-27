@@ -40,7 +40,8 @@ function createRequestClient(baseURL: string) {
     ) {
       accessStore.setLoginExpired(true);
     } else {
-      await authStore.logout(); // 执行登出
+      // 执行登出，但不调用远程 API 避免循环认证问题
+      await authStore.logout(true, false); 
     }
   }
 

@@ -81,8 +81,17 @@ export const useAuthStore = defineStore('auth', () => {
     };
   }
 
-  async function logout(redirect: boolean = true) {
-    await logoutApi();
+  async function logout(redirect: boolean = true, callApi: boolean = true) {
+    // 只有在非令牌过期的情况下才调用 logout API
+    if (callApi) {
+      try {
+        await logoutApi();
+      } catch (error) {
+        // 如果 logout API 失败，记录错误但继续执行本地清理
+        console.warn('Logout API failed, proceeding with local cleanup:', error);
+      }
+    }
+    
     resetAllStores();
     accessStore.setLoginExpired(false);
 

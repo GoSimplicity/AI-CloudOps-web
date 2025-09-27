@@ -172,7 +172,7 @@
   border: 1px solid #e8e8e8;
 }
 
-.yaml-textarea {
+.k8s-config-textarea {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
   line-height: 1.4;
@@ -503,19 +503,19 @@
 
 /* 滚动条样式 */
 .config-textarea::-webkit-scrollbar,
-.yaml-textarea::-webkit-scrollbar {
+.k8s-config-textarea::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 .config-textarea::-webkit-scrollbar-track,
-.yaml-textarea::-webkit-scrollbar-track {
+.k8s-config-textarea::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 4px;
 }
 
 .config-textarea::-webkit-scrollbar-thumb,
-.yaml-textarea::-webkit-scrollbar-thumb {
+.k8s-config-textarea::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 4px;
 }

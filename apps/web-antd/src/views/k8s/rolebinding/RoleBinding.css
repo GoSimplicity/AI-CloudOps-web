@@ -1,0 +1,540 @@
+/* RoleBinding 特有样式 */
+
+.rolebinding-table .ant-table-tbody > tr > td {
+  vertical-align: top;
+  padding: 12px 8px;
+}
+
+/* ==================== 角色引用样式 ==================== */
+.rolebinding-role-ref {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rolebinding-role-ref .ant-tag {
+  margin: 0;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.rolebinding-role-ref .role-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #262626;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==================== 主体显示样式 ==================== */
+.rolebinding-subjects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: flex-start;
+  max-width: 280px;
+}
+
+.rolebinding-subjects .subject-tag {
+  margin: 0;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+/* 主体类型颜色 */
+.rolebinding-subjects .ant-tag-blue {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  color: #1890ff;
+}
+
+.rolebinding-subjects .ant-tag-green {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  color: #52c41a;
+}
+
+.rolebinding-subjects .ant-tag-orange {
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  color: #fa8c16;
+}
+
+/* ==================== 详情模态框主体样式 ==================== */
+.rolebinding-subjects-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.subject-detail-item {
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  transition: all 0.2s ease;
+}
+
+.subject-detail-item:hover {
+  border-color: #d9d9d9;
+  background: #f5f5f5;
+}
+
+.subject-detail-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.subject-detail-row:last-child {
+  margin-bottom: 0;
+}
+
+.subject-label {
+  font-weight: 600;
+  color: #595959;
+  min-width: 80px;
+  font-size: 13px;
+}
+
+.subject-value {
+  color: #262626;
+  font-size: 13px;
+  font-weight: 500;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+/* ==================== 创建表单特殊样式 ==================== */
+.rolebinding-labels-filter {
+  position: relative;
+}
+
+.rolebinding-labels-filter .active-filters {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* 主体配置输入框组 */
+.k8s-form .k8s-key-value-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
+}
+
+.k8s-form .k8s-key-value-row:hover {
+  border-color: #d9d9d9;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* 主体类型选择器 */
+.k8s-form .k8s-key-value-row .ant-select {
+  min-width: 120px;
+}
+
+.k8s-form .k8s-key-value-row .k8s-form-input {
+  flex: 1;
+  height: 36px;
+}
+
+/* 角色引用输入组 */
+.k8s-form .ant-row .ant-col {
+  display: flex;
+  align-items: center;
+}
+
+/* ==================== 标签过滤器样式 ==================== */
+.labels-filter-form {
+  padding: 8px 0;
+}
+
+.labels-filter-form h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.filter-tags {
+  margin-bottom: 8px;
+}
+
+.add-filter-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.filter-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-input-row .ant-input {
+  flex: 1;
+  height: 32px;
+}
+
+.filter-input-row .ant-btn {
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==================== 添加输入行样式 ==================== */
+.add-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px dashed #d9d9d9;
+  transition: all 0.2s ease;
+}
+
+.add-input-row:hover {
+  border-color: #1677ff;
+  background: #f0f7ff;
+}
+
+.add-input-row .ant-input {
+  flex: 1;
+  height: 32px;
+  border: 1px solid #e8e8e8;
+  background: #fff;
+}
+
+.add-input-row .ant-btn {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ==================== 响应式优化 ==================== */
+@media (max-width: 768px) {
+  .rolebinding-role-ref {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .rolebinding-subjects {
+    max-width: 100%;
+  }
+
+  .subject-detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .subject-label {
+    min-width: auto;
+    font-size: 12px;
+  }
+
+  .subject-value {
+    font-size: 12px;
+  }
+
+  .k8s-form .k8s-key-value-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .k8s-form .k8s-key-value-row .ant-select {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .filter-input-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .filter-input-row .ant-input {
+    width: 100%;
+  }
+
+  .add-input-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .add-input-row .ant-input {
+    width: 100%;
+  }
+
+  .add-input-row .ant-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .rolebinding-subjects .subject-tag {
+    max-width: 100px;
+    font-size: 10px;
+  }
+
+  .rolebinding-role-ref .role-name {
+    max-width: 120px;
+    font-size: 12px;
+  }
+
+  .subject-detail-item {
+    padding: 8px 12px;
+  }
+
+  .rolebinding-labels-filter .active-filters {
+    position: static;
+    margin-top: 8px;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    box-shadow: none;
+  }
+}
+
+/* ==================== 主体创建表单优化 ==================== */
+.k8s-form .k8s-key-value-inputs .k8s-key-value-row {
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 48px;
+}
+
+.k8s-form .k8s-key-value-inputs .k8s-key-value-row .ant-select,
+.k8s-form .k8s-key-value-inputs .k8s-key-value-row .ant-input {
+  height: 36px;
+}
+
+.k8s-form .k8s-key-value-inputs .k8s-key-value-row .ant-btn {
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  margin-top: 0;
+}
+
+/* 主体类型禁用状态 */
+.k8s-form .k8s-key-value-row .ant-input:disabled {
+  background: #f5f5f5;
+  color: #bfbfbf;
+  cursor: not-allowed;
+}
+
+/* ==================== 表格列宽优化 ==================== */
+.rolebinding-table .ant-table-thead > tr > th:nth-child(1) {
+  min-width: 120px;
+}
+
+.rolebinding-table .ant-table-thead > tr > th:nth-child(2) {
+  min-width: 100px;
+}
+
+.rolebinding-table .ant-table-thead > tr > th:nth-child(3) {
+  min-width: 160px;
+}
+
+.rolebinding-table .ant-table-thead > tr > th:nth-child(4) {
+  min-width: 200px;
+}
+
+.rolebinding-table .ant-table-thead > tr > th:nth-child(5) {
+  min-width: 120px;
+}
+
+.rolebinding-table .ant-table-thead > tr > th:nth-child(6) {
+  min-width: 100px;
+}
+
+.rolebinding-table .ant-table-thead > tr > th:nth-child(7) {
+  min-width: 80px;
+}
+
+/* ==================== 打印样式 ==================== */
+@media print {
+  .rolebinding-subjects {
+    max-width: none;
+    flex-wrap: nowrap;
+  }
+
+  .subject-detail-item {
+    border: 1px solid #ddd;
+    break-inside: avoid;
+  }
+
+  .rolebinding-role-ref {
+    flex-wrap: nowrap;
+  }
+}
+
+/* ==================== 可访问性优化 ==================== */
+.rolebinding-subjects .subject-tag:focus,
+.rolebinding-role-ref .ant-tag:focus {
+  outline: 2px solid #1677ff;
+  outline-offset: 2px;
+}
+
+.subject-detail-item:focus-within {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+/* ==================== 高对比度模式支持 ==================== */
+@media (prefers-contrast: high) {
+  .rolebinding-subjects .subject-tag,
+  .rolebinding-role-ref .ant-tag {
+    border-width: 2px;
+    font-weight: 600;
+  }
+
+  .subject-detail-item {
+    border-width: 2px;
+  }
+
+  .subject-label {
+    font-weight: 700;
+  }
+}
+
+/* ==================== 命名空间标签特殊样式 ==================== */
+.rolebinding-namespace-badge {
+  background: #f0f5ff;
+  border: 1px solid #adc6ff;
+  color: #2f54eb;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.rolebinding-namespace-badge:hover {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(47, 84, 235, 0.2);
+}
+
+/* ==================== 角色类型徽章样式 ==================== */
+.rolebinding-role-type-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  margin-right: 6px;
+}
+
+.rolebinding-role-type-badge.role-type-role {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  color: #52c41a;
+}
+
+.rolebinding-role-type-badge.role-type-clusterrole {
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  color: #fa8c16;
+}
+
+/* ==================== 主体数量徽章 ==================== */
+.rolebinding-subjects-count {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  color: #1890ff;
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+/* ==================== 动画效果 ==================== */
+.rolebinding-subjects .subject-tag {
+  animation: fadeInScale 0.2s ease;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.subject-detail-item {
+  animation: slideInUp 0.3s ease;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================== YAML文本区域样式 ==================== */
+.k8s-config-textarea {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ==================== 表格行悬浮效果优化 ==================== */
+.rolebinding-table .ant-table-tbody > tr:hover > td {
+  background: #f5f7fa;
+  transition: all 0.2s ease;
+}
+
+.rolebinding-table .ant-table-tbody > tr:hover .rolebinding-role-ref .ant-tag,
+.rolebinding-table .ant-table-tbody > tr:hover .rolebinding-subjects .subject-tag {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

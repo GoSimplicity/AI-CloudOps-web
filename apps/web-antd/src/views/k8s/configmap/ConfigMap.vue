@@ -135,7 +135,7 @@
             allow-clear 
           >
             <template #suffix>
-              <search-outlined class="k8s-search-icon" />
+              <SearchOutlined class="k8s-search-icon" />
             </template>
           </a-input>
         </div>
@@ -275,7 +275,7 @@
             <a-tooltip title="删除">
               <a-button 
                 title="删除" 
-                class="ant-btn-dangerous" 
+                danger 
                 @click="deleteConfigMap(record)"
               >
                 <template #icon><DeleteOutlined /></template>
@@ -535,7 +535,7 @@
             v-model:value="createYamlFormModel.yaml" 
             placeholder="请输入 ConfigMap YAML 内容" 
             :rows="20"
-            class="yaml-textarea"
+            class="k8s-config-textarea"
           />
         </a-form-item>
       </a-form>
@@ -905,7 +905,7 @@
             v-model:value="yamlFormModel.yaml" 
             placeholder="YAML 内容" 
             :rows="20"
-            class="yaml-textarea"
+            class="k8s-config-textarea"
           />
         </a-form-item>
       </a-form>
@@ -1281,13 +1281,13 @@ onMounted(async () => {
 <style scoped>
 @import '../shared/k8s-common.css';
 
-.yaml-textarea {
+.k8s-config-textarea {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.4;
 }
 
-.yaml-textarea :deep(.ant-input) {
+.k8s-config-textarea :deep(.ant-input) {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.4;

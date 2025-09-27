@@ -73,7 +73,7 @@
             allow-clear 
           >
             <template #suffix>
-              <search-outlined class="k8s-search-icon" />
+              <SearchOutlined class="k8s-search-icon" />
             </template>
           </a-input>
         </div>
@@ -192,7 +192,7 @@
             </a-tooltip>
             <a-tooltip title="删除集群">
               <a-popconfirm title="确定要删除该集群吗?" @confirm="confirmDelete(record)" ok-text="确定" cancel-text="取消">
-                <a-button title="删除" class="ant-btn-dangerous">
+                <a-button title="删除" danger>
                   <template #icon><DeleteOutlined /></template>
                 </a-button>
               </a-popconfirm>

@@ -152,7 +152,7 @@
 }
 
 /* YAML 编辑器样式 */
-.yaml-textarea {
+.k8s-config-textarea {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
   font-size: 12px !important;
   line-height: 1.4 !important;
@@ -161,7 +161,7 @@
   border-radius: 6px;
 }
 
-.yaml-textarea:focus {
+.k8s-config-textarea:focus {
   background: #ffffff;
   border-color: #1677ff;
   box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
@@ -512,7 +512,7 @@
     color: #333 !important;
   }
   
-  .yaml-textarea {
+  .k8s-config-textarea {
     background: white !important;
     border: 1px solid #ddd !important;
   }

@@ -1,45 +1,30 @@
 import { requestClient } from '#/api/request';
 
-// ServiceAccount相关接口和类型定义
-
-export interface ServiceAccountInfo {
-  name: string;
-  namespace: string;
-  cluster_id: number;
-  uid: string;
-  labels?: Record<string, string>;
-  annotations?: Record<string, string>;
-  creation_timestamp: string;
-  age: string;
-  secrets_count: number;
-  image_pull_secrets_count: number;
-  automount_service_account_token?: boolean;
-}
-
-export interface ServiceAccountDetails extends ServiceAccountInfo {
-  secrets: ServiceAccountSecret[];
-  image_pull_secrets: ServiceAccountSecret[];
-  token?: string;
-  ca_cert?: string;
-}
-
-export interface ServiceAccountSecret {
-  name: string;
-  namespace: string;
-  type: string;
-}
-
-export interface ServiceAccountListReq {
+// 获取ServiceAccount列表请求
+export interface GetServiceAccountListReq {
   cluster_id: number;
   namespace?: string;
-  label_selector?: string;
-  field_selector?: string;
   search?: string;
   page?: number;
   size?: number;
 }
 
-export interface ServiceAccountCreateReq {
+// 获取ServiceAccount详情请求
+export interface GetServiceAccountDetailsReq {
+  cluster_id: number;
+  namespace: string;
+  name: string;
+}
+
+// 获取ServiceAccount YAML请求
+export interface GetServiceAccountYamlReq {
+  cluster_id: number;
+  namespace: string;
+  name: string;
+}
+
+// 创建ServiceAccount请求
+export interface CreateServiceAccountReq {
   cluster_id: number;
   namespace: string;
   name: string;
@@ -47,9 +32,17 @@ export interface ServiceAccountCreateReq {
   annotations?: Record<string, string>;
   automount_service_account_token?: boolean;
   image_pull_secrets?: string[];
+  secrets?: string[];
 }
 
-export interface ServiceAccountUpdateReq {
+// 通过YAML创建ServiceAccount请求
+export interface CreateServiceAccountByYamlReq {
+  cluster_id: number;
+  yaml_content: string;
+}
+
+// 更新ServiceAccount请求
+export interface UpdateServiceAccountReq {
   cluster_id: number;
   namespace: string;
   name: string;
@@ -57,125 +50,147 @@ export interface ServiceAccountUpdateReq {
   annotations?: Record<string, string>;
   automount_service_account_token?: boolean;
   image_pull_secrets?: string[];
+  secrets?: string[];
 }
 
-export interface ServiceAccountDeleteReq {
+// 通过YAML更新ServiceAccount请求
+export interface UpdateServiceAccountByYamlReq {
   cluster_id: number;
   namespace: string;
   name: string;
-  grace_period_seconds?: number;
-  force?: boolean;
+  yaml_content: string;
 }
 
-export interface ServiceAccountBatchDeleteReq {
-  cluster_id: number;
-  namespace: string;
-  names: string[];
-  grace_period_seconds?: number;
-  force?: boolean;
-}
-
-export interface ServiceAccountStatistics {
-  total_count: number;
-  active_count: number;
-  with_secrets_count: number;
-  with_image_pull_secrets_count: number;
-  auto_mount_enabled_count: number;
-}
-
-export interface ServiceAccountTokenReq {
+// 删除ServiceAccount请求
+export interface DeleteServiceAccountReq {
   cluster_id: number;
   namespace: string;
   name: string;
+}
+
+// 获取ServiceAccount Token请求
+export interface GetServiceAccountTokenReq {
+  cluster_id: number;
+  namespace: string;
+  name: string;
+}
+
+// 创建ServiceAccount Token请求
+export interface CreateServiceAccountTokenReq {
+  cluster_id: number;
+  namespace: string;
+  service_account_name: string;
   expiration_seconds?: number;
 }
 
-export interface ServiceAccountTokenResp {
+// ServiceAccount主model
+export interface K8sServiceAccount {
+  name: string;
+  namespace: string;
+  cluster_id: number;
+  uid: string;
+  creation_timestamp: string;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+  automount_service_account_token?: boolean;
+  image_pull_secrets: string[];
+  secrets: string[];
+  resource_version: string;
+  age: string;
+}
+
+// ServiceAccount Token信息响应
+export interface ServiceAccountTokenInfo {
   token: string;
-  expiration_timestamp?: string;
+  expiration_seconds?: number;
+  creation_timestamp: string;
+  expiration_time: string;
 }
 
-// API 接口函数
-
-/**
- * 获取ServiceAccount列表
- */
-export function getServiceAccountListApi(params: ServiceAccountListReq) {
-  return requestClient.get('/k8s/serviceaccount/list', {
-    params,
+// 获取ServiceAccount列表
+export const getServiceAccountList = (params: GetServiceAccountListReq) => {
+  return requestClient.get(`/k8s/serviceaccount/${params.cluster_id}/list`, {
+    params: {
+      namespace: params.namespace,
+      search: params.search,
+      page: params.page,
+      size: params.size,
+    },
   });
-}
+};
 
-/**
- * 获取ServiceAccount详情
- */
-export function getServiceAccountDetailsApi(cluster_id: number, namespace: string, name: string) {
-  return requestClient.get<ServiceAccountDetails>('/k8s/serviceaccount/details', {
-    params: { cluster_id, namespace, name },
-  });
-}
+// 获取ServiceAccount详情
+export const getServiceAccountDetails = (
+  params: GetServiceAccountDetailsReq,
+) => {
+  return requestClient.get(
+    `/k8s/serviceaccount/${params.cluster_id}/${params.namespace}/${params.name}/detail`,
+  );
+};
 
-/**
- * 创建ServiceAccount
- */
-export function createServiceAccountApi(data: ServiceAccountCreateReq) {
-  return requestClient.post('/k8s/serviceaccount/create', data);
-}
+// 获取ServiceAccount YAML
+export const getServiceAccountYaml = (params: GetServiceAccountYamlReq) => {
+  return requestClient.get(
+    `/k8s/serviceaccount/${params.cluster_id}/${params.namespace}/${params.name}/detail/yaml`,
+  );
+};
 
-/**
- * 更新ServiceAccount
- */
-export function updateServiceAccountApi(data: ServiceAccountUpdateReq) {
-  return requestClient.put('/k8s/serviceaccount/update', data);
-}
+// 创建ServiceAccount
+export const createServiceAccount = (data: CreateServiceAccountReq) => {
+  return requestClient.post(
+    `/k8s/serviceaccount/${data.cluster_id}/create`,
+    data,
+  );
+};
 
-/**
- * 删除ServiceAccount
- */
-export function deleteServiceAccountApi(data: ServiceAccountDeleteReq) {
-  return requestClient.delete('/k8s/serviceaccount/delete', { data });
-}
+// 通过YAML创建ServiceAccount
+export const createServiceAccountByYaml = (
+  data: CreateServiceAccountByYamlReq,
+) => {
+  return requestClient.post(
+    `/k8s/serviceaccount/${data.cluster_id}/create/yaml`,
+    data,
+  );
+};
 
-/**
- * 批量删除ServiceAccount
- */
-export function batchDeleteServiceAccountApi(data: ServiceAccountBatchDeleteReq) {
-  return requestClient.delete('/k8s/serviceaccount/batch-delete', { data });
-}
+// 更新ServiceAccount
+export const updateServiceAccount = (data: UpdateServiceAccountReq) => {
+  return requestClient.put(
+    `/k8s/serviceaccount/${data.cluster_id}/${data.namespace}/${data.name}/update`,
+    data,
+  );
+};
 
-/**
- * 获取ServiceAccount统计信息
- */
-export function getServiceAccountStatisticsApi(cluster_id: number, namespace?: string) {
-  return requestClient.get<ServiceAccountStatistics>('/k8s/serviceaccount/statistics', {
-    params: { cluster_id, namespace },
-  });
-}
+// 通过YAML更新ServiceAccount
+export const updateServiceAccountByYaml = (
+  data: UpdateServiceAccountByYamlReq,
+) => {
+  return requestClient.put(
+    `/k8s/serviceaccount/${data.cluster_id}/${data.namespace}/${data.name}/update/yaml`,
+    data,
+  );
+};
 
-/**
- * 获取ServiceAccount令牌
- */
-export function getServiceAccountTokenApi(data: ServiceAccountTokenReq) {
-  return requestClient.post<ServiceAccountTokenResp>('/k8s/serviceaccount/token', data);
-}
+// 删除ServiceAccount
+export const deleteServiceAccount = (params: DeleteServiceAccountReq) => {
+  return requestClient.delete(
+    `/k8s/serviceaccount/${params.cluster_id}/${params.namespace}/${params.name}/delete`,
+  );
+};
 
-/**
- * 获取ServiceAccount YAML
- */
-export function getServiceAccountYamlApi(cluster_id: number, namespace: string, name: string) {
-  return requestClient.get<{ yaml: string }>('/k8s/serviceaccount/yaml', {
-    params: { cluster_id, namespace, name },
-  });
-}
+// 获取ServiceAccount Token
+export const getServiceAccountToken = (params: GetServiceAccountTokenReq) => {
+  return requestClient.get(
+    `/k8s/serviceaccount/${params.cluster_id}/${params.namespace}/${params.name}/token`,
+  );
+};
 
-/**
- * 更新ServiceAccount YAML
- */
-export function updateServiceAccountYamlApi(cluster_id: number, namespace: string, name: string, yaml: string) {
-  return requestClient.put('/k8s/serviceaccount/yaml', {
-    cluster_id,
-    namespace, 
-    name,
-    yaml,
-  });
-}
+// 创建ServiceAccount Token
+export const createServiceAccountToken = (
+  data: CreateServiceAccountTokenReq,
+) => {
+  return requestClient.post(
+    `/k8s/serviceaccount/${data.cluster_id}/${data.namespace}/${data.service_account_name}/token`,
+    data,
+  );
+};

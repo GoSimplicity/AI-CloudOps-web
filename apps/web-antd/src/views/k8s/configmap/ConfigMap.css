@@ -256,19 +256,19 @@
 }
 
 /* YAML编辑器样式增强 */
-.yaml-textarea :deep(.ant-input) {
+.k8s-config-textarea :deep(.ant-input) {
   background: #1e1e1e;
   color: #d4d4d4;
   border: 1px solid #3c3c3c;
 }
 
-.yaml-textarea :deep(.ant-input):focus {
+.k8s-config-textarea :deep(.ant-input):focus {
   background: #1e1e1e;
   border-color: #1677ff;
   box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
 }
 
-.yaml-textarea :deep(.ant-input):hover {
+.k8s-config-textarea :deep(.ant-input):hover {
   background: #252526;
   border-color: #464647;
 }

@@ -47,12 +47,14 @@ export const authenticateResponseInterceptor = ({
       config.__isRetryRequest = true;
       try {
         const newToken = await doRefreshToken();
+        // 更新请求头中的token
+        config.headers.Authorization = formatToken(newToken);
         // 处理队列中的请求
         client.refreshTokenQueue.forEach((callback) => callback(newToken));
         // 清空队列
         client.refreshTokenQueue = [];
 
-        return client.request(error.config.url, { ...error.config });
+        return client.request(config.url, { ...config });
       } catch (refreshError) {
         // 如果刷新 token 失败，处理错误（如强制登出或跳转登录页面）
         client.refreshTokenQueue.forEach((callback) => callback(''));

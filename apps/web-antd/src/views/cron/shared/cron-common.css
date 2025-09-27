@@ -1,3 +1,5 @@
+/* ==================== CRON 模块通用样式 (基于K8S设计系统) ==================== */
+
 .k8s-management-container {
   min-height: 100vh;
   background: #f5f5f5;
@@ -30,7 +32,7 @@
 
 .k8s-title-icon {
   font-size: 24px;
-  color: #1677ff;
+  color: #fa8c16; /* Cron 橙色主题 */
   margin-right: 12px;
 }
 
@@ -160,7 +162,7 @@
 
 .k8s-filter-select.ant-select-focused :deep(.ant-select-selector) {
   background: #fff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  box-shadow: 0 0 0 2px rgba(250, 140, 22, 0.1); /* Cron 橙色主题 */
 }
 
 /* 搜索框样式 */
@@ -176,16 +178,16 @@
 }
 
 .k8s-search-input:hover {
-  border-color: #1677ff;
-  background: #fafbff;
-  box-shadow: 0 2px 8px rgba(22, 119, 255, 0.08);
+  border-color: #fa8c16; /* Cron 橙色主题 */
+  background: #fffbf6;
+  box-shadow: 0 2px 8px rgba(250, 140, 22, 0.08);
 }
 
 .k8s-search-input:focus,
 .k8s-search-input.ant-input-focused {
-  border-color: #1677ff;
+  border-color: #fa8c16; /* Cron 橙色主题 */
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(250, 140, 22, 0.15);
   outline: none;
 }
 
@@ -198,7 +200,7 @@
 
 .k8s-search-input:hover .k8s-search-icon,
 .k8s-search-input:focus .k8s-search-icon {
-  color: #1677ff;
+  color: #fa8c16; /* Cron 橙色主题 */
 }
 
 /* 清除按钮样式优化 */
@@ -212,8 +214,6 @@
 .k8s-search-input :deep(.ant-input-clear-icon):hover {
   color: #8c8c8c;
 }
-
-/* 页面大小选择器样式已移除，避免与分页组件重复 */
 
 /* 工具栏按钮样式 */
 .k8s-toolbar-btn {
@@ -235,13 +235,13 @@
 
 .k8s-toolbar-btn.ant-btn-default:hover {
   background: #f0f0f0;
-  border-color: #1677ff;
-  color: #1677ff;
+  border-color: #fa8c16; /* Cron 橙色主题 */
+  color: #fa8c16;
 }
 
 .k8s-toolbar-btn.ant-btn-primary {
-  background: #1677ff;
-  border-color: #1677ff;
+  background: #fa8c16; /* Cron 橙色主题 */
+  border-color: #fa8c16;
 }
 
 .k8s-toolbar-btn.ant-btn-dangerous {
@@ -489,7 +489,7 @@
 }
 
 .k8s-table :deep(.ant-table-tbody > tr:hover > td) {
-  background: #f5f5f5;
+  background: #fffbf6; /* Cron 橙色主题悬停色 */
   transition: all 0.2s ease;
 }
 
@@ -497,7 +497,7 @@
   transition: all 0.2s ease;
 }
 
-/* ==================== 操作列按钮优化 ==================== */
+/* ==================== 操作列按钮优化 (Cron 橙色主题) ==================== */
 .k8s-action-column {
   display: flex;
   gap: 8px;
@@ -528,20 +528,20 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* 查看详情按钮 - 蓝色主题 */
+/* 查看详情按钮 - 橙色主题 */
 .k8s-action-column .ant-btn[title*="查看"],
 .k8s-action-column .ant-btn[title*="详情"] {
-  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-  border-color: #e1f5fe;
-  color: #1976d2;
+  background: linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%);
+  border-color: #ffd591;
+  color: #d46b08;
 }
 
 .k8s-action-column .ant-btn[title*="查看"]:hover,
 .k8s-action-column .ant-btn[title*="详情"]:hover {
-  background: linear-gradient(135deg, #bbdefb 0%, #e1bee7 100%);
-  border-color: #42a5f5;
-  color: #0d47a1;
-  box-shadow: 0 6px 16px rgba(25, 118, 210, 0.25);
+  background: linear-gradient(135deg, #ffd591 0%, #ffc069 100%);
+  border-color: #ffb347;
+  color: #ad4e00;
+  box-shadow: 0 6px 16px rgba(212, 107, 8, 0.25);
 }
 
 /* 编辑/管理按钮 - 绿色主题 */
@@ -564,15 +564,15 @@
   box-shadow: 0 6px 16px rgba(46, 125, 50, 0.25);
 }
 
-/* 操作按钮 - 橙色主题 */
+/* 操作按钮 - 紫色主题 (启用/禁用) */
 .k8s-action-column .ant-btn[title*="刷新"],
 .k8s-action-column .ant-btn[title*="启用"],
 .k8s-action-column .ant-btn[title*="禁用"],
 .k8s-action-column .ant-btn[title*="调度"],
 .k8s-action-column .ant-btn[title*="驱逐"] {
-  background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%);
-  border-color: #ffcc02;
-  color: #f57c00;
+  background: linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%);
+  border-color: #d3adf7;
+  color: #722ed1;
 }
 
 .k8s-action-column .ant-btn[title*="刷新"]:hover,
@@ -580,10 +580,28 @@
 .k8s-action-column .ant-btn[title*="禁用"]:hover,
 .k8s-action-column .ant-btn[title*="调度"]:hover,
 .k8s-action-column .ant-btn[title*="驱逐"]:hover {
-  background: linear-gradient(135deg, #ffe0b2 0%, #f8bbd9 100%);
-  border-color: #ffb74d;
-  color: #e65100;
-  box-shadow: 0 6px 16px rgba(245, 124, 0, 0.25);
+  background: linear-gradient(135deg, #efdbff 0%, #d3adf7 100%);
+  border-color: #b37feb;
+  color: #531dab;
+  box-shadow: 0 6px 16px rgba(114, 46, 209, 0.25);
+}
+
+/* 执行按钮 - 蓝色主题 */
+.k8s-action-column .ant-btn[title*="立即"],
+.k8s-action-column .ant-btn[title*="执行"],
+.k8s-action-column .ant-btn[title*="触发"] {
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+  border-color: #91d5ff;
+  color: #1890ff;
+}
+
+.k8s-action-column .ant-btn[title*="立即"]:hover,
+.k8s-action-column .ant-btn[title*="执行"]:hover,
+.k8s-action-column .ant-btn[title*="触发"]:hover {
+  background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
+  border-color: #69c0ff;
+  color: #096dd9;
+  box-shadow: 0 6px 16px rgba(24, 144, 255, 0.25);
 }
 
 /* 危险操作按钮 - 红色主题 */
@@ -750,7 +768,7 @@
 }
 
 .k8s-role-tag {
-  background: #fff7e6;
+  background: #fff7e6; /* Cron 橙色主题 */
   border: 1px solid #ffd591;
   color: #fa8c16;
 }
@@ -856,9 +874,9 @@
 
 .k8s-form-input:focus,
 .k8s-form-input:hover {
-  border-color: #1677ff;
+  border-color: #fa8c16; /* Cron 橙色主题 */
   background: #ffffff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  box-shadow: 0 0 0 2px rgba(250, 140, 22, 0.1);
 }
 
 .k8s-form-input.ant-select {
@@ -940,15 +958,15 @@
 }
 
 .k8s-header-actions .ant-btn-primary {
-  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  background: linear-gradient(135deg, #fa8c16 0%, #fa8c16 100%); /* Cron 橙色主题 */
   border: none;
   color: #ffffff;
 }
 
 .k8s-header-actions .ant-btn-primary:hover {
-  background: linear-gradient(135deg, #4096ff 0%, #69b1ff 100%);
+  background: linear-gradient(135deg, #d46b08 0%, #fa541c 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(250, 140, 22, 0.3);
 }
 
 .k8s-header-actions .ant-btn:not(.ant-btn-primary) {
@@ -958,11 +976,11 @@
 }
 
 .k8s-header-actions .ant-btn:not(.ant-btn-primary):hover {
-  border-color: #1677ff;
-  color: #1677ff;
-  background: #f0f7ff;
+  border-color: #fa8c16; /* Cron 橙色主题 */
+  color: #fa8c16;
+  background: #fffbf6;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(250, 140, 22, 0.15);
 }
 
 .k8s-header-actions .ant-btn:active {
@@ -974,8 +992,8 @@
 }
 
 .k8s-header-actions .ant-btn.ant-btn-loading:not(.ant-btn-primary) {
-  border-color: #1677ff;
-  color: #1677ff;
+  border-color: #fa8c16; /* Cron 橙色主题 */
+  color: #fa8c16;
 }
 
 .k8s-header-actions .ant-btn .anticon {
@@ -1161,7 +1179,7 @@
   }
 }
 
-/* ====== K8s 详情模态框样式 ====== */
+/* ====== 详情模态框样式 ====== */
 
 /* 详情模态框内容 */
 .k8s-detail-content {
@@ -1211,7 +1229,7 @@
 }
 
 .k8s-system-label {
-  background: #fff7e6;
+  background: #fff7e6; /* Cron 橙色主题 */
   border: 1px solid #ffd591;
   color: #fa8c16;
 }
@@ -1274,8 +1292,8 @@
 }
 
 .k8s-config-textarea:focus-within {
-  border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  border-color: #fa8c16; /* Cron 橙色主题 */
+  box-shadow: 0 0 0 2px rgba(250, 140, 22, 0.1);
   background: #fff;
 }
 

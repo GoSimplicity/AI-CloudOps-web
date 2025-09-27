@@ -84,7 +84,7 @@
             allow-clear 
           >
             <template #suffix>
-              <search-outlined class="k8s-search-icon" />
+              <SearchOutlined class="k8s-search-icon" />
             </template>
           </a-input>
         </div>
@@ -226,7 +226,7 @@
               </a-button>
             </a-tooltip>
             <a-tooltip title="驱逐节点">
-              <a-button title="驱逐" class="ant-btn-dangerous" @click="openDrainModal(record)">
+              <a-button title="驱逐" danger @click="openDrainModal(record)">
                 <template #icon><DisconnectOutlined /></template>
               </a-button>
             </a-tooltip>
@@ -611,6 +611,7 @@ import {
   PlayCircleOutlined,
   DisconnectOutlined,
   DeploymentUnitOutlined,
+  SearchOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -759,10 +760,7 @@ const handleTableChange = (pagination: { current?: number; pageSize?: number }) 
   }
 };
 
-const handlePageSizeChange = () => {
-  currentPage.value = 1;
-  fetchNodes();
-};
+// 已弃用的函数：分页组件统一通过 handleTableChange 处理
 
 // 处理集群下拉选择的滚动事件
 const handleClusterDropdownScroll = (e: Event) => {

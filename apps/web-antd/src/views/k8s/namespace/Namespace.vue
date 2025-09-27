@@ -110,7 +110,7 @@
             allow-clear 
           >
             <template #suffix>
-              <search-outlined class="k8s-search-icon" />
+              <SearchOutlined class="k8s-search-icon" />
             </template>
           </a-input>
         </div>
@@ -229,7 +229,7 @@
             <a-tooltip title="删除命名空间">
               <a-button 
                 title="删除" 
-                class="ant-btn-dangerous" 
+                danger 
                 @click="deleteNamespace(record)" 
                 :disabled="record.name === 'default' || record.name === 'kube-system' || record.name === 'kube-public' || record.name === 'kube-node-lease'"
               >
@@ -239,7 +239,7 @@
             <a-tooltip title="强制删除" v-if="record.status === NamespaceStatus.Terminating">
               <a-button 
                 title="强制删除" 
-                class="ant-btn-dangerous" 
+                danger 
                 @click="forceDeleteNamespace(record)" 
                 :disabled="record.name === 'default' || record.name === 'kube-system' || record.name === 'kube-public' || record.name === 'kube-node-lease'"
               >

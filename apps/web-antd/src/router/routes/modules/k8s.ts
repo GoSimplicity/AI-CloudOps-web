@@ -143,6 +143,36 @@ const routes: RouteRecordRaw[] = [
           title: 'PVC管理',
         },
       },
+      {
+        name: 'K8sRole',
+        path: '/k8s_role',
+        component: () => import('#/views/k8s/role/Role.vue'),
+        meta: {
+          order: 16,
+          icon: 'lucide:shield',
+          title: 'Role管理',
+        },
+      },
+      {
+        name: 'K8sRoleBinding',
+        path: '/k8s_rolebinding',
+        component: () => import('#/views/k8s/rolebinding/RoleBinding.vue'),
+        meta: {
+          order: 17,
+          icon: 'lucide:key',
+          title: 'RoleBinding管理',
+        },
+      },
+      {
+        name: 'K8sClusterRoleBinding',
+        path: '/k8s_clusterrolebinding',
+        component: () => import('#/views/k8s/clusterrolebinding/ClusterRoleBinding.vue'),
+        meta: {
+          order: 19,
+          icon: 'lucide:settings',
+          title: 'ClusterRoleBinding管理',
+        },
+      },
     ],
   },
 ];

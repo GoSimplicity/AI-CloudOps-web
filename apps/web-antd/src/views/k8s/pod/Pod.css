@@ -610,7 +610,7 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 /* YAML 编辑器样式 */
-.yaml-textarea {
+.k8s-config-textarea {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
   line-height: 1.4;
@@ -622,7 +622,7 @@ div[aria-hidden="true"][tabindex="0"] {
   color: #333;
 }
 
-.yaml-textarea:focus {
+.k8s-config-textarea:focus {
   border-color: #1677ff;
   box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
   background: #fff;
@@ -732,7 +732,7 @@ div[aria-hidden="true"][tabindex="0"] {
 }
 
 /* 滚动条样式 */
-.yaml-textarea::-webkit-scrollbar,
+.k8s-config-textarea::-webkit-scrollbar,
 .pod-labels-filter .active-filters::-webkit-scrollbar,
 .pod-containers-config::-webkit-scrollbar,
 .env-vars-config::-webkit-scrollbar,
@@ -741,7 +741,7 @@ div[aria-hidden="true"][tabindex="0"] {
   height: 6px;
 }
 
-.yaml-textarea::-webkit-scrollbar-track,
+.k8s-config-textarea::-webkit-scrollbar-track,
 .pod-labels-filter .active-filters::-webkit-scrollbar-track,
 .pod-containers-config::-webkit-scrollbar-track,
 .env-vars-config::-webkit-scrollbar-track,
@@ -750,7 +750,7 @@ div[aria-hidden="true"][tabindex="0"] {
   border-radius: 3px;
 }
 
-.yaml-textarea::-webkit-scrollbar-thumb,
+.k8s-config-textarea::-webkit-scrollbar-thumb,
 .pod-labels-filter .active-filters::-webkit-scrollbar-thumb,
 .pod-containers-config::-webkit-scrollbar-thumb,
 .env-vars-config::-webkit-scrollbar-thumb,
@@ -759,7 +759,7 @@ div[aria-hidden="true"][tabindex="0"] {
   border-radius: 3px;
 }
 
-.yaml-textarea::-webkit-scrollbar-thumb:hover,
+.k8s-config-textarea::-webkit-scrollbar-thumb:hover,
 .pod-labels-filter .active-filters::-webkit-scrollbar-thumb:hover,
 .pod-containers-config::-webkit-scrollbar-thumb:hover,
 .env-vars-config::-webkit-scrollbar-thumb:hover,

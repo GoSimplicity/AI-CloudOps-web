@@ -77,6 +77,7 @@ export interface CronJob {
   description: string;
   job_type: CronJobType;
   status: CronJobStatus;
+  is_built_in: number; // 是否为内置任务 1是 2否
   schedule: string;
   command: string;
   args: string[];
@@ -88,7 +89,7 @@ export interface CronJob {
   http_body: string;
   script_type: string;
   script_content: string;
-  ssh_resource_id: number;
+  ssh_resource_id?: number; // 可空字段
   ssh_resource?: TreeLocalResource;
   ssh_command: string;
   ssh_work_dir: string;
@@ -133,7 +134,7 @@ export interface CreateCronJobReq {
   http_body?: string;
   script_type?: string;
   script_content?: string;
-  ssh_resource_id?: number;
+  ssh_resource_id?: number | null; // 可空字段
   ssh_command?: string;
   ssh_work_dir?: string;
   ssh_environment?: KeyValue[];
@@ -160,7 +161,7 @@ export interface UpdateCronJobReq {
   http_body?: string;
   script_type?: string;
   script_content?: string;
-  ssh_resource_id?: number;
+  ssh_resource_id?: number | null; // 可空字段
   ssh_command?: string;
   ssh_work_dir?: string;
   ssh_environment?: KeyValue[];
@@ -200,71 +201,16 @@ export interface DisableCronJobReq {
 
 // 验证调度表达式响应
 export interface ValidateScheduleResp {
-  valid: boolean;
+  valid: number; // 是否有效 1有效 0无效
   error_message?: string;
   next_run_times?: string[];
 }
 
-// 执行日志状态枚举
-export enum ExecutionLogStatus {
-  PENDING = 1, // 等待中
-  RUNNING = 2, // 运行中
-  SUCCESS = 3, // 成功
-  FAILED = 4, // 失败
-  TIMEOUT = 5, // 超时
-  CANCELLED = 6, // 已取消
-}
 
-// 触发类型枚举
-export enum TriggerType {
-  SCHEDULED = 1, // 定时触发
-  MANUAL = 2, // 手动触发
-  API = 3, // API触发
-}
-
-// 执行日志模型
-export interface ExecutionLog {
-  id: number;
-  created_at: string;
-  updated_at: string;
-  job_id: number;
-  job_name: string;
-  status: ExecutionLogStatus;
-  start_time: string;
-  end_time?: string;
-  duration: number;
-  output?: string;
-  error_message?: string;
-  trigger_type: TriggerType;
-  triggered_by?: string;
-}
-
-// 获取执行日志列表请求参数
-export interface GetExecutionLogsReq {
-  page?: number;
-  size?: number;
-  job_id?: number;
-  status?: ExecutionLogStatus;
-  trigger_type?: TriggerType;
-  start_date?: string;
-  end_date?: string;
-  search?: string;
-}
-
-// 删除执行日志请求参数
-export interface DeleteExecutionLogReq {
-  id: number;
-}
-
-// 清空执行日志请求参数
-export interface ClearExecutionLogsReq {
-  job_id?: number;
-  before_date?: string;
-}
 
 // 获取定时任务列表
 export async function getCronJobList(params: GetCronJobListReq) {
-  return requestClient.get<CronJob[]>('/cron/job/list', { params });
+  return requestClient.get('/cron/job/list', { params });
 }
 
 // 获取定时任务详情
@@ -310,17 +256,3 @@ export async function validateSchedule(params: ValidateScheduleReq) {
   );
 }
 
-// 获取执行日志列表
-export async function getExecutionLogs(params: GetExecutionLogsReq) {
-  return requestClient.get<ExecutionLog[]>('/cron/execution-log/list', { params });
-}
-
-// 删除执行日志
-export async function deleteExecutionLog(params: DeleteExecutionLogReq) {
-  return requestClient.delete(`/cron/execution-log/${params.id}/delete`);
-}
-
-// 清空执行日志
-export async function clearExecutionLogs(params: ClearExecutionLogsReq) {
-  return requestClient.post('/cron/execution-log/clear', params);
-}

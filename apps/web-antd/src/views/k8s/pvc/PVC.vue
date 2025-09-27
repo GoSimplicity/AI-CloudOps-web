@@ -127,7 +127,7 @@
             allow-clear 
           >
             <template #suffix>
-              <search-outlined class="k8s-search-icon" />
+              <SearchOutlined class="k8s-search-icon" />
             </template>
           </a-input>
         </div>
@@ -332,7 +332,7 @@
             <a-tooltip title="删除">
               <a-button 
                 title="删除" 
-                class="ant-btn-dangerous" 
+                danger 
                 @click="deletePVC(record)"
               >
                 <template #icon><DeleteOutlined /></template>
