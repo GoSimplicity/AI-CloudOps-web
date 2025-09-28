@@ -173,6 +173,26 @@ const routes: RouteRecordRaw[] = [
           title: 'ClusterRoleBinding管理',
         },
       },
+      {
+        name: 'K8sYamlTemplate',
+        path: '/k8s_yaml_template',
+        component: () => import('#/views/k8s/template/Template.vue'),
+        meta: {
+          order: 20,
+          icon: 'lucide:file-text',
+          title: 'YAML模板管理',
+        },
+      },
+      {
+        name: 'K8sYamlTask',
+        path: '/k8s_yaml_task',
+        component: () => import('#/views/k8s/task/Task.vue'),
+        meta: {
+          order: 21,
+          icon: 'lucide:file',
+          title: 'YAML任务管理',
+        },
+      },
     ],
   },
 ];

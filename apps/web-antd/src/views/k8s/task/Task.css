@@ -1,0 +1,501 @@
+/* Task 页面特有样式 */
+
+.task-table {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 任务变量显示样式 */
+.task-variables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  max-width: 200px;
+}
+
+.variable-tag {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 4px;
+  padding: 2px 6px;
+  transition: all 0.2s ease;
+}
+
+/* 执行结果预览样式 */
+.apply-result-preview {
+  max-width: 250px;
+  max-height: 80px;
+  overflow: hidden;
+}
+
+.result-preview {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #333;
+  background: #f0f9ff;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #e0f2fe;
+  white-space: pre;
+  word-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
+}
+
+/* 执行结果详情样式 */
+.apply-result-detail {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #333;
+  background: #f0f9ff;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e0f2fe;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
+}
+
+/* 时间显示样式 */
+.task-time {
+  font-size: 13px;
+  color: #666;
+  font-weight: 400;
+}
+
+/* 任务变量配置样式 */
+.task-variables-config {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fafafa;
+  min-height: 80px;
+}
+
+.variable-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
+}
+
+.variable-input-row:hover {
+  border-color: #d9d9d9;
+}
+
+.variable-input-row:last-child {
+  margin-bottom: 0;
+}
+
+.variable-input-row .ant-btn {
+  height: 36px;
+  border-radius: 6px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.variable-input-row .k8s-form-input {
+  flex: 1;
+  height: 36px;
+}
+
+/* 任务信息显示样式 */
+.task-info-display {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.info-label {
+  font-weight: 600;
+  color: #555;
+  min-width: 80px;
+  margin-right: 16px;
+}
+
+.info-value {
+  color: #262626;
+  font-weight: 400;
+  flex: 1;
+}
+
+.info-variables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* 任务状态特定样式 */
+.task-table .ant-badge-status-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.task-table .ant-badge-status-processing .ant-badge-status-dot {
+  animation: task-processing 1.2s infinite ease-in-out;
+}
+
+@keyframes task-processing {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+}
+
+/* 任务表格特定样式 */
+.task-table .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+  color: #262626;
+  border-bottom: 1px solid #e8e8e8;
+  text-align: left;
+}
+
+.task-table .ant-table-tbody > tr:hover > td {
+  background: #f5f5f5;
+}
+
+.task-table .ant-table-tbody > tr > td {
+  padding: 12px 16px;
+  vertical-align: top;
+}
+
+/* 任务操作按钮特殊样式 */
+.task-table .k8s-action-column .ant-btn[title*="执行"] {
+  background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
+  border-color: #52c41a;
+  color: #2e7d32;
+}
+
+.task-table .k8s-action-column .ant-btn[title*="执行"]:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d4edda 0%, #dcedc8 100%);
+  border-color: #389e0d;
+  color: #1b5e20;
+  box-shadow: 0 6px 16px rgba(82, 196, 26, 0.25);
+}
+
+.task-table .k8s-action-column .ant-btn[title*="执行"]:disabled {
+  background: #f5f5f5 !important;
+  border-color: #e8e8e8 !important;
+  color: #bfbfbf !important;
+}
+
+/* 批量操作按钮特殊样式 */
+.k8s-toolbar .k8s-action-buttons .ant-btn[title*="执行"] {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  border: none;
+  color: #ffffff;
+}
+
+.k8s-toolbar .k8s-action-buttons .ant-btn[title*="执行"]:hover {
+  background: linear-gradient(135deg, #73d13d 0%, #95de64 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
+}
+
+/* 模板选择器特殊样式 */
+.k8s-filter-select[aria-placeholder*="模板"] {
+  background: #f0f7ff;
+  border-color: #bae0ff;
+}
+
+.k8s-filter-select[aria-placeholder*="模板"]:hover {
+  background: #e6f4ff;
+  border-color: #91caff;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .task-variables {
+    max-width: 150px;
+  }
+  
+  .variable-tag {
+    font-size: 11px;
+    max-width: 80px;
+  }
+  
+  .apply-result-preview {
+    max-width: 200px;
+    max-height: 60px;
+  }
+  
+  .result-preview {
+    font-size: 10px;
+    padding: 4px;
+  }
+  
+  .apply-result-detail {
+    font-size: 11px;
+    padding: 12px;
+    max-height: 250px;
+  }
+  
+  .task-time {
+    font-size: 12px;
+  }
+  
+  .task-variables-config {
+    padding: 12px;
+  }
+  
+  .variable-input-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .info-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .info-label {
+    min-width: auto;
+    margin-right: 0;
+    margin-bottom: 4px;
+  }
+}
+
+@media (max-width: 576px) {
+  .task-variables {
+    max-width: 120px;
+  }
+  
+  .variable-tag {
+    font-size: 10px;
+    max-width: 60px;
+  }
+  
+  .apply-result-preview {
+    max-width: 150px;
+    max-height: 50px;
+  }
+  
+  .result-preview {
+    font-size: 9px;
+    padding: 3px;
+  }
+  
+  .task-info-display {
+    padding: 12px;
+  }
+  
+  .variable-input-row .k8s-form-input {
+    height: 32px;
+  }
+  
+  .variable-input-row .ant-btn {
+    height: 32px;
+    min-width: 32px;
+  }
+}
+
+/* 空状态优化 */
+.task-table .k8s-empty-state {
+  padding: 80px 0;
+}
+
+.task-table .k8s-empty-state .anticon {
+  font-size: 64px;
+  color: #e0e0e0;
+  margin-bottom: 24px;
+}
+
+.task-table .k8s-empty-state p:first-of-type {
+  font-size: 16px;
+  font-weight: 500;
+  color: #666;
+}
+
+.task-table .k8s-empty-state p:last-of-type {
+  font-size: 14px;
+  color: #999;
+}
+
+/* 加载状态优化 */
+.task-table .ant-btn.ant-btn-loading .anticon {
+  animation: task-spin 1s linear infinite;
+}
+
+@keyframes task-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 任务状态徽章样式优化 */
+.ant-badge-status-success {
+  background-color: #52c41a;
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2);
+}
+
+.ant-badge-status-processing {
+  background-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
+}
+
+.ant-badge-status-error {
+  background-color: #ff4d4f;
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+}
+
+.ant-badge-status-warning {
+  background-color: #faad14;
+  box-shadow: 0 0 0 2px rgba(250, 173, 20, 0.2);
+}
+
+.ant-badge-status-default {
+  background-color: #d9d9d9;
+  box-shadow: 0 0 0 2px rgba(217, 217, 217, 0.2);
+}
+
+/* 任务创建/编辑表单优化 */
+.k8s-form .ant-form-item-label > label[title*="模板"] {
+  font-weight: 600;
+  color: #1677ff;
+}
+
+.k8s-form .ant-form-item-label > label[title*="变量"] {
+  font-weight: 600;
+  color: #52c41a;
+}
+
+.k8s-form .ant-form-item[class*="name"] .ant-input:focus {
+  border-color: #722ed1;
+  box-shadow: 0 0 0 2px rgba(114, 46, 209, 0.1);
+}
+
+.k8s-form .ant-form-item[class*="template"] .ant-select:focus .ant-select-selector {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+/* 详情模态框优化 */
+.k8s-detail-content .k8s-detail-item {
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.k8s-detail-content .k8s-detail-item:last-child {
+  border-bottom: none;
+}
+
+.k8s-detail-content .k8s-detail-label {
+  font-weight: 600;
+  color: #555;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+}
+
+.k8s-detail-content .k8s-detail-value {
+  color: #262626;
+  font-weight: 400;
+  word-break: break-all;
+  text-align: right;
+}
+
+/* 执行模态框特殊样式 */
+.ant-modal .task-info-display {
+  margin-top: 8px;
+}
+
+/* 滚动条样式 */
+.apply-result-detail::-webkit-scrollbar {
+  width: 6px;
+}
+
+.apply-result-detail::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.apply-result-detail::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+.apply-result-detail::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+/* 成功和错误状态优化 */
+.ant-message .ant-message-notice-content .ant-message-custom-content.ant-message-success {
+  color: #52c41a;
+}
+
+.ant-message .ant-message-notice-content .ant-message-custom-content.ant-message-error {
+  color: #ff4d4f;
+}
+
+.ant-message .ant-message-notice-content .ant-message-custom-content.ant-message-info {
+  color: #1677ff;
+}
+
+/* 打印样式 */
+@media print {
+  .task-variables-config,
+  .task-info-display {
+    border: 1px solid #ddd;
+    background: white;
+  }
+  
+  .apply-result-detail {
+    border: 1px solid #ddd;
+    background: white;
+    color: black;
+  }
+  
+  .task-time {
+    color: black;
+  }
+  
+  .variable-tag {
+    border: 1px solid #ddd;
+    background: white;
+    color: black;
+  }
+}

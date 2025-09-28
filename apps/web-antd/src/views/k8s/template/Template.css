@@ -1,0 +1,373 @@
+/* Template 页面特有样式 */
+
+.template-table {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* YAML 内容预览样式 */
+.yaml-content-preview {
+  max-width: 300px;
+  max-height: 80px;
+  overflow: hidden;
+}
+
+.yaml-preview {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #333;
+  background: #f8f9fa;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  white-space: pre;
+  word-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
+}
+
+/* 时间显示样式 */
+.template-time {
+  font-size: 13px;
+  color: #666;
+  font-weight: 400;
+}
+
+/* YAML 详情内容样式 */
+.yaml-content-detail {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #333;
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 0;
+}
+
+/* YAML 查看模态框样式 */
+.yaml-view-modal {
+  max-height: 70vh;
+}
+
+.yaml-actions {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* YAML 表单操作按钮样式 */
+.yaml-form-actions {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+}
+
+.yaml-form-actions .ant-btn {
+  height: 36px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.yaml-form-actions .ant-btn-dashed {
+  border-color: #1677ff;
+  color: #1677ff;
+  background: #f0f7ff;
+}
+
+.yaml-form-actions .ant-btn-dashed:hover {
+  border-color: #4096ff;
+  color: #4096ff;
+  background: #e6f4ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(22, 119, 255, 0.15);
+}
+
+.yaml-form-actions .ant-btn-dashed:disabled {
+  border-color: #d9d9d9;
+  color: #bfbfbf;
+  background: #f5f5f5;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 模板表格特定样式 */
+.template-table .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+  color: #262626;
+  border-bottom: 1px solid #e8e8e8;
+  text-align: left;
+}
+
+.template-table .ant-table-tbody > tr:hover > td {
+  background: #f5f5f5;
+}
+
+.template-table .ant-table-tbody > tr > td {
+  padding: 12px 16px;
+  vertical-align: top;
+}
+
+/* 模板卡片样式优化 */
+.template-table .k8s-detail-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.template-table .k8s-detail-card .ant-card-head {
+  background: #fafafa;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.template-table .k8s-detail-card .ant-card-body {
+  padding: 16px;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .yaml-content-preview {
+    max-width: 200px;
+    max-height: 60px;
+  }
+  
+  .yaml-preview {
+    font-size: 11px;
+    padding: 6px;
+  }
+  
+  .yaml-content-detail {
+    font-size: 11px;
+    padding: 12px;
+    max-height: 300px;
+  }
+  
+  .template-time {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  .yaml-content-preview {
+    max-width: 150px;
+    max-height: 50px;
+  }
+  
+  .yaml-preview {
+    font-size: 10px;
+    padding: 4px;
+  }
+  
+  .yaml-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .yaml-form-actions .ant-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* 模板操作按钮特殊样式 */
+.template-table .k8s-action-column .ant-btn[title*="检查"] {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-color: #0ea5e9;
+  color: #0369a1;
+}
+
+.template-table .k8s-action-column .ant-btn[title*="检查"]:hover {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  border-color: #0284c7;
+  color: #0c4a6e;
+  box-shadow: 0 6px 16px rgba(14, 165, 233, 0.25);
+}
+
+.template-table .k8s-action-column .ant-btn[title*="应用"] {
+  background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
+  border-color: #52c41a;
+  color: #2e7d32;
+}
+
+.template-table .k8s-action-column .ant-btn[title*="应用"]:hover {
+  background: linear-gradient(135deg, #d4edda 0%, #dcedc8 100%);
+  border-color: #389e0d;
+  color: #1b5e20;
+  box-shadow: 0 6px 16px rgba(82, 196, 26, 0.25);
+}
+
+/* 加载状态优化 */
+.template-table .ant-btn.ant-btn-loading .anticon {
+  animation: template-spin 1s linear infinite;
+}
+
+@keyframes template-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 模板创建/编辑表单优化 */
+.k8s-form .ant-form-item-label > label[title*="YAML"] {
+  font-weight: 600;
+  color: #1677ff;
+}
+
+.k8s-form .ant-form-item[class*="name"] .ant-input:focus {
+  border-color: #52c41a;
+  box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.1);
+}
+
+.k8s-form .ant-form-item[class*="content"] .ant-input:focus,
+.k8s-form .ant-form-item[class*="content"] .k8s-config-textarea:focus-within {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+/* 空状态优化 */
+.template-table .k8s-empty-state {
+  padding: 80px 0;
+}
+
+.template-table .k8s-empty-state .anticon {
+  font-size: 64px;
+  color: #e0e0e0;
+  margin-bottom: 24px;
+}
+
+.template-table .k8s-empty-state p:first-of-type {
+  font-size: 16px;
+  font-weight: 500;
+  color: #666;
+}
+
+.template-table .k8s-empty-state p:last-of-type {
+  font-size: 14px;
+  color: #999;
+}
+
+/* YAML查看模态框按钮样式 */
+.yaml-actions .ant-btn[title*="复制"] {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.yaml-actions .ant-btn[title*="复制"]:hover {
+  background: #f0f7ff;
+  border-color: #1677ff;
+  color: #1677ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.15);
+}
+
+.yaml-actions .ant-btn[title*="预检查"] {
+  background: #fff7e6;
+  border-color: #ffd591;
+  color: #d46b08;
+}
+
+.yaml-actions .ant-btn[title*="预检查"]:hover {
+  background: #ffe7ba;
+  border-color: #ffc53d;
+  color: #ad4e00;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(250, 173, 20, 0.15);
+}
+
+.yaml-actions .ant-btn[title*="直接应用"] {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #389e0d;
+}
+
+.yaml-actions .ant-btn[title*="直接应用"]:hover {
+  background: #d9f7be;
+  border-color: #95de64;
+  color: #237804;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(82, 196, 26, 0.15);
+}
+
+/* 详情模态框优化 */
+.k8s-detail-content .k8s-detail-item {
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.k8s-detail-content .k8s-detail-item:last-child {
+  border-bottom: none;
+}
+
+.k8s-detail-content .k8s-detail-label {
+  font-weight: 600;
+  color: #555;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+}
+
+.k8s-detail-content .k8s-detail-value {
+  color: #262626;
+  font-weight: 400;
+  word-break: break-all;
+  text-align: right;
+}
+
+/* 成功和错误状态优化 */
+.ant-message .ant-message-notice-content .ant-message-custom-content.ant-message-success {
+  color: #52c41a;
+}
+
+.ant-message .ant-message-notice-content .ant-message-custom-content.ant-message-error {
+  color: #ff4d4f;
+}
+
+/* 滚动条样式 */
+.yaml-content-detail::-webkit-scrollbar {
+  width: 6px;
+}
+
+.yaml-content-detail::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.yaml-content-detail::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+.yaml-content-detail::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+/* 打印样式 */
+@media print {
+  .yaml-form-actions,
+  .yaml-actions {
+    display: none !important;
+  }
+  
+  .yaml-content-detail {
+    border: 1px solid #ddd;
+    background: white;
+    color: black;
+  }
+  
+  .template-time {
+    color: black;
+  }
+}
