@@ -42,11 +42,11 @@
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
-            <a-select-option :value="Env.Prod">🏭 生产</a-select-option>
-            <a-select-option :value="Env.Dev">🛠️ 开发</a-select-option>
-            <a-select-option :value="Env.Stage">🚀 预发</a-select-option>
-            <a-select-option :value="Env.Rc">🧪 测试</a-select-option>
-            <a-select-option :value="Env.Press">🎯 灰度</a-select-option>
+            <a-select-option :value="Env.Prod">生产环境</a-select-option>
+            <a-select-option :value="Env.Dev">开发环境</a-select-option>
+            <a-select-option :value="Env.Stage">预发环境</a-select-option>
+            <a-select-option :value="Env.Rc">测试环境</a-select-option>
+            <a-select-option :value="Env.Press">灰度环境</a-select-option>
           </a-select>
           
           <a-select 
@@ -57,16 +57,16 @@
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
-            <a-select-option :value="ClusterStatus.Running">✅ 运行中</a-select-option>
-            <a-select-option :value="ClusterStatus.Stopped">⏹️ 已停止</a-select-option>
-            <a-select-option :value="ClusterStatus.Error">❌ 异常</a-select-option>
+            <a-select-option :value="ClusterStatus.Running">运行中</a-select-option>
+            <a-select-option :value="ClusterStatus.Stopped">已停止</a-select-option>
+            <a-select-option :value="ClusterStatus.Error">异常</a-select-option>
           </a-select>
         </div>
         
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
-            placeholder="🔍 搜索集群名称、API地址等" 
+            placeholder="搜索集群名称、API地址等" 
             class="k8s-search-input" 
             @pressEnter="onSearch"
             @input="onSearchInput"
@@ -139,70 +139,112 @@
         class="k8s-table cluster-table"
         :scroll="{ x: 1400 }"
       >
-        <template #env="{ text }">
-          <a-tag color="blue">{{ getEnvText(text) }}</a-tag>
-        </template>
-
-        <template #status="{ text }">
-          <a-badge :status="text === ClusterStatus.Running ? 'success' : text === ClusterStatus.Error ? 'error' : 'default'" :text="getStatusText(text)" />
-        </template>
-
-        <template #tags="{ text }">
-          <div class="k8s-labels-display">
-            <a-tooltip v-for="tag in (text || []).slice(0, 3)" :key="tag.key" :title="`${tag.key}: ${tag.value}`">
-              <a-tag class="k8s-label-item">
-                {{ tag.key }}: {{ tag.value }}
-              </a-tag>
-            </a-tooltip>
-            <a-tooltip v-if="(text || []).length > 3" :title="(text || []).map((tag: any) => `${tag.key}: ${tag.value}`).join('\n')">
-              <a-tag class="k8s-label-item">
-                {{ (text || []).length }} 个标签
-              </a-tag>
-            </a-tooltip>
-            <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
-          </div>
-        </template>
-
-        <template #kubeconfig="{ record }">
-          <div class="cluster-kubeconfig-column">
-            <a-button 
-              type="link" 
-              size="small" 
-              @click="showKubeConfigModal(record)"
-              :disabled="!record.kube_config_content"
-              style="color: #1677ff; font-weight: 500; transition: all 0.3s ease;"
-            >
-              <template #icon><FileTextOutlined /></template>
-              {{ record.kube_config_content ? '查看配置' : '暂无配置' }}
-            </a-button>
-          </div>
-        </template>
-
-        <template #actions="{ record }">
-          <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
-              <a-button title="查看详情" @click="showClusterDetail(record)">
-                <template #icon><EyeOutlined /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="编辑集群">
-              <a-button title="编辑" @click="openEdit(record)">
-                <template #icon><EditOutlined /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="删除集群">
-              <a-popconfirm title="确定要删除该集群吗?" @confirm="confirmDelete(record)" ok-text="确定" cancel-text="取消">
-                <a-button title="删除" danger>
-                  <template #icon><DeleteOutlined /></template>
+        <template #bodyCell="{ column, text, record }">
+          <template v-if="column.key === 'env'">
+            <a-tag color="blue">{{ getEnvText(text) }}</a-tag>
+          </template>
+          
+          <template v-else-if="column.key === 'status'">
+            <a-badge :status="text === ClusterStatus.Running ? 'success' : text === ClusterStatus.Error ? 'error' : 'default'" :text="getStatusText(text)" />
+          </template>
+          
+          <template v-else-if="column.key === 'tags'">
+            <div class="k8s-labels-display">
+              <a-tooltip v-for="tag in (text || []).slice(0, 3)" :key="tag.key" :title="`${tag.key}: ${tag.value}`">
+                <a-tag class="k8s-label-item">
+                  {{ tag.key }}: {{ tag.value }}
+                </a-tag>
+              </a-tooltip>
+              <a-tooltip v-if="(text || []).length > 3" :title="(text || []).map((tag: any) => `${tag.key}: ${tag.value}`).join('\n')">
+                <a-tag class="k8s-label-item">
+                  {{ (text || []).length }} 个标签
+                </a-tag>
+              </a-tooltip>
+              <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
+            </div>
+          </template>
+          
+          <template v-else-if="column.key === 'kubeconfig'">
+            <div class="cluster-kubeconfig-column">
+              <!-- 始终显示有配置状态，因为列表接口可能不返回完整内容 -->
+              <div class="kubeconfig-preview-container">
+                <!-- 配置状态和信息 -->
+                <div class="kubeconfig-status-info">
+                  <a-tag color="green" size="small">
+                    <template #icon><FileTextOutlined /></template>
+                    有配置
+                  </a-tag>
+                  <span v-if="record.kube_config_content" class="config-length-info">
+                    {{ Math.ceil((record.kube_config_content?.length || 0) / 1024) }}KB
+                  </span>
+                </div>
+                
+                <!-- 配置预览 - 可点击 -->
+                <div 
+                  v-if="record.kube_config_content" 
+                  class="kubeconfig-preview-content kubeconfig-clickable"
+                  @click.stop="showKubeConfigModal(record)"
+                  title="点击查看完整配置"
+                >
+                  <a-tooltip placement="topLeft" overlayClassName="kubeconfig-tooltip">
+                    <template #title>
+                      <div class="kubeconfig-tooltip-content">
+                        <div class="tooltip-header">KubeConfig 预览：</div>
+                        <pre class="tooltip-config-content">{{ (record.kube_config_content || '').substring(0, 500) }}{{ (record.kube_config_content || '').length > 500 ? '\n...' : '' }}</pre>
+                      </div>
+                    </template>
+                    <div class="config-preview-text">
+                      {{ getKubeConfigPreview(record.kube_config_content) }}
+                    </div>
+                  </a-tooltip>
+                </div>
+                
+                <!-- 如果没有详细内容，显示简化信息 - 可点击 -->
+                <div 
+                  v-else 
+                  class="kubeconfig-preview-content kubeconfig-clickable"
+                  @click.stop="showKubeConfigModal(record)"
+                  title="点击查看完整配置"
+                >
+                  <div class="config-preview-text">
+                    集群: {{ record.name }} (点击查看完整配置)
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+          
+          <template v-else-if="column.key === 'actions'">
+            <div class="k8s-action-column">
+              <a-tooltip title="查看详情">
+                <a-button title="查看详情" @click="showClusterDetail(record)">
+                  <template #icon><EyeOutlined /></template>
                 </a-button>
-              </a-popconfirm>
-            </a-tooltip>
-            <a-tooltip title="刷新集群">
-              <a-button title="刷新" @click="refreshCluster(record.id!)">
-                <template #icon><ReloadOutlined /></template>
-              </a-button>
-            </a-tooltip>
-          </div>
+              </a-tooltip>
+              <a-tooltip title="编辑集群">
+                <a-button title="编辑" @click="openEdit(record)">
+                  <template #icon><EditOutlined /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="删除集群">
+                <a-popconfirm 
+                  title="确定要删除该集群吗?" 
+                  @confirm="confirmDelete(record)" 
+                  ok-text="确定" 
+                  cancel-text="取消"
+                >
+                  <a-button title="删除" danger>
+                    <template #icon><DeleteOutlined /></template>
+                  </a-button>
+                </a-popconfirm>
+              </a-tooltip>
+              <a-tooltip title="刷新集群">
+                <a-button title="刷新" @click="refreshCluster(record.id!)">
+                  <template #icon><ReloadOutlined /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+          </template>
         </template>
 
         <template #emptyText>
@@ -223,6 +265,7 @@
       :confirmLoading="submitLoading"
       width="800px"
       :maskClosable="false"
+      :keyboard="false"
       destroyOnClose
       okText="保存"
       cancelText="取消"
@@ -254,11 +297,11 @@
                 allow-clear 
                 class="form-input"
               >
-                <a-select-option :value="Env.Prod">🏭 生产环境</a-select-option>
-                <a-select-option :value="Env.Dev">🛠️ 开发环境</a-select-option>
-                <a-select-option :value="Env.Stage">🚀 预发环境</a-select-option>
-                <a-select-option :value="Env.Rc">🧪 测试环境</a-select-option>
-                <a-select-option :value="Env.Press">🎯 灰度环境</a-select-option>
+                <a-select-option :value="Env.Prod">生产环境</a-select-option>
+                <a-select-option :value="Env.Dev">开发环境</a-select-option>
+                <a-select-option :value="Env.Stage">预发环境</a-select-option>
+                <a-select-option :value="Env.Rc">测试环境</a-select-option>
+                <a-select-option :value="Env.Press">灰度环境</a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
@@ -288,8 +331,16 @@
         </a-row>
 
         <a-divider orientation="left">
-          <span style="color: #666; font-size: 14px;">💾 资源配置</span>
+          <span style="color: #666; font-size: 14px;">资源配置</span>
         </a-divider>
+        
+        <a-alert
+          message="危险操作警告"
+          description="修改资源配置可能影响集群性能和稳定性，请谨慎操作。生产环境建议经过充分测试后再进行调整。"
+          type="warning"
+          show-icon
+          style="margin-bottom: 16px;"
+        />
 
         <a-row :gutter="16">
           <a-col :span="12">
@@ -354,20 +405,25 @@
         </a-row>
 
         <a-divider orientation="left">
-          <span style="color: #666; font-size: 14px;">🔐 配置信息</span>
+          <span style="color: #666; font-size: 14px;">配置信息</span>
         </a-divider>
 
         <a-form-item label="KubeConfig 内容" name="kube_config_content">
-          <a-textarea 
-            v-model:value="formModel.kube_config_content" 
-            :rows="6" 
-            placeholder="请粘贴完整的 kubeconfig 内容..."
-            class="form-input"
-            :maxlength="10000"
-            show-count
-          />
+          <a-spin :spinning="editDetailLoading && isEdit" tip="正在获取完整的KubeConfig内容...">
+            <a-textarea 
+              v-model:value="formModel.kube_config_content" 
+              :rows="6" 
+              placeholder="请粘贴完整的 kubeconfig 内容..."
+              class="form-input"
+              :maxlength="10000"
+              show-count
+            />
+          </a-spin>
           <div style="color: #999; font-size: 12px; margin-top: 4px;">
-            💡 提示：请确保 kubeconfig 内容格式正确且具有足够的权限
+            提示：请确保 kubeconfig 内容格式正确且具有足够的权限
+            <span v-if="editDetailLoading && isEdit" style="color: #1890ff;">
+              <br/>正在从服务器获取完整的配置信息...
+            </span>
           </div>
         </a-form-item>
 
@@ -382,6 +438,14 @@
           <div style="color: #999; font-size: 12px; margin-top: 4px;">
             可限制该集群只能操作指定的命名空间，留空表示无限制
           </div>
+          <a-alert
+            message="重要提醒"
+            description="修改命名空间限制会影响集群的访问权限范围，请确认操作的安全性。"
+            type="info"
+            show-icon
+            style="margin-top: 8px;"
+            v-if="isEdit"
+          />
         </a-form-item>
 
         <a-form-item label="标签配置" name="tags">
@@ -389,24 +453,26 @@
             <div v-if="!formModel.tags || formModel.tags.length === 0" style="text-align: center; color: #999; padding: 20px;">
               暂无标签，点击下方按钮添加
             </div>
-            <div v-for="(tag, idx) in (formModel.tags || [])" :key="idx" class="key-value-row">
-              <a-input 
-                v-model:value="tag.key" 
-                placeholder="标签键" 
-                class="form-input"
-                :maxlength="50"
-              />
-              <a-input 
-                v-model:value="tag.value" 
-                placeholder="标签值" 
-                class="form-input"
-                :maxlength="200"
-              />
-              <a-button type="text" danger @click="removeTag(idx)">
-                <template #icon><DeleteOutlined /></template>
-                删除
-              </a-button>
-            </div>
+            <a-form-item-rest>
+              <div v-for="(tag, idx) in (formModel.tags || [])" :key="idx" class="key-value-row">
+                <a-input 
+                  v-model:value="tag.key" 
+                  placeholder="标签键" 
+                  class="form-input"
+                  :maxlength="50"
+                />
+                <a-input 
+                  v-model:value="tag.value" 
+                  placeholder="标签值" 
+                  class="form-input"
+                  :maxlength="200"
+                />
+                <a-button type="text" danger @click="removeTag(idx)">
+                  <template #icon><DeleteOutlined /></template>
+                  删除
+                </a-button>
+              </div>
+            </a-form-item-rest>
             <a-button type="dashed" @click="addTag" block style="margin-top: 12px;">
               <template #icon><PlusOutlined /></template>
               添加标签
@@ -629,13 +695,15 @@
         </div>
         <a-divider style="margin: 16px 0;" />
         <div class="kubeconfig-content">
-          <a-textarea 
-            :value="currentKubeConfigCluster?.kube_config_content || '暂无配置内容'" 
-            :rows="20" 
-            readonly 
-            class="kubeconfig-textarea"
-            placeholder="暂无 KubeConfig 配置内容"
-          />
+          <a-spin :spinning="kubeConfigLoading" tip="正在获取完整的KubeConfig内容...">
+            <a-textarea 
+              :value="currentKubeConfigCluster?.kube_config_content || '暂无配置内容'" 
+              :rows="20" 
+              readonly 
+              class="kubeconfig-textarea"
+              placeholder="暂无 KubeConfig 配置内容"
+            />
+          </a-spin>
         </div>
       </div>
     </a-modal>
@@ -672,6 +740,7 @@ const {
   isModalVisible,
   isEdit,
   submitLoading,
+  editDetailLoading,
   formModel,
   formRules,
   formRef,
@@ -699,6 +768,7 @@ const {
   closeDetailModal,
   // kubeconfig modal
   isKubeConfigModalVisible,
+  kubeConfigLoading,
   currentKubeConfigCluster,
   showKubeConfigModal,
   closeKubeConfigModal,
@@ -713,6 +783,8 @@ const {
   onSearch,
   onSearchInput,
   total,
+  // kubeconfig preview
+  getKubeConfigPreview,
 } = useClusterPage();
 
 const handleFilterChange = () => {
@@ -728,16 +800,16 @@ const handleTableChange = (pagination: { current?: number; pageSize?: number }) 
 
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '12%' },
-  { title: '环境', dataIndex: 'env', key: 'env', width: '8%', slots: { customRender: 'env' } },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', slots: { customRender: 'status' } },
-  { title: 'API 地址', dataIndex: 'api_server_addr', key: 'api_server_addr', width: '18%', ellipsis: true },
-  { title: '版本', dataIndex: 'version', key: 'version', width: '8%' },
-  { title: 'KubeConfig', key: 'kubeconfig', width: '10%', slots: { customRender: 'kubeconfig' } },
-  { title: '创建者', dataIndex: 'create_user_name', key: 'create_user_name', width: '10%' },
-  { title: '标签', dataIndex: 'tags', key: 'tags', width: '10%', slots: { customRender: 'tags' } },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: '10%' },
-  { title: '操作', key: 'actions', width: '16%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: '10%' },
+  { title: '环境', dataIndex: 'env', key: 'env', width: '7%' },
+  { title: '状态', dataIndex: 'status', key: 'status', width: '7%' },
+  { title: 'API 地址', dataIndex: 'api_server_addr', key: 'api_server_addr', width: '15%', ellipsis: true },
+  { title: '版本', dataIndex: 'version', key: 'version', width: '7%' },
+  { title: 'KubeConfig', key: 'kubeconfig', width: '18%' },
+  { title: '创建者', dataIndex: 'create_user_name', key: 'create_user_name', width: '8%' },
+  { title: '标签', dataIndex: 'tags', key: 'tags', width: '8%' },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: '8%' },
+  { title: '操作', key: 'actions', width: '12%', fixed: 'right' },
 ];
 
 onMounted(async () => {

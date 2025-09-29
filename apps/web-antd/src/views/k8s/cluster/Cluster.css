@@ -209,6 +209,107 @@
   padding: 0 12px;
 }
 
+/* KubeConfig 预览容器样式 */
+.kubeconfig-preview-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.kubeconfig-status-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.config-length-info {
+  font-size: 11px;
+  color: #666;
+  background: #f0f0f0;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.kubeconfig-preview-content {
+  flex: 1;
+}
+
+.kubeconfig-clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  padding: 2px;
+}
+
+.kubeconfig-clickable:hover {
+  background: #f0f9ff;
+}
+
+.config-preview-text {
+  font-size: 12px;
+  color: #333;
+  line-height: 1.4;
+  background: #fafafa;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+  word-break: break-all;
+  max-height: 40px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.kubeconfig-clickable .config-preview-text {
+  cursor: pointer;
+}
+
+.kubeconfig-clickable:hover .config-preview-text {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+}
+
+.kubeconfig-empty-state {
+  display: flex;
+  align-items: center;
+  color: #999;
+}
+
+/* KubeConfig Tooltip 样式 */
+
+.kubeconfig-tooltip-content {
+  font-size: 12px;
+}
+
+.tooltip-header {
+  font-weight: 600;
+  color: #1677ff;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.tooltip-config-content {
+  background: #f6f8fa;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #e1e8ed;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #24292e;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
+}
+
 /* 响应式优化 */
 @media (max-width: 768px) {
   .k8s-detail-item {
@@ -256,3 +357,4 @@
   background: #c1c1c1;
   border-radius: 4px;
 }
+
