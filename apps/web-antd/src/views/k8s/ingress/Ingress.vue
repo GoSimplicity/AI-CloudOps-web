@@ -469,13 +469,11 @@
                 :min="1"
                 :max="65535"
               />
-              <a-button 
-                type="text" 
-                danger 
+              <a-button type="text" danger 
                 @click="removeRuleField(index)" 
                 :disabled="createFormModel.rules.length <= 1"
                 size="small"
-              >
+               class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -506,7 +504,7 @@
                 style="flex: 2;"
               >
               </a-select>
-              <a-button type="text" danger @click="removeTlsField(index)" size="small">
+              <a-button type="text" danger @click="removeTlsField(index)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -535,7 +533,7 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeLabelField(key)" size="small">
+              <a-button type="text" danger @click="removeLabelField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -572,7 +570,7 @@
                 class="k8s-form-input"
                 :maxlength="500"
               />
-              <a-button type="text" danger @click="removeAnnotationField(key)" size="small">
+              <a-button type="text" danger @click="removeAnnotationField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -685,13 +683,11 @@
                 :min="1"
                 :max="65535"
               />
-              <a-button 
-                type="text" 
-                danger 
+              <a-button type="text" danger 
                 @click="removeEditRuleField(index)" 
                 :disabled="editFormModel.rules.length <= 1"
                 size="small"
-              >
+               class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -722,7 +718,7 @@
                 style="flex: 2;"
               >
               </a-select>
-              <a-button type="text" danger @click="removeEditTlsField(index)" size="small">
+              <a-button type="text" danger @click="removeEditTlsField(index)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -751,7 +747,7 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeEditLabelField(key)" size="small">
+              <a-button type="text" danger @click="removeEditLabelField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -788,7 +784,7 @@
                 class="k8s-form-input"
                 :maxlength="500"
               />
-              <a-button type="text" danger @click="removeEditAnnotationField(key)" size="small">
+              <a-button type="text" danger @click="removeEditAnnotationField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>

@@ -439,13 +439,11 @@
                 placeholder="容器镜像（例如：nginx:latest）" 
                 class="k8s-form-input"
               />
-              <a-button 
-                type="text" 
-                danger 
+              <a-button type="text" danger 
                 @click="removeImageField(index)" 
                 :disabled="createFormModel.images.length <= 1"
                 size="small"
-              >
+               class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -474,7 +472,7 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeLabelField(key)" size="small">
+              <a-button type="text" danger @click="removeLabelField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -511,7 +509,7 @@
                 class="k8s-form-input"
                 :maxlength="500"
               />
-              <a-button type="text" danger @click="removeAnnotationField(key)" size="small">
+              <a-button type="text" danger @click="removeAnnotationField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>

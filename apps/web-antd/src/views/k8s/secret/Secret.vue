@@ -383,8 +383,9 @@
         <!-- 字符串数据配置 -->
         <a-form-item label="字符串数据" name="string_data">
           <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.string_data || Object.keys(createFormModel.string_data).length === 0" style="text-align: center; color: #999; padding: 16px;">
-              暂无字符串数据，点击下方按钮添加
+            <div v-if="!createFormModel.string_data || Object.keys(createFormModel.string_data).length === 0" class="k8s-empty-state">
+              <div class="empty-icon">💾</div>
+              <div class="empty-text">暂无字符串数据，点击下方按钮添加</div>
             </div>
             <div v-for="(_, key) in createFormModel.string_data" :key="key" class="k8s-key-value-row">
               <a-input 
@@ -400,16 +401,17 @@
                 :rows="2"
                 :maxlength="10000"
               />
-              <a-button type="text" danger @click="removeStringDataField(key)" size="small">
+              <a-button type="text" danger @click="removeStringDataField(key)" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
-            <div class="add-input-row" style="margin-top: 8px;">
+            <div class="add-input-row" style="margin-top: 8px; display: flex; gap: 12px; align-items: center;">
               <a-input
                 v-model:value="newStringDataKey"
                 placeholder="输入数据键"
-                style="flex: 1; margin-right: 8px;"
+                style="flex: 1;"
                 @press-enter="addNewStringData"
+                class="k8s-form-input"
               />
               <a-button type="primary" @click="addNewStringData" :disabled="!newStringDataKey.trim()">
                 <template #icon><PlusOutlined /></template>
@@ -431,8 +433,9 @@
         <!-- 标签配置 -->
         <a-form-item label="标签配置（可选）" name="labels">
           <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 16px;">
-              暂无标签，点击下方按钮添加
+            <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" class="k8s-empty-state">
+              <div class="empty-icon">🏷️</div>
+              <div class="empty-text">暂无标签，点击下方按钮添加</div>
             </div>
             <div v-for="(_, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
               <a-input 
@@ -447,16 +450,17 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeLabelField(key)" size="small">
+              <a-button type="text" danger @click="removeLabelField(key)" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
-            <div class="add-input-row" style="margin-top: 8px;">
+            <div class="add-input-row" style="margin-top: 8px; display: flex; gap: 12px; align-items: center;">
               <a-input
                 v-model:value="newLabelKey"
                 placeholder="输入标签键"
-                style="flex: 1; margin-right: 8px;"
+                style="flex: 1;"
                 @press-enter="addNewLabel"
+                class="k8s-form-input"
               />
               <a-button type="primary" @click="addNewLabel" :disabled="!newLabelKey.trim()">
                 <template #icon><PlusOutlined /></template>
@@ -469,8 +473,9 @@
         <!-- 注解配置 -->
         <a-form-item label="注解配置（可选）" name="annotations">
           <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" style="text-align: center; color: #999; padding: 16px;">
-              暂无注解，点击下方按钮添加
+            <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" class="k8s-empty-state">
+              <div class="empty-icon">📝</div>
+              <div class="empty-text">暂无注解，点击下方按钮添加</div>
             </div>
             <div v-for="(_, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
               <a-input 
@@ -485,16 +490,17 @@
                 class="k8s-form-input"
                 :maxlength="500"
               />
-              <a-button type="text" danger @click="removeAnnotationField(key)" size="small">
+              <a-button type="text" danger @click="removeAnnotationField(key)" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
-            <div class="add-input-row" style="margin-top: 8px;">
+            <div class="add-input-row" style="margin-top: 8px; display: flex; gap: 12px; align-items: center;">
               <a-input
                 v-model:value="newAnnotationKey"
                 placeholder="输入注解键"
-                style="flex: 1; margin-right: 8px;"
+                style="flex: 1;"
                 @press-enter="addNewAnnotation"
+                class="k8s-form-input"
               />
               <a-button type="primary" @click="addNewAnnotation" :disabled="!newAnnotationKey.trim()">
                 <template #icon><PlusOutlined /></template>

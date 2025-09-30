@@ -449,31 +449,31 @@
         </a-form-item>
 
         <a-form-item label="标签配置" name="tags">
-          <div class="key-value-inputs">
-            <div v-if="!formModel.tags || formModel.tags.length === 0" style="text-align: center; color: #999; padding: 20px;">
-              暂无标签，点击下方按钮添加
+          <div class="k8s-key-value-inputs">
+            <div v-if="!formModel.tags || formModel.tags.length === 0" class="k8s-empty-state">
+              <div class="empty-icon">🏷️</div>
+              <div class="empty-text">暂无标签，点击下方按钮添加</div>
             </div>
             <a-form-item-rest>
-              <div v-for="(tag, idx) in (formModel.tags || [])" :key="idx" class="key-value-row">
+              <div v-for="(tag, idx) in (formModel.tags || [])" :key="idx" class="k8s-key-value-row">
                 <a-input 
                   v-model:value="tag.key" 
                   placeholder="标签键" 
-                  class="form-input"
+                  class="k8s-form-input"
                   :maxlength="50"
                 />
                 <a-input 
                   v-model:value="tag.value" 
                   placeholder="标签值" 
-                  class="form-input"
+                  class="k8s-form-input"
                   :maxlength="200"
                 />
-                <a-button type="text" danger @click="removeTag(idx)">
+                <a-button type="text" danger @click="removeTag(idx)" class="k8s-remove-btn">
                   <template #icon><DeleteOutlined /></template>
-                  删除
                 </a-button>
               </div>
             </a-form-item-rest>
-            <a-button type="dashed" @click="addTag" block style="margin-top: 12px;">
+            <a-button type="dashed" @click="addTag" block class="k8s-add-btn">
               <template #icon><PlusOutlined /></template>
               添加标签
             </a-button>

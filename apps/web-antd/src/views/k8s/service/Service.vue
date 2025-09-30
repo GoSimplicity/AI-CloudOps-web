@@ -464,13 +464,11 @@
                 :max="65535"
                 style="width: 100px;"
               />
-              <a-button 
-                type="text" 
-                danger 
+              <a-button type="text" danger 
                 @click="removePortField(index)" 
                 :disabled="createFormModel.ports.length <= 1"
                 size="small"
-              >
+               class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -499,7 +497,7 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeSelectorField(key)" size="small">
+              <a-button type="text" danger @click="removeSelectorField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -536,7 +534,7 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeLabelField(key)" size="small">
+              <a-button type="text" danger @click="removeLabelField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -573,7 +571,7 @@
                 class="k8s-form-input"
                 :maxlength="500"
               />
-              <a-button type="text" danger @click="removeAnnotationField(key)" size="small">
+              <a-button type="text" danger @click="removeAnnotationField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -686,13 +684,11 @@
                 :max="65535"
                 style="width: 100px;"
               />
-              <a-button 
-                type="text" 
-                danger 
+              <a-button type="text" danger 
                 @click="removeEditPortField(index)" 
                 :disabled="editFormModel.ports.length <= 1"
                 size="small"
-              >
+               class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -721,7 +717,7 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeEditSelectorField(key)" size="small">
+              <a-button type="text" danger @click="removeEditSelectorField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -758,7 +754,7 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeEditLabelField(key)" size="small">
+              <a-button type="text" danger @click="removeEditLabelField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -795,7 +791,7 @@
                 class="k8s-form-input"
                 :maxlength="500"
               />
-              <a-button type="text" danger @click="removeEditAnnotationField(key)" size="small">
+              <a-button type="text" danger @click="removeEditAnnotationField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>

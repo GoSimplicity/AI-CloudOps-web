@@ -418,14 +418,18 @@
 
         <a-form-item label="标签">
           <div class="k8s-key-value-inputs">
+            <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" class="k8s-empty-state">
+              <div class="empty-icon">🏷️</div>
+              <div class="empty-text">暂无标签，点击下方按钮添加</div>
+            </div>
             <div v-for="(value, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
               <a-input :value="key" placeholder="标签键" class="k8s-form-input" @change="(e: any) => { if(key !== e.target.value && e.target.value) { createFormModel.labels[e.target.value] = value; delete createFormModel.labels[key]; } }" />
               <a-input v-model:value="createFormModel.labels[key]" placeholder="标签值" class="k8s-form-input" />
-              <a-button type="link" danger @click="removeLabelItem(key, 'labels')">
+              <a-button type="text" danger @click="removeLabelItem(key, 'labels')" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
-            <a-button type="dashed" @click="addLabelItem('labels')" style="width: 100%;">
+            <a-button type="dashed" @click="addLabelItem('labels')" block class="k8s-add-btn">
               <template #icon><PlusOutlined /></template>
               添加标签
             </a-button>
@@ -434,14 +438,18 @@
 
         <a-form-item label="注解">
           <div class="k8s-key-value-inputs">
+            <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" class="k8s-empty-state">
+              <div class="empty-icon">📝</div>
+              <div class="empty-text">暂无注解，点击下方按钮添加</div>
+            </div>
             <div v-for="(value, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
               <a-input :value="key" placeholder="注解键" class="k8s-form-input" @change="(e: any) => { if(key !== e.target.value && e.target.value) { createFormModel.annotations[e.target.value] = value; delete createFormModel.annotations[key]; } }" />
               <a-input v-model:value="createFormModel.annotations[key]" placeholder="注解值" class="k8s-form-input" />
-              <a-button type="link" danger @click="removeLabelItem(key, 'annotations')">
+              <a-button type="text" danger @click="removeLabelItem(key, 'annotations')" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
-            <a-button type="dashed" @click="addLabelItem('annotations')" style="width: 100%;">
+            <a-button type="dashed" @click="addLabelItem('annotations')" block class="k8s-add-btn">
               <template #icon><PlusOutlined /></template>
               添加注解
             </a-button>

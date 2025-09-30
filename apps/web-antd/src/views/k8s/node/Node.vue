@@ -169,7 +169,7 @@
 
         <template #labels="{ text }">
           <div class="k8s-labels-display">
-            <a-tooltip v-for="(value, key) in Object.entries(text || {}).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
+            <a-tooltip v-for="[key, value] in Object.entries(text || {}).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
               <a-tag class="k8s-label-item">
                 {{ key }}: {{ value }}
               </a-tag>
@@ -288,7 +288,7 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeLabelField(key)">
+              <a-button type="text" danger @click="removeLabelField(key)" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
                 删除
               </a-button>
@@ -350,7 +350,7 @@
                 <a-select-option value="PreferNoSchedule">PreferNoSchedule</a-select-option>
                 <a-select-option value="NoExecute">NoExecute</a-select-option>
               </a-select>
-              <a-button type="text" danger @click="removeTaint(idx)">
+              <a-button type="text" danger @click="removeTaint(idx)" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
                 删除
               </a-button>

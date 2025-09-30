@@ -998,6 +998,216 @@
   background-color: #d9d9d9;
 }
 
+/* 键值对输入容器 - 简洁商务风格 */
+.k8s-key-value-inputs {
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 16px;
+  background: #fafafa;
+  min-height: 80px;
+}
+
+/* 键值对行样式 - 简洁设计 */
+.k8s-key-value-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+  transition: all 0.2s ease;
+}
+
+.k8s-key-value-row:hover {
+  border-color: #d9d9d9;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.k8s-key-value-row:last-child {
+  margin-bottom: 8px;
+}
+
+/* 表单输入框样式 - 商务风格 */
+.k8s-key-value-row .k8s-form-input {
+  flex: 1;
+  height: 36px;
+  border-radius: 4px;
+  border: 1px solid #d9d9d9;
+  background: #ffffff;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.k8s-key-value-row .k8s-form-input:focus {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+  outline: none;
+}
+
+.k8s-key-value-row .k8s-form-input:hover:not(:focus) {
+  border-color: #bfbfbf;
+}
+
+/* 删除按钮样式 - 简洁设计 */
+.k8s-remove-btn {
+  height: 36px;
+  width: 36px;
+  min-width: 36px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid #d9d9d9;
+  color: #999999;
+  transition: all 0.2s ease;
+}
+
+.k8s-remove-btn:hover {
+  background: #ff4d4f;
+  border-color: #ff4d4f;
+  color: #ffffff;
+}
+
+.k8s-remove-btn .anticon {
+  font-size: 14px;
+}
+
+/* 添加按钮样式 - 商务风格 */
+.k8s-add-btn {
+  height: 40px;
+  border-radius: 4px;
+  border: 1px dashed #d9d9d9;
+  background: #ffffff;
+  color: #666666;
+  font-weight: 400;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.k8s-add-btn:hover {
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+.k8s-add-btn .anticon {
+  font-size: 14px;
+}
+
+/* 空状态样式 - 简洁设计 */
+.k8s-key-value-inputs .k8s-empty-state {
+  text-align: center;
+  padding: 24px 16px;
+  color: #999999;
+  background: #ffffff;
+  border-radius: 4px;
+  border: 1px dashed #e8e8e8;
+  margin-bottom: 12px;
+}
+
+.k8s-empty-state .empty-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+.k8s-empty-state .empty-text {
+  font-size: 13px;
+  color: #999999;
+  line-height: 1.4;
+}
+
+/* 其他表单元素优化 */
+.k8s-form-input.ant-select {
+  height: 40px;
+}
+
+.k8s-form-input.ant-select :deep(.ant-select-selector) {
+  height: 40px !important;
+  border: none;
+  background: transparent;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 12px;
+}
+
+.k8s-form-input.ant-input-number {
+  width: 100%;
+  height: 40px;
+}
+
+.k8s-form-input.ant-input-number :deep(.ant-input-number-input) {
+  height: 38px;
+  padding: 0 12px;
+}
+
+/* 标签过滤器样式 */
+.labels-filter-form {
+  padding: 0;
+}
+
+.labels-filter-form .k8s-key-value-inputs {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.labels-filter-form .k8s-key-value-inputs::-webkit-scrollbar {
+  width: 6px;
+}
+
+.labels-filter-form .k8s-key-value-inputs::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.labels-filter-form .k8s-key-value-inputs::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+.labels-filter-form .k8s-key-value-inputs::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .k8s-key-value-row {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+  
+  .k8s-key-value-row .k8s-form-input {
+    width: 100%;
+  }
+  
+  .k8s-remove-btn {
+    width: 100%;
+    height: 36px;
+  }
+}
+
+@media (max-width: 576px) {
+  .k8s-key-value-inputs {
+    padding: 16px;
+  }
+  
+  .k8s-key-value-row {
+    padding: 12px;
+  }
+  
+  .k8s-empty-state .empty-icon {
+    font-size: 24px;
+  }
+}
+
 /* ==================== 模态框优化 ==================== */
 .ant-modal .ant-modal-content {
   border-radius: 8px;

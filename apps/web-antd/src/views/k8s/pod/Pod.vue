@@ -421,13 +421,11 @@
             <div v-for="(container, index) in createFormModel.containers" :key="index" class="container-config-item">
               <div class="container-header">
                 <span>容器 {{ index + 1 }}</span>
-                <a-button 
-                  type="text" 
-                  danger 
+                <a-button type="text" danger 
                   @click="removeContainerField(index)" 
                   :disabled="createFormModel.containers.length <= 1"
                   size="small"
-                >
+                 class="k8s-remove-btn">
                   <template #icon><DeleteOutlined /></template>
                 </a-button>
               </div>
@@ -460,7 +458,7 @@
                   <div v-for="(env, envIndex) in (container.envs || [])" :key="envIndex" class="env-var-row">
                     <a-input v-model:value="env.name" placeholder="环境变量名" style="width: 45%;" />
                     <a-input v-model:value="env.value" placeholder="环境变量值" style="width: 45%;" />
-                    <a-button type="text" danger @click="removeEnvField(index, envIndex)" size="small">
+                    <a-button type="text" danger @click="removeEnvField(index, envIndex)" size="small" class="k8s-remove-btn">
                       <template #icon><DeleteOutlined /></template>
                     </a-button>
                   </div>
@@ -481,7 +479,7 @@
                       <a-select-option value="TCP">TCP</a-select-option>
                       <a-select-option value="UDP">UDP</a-select-option>
                     </a-select>
-                    <a-button type="text" danger @click="removePortField(index, portIndex)" size="small">
+                    <a-button type="text" danger @click="removePortField(index, portIndex)" size="small" class="k8s-remove-btn">
                       <template #icon><DeleteOutlined /></template>
                     </a-button>
                   </div>
@@ -583,7 +581,7 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeLabelField(key)" size="small">
+              <a-button type="text" danger @click="removeLabelField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -621,7 +619,7 @@
                 class="k8s-form-input"
                 :maxlength="500"
               />
-              <a-button type="text" danger @click="removeAnnotationField(key)" size="small">
+              <a-button type="text" danger @click="removeAnnotationField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -924,7 +922,7 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeEditLabelField(key)" size="small">
+              <a-button type="text" danger @click="removeEditLabelField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -962,7 +960,7 @@
                 class="k8s-form-input"
                 :maxlength="500"
               />
-              <a-button type="text" danger @click="removeEditAnnotationField(key)" size="small">
+              <a-button type="text" danger @click="removeEditAnnotationField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -1218,7 +1216,7 @@
           <a-input-number v-model:value="port.local_port" placeholder="本地端口" :min="1" :max="65535" style="width: 40%;" />
           <span style="margin: 0 16px;">→</span>
           <a-input-number v-model:value="port.remote_port" placeholder="容器端口" :min="1" :max="65535" style="width: 40%;" />
-          <a-button type="text" danger @click="removePortForwardField(index)" :disabled="portForwardFormModel.ports.length <= 1" size="small">
+          <a-button type="text" danger @click="removePortForwardField(index)" :disabled="portForwardFormModel.ports.length <= 1" size="small" class="k8s-remove-btn">
             <template #icon><DeleteOutlined /></template>
           </a-button>
         </div>

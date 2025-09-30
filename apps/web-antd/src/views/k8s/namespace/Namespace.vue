@@ -309,7 +309,7 @@
                 class="form-input value-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeCreateLabelField(key)" size="small">
+              <a-button type="text" danger @click="removeCreateLabelField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -346,7 +346,7 @@
                 class="form-input value-input"
                 :maxlength="500"
               />
-              <a-button type="text" danger @click="removeCreateAnnotationField(key)" size="small">
+              <a-button type="text" danger @click="removeCreateAnnotationField(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -405,7 +405,7 @@
                 class="form-input value-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeLabelField(key)">
+              <a-button type="text" danger @click="removeLabelField(key)" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
                 删除
               </a-button>
@@ -443,7 +443,7 @@
                 class="form-input value-input"
                 :maxlength="500"
               />
-              <a-button type="text" danger @click="removeAnnotationField(key)">
+              <a-button type="text" danger @click="removeAnnotationField(key)" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
                 删除
               </a-button>
