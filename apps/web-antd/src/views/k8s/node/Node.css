@@ -272,7 +272,8 @@
 }
 
 /* 表单输入行样式 */
-.add-input-row {
+.add-input-row,
+.k8s-add-input-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -280,6 +281,24 @@
   background: #f8f9fa;
   border: 1px dashed #d9d9d9;
   border-radius: 6px;
+}
+
+/* 键值对输入行布局优化 */
+.k8s-key-value-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.k8s-key-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.k8s-value-input {
+  flex: 1;
+  min-width: 0;
 }
 
 /* 滚动条样式 */

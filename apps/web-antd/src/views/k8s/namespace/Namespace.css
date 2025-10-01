@@ -47,13 +47,14 @@
   font-weight: 600;
 }
 
-/* 标签和注解显示 - 统一为 node 页面的样式 */
+/* 标签和注解显示 - 统一样式 */
 .k8s-labels-display,
 .k8s-annotations-display {
   min-height: 30px;
 }
 
-.k8s-labels-display .k8s-label-item {
+.k8s-labels-display .k8s-label-item,
+.k8s-annotations-display .k8s-annotation-item {
   background: #e6f7ff;
   border: 1px solid #91d5ff;
   color: #1677ff;
@@ -83,29 +84,7 @@
   font-weight: 600;
 }
 
-.k8s-annotation-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  padding: 8px 12px;
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
-}
-
-.k8s-annotation-key {
-  background: #f0f2ff;
-  color: #1677ff;
-  border: 1px solid #d6e4ff;
-  font-weight: 600;
-}
-
-.k8s-annotation-separator,
-.k8s-label-separator {
-  color: #999;
-  font-weight: normal;
-}
+/* 移除旧的注解样式，使用统一样式 */
 
 .k8s-no-data {
   color: #999;

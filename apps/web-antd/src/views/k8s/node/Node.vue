@@ -66,18 +66,18 @@
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
-            <a-select-option :value="NodeStatus.Ready">✅ 就绪</a-select-option>
-            <a-select-option :value="NodeStatus.NotReady">❌ 未就绪</a-select-option>
-            <a-select-option :value="NodeStatus.SchedulingDisabled">⏸️ 调度禁用</a-select-option>
-            <a-select-option :value="NodeStatus.Unknown">❓ 未知</a-select-option>
-            <a-select-option :value="NodeStatus.Error">🚫 异常</a-select-option>
+            <a-select-option :value="NodeStatus.Ready">就绪</a-select-option>
+            <a-select-option :value="NodeStatus.NotReady">未就绪</a-select-option>
+            <a-select-option :value="NodeStatus.SchedulingDisabled">调度禁用</a-select-option>
+            <a-select-option :value="NodeStatus.Unknown">未知</a-select-option>
+            <a-select-option :value="NodeStatus.Error">异常</a-select-option>
           </a-select>
         </div>
         
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
-            placeholder="🔍 搜索节点名称" 
+            placeholder="搜索节点名称" 
             class="k8s-search-input" 
             @pressEnter="onSearch"
             @input="onSearch"
@@ -160,9 +160,16 @@
 
         <template #roles="{ text }">
           <div class="k8s-roles-display">
-            <a-tag v-for="role in (text || [])" :key="role" class="k8s-role-tag">
-              {{ role }}
-            </a-tag>
+            <a-tooltip v-for="role in (text || []).slice(0, 3)" :key="role" :title="role">
+              <a-tag class="k8s-role-tag">
+                {{ role }}
+              </a-tag>
+            </a-tooltip>
+            <a-tooltip v-if="(text || []).length > 3" :title="(text || []).join(', ')">
+              <a-tag class="k8s-role-tag">
+                {{ (text || []).length }} 个角色
+              </a-tag>
+            </a-tooltip>
             <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
           </div>
         </template>
@@ -246,11 +253,11 @@
     <!-- 标签管理模态框 -->
     <a-modal
       v-model:open="isLabelModalVisible"
-      :title="isLabelEdit ? '编辑节点标签' : '添加节点标签'"
+      title="管理节点标签"
       @ok="submitLabelForm"
       @cancel="closeLabelModal"
       :confirmLoading="submitLoading"
-      width="700px"
+      width="800px"
       :maskClosable="false"
       destroyOnClose
       okText="保存"
@@ -263,41 +270,44 @@
         class="k8s-form"
         :rules="labelFormRules"
       >
-        <a-form-item label="覆盖模式" name="overwrite">
-          <a-radio-group v-model:value="labelFormModel.overwrite">
-            <a-radio :value="1">覆盖已存在的标签</a-radio>
-            <a-radio :value="2">保留已存在的标签</a-radio>
-          </a-radio-group>
-        </a-form-item>
-
-        <a-form-item label="标签配置" name="labels">
-          <div class="k8s-key-value-inputs">
-            <div v-if="!labelFormModel.labels || Object.keys(labelFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 20px;">
-              暂无标签，点击下方按钮添加
+        <a-form-item label="标签配置">
+          <a-form-item-rest>
+            <div class="k8s-key-value-inputs">
+              <div v-if="!labelFormModel.labels || Object.keys(labelFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 20px;">
+                暂无标签，点击下方按钮添加
+              </div>
+              <div v-for="(_, key) in labelFormModel.labels" :key="key" class="k8s-key-value-row">
+                <a-input 
+                  :value="key" 
+                  :placeholder="`标签键: ${key}`" 
+                  disabled
+                  class="k8s-form-input k8s-key-input"
+                />
+                <a-input 
+                  v-model:value="labelFormModel.labels[key]" 
+                  placeholder="标签值" 
+                  class="k8s-form-input k8s-value-input"
+                  :maxlength="200"
+                />
+                <a-button type="text" danger @click="removeLabelField(key)" class="k8s-remove-btn">
+                  <template #icon><DeleteOutlined /></template>
+                  删除
+                </a-button>
+              </div>
+              <div class="k8s-add-input-row" style="margin-top: 12px;">
+                <a-input
+                  v-model:value="newLabelKey"
+                  placeholder="输入标签键"
+                  style="flex: 1; margin-right: 8px;"
+                  @press-enter="addNewLabel"
+                />
+                <a-button type="primary" @click="addNewLabel" :disabled="!newLabelKey.trim()">
+                  <template #icon><PlusOutlined /></template>
+                  添加
+                </a-button>
+              </div>
             </div>
-            <div v-for="(_, key) in labelFormModel.labels" :key="key" class="k8s-key-value-row">
-              <a-input 
-                v-model:value="labelFormModel.labels[key]" 
-                :placeholder="`标签键: ${key}`" 
-                disabled
-                class="k8s-form-input"
-              />
-              <a-input 
-                v-model:value="labelFormModel.labels[key]" 
-                placeholder="标签值" 
-                class="k8s-form-input"
-                :maxlength="200"
-              />
-              <a-button type="text" danger @click="removeLabelField(key)" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
-                删除
-              </a-button>
-            </div>
-            <a-button type="dashed" @click="addNewLabel" block style="margin-top: 12px;">
-              <template #icon><PlusOutlined /></template>
-              添加标签
-            </a-button>
-          </div>
+          </a-form-item-rest>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -322,44 +332,46 @@
         class="k8s-form"
         :rules="taintFormRules"
       >
-        <a-form-item label="污点配置" name="taints">
-          <div class="k8s-key-value-inputs">
-            <div v-if="!taintFormModel.taints || taintFormModel.taints.length === 0" style="text-align: center; color: #999; padding: 20px;">
-              暂无污点，点击下方按钮添加
-            </div>
-            <div v-for="(taint, idx) in taintFormModel.taints" :key="idx" class="k8s-key-value-row">
-              <a-input 
-                v-model:value="taint.key" 
-                placeholder="污点键" 
-                class="k8s-form-input"
-                :maxlength="100"
-              />
-              <a-input 
-                v-model:value="taint.value" 
-                placeholder="污点值（可选）" 
-                class="k8s-form-input"
-                :maxlength="100"
-              />
-              <a-select 
-                v-model:value="taint.effect" 
-                placeholder="污点效果" 
-                class="k8s-form-input"
-                style="width: 150px"
-              >
-                <a-select-option value="NoSchedule">NoSchedule</a-select-option>
-                <a-select-option value="PreferNoSchedule">PreferNoSchedule</a-select-option>
-                <a-select-option value="NoExecute">NoExecute</a-select-option>
-              </a-select>
-              <a-button type="text" danger @click="removeTaint(idx)" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
-                删除
+        <a-form-item label="污点配置">
+          <a-form-item-rest>
+            <div class="k8s-key-value-inputs">
+              <div v-if="!taintFormModel.taints || taintFormModel.taints.length === 0" style="text-align: center; color: #999; padding: 20px;">
+                暂无污点，点击下方按钮添加
+              </div>
+              <div v-for="(taint, idx) in taintFormModel.taints" :key="idx" class="k8s-key-value-row">
+                <a-input 
+                  v-model:value="taint.key" 
+                  placeholder="污点键" 
+                  class="k8s-form-input"
+                  :maxlength="100"
+                />
+                <a-input 
+                  v-model:value="taint.value" 
+                  placeholder="污点值（可选）" 
+                  class="k8s-form-input"
+                  :maxlength="100"
+                />
+                <a-select 
+                  v-model:value="taint.effect" 
+                  placeholder="污点效果" 
+                  class="k8s-form-input"
+                  style="width: 150px"
+                >
+                  <a-select-option value="NoSchedule">NoSchedule</a-select-option>
+                  <a-select-option value="PreferNoSchedule">PreferNoSchedule</a-select-option>
+                  <a-select-option value="NoExecute">NoExecute</a-select-option>
+                </a-select>
+                <a-button type="text" danger @click="removeTaint(idx)" class="k8s-remove-btn">
+                  <template #icon><DeleteOutlined /></template>
+                  删除
+                </a-button>
+              </div>
+              <a-button type="dashed" @click="addTaint" block style="margin-top: 12px;">
+                <template #icon><PlusOutlined /></template>
+                添加污点
               </a-button>
             </div>
-            <a-button type="dashed" @click="addTaint" block style="margin-top: 12px;">
-              <template #icon><PlusOutlined /></template>
-              添加污点
-            </a-button>
-          </div>
+          </a-form-item-rest>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -630,7 +642,6 @@ const {
   isLabelModalVisible,
   isTaintModalVisible,
   isDrainModalVisible,
-  isLabelEdit,
   submitLoading,
   
   // detail modal
@@ -712,8 +723,25 @@ const newLabelKey = ref('');
 const newLabelValue = ref('');
 
 const addNewLabel = () => {
-  if (!newLabelKey.value) return;
-  labelFormModel.value.labels[newLabelKey.value] = newLabelValue.value || '';
+  if (!newLabelKey.value || !newLabelKey.value.trim()) return;
+  const key = newLabelKey.value.trim();
+  const value = newLabelValue.value || '';
+  
+  // 先获取所有现有的键，然后重建对象确保新键在最后
+  const existingKeys = Object.keys(labelFormModel.value.labels);
+  const newLabels: Record<string, string> = {};
+  
+  // 先添加所有现有的标签（排除要添加的键，以防重复）
+  existingKeys.forEach(k => {
+    if (k !== key) {
+      newLabels[k] = labelFormModel.value.labels[k] || '';
+    }
+  });
+  
+  // 最后添加新标签
+  newLabels[key] = value;
+  
+  labelFormModel.value.labels = newLabels;
   newLabelKey.value = '';
   newLabelValue.value = '';
 };

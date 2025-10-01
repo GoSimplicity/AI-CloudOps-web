@@ -215,6 +215,12 @@ export function useNamespacePage() {
     return phase ? map[phase] || 'default' : 'default';
   };
 
+  const getClusterName = (clusterId?: number) => {
+    if (!clusterId) return '-';
+    const cluster = clusters.value.find(c => c.id === clusterId);
+    return cluster?.name || `集群 ${clusterId}`;
+  };
+
   // cluster operations
   const clearNamespaces = () => {
     namespaces.value = [];
@@ -345,7 +351,7 @@ export function useNamespacePage() {
       };
       
       await createNamespaceApi(filterClusterId.value, params);
-      message.success('🎉 命名空间创建成功');
+      message.success('命名空间创建成功');
       isCreateModalVisible.value = false;
       await fetchNamespaces();
     } catch (err: unknown) {
@@ -353,7 +359,7 @@ export function useNamespacePage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ 命名空间创建失败');
+      message.error('命名空间创建失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -390,11 +396,11 @@ export function useNamespacePage() {
       };
       
       await updateNamespaceApi(currentOperationNamespace.value.cluster_id, currentOperationNamespace.value.name, params);
-      message.success('🎉 命名空间标签/注解更新成功');
+      message.success('命名空间标签/注解更新成功');
       isLabelModalVisible.value = false;
       await fetchNamespaces();
     } catch (err: unknown) {
-      message.error('❌ 标签/注解更新失败');
+      message.error('标签/注解更新失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -430,11 +436,11 @@ export function useNamespacePage() {
       };
       
       await deleteNamespaceApi(currentOperationNamespace.value.cluster_id, currentOperationNamespace.value.name, params);
-      message.success('✅ 命名空间删除成功');
+      message.success('命名空间删除成功');
       isDeleteModalVisible.value = false;
       await fetchNamespaces();
     } catch (err) {
-      message.error('❌ 命名空间删除失败');
+      message.error('命名空间删除失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -464,10 +470,10 @@ export function useNamespacePage() {
             grace_period_seconds: 0,
           };
           await deleteNamespaceApi(clusterId, record.name, params);
-          message.success('✅ 命名空间强制删除成功');
+          message.success('命名空间强制删除成功');
           await fetchNamespaces();
         } catch (err) {
-          message.error('❌ 命名空间强制删除失败');
+          message.error('命名空间强制删除失败');
           console.error(err);
         }
       },
@@ -535,12 +541,12 @@ export function useNamespacePage() {
               await deleteNamespaceApi(ns.cluster_id, ns.name, params);
             }
           }
-          message.success(`✅ 批量${operation}操作已完成`);
+          message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchNamespaces();
         } catch (err) {
-          message.error(`❌ 批量${operation}失败`);
+          message.error(`批量${operation}失败`);
           console.error(err);
         }
       },
@@ -660,6 +666,7 @@ export function useNamespacePage() {
     getStatusColor,
     getPhaseText,
     getPhaseColor,
+    getClusterName,
     recordToKeyValueList,
     keyValueListToRecord,
     hasSystemLabels,

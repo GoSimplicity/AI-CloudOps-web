@@ -70,9 +70,9 @@
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
-            <a-select-option :value="NamespaceStatus.Active">✅ 活跃</a-select-option>
-            <a-select-option :value="NamespaceStatus.Terminating">⏹️ 终止中</a-select-option>
-            <a-select-option :value="NamespaceStatus.Unknown">❓ 未知</a-select-option>
+            <a-select-option :value="NamespaceStatus.Active">活跃</a-select-option>
+            <a-select-option :value="NamespaceStatus.Terminating">终止中</a-select-option>
+            <a-select-option :value="NamespaceStatus.Unknown">未知</a-select-option>
           </a-select>
           
           <!-- 标签过滤器 -->
@@ -103,7 +103,7 @@
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
-            placeholder="🔍 搜索命名空间名称" 
+            placeholder="搜索命名空间名称" 
             class="k8s-search-input" 
             @pressEnter="onSearch"
             @input="onSearch"
@@ -202,10 +202,12 @@
 
         <template #annotations="{ text }">
           <div class="k8s-annotations-display">
-            <a-tag v-for="annotation in (text || []).slice(0, 2)" :key="annotation.key" class="k8s-annotation-item">
-              {{ annotation.key }}: {{ annotation.value }}
-            </a-tag>
-            <a-tooltip v-if="(text || []).length > 2" :title="(text || []).map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+            <a-tooltip v-for="annotation in (text || []).slice(0, 3)" :key="annotation.key" :title="`${annotation.key}: ${annotation.value}`">
+              <a-tag class="k8s-annotation-item">
+                {{ annotation.key }}: {{ annotation.value }}
+              </a-tag>
+            </a-tooltip>
+            <a-tooltip v-if="(text || []).length > 3" :title="(text || []).map((item: any) => `${item.key}: ${item.value}`).join('\n')">
               <a-tag class="k8s-annotation-item">
                 {{ (text || []).length }} 个注解
               </a-tag>
@@ -497,8 +499,8 @@
                   <a-badge :status="getPhaseColor(currentNamespaceDetail.phase)" :text="getPhaseText(currentNamespaceDetail.phase)" />
                 </div>
                 <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">集群ID:</span>
-                  <span class="k8s-detail-value">{{ currentNamespaceDetail.cluster_id }}</span>
+                  <span class="k8s-detail-label">集群:</span>
+                  <span class="k8s-detail-value">{{ getClusterName(currentNamespaceDetail.cluster_id) }}</span>
                 </div>
               </a-card>
             </a-col>
@@ -507,9 +509,9 @@
               <a-card title="标签信息" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display">
                   <a-tooltip v-for="label in (currentNamespaceDetail.labels || [])" :key="label.key" :title="`${label.key}: ${label.value}`">
-                    <div class="k8s-label-item" style="margin-bottom: 8px;">
+                    <a-tag class="k8s-label-item">
                       {{ label.key }}: {{ label.value }}
-                    </div>
+                    </a-tag>
                   </a-tooltip>
                   <span v-if="!currentNamespaceDetail.labels || currentNamespaceDetail.labels.length === 0" class="k8s-no-data">
                     暂无标签
@@ -524,7 +526,7 @@
               <a-card title="注解信息" class="k8s-detail-card" size="small">
                 <div class="k8s-annotations-display">
                   <a-tooltip v-for="annotation in (currentNamespaceDetail.annotations || [])" :key="annotation.key" :title="`${annotation.key}: ${annotation.value}`" placement="top">
-                    <a-tag class="k8s-annotation-item" style="margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <a-tag class="k8s-annotation-item">
                       {{ annotation.key }}: {{ annotation.value }}
                     </a-tag>
                   </a-tooltip>
@@ -541,7 +543,7 @@
               <a-card title="详细信息" class="k8s-detail-card" size="small">
                 <a-descriptions :column="{ xxl: 3, xl: 3, lg: 2, md: 2, sm: 1, xs: 1 }" size="small" bordered>
                   <a-descriptions-item label="命名空间">{{ currentNamespaceDetail.name }}</a-descriptions-item>
-                  <a-descriptions-item label="集群">{{ currentNamespaceDetail.cluster_id }}</a-descriptions-item>
+                  <a-descriptions-item label="集群">{{ getClusterName(currentNamespaceDetail.cluster_id) }}</a-descriptions-item>
                   <a-descriptions-item label="状态">
                     <a-badge :status="getStatusColor(currentNamespaceDetail.status)" :text="getStatusText(currentNamespaceDetail.status)" />
                   </a-descriptions-item>
@@ -573,7 +575,7 @@
     >
       <div class="delete-form">
         <a-alert
-          message="⚠️ 警告"
+          message="警告"
           :description="`您即将删除命名空间 '${currentOperationNamespace?.name}'，此操作不可逆！`"
           type="warning"
           show-icon
@@ -743,6 +745,7 @@ const {
   getStatusColor,
   getPhaseText,
   getPhaseColor,
+  getClusterName,
   
   // operations
   fetchClusters,

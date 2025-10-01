@@ -84,15 +84,7 @@ export interface GetK8sNodeDetailReq {
 export interface AddLabelNodesReq {
   cluster_id: number;                 // 集群ID
   node_name: string;                  // 节点名称
-  labels: Record<string, string>;     // 要添加的标签
-  overwrite: number;                  // 是否覆盖已存在的标签 (1: 是, 2: 否)
-}
-
-// 删除节点标签请求接口
-export interface DeleteLabelNodesReq {
-  cluster_id: number; // 集群ID
-  node_name: string;  // 节点名称
-  label_keys: string[]; // 要删除的标签键
+  labels: Record<string, string>; 
 }
 
 // 驱逐节点请求接口
@@ -166,12 +158,6 @@ export const getK8sNodeDetail = (params: GetK8sNodeDetailReq) => {
 export const addK8sNodeLabels = (params: AddLabelNodesReq) => {
   const { cluster_id, node_name, ...data } = params;
   return requestClient.post(`/k8s/clusters/${cluster_id}/nodes/${node_name}/labels`, data);
-};
-
-// 删除节点标签
-export const deleteK8sNodeLabels = (params: DeleteLabelNodesReq) => {
-  const { cluster_id, node_name, ...data } = params;
-  return requestClient.delete(`/k8s/clusters/${cluster_id}/nodes/${node_name}/labels`, { data });
 };
 
 // 驱逐节点

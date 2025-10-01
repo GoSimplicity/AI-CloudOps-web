@@ -54,7 +54,6 @@ export function useNodePage() {
   const isLabelModalVisible = ref(false);
   const isTaintModalVisible = ref(false);
   const isDrainModalVisible = ref(false);
-  const isLabelEdit = ref(false);
   const submitLoading = ref(false);
   
   // detail modal state
@@ -68,10 +67,8 @@ export function useNodePage() {
   // 标签表单模型
   const labelFormModel = ref<{
     labels: Record<string, string>;
-    overwrite: number;
   }>({
     labels: {},
-    overwrite: 1,
   });
 
   // 污点表单模型
@@ -285,22 +282,10 @@ export function useNodePage() {
   };
 
   // 标签管理
-  const openLabelModal = (record: K8sNode) => {
-    currentOperationNode.value = record;
-    isLabelEdit.value = false;
-    labelFormModel.value = {
-      labels: {},
-      overwrite: 1,
-    };
-    isLabelModalVisible.value = true;
-  };
-
   const openEditLabelModal = (record: K8sNode) => {
     currentOperationNode.value = record;
-    isLabelEdit.value = true;
     labelFormModel.value = {
       labels: { ...record.labels },
-      overwrite: 1,
     };
     isLabelModalVisible.value = true;
   };
@@ -316,32 +301,18 @@ export function useNodePage() {
     try {
       submitLoading.value = true;
       
-      if (isLabelEdit.value) {
-        // 编辑模式：更新标签
-        const params: AddLabelNodesReq = {
-          cluster_id: currentOperationNode.value.cluster_id,
-          node_name: currentOperationNode.value.name,
-          labels: labelFormModel.value.labels,
-          overwrite: labelFormModel.value.overwrite,
-        };
-        await addK8sNodeLabels(params);
-        message.success('🎉 节点标签更新成功');
-      } else {
-        // 新增模式：添加标签
-        const params: AddLabelNodesReq = {
-          cluster_id: currentOperationNode.value.cluster_id,
-          node_name: currentOperationNode.value.name,
-          labels: labelFormModel.value.labels,
-          overwrite: labelFormModel.value.overwrite,
-        };
-        await addK8sNodeLabels(params);
-        message.success('🎉 节点标签添加成功');
-      }
+      const params: AddLabelNodesReq = {
+        cluster_id: currentOperationNode.value.cluster_id,
+        node_name: currentOperationNode.value.name,
+        labels: labelFormModel.value.labels,
+      };
+      await addK8sNodeLabels(params);
+      message.success('节点标签保存成功');
       
       isLabelModalVisible.value = false;
       await fetchNodes();
     } catch (err: unknown) {
-      message.error(isLabelEdit.value ? '❌ 标签更新失败' : '❌ 标签添加失败');
+      message.error('标签保存失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -385,11 +356,11 @@ export function useNodePage() {
         taints: taintFormModel.value.taints,
       };
       await addK8sNodeTaints(params);
-      message.success('🎉 节点污点更新成功');
+      message.success('节点污点更新成功');
       isTaintModalVisible.value = false;
       await fetchNodes();
     } catch (err: unknown) {
-      message.error('❌ 污点更新失败');
+      message.error('污点更新失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -421,18 +392,18 @@ export function useNodePage() {
               node_name: record.name,
             };
             await uncordonK8sNode(params);
-            message.success('✅ 节点调度已启用');
+            message.success('节点调度已启用');
           } else {
             const params: K8sNodeCordonReq = {
               cluster_id: clusterId,
               node_name: record.name,
             };
             await cordonK8sNode(params);
-            message.success('🚫 节点调度已禁用');
+            message.success('节点调度已禁用');
           }
           await fetchNodes();
         } catch (err) {
-          message.error(`❌ ${action}节点调度失败`);
+          message.error(`${action}节点调度失败`);
           console.error(err);
         }
       },
@@ -478,7 +449,7 @@ export function useNodePage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ 节点驱逐失败');
+      message.error('节点驱逐失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -504,12 +475,12 @@ export function useNodePage() {
         try {
           // 根据不同操作类型执行相应的批量操作
           // 这里可以扩展更多批量操作
-          message.success(`✅ 批量${operation}操作已启动`);
+          message.success(`批量${operation}操作已启动`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchNodes();
         } catch (err) {
-          message.error(`❌ 批量${operation}失败`);
+          message.error(`批量${operation}失败`);
           console.error(err);
         }
       },
@@ -567,7 +538,6 @@ export function useNodePage() {
     isLabelModalVisible,
     isTaintModalVisible,
     isDrainModalVisible,
-    isLabelEdit,
     submitLoading,
     
     // detail modal
@@ -604,7 +574,6 @@ export function useNodePage() {
     closeDetailModal,
     
     // label operations
-    openLabelModal,
     openEditLabelModal,
     closeLabelModal,
     submitLabelForm,
