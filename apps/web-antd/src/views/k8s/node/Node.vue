@@ -192,10 +192,25 @@
 
         <template #taints="{ text }">
           <div class="k8s-taints-display">
-            <a-tag v-for="taint in (text || []).slice(0, 2)" :key="taint.key" class="k8s-taint-item">
-              {{ taint.key }}:{{ taint.effect }}
-            </a-tag>
-            <a-tooltip v-if="(text || []).length > 2" :title="(text || []).map((t: CoreTaint) => `${t.key}:${t.effect}`).join('\n')">
+            <a-tooltip 
+              v-for="taint in (text || []).slice(0, 2)" 
+              :key="taint.key" 
+              :title="`污点键: ${taint.key}\n污点效果: ${taint.effect}${taint.value ? '\n污点值: ' + taint.value : ''}`"
+              placement="top"
+              :mouseEnterDelay="0.3"
+              :autoAdjustOverflow="true"
+            >
+              <a-tag class="k8s-taint-item">
+                {{ taint.key }}:{{ taint.effect }}
+              </a-tag>
+            </a-tooltip>
+            <a-tooltip 
+              v-if="(text || []).length > 2" 
+              :title="(text || []).map((t: CoreTaint) => `污点键: ${t.key}\n污点效果: ${t.effect}${t.value ? '\n污点值: ' + t.value : ''}`).join('\n\n')"
+              placement="top"
+              :mouseEnterDelay="0.3"
+              :autoAdjustOverflow="true"
+            >
               <a-tag class="k8s-taint-item">
                 +{{ (text || []).length - 2 }} 更多
               </a-tag>
@@ -206,25 +221,37 @@
 
         <template #actions="{ record }">
           <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
-              <a-button title="查看详情" @click="showNodeDetail(record)">
+            <a-tooltip title="查看节点详情" placement="top" :mouseEnterDelay="0.5">
+              <a-button type="primary" @click="showNodeDetail(record)" size="small">
                 <template #icon><EyeOutlined /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="管理标签">
-              <a-button title="管理标签" @click="openEditLabelModal(record)">
+            <a-tooltip title="管理节点标签 (Labels)" placement="top" :mouseEnterDelay="0.5">
+              <a-button type="default" @click="openEditLabelModal(record)" size="small" style="background: #e6f7ff; border-color: #91caff; color: #1890ff;">
                 <template #icon><TagsOutlined /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="管理污点">
-              <a-button title="管理污点" @click="openTaintModal(record)">
+            <a-tooltip title="管理节点污点 (Taints)" placement="top" :mouseEnterDelay="0.5">
+              <a-button type="default" @click="openTaintModal(record)" size="small" style="background: #fff7e6; border-color: #ffc069; color: #fa8c16;">
                 <template #icon><WarningOutlined /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip :title="record.schedulable === 1 ? '禁用调度' : '启用调度'">
+            <a-tooltip placement="top" :mouseEnterDelay="0.5">
+              <template #title>
+                <div>
+                  {{ record.schedulable === 1 ? '禁用调度 (Cordon)' : '启用调度 (Uncordon)' }}
+                  <div style="font-size: 11px; opacity: 0.85; margin-top: 2px;">
+                    {{ record.schedulable === 1 ? '阻止新 Pod 调度到此节点' : '允许新 Pod 调度到此节点' }}
+                  </div>
+                </div>
+              </template>
               <a-button 
-                :title="record.schedulable === 1 ? '禁用调度' : '启用调度'"
+                size="small"
+                :type="record.schedulable === 1 ? 'default' : 'default'"
                 @click="toggleNodeSchedule(record)"
+                :style="record.schedulable === 1 ? 
+                  'background: #fff2f0; border-color: #ffccc7; color: #f5222d;' : 
+                  'background: #f6ffed; border-color: #b7eb8f; color: #52c41a;'"
               >
                 <template #icon>
                   <StopOutlined v-if="record.schedulable === 1" />
@@ -232,8 +259,16 @@
                 </template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="驱逐节点">
-              <a-button title="驱逐" danger @click="openDrainModal(record)">
+            <a-tooltip placement="top" :mouseEnterDelay="0.5">
+              <template #title>
+                <div>
+                  驱逐节点 (Drain)
+                  <div style="font-size: 11px; opacity: 0.85; margin-top: 2px;">
+                    安全迁移节点上的所有 Pod
+                  </div>
+                </div>
+              </template>
+              <a-button danger type="primary" @click="openDrainModal(record)" size="small">
                 <template #icon><DisconnectOutlined /></template>
               </a-button>
             </a-tooltip>
@@ -253,16 +288,28 @@
     <!-- 标签管理模态框 -->
     <a-modal
       v-model:open="isLabelModalVisible"
-      title="管理节点标签"
+      title="管理节点标签 (Node Labels)"
       @ok="submitLabelForm"
       @cancel="closeLabelModal"
       :confirmLoading="submitLoading"
       width="800px"
       :maskClosable="false"
       destroyOnClose
-      okText="保存"
+      okText="保存更改"
       cancelText="取消"
+      :focusTriggerAfterClose="false"
+      :autoFocus="false"
+      :keyboard="true"
     >
+      <a-alert 
+        message="标签管理说明" 
+        description="标签用于组织和选择 Kubernetes 资源。可以为节点添加自定义标签，用于 Pod 调度选择器、节点亲和性等场景。保存后将完全覆盖现有标签配置。" 
+        type="info" 
+        show-icon 
+        style="margin-bottom: 16px;" 
+        closable
+      />
+      
       <a-form 
         ref="labelFormRef"
         :model="labelFormModel" 
@@ -270,11 +317,11 @@
         class="k8s-form"
         :rules="labelFormRules"
       >
-        <a-form-item label="标签配置">
+        <a-form-item label="标签配置 (Key-Value)">
           <a-form-item-rest>
             <div class="k8s-key-value-inputs">
               <div v-if="!labelFormModel.labels || Object.keys(labelFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 20px;">
-                暂无标签，点击下方按钮添加
+                暂无标签，点击下方"添加"按钮添加新标签
               </div>
               <div v-for="(_, key) in labelFormModel.labels" :key="key" class="k8s-key-value-row">
                 <a-input 
@@ -315,16 +362,41 @@
     <!-- 污点管理模态框 -->
     <a-modal
       v-model:open="isTaintModalVisible"
-      title="管理节点污点"
+      title="管理节点污点 (Node Taints)"
       @ok="submitTaintForm"
       @cancel="closeTaintModal"
       :confirmLoading="submitLoading"
       width="800px"
       :maskClosable="false"
       destroyOnClose
-      okText="保存"
+      okText="保存更改"
       cancelText="取消"
+      :focusTriggerAfterClose="false"
+      :autoFocus="false"
+      :keyboard="true"
     >
+      <a-alert 
+        message="污点管理说明" 
+        type="info" 
+        show-icon 
+        style="margin-bottom: 16px;" 
+        closable
+      >
+        <template #description>
+          <div>
+            污点（Taints）用于排斥 Pod 调度到节点上，除非 Pod 具有相应的容忍度（Tolerations）。
+            <div style="margin-top: 8px;">
+              <strong>污点效果说明：</strong>
+              <ul style="margin: 4px 0 0 0; padding-left: 20px;">
+                <li><code>NoSchedule</code>: 禁止新 Pod 调度，不影响已有 Pod</li>
+                <li><code>PreferNoSchedule</code>: 尽量避免调度，但不强制</li>
+                <li><code>NoExecute</code>: 驱逐不容忍的 Pod，禁止新 Pod 调度</li>
+              </ul>
+            </div>
+          </div>
+        </template>
+      </a-alert>
+      
       <a-form 
         ref="taintFormRef"
         :model="taintFormModel" 
@@ -332,11 +404,11 @@
         class="k8s-form"
         :rules="taintFormRules"
       >
-        <a-form-item label="污点配置">
+        <a-form-item label="污点配置 (Key, Value, Effect)">
           <a-form-item-rest>
             <div class="k8s-key-value-inputs">
               <div v-if="!taintFormModel.taints || taintFormModel.taints.length === 0" style="text-align: center; color: #999; padding: 20px;">
-                暂无污点，点击下方按钮添加
+                暂无污点，点击下方"添加污点"按钮添加新污点
               </div>
               <div v-for="(taint, idx) in taintFormModel.taints" :key="idx" class="k8s-key-value-row">
                 <a-input 
@@ -373,21 +445,51 @@
             </div>
           </a-form-item-rest>
         </a-form-item>
+
+        <a-divider>YAML 配置验证</a-divider>
+        
+        <a-form-item label="YAML 数据" help="可选：输入污点的 YAML 配置进行验证">
+          <a-form-item-rest>
+            <a-textarea
+              v-model:value="taintYamlData"
+              placeholder="taints:
+  - key: node-role.kubernetes.io/master
+    effect: NoSchedule
+  - key: dedicated
+    value: gpu
+    effect: NoExecute"
+              :rows="6"
+              style="font-family: monospace; margin-bottom: 8px;"
+            />
+            <a-button 
+              type="default" 
+              @click="handleValidateYaml" 
+              :loading="yamlValidating"
+              :disabled="!taintYamlData || !taintYamlData.trim()"
+            >
+              <template #icon><CheckOutlined /></template>
+              验证 YAML
+            </a-button>
+          </a-form-item-rest>
+        </a-form-item>
       </a-form>
     </a-modal>
 
     <!-- 驱逐节点模态框 -->
     <a-modal
       v-model:open="isDrainModalVisible"
-      title="驱逐节点"
+      title="驱逐节点 (Drain Node)"
       @ok="submitDrainForm"
       @cancel="closeDrainModal"
       :confirmLoading="submitLoading"
-      width="600px"
+      width="650px"
       :maskClosable="false"
       destroyOnClose
       okText="确认驱逐"
       cancelText="取消"
+      :focusTriggerAfterClose="false"
+      :autoFocus="false"
+      :keyboard="true"
     >
       <a-form 
         ref="drainFormRef"
@@ -397,46 +499,74 @@
         :rules="drainFormRules"
       >
         <a-alert 
-          message="警告：驱逐节点将强制迁移该节点上的所有Pod" 
-          description="请谨慎操作，确保业务可以承受Pod迁移带来的影响。建议在维护窗口期间执行此操作。" 
+          message="⚠️ 警告：驱逐节点将安全迁移该节点上的所有 Pod" 
           type="warning" 
           show-icon 
           style="margin-bottom: 20px;" 
-        />
+        >
+          <template #description>
+            <div>
+              驱逐（Drain）操作会：
+              <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                <li>先将节点标记为不可调度（Cordon）</li>
+                <li>然后安全地驱逐节点上的所有 Pod</li>
+                <li>等待 Pod 在其他节点上重新调度</li>
+              </ul>
+              <div style="margin-top: 8px; color: #d4380d;">
+                <strong>请谨慎操作！</strong>确保业务可以承受 Pod 迁移带来的影响，建议在维护窗口期间执行。
+              </div>
+            </div>
+          </template>
+        </a-alert>
 
         <a-row :gutter="16">
           <a-col :xs="24" :sm="12">
-            <a-form-item label="强制驱逐" name="force">
+            <a-form-item name="force">
+              <template #label>
+                <span>强制驱逐 <a-tag color="orange" size="small">慎用</a-tag></span>
+              </template>
               <a-radio-group v-model:value="drainFormModel.force">
                 <a-radio :value="1">是</a-radio>
-                <a-radio :value="2">否</a-radio>
+                <a-radio :value="2">否（推荐）</a-radio>
               </a-radio-group>
-              <div style="color: #999; font-size: 12px; margin-top: 4px;">强制驱逐将忽略PodDisruptionBudget</div>
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                强制驱逐将忽略 PodDisruptionBudget（PDB），可能影响服务可用性
+              </div>
             </a-form-item>
           </a-col>
           <a-col :xs="24" :sm="12">
-            <a-form-item label="忽略DaemonSet" name="ignore_daemon_sets">
+            <a-form-item name="ignore_daemon_sets">
+              <template #label>
+                <span>忽略 DaemonSet <a-tag color="green" size="small">推荐</a-tag></span>
+              </template>
               <a-radio-group v-model:value="drainFormModel.ignore_daemon_sets">
-                <a-radio :value="1">是</a-radio>
+                <a-radio :value="1">是（推荐）</a-radio>
                 <a-radio :value="2">否</a-radio>
               </a-radio-group>
-              <div style="color: #999; font-size: 12px; margin-top: 4px;">建议选择"是"</div>
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                DaemonSet Pod 会在每个节点上运行，通常应忽略
+              </div>
             </a-form-item>
           </a-col>
         </a-row>
 
         <a-row :gutter="16">
           <a-col :xs="24" :sm="12">
-            <a-form-item label="删除本地数据" name="delete_local_data">
+            <a-form-item name="delete_local_data">
+              <template #label>
+                <span>删除本地数据 <a-tag color="orange" size="small">注意</a-tag></span>
+              </template>
               <a-radio-group v-model:value="drainFormModel.delete_local_data">
                 <a-radio :value="1">是</a-radio>
-                <a-radio :value="2">否</a-radio>
+                <a-radio :value="2">否（推荐）</a-radio>
               </a-radio-group>
-              <div style="color: #999; font-size: 12px; margin-top: 4px;">删除使用emptyDir的Pod</div>
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                允许删除使用 emptyDir 卷的 Pod（本地数据会丢失）
+              </div>
             </a-form-item>
           </a-col>
           <a-col :xs="24" :sm="12">
-            <a-form-item label="优雅关闭时间(秒)" name="grace_period_seconds">
+            <a-form-item label="优雅关闭时间 (秒)" name="grace_period_seconds">
               <a-input-number
                 v-model:value="drainFormModel.grace_period_seconds"
                 :min="0"
@@ -446,11 +576,14 @@
                 placeholder="30"
                 style="width: 100%"
               />
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                Pod 优雅停止的等待时间（默认 30 秒）
+              </div>
             </a-form-item>
           </a-col>
         </a-row>
 
-        <a-form-item label="超时时间(秒)" name="timeout_seconds">
+        <a-form-item label="超时时间 (秒)" name="timeout_seconds">
           <a-input-number
             v-model:value="drainFormModel.timeout_seconds"
             :min="30"
@@ -460,7 +593,9 @@
             placeholder="300"
             style="width: 100%"
           />
-          <div style="color: #999; font-size: 12px; margin-top: 4px;">驱逐操作的最大等待时间</div>
+          <div style="color: #999; font-size: 12px; margin-top: 4px;">
+            驱逐操作的最大等待时间（默认 300 秒），超时后操作将失败
+          </div>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -468,12 +603,15 @@
     <!-- 详情模态框 -->
     <a-modal
       v-model:open="isDetailModalVisible"
-      title="节点详情"
+      title="节点详情 (Node Details)"
       :footer="null"
       @cancel="closeDetailModal"
       width="1000px"
       :maskClosable="false"
       destroyOnClose
+      :focusTriggerAfterClose="false"
+      :autoFocus="false"
+      :keyboard="true"
     >
       <a-spin :spinning="detailLoading">
         <div v-if="currentNodeDetail" class="k8s-detail-content">
@@ -553,7 +691,14 @@
             <a-col :xs="24" :lg="12">
               <a-card title="标签信息" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display">
-                  <a-tooltip v-for="(value, key) in (currentNodeDetail.labels || {})" :key="key" :title="`${key}: ${value}`">
+                  <a-tooltip 
+                    v-for="(value, key) in (currentNodeDetail.labels || {})" 
+                    :key="key" 
+                    :title="`${key}: ${value}`"
+                    placement="top"
+                    :mouseEnterDelay="0.3"
+                    :autoAdjustOverflow="true"
+                  >
                     <div class="k8s-label-item" style="margin-bottom: 8px;">
                       {{ key }}: {{ value }}
                     </div>
@@ -568,10 +713,19 @@
             <a-col :xs="24" :lg="12">
               <a-card title="污点信息" class="k8s-detail-card" size="small">
                 <div class="k8s-taints-display">
-                  <div v-for="taint in (currentNodeDetail.taints || [])" :key="taint.key" class="k8s-taint-item" style="margin-bottom: 8px;">
-                    {{ taint.key }}:{{ taint.effect }}
-                    <span v-if="taint.value">({{ taint.value }})</span>
-                  </div>
+                  <a-tooltip 
+                    v-for="taint in (currentNodeDetail.taints || [])" 
+                    :key="taint.key" 
+                    :title="`污点键: ${taint.key}\n污点效果: ${taint.effect}${taint.value ? '\n污点值: ' + taint.value : ''}`"
+                    placement="top"
+                    :mouseEnterDelay="0.3"
+                    :autoAdjustOverflow="true"
+                  >
+                    <div class="k8s-taint-item" style="margin-bottom: 8px;">
+                      {{ taint.key }}:{{ taint.effect }}
+                      <span v-if="taint.value">({{ taint.value }})</span>
+                    </div>
+                  </a-tooltip>
                   <span v-if="!currentNodeDetail.taints || currentNodeDetail.taints.length === 0" class="k8s-no-data">
                     暂无污点
                   </span>
@@ -624,6 +778,7 @@ import {
   DisconnectOutlined,
   DeploymentUnitOutlined,
   SearchOutlined,
+  CheckOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -694,6 +849,7 @@ const {
   addTaint,
   removeTaint,
   submitTaintForm,
+  validateTaintYaml,
   
   // schedule operations
   toggleNodeSchedule,
@@ -721,6 +877,24 @@ const {
 // 添加新标签的临时状态
 const newLabelKey = ref('');
 const newLabelValue = ref('');
+
+// YAML 验证相关状态
+const taintYamlData = ref('');
+const yamlValidating = ref(false);
+
+const handleValidateYaml = async () => {
+  if (!taintYamlData.value || !taintYamlData.value.trim()) {
+    message.warning('请输入 YAML 数据');
+    return;
+  }
+  
+  yamlValidating.value = true;
+  try {
+    await validateTaintYaml(taintYamlData.value);
+  } finally {
+    yamlValidating.value = false;
+  }
+};
 
 const addNewLabel = () => {
   if (!newLabelKey.value || !newLabelKey.value.trim()) return;

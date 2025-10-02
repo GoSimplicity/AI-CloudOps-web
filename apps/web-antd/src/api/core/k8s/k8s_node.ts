@@ -9,13 +9,6 @@ export enum NodeStatus {
   Error = 5               // 异常
 }
 
-// 节点污点接口
-export interface NodeTaint {
-  key: string;    // 污点键
-  value: string;  // 污点值
-  effect: string; // 污点效果
-}
-
 // 节点条件接口
 export interface NodeCondition {
   type: string;               // 条件类型
@@ -70,7 +63,7 @@ export interface ListReq {
 // 获取节点列表请求接口
 export interface GetK8sNodeListReq extends ListReq {
   cluster_id: number;         // 集群ID
-  status?: NodeStatus;        // 状态过滤
+  status?: NodeStatus[];      // 状态过滤
   label_selector?: string;    // 标签选择器
 }
 
@@ -80,11 +73,11 @@ export interface GetK8sNodeDetailReq {
   node_name: string;  // 节点名称
 }
 
-// 添加节点标签请求接口
-export interface AddLabelNodesReq {
+// 更新节点标签请求接口
+export interface UpdateNodeLabelsReq {
   cluster_id: number;                 // 集群ID
   node_name: string;                  // 节点名称
-  labels: Record<string, string>; 
+  labels: Record<string, string>;     // 标签（完全覆盖现有标签，传空对象表示清空所有标签）
 }
 
 // 驱逐节点请求接口
@@ -137,70 +130,57 @@ export interface CheckTaintYamlReq {
   yaml_data: string;  // YAML数据
 }
 
-// 切换节点调度状态请求接口
-export interface SwitchK8sNodeScheduleReq {
-  cluster_id: number; // 集群ID
-  node_name: string;  // 节点名称
-  enable: number;     // 是否启用调度 (1: 启用, 2: 禁用)
-}
-
 // 获取节点列表
 export const getK8sNodeList = (params: GetK8sNodeListReq) => {
-  return requestClient.get(`/k8s/clusters/${params.cluster_id}/nodes`, { params });
+  return requestClient.get(`/k8s/node/${params.cluster_id}/list`, { params });
 };
 
 // 获取节点详情
 export const getK8sNodeDetail = (params: GetK8sNodeDetailReq) => {
-  return requestClient.get(`/k8s/clusters/${params.cluster_id}/nodes/${params.node_name}`);
+  return requestClient.get(`/k8s/node/${params.cluster_id}/${params.node_name}/detail`);
 };
 
-// 添加节点标签
-export const addK8sNodeLabels = (params: AddLabelNodesReq) => {
-  const { cluster_id, node_name, ...data } = params;
-  return requestClient.post(`/k8s/clusters/${cluster_id}/nodes/${node_name}/labels`, data);
+// 更新节点标签（完全覆盖）
+export const updateK8sNodeLabels = (params: UpdateNodeLabelsReq) => {
+  const { cluster_id, node_name, labels } = params;
+  return requestClient.post(`/k8s/node/${cluster_id}/${node_name}/labels/update`, { labels });
 };
 
 // 驱逐节点
 export const drainK8sNode = (params: DrainK8sNodeReq) => {
   const { cluster_id, node_name, ...data } = params;
-  return requestClient.post(`/k8s/clusters/${cluster_id}/nodes/${node_name}/drain`, data);
+  return requestClient.post(`/k8s/node/${cluster_id}/${node_name}/drain`, data);
 };
 
-// 禁止节点调度
+// 禁止节点调度（封锁）
 export const cordonK8sNode = (params: K8sNodeCordonReq) => {
-  return requestClient.post(`/k8s/clusters/${params.cluster_id}/nodes/${params.node_name}/cordon`);
+  return requestClient.post(`/k8s/node/${params.cluster_id}/${params.node_name}/cordon`);
 };
 
-// 解除节点调度限制
+// 解除节点调度限制（解封）
 export const uncordonK8sNode = (params: K8sNodeUncordonReq) => {
-  return requestClient.post(`/k8s/clusters/${params.cluster_id}/nodes/${params.node_name}/uncordon`);
-};
-
-// 切换节点调度状态
-export const switchK8sNodeSchedule = (params: SwitchK8sNodeScheduleReq) => {
-  const { cluster_id, node_name, ...data } = params;
-  return requestClient.post(`/k8s/clusters/${cluster_id}/nodes/${node_name}/schedule/switch`, data);
+  return requestClient.post(`/k8s/node/${params.cluster_id}/${params.node_name}/uncordon`);
 };
 
 // 获取节点污点
 export const getK8sNodeTaints = (params: GetK8sNodeTaintsReq) => {
-  return requestClient.get(`/k8s/clusters/${params.cluster_id}/nodes/${params.node_name}/taints`);
+  return requestClient.get(`/k8s/node/${params.cluster_id}/${params.node_name}/taints/list`);
 };
 
 // 添加节点污点
 export const addK8sNodeTaints = (params: AddK8sNodeTaintsReq) => {
   const { cluster_id, node_name, ...data } = params;
-  return requestClient.post(`/k8s/clusters/${cluster_id}/nodes/${node_name}/taints`, data);
+  return requestClient.post(`/k8s/node/${cluster_id}/${node_name}/taints/add`, data);
 };
 
 // 删除节点污点
 export const deleteK8sNodeTaints = (params: DeleteK8sNodeTaintsReq) => {
   const { cluster_id, node_name, ...data } = params;
-  return requestClient.delete(`/k8s/clusters/${cluster_id}/nodes/${node_name}/taints`, { data });
+  return requestClient.delete(`/k8s/node/${cluster_id}/${node_name}/taints/delete`, { data });
 };
 
 // 检查污点YAML配置
 export const checkK8sNodeTaintYaml = (params: CheckTaintYamlReq) => {
   const { cluster_id, node_name, ...data } = params;
-  return requestClient.post(`/k8s/clusters/${cluster_id}/nodes/${node_name}/taints/check`, data);
+  return requestClient.post(`/k8s/node/${cluster_id}/${node_name}/taints/check`, data);
 };

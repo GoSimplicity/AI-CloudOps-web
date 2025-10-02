@@ -6,19 +6,25 @@ import {
   type K8sNode,
   type GetK8sNodeListReq,
   type GetK8sNodeDetailReq,
-  type AddLabelNodesReq,
+  type UpdateNodeLabelsReq,
   type DrainK8sNodeReq,
   type K8sNodeCordonReq,
   type K8sNodeUncordonReq,
+  type GetK8sNodeTaintsReq,
   type AddK8sNodeTaintsReq,
+  type DeleteK8sNodeTaintsReq,
+  type CheckTaintYamlReq,
   type CoreTaint,
   getK8sNodeList,
   getK8sNodeDetail,
-  addK8sNodeLabels,
+  updateK8sNodeLabels,
   drainK8sNode,
   cordonK8sNode,
   uncordonK8sNode,
+  getK8sNodeTaints,
   addK8sNodeTaints,
+  deleteK8sNodeTaints,
+  checkK8sNodeTaintYaml,
 } from '#/api/core/k8s/k8s_node';
 import {
   type K8sCluster,
@@ -74,8 +80,12 @@ export function useNodePage() {
   // 污点表单模型
   const taintFormModel = ref<{
     taints: CoreTaint[];
+    originalTaints: CoreTaint[]; // 用于跟踪原始污点
+    taintsToDelete: string[]; // 用于跟踪要删除的污点键
   }>({
     taints: [],
+    originalTaints: [],
+    taintsToDelete: [],
   });
 
   // 驱逐表单模型
@@ -235,13 +245,17 @@ export function useNodePage() {
         page: currentPage.value,
         size: pageSize.value,
         search: searchText.value || undefined,
-        status: filterStatus.value ? filterStatus.value : undefined,
+        status: filterStatus.value !== undefined ? [filterStatus.value] : undefined,
       };
       const res = await getK8sNodeList(params);
-      // 确保每个node对象都有正确的cluster_id
+      // 确保每个node对象都有正确的cluster_id和防御性字段
       const nodesWithClusterId = (res?.items || []).map((node: any) => ({
         ...node,
-        cluster_id: node.cluster_id || filterClusterId.value || 0
+        cluster_id: node.cluster_id || filterClusterId.value || 0,
+        taints: Array.isArray(node.taints) ? node.taints : [],
+        labels: node.labels || {},
+        roles: Array.isArray(node.roles) ? node.roles : [],
+        conditions: Array.isArray(node.conditions) ? node.conditions : []
       }));
       nodes.value = nodesWithClusterId;
       total.value = res?.total || 0;
@@ -266,11 +280,26 @@ export function useNodePage() {
         node_name: record.name,
       };
       const res = await getK8sNodeDetail(params);
-      currentNodeDetail.value = res || { ...record, cluster_id: clusterId };
+      const nodeDetailWithDefaults = {
+        ...(res || record),
+        cluster_id: clusterId,
+        taints: Array.isArray((res || record).taints) ? (res || record).taints : [],
+        labels: (res || record).labels || {},
+        roles: Array.isArray((res || record).roles) ? (res || record).roles : [],
+        conditions: Array.isArray((res || record).conditions) ? (res || record).conditions : []
+      };
+      currentNodeDetail.value = nodeDetailWithDefaults;
     } catch (err) {
       message.error('获取节点详情失败');
       console.error(err);
-      currentNodeDetail.value = { ...record, cluster_id: clusterId };
+      currentNodeDetail.value = {
+        ...record,
+        cluster_id: clusterId,
+        taints: Array.isArray(record.taints) ? record.taints : [],
+        labels: record.labels || {},
+        roles: Array.isArray(record.roles) ? record.roles : [],
+        conditions: Array.isArray(record.conditions) ? record.conditions : []
+      };
     } finally {
       detailLoading.value = false;
     }
@@ -281,11 +310,11 @@ export function useNodePage() {
     currentNodeDetail.value = null;
   };
 
-  // 标签管理
+  // 标签管理（覆盖式更新）
   const openEditLabelModal = (record: K8sNode) => {
     currentOperationNode.value = record;
     labelFormModel.value = {
-      labels: { ...record.labels },
+      labels: { ...record.labels }, // 复制当前标签，修改后直接覆盖
     };
     isLabelModalVisible.value = true;
   };
@@ -301,14 +330,15 @@ export function useNodePage() {
     try {
       submitLoading.value = true;
       
-      const params: AddLabelNodesReq = {
+      // 使用覆盖式更新，直接发送当前所有标签（会完全覆盖现有标签）
+      const params: UpdateNodeLabelsReq = {
         cluster_id: currentOperationNode.value.cluster_id,
         node_name: currentOperationNode.value.name,
-        labels: labelFormModel.value.labels,
+        labels: labelFormModel.value.labels, // 直接发送当前标签，实现增删改的聚合操作
       };
-      await addK8sNodeLabels(params);
-      message.success('节点标签保存成功');
+      await updateK8sNodeLabels(params);
       
+      message.success('节点标签保存成功');
       isLabelModalVisible.value = false;
       await fetchNodes();
     } catch (err: unknown) {
@@ -320,12 +350,37 @@ export function useNodePage() {
   };
 
   // 污点管理
-  const openTaintModal = (record: K8sNode) => {
+  const openTaintModal = async (record: K8sNode) => {
     currentOperationNode.value = record;
-    taintFormModel.value = {
-      taints: [...record.taints],
-    };
-    isTaintModalVisible.value = true;
+    const clusterId = validateClusterId(record);
+    if (!clusterId) return;
+    
+    try {
+      // 从服务器获取最新的污点信息
+      const params: GetK8sNodeTaintsReq = {
+        cluster_id: clusterId,
+        node_name: record.name,
+      };
+      const res = await getK8sNodeTaints(params);
+      const taints = Array.isArray(res?.taints) ? res.taints : (Array.isArray(record.taints) ? record.taints : []);
+      
+      taintFormModel.value = {
+        taints: [...taints],
+        originalTaints: [...taints],
+        taintsToDelete: [],
+      };
+      isTaintModalVisible.value = true;
+    } catch (err) {
+      // 如果获取失败，使用记录中的污点数据
+      const taints = Array.isArray(record.taints) ? record.taints : [];
+      taintFormModel.value = {
+        taints: [...taints],
+        originalTaints: [...taints],
+        taintsToDelete: [],
+      };
+      isTaintModalVisible.value = true;
+      console.error('获取污点信息失败:', err);
+    }
   };
 
   const closeTaintModal = () => {
@@ -342,6 +397,15 @@ export function useNodePage() {
   };
 
   const removeTaint = (index: number) => {
+    const taint = taintFormModel.value.taints[index];
+    // 如果是原始污点，添加到删除列表
+    if (taint && taint.key) {
+      const isOriginal = taintFormModel.value.originalTaints.some(t => t.key === taint.key);
+      if (isOriginal && !taintFormModel.value.taintsToDelete.includes(taint.key)) {
+        taintFormModel.value.taintsToDelete.push(taint.key);
+      }
+    }
+    // 从当前污点列表中删除
     taintFormModel.value.taints.splice(index, 1);
   };
 
@@ -350,12 +414,39 @@ export function useNodePage() {
     
     try {
       submitLoading.value = true;
-      const params: AddK8sNodeTaintsReq = {
-        cluster_id: currentOperationNode.value.cluster_id,
-        node_name: currentOperationNode.value.name,
-        taints: taintFormModel.value.taints,
-      };
-      await addK8sNodeTaints(params);
+      
+      // 先删除标记为删除的污点
+      if (taintFormModel.value.taintsToDelete.length > 0) {
+        const deleteParams: DeleteK8sNodeTaintsReq = {
+          cluster_id: currentOperationNode.value.cluster_id,
+          node_name: currentOperationNode.value.name,
+          taint_keys: taintFormModel.value.taintsToDelete,
+        };
+        await deleteK8sNodeTaints(deleteParams);
+      }
+      
+      // 再添加或更新污点（只发送新的或修改过的污点）
+      const taintsToAdd: CoreTaint[] = taintFormModel.value.taints.filter(taint => {
+        if (!taint.key) return false; // 忽略没有key的污点
+        
+        // 检查是否是新污点或者是否发生了变化
+        const originalTaint = taintFormModel.value.originalTaints.find(t => t.key === taint.key);
+        if (!originalTaint) return true; // 新污点
+        
+        // 检查是否有修改
+        return originalTaint.value !== taint.value || 
+               originalTaint.effect !== taint.effect;
+      });
+      
+      if (taintsToAdd.length > 0) {
+        const addParams: AddK8sNodeTaintsReq = {
+          cluster_id: currentOperationNode.value.cluster_id,
+          node_name: currentOperationNode.value.name,
+          taints: taintsToAdd,
+        };
+        await addK8sNodeTaints(addParams);
+      }
+      
       message.success('节点污点更新成功');
       isTaintModalVisible.value = false;
       await fetchNodes();
@@ -367,10 +458,38 @@ export function useNodePage() {
     }
   };
 
-  // 节点调度操作
+  // 验证污点YAML配置
+  const validateTaintYaml = async (yamlData: string): Promise<boolean> => {
+    if (!currentOperationNode.value) {
+      message.error('未选择节点');
+      return false;
+    }
+    
+    const clusterId = validateClusterId(currentOperationNode.value);
+    if (!clusterId) return false;
+    
+    try {
+      const params: CheckTaintYamlReq = {
+        cluster_id: clusterId,
+        node_name: currentOperationNode.value.name,
+        yaml_data: yamlData,
+      };
+      await checkK8sNodeTaintYaml(params);
+      message.success('YAML配置验证通过');
+      return true;
+    } catch (err) {
+      message.error('YAML配置验证失败');
+      console.error(err);
+      return false;
+    }
+  };
+
+  // 节点调度操作（使用 cordon/uncordon 接口）
   const toggleNodeSchedule = async (record: K8sNode) => {
-    const enable = record.schedulable === 2 ? 1 : 2; // 切换调度状态
-    const action = enable === 1 ? '启用' : '禁用';
+    // schedulable === 1 表示可调度，需要禁用调度（cordon）
+    // schedulable === 2 表示不可调度，需要启用调度（uncordon）
+    const needCordon = record.schedulable === 1;
+    const action = needCordon ? '禁用' : '启用';
     
     Modal.confirm({
       title: `${action}节点调度`,
@@ -386,21 +505,23 @@ export function useNodePage() {
             return;
           }
           
-          if (enable === 1) {
-            const params: K8sNodeUncordonReq = {
-              cluster_id: clusterId,
-              node_name: record.name,
-            };
-            await uncordonK8sNode(params);
-            message.success('节点调度已启用');
-          } else {
+          if (needCordon) {
+            // 禁用调度
             const params: K8sNodeCordonReq = {
               cluster_id: clusterId,
               node_name: record.name,
             };
             await cordonK8sNode(params);
-            message.success('节点调度已禁用');
+          } else {
+            // 启用调度
+            const params: K8sNodeUncordonReq = {
+              cluster_id: clusterId,
+              node_name: record.name,
+            };
+            await uncordonK8sNode(params);
           }
+          
+          message.success(`节点调度已${action}`);
           await fetchNodes();
         } catch (err) {
           message.error(`${action}节点调度失败`);
@@ -458,6 +579,7 @@ export function useNodePage() {
 
 
   const removeLabelField = (key: string) => {
+    // 覆盖式更新：直接从当前标签中删除即可，提交时会完全覆盖
     delete labelFormModel.value.labels[key];
   };
 
@@ -585,6 +707,7 @@ export function useNodePage() {
     addTaint,
     removeTaint,
     submitTaintForm,
+    validateTaintYaml,
     
     // schedule operations
     toggleNodeSchedule,
