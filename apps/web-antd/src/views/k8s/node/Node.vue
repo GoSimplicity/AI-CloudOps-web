@@ -991,7 +991,7 @@ const columns = [
 
 const conditionColumns = [
   { title: '类型', dataIndex: 'type', key: 'type' },
-  { title: '状态', dataIndex: 'status', key: 'status', slots: { customRender: 'status' } },
+  { title: '状态', dataIndex: 'status', key: 'status' },
   { title: '原因', dataIndex: 'reason', key: 'reason' },
   { title: '消息', dataIndex: 'message', key: 'message', ellipsis: true },
   { title: '最后转换时间', dataIndex: 'lastTransitionTime', key: 'lastTransitionTime' },

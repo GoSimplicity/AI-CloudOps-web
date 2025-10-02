@@ -1019,6 +1019,21 @@ const updateLiveData = () => {
   fetchAllSystemData();
 };
 
+// 图表自适应窗口大小
+const handleResize = () => {
+  if (trendChartInstance && !trendChartInstance.isDisposed()) {
+    trendChartInstance.resize();
+  }
+  if (networkChartInstance && !networkChartInstance.isDisposed()) {
+    networkChartInstance.resize();
+  }
+  Object.values(miniCharts).forEach((chart: any) => {
+    if (chart && !chart.isDisposed()) {
+      chart.resize();
+    }
+  });
+};
+
 onMounted(async () => {
   updateTime();
   timeTimer = setInterval(updateTime, 1000);
@@ -1042,22 +1057,15 @@ onMounted(async () => {
   }, 200);
   
   // 监听窗口大小变化
-  window.addEventListener('resize', () => {
-    if (trendChartInstance) {
-      trendChartInstance.resize();
-    }
-    if (networkChartInstance) {
-      networkChartInstance.resize();
-    }
-    Object.values(miniCharts).forEach((chart: any) => {
-      chart?.resize();
-    });
-  });
+  window.addEventListener('resize', handleResize);
 });
 
 onUnmounted(() => {
   clearInterval(timeTimer);
   clearInterval(dataTimer);
+  
+  // 移除 resize 事件监听器
+  window.removeEventListener('resize', handleResize);
   
   // 安全地销毁图表实例
   if (trendChartInstance && !trendChartInstance.isDisposed()) {

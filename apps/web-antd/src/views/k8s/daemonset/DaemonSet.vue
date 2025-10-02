@@ -797,7 +797,7 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="() = class="k8s-remove-btn"> removeEditLabelField(label.key)" size="small">
+              <a-button type="text" danger @click="() => removeEditLabelField(label.key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
@@ -834,7 +834,7 @@
                 class="k8s-form-input"
                 :maxlength="500"
               />
-              <a-button type="text" danger @click="() = class="k8s-remove-btn"> removeEditAnnotationField(annotation.key)" size="small">
+              <a-button type="text" danger @click="() => removeEditAnnotationField(annotation.key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>

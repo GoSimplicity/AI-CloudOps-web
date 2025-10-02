@@ -998,41 +998,41 @@ const columns = [
     title: '角色引用', 
     key: 'roleRef', 
     width: '22%', 
-    slots: { customRender: 'roleRef' },
-    ellipsis: true
+    ellipsis: true,
+    slots: { customRender: 'roleRef' }
   },
   { 
     title: '主体', 
     key: 'subjects', 
     width: '25%', 
-    slots: { customRender: 'subjects' },
-    ellipsis: true
+    ellipsis: true,
+    slots: { customRender: 'subjects' }
   },
   { 
     title: '标签', 
     dataIndex: 'labels', 
     key: 'labels', 
     width: '15%', 
-    slots: { customRender: 'labels' },
-    ellipsis: true
+    ellipsis: true,
+    slots: { customRender: 'labels' }
   },
   { 
     title: '创建时间', 
     key: 'creation_timestamp', 
     width: '12%', 
-    slots: { customRender: 'creationTimestamp' },
     sorter: (a: any, b: any) => {
       const timeA = new Date(a.creation_timestamp).getTime();
       const timeB = new Date(b.creation_timestamp).getTime();
       return timeA - timeB;
-    }
+    },
+    slots: { customRender: 'creationTimestamp' }
   },
   { 
     title: '操作', 
     key: 'actions', 
     width: '8%', 
-    fixed: 'right', 
-    slots: { customRender: 'actions' } 
+    fixed: 'right',
+    slots: { customRender: 'actions' }
   },
 ];
 
