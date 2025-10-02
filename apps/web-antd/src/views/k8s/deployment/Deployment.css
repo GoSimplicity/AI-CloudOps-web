@@ -166,20 +166,6 @@
   box-shadow: 0 6px 16px rgba(82, 196, 26, 0.25);
 }
 
-/* 回滚按钮 - 黄色主题 */
-.deployment-table .ant-btn[title*="回滚"] {
-  background: linear-gradient(135deg, #feffe6 0%, #ffffb8 100%);
-  border-color: #fffb8f;
-  color: #fadb14;
-}
-
-.deployment-table .ant-btn[title*="回滚"]:hover {
-  background: linear-gradient(135deg, #ffffb8 0%, #fffb8f 100%);
-  border-color: #fff566;
-  color: #d4b106;
-  box-shadow: 0 6px 16px rgba(250, 219, 20, 0.25);
-}
-
 /* Pod 查看按钮 - 蓝色主题 */
 .deployment-table .ant-btn[title*="Pod"] {
   background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
@@ -245,38 +231,153 @@
   font-size: 12px;
 }
 
-/* 回滚模态框样式 */
-.rollback-modal .k8s-form-input {
-  width: 100%;
+/* YAML 工具栏样式 */
+.yaml-toolbar {
+  margin-bottom: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
 }
 
-.rollback-modal .version-hint {
-  background: #fff7e6;
-  border: 1px solid #ffd591;
+/* YAML 工具栏按钮基础样式 */
+.yaml-toolbar-btn {
+  height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 500;
   border-radius: 6px;
-  padding: 8px 12px;
-  margin-top: 8px;
-  color: #fa8c16;
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.yaml-toolbar-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s;
+}
+
+.yaml-toolbar-btn:hover::before {
+  left: 100%;
+}
+
+.yaml-toolbar-btn .anticon {
+  font-size: 14px;
+}
+
+/* 插入模板按钮 - 蓝色主题 */
+.yaml-btn-template {
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  color: #ffffff;
+  border-color: #357abd;
+}
+
+.yaml-btn-template:hover {
+  background: linear-gradient(135deg, #5ba3f5 0%, #4a90e2 100%);
+  border-color: #4a90e2;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+}
+
+.yaml-btn-template:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(74, 144, 226, 0.2);
+}
+
+/* 格式化按钮 - 紫色主题 */
+.yaml-btn-format {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  color: #ffffff;
+  border-color: #8e44ad;
+}
+
+.yaml-btn-format:hover {
+  background: linear-gradient(135deg, #a569bd 0%, #9b59b6 100%);
+  border-color: #9b59b6;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+}
+
+.yaml-btn-format:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(155, 89, 182, 0.2);
+}
+
+/* 检查格式按钮 - 绿色主题 */
+.yaml-btn-validate {
+  background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+  color: #ffffff;
+  border-color: #229954;
+}
+
+.yaml-btn-validate:hover {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  border-color: #27ae60;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+.yaml-btn-validate:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(39, 174, 96, 0.2);
+}
+
+/* 清空按钮 - 灰色主题 */
+.yaml-btn-clear {
+  background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+  color: #ffffff;
+  border-color: #7f8c8d;
+}
+
+.yaml-btn-clear:hover {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  border-color: #c0392b;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+.yaml-btn-clear:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(231, 76, 60, 0.2);
 }
 
 /* YAML 编辑器样式 */
 .k8s-config-textarea {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.5;
   background: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 8px;
   padding: 16px;
   resize: none;
-  color: #333;
+  color: #2c3e50;
+  transition: all 0.2s ease;
 }
 
 .k8s-config-textarea:focus {
-  border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
-  background: #fff;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+  background: #ffffff;
+  outline: none;
 }
 
 /* Pod 列表表格样式 */
@@ -402,6 +503,46 @@
   background: #f8f9fa;
   border: 1px dashed #d9d9d9;
   border-radius: 6px;
+}
+
+/* YAML 工具栏响应式优化 */
+@media (max-width: 768px) {
+  .yaml-toolbar {
+    gap: 8px;
+    padding: 10px;
+  }
+  
+  .yaml-toolbar-btn {
+    height: 34px;
+    padding: 0 14px;
+    font-size: 12px;
+    gap: 5px;
+  }
+  
+  .yaml-toolbar-btn .anticon {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 576px) {
+  .yaml-toolbar {
+    gap: 6px;
+    padding: 8px;
+  }
+  
+  .yaml-toolbar-btn {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 11px;
+    gap: 4px;
+    flex: 1 1 calc(50% - 3px);
+    min-width: 0;
+    justify-content: center;
+  }
+  
+  .yaml-toolbar-btn .anticon {
+    font-size: 12px;
+  }
 }
 
 /* 响应式优化 */

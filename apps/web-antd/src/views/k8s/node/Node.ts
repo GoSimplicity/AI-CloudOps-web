@@ -562,7 +562,7 @@ export function useNodePage() {
         ...drainFormModel.value,
       };
       await drainK8sNode(params);
-      message.success('🔄 节点驱逐操作已启动');
+      message.success('节点驱逐操作已启动');
       isDrainModalVisible.value = false;
       await fetchNodes();
     } catch (err: unknown) {

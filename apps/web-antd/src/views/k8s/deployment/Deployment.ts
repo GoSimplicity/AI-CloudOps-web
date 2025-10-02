@@ -1,6 +1,7 @@
-import { ref, computed } from 'vue';
+import { ref, computed, h } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+import yaml from 'js-yaml';
 import {
   type K8sDeployment,
   type GetDeploymentListReq,
@@ -21,7 +22,6 @@ import {
   scaleDeploymentApi,
   pauseDeploymentApi,
   resumeDeploymentApi,
-  rollbackDeploymentApi,
   getDeploymentPodsApi,
   getDeploymentHistoryApi,
 } from '#/api/core/k8s/k8s_deployment';
@@ -37,6 +37,36 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
+
+// YAML 模板常量
+const DEPLOYMENT_YAML_TEMPLATE = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+  labels:
+    app: my-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"`;
 
 export function useDeploymentPage() {
   // state
@@ -66,7 +96,6 @@ export function useDeploymentPage() {
   // form refs
   const formRef = ref<FormInstance>();
   const scaleFormRef = ref<FormInstance>();
-  const rollbackFormRef = ref<FormInstance>();
   const yamlFormRef = ref<FormInstance>();
   const createYamlFormRef = ref<FormInstance>();
 
@@ -76,7 +105,6 @@ export function useDeploymentPage() {
   const isEditModalVisible = ref(false);
   const isDetailModalVisible = ref(false);
   const isScaleModalVisible = ref(false);
-  const isRollbackModalVisible = ref(false);
   const isYamlModalVisible = ref(false);
   const isPodModalVisible = ref(false);
   const isHistoryModalVisible = ref(false);
@@ -129,12 +157,6 @@ export function useDeploymentPage() {
     replicas: 1,
   });
 
-  const rollbackFormModel = ref<{
-    revision: number;
-  }>({
-    revision: 1,
-  });
-
   const yamlFormModel = ref<{
     yaml: string;
   }>({
@@ -167,13 +189,6 @@ export function useDeploymentPage() {
     replicas: [
       { required: true, message: '请输入副本数量', trigger: 'blur' },
       { type: 'number', min: 0, max: 100, message: '副本数量必须在0-100之间', trigger: 'blur' }
-    ]
-  };
-
-  const rollbackFormRules: Record<string, Rule[]> = {
-    revision: [
-      { required: true, message: '请输入回滚版本', trigger: 'blur' },
-      { type: 'number', min: 1, message: '版本号必须大于0', trigger: 'blur' }
     ]
   };
 
@@ -475,7 +490,7 @@ export function useDeploymentPage() {
         currentOperationDeployment.value.name,
         params
       );
-      message.success('🎉 Deployment YAML 更新成功');
+      message.success('Deployment YAML 更新成功');
       isYamlModalVisible.value = false;
       await fetchDeployments();
     } catch (err: unknown) {
@@ -483,7 +498,7 @@ export function useDeploymentPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ Deployment YAML 更新失败');
+      message.error('Deployment YAML 更新失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -538,7 +553,7 @@ export function useDeploymentPage() {
       };
       
       await createDeploymentApi(filterClusterId.value, params);
-      message.success('🎉 Deployment 创建成功');
+      message.success('Deployment 创建成功');
       isCreateModalVisible.value = false;
       await fetchDeployments();
     } catch (err: unknown) {
@@ -546,7 +561,7 @@ export function useDeploymentPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ Deployment 创建失败');
+      message.error('Deployment 创建失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -565,7 +580,7 @@ export function useDeploymentPage() {
       };
       
       await createDeploymentByYamlApi(filterClusterId.value, params);
-      message.success('🎉 Deployment YAML 创建成功');
+      message.success('Deployment YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchDeployments();
     } catch (err: unknown) {
@@ -573,7 +588,7 @@ export function useDeploymentPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ Deployment YAML 创建失败');
+      message.error('Deployment YAML 创建失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -622,7 +637,7 @@ export function useDeploymentPage() {
         currentOperationDeployment.value.name,
         params
       );
-      message.success('🎉 Deployment 更新成功');
+      message.success('Deployment 更新成功');
       isEditModalVisible.value = false;
       await fetchDeployments();
     } catch (err: unknown) {
@@ -630,7 +645,7 @@ export function useDeploymentPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ Deployment 更新失败');
+      message.error('Deployment 更新失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -652,10 +667,10 @@ export function useDeploymentPage() {
       onOk: async () => {
         try {
           await deleteDeploymentApi(clusterId, record.namespace, record.name);
-          message.success('✅ Deployment 删除成功');
+          message.success('Deployment 删除成功');
           await fetchDeployments();
         } catch (err) {
-          message.error('❌ Deployment 删除失败');
+          message.error('Deployment 删除失败');
           console.error(err);
         }
       },
@@ -677,10 +692,10 @@ export function useDeploymentPage() {
       onOk: async () => {
         try {
           await restartDeploymentApi(clusterId, record.namespace, record.name);
-          message.success('✅ Deployment 重启成功');
+          message.success('Deployment 重启成功');
           await fetchDeployments();
         } catch (err) {
-          message.error('❌ Deployment 重启失败');
+          message.error('Deployment 重启失败');
           console.error(err);
         }
       },
@@ -719,7 +734,7 @@ export function useDeploymentPage() {
         currentOperationDeployment.value.name,
         params
       );
-      message.success('🎉 Deployment 伸缩成功');
+      message.success('Deployment 伸缩成功');
       isScaleModalVisible.value = false;
       await fetchDeployments();
     } catch (err: unknown) {
@@ -727,7 +742,7 @@ export function useDeploymentPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ Deployment 伸缩失败');
+      message.error('Deployment 伸缩失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -749,10 +764,10 @@ export function useDeploymentPage() {
       onOk: async () => {
         try {
           await pauseDeploymentApi(clusterId, record.namespace, record.name);
-          message.success('✅ Deployment 暂停成功');
+          message.success('Deployment 暂停成功');
           await fetchDeployments();
         } catch (err) {
-          message.error('❌ Deployment 暂停失败');
+          message.error('Deployment 暂停失败');
           console.error(err);
         }
       },
@@ -773,61 +788,14 @@ export function useDeploymentPage() {
       onOk: async () => {
         try {
           await resumeDeploymentApi(clusterId, record.namespace, record.name);
-          message.success('✅ Deployment 恢复成功');
+          message.success('Deployment 恢复成功');
           await fetchDeployments();
         } catch (err) {
-          message.error('❌ Deployment 恢复失败');
+          message.error('Deployment 恢复失败');
           console.error(err);
         }
       },
     });
-  };
-
-  // 回滚 Deployment
-  const openRollbackModal = (record: K8sDeployment) => {
-    const clusterId = validateClusterId(record);
-    if (!clusterId) return;
-    
-    currentOperationDeployment.value = { ...record, cluster_id: clusterId };
-    rollbackFormModel.value.revision = 1;
-    isRollbackModalVisible.value = true;
-  };
-
-  const closeRollbackModal = () => {
-    isRollbackModalVisible.value = false;
-    currentOperationDeployment.value = null;
-  };
-
-  const submitRollbackForm = async () => {
-    if (!rollbackFormRef.value || !currentOperationDeployment.value) return;
-    
-    try {
-      await rollbackFormRef.value.validate();
-      submitLoading.value = true;
-      
-      const params = {
-        revision: rollbackFormModel.value.revision,
-      };
-      
-      await rollbackDeploymentApi(
-        currentOperationDeployment.value.cluster_id,
-        currentOperationDeployment.value.namespace,
-        currentOperationDeployment.value.name,
-        params
-      );
-      message.success('🎉 Deployment 回滚成功');
-      isRollbackModalVisible.value = false;
-      await fetchDeployments();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
-        return;
-      }
-      message.error('❌ Deployment 回滚失败');
-      console.error(err);
-    } finally {
-      submitLoading.value = false;
-    }
   };
 
   // 查看 Pod 列表
@@ -927,12 +895,12 @@ export function useDeploymentPage() {
               await restartDeploymentApi(clusterId, deployment.namespace, deployment.name);
             }
           }
-          message.success(`✅ 批量${operation}操作已完成`);
+          message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchDeployments();
         } catch (err) {
-          message.error(`❌ 批量${operation}失败`);
+          message.error(`批量${operation}失败`);
           console.error(err);
         }
       },
@@ -1004,6 +972,245 @@ export function useDeploymentPage() {
     delete createFormModel.value.annotations[key];
   };
 
+  // YAML 操作辅助函数
+  const insertYamlTemplate = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认操作',
+        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+        okText: '确认',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = DEPLOYMENT_YAML_TEMPLATE;
+          message.success('模板已插入');
+        },
+      });
+    } else {
+      createYamlFormModel.value.yaml = DEPLOYMENT_YAML_TEMPLATE;
+      message.success('模板已插入');
+    }
+  };
+
+  const formatYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      // 解析 YAML
+      const parsed = yaml.load(yamlContent);
+      // 重新格式化为 YAML（缩进2空格）
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1, // 不限制行宽
+        noRefs: true,  // 不使用引用
+        sortKeys: false, // 保持原有顺序
+      });
+      createYamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+      console.error('YAML 格式化错误:', error);
+    }
+  };
+
+  const validateYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      // 尝试解析 YAML
+      const parsed = yaml.load(yamlContent);
+      
+      // 检查是否是有效的对象
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      // 基本的 Deployment 字段检查
+      const deployment = parsed as any;
+      const issues: string[] = [];
+
+      if (!deployment.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!deployment.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (deployment.kind !== 'Deployment') {
+        issues.push(`kind 应为 "Deployment"，当前为 "${deployment.kind}"`);
+      }
+      if (!deployment.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!deployment.spec) {
+        issues.push('缺少 spec 字段');
+      } else {
+        if (deployment.spec.replicas === undefined) {
+          issues.push('建议设置 spec.replicas 字段');
+        }
+        if (!deployment.spec.selector) {
+          issues.push('缺少 spec.selector 字段');
+        }
+        if (!deployment.spec.template) {
+          issues.push('缺少 spec.template 字段');
+        }
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+      console.error('YAML 验证错误:', error);
+    }
+  };
+
+  const clearYaml = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认清空',
+        content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+        okText: '确认清空',
+        okType: 'danger',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = '';
+          message.success('YAML 内容已清空');
+        },
+      });
+    } else {
+      message.info('YAML 内容已为空');
+    }
+  };
+
+  // 编辑 YAML 的格式化和验证函数
+  const formatEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      yamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+      console.error('YAML 格式化错误:', error);
+    }
+  };
+
+  const validateEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      const deployment = parsed as any;
+      const issues: string[] = [];
+
+      if (!deployment.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!deployment.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (deployment.kind !== 'Deployment') {
+        issues.push(`kind 应为 "Deployment"，当前为 "${deployment.kind}"`);
+      }
+      if (!deployment.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!deployment.spec) {
+        issues.push('缺少 spec 字段');
+      } else {
+        if (deployment.spec.replicas === undefined) {
+          issues.push('建议设置 spec.replicas 字段');
+        }
+        if (!deployment.spec.selector) {
+          issues.push('缺少 spec.selector 字段');
+        }
+        if (!deployment.spec.template) {
+          issues.push('缺少 spec.template 字段');
+        }
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+      console.error('YAML 验证错误:', error);
+    }
+  };
+
   return {
     // state
     deployments,
@@ -1032,7 +1239,6 @@ export function useDeploymentPage() {
     // form refs
     formRef,
     scaleFormRef,
-    rollbackFormRef,
     yamlFormRef,
     createYamlFormRef,
     
@@ -1042,7 +1248,6 @@ export function useDeploymentPage() {
     isEditModalVisible,
     isDetailModalVisible,
     isScaleModalVisible,
-    isRollbackModalVisible,
     isYamlModalVisible,
     isPodModalVisible,
     isHistoryModalVisible,
@@ -1060,14 +1265,12 @@ export function useDeploymentPage() {
     createFormModel,
     editFormModel,
     scaleFormModel,
-    rollbackFormModel,
     yamlFormModel,
     createYamlFormModel,
     
     // form rules
     createFormRules,
     scaleFormRules,
-    rollbackFormRules,
     yamlFormRules,
     createYamlFormRules,
     
@@ -1125,11 +1328,6 @@ export function useDeploymentPage() {
     closeScaleModal,
     submitScaleForm,
     
-    // rollback operations
-    openRollbackModal,
-    closeRollbackModal,
-    submitRollbackForm,
-    
     // pod operations
     showPodModal,
     closePodModal,
@@ -1157,6 +1355,14 @@ export function useDeploymentPage() {
     removeLabelField,
     addAnnotationField,
     removeAnnotationField,
+    
+    // yaml operations
+    insertYamlTemplate,
+    formatYaml,
+    validateYaml,
+    clearYaml,
+    formatEditYaml,
+    validateEditYaml,
     
     // constants
     K8sDeploymentStatus,

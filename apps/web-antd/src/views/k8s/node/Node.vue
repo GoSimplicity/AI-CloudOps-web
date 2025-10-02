@@ -499,7 +499,7 @@
         :rules="drainFormRules"
       >
         <a-alert 
-          message="⚠️ 警告：驱逐节点将安全迁移该节点上的所有 Pod" 
+          message="警告：驱逐节点将安全迁移该节点上的所有 Pod" 
           type="warning" 
           show-icon 
           style="margin-bottom: 20px;" 
