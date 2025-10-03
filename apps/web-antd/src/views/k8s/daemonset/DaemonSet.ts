@@ -108,14 +108,14 @@ export function useDaemonSetPage() {
     name: string;
     namespace: string;
     image: string;
-    labels: KeyValueList;
-    annotations: KeyValueList;
+    labels: Record<string, string>;
+    annotations: Record<string, string>;
   }>({
     name: '',
     namespace: '',
     image: '',
-    labels: [],
-    annotations: [],
+    labels: {},
+    annotations: {},
   });
 
   const rollbackFormModel = ref<{
@@ -221,11 +221,6 @@ export function useDaemonSetPage() {
       [K8sDaemonSetStatus.Updating]: 'processing',
     };
     return status !== undefined ? map[status] || 'default' : 'default';
-  };
-
-  // 转换函数：Record<string, string> -> KeyValueList
-  const recordToKeyValueList = (record: Record<string, string>): KeyValueList => {
-    return Object.entries(record).map(([key, value]: [string, string]) => ({ key, value }));
   };
 
   // 转换函数：KeyValueList 或对象 -> Record<string, string>
@@ -345,7 +340,7 @@ export function useDaemonSetPage() {
         namespace: filterNamespace.value || undefined,
         status: filterStatus.value?.toString() || undefined,
         labels: Object.keys(filterLabels.value).length > 0 
-          ? Object.entries(filterLabels.value).map(([key, value]: [string, string]) => ({ key, value }))
+          ? filterLabels.value
           : undefined,
       };
       const res = await getDaemonSetListApi(filterClusterId.value, params);
@@ -504,8 +499,8 @@ export function useDaemonSetPage() {
         name: createFormModel.value.name,
         namespace: createFormModel.value.namespace,
         images: createFormModel.value.images.filter(img => img.trim()),
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? recordToKeyValueList(createFormModel.value.labels) : undefined,
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? recordToKeyValueList(createFormModel.value.annotations) : undefined,
+        labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
+        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
       };
       
       await createDaemonSetApi(filterClusterId.value, params);
@@ -617,8 +612,8 @@ export function useDaemonSetPage() {
       name: record.name,
       namespace: record.namespace,
       image: record.images?.[0] || '',
-      labels: recordToKeyValueList(keyValueListToRecord(record.labels)),
-      annotations: recordToKeyValueList(keyValueListToRecord(record.annotations)),
+      labels: keyValueListToRecord(record.labels),
+      annotations: keyValueListToRecord(record.annotations),
     };
     isEditModalVisible.value = true;
   };
@@ -638,8 +633,8 @@ export function useDaemonSetPage() {
       const params: UpdateDaemonSetReq = {
         cluster_id: currentOperationDaemonSet.value.cluster_id,
         images: editFormModel.value.image ? [editFormModel.value.image] : undefined,
-        labels: editFormModel.value.labels.length > 0 ? keyValueListToRecord(editFormModel.value.labels) : undefined,
-        annotations: editFormModel.value.annotations.length > 0 ? keyValueListToRecord(editFormModel.value.annotations) : undefined,
+        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
+        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
       };
       
       await updateDaemonSetApi(
@@ -886,11 +881,11 @@ export function useDaemonSetPage() {
 
   // 编辑模态框专用的移除方法
   const removeEditLabelField = (key: string) => {
-    editFormModel.value.labels = editFormModel.value.labels.filter(label => label.key !== key);
+    delete editFormModel.value.labels[key];
   };
 
   const removeEditAnnotationField = (key: string) => {
-    editFormModel.value.annotations = editFormModel.value.annotations.filter(annotation => annotation.key !== key);
+    delete editFormModel.value.annotations[key];
   };
 
   return {
@@ -966,7 +961,6 @@ export function useDaemonSetPage() {
     getEnvText,
     getStatusText,
     getStatusColor,
-    recordToKeyValueList,
     keyValueListToRecord,
     
     // operations

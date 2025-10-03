@@ -1,5 +1,4 @@
 import { requestClient } from '#/api/request';
-import type { KeyValueList } from './k8s_cluster';
 
 // DaemonSet状态枚举
 export enum K8sDaemonSetStatus {
@@ -42,9 +41,9 @@ export interface K8sDaemonSet {
   number_misscheduled: number; // 错误调度数量
   update_strategy?: string; // 更新策略
   revision_history_limit?: number; // 历史版本限制
-  selector?: KeyValueList; // 标签选择器
-  labels?: KeyValueList; // 标签
-  annotations?: KeyValueList; // 注解
+  selector?: Record<string, string>; // 标签选择器
+  labels?: Record<string, string>; // 标签
+  annotations?: Record<string, string>; // 注解
   images?: string[]; // 容器镜像列表
   status: K8sDaemonSetStatus; // DaemonSet状态
   conditions?: DaemonSetCondition[]; // DaemonSet条件
@@ -67,7 +66,7 @@ export interface GetDaemonSetListReq {
   cluster_id: number; // 集群ID，必填
   namespace?: string; // 命名空间
   status?: string; // DaemonSet状态
-  labels?: KeyValueList; // 标签
+  labels?: Record<string, string>; // 标签
 }
 
 // 获取DaemonSet详情请求
@@ -90,8 +89,8 @@ export interface CreateDaemonSetReq {
   name: string; // DaemonSet名称，必填
   namespace: string; // 命名空间，必填
   images: string[]; // 容器镜像列表，必填
-  labels?: KeyValueList; // 标签
-  annotations?: KeyValueList; // 注解
+  labels?: Record<string, string>; // 标签
+  annotations?: Record<string, string>; // 注解
   spec?: DaemonSetSpec; // DaemonSet规格
   yaml?: string; // YAML内容
 }
