@@ -95,6 +95,7 @@ export function useDeploymentPage() {
 
   // form refs
   const formRef = ref<FormInstance>();
+  const editFormRef = ref<FormInstance>();
   const scaleFormRef = ref<FormInstance>();
   const yamlFormRef = ref<FormInstance>();
   const createYamlFormRef = ref<FormInstance>();
@@ -203,6 +204,13 @@ export function useDeploymentPage() {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
       { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
+    ]
+  };
+
+  const editFormRules: Record<string, Rule[]> = {
+    replicas: [
+      { required: true, message: '请输入副本数量', trigger: 'blur' },
+      { type: 'number', min: 0, max: 100, message: '副本数量必须在0-100之间', trigger: 'blur' }
     ]
   };
 
@@ -597,14 +605,17 @@ export function useDeploymentPage() {
 
   // 编辑 Deployment
   const openEditModal = (record: K8sDeployment) => {
-    currentOperationDeployment.value = record;
+    const clusterId = validateClusterId(record);
+    if (!clusterId) return;
+    
+    currentOperationDeployment.value = { ...record, cluster_id: clusterId };
     editFormModel.value = {
       name: record.name,
       namespace: record.namespace,
       replicas: record.replicas,
-      images: record.images || [''],
-      labels: record.labels || {},
-      annotations: record.annotations || {},
+      images: (record.images && record.images.length > 0) ? [...record.images] : [''],
+      labels: keyValueListToRecord(record.labels),
+      annotations: keyValueListToRecord(record.annotations),
     };
     isEditModalVisible.value = true;
   };
@@ -615,10 +626,10 @@ export function useDeploymentPage() {
   };
 
   const submitEditForm = async () => {
-    if (!formRef.value || !currentOperationDeployment.value) return;
+    if (!editFormRef.value || !currentOperationDeployment.value) return;
     
     try {
-      await formRef.value.validate();
+      await editFormRef.value.validate();
       submitLoading.value = true;
       
       const params: Omit<UpdateDeploymentReq, 'cluster_id' | 'namespace' | 'name'> = {
@@ -1238,6 +1249,7 @@ export function useDeploymentPage() {
     
     // form refs
     formRef,
+    editFormRef,
     scaleFormRef,
     yamlFormRef,
     createYamlFormRef,
@@ -1270,6 +1282,7 @@ export function useDeploymentPage() {
     
     // form rules
     createFormRules,
+    editFormRules,
     scaleFormRules,
     yamlFormRules,
     createYamlFormRules,

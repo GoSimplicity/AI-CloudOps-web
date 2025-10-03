@@ -304,6 +304,11 @@
                 <template #icon><EyeOutlined /></template>
               </a-button>
             </a-tooltip>
+            <a-tooltip title="编辑">
+              <a-button title="编辑" @click="openEditModal(record)">
+                <template #icon><EditOutlined /></template>
+              </a-button>
+            </a-tooltip>
             <a-tooltip title="查看 YAML">
               <a-button title="查看 YAML" @click="showYamlModal(record)">
                 <template #icon><FileTextOutlined /></template>
@@ -360,6 +365,163 @@
         </template>
       </a-table>
     </div>
+
+    <!-- 编辑 Deployment 模态框 -->
+    <a-modal
+      v-model:open="isEditModalVisible"
+      title="编辑 Deployment"
+      @ok="submitEditForm"
+      @cancel="closeEditModal"
+      :confirmLoading="submitLoading"
+      width="800px"
+      :maskClosable="false"
+      destroyOnClose
+      okText="保存"
+      cancelText="取消"
+    >
+      <a-form 
+        ref="editFormRef"
+        :model="editFormModel" 
+        layout="vertical" 
+        class="k8s-form"
+        :rules="editFormRules"
+      >
+        <a-form-item label="Deployment 名称" name="name">
+          <a-input 
+            v-model:value="editFormModel.name" 
+            placeholder="Deployment 名称" 
+            class="k8s-form-input"
+            disabled
+          />
+          <div style="color: #999; font-size: 12px; margin-top: 4px;">
+            名称不可修改
+          </div>
+        </a-form-item>
+
+        <a-form-item label="命名空间" name="namespace">
+          <a-input 
+            v-model:value="editFormModel.namespace" 
+            placeholder="命名空间" 
+            class="k8s-form-input"
+            disabled
+          />
+          <div style="color: #999; font-size: 12px; margin-top: 4px;">
+            命名空间不可修改
+          </div>
+        </a-form-item>
+
+        <a-form-item label="副本数量" name="replicas" :required="true">
+          <a-input-number 
+            v-model:value="editFormModel.replicas" 
+            :min="0" 
+            :max="100" 
+            class="k8s-form-input"
+            placeholder="副本数量"
+          />
+        </a-form-item>
+
+        <a-form-item label="容器镜像">
+          <div class="k8s-key-value-inputs">
+            <div v-for="(_, index) in editFormModel.images" :key="index" class="k8s-key-value-row">
+              <a-input 
+                v-model:value="editFormModel.images[index]" 
+                placeholder="容器镜像（例如：nginx:latest）" 
+                class="k8s-form-input"
+              />
+              <a-button type="text" danger 
+                @click="removeEditImageField(index)" 
+                :disabled="editFormModel.images.length <= 1"
+                size="small"
+               class="k8s-remove-btn">
+                <template #icon><DeleteOutlined /></template>
+              </a-button>
+            </div>
+            <a-button type="dashed" @click="addEditImageField" style="margin-top: 8px;">
+              <template #icon><PlusOutlined /></template>
+              添加镜像
+            </a-button>
+          </div>
+        </a-form-item>
+
+        <a-form-item label="标签配置（可选）">
+          <a-form-item-rest>
+            <div class="k8s-key-value-inputs">
+              <div v-if="!editFormModel.labels || Object.keys(editFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 16px;">
+                暂无标签，点击下方按钮添加
+              </div>
+              <div v-for="(_, key) in editFormModel.labels" :key="key" class="k8s-key-value-row">
+                <a-input 
+                  :value="key" 
+                  :placeholder="`标签键: ${key}`" 
+                  disabled
+                  class="k8s-form-input"
+                />
+                <a-input 
+                  v-model:value="editFormModel.labels[key]" 
+                  placeholder="标签值" 
+                  class="k8s-form-input"
+                  :maxlength="200"
+                />
+                <a-button type="text" danger @click="removeEditLabelField(key)" size="small" class="k8s-remove-btn">
+                  <template #icon><DeleteOutlined /></template>
+                </a-button>
+              </div>
+              <div class="add-input-row" style="margin-top: 8px;">
+                <a-input
+                  v-model:value="newEditLabelKey"
+                  placeholder="输入标签键"
+                  style="flex: 1; margin-right: 8px;"
+                  @press-enter="addNewEditLabel"
+                />
+                <a-button type="primary" @click="addNewEditLabel" :disabled="!newEditLabelKey.trim()">
+                  <template #icon><PlusOutlined /></template>
+                  添加
+                </a-button>
+              </div>
+            </div>
+          </a-form-item-rest>
+        </a-form-item>
+
+        <a-form-item label="注解配置（可选）">
+          <a-form-item-rest>
+            <div class="k8s-key-value-inputs">
+              <div v-if="!editFormModel.annotations || Object.keys(editFormModel.annotations).length === 0" style="text-align: center; color: #999; padding: 16px;">
+                暂无注解，点击下方按钮添加
+              </div>
+              <div v-for="(_, key) in editFormModel.annotations" :key="key" class="k8s-key-value-row">
+                <a-input 
+                  :value="key" 
+                  :placeholder="`注解键: ${key}`" 
+                  disabled
+                  class="k8s-form-input"
+                />
+                <a-input 
+                  v-model:value="editFormModel.annotations[key]" 
+                  placeholder="注解值" 
+                  class="k8s-form-input"
+                  :maxlength="500"
+                />
+                <a-button type="text" danger @click="removeEditAnnotationField(key)" size="small" class="k8s-remove-btn">
+                  <template #icon><DeleteOutlined /></template>
+                </a-button>
+              </div>
+              <div class="add-input-row" style="margin-top: 8px;">
+                <a-input
+                  v-model:value="newEditAnnotationKey"
+                  placeholder="输入注解键"
+                  style="flex: 1; margin-right: 8px;"
+                  @press-enter="addNewEditAnnotation"
+                />
+                <a-button type="primary" @click="addNewEditAnnotation" :disabled="!newEditAnnotationKey.trim()">
+                  <template #icon><PlusOutlined /></template>
+                  添加
+                </a-button>
+              </div>
+            </div>
+          </a-form-item-rest>
+        </a-form-item>
+      </a-form>
+    </a-modal>
 
     <!-- 创建 Deployment 模态框 -->
     <a-modal
@@ -449,78 +611,82 @@
           </div>
         </a-form-item>
 
-        <a-form-item label="标签配置（可选）" name="labels">
-          <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 16px;">
-              暂无标签，点击下方按钮添加
+        <a-form-item label="标签配置（可选）">
+          <a-form-item-rest>
+            <div class="k8s-key-value-inputs">
+              <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 16px;">
+                暂无标签，点击下方按钮添加
+              </div>
+              <div v-for="(_, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
+                <a-input 
+                  :value="key" 
+                  :placeholder="`标签键: ${key}`" 
+                  disabled
+                  class="k8s-form-input"
+                />
+                <a-input 
+                  v-model:value="createFormModel.labels[key]" 
+                  placeholder="标签值" 
+                  class="k8s-form-input"
+                  :maxlength="200"
+                />
+                <a-button type="text" danger @click="removeLabelField(key)" size="small" class="k8s-remove-btn">
+                  <template #icon><DeleteOutlined /></template>
+                </a-button>
+              </div>
+              <div class="add-input-row" style="margin-top: 8px;">
+                <a-input
+                  v-model:value="newLabelKey"
+                  placeholder="输入标签键"
+                  style="flex: 1; margin-right: 8px;"
+                  @press-enter="addNewLabel"
+                />
+                <a-button type="primary" @click="addNewLabel" :disabled="!newLabelKey.trim()">
+                  <template #icon><PlusOutlined /></template>
+                  添加
+                </a-button>
+              </div>
             </div>
-            <div v-for="(_, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`标签键: ${key}`" 
-                disabled
-                class="k8s-form-input"
-              />
-              <a-input 
-                v-model:value="createFormModel.labels[key]" 
-                placeholder="标签值" 
-                class="k8s-form-input"
-                :maxlength="200"
-              />
-              <a-button type="text" danger @click="removeLabelField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
-              </a-button>
-            </div>
-            <div class="add-input-row" style="margin-top: 8px;">
-              <a-input
-                v-model:value="newLabelKey"
-                placeholder="输入标签键"
-                style="flex: 1; margin-right: 8px;"
-                @press-enter="addNewLabel"
-              />
-              <a-button type="primary" @click="addNewLabel" :disabled="!newLabelKey.trim()">
-                <template #icon><PlusOutlined /></template>
-                添加
-              </a-button>
-            </div>
-          </div>
+          </a-form-item-rest>
         </a-form-item>
 
-        <a-form-item label="注解配置（可选）" name="annotations">
-          <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" style="text-align: center; color: #999; padding: 16px;">
-              暂无注解，点击下方按钮添加
+        <a-form-item label="注解配置（可选）">
+          <a-form-item-rest>
+            <div class="k8s-key-value-inputs">
+              <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" style="text-align: center; color: #999; padding: 16px;">
+                暂无注解，点击下方按钮添加
+              </div>
+              <div v-for="(_, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
+                <a-input 
+                  :value="key" 
+                  :placeholder="`注解键: ${key}`" 
+                  disabled
+                  class="k8s-form-input"
+                />
+                <a-input 
+                  v-model:value="createFormModel.annotations[key]" 
+                  placeholder="注解值" 
+                  class="k8s-form-input"
+                  :maxlength="500"
+                />
+                <a-button type="text" danger @click="removeAnnotationField(key)" size="small" class="k8s-remove-btn">
+                  <template #icon><DeleteOutlined /></template>
+                </a-button>
+              </div>
+              <div class="add-input-row" style="margin-top: 8px;">
+                <a-input
+                  v-model:value="newAnnotationKey"
+                  placeholder="输入注解键"
+                  style="flex: 1; margin-right: 8px;"
+                  @press-enter="addNewAnnotation"
+                />
+                <a-button type="primary" @click="addNewAnnotation" :disabled="!newAnnotationKey.trim()">
+                  <template #icon><PlusOutlined /></template>
+                  添加
+                </a-button>
+              </div>
             </div>
-            <div v-for="(_, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`注解键: ${key}`" 
-                disabled
-                class="k8s-form-input"
-              />
-              <a-input 
-                v-model:value="createFormModel.annotations[key]" 
-                placeholder="注解值" 
-                class="k8s-form-input"
-                :maxlength="500"
-              />
-              <a-button type="text" danger @click="removeAnnotationField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
-              </a-button>
-            </div>
-            <div class="add-input-row" style="margin-top: 8px;">
-              <a-input
-                v-model:value="newAnnotationKey"
-                placeholder="输入注解键"
-                style="flex: 1; margin-right: 8px;"
-                @press-enter="addNewAnnotation"
-              />
-              <a-button type="primary" @click="addNewAnnotation" :disabled="!newAnnotationKey.trim()">
-                <template #icon><PlusOutlined /></template>
-                添加
-              </a-button>
-            </div>
-          </div>
+          </a-form-item-rest>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -917,6 +1083,7 @@ import {
   DeploymentUnitOutlined,
   AppstoreOutlined,
   EyeOutlined,
+  EditOutlined,
   TagsOutlined,
   SearchOutlined,
   FileTextOutlined,
@@ -954,6 +1121,7 @@ const {
   // modal state
   isCreateModalVisible,
   isCreateYamlModalVisible,
+  isEditModalVisible,
   isDetailModalVisible,
   isScaleModalVisible,
   isYamlModalVisible,
@@ -970,18 +1138,21 @@ const {
   
   // form models
   createFormModel,
+  editFormModel,
   createYamlFormModel,
   scaleFormModel,
   yamlFormModel,
   
   // form refs
   formRef,
+  editFormRef,
   scaleFormRef,
   yamlFormRef,
   createYamlFormRef,
   
   // form rules
   createFormRules,
+  editFormRules,
   scaleFormRules,
   yamlFormRules,
   createYamlFormRules,
@@ -1020,6 +1191,11 @@ const {
   openCreateYamlModal,
   closeCreateYamlModal,
   submitCreateYamlForm,
+  
+  // edit operations
+  openEditModal,
+  closeEditModal,
+  submitEditForm,
   
   // deployment operations
   deleteDeployment,
@@ -1072,6 +1248,8 @@ const {
 // 添加新标签/注解的方法
 const newLabelKey = ref('');
 const newAnnotationKey = ref('');
+const newEditLabelKey = ref('');
+const newEditAnnotationKey = ref('');
 
 const addNewLabel = () => {
   if (newLabelKey.value && newLabelKey.value.trim()) {
@@ -1084,6 +1262,39 @@ const addNewAnnotation = () => {
   if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
     createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
     newAnnotationKey.value = '';
+  }
+};
+
+// 编辑表单的辅助函数
+const addEditImageField = () => {
+  editFormModel.value.images.push('');
+};
+
+const removeEditImageField = (index: number) => {
+  if (editFormModel.value.images.length > 1) {
+    editFormModel.value.images.splice(index, 1);
+  }
+};
+
+const removeEditLabelField = (key: string) => {
+  delete editFormModel.value.labels[key];
+};
+
+const removeEditAnnotationField = (key: string) => {
+  delete editFormModel.value.annotations[key];
+};
+
+const addNewEditLabel = () => {
+  if (newEditLabelKey.value && newEditLabelKey.value.trim()) {
+    editFormModel.value.labels[newEditLabelKey.value.trim()] = '';
+    newEditLabelKey.value = '';
+  }
+};
+
+const addNewEditAnnotation = () => {
+  if (newEditAnnotationKey.value && newEditAnnotationKey.value.trim()) {
+    editFormModel.value.annotations[newEditAnnotationKey.value.trim()] = '';
+    newEditAnnotationKey.value = '';
   }
 };
 
