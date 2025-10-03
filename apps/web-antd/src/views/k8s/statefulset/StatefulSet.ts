@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+import yaml from 'js-yaml';
 import {
   type K8sStatefulSet,
   type K8sStatefulSetHistory,
@@ -39,6 +40,49 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
+
+// YAML 模板常量
+const STATEFULSET_YAML_TEMPLATE = `apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: my-statefulset
+  labels:
+    app: my-app
+spec:
+  serviceName: my-service
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+          name: web
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+        volumeMounts:
+        - name: data
+          mountPath: /usr/share/nginx/html
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi`;
 
 export function useStatefulSetPage() {
   // state
@@ -396,7 +440,7 @@ export function useStatefulSetPage() {
         namespace: filterNamespace.value || undefined,
         status: filterStatus.value?.toString() || undefined,
         service_name: filterServiceName.value || undefined,
-        labels: Object.keys(filterLabels.value).length > 0 ? recordToKeyValueList(filterLabels.value) : undefined,
+        labels: Object.keys(filterLabels.value).length > 0 ? filterLabels.value : undefined,
       };
       const res = await getStatefulSetListApi(filterClusterId.value, params);
       // 确保每个statefulSet对象都有正确的cluster_id
@@ -506,7 +550,7 @@ export function useStatefulSetPage() {
         currentOperationStatefulSet.value.name,
         params
       );
-      message.success('🎉 StatefulSet YAML 更新成功');
+      message.success('StatefulSet YAML 更新成功');
       isYamlModalVisible.value = false;
       await fetchStatefulSets();
     } catch (err: unknown) {
@@ -514,7 +558,7 @@ export function useStatefulSetPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ StatefulSet YAML 更新失败');
+      message.error('StatefulSet YAML 更新失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -564,8 +608,8 @@ export function useStatefulSetPage() {
         replicas: createFormModel.value.replicas,
         service_name: createFormModel.value.service_name,
         images: createFormModel.value.images.filter(img => img.trim()),
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? recordToKeyValueList(createFormModel.value.labels) : undefined,
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? recordToKeyValueList(createFormModel.value.annotations) : undefined,
+        labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
+        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
         spec: {
           replicas: createFormModel.value.replicas,
           service_name: createFormModel.value.service_name,
@@ -573,7 +617,7 @@ export function useStatefulSetPage() {
       };
       
       await createStatefulSetApi(filterClusterId.value, params);
-      message.success('🎉 StatefulSet 创建成功');
+      message.success('StatefulSet 创建成功');
       isCreateModalVisible.value = false;
       await fetchStatefulSets();
     } catch (err: unknown) {
@@ -581,7 +625,7 @@ export function useStatefulSetPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ StatefulSet 创建失败');
+      message.error('StatefulSet 创建失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -601,7 +645,7 @@ export function useStatefulSetPage() {
       };
       
       await createStatefulSetByYamlApi(filterClusterId.value, params);
-      message.success('🎉 StatefulSet YAML 创建成功');
+      message.success('StatefulSet YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchStatefulSets();
     } catch (err: unknown) {
@@ -609,7 +653,7 @@ export function useStatefulSetPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ StatefulSet YAML 创建失败');
+      message.error('StatefulSet YAML 创建失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -631,10 +675,10 @@ export function useStatefulSetPage() {
       onOk: async () => {
         try {
           await deleteStatefulSetApi(clusterId, record.namespace, record.name);
-          message.success('✅ StatefulSet 删除成功');
+          message.success('StatefulSet 删除成功');
           await fetchStatefulSets();
         } catch (err) {
-          message.error('❌ StatefulSet 删除失败');
+          message.error('StatefulSet 删除失败');
           console.error(err);
         }
       },
@@ -661,10 +705,10 @@ export function useStatefulSetPage() {
             name: record.name,
           };
           await restartStatefulSetApi(clusterId, record.namespace, record.name, params);
-          message.success('✅ StatefulSet 重启成功');
+          message.success('StatefulSet 重启成功');
           await fetchStatefulSets();
         } catch (err) {
-          message.error('❌ StatefulSet 重启失败');
+          message.error('StatefulSet 重启失败');
           console.error(err);
         }
       },
@@ -729,7 +773,7 @@ export function useStatefulSetPage() {
         currentOperationStatefulSet.value.name,
         params
       );
-      message.success('🎉 StatefulSet 更新成功');
+      message.success('StatefulSet 更新成功');
       isEditModalVisible.value = false;
       await fetchStatefulSets();
     } catch (err: unknown) {
@@ -737,7 +781,7 @@ export function useStatefulSetPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ StatefulSet 更新失败');
+      message.error('StatefulSet 更新失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -779,7 +823,7 @@ export function useStatefulSetPage() {
         currentOperationStatefulSet.value.name,
         params
       );
-      message.success('🎉 StatefulSet 伸缩成功');
+      message.success('StatefulSet 伸缩成功');
       isScaleModalVisible.value = false;
       await fetchStatefulSets();
     } catch (err: unknown) {
@@ -787,7 +831,7 @@ export function useStatefulSetPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ StatefulSet 伸缩失败');
+      message.error('StatefulSet 伸缩失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -829,7 +873,7 @@ export function useStatefulSetPage() {
         currentOperationStatefulSet.value.name,
         params
       );
-      message.success('🎉 StatefulSet 回滚成功');
+      message.success('StatefulSet 回滚成功');
       isRollbackModalVisible.value = false;
       await fetchStatefulSets();
     } catch (err: unknown) {
@@ -837,7 +881,7 @@ export function useStatefulSetPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ StatefulSet 回滚失败');
+      message.error('StatefulSet 回滚失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -946,12 +990,12 @@ export function useStatefulSetPage() {
               await restartStatefulSetApi(clusterId, statefulSet.namespace, statefulSet.name, params);
             }
           }
-          message.success(`✅ 批量${operation}操作已完成`);
+          message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchStatefulSets();
         } catch (err) {
-          message.error(`❌ 批量${operation}失败`);
+          message.error(`批量${operation}失败`);
           console.error(err);
         }
       },
@@ -1031,6 +1075,210 @@ export function useStatefulSetPage() {
 
   const removeEditAnnotationField = (key: string) => {
     editFormModel.value.annotations = editFormModel.value.annotations.filter(item => item.key !== key);
+  };
+
+  // YAML 操作辅助函数
+  const insertYamlTemplate = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认操作',
+        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+        okText: '确认',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = STATEFULSET_YAML_TEMPLATE;
+          message.success('模板已插入');
+        },
+      });
+    } else {
+      createYamlFormModel.value.yaml = STATEFULSET_YAML_TEMPLATE;
+      message.success('模板已插入');
+    }
+  };
+
+  const formatYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      createYamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+      console.error('YAML 格式化错误:', error);
+    }
+  };
+
+  const validateYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      const statefulset = parsed as any;
+      const issues: string[] = [];
+
+      if (!statefulset.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!statefulset.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (statefulset.kind !== 'StatefulSet') {
+        issues.push(`kind 应为 "StatefulSet"，当前为 "${statefulset.kind}"`);
+      }
+      if (!statefulset.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!statefulset.spec) {
+        issues.push('缺少 spec 字段');
+      } else {
+        if (!statefulset.spec.serviceName) {
+          issues.push('缺少 spec.serviceName 字段');
+        }
+        if (!statefulset.spec.selector) {
+          issues.push('缺少 spec.selector 字段');
+        }
+        if (!statefulset.spec.template) {
+          issues.push('缺少 spec.template 字段');
+        }
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 检查发现问题',
+          content: issues.join('\n'),
+          okText: '知道了',
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过');
+      }
+    } catch (error: any) {
+      message.error(`YAML 检查失败: ${error.message || '未知错误'}`);
+      console.error('YAML 检查错误:', error);
+    }
+  };
+
+  const clearYaml = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认清空',
+        content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+        okText: '确认清空',
+        okType: 'danger',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = '';
+          message.success('YAML 内容已清空');
+        },
+      });
+    } else {
+      message.info('YAML 内容已为空');
+    }
+  };
+
+  // 编辑 YAML 的格式化和验证函数
+  const formatEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      yamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+      console.error('YAML 格式化错误:', error);
+    }
+  };
+
+  const validateEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      const statefulset = parsed as any;
+      const issues: string[] = [];
+
+      if (!statefulset.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!statefulset.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (statefulset.kind !== 'StatefulSet') {
+        issues.push(`kind 应为 "StatefulSet"，当前为 "${statefulset.kind}"`);
+      }
+      if (!statefulset.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!statefulset.spec) {
+        issues.push('缺少 spec 字段');
+      } else {
+        if (!statefulset.spec.serviceName) {
+          issues.push('缺少 spec.serviceName 字段');
+        }
+        if (!statefulset.spec.selector) {
+          issues.push('缺少 spec.selector 字段');
+        }
+        if (!statefulset.spec.template) {
+          issues.push('缺少 spec.template 字段');
+        }
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 检查发现问题',
+          content: issues.join('\n'),
+          okText: '知道了',
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过');
+      }
+    } catch (error: any) {
+      message.error(`YAML 检查失败: ${error.message || '未知错误'}`);
+      console.error('YAML 检查错误:', error);
+    }
   };
 
   return {
@@ -1132,6 +1380,12 @@ export function useStatefulSetPage() {
     showYamlModal,
     closeYamlModal,
     submitYamlForm,
+    insertYamlTemplate,
+    formatYaml,
+    validateYaml,
+    clearYaml,
+    formatEditYaml,
+    validateEditYaml,
     
     // create operations
     openCreateModal,

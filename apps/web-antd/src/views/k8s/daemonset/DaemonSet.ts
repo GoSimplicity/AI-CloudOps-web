@@ -450,7 +450,7 @@ export function useDaemonSetPage() {
         currentOperationDaemonSet.value.name,
         params
       );
-      message.success('🎉 DaemonSet YAML 更新成功');
+      message.success('DaemonSet YAML 更新成功');
       isYamlModalVisible.value = false;
       await fetchDaemonSets();
     } catch (err: unknown) {
@@ -458,7 +458,7 @@ export function useDaemonSetPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ DaemonSet YAML 更新失败');
+      message.error('DaemonSet YAML 更新失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -509,7 +509,7 @@ export function useDaemonSetPage() {
       };
       
       await createDaemonSetApi(filterClusterId.value, params);
-      message.success('🎉 DaemonSet 创建成功');
+      message.success('DaemonSet 创建成功');
       isCreateModalVisible.value = false;
       await fetchDaemonSets();
     } catch (err: unknown) {
@@ -517,7 +517,7 @@ export function useDaemonSetPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ DaemonSet 创建失败');
+      message.error('DaemonSet 创建失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -537,7 +537,7 @@ export function useDaemonSetPage() {
       };
       
       await createDaemonSetByYamlApi(filterClusterId.value, params);
-      message.success('🎉 DaemonSet YAML 创建成功');
+      message.success('DaemonSet YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchDaemonSets();
     } catch (err: unknown) {
@@ -545,7 +545,7 @@ export function useDaemonSetPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ DaemonSet YAML 创建失败');
+      message.error('DaemonSet YAML 创建失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -567,10 +567,10 @@ export function useDaemonSetPage() {
       onOk: async () => {
         try {
           await deleteDaemonSetApi(clusterId, record.namespace, record.name);
-          message.success('✅ DaemonSet 删除成功');
+          message.success('DaemonSet 删除成功');
           await fetchDaemonSets();
         } catch (err) {
-          message.error('❌ DaemonSet 删除失败');
+          message.error('DaemonSet 删除失败');
           console.error(err);
         }
       },
@@ -597,10 +597,10 @@ export function useDaemonSetPage() {
             name: record.name,
           };
           await restartDaemonSetApi(clusterId, record.namespace, record.name, params);
-          message.success('✅ DaemonSet 重启成功');
+          message.success('DaemonSet 重启成功');
           await fetchDaemonSets();
         } catch (err) {
-          message.error('❌ DaemonSet 重启失败');
+          message.error('DaemonSet 重启失败');
           console.error(err);
         }
       },
@@ -648,7 +648,7 @@ export function useDaemonSetPage() {
         currentOperationDaemonSet.value.name,
         params
       );
-      message.success('🎉 DaemonSet 更新成功');
+      message.success('DaemonSet 更新成功');
       isEditModalVisible.value = false;
       await fetchDaemonSets();
     } catch (err: unknown) {
@@ -656,7 +656,7 @@ export function useDaemonSetPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ DaemonSet 更新失败');
+      message.error('DaemonSet 更新失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -698,7 +698,7 @@ export function useDaemonSetPage() {
         currentOperationDaemonSet.value.name,
         params
       );
-      message.success('🎉 DaemonSet 回滚成功');
+      message.success('DaemonSet 回滚成功');
       isRollbackModalVisible.value = false;
       await fetchDaemonSets();
     } catch (err: unknown) {
@@ -706,7 +706,7 @@ export function useDaemonSetPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ DaemonSet 回滚失败');
+      message.error('DaemonSet 回滚失败');
       console.error(err);
     } finally {
       submitLoading.value = false;
@@ -815,12 +815,12 @@ export function useDaemonSetPage() {
               await restartDaemonSetApi(clusterId, daemonSet.namespace, daemonSet.name, params);
             }
           }
-          message.success(`✅ 批量${operation}操作已完成`);
+          message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchDaemonSets();
         } catch (err) {
-          message.error(`❌ 批量${operation}失败`);
+          message.error(`批量${operation}失败`);
           console.error(err);
         }
       },

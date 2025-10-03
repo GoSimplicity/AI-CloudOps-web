@@ -72,7 +72,7 @@ export interface GetStatefulSetListReq {
   namespace?: string; // 命名空间
   status?: string; // StatefulSet状态
   service_name?: string; // 服务名称
-  labels?: KeyValueList; // 标签
+  labels?: Record<string, string>; // 标签
 }
 
 // 获取StatefulSet详情请求
@@ -97,8 +97,8 @@ export interface CreateStatefulSetReq {
   replicas: number; // 副本数量，必填
   service_name: string; // 服务名称，必填
   images: string[]; // 容器镜像列表，必填
-  labels?: KeyValueList; // 标签
-  annotations?: KeyValueList; // 注解
+  labels?: Record<string, string>; // 标签
+  annotations?: Record<string, string>; // 注解
   spec?: statefulsetpec; // StatefulSet规格
   yaml?: string; // YAML内容
 }

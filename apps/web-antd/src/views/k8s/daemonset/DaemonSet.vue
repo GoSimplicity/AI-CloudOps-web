@@ -95,9 +95,9 @@
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
-            <a-select-option :value="K8sDaemonSetStatus.Running">✅ 运行中</a-select-option>
-            <a-select-option :value="K8sDaemonSetStatus.Error">❌ 异常</a-select-option>
-            <a-select-option :value="K8sDaemonSetStatus.Updating">🔄 更新中</a-select-option>
+            <a-select-option :value="K8sDaemonSetStatus.Running">运行中</a-select-option>
+            <a-select-option :value="K8sDaemonSetStatus.Error">异常</a-select-option>
+            <a-select-option :value="K8sDaemonSetStatus.Updating">更新中</a-select-option>
           </a-select>
           
           <!-- 标签过滤器 -->
@@ -128,7 +128,7 @@
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
-            placeholder="🔍 搜索 DaemonSet 名称" 
+            placeholder="搜索 DaemonSet 名称" 
             class="k8s-search-input" 
             @pressEnter="onSearch"
             @input="onSearch"
@@ -335,11 +335,6 @@
             <a-tooltip title="重启">
               <a-button title="重启" @click="restartDaemonSet(record)">
                 <template #icon><RedoOutlined /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="回滚">
-              <a-button title="回滚" @click="openRollbackModal(record)">
-                <template #icon><RollbackOutlined /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="查看 Pod">
@@ -855,49 +850,6 @@
       </a-form>
     </a-modal>
 
-    <!-- 回滚模态框 -->
-    <a-modal
-      v-model:open="isRollbackModalVisible"
-      title="回滚 DaemonSet"
-      @ok="submitRollbackForm"
-      @cancel="closeRollbackModal"
-      :confirmLoading="submitLoading"
-      width="500px"
-      :maskClosable="false"
-      destroyOnClose
-      okText="确认回滚"
-      cancelText="取消"
-      okType="warning"
-    >
-      <a-form 
-        ref="rollbackFormRef"
-        :model="rollbackFormModel" 
-        layout="vertical" 
-        class="k8s-form"
-        :rules="rollbackFormRules"
-      >
-        <a-alert
-          message="⚠️ 警告"
-          :description="`即将回滚 DaemonSet '${currentOperationDaemonSet?.name}' 到指定版本`"
-          type="warning"
-          show-icon
-          style="margin-bottom: 24px;"
-        />
-        
-        <a-form-item label="回滚版本" name="revision" :required="true">
-          <a-input-number 
-            v-model:value="rollbackFormModel.revision" 
-            :min="1" 
-            class="k8s-form-input"
-            placeholder="请输入要回滚到的版本号"
-          />
-          <div style="color: #999; font-size: 12px; margin-top: 4px;">
-            请输入要回滚到的版本号（>=1）
-          </div>
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
     <!-- YAML 模态框 -->
     <a-modal
       v-model:open="isYamlModalVisible"
@@ -1067,7 +1019,6 @@ import {
   SearchOutlined,
   FileTextOutlined,
   RedoOutlined,
-  RollbackOutlined,
   ContainerOutlined,
   HistoryOutlined,
   HddOutlined,
@@ -1097,7 +1048,6 @@ const {
   isCreateYamlModalVisible,
   isEditModalVisible,
   isDetailModalVisible,
-  isRollbackModalVisible,
   isYamlModalVisible,
   isPodModalVisible,
   isHistoryModalVisible,
@@ -1114,19 +1064,16 @@ const {
   createFormModel,
   editFormModel,
   createYamlFormModel,
-  rollbackFormModel,
   yamlFormModel,
   
   // form refs
   formRef,
   editFormRef,
-  rollbackFormRef,
   yamlFormRef,
   createYamlFormRef,
   
   // form rules
   createFormRules,
-  rollbackFormRules,
   yamlFormRules,
   createYamlFormRules,
   
@@ -1173,11 +1120,6 @@ const {
   openEditModal,
   closeEditModal,
   submitEditForm,
-  
-  // rollback operations
-  openRollbackModal,
-  closeRollbackModal,
-  submitRollbackForm,
   
   // pod operations
   showPodModal,
@@ -1375,11 +1317,11 @@ const rollbackToVersion = (revision: number) => {
               revision
             }
           );
-          message.success(`🎉 DaemonSet 回滚到版本 ${revision} 成功`);
+          message.success(`DaemonSet 回滚到版本 ${revision} 成功`);
           closeHistoryModal();
           await fetchDaemonSets();
         } catch (err) {
-          message.error(`❌ DaemonSet 回滚到版本 ${revision} 失败`);
+          message.error(`DaemonSet 回滚到版本 ${revision} 失败`);
           console.error(err);
         }
       },

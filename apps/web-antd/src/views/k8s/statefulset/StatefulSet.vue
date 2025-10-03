@@ -95,10 +95,10 @@
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
-            <a-select-option :value="K8sStatefulSetStatus.Running">✅ 运行中</a-select-option>
-            <a-select-option :value="K8sStatefulSetStatus.Stopped">⏹️ 已停止</a-select-option>
-            <a-select-option :value="K8sStatefulSetStatus.Updating">🔄 更新中</a-select-option>
-            <a-select-option :value="K8sStatefulSetStatus.Error">❌ 异常</a-select-option>
+            <a-select-option :value="K8sStatefulSetStatus.Running">运行中</a-select-option>
+            <a-select-option :value="K8sStatefulSetStatus.Stopped">已停止</a-select-option>
+            <a-select-option :value="K8sStatefulSetStatus.Updating">更新中</a-select-option>
+            <a-select-option :value="K8sStatefulSetStatus.Error">异常</a-select-option>
           </a-select>
 
           <a-input 
@@ -140,7 +140,7 @@
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
-            placeholder="🔍 搜索 StatefulSet 名称" 
+            placeholder="搜索 StatefulSet 名称" 
             class="k8s-search-input" 
             @pressEnter="onSearch"
             @input="onSearch"
@@ -340,11 +340,6 @@
             <a-tooltip title="重启">
               <a-button title="重启" @click="restartStatefulSet(record)">
                 <template #icon><RedoOutlined /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="回滚">
-              <a-button title="回滚" @click="openRollbackModal(record)">
-                <template #icon><RollbackOutlined /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="查看 Pod">
@@ -576,9 +571,27 @@
         :rules="createYamlFormRules"
       >
         <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
+              <template #icon><FileAddOutlined /></template>
+              插入模板
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
+              <template #icon><ClearOutlined /></template>
+              清空
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="createYamlFormModel.yaml" 
-            placeholder="请输入 StatefulSet YAML 内容" 
+            placeholder="请输入 StatefulSet YAML 内容，或点击【插入模板】使用默认模板" 
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -948,49 +961,6 @@
       </a-form>
     </a-modal>
 
-    <!-- 回滚模态框 -->
-    <a-modal
-      v-model:open="isRollbackModalVisible"
-      title="回滚 StatefulSet"
-      @ok="submitRollbackForm"
-      @cancel="closeRollbackModal"
-      :confirmLoading="submitLoading"
-      width="500px"
-      :maskClosable="false"
-      destroyOnClose
-      okText="确认回滚"
-      cancelText="取消"
-      okType="warning"
-    >
-      <a-form 
-        ref="rollbackFormRef"
-        :model="rollbackFormModel" 
-        layout="vertical" 
-        class="k8s-form"
-        :rules="rollbackFormRules"
-      >
-        <a-alert
-          message="⚠️ 警告"
-          :description="`即将回滚 StatefulSet '${currentOperationStatefulSet?.name}' 到指定版本`"
-          type="warning"
-          show-icon
-          style="margin-bottom: 24px;"
-        />
-        
-        <a-form-item label="回滚版本" name="revision" :required="true">
-          <a-input-number 
-            v-model:value="rollbackFormModel.revision" 
-            :min="1" 
-            class="k8s-form-input"
-            placeholder="请输入要回滚到的版本号"
-          />
-          <div style="color: #999; font-size: 12px; margin-top: 4px;">
-            请输入要回滚到的版本号（>=1）
-          </div>
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
     <!-- YAML 模态框 -->
     <a-modal
       v-model:open="isYamlModalVisible"
@@ -1012,6 +982,16 @@
         :rules="yamlFormRules"
       >
         <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatEditYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateEditYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="yamlFormModel.yaml" 
             placeholder="YAML 内容" 
@@ -1160,11 +1140,14 @@ import {
   FileTextOutlined,
   ExpandOutlined,
   RedoOutlined,
-  RollbackOutlined,
   ContainerOutlined,
   HistoryOutlined,
   DatabaseOutlined,
   ApiOutlined,
+  FileAddOutlined,
+  FormatPainterOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -1193,7 +1176,6 @@ const {
   isEditModalVisible,
   isDetailModalVisible,
   isScaleModalVisible,
-  isRollbackModalVisible,
   isYamlModalVisible,
   isPodModalVisible,
   isHistoryModalVisible,
@@ -1211,14 +1193,12 @@ const {
   createYamlFormModel,
   editFormModel,
   scaleFormModel,
-  rollbackFormModel,
   yamlFormModel,
   
   // form refs
   formRef,
   editFormRef,
   scaleFormRef,
-  rollbackFormRef,
   yamlFormRef,
   createYamlFormRef,
   
@@ -1226,7 +1206,6 @@ const {
   createFormRules,
   editFormRules,
   scaleFormRules,
-  rollbackFormRules,
   yamlFormRules,
   createYamlFormRules,
   
@@ -1256,6 +1235,12 @@ const {
   showYamlModal,
   closeYamlModal,
   submitYamlForm,
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
   
   // create operations
   openCreateModal,
@@ -1278,11 +1263,6 @@ const {
   openScaleModal,
   closeScaleModal,
   submitScaleForm,
-  
-  // rollback operations
-  openRollbackModal,
-  closeRollbackModal,
-  submitRollbackForm,
   
   // pod operations
   showPodModal,
@@ -1482,11 +1462,11 @@ const rollbackToVersion = (revision: number) => {
               revision
             }
           );
-          message.success(`🎉 StatefulSet 回滚到版本 ${revision} 成功`);
+          message.success(`StatefulSet 回滚到版本 ${revision} 成功`);
           closeHistoryModal();
           await fetchStatefulSets();
         } catch (err) {
-          message.error(`❌ StatefulSet 回滚到版本 ${revision} 失败`);
+          message.error(`StatefulSet 回滚到版本 ${revision} 失败`);
           console.error(err);
         }
       },
