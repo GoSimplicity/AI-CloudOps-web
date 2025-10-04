@@ -1884,7 +1884,7 @@ export function usePodPage() {
       };
       const res = await getK8sPodsByNode(params);
       pods.value = res?.items || [];
-      total.value = res?.items?.length || 0;
+      total.value = res?.total || 0;
     } catch (err) {
       message.error('获取节点Pod失败');
       console.error(err);

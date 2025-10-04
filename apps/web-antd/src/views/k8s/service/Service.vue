@@ -335,6 +335,11 @@
                 <template #icon><EyeOutlined /></template>
               </a-button>
             </a-tooltip>
+            <a-tooltip title="编辑">
+              <a-button title="编辑" @click="openEditModal(record)">
+                <template #icon><EditOutlined /></template>
+              </a-button>
+            </a-tooltip>
             <a-tooltip title="查看 YAML">
               <a-button title="查看 YAML" @click="showYamlModal(record)">
                 <template #icon><FileTextOutlined /></template>
@@ -343,11 +348,6 @@
             <a-tooltip title="查看端点">
               <a-button title="查看端点" @click="showEndpointsModal(record)">
                 <template #icon><NodeIndexOutlined /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="编辑">
-              <a-button title="编辑" @click="openEditModal(record)">
-                <template #icon><EditOutlined /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="删除">
@@ -1321,16 +1321,16 @@ const handleClusterDropdownScroll = (e: Event) => {
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '15%' },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '12%' },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', slots: { customRender: 'status' } },
-  { title: '类型', dataIndex: 'type', key: 'type', width: '10%', slots: { customRender: 'type' } },
-  { title: '集群IP', dataIndex: 'cluster_ip', key: 'cluster_ip', width: '12%', slots: { customRender: 'cluster_ip' } },
-  { title: '外部IP', dataIndex: 'external_ips', key: 'external_ips', width: '12%', slots: { customRender: 'external_ips' } },
-  { title: '端口', dataIndex: 'ports', key: 'ports', width: '15%', slots: { customRender: 'ports' } },
-  { title: '选择器', dataIndex: 'selector', key: 'selector', width: '12%', slots: { customRender: 'selector' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '12%', slots: { customRender: 'labels' } },
-  { title: '操作', key: 'actions', width: '20%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: '14%', ellipsis: true },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '11%', ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', align: 'center', slots: { customRender: 'status' } },
+  { title: '类型', dataIndex: 'type', key: 'type', width: '9%', align: 'center', slots: { customRender: 'type' } },
+  { title: '集群IP', dataIndex: 'cluster_ip', key: 'cluster_ip', width: '11%', slots: { customRender: 'cluster_ip' } },
+  { title: '外部IP', dataIndex: 'external_ips', key: 'external_ips', width: '10%', slots: { customRender: 'external_ips' } },
+  { title: '端口', dataIndex: 'ports', key: 'ports', width: '12%', slots: { customRender: 'ports' } },
+  { title: '选择器', dataIndex: 'selector', key: 'selector', width: '10%', slots: { customRender: 'selector' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: '11%', slots: { customRender: 'labels' } },
+  { title: '操作', key: 'actions', width: '14%', fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 const portColumns = [

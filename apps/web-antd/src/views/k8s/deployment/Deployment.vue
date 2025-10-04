@@ -102,7 +102,7 @@
           </a-select>
           
           <!-- 标签过滤器 -->
-          <div class="deployment-labels-filter">
+          <div class="k8s-labels-filter">
             <a-button type="dashed" @click="openLabelsFilter" class="k8s-toolbar-btn">
               <template #icon><TagsOutlined /></template>
               标签过滤 
@@ -228,8 +228,8 @@
         </template>
 
         <template #replicas="{ record }">
-          <div class="deployment-replicas">
-            <span class="replicas-text">
+          <div class="k8s-replicas-display">
+            <span class="k8s-replicas-text">
               {{ record.ready_replicas }}/{{ record.replicas }}
             </span>
             <a-progress 
@@ -243,12 +243,12 @@
         </template>
 
         <template #images="{ text }">
-          <div class="deployment-images">
-            <a-tag v-for="(image, index) in (Array.isArray(text) ? text : []).slice(0, 2)" :key="index" class="image-tag">
+          <div class="k8s-images-display">
+            <a-tag v-for="(image, index) in (Array.isArray(text) ? text : []).slice(0, 2)" :key="index" class="k8s-image-tag">
               {{ image.split('/').pop()?.split(':')[0] || image }}
             </a-tag>
             <a-tooltip v-if="(Array.isArray(text) ? text : []).length > 2" :title="(Array.isArray(text) ? text : []).join('\n')">
-              <a-tag class="image-tag">
+              <a-tag class="k8s-image-tag">
                 +{{ (Array.isArray(text) ? text : []).length - 2 }} 更多
               </a-tag>
             </a-tooltip>
@@ -820,8 +820,8 @@
 
             <a-col :xs="24" :lg="12">
               <a-card title="容器镜像" class="k8s-detail-card" size="small">
-                <div class="deployment-images">
-                  <a-tag v-for="(image, index) in (currentDeploymentDetail.images || [])" :key="index" class="image-tag" style="margin-bottom: 8px;">
+                <div class="k8s-images-display">
+                  <a-tag v-for="(image, index) in (currentDeploymentDetail.images || [])" :key="index" class="k8s-image-tag" style="margin-bottom: 8px;">
                     {{ image }}
                   </a-tag>
                   <span v-if="!currentDeploymentDetail.images || currentDeploymentDetail.images.length === 0" class="k8s-no-data">
@@ -1343,14 +1343,14 @@ const handleClusterDropdownScroll = (e: Event) => {
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '15%' },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '12%' },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', slots: { customRender: 'status' } },
-  { title: '副本数', key: 'replicas', width: '10%', slots: { customRender: 'replicas' } },
-  { title: '策略', dataIndex: 'strategy', key: 'strategy', width: '8%', slots: { customRender: 'strategy' } },
-  { title: '镜像', dataIndex: 'images', key: 'images', width: '15%', slots: { customRender: 'images' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '12%', slots: { customRender: 'labels' } },
-  { title: '操作', key: 'actions', width: '20%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: '14%', ellipsis: true },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '11%', ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', align: 'center', slots: { customRender: 'status' } },
+  { title: '副本数', key: 'replicas', width: '11%', align: 'center', slots: { customRender: 'replicas' } },
+  { title: '策略', dataIndex: 'strategy', key: 'strategy', width: '9%', align: 'center', slots: { customRender: 'strategy' } },
+  { title: '镜像', dataIndex: 'images', key: 'images', width: '14%', slots: { customRender: 'images' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: '11%', slots: { customRender: 'labels' } },
+  { title: '操作', key: 'actions', width: '22%', fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 // 标签过滤器状态

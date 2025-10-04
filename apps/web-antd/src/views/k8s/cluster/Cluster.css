@@ -1,55 +1,11 @@
-/* 工具栏右侧按钮优化 */
-.k8s-toolbar-right .ant-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+/* ==================== Cluster 页面特定样式 ==================== */
+/*
+ * Note: 本文件只包含 Cluster 特有样式
+ * 共通样式已移至 k8s-common.css
+ */
 
-/* 集群详情模态框样式 */
-.k8s-detail-content {
-  padding: 8px;
-}
-
-.k8s-detail-card {
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e8e8e8;
-}
-
-.k8s-detail-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.k8s-detail-label {
-  font-weight: 600;
-  color: #555;
-  min-width: 120px;
-}
-
-.k8s-detail-value {
-  color: #262626;
-  flex: 1;
-  word-break: break-all;
-  line-height: 1.6;
-}
-
-.k8s-detail-content .ant-table-small .ant-table-tbody > tr > td {
-  padding: 8px 12px;
-  font-size: 12px;
-}
-
-.k8s-detail-content .ant-table-small .ant-table-thead > tr > th {
-  padding: 10px 12px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-/* 标签显示样式 - 统一为 node 页面的样式 */
-.k8s-namespace-list,
-.k8s-tags-display {
+/* 命名空间列表样式 */
+.k8s-namespace-list {
   min-height: 60px;
   padding: 12px;
   background: #fafafa;
@@ -64,6 +20,15 @@
   padding: 2px 8px;
   border-radius: 6px;
   margin: 4px;
+}
+
+/* 集群标签显示样式 */
+.k8s-tags-display {
+  min-height: 60px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
 }
 
 .k8s-labels-display {
@@ -109,32 +74,7 @@
   font-weight: normal;
 }
 
-.k8s-no-data {
-  color: #999;
-  font-style: italic;
-  text-align: center;
-  height: 40px;
-  line-height: 40px;
-}
-
-/* KubeConfig配置区域 */
-.k8s-config-actions {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.k8s-config-textarea {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 16px;
-}
-
-/* KubeConfig模态框样式 */
+/* KubeConfig 模态框样式 */
 .kubeconfig-modal-content {
   padding: 8px;
 }
@@ -183,30 +123,6 @@
   border-radius: 8px;
   padding: 20px;
   resize: none;
-}
-
-/* 集群表格列样式 */
-.cluster-table :deep(.ant-table-tbody td[data-index="0"]) {
-  font-weight: 600;
-  color: #1677ff;
-}
-
-.cluster-table :deep(.ant-table-tbody td[data-index="3"]) {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 12px;
-  color: #666;
-}
-
-.cluster-table :deep(.ant-table-tbody td[data-index="4"]) {
-  font-weight: 500;
-  color: #52c41a;
-}
-
-.cluster-kubeconfig-column .ant-btn {
-  height: 32px;
-  border-radius: 6px;
-  font-size: 12px;
-  padding: 0 12px;
 }
 
 /* KubeConfig 预览容器样式 */
@@ -281,7 +197,6 @@
 }
 
 /* KubeConfig Tooltip 样式 */
-
 .kubeconfig-tooltip-content {
   font-size: 12px;
 }
@@ -310,19 +225,31 @@
   margin: 0;
 }
 
-/* 响应式优化 */
-@media (max-width: 768px) {
-  .k8s-detail-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .k8s-detail-label {
-    min-width: auto;
-  }
+/* 集群表格列样式 */
+.cluster-table :deep(.ant-table-tbody td[data-index="0"]) {
+  font-weight: 600;
+  color: #1677ff;
 }
 
+.cluster-table :deep(.ant-table-tbody td[data-index="3"]) {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  color: #666;
+}
+
+.cluster-table :deep(.ant-table-tbody td[data-index="4"]) {
+  font-weight: 500;
+  color: #52c41a;
+}
+
+.cluster-kubeconfig-column .ant-btn {
+  height: 32px;
+  border-radius: 6px;
+  font-size: 12px;
+  padding: 0 12px;
+}
+
+/* 响应式优化 */
 @media (max-width: 576px) {
   .kubeconfig-header {
     flex-direction: column;
@@ -335,26 +262,3 @@
     justify-content: center;
   }
 }
-
-/* 滚动条样式 */
-.k8s-config-textarea::-webkit-scrollbar,
-.kubeconfig-textarea::-webkit-scrollbar,
-.k8s-detail-content .ant-table-wrapper::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.k8s-config-textarea::-webkit-scrollbar-track,
-.kubeconfig-textarea::-webkit-scrollbar-track,
-.k8s-detail-content .ant-table-wrapper::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.k8s-config-textarea::-webkit-scrollbar-thumb,
-.kubeconfig-textarea::-webkit-scrollbar-thumb,
-.k8s-detail-content .ant-table-wrapper::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-

@@ -1,44 +1,10 @@
-/* Node组件特定样式 */
+/* ==================== Node 页面特定样式 ==================== */
+/*
+ * Note: 本文件只包含 Node 特有样式
+ * 共通样式已移至 k8s-common.css
+ */
 
-/* 工具栏右侧按钮优化 */
-.k8s-toolbar-right .ant-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* 节点详情模态框样式 */
-.node-detail-content {
-  padding: 8px;
-}
-
-.detail-card {
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e8e8e8;
-}
-
-.detail-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.detail-label {
-  font-weight: 600;
-  color: #555;
-  min-width: 120px;
-}
-
-.detail-value {
-  color: #262626;
-  flex: 1;
-  word-break: break-all;
-  line-height: 1.6;
-}
-
-/* 节点角色和污点标签样式 */
+/* 节点角色和污点标签样式 (使用 k8s-common.css 中定义的基础样式) */
 .k8s-roles-display .k8s-role-tag {
   background: #fff7e6;
   border: 1px solid #ffd591;
@@ -51,16 +17,22 @@
   color: #ff4d4f;
 }
 
-/* 节点状态样式 */
-.k8s-table :deep(.ant-table-tbody > tr[data-node-status="NotReady"]) {
+/* 节点表格行状态指示器 */
+.node-table :deep(.ant-table-tbody > tr[data-node-status="Ready"]) {
+  border-left: 3px solid #52c41a;
+}
+
+.node-table :deep(.ant-table-tbody > tr[data-node-status="NotReady"]) {
+  border-left: 3px solid #ff4d4f;
   background-color: #fff2f0;
 }
 
-.k8s-table :deep(.ant-table-tbody > tr[data-node-status="SchedulingDisabled"]) {
+.node-table :deep(.ant-table-tbody > tr[data-node-status="SchedulingDisabled"]) {
+  border-left: 3px solid #faad14;
   background-color: #fffbe6;
 }
 
-/* 节点表格列样式 */
+/* 节点表格列特定样式 */
 .node-table :deep(.ant-table-tbody td[data-index="0"]) {
   font-weight: 600;
   color: #1677ff;
@@ -85,158 +57,6 @@
 
 .node-table :deep(.ant-table-tbody td[data-index="6"]) {
   color: #52c41a;
-}
-
-/* 集群选择器样式优化 */
-.k8s-cluster-selector {
-  width: 200px;
-  min-width: 180px;
-  max-width: 250px;
-  flex-shrink: 0;
-}
-
-.k8s-cluster-selector :deep(.ant-select-selector) {
-  height: 36px !important;
-  padding: 0 12px;
-  border: 1px solid #d9d9d9;
-  background: #fff;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: flex !important;
-  align-items: center !important;
-  line-height: 1 !important;
-}
-
-.k8s-cluster-selector:hover :deep(.ant-select-selector) {
-  border-color: #40a9ff;
-}
-
-.k8s-cluster-selector.ant-select-focused :deep(.ant-select-selector) {
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-}
-
-/* 集群选择器下拉选项样式 */
-.k8s-cluster-selector :deep(.ant-select-selection-item) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: calc(100% - 20px);
-  line-height: 1 !important;
-  display: flex !important;
-  align-items: center !important;
-  height: 100% !important;
-}
-
-/* 占位符文本对齐 */
-.k8s-cluster-selector :deep(.ant-select-selection-placeholder) {
-  line-height: 1 !important;
-  display: flex !important;
-  align-items: center !important;
-  height: 100% !important;
-}
-
-/* 下拉框选项内容优化 */
-.k8s-cluster-selector :deep(.ant-select-dropdown) {
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.k8s-cluster-selector :deep(.ant-select-item) {
-  padding: 8px 12px;
-}
-
-/* 下拉选项内容垂直居中 */
-.k8s-cluster-selector :deep(.ant-select-item-option-content) {
-  display: flex !important;
-  align-items: center !important;
-  line-height: 1.4 !important;
-}
-
-.k8s-cluster-selector :deep(.ant-select-item-option-content > div) {
-  display: flex !important;
-  align-items: center !important;
-  width: 100% !important;
-  max-width: 100%;
-  overflow: hidden;
-}
-
-.k8s-cluster-selector :deep(.ant-select-item-option-content > div > span) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 150px;
-  display: inline-block;
-  line-height: 1.4 !important;
-  vertical-align: middle !important;
-}
-
-/* 特殊状态指示器 */
-.node-table :deep(.ant-table-tbody > tr[data-node-status="Ready"]) {
-  border-left: 2px solid #52c41a;
-}
-
-.node-table :deep(.ant-table-tbody > tr[data-node-status="NotReady"]) {
-  border-left: 2px solid #ff4d4f;
-}
-
-.node-table :deep(.ant-table-tbody > tr[data-node-status="SchedulingDisabled"]) {
-  border-left: 2px solid #faad14;
-}
-
-/* 表格布局修复 */
-.node-table {
-  width: 100%;
-  table-layout: fixed;
-}
-
-.node-table :deep(.ant-table-container) {
-  overflow: visible;
-}
-
-.node-table :deep(.ant-table-tbody > tr > td) {
-  vertical-align: top;
-  word-wrap: break-word;
-  word-break: break-all;
-}
-
-.node-table :deep(.ant-table-thead > tr > th),
-.node-table :deep(.ant-table-tbody > tr > td) {
-  padding: 12px 16px;
-}
-
-/* 确保表格内容正常显示 */
-.k8s-data-display {
-  overflow: visible !important;
-  position: relative;
-  z-index: 1;
-}
-
-.k8s-data-display .ant-table-wrapper {
-  overflow: visible;
-}
-
-.k8s-data-display .ant-table {
-  overflow: visible;
-}
-
-/* 修复表格行显示问题 */
-.node-table :deep(.ant-table-tbody > tr) {
-  display: table-row !important;
-}
-
-.node-table :deep(.ant-table-tbody > tr > td) {
-  display: table-cell !important;
-  position: relative;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-/* 修复表格头部显示 */
-.node-table :deep(.ant-table-thead > tr > th) {
-  position: relative;
-  background: #fafafa !important;
 }
 
 /* 节点操作按钮样式 */
@@ -271,150 +91,39 @@
   margin-bottom: 6px;
 }
 
-/* 表单输入行样式 */
-.add-input-row,
-.k8s-add-input-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  background: #f8f9fa;
-  border: 1px dashed #d9d9d9;
-  border-radius: 6px;
+/* 表格布局优化 */
+.node-table {
+  width: 100%;
+  table-layout: fixed;
 }
 
-/* 键值对输入行布局优化 */
-.k8s-key-value-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.k8s-key-input {
-  flex: 1;
-  min-width: 0;
-}
-
-.k8s-value-input {
-  flex: 1;
-  min-width: 0;
-}
-
-/* 滚动条样式 */
-.k8s-detail-content .ant-table-wrapper::-webkit-scrollbar,
-.k8s-form .ant-select-dropdown::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.k8s-detail-content .ant-table-wrapper::-webkit-scrollbar-track,
-.k8s-form .ant-select-dropdown::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.k8s-detail-content .ant-table-wrapper::-webkit-scrollbar-thumb,
-.k8s-form .ant-select-dropdown::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-/* 响应式优化 */
-/* 大屏幕优化 */
-@media (min-width: 1200px) {
-  .k8s-cluster-selector {
-    width: 220px;
-    max-width: 280px;
-  }
-}
-
-/* 中等屏幕优化 */
-@media (min-width: 768px) and (max-width: 1199px) {
-  .k8s-cluster-selector {
-    width: 180px;
-    min-width: 160px;
-    max-width: 200px;
-  }
-  
-  .k8s-selector-label {
-    font-size: 12px;
-  }
-}
-
-/* 小屏幕优化 */
-@media (max-width: 767px) {
-  .detail-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .detail-label {
-    min-width: auto;
-  }
-  
-  .k8s-cluster-selector {
-    width: 100%;
-    max-width: none;
-    min-width: 120px;
-  }
-  
-  .k8s-action-column .ant-btn {
-    margin-bottom: 4px;
-  }
-}
-
-/* 超小屏幕优化 */
-@media (max-width: 575px) {
-  .k8s-cluster-selector {
-    min-width: 100%;
-  }
-  
-  .k8s-selector-label {
-    font-size: 11px;
-  }
-}
-
-/* 节点详情模态框优化 */
-.k8s-detail-content {
-  padding: 8px;
-}
-
-.k8s-detail-card {
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e8e8e8;
-}
-
-.k8s-detail-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.k8s-detail-label {
-  font-weight: 600;
-  color: #555;
-  min-width: 120px;
-}
-
-.k8s-detail-value {
-  color: #262626;
-  flex: 1;
+.node-table :deep(.ant-table-tbody > tr > td) {
+  vertical-align: top;
+  word-wrap: break-word;
   word-break: break-all;
-  line-height: 1.6;
 }
 
-.k8s-detail-content .ant-table-small .ant-table-tbody > tr > td {
+.node-table :deep(.ant-table-thead > tr > th),
+.node-table :deep(.ant-table-tbody > tr > td) {
+  padding: 12px 16px;
+}
+
+/* 节点详情模态框特定表格样式 */
+.node-detail-content .ant-table-small .ant-table-tbody > tr > td {
   padding: 8px 12px;
   font-size: 12px;
 }
 
-.k8s-detail-content .ant-table-small .ant-table-thead > tr > th {
+.node-detail-content .ant-table-small .ant-table-thead > tr > th {
   padding: 10px 12px;
   font-size: 12px;
   font-weight: 600;
+  background: #fafafa;
 }
 
+/* 响应式优化 */
+@media (max-width: 767px) {
+  .k8s-action-column .ant-btn {
+    margin-bottom: 4px;
+  }
+}

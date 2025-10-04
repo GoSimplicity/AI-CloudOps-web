@@ -419,7 +419,7 @@ export function useIngressPage() {
         hosts: extractHosts(ingress.rules),
       }));
       ingresses.value = ingressesWithClusterId;
-      total.value = res?.total || ingressesWithClusterId.length;
+      total.value = res?.total || 0;
     } catch (err) {
       message.error('获取 Ingress 列表失败');
       console.error(err);

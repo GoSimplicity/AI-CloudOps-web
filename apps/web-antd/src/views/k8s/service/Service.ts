@@ -375,7 +375,7 @@ export function useServicePage() {
         cluster_id: service.cluster_id || filterClusterId.value || 0
       }));
       services.value = servicesWithClusterId;
-      total.value = servicesWithClusterId.length;
+      total.value = res?.total || 0;
     } catch (err) {
       message.error('获取 Service 列表失败');
       console.error(err);

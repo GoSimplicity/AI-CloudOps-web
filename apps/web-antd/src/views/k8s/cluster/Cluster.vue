@@ -800,16 +800,16 @@ const handleTableChange = (pagination: { current?: number; pageSize?: number }) 
 
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '10%' },
-  { title: '环境', dataIndex: 'env', key: 'env', width: '7%' },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '7%' },
-  { title: 'API 地址', dataIndex: 'api_server_addr', key: 'api_server_addr', width: '15%', ellipsis: true },
-  { title: '版本', dataIndex: 'version', key: 'version', width: '7%' },
-  { title: 'KubeConfig', key: 'kubeconfig', width: '18%' },
-  { title: '创建者', dataIndex: 'create_user_name', key: 'create_user_name', width: '8%' },
-  { title: '标签', dataIndex: 'tags', key: 'tags', width: '8%' },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: '8%' },
-  { title: '操作', key: 'actions', width: '12%', fixed: 'right' },
+  { title: '名称', dataIndex: 'name', key: 'name', width: '12%', ellipsis: true },
+  { title: '环境', dataIndex: 'env', key: 'env', width: '8%', align: 'center' },
+  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', align: 'center' },
+  { title: 'API 地址', dataIndex: 'api_server_addr', key: 'api_server_addr', width: '16%', ellipsis: true },
+  { title: '版本', dataIndex: 'version', key: 'version', width: '8%', align: 'center' },
+  { title: 'KubeConfig', key: 'kubeconfig', width: '16%' },
+  { title: '创建者', dataIndex: 'create_user_name', key: 'create_user_name', width: '9%', ellipsis: true },
+  { title: '标签', dataIndex: 'tags', key: 'tags', width: '9%' },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: '10%', align: 'center' },
+  { title: '操作', key: 'actions', width: '14%', fixed: 'right', align: 'center' },
 ];
 
 onMounted(async () => {

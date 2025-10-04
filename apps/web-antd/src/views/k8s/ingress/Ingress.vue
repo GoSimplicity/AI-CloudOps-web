@@ -101,7 +101,7 @@
           </a-select>
           
           <!-- 标签过滤器 -->
-          <div class="ingress-labels-filter">
+          <div class="k8s-labels-filter">
             <a-button type="dashed" @click="openLabelsFilter" class="k8s-toolbar-btn">
               <template #icon><TagsOutlined /></template>
               标签过滤 
@@ -345,14 +345,14 @@
                 <template #icon><EyeOutlined /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="查看 YAML">
-              <a-button title="查看 YAML" @click="showYamlModal(record)">
-                <template #icon><FileTextOutlined /></template>
-              </a-button>
-            </a-tooltip>
             <a-tooltip title="编辑">
               <a-button title="编辑" @click="openEditModal(record)">
                 <template #icon><EditOutlined /></template>
+              </a-button>
+            </a-tooltip>
+            <a-tooltip title="查看 YAML">
+              <a-button title="查看 YAML" @click="showYamlModal(record)">
+                <template #icon><FileTextOutlined /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="删除">
@@ -1306,16 +1306,16 @@ const handleClusterDropdownScroll = (e: Event) => {
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '12%' },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '10%' },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', slots: { customRender: 'status' } },
-  { title: 'Ingress类', dataIndex: 'ingress_class_name', key: 'ingress_class_name', width: '10%', slots: { customRender: 'ingress_class_name' } },
-  { title: '主机', dataIndex: 'hosts', key: 'hosts', width: '15%', slots: { customRender: 'hosts' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: '14%', ellipsis: true },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '11%', ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', align: 'center', slots: { customRender: 'status' } },
+  { title: 'Ingress类', dataIndex: 'ingress_class_name', key: 'ingress_class_name', width: '9%', align: 'center', slots: { customRender: 'ingress_class_name' } },
+  { title: '主机', dataIndex: 'hosts', key: 'hosts', width: '14%', slots: { customRender: 'hosts' } },
   { title: '负载均衡器', dataIndex: 'load_balancer', key: 'load_balancer', width: '12%', slots: { customRender: 'load_balancer' } },
-  { title: '规则', dataIndex: 'rules', key: 'rules', width: '12%', slots: { customRender: 'rules' } },
-  { title: 'TLS', dataIndex: 'tls', key: 'tls', width: '10%', slots: { customRender: 'tls' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '12%', slots: { customRender: 'labels' } },
-  { title: '操作', key: 'actions', width: '15%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: '规则', dataIndex: 'rules', key: 'rules', width: '10%', align: 'center', slots: { customRender: 'rules' } },
+  { title: 'TLS', dataIndex: 'tls', key: 'tls', width: '8%', align: 'center', slots: { customRender: 'tls' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: '11%', slots: { customRender: 'labels' } },
+  { title: '操作', key: 'actions', width: '13%', fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 const ruleColumns = [

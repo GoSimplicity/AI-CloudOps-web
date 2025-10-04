@@ -259,24 +259,11 @@ export function useRoleBindingPage() {
     ],
   };
 
-  // computed
+  // computed - 后端已经处理了搜索、命名空间过滤和分页，前端不再做二次过滤
   const filteredRoleBindings = computed(() => {
-    let filtered = [...roleBindings.value];
-
-    if (searchText.value) {
-      const search = searchText.value.toLowerCase();
-      filtered = filtered.filter(item => 
-        item.name.toLowerCase().includes(search) ||
-        item.namespace.toLowerCase().includes(search)
-      );
-    }
-
-    if (filterNamespace.value) {
-      filtered = filtered.filter(item => item.namespace === filterNamespace.value);
-    }
-
+    // 如果有标签过滤，在前端进行过滤（但不改变 total，因为会导致分页不准确）
     if (Object.keys(filterLabels.value).length > 0) {
-      filtered = filtered.filter(item => {
+      return roleBindings.value.filter(item => {
         if (!item.labels) return false;
         return Object.entries(filterLabels.value).every(([key, value]) => {
           const itemLabels = typeof item.labels === 'object' 
@@ -286,11 +273,8 @@ export function useRoleBindingPage() {
         });
       });
     }
-
-    total.value = filtered.length;
-    const start = (currentPage.value - 1) * pageSize.value;
-    const end = start + pageSize.value;
-    return filtered.slice(start, end);
+    // 直接返回后端返回的数据，不做前端分页
+    return roleBindings.value;
   });
 
   const rowSelection = computed(() => ({

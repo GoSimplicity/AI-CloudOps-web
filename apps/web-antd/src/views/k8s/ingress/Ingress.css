@@ -1,10 +1,5 @@
 /* ==================== Ingress 特定样式 ==================== */
 
-/* Ingress 表格样式 */
-.ingress-table :deep(.ant-table-tbody > tr > td) {
-  vertical-align: middle;
-}
-
 /* Ingress 主机显示样式 */
 .ingress-hosts {
   display: flex;
@@ -98,93 +93,6 @@
   transform: scale(1.05);
 }
 
-/* Ingress 标签过滤器样式 */
-.ingress-labels-filter {
-  position: relative;
-}
-
-.ingress-labels-filter .k8s-toolbar-btn {
-  height: 36px;
-  border-radius: 6px;
-  font-weight: 500;
-  border: 1px solid #d9d9d9;
-  background: #fafafa;
-  transition: all 0.2s ease;
-}
-
-.ingress-labels-filter .k8s-toolbar-btn:hover {
-  background: #f0f0f0;
-  border-color: #1677ff;
-  color: #1677ff;
-}
-
-.ingress-labels-filter .active-filters {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 10;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  max-height: 80px;
-  overflow: auto;
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 6px;
-  padding: 8px;
-  margin-top: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.active-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-}
-
-/* Ingress 状态标签样式增强 */
-.ant-tag[color="blue"] {
-  background: #e6f7ff;
-  border-color: #91d5ff;
-  color: #1890ff;
-}
-
-.ant-tag[color="green"] {
-  background: #f6ffed;
-  border-color: #b7eb8f;
-  color: #52c41a;
-}
-
-.ant-tag[color="orange"] {
-  background: #fff7e6;
-  border-color: #ffd591;
-  color: #fa8c16;
-}
-
-.ant-tag[color="purple"] {
-  background: #f9f0ff;
-  border-color: #d3adf7;
-  color: #722ed1;
-}
-
-/* YAML 编辑器样式 */
-.k8s-config-textarea {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
-  font-size: 12px !important;
-  line-height: 1.4 !important;
-  background: #fafafa;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-}
-
-.k8s-config-textarea:focus {
-  background: #ffffff;
-  border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
-}
-
 /* Ingress 规则配置表单样式 */
 .rule-config-row {
   display: flex;
@@ -237,23 +145,6 @@
   height: 30px;
 }
 
-/* Ingress 详情模态框样式增强 */
-.k8s-detail-content .ingress-hosts .host-tag {
-  margin-bottom: 4px;
-}
-
-.k8s-detail-content .ingress-load-balancer .lb-tag {
-  margin-bottom: 4px;
-}
-
-.k8s-detail-content .ingress-rules .rule-tag {
-  margin-bottom: 4px;
-}
-
-.k8s-detail-content .ingress-tls .tls-tag {
-  margin-bottom: 4px;
-}
-
 /* Ingress 规则表格样式 */
 .ingress-rules-table {
   margin-top: 16px;
@@ -286,44 +177,6 @@
   font-size: 12px;
   font-weight: 600;
   background: #fafafa;
-}
-
-/* 标签过滤模态框样式 */
-.labels-filter-form {
-  padding: 8px;
-}
-
-.labels-filter-form .current-filters {
-  margin-bottom: 16px;
-  padding: 16px;
-  background: #f6ffed;
-  border-radius: 8px;
-  border: 1px solid #e6f7ff;
-}
-
-.labels-filter-form .current-filters h4,
-.labels-filter-form .add-filter-section h4 {
-  font-size: 14px;
-  font-weight: 600;
-  color: #262626;
-  margin-bottom: 12px;
-}
-
-.labels-filter-form .filter-tags {
-  margin-bottom: 16px;
-}
-
-.labels-filter-form .add-filter-section {
-  padding: 16px;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
-}
-
-.labels-filter-form .filter-input-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
 }
 
 /* Ingress 表单样式增强 */
@@ -399,200 +252,7 @@
   font-style: italic;
 }
 
-/* Ingress 状态指示器样式 */
-.ingress-status-running {
-  color: #52c41a;
-}
-
-.ingress-status-pending {
-  color: #faad14;
-}
-
-.ingress-status-failed {
-  color: #ff4d4f;
-}
-
-/* Ingress 主机指示器样式 */
-.ingress-host-tag {
-  background: #e6f7ff;
-  color: #1890ff;
-  border-color: #91d5ff;
-}
-
-.ingress-host-tag:hover {
-  background: #bae7ff;
-  border-color: #69c0ff;
-}
-
-/* Ingress 路径指示器样式 */
-.ingress-path-tag {
-  background: #f6ffed;
-  color: #52c41a;
-  border-color: #b7eb8f;
-}
-
-.ingress-path-tag:hover {
-  background: #d9f7be;
-  border-color: #95de64;
-}
-
-/* Ingress 负载均衡器指示器样式 */
-.ingress-lb-tag {
-  background: #fff7e6;
-  color: #fa8c16;
-  border-color: #ffd591;
-}
-
-.ingress-lb-tag:hover {
-  background: #ffe7ba;
-  border-color: #ffc069;
-}
-
-/* Ingress TLS 指示器样式 */
-.ingress-tls-tag {
-  background: #f9f0ff;
-  color: #722ed1;
-  border-color: #d3adf7;
-}
-
-.ingress-tls-tag:hover {
-  background: #efdbff;
-  border-color: #b37feb;
-}
-
-/* 响应式设计 - Ingress 特定 */
-@media (max-width: 768px) {
-  .ingress-hosts {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-  }
-  
-  .ingress-load-balancer {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-  }
-  
-  .ingress-rules {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-  }
-  
-  .ingress-tls {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-  }
-  
-  .host-tag,
-  .lb-tag,
-  .rule-tag,
-  .tls-tag {
-    font-size: 10px;
-  }
-  
-  .ingress-class {
-    font-size: 11px;
-  }
-}
-
-@media (max-width: 576px) {
-  .k8s-form .ingress-rule-config-item {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-  
-  .k8s-form .ingress-rule-config-item .ant-select {
-    width: 100%;
-  }
-  
-  .k8s-form .tls-config-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-  
-  .ingress-labels-filter {
-    width: 100%;
-  }
-  
-  .ingress-labels-filter .active-filters {
-    position: static;
-    margin-top: 8px;
-    border: none;
-    box-shadow: none;
-    background: transparent;
-    padding: 0;
-  }
-  
-  .labels-filter-form .filter-input-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .ingress-labels-filter .k8s-toolbar-btn {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-/* 标签过滤器滚动条样式 */
-.ingress-labels-filter .active-filters::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.ingress-labels-filter .active-filters::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.ingress-labels-filter .active-filters::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.ingress-labels-filter .active-filters::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* Ingress 详情卡片样式增强 */
-.k8s-detail-content .ant-card-small > .ant-card-head {
-  min-height: 40px;
-  padding: 8px 16px;
-}
-
-.k8s-detail-content .ant-card-small > .ant-card-head > .ant-card-head-wrapper > .ant-card-head-title {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.k8s-detail-content .ant-card-small > .ant-card-body {
-  padding: 12px 16px;
-}
-
-/* Ingress 工具提示样式 */
-.ingress-tooltip {
-  max-width: 300px;
-}
-
-.ingress-tooltip .ant-tooltip-inner {
-  background: #fff;
-  color: #333;
-  border: 1px solid #e8e8e8;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.ingress-tooltip .ant-tooltip-arrow::before {
-  background: #fff;
-  border: 1px solid #e8e8e8;
-}
-
-/* Ingress 规则路径样式 */
+/* Ingress 路径显示样式 */
 .ingress-path-display {
   display: flex;
   flex-wrap: wrap;
@@ -653,26 +313,43 @@
   padding: 2px 6px;
 }
 
-/* 打印样式 */
-@media print {
-  .ingress-hosts .host-tag,
-  .ingress-load-balancer .lb-tag,
-  .ingress-rules .rule-tag,
-  .ingress-tls .tls-tag,
-  .ingress-class,
-  .ingress-secret-name {
-    background: white !important;
-    border: 1px solid #ddd !important;
-    color: #333 !important;
+/* 响应式设计 - Ingress 特定 */
+@media (max-width: 768px) {
+  .ingress-hosts,
+  .ingress-load-balancer,
+  .ingress-rules,
+  .ingress-tls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
   }
   
-  .k8s-config-textarea {
-    background: white !important;
-    border: 1px solid #ddd !important;
+  .host-tag,
+  .lb-tag,
+  .rule-tag,
+  .tls-tag {
+    font-size: 10px;
   }
   
-  .ingress-labels-filter,
-  .labels-filter-form {
-    display: none !important;
+  .ingress-class {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 576px) {
+  .k8s-form .ingress-rule-config-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .k8s-form .ingress-rule-config-item .ant-select {
+    width: 100%;
+  }
+  
+  .k8s-form .tls-config-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
   }
 }

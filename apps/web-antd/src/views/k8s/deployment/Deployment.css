@@ -1,101 +1,27 @@
-/* Deployment 页面特定样式 */
+/* ==================== Deployment 页面特定样式 ==================== */
+/* 
+ * Note: 本文件只包含 Deployment 特有样式
+ * 共通样式已移至 k8s-common.css
+ */
 
-/* 副本数显示样式 */
-.deployment-replicas {
-  min-width: 100px;
+/* Deployment 表格行状态指示器 */
+.deployment-table :deep(.ant-table-tbody > tr[data-deployment-status="Running"]) {
+  border-left: 3px solid #52c41a;
 }
 
-.deployment-replicas .replicas-text {
-  font-weight: 600;
-  color: #262626;
-  font-size: 14px;
+.deployment-table :deep(.ant-table-tbody > tr[data-deployment-status="Stopped"]) {
+  border-left: 3px solid #d9d9d9;
 }
 
-.deployment-replicas .ant-progress {
-  margin-top: 4px;
+.deployment-table :deep(.ant-table-tbody > tr[data-deployment-status="Paused"]) {
+  border-left: 3px solid #faad14;
 }
 
-.deployment-replicas .ant-progress-bg {
-  height: 6px !important;
+.deployment-table :deep(.ant-table-tbody > tr[data-deployment-status="Error"]) {
+  border-left: 3px solid #ff4d4f;
 }
 
-.deployment-replicas .ant-progress-inner {
-  border-radius: 3px;
-  background-color: #f0f0f0;
-}
-
-/* 镜像显示样式 */
-.deployment-images {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-  min-height: 30px;
-}
-
-.deployment-images .image-tag {
-  background: #f0f7ff;
-  border: 1px solid #adc6ff;
-  color: #2f54eb;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 4px;
-  padding: 2px 6px;
-  margin: 0;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: all 0.2s ease;
-}
-
-.deployment-images .image-tag:hover {
-  background: #e6f4ff;
-  border-color: #85a5ff;
-  color: #1d39c4;
-  transform: scale(1.05);
-}
-
-/* Deployment 表格样式 */
-.deployment-table :deep(.ant-table-tbody td[data-index="0"]) {
-  font-weight: 600;
-  color: #1677ff;
-}
-
-.deployment-table :deep(.ant-table-tbody td[data-index="1"]) {
-  font-weight: 500;
-  color: #52c41a;
-}
-
-.deployment-table :deep(.ant-table-tbody td[data-index="2"]) {
-  text-align: center;
-}
-
-.deployment-table :deep(.ant-table-tbody td[data-index="3"]) {
-  text-align: center;
-}
-
-/* 操作列按钮布局优化 */
-.deployment-table .k8s-action-column {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  min-width: 200px;
-}
-
-.deployment-table .k8s-action-column .ant-btn {
-  height: 32px;
-  width: 32px;
-  min-width: 32px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-}
-
+/* Deployment 特定操作按钮样式 */
 /* YAML 操作按钮 - 紫色主题 */
 .deployment-table .ant-btn[title*="YAML"] {
   background: linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%);
@@ -180,47 +106,7 @@
   box-shadow: 0 6px 16px rgba(24, 144, 255, 0.25);
 }
 
-/* 策略标签样式 */
-.deployment-table .ant-tag[data-strategy] {
-  font-weight: 500;
-  border-radius: 4px;
-  padding: 2px 8px;
-  border: 1px solid;
-}
-
-/* Deployment 详情模态框样式 */
-.deployment-detail-modal .k8s-detail-content {
-  padding: 12px;
-}
-
-.deployment-detail-modal .k8s-detail-card {
-  margin-bottom: 16px;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.deployment-detail-modal .k8s-detail-item {
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.deployment-detail-modal .k8s-detail-label {
-  font-weight: 600;
-  color: #555;
-  min-width: 120px;
-}
-
-.deployment-detail-modal .k8s-detail-value {
-  color: #262626;
-  flex: 1;
-  word-break: break-all;
-}
-
-/* 伸缩模态框样式 */
-.scale-modal .k8s-form-input {
-  width: 100%;
-}
-
+/* 伸缩模态框特定样式 */
 .scale-modal .current-replicas {
   background: #f6ffed;
   border: 1px solid #d9f7be;
@@ -229,320 +115,6 @@
   margin-top: 8px;
   color: #52c41a;
   font-size: 12px;
-}
-
-/* YAML 工具栏样式 */
-.yaml-toolbar {
-  margin-bottom: 16px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 12px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 8px;
-  border: 1px solid #dee2e6;
-}
-
-/* YAML 工具栏按钮基础样式 */
-.yaml-toolbar-btn {
-  height: 36px;
-  padding: 0 16px;
-  font-size: 13px;
-  font-weight: 500;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid transparent;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  position: relative;
-  overflow: hidden;
-}
-
-.yaml-toolbar-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transition: left 0.5s;
-}
-
-.yaml-toolbar-btn:hover::before {
-  left: 100%;
-}
-
-.yaml-toolbar-btn .anticon {
-  font-size: 14px;
-}
-
-/* 插入模板按钮 - 蓝色主题 */
-.yaml-btn-template {
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-  color: #ffffff;
-  border-color: #357abd;
-}
-
-.yaml-btn-template:hover {
-  background: linear-gradient(135deg, #5ba3f5 0%, #4a90e2 100%);
-  border-color: #4a90e2;
-  color: #ffffff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
-}
-
-.yaml-btn-template:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(74, 144, 226, 0.2);
-}
-
-/* 格式化按钮 - 紫色主题 */
-.yaml-btn-format {
-  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-  color: #ffffff;
-  border-color: #8e44ad;
-}
-
-.yaml-btn-format:hover {
-  background: linear-gradient(135deg, #a569bd 0%, #9b59b6 100%);
-  border-color: #9b59b6;
-  color: #ffffff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
-}
-
-.yaml-btn-format:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(155, 89, 182, 0.2);
-}
-
-/* 检查格式按钮 - 绿色主题 */
-.yaml-btn-validate {
-  background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
-  color: #ffffff;
-  border-color: #229954;
-}
-
-.yaml-btn-validate:hover {
-  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-  border-color: #27ae60;
-  color: #ffffff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
-}
-
-.yaml-btn-validate:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(39, 174, 96, 0.2);
-}
-
-/* 清空按钮 - 灰色主题 */
-.yaml-btn-clear {
-  background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
-  color: #ffffff;
-  border-color: #7f8c8d;
-}
-
-.yaml-btn-clear:hover {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  border-color: #c0392b;
-  color: #ffffff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
-}
-
-.yaml-btn-clear:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(231, 76, 60, 0.2);
-}
-
-/* YAML 编辑器样式 */
-.k8s-config-textarea {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 16px;
-  resize: none;
-  color: #2c3e50;
-  transition: all 0.2s ease;
-}
-
-.k8s-config-textarea:focus {
-  border-color: #4a90e2;
-  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
-  background: #ffffff;
-  outline: none;
-}
-
-/* Pod 列表表格样式 */
-.pod-list-modal .k8s-table {
-  margin: -8px;
-}
-
-.pod-list-modal .k8s-table .ant-table-thead > tr > th {
-  background: #fafafa;
-  font-weight: 600;
-  font-size: 12px;
-  padding: 10px 12px;
-}
-
-.pod-list-modal .k8s-table .ant-table-tbody > tr > td {
-  padding: 8px 12px;
-  font-size: 12px;
-}
-
-/* 标签过滤器样式 */
-.deployment-labels-filter {
-  position: relative;
-}
-
-.deployment-labels-filter .k8s-toolbar-btn {
-  height: 36px;
-  border-radius: 6px;
-  font-weight: 500;
-  border: 1px solid #d9d9d9;
-  background: #fafafa;
-  transition: all 0.2s ease;
-}
-
-.deployment-labels-filter .k8s-toolbar-btn:hover {
-  background: #f0f0f0;
-  border-color: #1677ff;
-  color: #1677ff;
-}
-
-.deployment-labels-filter .active-filters {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 10;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  max-height: 80px;
-  overflow: auto;
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 6px;
-  padding: 8px;
-  margin-top: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* 标签过滤器模态框样式 */
-.labels-filter-form {
-  padding: 8px;
-}
-
-.labels-filter-form .current-filters {
-  margin-bottom: 16px;
-  padding: 16px;
-  background: #f6ffed;
-  border-radius: 8px;
-  border: 1px solid #e6f7ff;
-}
-
-.labels-filter-form .filter-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.labels-filter-form .add-filter-section {
-  background: #fafafa;
-  border-radius: 8px;
-  padding: 16px;
-  border: 1px dashed #d9d9d9;
-}
-
-.labels-filter-form .filter-input-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
-  padding: 8px;
-  background: #ffffff;
-  border-radius: 6px;
-  border: 1px solid #e8e8e8;
-}
-
-/* 创建表单中的镜像字段样式 */
-.k8s-key-value-inputs .image-input-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 12px;
-  padding: 8px;
-  background: #ffffff;
-  border-radius: 6px;
-  border: 1px solid #f0f0f0;
-  transition: all 0.2s ease;
-}
-
-.k8s-key-value-inputs .image-input-row:hover {
-  border-color: #d9d9d9;
-}
-
-.k8s-key-value-inputs .image-input-row .k8s-form-input {
-  flex: 1;
-}
-
-/* 添加输入行样式 */
-.add-input-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  background: #f8f9fa;
-  border: 1px dashed #d9d9d9;
-  border-radius: 6px;
-}
-
-/* YAML 工具栏响应式优化 */
-@media (max-width: 768px) {
-  .yaml-toolbar {
-    gap: 8px;
-    padding: 10px;
-  }
-  
-  .yaml-toolbar-btn {
-    height: 34px;
-    padding: 0 14px;
-    font-size: 12px;
-    gap: 5px;
-  }
-  
-  .yaml-toolbar-btn .anticon {
-    font-size: 13px;
-  }
-}
-
-@media (max-width: 576px) {
-  .yaml-toolbar {
-    gap: 6px;
-    padding: 8px;
-  }
-  
-  .yaml-toolbar-btn {
-    height: 32px;
-    padding: 0 12px;
-    font-size: 11px;
-    gap: 4px;
-    flex: 1 1 calc(50% - 3px);
-    min-width: 0;
-    justify-content: center;
-  }
-  
-  .yaml-toolbar-btn .anticon {
-    font-size: 12px;
-  }
 }
 
 /* 响应式优化 */
@@ -559,26 +131,6 @@
     min-width: 100px;
     justify-content: center;
   }
-  
-  .deployment-replicas .ant-progress {
-    max-width: 80px;
-  }
-  
-  .deployment-images .image-tag {
-    max-width: 80px;
-    font-size: 11px;
-  }
-  
-  .deployment-labels-filter .active-filters {
-    position: relative;
-    top: auto;
-    left: auto;
-    right: auto;
-    max-height: 60px;
-    margin-top: 8px;
-    box-shadow: none;
-    border: 1px solid #e8e8e8;
-  }
 }
 
 @media (max-width: 576px) {
@@ -586,77 +138,6 @@
     height: 26px;
     font-size: 12px;
   }
-  
-  .deployment-replicas .replicas-text {
-    font-size: 12px;
-  }
-  
-  .deployment-images .image-tag {
-    font-size: 10px;
-    padding: 1px 4px;
-  }
-  
-  .labels-filter-form .filter-input-row {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .deployment-labels-filter .k8s-toolbar-btn {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-/* 滚动条样式 */
-.k8s-config-textarea::-webkit-scrollbar,
-.deployment-labels-filter .active-filters::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.k8s-config-textarea::-webkit-scrollbar-track,
-.deployment-labels-filter .active-filters::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.k8s-config-textarea::-webkit-scrollbar-thumb,
-.deployment-labels-filter .active-filters::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.k8s-config-textarea::-webkit-scrollbar-thumb:hover,
-.deployment-labels-filter .active-filters::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
-}
-
-/* 状态指示器优化 */
-.deployment-table :deep(.ant-badge-status-dot) {
-  width: 8px;
-  height: 8px;
-}
-
-.deployment-table :deep(.ant-badge-status-text) {
-  margin-left: 8px;
-  font-weight: 500;
-}
-
-/* Deployment 特有的状态样式 */
-.deployment-table :deep(.ant-table-tbody > tr[data-deployment-status="Running"]) {
-  border-left: 3px solid #52c41a;
-}
-
-.deployment-table :deep(.ant-table-tbody > tr[data-deployment-status="Stopped"]) {
-  border-left: 3px solid #d9d9d9;
-}
-
-.deployment-table :deep(.ant-table-tbody > tr[data-deployment-status="Paused"]) {
-  border-left: 3px solid #faad14;
-}
-
-.deployment-table :deep(.ant-table-tbody > tr[data-deployment-status="Error"]) {
-  border-left: 3px solid #ff4d4f;
 }
 
 /* 动画效果 */
@@ -674,18 +155,4 @@
 
 .deployment-table .ant-btn[title*="重启"]:active {
   animation: pulse 0.3s ease-in-out;
-}
-
-.deployment-replicas .ant-progress-bg {
-  transition: all 0.3s ease;
-}
-
-/* 成功状态的进度条 */
-.deployment-replicas .ant-progress-success-bg {
-  background: linear-gradient(90deg, #52c41a 0%, #73d13d 100%);
-}
-
-/* 错误状态的进度条 */
-.deployment-replicas .ant-progress-bg[style*="width: 0"] {
-  background: #ff4d4f;
 }

@@ -113,7 +113,7 @@
           </a-input>
           
           <!-- 标签过滤器 -->
-          <div class="statefulset-labels-filter">
+          <div class="k8s-labels-filter">
             <a-button type="dashed" @click="openLabelsFilter" class="k8s-toolbar-btn">
               <template #icon><TagsOutlined /></template>
               标签过滤 
@@ -239,8 +239,8 @@
         </template>
 
         <template #replicas="{ record }">
-          <div class="statefulset-replicas">
-            <span class="replicas-text">
+          <div class="k8s-replicas-display">
+            <span class="k8s-replicas-text">
               {{ record.ready_replicas }}/{{ record.replicas }}
             </span>
             <a-progress 
@@ -254,14 +254,14 @@
         </template>
 
         <template #images="{ text }">
-          <div class="statefulset-images">
+          <div class="k8s-images-display">
             <a-tooltip v-for="(image, index) in (Array.isArray(text) ? text : []).slice(0, 2)" :key="index" :title="image">
-              <a-tag class="image-tag">
+              <a-tag class="k8s-image-tag">
                 {{ image.split('/').pop()?.split(':')[0] || image }}
               </a-tag>
             </a-tooltip>
             <a-tooltip v-if="(Array.isArray(text) ? text : []).length > 2" :title="(Array.isArray(text) ? text : []).join('\n')">
-              <a-tag class="image-tag">
+              <a-tag class="k8s-image-tag">
                 +{{ (Array.isArray(text) ? text : []).length - 2 }} 更多
               </a-tag>
             </a-tooltip>
@@ -322,14 +322,14 @@
                 <template #icon><EyeOutlined /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="查看 YAML">
-              <a-button title="查看 YAML" @click="showYamlModal(record)">
-                <template #icon><FileTextOutlined /></template>
-              </a-button>
-            </a-tooltip>
             <a-tooltip title="编辑">
               <a-button title="编辑" @click="openEditModal(record)">
                 <template #icon><EditOutlined /></template>
+              </a-button>
+            </a-tooltip>
+            <a-tooltip title="查看 YAML">
+              <a-button title="查看 YAML" @click="showYamlModal(record)">
+                <template #icon><FileTextOutlined /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="伸缩">
@@ -831,9 +831,9 @@
 
             <a-col :xs="24" :lg="12">
               <a-card title="容器镜像" class="k8s-detail-card" size="small">
-                <div class="statefulset-images">
+                <div class="k8s-images-display">
                   <a-tooltip v-for="(image, index) in (currentStatefulSetDetail.images || [])" :key="index" :title="image">
-                    <a-tag class="image-tag" style="margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;">
+                    <a-tag class="k8s-image-tag" style="margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;">
                       {{ image }}
                     </a-tag>
                   </a-tooltip>
@@ -1376,15 +1376,15 @@ const handleClusterDropdownScroll = (e: Event) => {
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '15%' },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '12%' },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', slots: { customRender: 'status' } },
-  { title: '副本数', key: 'replicas', width: '10%', slots: { customRender: 'replicas' } },
-  { title: '服务名称', dataIndex: 'service_name', key: 'service_name', width: '12%', slots: { customRender: 'service_name' } },
-  { title: 'Pod管理策略', dataIndex: 'pod_management_policy', key: 'pod_management_policy', width: '12%', slots: { customRender: 'pod_management_policy' } },
-  { title: '镜像', dataIndex: 'images', key: 'images', width: '15%', slots: { customRender: 'images' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '12%', slots: { customRender: 'labels' } },
-  { title: '操作', key: 'actions', width: '20%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: '14%', ellipsis: true },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '11%', ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', align: 'center', slots: { customRender: 'status' } },
+  { title: '副本数', key: 'replicas', width: '11%', align: 'center', slots: { customRender: 'replicas' } },
+  { title: '服务名称', dataIndex: 'service_name', key: 'service_name', width: '11%', ellipsis: true, slots: { customRender: 'service_name' } },
+  { title: 'Pod管理策略', dataIndex: 'pod_management_policy', key: 'pod_management_policy', width: '9%', align: 'center', slots: { customRender: 'pod_management_policy' } },
+  { title: '镜像', dataIndex: 'images', key: 'images', width: '14%', slots: { customRender: 'images' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: '11%', slots: { customRender: 'labels' } },
+  { title: '操作', key: 'actions', width: '21%', fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 // 标签过滤器状态

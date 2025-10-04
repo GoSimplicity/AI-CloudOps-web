@@ -221,37 +221,26 @@
 
         <template #actions="{ record }">
           <div class="k8s-action-column">
-            <a-tooltip title="查看节点详情" placement="top" :mouseEnterDelay="0.5">
-              <a-button type="primary" @click="showNodeDetail(record)" size="small">
+            <a-tooltip title="查看详情">
+              <a-button title="查看详情" @click="showNodeDetail(record)">
                 <template #icon><EyeOutlined /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="管理节点标签 (Labels)" placement="top" :mouseEnterDelay="0.5">
-              <a-button type="default" @click="openEditLabelModal(record)" size="small" style="background: #e6f7ff; border-color: #91caff; color: #1890ff;">
+            <a-tooltip title="管理标签">
+              <a-button title="管理标签" @click="openEditLabelModal(record)">
                 <template #icon><TagsOutlined /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="管理节点污点 (Taints)" placement="top" :mouseEnterDelay="0.5">
-              <a-button type="default" @click="openTaintModal(record)" size="small" style="background: #fff7e6; border-color: #ffc069; color: #fa8c16;">
+            <a-tooltip title="管理污点">
+              <a-button title="管理污点" @click="openTaintModal(record)">
                 <template #icon><WarningOutlined /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip placement="top" :mouseEnterDelay="0.5">
-              <template #title>
-                <div>
-                  {{ record.schedulable === 1 ? '禁用调度 (Cordon)' : '启用调度 (Uncordon)' }}
-                  <div style="font-size: 11px; opacity: 0.85; margin-top: 2px;">
-                    {{ record.schedulable === 1 ? '阻止新 Pod 调度到此节点' : '允许新 Pod 调度到此节点' }}
-                  </div>
-                </div>
-              </template>
+            <a-tooltip :title="record.schedulable === 1 ? '禁用调度' : '启用调度'">
               <a-button 
-                size="small"
-                :type="record.schedulable === 1 ? 'default' : 'default'"
+                :title="record.schedulable === 1 ? '禁用调度' : '启用调度'"
                 @click="toggleNodeSchedule(record)"
-                :style="record.schedulable === 1 ? 
-                  'background: #fff2f0; border-color: #ffccc7; color: #f5222d;' : 
-                  'background: #f6ffed; border-color: #b7eb8f; color: #52c41a;'"
+                data-action="schedule"
               >
                 <template #icon>
                   <StopOutlined v-if="record.schedulable === 1" />
@@ -259,16 +248,13 @@
                 </template>
               </a-button>
             </a-tooltip>
-            <a-tooltip placement="top" :mouseEnterDelay="0.5">
-              <template #title>
-                <div>
-                  驱逐节点 (Drain)
-                  <div style="font-size: 11px; opacity: 0.85; margin-top: 2px;">
-                    安全迁移节点上的所有 Pod
-                  </div>
-                </div>
-              </template>
-              <a-button danger type="primary" @click="openDrainModal(record)" size="small">
+            <a-tooltip title="驱逐节点">
+              <a-button 
+                title="驱逐节点" 
+                @click="openDrainModal(record)" 
+                danger
+                data-action="drain"
+              >
                 <template #icon><DisconnectOutlined /></template>
               </a-button>
             </a-tooltip>
@@ -977,16 +963,16 @@ const handleClusterDropdownScroll = (e: Event) => {
 };
 
 const columns = [
-  { title: '节点名称', dataIndex: 'name', key: 'name', width: '15%', ellipsis: true },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', slots: { customRender: 'status' } },
-  { title: '调度状态', dataIndex: 'schedulable', key: 'schedulable', width: '8%', slots: { customRender: 'schedulable' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: '14%', ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', align: 'center', slots: { customRender: 'status' } },
+  { title: '调度状态', dataIndex: 'schedulable', key: 'schedulable', width: '9%', align: 'center', slots: { customRender: 'schedulable' } },
   { title: '角色', dataIndex: 'roles', key: 'roles', width: '10%', slots: { customRender: 'roles' } },
-  { title: '存在时间', dataIndex: 'age', key: 'age', width: '8%' },
-  { title: '内部IP', dataIndex: 'internal_ip', key: 'internal_ip', width: '12%' },
-  { title: 'Kubelet版本', dataIndex: 'kubelet_version', key: 'kubelet_version', width: '10%' },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '12%', slots: { customRender: 'labels' } },
+  { title: '存在时间', dataIndex: 'age', key: 'age', width: '9%', align: 'center' },
+  { title: '内部IP', dataIndex: 'internal_ip', key: 'internal_ip', width: '11%', ellipsis: true },
+  { title: 'Kubelet版本', dataIndex: 'kubelet_version', key: 'kubelet_version', width: '10%', align: 'center' },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: '10%', slots: { customRender: 'labels' } },
   { title: '污点', dataIndex: 'taints', key: 'taints', width: '10%', slots: { customRender: 'taints' } },
-  { title: '操作', key: 'actions', width: '17%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: '操作', key: 'actions', width: '19%', fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 const conditionColumns = [
