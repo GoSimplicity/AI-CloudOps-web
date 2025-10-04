@@ -95,9 +95,9 @@
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
-            <a-select-option :value="K8sIngressStatus.RUNNING">✅ 运行中</a-select-option>
-            <a-select-option :value="K8sIngressStatus.PENDING">⏳ 等待中</a-select-option>
-            <a-select-option :value="K8sIngressStatus.FAILED">❌ 失败</a-select-option>
+            <a-select-option :value="K8sIngressStatus.RUNNING">运行中</a-select-option>
+            <a-select-option :value="K8sIngressStatus.PENDING">等待中</a-select-option>
+            <a-select-option :value="K8sIngressStatus.FAILED">失败</a-select-option>
           </a-select>
           
           <!-- 标签过滤器 -->
@@ -128,7 +128,7 @@
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
-            placeholder="🔍 搜索 Ingress 名称" 
+            placeholder="搜索 Ingress 名称" 
             class="k8s-search-input" 
             @pressEnter="onSearch"
             @input="onSearch"
@@ -384,7 +384,7 @@
       @ok="submitCreateForm"
       @cancel="closeCreateModal"
       :confirmLoading="submitLoading"
-      width="900px"
+      width="800px"
       :maskClosable="false"
       destroyOnClose
       okText="创建"
@@ -598,7 +598,7 @@
       @ok="submitEditForm"
       @cancel="closeEditModal"
       :confirmLoading="submitLoading"
-      width="900px"
+      width="800px"
       :maskClosable="false"
       destroyOnClose
       okText="更新"
@@ -826,9 +826,27 @@
         :rules="createYamlFormRules"
       >
         <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
+              <template #icon><FileAddOutlined /></template>
+              插入模板
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
+              <template #icon><ClearOutlined /></template>
+              清空
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="createYamlFormModel.yaml" 
-            placeholder="请输入 Ingress YAML 内容" 
+            placeholder="请输入 Ingress YAML 内容，或点击【插入模板】使用默认模板" 
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -1096,8 +1114,9 @@
 
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
-import { message } from 'ant-design-vue';
+import { message, Modal } from 'ant-design-vue';
 import { useIngressPage } from './Ingress';
+import yaml from 'js-yaml';
 import { 
   PlusOutlined, 
   ReloadOutlined, 
@@ -1111,6 +1130,10 @@ import {
   FileTextOutlined,
   EditOutlined,
   GlobalOutlined,
+  FileAddOutlined,
+  FormatPainterOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -1370,6 +1393,139 @@ const resetFilters = () => {
   clearIngresses();
   clearNamespaces();
   message.success('已重置所有筛选条件');
+};
+
+// YAML 工具栏函数
+const INGRESS_YAML_TEMPLATE = `apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-ingress
+  namespace: default
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: my-service
+                port:
+                  number: 80`;
+
+const insertYamlTemplate = () => {
+  if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    Modal.confirm({
+      title: '确认操作',
+      content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+      okText: '确认',
+      cancelText: '取消',
+      centered: true,
+      onOk: () => {
+        createYamlFormModel.value.yaml = INGRESS_YAML_TEMPLATE;
+        message.success('模板已插入');
+      },
+    });
+  } else {
+    createYamlFormModel.value.yaml = INGRESS_YAML_TEMPLATE;
+    message.success('模板已插入');
+  }
+};
+
+const formatYaml = () => {
+  const yamlContent = createYamlFormModel.value.yaml;
+  if (!yamlContent || !yamlContent.trim()) {
+    message.warning('YAML 内容为空，无法格式化');
+    return;
+  }
+
+  try {
+    const parsed = yaml.load(yamlContent);
+    const formatted = yaml.dump(parsed, {
+      indent: 2,
+      lineWidth: -1,
+      noRefs: true,
+      sortKeys: false,
+    });
+    createYamlFormModel.value.yaml = formatted;
+    message.success('YAML 格式化成功');
+  } catch (error: any) {
+    message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+  }
+};
+
+const validateYaml = () => {
+  const yamlContent = createYamlFormModel.value.yaml;
+  if (!yamlContent || !yamlContent.trim()) {
+    message.warning('YAML 内容为空，无法检查');
+    return;
+  }
+
+  try {
+    const parsed = yaml.load(yamlContent);
+    
+    if (!parsed || typeof parsed !== 'object') {
+      message.warning('YAML 内容无效：应为对象格式');
+      return;
+    }
+
+    const ingress = parsed as any;
+    const issues: string[] = [];
+
+    if (!ingress.apiVersion) {
+      issues.push('缺少 apiVersion 字段');
+    }
+    if (!ingress.kind) {
+      issues.push('缺少 kind 字段');
+    } else if (ingress.kind !== 'Ingress') {
+      issues.push(`kind 应为 "Ingress"，当前为 "${ingress.kind}"`);
+    }
+    if (!ingress.metadata?.name) {
+      issues.push('缺少 metadata.name 字段');
+    }
+    if (!ingress.spec) {
+      issues.push('缺少 spec 字段');
+    }
+
+    if (issues.length > 0) {
+      Modal.warning({
+        title: 'YAML 格式检查警告',
+        content: '发现以下问题：\n' + issues.join('\n'),
+        width: 500,
+        centered: true,
+      });
+    } else {
+      message.success('YAML 格式检查通过');
+    }
+  } catch (error: any) {
+    Modal.error({
+      title: 'YAML 格式检查失败',
+      content: `语法错误：${error.message || '未知错误'}`,
+      width: 600,
+      centered: true,
+    });
+  }
+};
+
+const clearYaml = () => {
+  if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    Modal.confirm({
+      title: '确认清空',
+      content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+      okText: '确认清空',
+      okType: 'danger',
+      cancelText: '取消',
+      centered: true,
+      onOk: () => {
+        createYamlFormModel.value.yaml = '';
+        message.success('YAML 内容已清空');
+      },
+    });
+  } else {
+    message.info('YAML 内容已为空');
+  }
 };
 
 onMounted(async () => {
