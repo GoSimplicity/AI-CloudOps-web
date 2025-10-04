@@ -407,14 +407,21 @@ export const forwardK8sPodPort = (data: PodPortForwardReq) => {
 export const uploadK8sPodFile = (data: PodFileUploadReq, file: File) => {
   const formData = new FormData();
   formData.append('file', file);
-  return requestClient.post(`/k8s/pod/${data.cluster_id}/${data.namespace}/${data.pod_name}/containers/${data.container}/files/upload`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  // 将目标路径作为表单字段传递
+  formData.append('file_path', data.file_path);
+  
+  return requestClient.post(
+    `/k8s/pod/${data.cluster_id}/${data.namespace}/${data.pod_name}/containers/${data.container}/files/upload`, 
+    formData, 
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  );
 };
 
-// Pod文件下载 - 修复版本，与后端API匹配
+// Pod文件下载
 export const downloadK8sPodFile = (params: PodFileDownloadReq) => {
   // 根据后端API路径构建URL: /api/k8s/pod/:cluster_id/:namespace/:name/containers/:container/files/download
   const url = `/k8s/pod/${params.cluster_id}/${params.namespace}/${params.pod_name}/containers/${params.container}/files/download`;

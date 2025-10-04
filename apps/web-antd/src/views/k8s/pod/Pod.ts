@@ -1,6 +1,7 @@
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, h } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+import yaml from 'js-yaml';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
@@ -56,6 +57,34 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
+
+// YAML 模板常量
+const POD_YAML_TEMPLATE = `apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+  labels:
+    app: my-app
+spec:
+  restartPolicy: Always
+  containers:
+  - name: main-container
+    image: nginx:latest
+    imagePullPolicy: IfNotPresent
+    ports:
+    - containerPort: 80
+      protocol: TCP
+    env:
+    - name: ENV_NAME
+      value: production
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+`;
 
 export function usePodPage() {
   // state
@@ -607,7 +636,7 @@ export function usePodPage() {
       };
       
       await updateK8sPodByYaml(params);
-      message.success('🎉 Pod YAML 更新成功');
+      message.success('Pod YAML 更新成功');
       isYamlModalVisible.value = false;
       await fetchPods();
     } catch (err: unknown) {
@@ -615,7 +644,7 @@ export function usePodPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ Pod YAML 更新失败');
+      message.error('Pod YAML 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -699,7 +728,7 @@ export function usePodPage() {
       };
       
       await createK8sPod(params);
-      message.success('🎉 Pod 创建成功');
+      message.success('Pod 创建成功');
       isCreateModalVisible.value = false;
       await fetchPods();
     } catch (err: unknown) {
@@ -707,7 +736,7 @@ export function usePodPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ Pod 创建失败');
+      message.error('Pod 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -727,7 +756,7 @@ export function usePodPage() {
       };
       
       await createK8sPodByYaml(params);
-      message.success('🎉 Pod YAML 创建成功');
+      message.success('Pod YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchPods();
     } catch (err: unknown) {
@@ -735,10 +764,244 @@ export function usePodPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ Pod YAML 创建失败');
+      message.error('Pod YAML 创建失败');
 
     } finally {
       submitLoading.value = false;
+    }
+  };
+
+  // YAML 工具函数
+  const insertYamlTemplate = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认覆盖',
+        content: '当前 YAML 编辑器中已有内容，插入模板将覆盖现有内容。是否继续？',
+        okText: '继续插入',
+        okType: 'primary',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = POD_YAML_TEMPLATE;
+          message.success('模板已插入');
+        },
+      });
+    } else {
+      createYamlFormModel.value.yaml = POD_YAML_TEMPLATE;
+      message.success('模板已插入');
+    }
+  };
+
+  const formatYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      // 解析 YAML
+      const parsed = yaml.load(yamlContent);
+      // 重新格式化为 YAML（缩进2空格）
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1, // 不限制行宽
+        noRefs: true,  // 不使用引用
+        sortKeys: false, // 保持原有顺序
+      });
+      createYamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+
+    }
+  };
+
+  const validateYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      // 尝试解析 YAML
+      const parsed = yaml.load(yamlContent);
+      
+      // 检查是否是有效的对象
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      // 基本的 Pod 字段检查
+      const pod = parsed as any;
+      const issues: string[] = [];
+
+      if (!pod.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!pod.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (pod.kind !== 'Pod') {
+        issues.push(`kind 应为 "Pod"，当前为 "${pod.kind}"`);
+      }
+      if (!pod.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!pod.spec) {
+        issues.push('缺少 spec 字段');
+      } else {
+        if (!pod.spec.containers || !Array.isArray(pod.spec.containers) || pod.spec.containers.length === 0) {
+          issues.push('缺少 spec.containers 字段或容器列表为空');
+        }
+        if (!pod.spec.restartPolicy) {
+          issues.push('建议设置 spec.restartPolicy 字段');
+        }
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+
+    }
+  };
+
+  const clearYaml = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认清空',
+        content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+        okText: '确认清空',
+        okType: 'danger',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = '';
+          message.success('YAML 内容已清空');
+        },
+      });
+    } else {
+      message.info('YAML 内容已为空');
+    }
+  };
+
+  // 编辑 YAML 的格式化和验证函数
+  const formatEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      yamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+
+    }
+  };
+
+  const validateEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      const pod = parsed as any;
+      const issues: string[] = [];
+
+      if (!pod.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!pod.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (pod.kind !== 'Pod') {
+        issues.push(`kind 应为 "Pod"，当前为 "${pod.kind}"`);
+      }
+      if (!pod.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!pod.spec) {
+        issues.push('缺少 spec 字段');
+      } else {
+        if (!pod.spec.containers || !Array.isArray(pod.spec.containers) || pod.spec.containers.length === 0) {
+          issues.push('缺少 spec.containers 字段或容器列表为空');
+        }
+        if (!pod.spec.restartPolicy) {
+          issues.push('建议设置 spec.restartPolicy 字段');
+        }
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+
     }
   };
 
@@ -775,7 +1038,7 @@ export function usePodPage() {
       };
       
       await updateK8sPod(params);
-      message.success('🎉 Pod 更新成功');
+      message.success('Pod 更新成功');
       isEditModalVisible.value = false;
       await fetchPods();
     } catch (err: unknown) {
@@ -783,7 +1046,7 @@ export function usePodPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ Pod 更新失败');
+      message.error('Pod 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -810,10 +1073,10 @@ export function usePodPage() {
             name: record.name,
           };
           await deleteK8sPod(params);
-          message.success('✅ Pod 删除成功');
+          message.success('Pod 删除成功');
           await fetchPods();
         } catch (err) {
-          message.error('❌ Pod 删除失败');
+          message.error('Pod 删除失败');
 
         }
       },
@@ -1147,7 +1410,7 @@ export function usePodPage() {
         },
         // onOpen - 连接建立
         () => {
-          message.success('✅ 实时日志连接已建立，支持自动重连');
+          message.success('实时日志连接已建立，支持自动重连');
           logsLoading.value = false;
           
           // 确保状态正确设置
@@ -1561,7 +1824,7 @@ export function usePodPage() {
         },
         // onOpen - 连接建立
         () => {
-          message.success('✅ 终端连接已建立');
+          message.success('终端连接已建立');
           isTerminalConnected.value = true;
           terminalLoading.value = false;
           
@@ -1597,7 +1860,7 @@ export function usePodPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ 建立终端连接失败');
+      message.error('建立终端连接失败');
 
       isTerminalConnected.value = false;
     } finally {
@@ -1669,14 +1932,14 @@ export function usePodPage() {
         shell: execFormModel.value.shell,
       };
       await execK8sPod(params);
-      message.success('🎉 命令执行成功');
+      message.success('命令执行成功');
       isExecModalVisible.value = false;
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ 命令执行失败');
+      message.error('命令执行失败');
 
     } finally {
       submitLoading.value = false;
@@ -1943,12 +2206,12 @@ export function usePodPage() {
             
           }
           
-          message.success(`✅ 批量${operation}操作已完成`);
+          message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchPods();
         } catch (err) {
-          message.error(`❌ 批量${operation}失败`);
+          message.error(`批量${operation}失败`);
 
         }
       },
@@ -2229,6 +2492,14 @@ export function usePodPage() {
     showYamlModal,
     closeYamlModal,
     submitYamlForm,
+    
+    // YAML toolbar operations
+    insertYamlTemplate,
+    formatYaml,
+    validateYaml,
+    clearYaml,
+    formatEditYaml,
+    validateEditYaml,
     
     // create operations
     openCreateModal,

@@ -95,26 +95,11 @@
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
-            <a-select-option :value="K8sPodStatus.Pending">⏳ 等待中</a-select-option>
-            <a-select-option :value="K8sPodStatus.Running">✅ 运行中</a-select-option>
-            <a-select-option :value="K8sPodStatus.Succeeded">🎉 已完成</a-select-option>
-            <a-select-option :value="K8sPodStatus.Failed">❌ 失败</a-select-option>
-            <a-select-option :value="K8sPodStatus.Unknown">❓ 未知</a-select-option>
-          </a-select>
-
-          <a-select 
-            v-model:value="filterPhase" 
-            placeholder="阶段筛选" 
-            class="k8s-filter-select" 
-            allow-clear 
-            @change="handleFilterChange"
-          >
-            <template #suffixIcon><ApiOutlined /></template>
-            <a-select-option :value="K8sPodPhase.Pending">⏳ Pending</a-select-option>
-            <a-select-option :value="K8sPodPhase.Running">✅ Running</a-select-option>
-            <a-select-option :value="K8sPodPhase.Succeeded">🎉 Succeeded</a-select-option>
-            <a-select-option :value="K8sPodPhase.Failed">❌ Failed</a-select-option>
-            <a-select-option :value="K8sPodPhase.Unknown">❓ Unknown</a-select-option>
+            <a-select-option :value="K8sPodStatus.Pending">等待中</a-select-option>
+            <a-select-option :value="K8sPodStatus.Running">运行中</a-select-option>
+            <a-select-option :value="K8sPodStatus.Succeeded">已完成</a-select-option>
+            <a-select-option :value="K8sPodStatus.Failed">失败</a-select-option>
+            <a-select-option :value="K8sPodStatus.Unknown">未知</a-select-option>
           </a-select>
           
           <!-- 标签过滤器 -->
@@ -145,7 +130,7 @@
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
-            placeholder="🔍 搜索 Pod 名称" 
+            placeholder="搜索 Pod 名称" 
             class="k8s-search-input" 
             @pressEnter="onSearch"
             @input="onSearch"
@@ -163,7 +148,7 @@
         <div class="k8s-action-buttons">
           <a-button 
             @click="resetFilters" 
-            :disabled="!filterStatus && !filterPhase && !searchText && !filterClusterId && !filterNamespace && Object.keys(filterLabels).length === 0"
+            :disabled="!filterStatus && !searchText && !filterClusterId && !filterNamespace && Object.keys(filterLabels).length === 0"
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
           >
@@ -661,9 +646,27 @@
         :rules="createYamlFormRules"
       >
         <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
+              <template #icon><FileAddOutlined /></template>
+              插入模板
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
+              <template #icon><ClearOutlined /></template>
+              清空
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="createYamlFormModel.yaml" 
-            placeholder="请输入 Pod YAML 内容" 
+            placeholder="请输入 Pod YAML 内容，或点击【插入模板】使用默认模板" 
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -866,6 +869,16 @@
         :rules="yamlFormRules"
       >
         <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatEditYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateEditYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="yamlFormModel.yaml" 
             placeholder="YAML 内容" 
@@ -1069,7 +1082,6 @@
           
           <!-- 空状态提示 -->
           <div v-show="!podLogs && !isLogsStreaming" class="logs-empty-state">
-            <div class="empty-icon">📄</div>
             <div class="empty-text">
               <p>暂无日志数据</p>
               <p>请选择容器并点击"开始实时流"按钮</p>
@@ -1177,7 +1189,6 @@
           
           <!-- 未连接状态提示 -->
           <div v-show="!isTerminalConnected && !terminalLoading" class="terminal-empty-state">
-            <div class="empty-icon">🖥️</div>
             <div class="empty-text">
               <p>Pod 终端未连接</p>
               <p>请选择容器和Shell类型，然后点击"连接终端"按钮</p>
@@ -1374,7 +1385,6 @@
 
         <!-- 无容器提示 -->
         <div v-if="!fileManagerContainer" class="no-container-selected" style="text-align: center; padding: 40px; color: #999;">
-          <div style="font-size: 48px; margin-bottom: 16px;">📁</div>
           <p>请先选择一个容器来进行文件管理操作</p>
         </div>
       </div>
@@ -1457,7 +1467,6 @@ import {
   LinkOutlined,
   FolderOutlined,
   DatabaseOutlined,
-  ApiOutlined,
   ClearOutlined,
   PlayCircleOutlined,
   PauseCircleOutlined,
@@ -1465,6 +1474,9 @@ import {
   QuestionCircleOutlined,
   UploadOutlined,
   DownloadOutlined,
+  FileAddOutlined,
+  FormatPainterOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -1476,7 +1488,6 @@ const {
   namespacesLoading,
   searchText,
   filterStatus,
-  filterPhase,
   filterClusterId,
   filterNamespace,
   filterLabels,
@@ -1561,6 +1572,14 @@ const {
   closeYamlModal,
   submitYamlForm,
   
+  // YAML toolbar operations
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
+  
   // create operations
   openCreateModal,
   closeCreateModal,
@@ -1625,7 +1644,6 @@ const {
   
   // constants
   K8sPodStatus,
-  K8sPodPhase,
 } = usePodPage();
 
 // 添加新标签/注解的方法
@@ -1796,7 +1814,6 @@ const applyLabelsFilter = () => {
 // 重置所有筛选条件
 const resetFilters = () => {
   filterStatus.value = undefined;
-  filterPhase.value = undefined;
   searchText.value = '';
   filterClusterId.value = undefined;
   filterNamespace.value = undefined;
