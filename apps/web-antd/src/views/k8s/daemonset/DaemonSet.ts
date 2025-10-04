@@ -1,6 +1,7 @@
-import { ref, computed } from 'vue';
+import { ref, computed, h } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+import yaml from 'js-yaml';
 import {
   type K8sDaemonSet,
   type K8sDaemonSetHistory,
@@ -37,6 +38,35 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
+
+// YAML 模板常量
+const DAEMONSET_YAML_TEMPLATE = `apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: my-daemonset
+  labels:
+    app: my-daemon
+spec:
+  selector:
+    matchLabels:
+      app: my-daemon
+  template:
+    metadata:
+      labels:
+        app: my-daemon
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"`;
 
 export function useDaemonSetPage() {
   // state
@@ -888,6 +918,239 @@ export function useDaemonSetPage() {
     delete editFormModel.value.annotations[key];
   };
 
+  // YAML 操作辅助函数
+  const insertYamlTemplate = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认操作',
+        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+        okText: '确认',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = DAEMONSET_YAML_TEMPLATE;
+          message.success('模板已插入');
+        },
+      });
+    } else {
+      createYamlFormModel.value.yaml = DAEMONSET_YAML_TEMPLATE;
+      message.success('模板已插入');
+    }
+  };
+
+  const formatYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      // 解析 YAML
+      const parsed = yaml.load(yamlContent);
+      // 重新格式化为 YAML（缩进2空格）
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1, // 不限制行宽
+        noRefs: true,  // 不使用引用
+        sortKeys: false, // 保持原有顺序
+      });
+      createYamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+      console.error('YAML 格式化错误:', error);
+    }
+  };
+
+  const validateYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      // 尝试解析 YAML
+      const parsed = yaml.load(yamlContent);
+      
+      // 检查是否是有效的对象
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      // 基本的 DaemonSet 字段检查
+      const daemonset = parsed as any;
+      const issues: string[] = [];
+
+      if (!daemonset.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!daemonset.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (daemonset.kind !== 'DaemonSet') {
+        issues.push(`kind 应为 "DaemonSet"，当前为 "${daemonset.kind}"`);
+      }
+      if (!daemonset.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!daemonset.spec) {
+        issues.push('缺少 spec 字段');
+      } else {
+        if (!daemonset.spec.selector) {
+          issues.push('缺少 spec.selector 字段');
+        }
+        if (!daemonset.spec.template) {
+          issues.push('缺少 spec.template 字段');
+        }
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+      console.error('YAML 验证错误:', error);
+    }
+  };
+
+  const clearYaml = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认清空',
+        content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+        okText: '确认清空',
+        okType: 'danger',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = '';
+          message.success('YAML 内容已清空');
+        },
+      });
+    } else {
+      message.info('YAML 内容已为空');
+    }
+  };
+
+  // 编辑 YAML 的格式化和验证函数
+  const formatEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      yamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+      console.error('YAML 格式化错误:', error);
+    }
+  };
+
+  const validateEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      const daemonset = parsed as any;
+      const issues: string[] = [];
+
+      if (!daemonset.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!daemonset.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (daemonset.kind !== 'DaemonSet') {
+        issues.push(`kind 应为 "DaemonSet"，当前为 "${daemonset.kind}"`);
+      }
+      if (!daemonset.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!daemonset.spec) {
+        issues.push('缺少 spec 字段');
+      } else {
+        if (!daemonset.spec.selector) {
+          issues.push('缺少 spec.selector 字段');
+        }
+        if (!daemonset.spec.template) {
+          issues.push('缺少 spec.template 字段');
+        }
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+      console.error('YAML 验证错误:', error);
+    }
+  };
+
   return {
     // state
     daemonSets,
@@ -1028,6 +1291,14 @@ export function useDaemonSetPage() {
     removeAnnotationField,
     removeEditLabelField,
     removeEditAnnotationField,
+    
+    // yaml operations
+    insertYamlTemplate,
+    formatYaml,
+    validateYaml,
+    clearYaml,
+    formatEditYaml,
+    validateEditYaml,
     
     // constants
     K8sDaemonSetStatus,

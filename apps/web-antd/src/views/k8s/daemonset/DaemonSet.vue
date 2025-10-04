@@ -544,9 +544,27 @@
         :rules="createYamlFormRules"
       >
         <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
+              <template #icon><FileAddOutlined /></template>
+              插入模板
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
+              <template #icon><ClearOutlined /></template>
+              清空
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="createYamlFormModel.yaml" 
-            placeholder="请输入 DaemonSet YAML 内容" 
+            placeholder="请输入 DaemonSet YAML 内容，或点击【插入模板】使用默认模板" 
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -873,6 +891,16 @@
         :rules="yamlFormRules"
       >
         <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatEditYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateEditYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="yamlFormModel.yaml" 
             placeholder="YAML 内容" 
@@ -1024,6 +1052,10 @@ import {
   ContainerOutlined,
   HistoryOutlined,
   HddOutlined,
+  FileAddOutlined,
+  FormatPainterOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -1149,6 +1181,14 @@ const {
   removeAnnotationField,
   removeEditLabelField,
   removeEditAnnotationField,
+  
+  // yaml operations
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
   
   // constants
   K8sDaemonSetStatus,
