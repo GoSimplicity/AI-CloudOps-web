@@ -1925,7 +1925,7 @@ const handleUploadFiles = async () => {
   } catch (error) {
     uploadProgress.value.status = 'exception';
     message.error('文件上传失败');
-    console.error('Upload error:', error);
+
   } finally {
     uploadLoading.value = false;
   }
@@ -1947,7 +1947,7 @@ const handleDownloadFile = async () => {
     
     await downloadFile(downloadFilePath.value.trim(), fileManagerContainer.value);
   } catch (error) {
-    console.error('Download error:', error);
+
     // 错误已经在downloadFile函数中处理，这里不需要额外的错误消息
   } finally {
     downloadLoading.value = false;

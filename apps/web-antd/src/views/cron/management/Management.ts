@@ -390,7 +390,7 @@ export function useCronJobPage() {
         second: '2-digit',
       });
     } catch (error) {
-      console.error('格式化日期时间失败:', error);
+
       return dateTimeStr;
     }
   };
@@ -412,8 +412,6 @@ export function useCronJobPage() {
       return `${hours}小时${minutes}分`;
     }
   };
-
-
 
   // 数据获取
   const fetchCronJobs = async (resetPage = false) => {
@@ -438,7 +436,7 @@ export function useCronJobPage() {
       state.cronJobs = response.data?.items || response.items || [];
       state.total = response.data?.total || response.total || 0;
     } catch (error: any) {
-      console.error('获取定时任务列表失败:', error);
+
       
       // 根据错误类型提供不同的处理
       if (error?.response?.status === 401) {
@@ -481,7 +479,7 @@ export function useCronJobPage() {
       state.sshResources = items;
       state.filteredSshResources = items;
     } catch (error: any) {
-      console.error('获取SSH资源列表失败:', error);
+
       if (error?.response?.status === 401) {
         message.warning('获取SSH资源失败：登录已过期');
       } else if (error?.response?.status === 403) {
@@ -511,7 +509,6 @@ export function useCronJobPage() {
     }
   };
 
-
   // 详情操作
   const showJobDetail = async (job: CronJob) => {
     try {
@@ -521,7 +518,7 @@ export function useCronJobPage() {
       state.currentJobDetail = response;
     } catch (error) {
       message.error('获取任务详情失败');
-      console.error('获取任务详情失败:', error);
+
     } finally {
       state.detailLoading = false;
     }
@@ -558,7 +555,7 @@ export function useCronJobPage() {
         message.error('请检查表单输入');
       } else {
         message.error('❌ 定时任务创建失败');
-        console.error('创建定时任务失败:', error);
+
       }
     } finally {
       state.submitLoading = false;
@@ -599,7 +596,7 @@ export function useCronJobPage() {
       state.isEditModalVisible = true;
     } catch (error) {
       message.error('获取任务详情失败');
-      console.error('获取任务详情失败:', error);
+
     } finally {
       state.submitLoading = false;
     }
@@ -625,7 +622,7 @@ export function useCronJobPage() {
         message.error('请检查表单输入');
       } else {
         message.error('❌ 定时任务更新失败');
-        console.error('更新定时任务失败:', error);
+
       }
     } finally {
       state.submitLoading = false;
@@ -648,7 +645,7 @@ export function useCronJobPage() {
           await fetchCronJobs();
         } catch (error) {
           message.error(`❌ 定时任务删除失败`);
-          console.error('删除定时任务失败:', error);
+
         }
       },
     });
@@ -661,7 +658,7 @@ export function useCronJobPage() {
       await fetchCronJobs();
     } catch (error) {
       message.error(`❌ 定时任务启用失败`);
-      console.error('启用定时任务失败:', error);
+
     }
   };
 
@@ -672,7 +669,7 @@ export function useCronJobPage() {
       await fetchCronJobs();
     } catch (error) {
       message.error(`❌ 定时任务禁用失败`);
-      console.error('禁用定时任务失败:', error);
+
     }
   };
 
@@ -691,13 +688,11 @@ export function useCronJobPage() {
           await fetchCronJobs();
         } catch (error) {
           message.error(`❌ 定时任务触发失败`);
-          console.error('触发定时任务失败:', error);
+
         }
       },
     });
   };
-
-
 
   // 批量操作
   const batchOperation = (operation: string) => {
@@ -740,7 +735,7 @@ export function useCronJobPage() {
           await fetchCronJobs();
         } catch (error) {
           message.error(`❌ 批量${operation}失败`);
-          console.error(`批量${operation}失败:`, error);
+
         }
       },
     });
@@ -775,7 +770,7 @@ export function useCronJobPage() {
       }
     } catch (error) {
       message.error('调度表达式验证失败');
-      console.error('验证调度表达式失败:', error);
+
     }
   };
 

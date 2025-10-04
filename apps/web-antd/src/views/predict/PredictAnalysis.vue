@@ -215,12 +215,21 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick, onUnmounted } from 'vue';
-import * as echarts from 'echarts';
+// 按需引入echarts，减少打包体积
+import * as echarts from 'echarts/core';
+import { LineChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, DataZoomComponent, MarkLineComponent } from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
+
+// 注册必需的组件
+echarts.use([
+  LineChart,
+  GridComponent, TooltipComponent, LegendComponent, TitleComponent, DataZoomComponent, MarkLineComponent,
+  CanvasRenderer
+]);
 import { message } from 'ant-design-vue';
 import {
   LineChartOutlined,
-  ClearOutlined,
-  PlayCircleOutlined,
   ThunderboltOutlined,
   ApiOutlined,
   DatabaseOutlined,
@@ -370,7 +379,7 @@ const startAnalysis = async () => {
     initCharts();
     message.success('预测分析完成');
   } catch (error) {
-    console.error('预测分析失败:', error);
+
     message.error('预测分析失败，请检查输入参数');
   } finally {
     analyzing.value = false;
@@ -620,11 +629,13 @@ const exportResult = () => {
   message.success('预测结果已导出');
 };
 
+const handleChartResize = () => {
+  trendChart?.resize();
+  confidenceChart?.resize();
+};
+
 onMounted(() => {
-  window.addEventListener('resize', () => {
-    trendChart?.resize();
-    confidenceChart?.resize();
-  });
+  window.addEventListener('resize', handleChartResize);
 });
 
 onUnmounted(() => {
@@ -637,7 +648,7 @@ onUnmounted(() => {
     confidenceChart.dispose();
     confidenceChart = null;
   }
-  window.removeEventListener('resize', () => {});
+  window.removeEventListener('resize', handleChartResize);
 });
 </script>
 

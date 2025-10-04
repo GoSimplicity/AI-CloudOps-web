@@ -442,7 +442,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
   PlusOutlined,
@@ -616,7 +616,7 @@ const detailDialog = reactive({
 const dialogCategories = ref<WorkorderCategoryItem[]>([]);
 const categorySelectorLoading = ref(false);
 const categorySearchKeyword = ref('');
-let categorySearchTimeout: any = null;
+let categorySearchTimeout: NodeJS.Timeout | null = null;
 
 const categoryPagination = reactive({
   current: 1,
@@ -629,7 +629,7 @@ const categoryPagination = reactive({
 const dialogProcesses = ref<WorkorderProcessItem[]>([]);
 const processSelectorLoading = ref(false);
 const processSearchKeyword = ref('');
-let processSearchTimeout: any = null;
+let processSearchTimeout: NodeJS.Timeout | null = null;
 
 const processPagination = reactive({
   current: 1,
@@ -642,13 +642,20 @@ const processPagination = reactive({
 const dialogForms = ref<WorkorderFormDesignItem[]>([]);
 const formSelectorLoading = ref(false);
 const formSearchKeyword = ref('');
-let formSearchTimeout: any = null;
+let formSearchTimeout: NodeJS.Timeout | null = null;
 
 const formPagination = reactive({
   current: 1,
   pageSize: 20,
   total: 0,
   hasMore: false
+});
+
+// 清理定时器
+onBeforeUnmount(() => {
+  if (categorySearchTimeout) clearTimeout(categorySearchTimeout);
+  if (processSearchTimeout) clearTimeout(processSearchTimeout);
+  if (formSearchTimeout) clearTimeout(formSearchTimeout);
 });
 
 const formDialogWidth = computed(() => {
@@ -682,7 +689,6 @@ const processTotalPages = computed(() => {
 const formTotalPages = computed(() => {
   return Math.ceil(formPagination.total / formPagination.pageSize);
 });
-
 
 const getStatusColor = (status: number): string => {
   const colorMap = {
@@ -789,7 +795,7 @@ const loadDialogCategories = async (reset: boolean = false, search?: string): Pr
         dialogCategories.value.length < categoryPagination.total;
     }
   } catch (error: any) {
-    console.error('加载分类列表失败:', error);
+
     if (reset) {
       message.error(error.message || '加载分类列表失败');
       dialogCategories.value = [];
@@ -878,7 +884,7 @@ const loadDialogProcesses = async (reset: boolean = false, search?: string): Pro
         dialogProcesses.value.length < processPagination.total;
     }
   } catch (error: any) {
-    console.error('加载流程列表失败:', error);
+
     if (reset) {
       message.error(error.message || '加载流程列表失败');
       dialogProcesses.value = [];
@@ -967,7 +973,7 @@ const loadDialogForms = async (reset: boolean = false, search?: string): Promise
         dialogForms.value.length < formPagination.total;
     }
   } catch (error: any) {
-    console.error('加载表单列表失败:', error);
+
     if (reset) {
       message.error(error.message || '加载表单列表失败');
       dialogForms.value = [];
@@ -1068,7 +1074,7 @@ const loadTemplates = async () => {
     }
   } catch (error) {
     message.error('加载模板数据失败');
-    console.error('Failed to load templates:', error);
+
   } finally {
     loading.value = false;
   }
@@ -1103,7 +1109,7 @@ const loadCategories = async () => {
 
     categories.value = allCategories;
   } catch (error: any) {
-    console.error('Failed to load categories:', error);
+
     message.error(`加载分类列表失败: ${error.message || '未知错误'}`);
     categories.value = [];
   }
@@ -1166,7 +1172,7 @@ const handleEditTemplate = async (row: WorkorderTemplateItem) => {
     }
   } catch (error) {
     message.error('获取模板详情失败');
-    console.error('Failed to get template details:', error);
+
   } finally {
     loading.value = false;
   }
@@ -1183,7 +1189,7 @@ const handleViewTemplate = async (row: WorkorderTemplateItem) => {
     }
   } catch (error) {
     message.error('获取模板详情失败');
-    console.error('Failed to get template details:', error);
+
   } finally {
     loading.value = false;
   }
@@ -1221,7 +1227,7 @@ const confirmDelete = (template: WorkorderTemplateItem) => {
         loadTemplates();
       } catch (error: any) {
         message.error(`删除模板失败: ${error.message || '未知错误'}`);
-        console.error('Failed to delete template:', error);
+
       } finally {
         loading.value = false;
       }
@@ -1286,7 +1292,7 @@ const saveTemplate = async () => {
       ? `更新模板失败: ${error.message || '未知错误'}`
       : `创建模板失败: ${error.message || '未知错误'}`
     );
-    console.error('Failed to save template:', error);
+
   } finally {
     loading.value = false;
   }
@@ -1345,7 +1351,7 @@ const loadSelectorsForEdit = async (templateData: WorkorderTemplateItem): Promis
       loadFormForEdit(templateData)
     ]);
   } catch (error) {
-    console.error('加载编辑模式选择器信息失败:', error);
+
   }
 };
 
@@ -1374,7 +1380,7 @@ const loadCategoryForEdit = async (templateData: WorkorderTemplateItem): Promise
       dialogCategories.value = [categoryInfo, ...dialogCategories.value.filter(c => c.id !== categoryInfo.id)];
     }
   } catch (error) {
-    console.error('加载编辑模式分类信息失败:', error);
+
   }
 };
 
@@ -1399,7 +1405,7 @@ const loadProcessForEdit = async (templateData: WorkorderTemplateItem): Promise<
       dialogProcesses.value = [processInfo, ...dialogProcesses.value.filter(p => p.id !== processInfo.id)];
     }
   } catch (error) {
-    console.error('加载编辑模式流程信息失败:', error);
+
   }
 };
 
@@ -1426,7 +1432,7 @@ const loadFormForEdit = async (templateData: WorkorderTemplateItem): Promise<voi
       dialogForms.value = [formInfo, ...dialogForms.value.filter(f => f.id !== formInfo.id)];
     }
   } catch (error) {
-    console.error('加载编辑模式表单信息失败:', error);
+
   }
 };
 
@@ -1439,7 +1445,7 @@ onMounted(async () => {
       loadTemplates()
     ]);
   } catch (error: any) {
-    console.error('初始化数据加载失败:', error);
+
     message.error(`初始化数据加载失败: ${error.message || '未知错误'}, 请刷新页面重试`);
   } finally {
     loading.value = false;

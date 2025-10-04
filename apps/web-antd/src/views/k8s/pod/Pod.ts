@@ -255,7 +255,6 @@ export function usePodPage() {
     ]
   };
 
-
   const execFormRules: Record<string, Rule[]> = {
     container: [
       { required: true, message: '请选择容器', trigger: 'change' }
@@ -412,7 +411,7 @@ export function usePodPage() {
       }
     } catch (err) {
       message.error('获取集群列表失败');
-      console.error(err);
+
     } finally {
       clustersLoading.value = false;
     }
@@ -441,7 +440,7 @@ export function usePodPage() {
       namespacesTotal.value = res?.total || 0;
     } catch (err) {
       message.error('获取命名空间列表失败');
-      console.error(err);
+
     } finally {
       namespacesLoading.value = false;
     }
@@ -486,7 +485,7 @@ export function usePodPage() {
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取 Pod 列表失败');
-      console.error(err);
+
     } finally {
       loading.value = false;
     }
@@ -529,7 +528,7 @@ export function usePodPage() {
       currentPodDetail.value = processedDetail;
     } catch (err) {
       message.error('获取 Pod 详情失败');
-      console.error(err);
+
       // 错误时也要处理格式转换
       try {
         const parsedLabels = parseJsonField(record.labels, {});
@@ -580,7 +579,7 @@ export function usePodPage() {
       isYamlModalVisible.value = true;
     } catch (err) {
       message.error('获取 Pod YAML 失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -617,7 +616,7 @@ export function usePodPage() {
         return;
       }
       message.error('❌ Pod YAML 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -709,7 +708,7 @@ export function usePodPage() {
         return;
       }
       message.error('❌ Pod 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -737,7 +736,7 @@ export function usePodPage() {
         return;
       }
       message.error('❌ Pod YAML 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -785,7 +784,7 @@ export function usePodPage() {
         return;
       }
       message.error('❌ Pod 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -815,7 +814,7 @@ export function usePodPage() {
           await fetchPods();
         } catch (err) {
           message.error('❌ Pod 删除失败');
-          console.error(err);
+
         }
       },
     });
@@ -846,7 +845,7 @@ export function usePodPage() {
       isLogsModalVisible.value = true;
     } catch (err) {
       message.error('获取 Pod 容器列表失败');
-      console.error(err);
+
     }
   };
 
@@ -910,7 +909,7 @@ export function usePodPage() {
     try {
       new URL(url, window.location.origin);
     } catch (urlError) {
-      console.error('Invalid SSE URL:', url, urlError);
+
       onError?.(new Event('error'));
       return {
         eventSource: null as any,
@@ -958,7 +957,7 @@ export function usePodPage() {
         
         if (!response.ok) {
           const errorText = await response.text().catch(() => 'Unknown error');
-          console.error(`SSE连接失败 - 状态码: ${response.status}, 错误信息:`, errorText);
+
           throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
         
@@ -1025,7 +1024,7 @@ export function usePodPage() {
         }
       } catch (error: any) {
         if (!isManualClose) {
-          console.error('SSE fetch错误:', error);
+
         }
         
         if (error?.name === 'AbortError') {          isManualClose = true;
@@ -1064,7 +1063,7 @@ export function usePodPage() {
           try {
             abortController.abort();
           } catch (error) {
-            console.debug('AbortController.abort() 调用时的预期错误:', error);
+
           }
         }
         
@@ -1073,14 +1072,14 @@ export function usePodPage() {
             await reader.cancel().catch(() => {});
             reader = null;
           } catch (error) {
-            console.debug('Reader.cancel() 调用时的预期错误:', error);
+
           }
         }
         
         try {
           onClose?.();
         } catch (error) {
-          console.debug('onClose回调错误:', error);
+
         }
       }
     } as unknown as EventSource;
@@ -1088,8 +1087,8 @@ export function usePodPage() {
     return {
       eventSource: eventSource as unknown as EventSource,
       close: () => {
-        Promise.resolve(eventSource.close()).catch((error) => {
-          console.debug('关闭连接时的预期错误:', error);
+        Promise.resolve(eventSource.close()).catch((_error) => {
+          // Ignore close errors
         });      }
     };
   };
@@ -1141,10 +1140,10 @@ export function usePodPage() {
         },
         // onError - 连接错误（支持自动重连，减少用户干扰）
         // onError - 连接错误（支持自动重连，减少用户干扰）
-        (error: Event) => {
+        (_error: Event) => {
           // 现在有自动重连机制，不需要复杂的错误处理
           // 只在控制台记录，避免频繁打扰用户
-          console.debug('SSE连接错误:', error);
+
         },
         // onOpen - 连接建立
         () => {
@@ -1167,7 +1166,7 @@ export function usePodPage() {
         }
       );
     } catch (err) {
-      console.error('启动实时日志失败:', err);
+
       let errorMessage = '启动实时日志失败';
       
       if (err instanceof Error) {
@@ -1198,7 +1197,7 @@ export function usePodPage() {
         logsStreamConnection.value = null;
       }
     } catch (error) {
-      console.debug('停止日志流时遇到错误:', error);
+
     } finally {
       // 确保状态被正确重置
       isLogsStreaming.value = false;
@@ -1230,7 +1229,7 @@ export function usePodPage() {
       isExecModalVisible.value = true;
     } catch (err) {
       message.error('获取 Pod 容器列表失败');
-      console.error(err);
+
     }
   };
 
@@ -1275,9 +1274,9 @@ export function usePodPage() {
         } catch (error) {
           // 捕获特定的addon dispose错误
           if (error instanceof Error && error.message.includes('Could not dispose an addon that has not been loaded')) {
-            console.debug('预期的addon dispose错误:', error.message);
+
           } else {
-            console.error('终端清理错误:', error);
+
           }
           // 强制重置状态
           terminal.value = null;
@@ -1346,7 +1345,7 @@ export function usePodPage() {
 
       return true;
     } catch (error) {
-      console.error('初始化终端失败:', error);
+
       message.error('初始化终端失败');
       return false;
     }
@@ -1365,7 +1364,7 @@ export function usePodPage() {
     const token = accessStore.accessToken;
     
     if (!token) {
-      console.error('未获取到认证token');
+
       onError?.(new Event('auth_error'));
       return { 
         sendCommand: () => {
@@ -1447,12 +1446,12 @@ export function usePodPage() {
               }
             }
           } catch (error) {
-            console.error('处理WebSocket消息时出错:', error);
+
           }
         };
 
         socket.onerror = (error) => {
-          console.error('Pod执行命令WebSocket连接错误:', error);
+
           onError?.(error);
         };
 
@@ -1461,13 +1460,13 @@ export function usePodPage() {
           
           // 根据关闭代码提供更详细的错误信息
           if (event.code === 1006) {
-            console.debug('WebSocket连接异常关闭');
+
           } else if (event.code === 1000) {
-            console.debug('WebSocket正常关闭');
+
           } else if (event.code === 1003) {
-            console.error('WebSocket协议错误');
+
           } else if (event.code === 4401) {
-            console.error('WebSocket认证失败 - 请检查token是否有效');
+
           }
           
           if (!isManualClose && !event.wasClean) {
@@ -1479,7 +1478,7 @@ export function usePodPage() {
         };
 
       } catch (error) {
-        console.error('创建WebSocket连接失败:', error);
+
         onError?.(new Event('connection_failed'));
       }
     };
@@ -1490,7 +1489,7 @@ export function usePodPage() {
         // 直接发送字符串命令
         socket.send(command);
       } else {
-        console.warn('WebSocket未连接，无法发送命令');
+
       }
     };
 
@@ -1555,8 +1554,8 @@ export function usePodPage() {
           }
         },
         // onError - 连接错误
-        (error: Event) => {
-          console.error('终端连接错误:', error);
+        (_error: Event) => {
+          // Error occurred in terminal connection
           message.error('终端连接出现问题');
           isTerminalConnected.value = false;
         },
@@ -1599,7 +1598,7 @@ export function usePodPage() {
         return;
       }
       message.error('❌ 建立终端连接失败');
-      console.error(err);
+
       isTerminalConnected.value = false;
     } finally {
       terminalLoading.value = false;
@@ -1630,9 +1629,9 @@ export function usePodPage() {
         } catch (error) {
           // 捕获特定的addon dispose错误
           if (error instanceof Error && error.message.includes('Could not dispose an addon that has not been loaded')) {
-            console.debug('预期的addon dispose错误:', error.message);
+
           } else {
-            console.error('终端清理错误:', error);
+
           }
           // 强制重置状态，无论是否有错误
           terminal.value = null;
@@ -1646,7 +1645,7 @@ export function usePodPage() {
       }
       
     } catch (error) {
-      console.debug('断开终端连接时遇到错误:', error);
+
     } finally {
       // 确保状态被正确重置
       isTerminalConnected.value = false;
@@ -1678,7 +1677,7 @@ export function usePodPage() {
         return;
       }
       message.error('❌ 命令执行失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -1717,7 +1716,7 @@ export function usePodPage() {
       isPortForwardModalVisible.value = false;
     } catch (err) {
       message.error('端口转发设置失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -1743,7 +1742,7 @@ export function usePodPage() {
       isFileManagerModalVisible.value = true;
     } catch (err) {
       message.error('获取容器信息失败');
-      console.error(err);
+
     }
   };
 
@@ -1768,7 +1767,7 @@ export function usePodPage() {
       message.success('文件上传成功');
     } catch (err) {
       message.error('文件上传失败');
-      console.error(err);
+
     }
   };
 
@@ -1837,8 +1836,7 @@ export function usePodPage() {
       message.success(`文件 "${fileName}" 下载成功`);
       
     } catch (err: any) {
-      console.error('🔴 文件下载失败:', err);
-      console.error('🔴 错误详情:', {
+      console.error('文件下载错误详情:', {
         message: err?.message,
         response: err?.response,
         status: err?.response?.status,
@@ -1887,7 +1885,7 @@ export function usePodPage() {
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取节点Pod失败');
-      console.error(err);
+
     } finally {
       loading.value = false;
     }
@@ -1951,7 +1949,7 @@ export function usePodPage() {
           await fetchPods();
         } catch (err) {
           message.error(`❌ 批量${operation}失败`);
-          console.error(err);
+
         }
       },
     });

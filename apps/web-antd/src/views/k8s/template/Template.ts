@@ -187,7 +187,7 @@ export function useTemplatePage() {
       }
     } catch (err) {
       message.error('获取集群列表失败');
-      console.error(err);
+
     } finally {
       clustersLoading.value = false;
     }
@@ -214,7 +214,7 @@ export function useTemplatePage() {
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取模板列表失败');
-      console.error(err);
+
     } finally {
       loading.value = false;
     }
@@ -235,7 +235,7 @@ export function useTemplatePage() {
       currentTemplateDetail.value = res || record;
     } catch (err) {
       message.error('获取模板详情失败');
-      console.error(err);
+
       currentTemplateDetail.value = record;
     } finally {
       detailLoading.value = false;
@@ -299,7 +299,7 @@ export function useTemplatePage() {
         return;
       }
       message.error('❌ 模板创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -347,7 +347,7 @@ export function useTemplatePage() {
         return;
       }
       message.error('❌ 模板更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -376,13 +376,12 @@ export function useTemplatePage() {
       return true;
     } catch (err) {
       message.error('❌ YAML 格式检查失败');
-      console.error(err);
+
       return false;
     } finally {
       checkLoading.value = false;
     }
   };
-
 
   // 删除模板
   const deleteTemplate = (record: K8sYamlTemplate) => {
@@ -407,7 +406,7 @@ export function useTemplatePage() {
           await fetchTemplates();
         } catch (err) {
           message.error('❌ 模板删除失败');
-          console.error(err);
+
         }
       },
     });
@@ -444,7 +443,7 @@ export function useTemplatePage() {
           await fetchTemplates();
         } catch (err) {
           message.error(`❌ 批量${operation}失败`);
-          console.error(err);
+
         }
       },
     });

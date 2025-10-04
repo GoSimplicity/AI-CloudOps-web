@@ -722,7 +722,7 @@ const loadComments = async (instanceId: number) => {
       commentsList.value = []
     }
   } catch (error: any) {
-    console.error('Failed to load comments:', error)
+
     message.error(`加载评论失败: ${error.message || '未知错误'}`)
     commentsList.value = []
   } finally {
@@ -745,7 +745,7 @@ const saveComment = async () => {
     emit('commentAdded')
   } catch (error: any) {
     message.error(`添加评论失败: ${error.message || '未知错误'}`)
-    console.error('Failed to create comment:', error)
+
   } finally {
     loading.value = false
   }

@@ -15,4 +15,8 @@ export const overridesPreferences = defineOverridesPreferences({
   theme: {
     mode: 'light',
   },
+  tabbar: {
+    // 确保页面缓存功能启用，避免切换页面时重新加载
+    keepAlive: true,
+  },
 });

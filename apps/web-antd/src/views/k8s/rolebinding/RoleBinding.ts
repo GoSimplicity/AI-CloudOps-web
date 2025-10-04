@@ -56,7 +56,7 @@ const calculateAge = (creationTimestamp?: string): string => {
       return '刚刚';
     }
   } catch (error) {
-    console.warn('Failed to calculate age:', error);
+
     return '-';
   }
 };
@@ -94,7 +94,7 @@ const parseRoleBindingData = (roleBinding: K8sRoleBinding): K8sRoleBinding => {
       }
     }
   } catch (error) {
-    console.warn('Failed to parse RoleBinding annotations:', error);
+
   }
 
   // 确保 subjects 不为 null
@@ -377,7 +377,7 @@ export function useRoleBindingPage() {
         }
       }
     } catch (error: any) {
-      console.error('获取集群列表失败:', error);
+
       message.error('获取集群列表失败：' + (error.message || '未知错误'));
     } finally {
       clustersLoading.value = false;
@@ -423,7 +423,7 @@ export function useRoleBindingPage() {
       
       namespacesTotal.value = response?.total || 0;
     } catch (error: any) {
-      console.error('获取命名空间列表失败:', error);
+
       message.error('获取命名空间列表失败：' + (error.message || '未知错误'));
     } finally {
       namespacesLoading.value = false;
@@ -467,7 +467,7 @@ export function useRoleBindingPage() {
       roleBindings.value = rawRoleBindings.map(rb => parseRoleBindingData(rb));
       total.value = response?.total || 0;
     } catch (error: any) {
-      console.error('获取 RoleBinding 列表失败:', error);
+
       message.error('获取 RoleBinding 列表失败：' + (error.message || '未知错误'));
       roleBindings.value = [];
       total.value = 0;
@@ -496,7 +496,7 @@ export function useRoleBindingPage() {
       // 对详情数据也进行解析
       currentRoleBindingDetail.value = response ? parseRoleBindingData(response) : parseRoleBindingData(roleBinding);
     } catch (error: any) {
-      console.error('获取 RoleBinding 详情失败:', error);
+
       message.error('获取 RoleBinding 详情失败：' + (error.message || '未知错误'));
       // 即使获取详情失败，也要解析基础数据
       currentRoleBindingDetail.value = parseRoleBindingData(roleBinding);
@@ -531,7 +531,7 @@ export function useRoleBindingPage() {
       yamlFormModel.value.yaml = response?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (error: any) {
-      console.error('获取 RoleBinding YAML 失败:', error);
+
       message.error('获取 RoleBinding YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
@@ -568,7 +568,7 @@ export function useRoleBindingPage() {
       await fetchRoleBindings();
     } catch (error: any) {
       if (error.errorFields) return;
-      console.error('更新 RoleBinding YAML 失败:', error);
+
       message.error('❌ 更新 RoleBinding YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
@@ -634,7 +634,7 @@ export function useRoleBindingPage() {
       await fetchRoleBindings();
     } catch (error: any) {
       if (error.errorFields) return;
-      console.error('创建 RoleBinding 失败:', error);
+
       message.error('❌ 创建 RoleBinding 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
@@ -674,7 +674,7 @@ export function useRoleBindingPage() {
       await fetchRoleBindings();
     } catch (error: any) {
       if (error.errorFields) return;
-      console.error('通过 YAML 创建 RoleBinding 失败:', error);
+
       message.error('❌ 通过 YAML 创建 RoleBinding 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
@@ -705,7 +705,7 @@ export function useRoleBindingPage() {
           message.success('🎉 RoleBinding 删除成功');
           await fetchRoleBindings();
         } catch (error: any) {
-          console.error('删除 RoleBinding 失败:', error);
+
           message.error('❌ 删除 RoleBinding 失败：' + (error.message || '未知错误'));
         }
       },
@@ -768,7 +768,7 @@ export function useRoleBindingPage() {
             selectedRows.value = [];
             await fetchRoleBindings();
           } catch (error: any) {
-            console.error('批量删除 RoleBinding 失败:', error);
+
             message.error('❌ 批量删除部分 RoleBinding 失败：' + (error.message || '未知错误'));
             await fetchRoleBindings();
           }

@@ -123,7 +123,7 @@
                 </a-button>
                 <a-dropdown>
                   <template #overlay>
-                    <a-menu @click="({ key }) => handleMenuAction(key, record)">
+                    <a-menu @click="({ key }: any) => handleMenuAction(key, record)">
                       <a-menu-item key="toggleStatus">
                         <template v-if="record.status === CategoryStatus.Enabled">
                           <StopOutlined />
@@ -429,7 +429,7 @@ const loadCategoryList = async (): Promise<void> => {
       total.value = 0;
     }
   } catch (error) {
-    console.error('加载分类列表失败:', error);
+
     message.error('加载分类列表失败');
     categoryList.value = [];
     total.value = 0;
@@ -511,7 +511,7 @@ const handleEdit = async (record: WorkorderCategoryItem): Promise<void> => {
       detailDialog.visible = false; // 如果是从详情对话框打开的，关闭详情对话框
     }
   } catch (error) {
-    console.error('加载分类详情失败:', error);
+
     message.error('加载分类详情失败');
   }
 };
@@ -530,7 +530,7 @@ const handleView = async (record: WorkorderCategoryItem): Promise<void> => {
       detailDialog.visible = true;
     }
   } catch (error) {
-    console.error('加载分类详情失败:', error);
+
     message.error('加载分类详情失败');
   }
 };
@@ -568,7 +568,7 @@ const handleToggleStatus = async (record: WorkorderCategoryItem): Promise<void> 
     // 重新加载当前页数据
     await loadCategoryList();
   } catch (error) {
-    console.error('更新分类状态失败:', error);
+
     message.error('更新分类状态失败');
   }
 };
@@ -597,7 +597,7 @@ const handleDelete = (record: WorkorderCategoryItem): void => {
         
         await loadCategoryList();
       } catch (error) {
-        console.error('删除分类失败:', error);
+
         message.error('删除分类失败');
       }
     }
@@ -647,7 +647,7 @@ const handleSubmit = async (): Promise<void> => {
     closeFormDialog();
     await loadCategoryList();
   } catch (error) {
-    console.error('保存分类失败:', error);
+
     message.error('保存分类失败');
   } finally {
     submitLoading.value = false;

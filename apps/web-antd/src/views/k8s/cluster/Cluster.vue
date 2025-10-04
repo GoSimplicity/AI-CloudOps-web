@@ -798,7 +798,6 @@ const handleTableChange = (pagination: { current?: number; pageSize?: number }) 
   }
 };
 
-
 const columns = [
   { title: '名称', dataIndex: 'name', key: 'name', width: '12%', ellipsis: true },
   { title: '环境', dataIndex: 'env', key: 'env', width: '8%', align: 'center' },
@@ -822,5 +821,4 @@ onMounted(async () => {
 </style>
 
 <style scoped src="./Cluster.css"></style>
-
 

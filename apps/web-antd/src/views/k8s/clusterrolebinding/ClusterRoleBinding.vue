@@ -905,7 +905,7 @@ const formatAge = (age: string, creationTimestamp?: string): string => {
       return '刚刚';
     }
   } catch (error) {
-    console.warn('Failed to calculate age:', error);
+
     return '-';
   }
 };
@@ -927,7 +927,7 @@ const formatCreationTime = (timestamp?: string): string => {
       second: '2-digit'
     });
   } catch (error) {
-    console.warn('Failed to format creation time:', error);
+
     return timestamp;
   }
 };

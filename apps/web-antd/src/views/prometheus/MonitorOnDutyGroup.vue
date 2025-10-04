@@ -859,7 +859,6 @@ import {
 import dayjs, { type Dayjs } from 'dayjs';
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 
-
 const router = useRouter();
 
 // 用户接口类型
@@ -1135,7 +1134,6 @@ const filteredFuturePlans = computed(() => {
   return plans.slice(startIndex, endIndex);
 });
 
-
 const getAvatarColor = (name: string): string => {
   const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
   let hash = 0;
@@ -1257,7 +1255,7 @@ const fetchOnDutyGroups = async (): Promise<void> => {
       }
     }
   } catch (error: any) {
-    console.error('获取值班组列表失败:', error);
+
     message.error(error.message || '获取值班组列表失败');
     data.value = [];
     paginationConfig.total = 0;
@@ -1307,7 +1305,7 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
     userPaginationConfig.total = total;
     userPaginationConfig.hasMore = page * userPaginationConfig.pageSize < total;
   } catch (error: any) {
-    console.error('获取用户列表失败:', error);
+
     message.error(error.message || '获取用户列表失败');
   } finally {
     usersLoading.value = false;
@@ -1362,7 +1360,7 @@ const fetchOnDutyGroupDetail = async (id: number): Promise<void> => {
       message.error('获取值班组详情失败');
     }
   } catch (error: any) {
-    console.error('获取值班组详情失败:', error);
+
     message.error(error.message || '获取值班组详情失败');
   }
 };
@@ -1403,7 +1401,7 @@ const fetchFuturePlan = async (id: number): Promise<void> => {
       futurePlanDialog.data = null;
     }
   } catch (error: any) {
-    console.error('获取未来排班计划失败:', error);
+
     message.error(error.message || '获取未来排班计划失败');
     futurePlanDialog.data = null;
   } finally {
@@ -1450,7 +1448,7 @@ const fetchOnDutyHistory = async (id: number, startDate?: string, endDate?: stri
       }
     }
   } catch (error: any) {
-    console.error('获取值班历史失败:', error);
+
     message.error(error.message || '获取值班历史失败');
     if (!append) {
       historyDialog.data = [];
@@ -1493,7 +1491,7 @@ const fetchChangeRecords = async (page = 1, append = false): Promise<void> => {
       }
     }
   } catch (error: any) {
-    console.error('获取调班记录失败:', error);
+
     message.error(error.message || '获取调班记录失败');
     if (!append) {
       changeDialog.data = [];
@@ -1576,7 +1574,7 @@ const handleEnableChange = async (record: MonitorOnDutyGroup & { statusLoading?:
       message.error(`${checked ? '启用' : '禁用'}值班组失败`);
     }
   } catch (error: any) {
-    console.error('更新值班组状态失败:', error);
+
     message.error(error.message || '更新值班组状态失败');
   } finally {
     if (record) {
@@ -1766,7 +1764,7 @@ const exportHistory = async (): Promise<void> => {
 
     message.success(`值班历史已导出 (${exportData.length}条记录)`);
   } catch (error: any) {
-    console.error('导出值班历史失败:', error);
+
     message.error(error.message || '导出值班历史失败');
   } finally {
     historyDialog.loading = false;
@@ -1900,7 +1898,7 @@ const handleAdd = async (): Promise<void> => {
       message.error('新增值班组失败');
     }
   } catch (error: any) {
-    console.error('新增值班组失败:', error);
+
     message.error(error.message || '新增值班组失败');
   } finally {
     loading.value = false;
@@ -1931,7 +1929,7 @@ const handleUpdate = async (): Promise<void> => {
       message.error('更新值班组失败');
     }
   } catch (error: any) {
-    console.error('更新值班组失败:', error);
+
     message.error(error.message || '更新值班组失败');
   } finally {
     loading.value = false;
@@ -1964,7 +1962,7 @@ const handleCreateChange = async (): Promise<void> => {
       message.error('创建调班记录失败');
     }
   } catch (error: any) {
-    console.error('创建调班记录失败:', error);
+
     message.error(error.message || '创建调班记录失败');
   } finally {
     loading.value = false;
@@ -2023,7 +2021,7 @@ const handleViewChange = async (record: MonitorOnDutyGroup): Promise<void> => {
     await fetchChangeRecords(1);
     changeDialogVisible.value = true;
   } catch (error: any) {
-    console.error('获取调班记录失败:', error);
+
     message.error(error.message || '获取调班记录失败');
     changeDialog.data = [];
   } finally {
@@ -2054,7 +2052,7 @@ const confirmDelete = (record: MonitorOnDutyGroup): void => {
           message.error('删除值班组失败');
         }
       } catch (error: any) {
-        console.error('删除值班组失败:', error);
+
         message.error(error.message || '删除值班组失败');
       }
     }

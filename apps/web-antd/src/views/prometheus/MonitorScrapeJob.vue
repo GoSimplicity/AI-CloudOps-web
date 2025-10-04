@@ -676,7 +676,6 @@ const formRules = computed(() => ({
   ]
 }));
 
-
 const getJobStatusClass = (record: MonitorScrapeJob): string => {
   if (record.enable === 1) return 'status-enabled';
   return 'status-disabled';
@@ -842,7 +841,7 @@ const loadScrapeJobList = async (): Promise<void> => {
       paginationConfig.total = 0;
     }
   } catch (error: any) {
-    console.error('加载采集任务列表失败:', error);
+
     message.error(error.message || '加载采集任务列表失败');
   } finally {
     loading.value = false;
@@ -1035,7 +1034,7 @@ const toggleJobStatus = async (record: MonitorScrapeJob): Promise<void> => {
     message.success(`采集任务已${newStatus === 1 ? '启用' : '禁用'}`);
     loadScrapeJobList();
   } catch (error: any) {
-    console.error('切换采集任务状态失败:', error);
+
     message.error(error.message || '切换采集任务状态失败');
   }
 };
@@ -1059,7 +1058,7 @@ const confirmDelete = (record: MonitorScrapeJob): void => {
 
         loadScrapeJobList();
       } catch (error: any) {
-        console.error('删除采集任务失败:', error);
+
         message.error(error.message || '删除采集任务失败');
       }
     }
@@ -1111,7 +1110,7 @@ const saveScrapeJob = async (): Promise<void> => {
     formDialogVisible.value = false;
     loadScrapeJobList();
   } catch (error: any) {
-    console.error('保存采集任务失败:', error);
+
     message.error(error.message || '保存采集任务失败');
   }
 };
@@ -1310,7 +1309,7 @@ const loadTreeData = async (): Promise<void> => {
     const response = await getTreeList();
     treeData.value = response.items || [];
   } catch (error) {
-    console.error('获取服务树数据失败:', error);
+
     message.error('获取服务树数据失败');
     treeData.value = [];
   }

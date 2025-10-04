@@ -576,7 +576,6 @@ const getStatusText = (status: number): string => {
   return textMap[status as keyof typeof textMap] || '未知'
 }
 
-
 const getFlowActionIcon = (action: string) => {
   const iconMap: Record<string, any> = {
     [FlowAction.Submit]: SendOutlined,
@@ -641,7 +640,7 @@ const loadFlow = async (instanceId: number) => {
       flowList.value = []
     }
   } catch (error: any) {
-    console.error('Failed to load flow:', error)
+
     message.error(`加载流转记录失败: ${error.message || '未知错误'}`)
     flowList.value = []
   } finally {

@@ -723,7 +723,6 @@ const formRules = {
   ]
 };
 
-
 const getPoolStatusClass = (record: MonitorSendGroup): string => {
   if (record.enable === 1 && record.need_upgrade === 1) return 'status-full';
   if (record.enable === 1 || record.need_upgrade === 1) return 'status-partial';
@@ -812,7 +811,7 @@ const getNotifyMethods = (record: MonitorSendGroup): string[] => {
     
     return [];
   } catch (error) {
-    console.error('Error parsing notify_methods:', error);
+
     return [];
   }
 };
@@ -881,7 +880,7 @@ const loadSendGroupList = async (): Promise<void> => {
       updateStats();
     }
   } catch (error: any) {
-    console.error('加载发送组列表失败:', error);
+
     message.error(error.message || '加载发送组列表失败');
   } finally {
     loading.value = false;
@@ -973,7 +972,7 @@ const loadOptionsData = async (): Promise<void> => {
       value: user.id
     }));
   } catch (error: any) {
-    console.error('加载选项数据失败:', error);
+
     message.error('加载选项数据失败');
   }
 };
@@ -1317,7 +1316,7 @@ const handleViewSendGroup = async (record: MonitorSendGroup): Promise<void> => {
     detailDialog.form = response;
     detailDialogVisible.value = true;
   } catch (error: any) {
-    console.error('获取发送组详情失败:', error);
+
     message.error(error.message || '获取发送组详情失败');
   }
 };
@@ -1335,7 +1334,7 @@ const handleDeleteClick = (record: MonitorSendGroup): void => {
         message.success(`发送组 "${record.name_zh || record.name}" 已删除`);
         await loadSendGroupList();
       } catch (error: any) {
-        console.error('删除发送组失败:', error);
+
         message.error(error.message || '删除发送组失败');
       }
     },
@@ -1448,7 +1447,7 @@ const saveSendGroup = async (): Promise<void> => {
     formDialogVisible.value = false;
     loadSendGroupList();
   } catch (error: any) {
-    console.error('保存发送组失败:', error);
+
     message.error(error.message || '保存发送组失败');
   }
 };

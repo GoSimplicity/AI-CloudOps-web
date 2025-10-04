@@ -705,7 +705,6 @@ const formRules = {
   ]
 };
 
-
 const getNodeIconClass = (node: TreeNodeWithRelations): string => {
   return node.status === TreeNodeStatus.ACTIVE ? 'node-icon-active' : 'node-icon-inactive';
 };
@@ -795,7 +794,7 @@ const loadTreeData = async (): Promise<void> => {
       updateStats(nodes);
     }
   } catch (error: any) {
-    console.error('加载树状数据失败:', error);
+
     message.error(error.message || '加载树状数据失败');
   } finally {
     treeLoading.value = false;
@@ -814,13 +813,13 @@ const loadUserList = async (): Promise<void> => {
     if (response && response.items) {
       userOptions.value = response.items;
       userPagination.total = response.total || 0;
-      console.log('Loaded users:', userOptions.value.length, 'Total:', userPagination.total);
+
     } else {
-      console.error('加载用户列表响应格式异常:', response);
+
       message.error('加载用户列表失败: 响应格式异常');
     }
   } catch (error: any) {
-    console.error('加载用户列表失败:', error);
+
     message.error(error.message || '加载用户列表失败');
   }
 };
@@ -852,7 +851,7 @@ const loadAvailableResources = async (): Promise<void> => {
       resourcePagination.total = response.total || 0;
     }
   } catch (error: any) {
-    console.error('加载资源列表失败:', error);
+
     message.error(error.message || '加载资源列表失败');
   } finally {
     resourceLoading.value = false;
@@ -868,7 +867,7 @@ const handleTreeSelect = async (selectedKeys: number[]): Promise<void> => {
       const response = await getNodeDetail(nodeId!);
       selectedNode.value = response as TreeNodeWithRelations;
     } catch (error: any) {
-      console.error('获取节点详情失败:', error);
+
       message.error(error.message || '获取节点详情失败');
     } finally {
       detailLoading.value = false;
@@ -1003,7 +1002,7 @@ const handleUnbindResource = async (resourceId: number): Promise<void> => {
     handleTreeSelect([selectedNode.value.id]);
     loadTreeData();
   } catch (error: any) {
-    console.error('解绑资源失败:', error);
+
     message.error(error.message || '解绑资源失败');
   }
 };
@@ -1023,7 +1022,7 @@ const removeMember = async (userId: number, memberType: TreeNodeMemberType): Pro
     handleTreeSelect([selectedNode.value.id]);
     loadTreeData();
   } catch (error: any) {
-    console.error('移除成员失败:', error);
+
     message.error(error.message || '移除成员失败');
   }
 };
@@ -1043,7 +1042,7 @@ const confirmDelete = (record: TreeNode): void => {
         selectedKeys.value = [];
         loadTreeData();
       } catch (error: any) {
-        console.error('删除节点失败:', error);
+
         message.error(error.message || '删除节点失败');
       }
     }
@@ -1088,7 +1087,7 @@ const saveNode = async (): Promise<void> => {
       handleTreeSelect([formDialog.form.id]);
     }
   } catch (error: any) {
-    console.error('保存节点失败:', error);
+
     message.error(error.message || '保存节点失败');
   }
 };
@@ -1112,7 +1111,7 @@ const handleMoveNode = async (): Promise<void> => {
     selectedKeys.value = [moveDialog.nodeId];
     handleTreeSelect([moveDialog.nodeId]);
   } catch (error: any) {
-    console.error('移动节点失败:', error);
+
     message.error(error.message || '移动节点失败');
   }
 };
@@ -1141,7 +1140,7 @@ const handleAddMemberConfirm = async (): Promise<void> => {
     }
     loadTreeData();
   } catch (error: any) {
-    console.error('添加成员失败:', error);
+
     message.error(error.message || '添加成员失败');
   }
 };
@@ -1165,7 +1164,7 @@ const handleBindResourceConfirm = async (): Promise<void> => {
     handleTreeSelect([selectedNode.value.id]);
     loadTreeData();
   } catch (error: any) {
-    console.error('绑定资源失败:', error);
+
     message.error(error.message || '绑定资源失败');
   }
 };

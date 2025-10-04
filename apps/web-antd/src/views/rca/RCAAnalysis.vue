@@ -446,7 +446,18 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick, onUnmounted } from 'vue';
-import * as echarts from 'echarts';
+// 按需引入echarts，减少打包体积
+import * as echarts from 'echarts/core';
+import { GraphChart, ScatterChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
+
+// 注册必需的组件
+echarts.use([
+  GraphChart, ScatterChart,
+  GridComponent, TooltipComponent, LegendComponent, TitleComponent,
+  CanvasRenderer
+]);
 import { message } from 'ant-design-vue';
 import {
   PartitionOutlined,
@@ -460,6 +471,7 @@ import {
   BugOutlined,
   LineChartOutlined
 } from '@ant-design/icons-vue';
+import { Icon } from '@iconify/vue';
 import {
   analyzeRootCause,
   getAllPrometheusMetrics,
@@ -566,7 +578,7 @@ const loadAvailableMetrics = async () => {
     }));
     message.success('指标列表已更新');
   } catch (error) {
-    console.error('获取指标列表失败:', error);
+
     message.error('获取指标列表失败');
   } finally {
     loadingMetrics.value = false;
@@ -620,7 +632,7 @@ const startAnalysis = async () => {
       }
     }
   } catch (error) {
-    console.error('根因分析失败:', error);
+
     let errorMessage = '根因分析失败';
     if (error instanceof Error) {
       if (error.message.includes('Network Error')) {
@@ -901,8 +913,6 @@ const formatShortTime = (timestamp?: string) => {
     minute: '2-digit'
   });
 };
-
-
 
 // 处理窗口调整
 const handleResize = () => {

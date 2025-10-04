@@ -176,7 +176,20 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
-import * as echarts from 'echarts';
+// 按需引入echarts，减少打包体积
+import * as echarts from 'echarts/core';
+import { BarChart, LineChart, PieChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
+import type { EChartsType } from 'echarts/core';
+
+// 注册必需的组件
+echarts.use([
+  BarChart, LineChart, PieChart,
+  GridComponent, TooltipComponent, LegendComponent, TitleComponent,
+  CanvasRenderer
+]);
+
 import { 
   CheckCircleOutlined,
   InfoCircleOutlined,
@@ -185,7 +198,6 @@ import {
 } from '@ant-design/icons-vue';
 import { getSystemInfoApi, getSystemMetricsApi, refreshSystemInfoApi } from '#/api/core/system/system';
 import type { System } from '#/api/core/system/system';
-import type { ECharts } from 'echarts';
 // 时间显示
 const currentTime = ref('');
 const updateTime = () => {
@@ -256,8 +268,6 @@ const chartPeriod = ref('24h');
 // 事件列表（初始化为空）
 const events = ref<Array<{id: string, type: string, message: string, time: string}>>([]);
 
-
-
 // 资源使用情况（从系统指标获取真实数据）
 const resources = computed(() => {
   const systemMetrics = moduleData.value.systemMetrics;
@@ -298,9 +308,9 @@ const resources = computed(() => {
 const chartRefs = ref<Record<string, HTMLElement>>({});
 const trendChart = ref<HTMLElement | null>(null);
 const networkChart = ref<HTMLElement | null>(null);
-let trendChartInstance: ECharts | null = null;
-let networkChartInstance: ECharts | null = null;
-const miniCharts: Record<string, ECharts> = {};
+let trendChartInstance: EChartsType | null = null;
+let networkChartInstance: EChartsType | null = null;
+const miniCharts: Record<string, EChartsType> = {};
 
 // 刷新状态
 const refreshing = ref(false);
@@ -391,7 +401,7 @@ const systemStatusText = computed(() => {
 });
 
 // 初始化迷你图表
-const initMiniChart = (element: HTMLElement, data: number[], color = '#1890ff'): ECharts | undefined => {
+const initMiniChart = (element: HTMLElement, data: number[], color = '#1890ff'): EChartsType | undefined => {
   if (!element) return;
   
   // 检查是否已有实例，如果有则先销毁
@@ -499,7 +509,9 @@ const initNetworkChart = () => {
     ]
   };
   
-  networkChartInstance.setOption(option);
+  if (networkChartInstance) {
+    networkChartInstance.setOption(option);
+  }
 };
 
 // 初始化趋势图表
@@ -746,8 +758,6 @@ const updateCharts = () => {
 let timeTimer: any = null;
 let dataTimer: any = null;
 
-
-
 // 更新指标数据基于系统状态
 const updateMetricsFromModuleData = () => {
   const systemMetrics = moduleData.value.systemMetrics;
@@ -930,7 +940,7 @@ const fetchSystemData = async () => {
       // 清除系统信息相关错误
       events.value = events.value.filter(event => !['system_info_error', 'system_data_error'].includes(event.id));
     } else {
-      console.warn('Failed to fetch system info:', systemInfo.reason);
+
       events.value.unshift({
         id: 'system_info_error',
         type: 'warning',
@@ -945,7 +955,7 @@ const fetchSystemData = async () => {
       // 清除系统监控相关错误
       events.value = events.value.filter(event => !['system_metrics_error', 'system_data_error'].includes(event.id));
     } else {
-      console.warn('Failed to fetch system metrics:', systemMetrics.reason);
+
       events.value.unshift({
         id: 'system_metrics_error',
         type: 'warning',
@@ -955,7 +965,7 @@ const fetchSystemData = async () => {
       events.value = events.value.slice(0, 10); // 限制事件数量
     }
   } catch (error) {
-    console.error('Failed to fetch system data:', error);
+
     events.value.unshift({
       id: 'system_data_error',
       type: 'error',
@@ -973,7 +983,7 @@ const refreshSystemData = async () => {
     await refreshSystemInfoApi();
     await fetchSystemData();
   } catch (error) {
-    console.error('Failed to refresh system data:', error);
+
   } finally {
     refreshing.value = false;
   }
@@ -1005,7 +1015,7 @@ const fetchAllSystemData = async () => {
     updateMetricsFromModuleData();
     updateCharts();
   } catch (error) {
-    console.error('系统数据加载失败:', error);
+
     systemStatus.value.system = {
       connected: false,
       healthy: false,
@@ -1042,8 +1052,8 @@ onMounted(async () => {
   loading.value = false;
   
   // 加载系统数据
-  fetchAllSystemData().catch(err => {
-    console.warn('系统数据加载失败:', err);
+  fetchAllSystemData().catch(_err => {
+    // Error loading system data on mount
   });
   
   // 设置定时更新（每30秒更新一次以减少服务器负载）

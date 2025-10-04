@@ -955,7 +955,7 @@ const handleTableChange = (pagination: any) => {
 // 初始化数据加载
 onMounted(async () => {
   if (!accessStore.accessToken) {
-    console.warn('用户未认证，跳过数据加载');
+
     return;
   }
   

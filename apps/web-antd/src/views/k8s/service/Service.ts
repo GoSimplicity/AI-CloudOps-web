@@ -316,7 +316,7 @@ export function useServicePage() {
       }
     } catch (err) {
       message.error('获取集群列表失败');
-      console.error(err);
+
     } finally {
       clustersLoading.value = false;
     }
@@ -345,7 +345,7 @@ export function useServicePage() {
       namespacesTotal.value = res?.total || 0;
     } catch (err) {
       message.error('获取命名空间列表失败');
-      console.error(err);
+
     } finally {
       namespacesLoading.value = false;
     }
@@ -381,7 +381,7 @@ export function useServicePage() {
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取 Service 列表失败');
-      console.error(err);
+
     } finally {
       loading.value = false;
     }
@@ -409,7 +409,7 @@ export function useServicePage() {
       currentServiceDetail.value = processedDetail;
     } catch (err) {
       message.error('获取 Service 详情失败');
-      console.error(err);
+
       // 错误时使用原始记录数据
       const fallbackDetail = { 
         ...record, 
@@ -440,7 +440,7 @@ export function useServicePage() {
       isYamlModalVisible.value = true;
     } catch (err) {
       message.error('获取 Service YAML 失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -482,7 +482,7 @@ export function useServicePage() {
         return;
       }
       message.error('❌ Service YAML 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -545,7 +545,7 @@ export function useServicePage() {
         return;
       }
       message.error('❌ Service 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -573,7 +573,7 @@ export function useServicePage() {
         return;
       }
       message.error('❌ Service YAML 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -635,7 +635,7 @@ export function useServicePage() {
         return;
       }
       message.error('❌ Service 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -660,7 +660,7 @@ export function useServicePage() {
           await fetchServices();
         } catch (err) {
           message.error('❌ Service 删除失败');
-          console.error(err);
+
         }
       },
     });
@@ -679,7 +679,7 @@ export function useServicePage() {
       isEndpointsModalVisible.value = true;
     } catch (err) {
       message.error('获取 Service 端点失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -742,7 +742,7 @@ export function useServicePage() {
           await fetchServices();
         } catch (err) {
           message.error(`❌ 批量${operation}失败`);
-          console.error(err);
+
         }
       },
     });

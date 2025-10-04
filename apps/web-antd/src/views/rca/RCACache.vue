@@ -340,6 +340,7 @@ import {
   DatabaseOutlined,
   CloseCircleOutlined
 } from '@ant-design/icons-vue';
+import { Icon } from '@iconify/vue';
 import {
   getCacheStats,
   clearAllCache,
@@ -421,7 +422,7 @@ const refreshCacheStats = async () => {
       }, 500);
     }
   } catch (error) {
-    console.error('获取缓存统计失败:', error);
+
     let errorMessage = '获取缓存状态失败';
     if (error instanceof Error) {
       if (error.message.includes('Network Error')) {
@@ -468,7 +469,7 @@ const handleClearNamespaceCache = async () => {
       addToHistory('清除命名空间缓存', false, response.message || '操作失败');
     }
   } catch (error) {
-    console.error('清除命名空间缓存失败:', error);
+
     message.error('清除命名空间缓存失败，请稍后重试');
     addToHistory('清除命名空间缓存', false, '网络错误');
   } finally {
@@ -503,7 +504,7 @@ const handleClearOperationCache = async () => {
       addToHistory('清除操作缓存', false, response.message || '操作失败');
     }
   } catch (error) {
-    console.error('清除操作缓存失败:', error);
+
     message.error('清除操作缓存失败，请稍后重试');
     addToHistory('清除操作缓存', false, '网络错误');
   } finally {
@@ -538,7 +539,7 @@ const confirmClearAllCache = async () => {
       addToHistory('清除所有缓存', false, response.message || '操作失败');
     }
   } catch (error) {
-    console.error('清除所有缓存失败:', error);
+
     message.error('清除所有缓存失败，请稍后重试');
     addToHistory('清除所有缓存', false, '网络错误');
   } finally {
@@ -1055,8 +1056,6 @@ align-items: center;
   padding-bottom: 8px;
   border-bottom: 1px solid #e8e8e8;
 }
-
-
 
 .details-tabs :deep(.ant-tabs-nav) {
   padding: 0 24px;

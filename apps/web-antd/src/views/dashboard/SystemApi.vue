@@ -430,7 +430,7 @@ const fetchApiStatistics = async () => {
     const response = await getApiStatisticsApi();
     apiStatistics.value = response;
   } catch (error: any) {
-    console.error('获取统计数据失败:', error);
+
     // 不显示错误信息，因为这是后台请求
   }
 };

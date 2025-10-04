@@ -73,7 +73,7 @@ onMounted(async () => {
     socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
-      console.log('WebSocket connection established.');
+
       term?.focus();
     };
 
@@ -149,18 +149,18 @@ onMounted(async () => {
       }
     });
 
-    socket.onclose = (event) => {
-      console.log('WebSocket connection closed:', event);
+    socket.onclose = (_event) => {
+      // Connection closed
       term?.write('\r\n\x1b[31mConnection closed.\x1b[0m');
     };
 
-    socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
+    socket.onerror = (_error) => {
+      // WebSocket error
       message.error('WebSocket 连接错误');
       term?.write('\r\n\x1b[31mWebSocket connection error.\x1b[0m');
     };
   } catch (error) {
-    console.error('Failed to connect to terminal:', error);
+
     message.error('连接终端失败');
     term?.write('\r\n\x1b[31mFailed to establish terminal connection.\x1b[0m');
   }

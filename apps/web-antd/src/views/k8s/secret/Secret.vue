@@ -1127,7 +1127,6 @@ const newEditStringDataKey = ref('');
 const newEditLabelKey = ref('');
 const newEditAnnotationKey = ref('');
 
-
 const addNewStringData = () => {
   if (newStringDataKey.value && newStringDataKey.value.trim()) {
     createFormModel.value.string_data[newStringDataKey.value.trim()] = '';
@@ -1225,7 +1224,7 @@ const decodeBase64Data = (base64Str?: any) => {
       return binaryStr;
     }
   } catch (error) {
-    console.error('Base64 解码失败:', error, '原始数据:', str.substring(0, 100));
+
     return `解码失败 (原始长度: ${str.length}): ${str.substring(0, 50)}${str.length > 50 ? '...' : ''}`;
   }
 };
@@ -1249,7 +1248,7 @@ const copyToClipboard = async (text: string) => {
       message.success('内容已复制到剪贴板');
     }
   } catch (error) {
-    console.error('复制失败:', error);
+
     message.error('复制失败，请手动复制');
   }
 };

@@ -102,7 +102,6 @@ export function useNamespacePage() {
     labels: {},
   });
 
-
   // 表单验证规则
   const labelFormRules: Record<string, Rule[]> = {
     // 动态验证标签和注解
@@ -122,7 +121,6 @@ export function useNamespacePage() {
       { type: 'number', min: 0, max: 3600, message: '优雅删除时间必须在0-3600秒之间', trigger: 'blur' }
     ]
   };
-
 
   // computed
   const filteredNamespaces = computed(() => {
@@ -259,7 +257,7 @@ export function useNamespacePage() {
       }
     } catch (err) {
       message.error('获取集群列表失败');
-      console.error(err);
+
     } finally {
       clustersLoading.value = false;
     }
@@ -292,7 +290,7 @@ export function useNamespacePage() {
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取命名空间列表失败');
-      console.error(err);
+
     } finally {
       loading.value = false;
     }
@@ -310,7 +308,7 @@ export function useNamespacePage() {
       currentNamespaceDetail.value = res || { ...record, cluster_id: clusterId };
     } catch (err) {
       message.error('获取命名空间详情失败');
-      console.error(err);
+
       currentNamespaceDetail.value = { ...record, cluster_id: clusterId };
     } finally {
       detailLoading.value = false;
@@ -360,12 +358,11 @@ export function useNamespacePage() {
         return;
       }
       message.error('命名空间创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
   };
-
 
   const openEditLabelModal = (record: K8sNamespace) => {
     currentOperationNamespace.value = record;
@@ -401,7 +398,7 @@ export function useNamespacePage() {
       await fetchNamespaces();
     } catch (err: unknown) {
       message.error('标签/注解更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -441,7 +438,7 @@ export function useNamespacePage() {
       await fetchNamespaces();
     } catch (err) {
       message.error('命名空间删除失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -474,7 +471,7 @@ export function useNamespacePage() {
           await fetchNamespaces();
         } catch (err) {
           message.error('命名空间强制删除失败');
-          console.error(err);
+
         }
       },
     });
@@ -547,7 +544,7 @@ export function useNamespacePage() {
           await fetchNamespaces();
         } catch (err) {
           message.error(`批量${operation}失败`);
-          console.error(err);
+
         }
       },
     });

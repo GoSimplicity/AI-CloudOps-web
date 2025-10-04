@@ -316,7 +316,7 @@ export function usePVCPage() {
         }
       }
     } catch (error: any) {
-      console.error('获取集群列表失败:', error);
+
       message.error(error?.message || '获取集群列表失败');
     } finally {
       clustersLoading.value = false;
@@ -348,7 +348,7 @@ export function usePVCPage() {
       }
       namespacesTotal.value = res?.total || 0;
     } catch (error: any) {
-      console.error('获取命名空间列表失败:', error);
+
       message.error(error?.message || '获取命名空间列表失败');
     } finally {
       namespacesLoading.value = false;
@@ -385,7 +385,7 @@ export function usePVCPage() {
       pvcs.value = pvcsWithClusterId;
       total.value = res?.total || 0;
     } catch (error: any) {
-      console.error('获取PVC列表失败:', error);
+
       message.error(error?.message || '获取PVC列表失败');
       pvcs.value = [];
       total.value = 0;
@@ -420,7 +420,7 @@ export function usePVCPage() {
         currentPVCDetail.value = response;
       }
     } catch (error: any) {
-      console.error('获取PVC详情失败:', error);
+
       message.error(error?.message || '获取PVC详情失败');
     } finally {
       detailLoading.value = false;
@@ -444,7 +444,7 @@ export function usePVCPage() {
         currentYamlContent.value = response.yaml;
       }
     } catch (error: any) {
-      console.error('获取PVC YAML失败:', error);
+
       message.error(error?.message || '获取PVC YAML失败');
     }
   };
@@ -465,7 +465,7 @@ export function usePVCPage() {
       
       currentPVCPods.value = res?.items || [];
     } catch (error: any) {
-      console.error('获取使用PVC的Pod列表失败:', error);
+
       message.error(error?.message || '获取使用PVC的Pod列表失败');
       currentPVCPods.value = [];
     } finally {
@@ -498,7 +498,7 @@ export function usePVCPage() {
       resetCreateForm();
       await fetchPVCs();
     } catch (error: any) {
-      console.error('创建PVC失败:', error);
+
       message.error(error?.message || '创建PVC失败');
     } finally {
       submitLoading.value = false;
@@ -526,7 +526,7 @@ export function usePVCPage() {
       resetCreateYamlForm();
       await fetchPVCs();
     } catch (error: any) {
-      console.error('通过YAML创建PVC失败:', error);
+
       message.error(error?.message || '通过YAML创建PVC失败');
     } finally {
       submitLoading.value = false;
@@ -558,7 +558,7 @@ export function usePVCPage() {
       resetEditForm();
       await fetchPVCs();
     } catch (error: any) {
-      console.error('更新PVC失败:', error);
+
       message.error(error?.message || '更新PVC失败');
     } finally {
       submitLoading.value = false;
@@ -588,7 +588,7 @@ export function usePVCPage() {
       resetYamlForm();
       await fetchPVCs();
     } catch (error: any) {
-      console.error('通过YAML更新PVC失败:', error);
+
       message.error(error?.message || '通过YAML更新PVC失败');
     } finally {
       submitLoading.value = false;
@@ -617,7 +617,7 @@ export function usePVCPage() {
           message.success(`删除PVC "${record.name}" 成功`);
           await fetchPVCs();
         } catch (error: any) {
-          console.error('删除PVC失败:', error);
+
           message.error(error?.message || '删除PVC失败');
         }
       },
@@ -647,7 +647,7 @@ export function usePVCPage() {
       resetExpandForm();
       await fetchPVCs();
     } catch (error: any) {
-      console.error('扩容PVC失败:', error);
+
       message.error(error?.message || '扩容PVC失败');
     } finally {
       submitLoading.value = false;
@@ -687,7 +687,7 @@ export function usePVCPage() {
           selectedRows.value = [];
           await fetchPVCs();
         } catch (error: any) {
-          console.error('批量删除PVC失败:', error);
+
           message.error(error?.message || '批量删除PVC失败');
         }
       },

@@ -224,7 +224,7 @@ const fetchServiceInfo = async () => {
     message.success('服务信息获取成功');
   } catch (error: any) {
     message.error(`获取服务信息失败: ${error.message}`);
-    console.error('获取服务信息失败:', error);
+
   } finally {
     loading.value = false;
   }
@@ -243,7 +243,7 @@ const fetchConfigInfo = async () => {
     message.success('配置信息获取成功');
   } catch (error: any) {
     message.error(`获取配置信息失败: ${error.message}`);
-    console.error('获取配置信息失败:', error);
+
   } finally {
     configLoading.value = false;
   }

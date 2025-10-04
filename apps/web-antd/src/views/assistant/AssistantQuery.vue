@@ -304,7 +304,6 @@ const sendMessage = async () => {
       currentSessionId.value = data.session_id;
     }
 
-
     const assistantMessage: ChatMessage = {
       role: 'assistant',
       content: data.answer,
@@ -321,7 +320,7 @@ const sendMessage = async () => {
 
   } catch (error: any) {
     message.error(`发送失败: ${error.message}`);
-    console.error('发送消息失败:', error);
+
   } finally {
     isLoading.value = false;
   }

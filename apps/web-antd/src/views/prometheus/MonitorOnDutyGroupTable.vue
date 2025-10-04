@@ -379,11 +379,19 @@ import {
   createMonitorOnDutyGroupChangeApi,
   getMonitorOnDutyGroupChangeListApi,
   type MonitorOnDutyHistory,
-  type User,
   type MonitorOnDutyGroup,
   type CreateMonitorOnDutyGroupChangeReq,
   type GetMonitorOnDutyHistoryReq,
 } from '#/api/core/prometheus/prometheus_onduty';
+
+// Define User type locally
+interface User {
+  id: number;
+  username: string;
+  name?: string;
+  real_name?: string;
+  email?: string;
+}
 
 // 定义接口 - 修复API响应结构
 interface Day {
@@ -496,9 +504,9 @@ const fetchDutyGroups = async (): Promise<void> => {
       return;
     }
     
-    console.log('开始获取值班组详情，ID:', id);
+
     const response = await getMonitorOnDutyGroupDetailApi(id);
-    console.log('获取值班组详情响应:', response);
+
     
     // 改进的API响应结构处理 - 使用与值班组页面相同的逻辑
     let groupData = null;
@@ -528,7 +536,7 @@ const fetchDutyGroups = async (): Promise<void> => {
     
     if (groupData) {
       dutyGroupDetail.value = groupData;
-      console.log('设置值班组详情数据:', groupData);
+
       
       // 初始化用户缓存
         if (groupData.users && Array.isArray(groupData.users)) {
@@ -536,7 +544,7 @@ const fetchDutyGroups = async (): Promise<void> => {
           const userName = user.real_name || user.username || `用户${user.id}`;
           userCache.value.set(user.id, userName);
         });
-        console.log('初始化用户缓存:', userCache.value);
+
       }
       
       updateStats();
@@ -548,11 +556,11 @@ const fetchDutyGroups = async (): Promise<void> => {
         loadChangeRecords(1)
       ]);
     } else {
-      console.error('无法解析API响应数据:', response);
+
       message.error('获取值班组信息失败：数据格式异常');
     }
   } catch (error: any) {
-    console.error('获取值班组信息失败:', error);
+
     
     // 更详细的错误信息
     let errorMessage = '获取值班组信息失败';
@@ -586,7 +594,7 @@ const fetchDutyGroups = async (): Promise<void> => {
 
 const fetchDutySchedule = async (): Promise<void> => {
   if (!dutyGroupId.value) {
-    console.warn('未设置值班组ID，跳过获取值班计划');
+
     return;
   }
   
@@ -597,18 +605,10 @@ const fetchDutySchedule = async (): Promise<void> => {
     const startOfCalendar = currentMonth.startOf('month').startOf('week');
     const endOfCalendar = currentMonth.endOf('month').endOf('week');
 
-    console.log('开始获取值班计划，参数:', {
-      id,
-      start_time: startOfCalendar.format('YYYY-MM-DD'),
-      end_time: endOfCalendar.format('YYYY-MM-DD')
-    });
-
     const response = await getMonitorOnDutyGroupFuturePlanApi(id, {
       start_time: startOfCalendar.format('YYYY-MM-DD'),
       end_time: endOfCalendar.format('YYYY-MM-DD')
     });
-
-    console.log('获取值班计划响应:', response);
 
     // 改进的响应数据处理 - 兼容多种响应格式
     let planDetails: DutyPlanDetail[] = [];
@@ -643,7 +643,6 @@ const fetchDutySchedule = async (): Promise<void> => {
       }
     }
 
-    console.log('解析后的计划详情:', planDetails);
     dutyPlanData.value = planDetails;
 
     if (planDetails.length > 0) {
@@ -693,7 +692,7 @@ const fetchDutySchedule = async (): Promise<void> => {
       }
       
       calendarDays.value = days;
-      console.log('生成的日历数据:', days);
+
     } else {
       // 如果没有计划数据，仍然生成空的日历网格
       const days: Day[] = [];
@@ -710,12 +709,12 @@ const fetchDutySchedule = async (): Promise<void> => {
         });
       }
       calendarDays.value = days;
-      console.log('生成空的日历数据');
+
     }
     
     updateStats();
   } catch (error: any) {
-    console.error('获取值班计划失败:', error);
+
     
     let errorMessage = '获取值班计划失败';
     if (error.response?.status === 404) {
@@ -735,7 +734,7 @@ const fetchDutySchedule = async (): Promise<void> => {
 
 const loadHistoryRecords = async (): Promise<void> => {
   if (!dutyGroupId.value) {
-    console.warn('未设置值班组ID，跳过加载历史记录');
+
     return;
   }
   
@@ -744,22 +743,12 @@ const loadHistoryRecords = async (): Promise<void> => {
     const startDate = currentMonth.startOf('month').format('YYYY-MM-DD');
     const endDate = currentMonth.endOf('month').format('YYYY-MM-DD');
 
-    console.log('开始加载值班历史，参数:', {
-      groupId: dutyGroupId.value,
-      start_date: startDate,
-      end_date: endDate,
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize
-    });
-
     const response = await getMonitorOnDutyHistoryApi(dutyGroupId.value, {
       start_date: startDate,
       end_date: endDate,
       page: paginationConfig.current,
       size: paginationConfig.pageSize
     });
-
-    console.log('获取值班历史响应:', response);
 
     // 改进的历史数据响应处理 - 使用与值班组页面相同的逻辑
     let historyData: MonitorOnDutyHistory[] = [];
@@ -803,14 +792,14 @@ const loadHistoryRecords = async (): Promise<void> => {
       }
     }
     
-    console.log('解析的历史数据:', historyData);
+
     
     historyList.value = historyData;
     paginationConfig.total = total;
     
     updateStats();
   } catch (error: any) {
-    console.error('加载值班历史失败:', error);
+
     
     let errorMessage = '加载值班历史失败';
     if (error.response?.status === 404) {
@@ -838,23 +827,15 @@ const changeRecordsPagination = reactive({
 // 加载调班记录
 const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
   if (!dutyGroupId.value) {
-    console.warn('未设置值班组ID，跳过加载调班记录');
+
     return;
   }
   
   try {
-    console.log('开始加载调班记录，参数:', {
-      groupId: dutyGroupId.value,
-      page,
-      size: changeRecordsPagination.pageSize
-    });
-
     const response = await getMonitorOnDutyGroupChangeListApi(dutyGroupId.value, {
       page,
       size: changeRecordsPagination.pageSize
     });
-
-    console.log('获取调班记录响应:', response);
 
     // 改进的调班记录响应处理
     let changeData: any[] = [];
@@ -888,7 +869,7 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
       }
     }
     
-    console.log('解析的调班记录数据:', changeData);
+
     
     if (append) {
       changeRecordsList.value = [...changeRecordsList.value, ...changeData];
@@ -900,7 +881,7 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
     changeRecordsPagination.hasMore = page * changeRecordsPagination.pageSize < total;
     updateStats();
   } catch (error: any) {
-    console.error('加载调班记录失败:', error);
+
     
     let errorMessage = '加载调班记录失败';
     if (error.response?.status === 404) {
@@ -922,7 +903,7 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
 // 初始化函数
 const initializeData = async (): Promise<void> => {
   const id = parseInt(route.query.id as string) || 0;
-  console.log('初始化数据，值班组ID:', id);
+
   
   if (id) {
     dutyGroupId.value = id;
@@ -944,7 +925,6 @@ const disabledDate = (current: Dayjs): boolean => {
 const filterOption = (input: string, option: any) => {
   return option.label?.toLowerCase().indexOf(input.toLowerCase()) >= 0;
 };
-
 
 const getAvatarColor = (name: string): string => {
   const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2'];
@@ -1190,7 +1170,7 @@ const saveChange = async (): Promise<void> => {
       message.error('创建换班记录失败');
     }
   } catch (error: any) {
-    console.error('保存换班记录失败:', error);
+
     message.error(error.message || '保存换班记录失败');
   } finally {
     submitting.value = false;
@@ -1220,7 +1200,7 @@ const closeDayDetail = (): void => {
 
 // 生命周期钩子 - 修复初始化问题
 onMounted(async () => {
-  console.log('组件已挂载，开始初始化');
+
   // 使用 nextTick 确保所有函数都已初始化
   await nextTick();
   await initializeData();

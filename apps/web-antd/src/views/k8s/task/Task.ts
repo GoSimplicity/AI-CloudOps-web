@@ -198,7 +198,6 @@ export function useTaskPage() {
     return template?.name || `模板 ${templateId}`;
   };
 
-
   // cluster operations
   const clearTasks = () => {
     tasks.value = [];
@@ -242,7 +241,7 @@ export function useTaskPage() {
       }
     } catch (err) {
       message.error('获取集群列表失败');
-      console.error(err);
+
     } finally {
       clustersLoading.value = false;
     }
@@ -275,7 +274,7 @@ export function useTaskPage() {
       templatesTotal.value = res?.total || 0;
     } catch (err) {
       message.error('获取模板列表失败');
-      console.error(err);
+
     } finally {
       templatesLoading.value = false;
     }
@@ -304,7 +303,7 @@ export function useTaskPage() {
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取任务列表失败');
-      console.error(err);
+
     } finally {
       loading.value = false;
     }
@@ -326,7 +325,7 @@ export function useTaskPage() {
       currentTaskDetail.value = res || record;
     } catch (err) {
       message.error('获取任务详情失败');
-      console.error(err);
+
       currentTaskDetail.value = record;
     } finally {
       detailLoading.value = false;
@@ -379,7 +378,7 @@ export function useTaskPage() {
         return;
       }
       message.error('❌ 任务创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -429,7 +428,7 @@ export function useTaskPage() {
         return;
       }
       message.error('❌ 任务更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -470,7 +469,7 @@ export function useTaskPage() {
       await fetchTasks();
     } catch (err) {
       message.error(executeFormModel.value.dry_run ? '❌ 任务预检查失败' : '❌ 任务执行失败');
-      console.error(err);
+
     } finally {
       executeLoading.value = false;
     }
@@ -499,7 +498,7 @@ export function useTaskPage() {
           await fetchTasks();
         } catch (err) {
           message.error('❌ 任务删除失败');
-          console.error(err);
+
         }
       },
     });
@@ -542,7 +541,7 @@ export function useTaskPage() {
           await fetchTasks();
         } catch (err) {
           message.error(`❌ 批量${operation}失败`);
-          console.error(err);
+
         }
       },
     });

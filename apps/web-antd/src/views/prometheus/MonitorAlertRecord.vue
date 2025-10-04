@@ -670,7 +670,6 @@ const formRules = {
   ],
 };
 
-
 const getRecordStatusClass = (record: MonitorRecordRule): string => {
   return record.enable === 1 ? 'status-full' : 'status-none';
 };
@@ -731,7 +730,7 @@ const fetchRecordRules = async (): Promise<void> => {
     paginationConfig.total = response.total || 0;
     updateStats();
   } catch (error: any) {
-    console.error('加载记录规则列表失败:', error);
+
     message.error(error.message || '加载记录规则列表失败');
   } finally {
     loading.value = false;
@@ -750,7 +749,7 @@ const loadPools = async () => {
     poolPagination.total = response.total;
   } catch (error: any) {
     message.error(error.message || '获取实例池数据失败，请稍后重试');
-    console.error(error);
+
   }
 };
 
@@ -816,7 +815,7 @@ const handleViewRecord = async (record: MonitorRecordRule): Promise<void> => {
     detailDialog.form = response;
     detailDialogVisible.value = true;
   } catch (error: any) {
-    console.error('获取记录详情失败:', error);
+
     message.error(error.message || '获取记录详情失败');
   }
 };
@@ -855,7 +854,7 @@ const handleEnableRecord = async (record: MonitorRecordRule): Promise<void> => {
       detailDialog.form!.enable = 1;
     }
   } catch (error: any) {
-    console.error('启用记录规则失败:', error);
+
     message.error(error.message || '启用记录规则失败');
   }
 };
@@ -876,7 +875,7 @@ const handleDisableRecord = async (record: MonitorRecordRule): Promise<void> => 
     message.success(`记录规则 "${record.name}" 已禁用`);
     fetchRecordRules();
   } catch (error: any) {
-    console.error('禁用记录规则失败:', error);
+
     message.error(error.message || '禁用记录规则失败');
   }
 };
@@ -943,7 +942,7 @@ const handleAdd = async (): Promise<void> => {
     fetchRecordRules();
     closeAddModal();
   } catch (error: any) {
-    console.error('新增记录失败:', error);
+
     message.error(error.message || '新增记录失败');
   } finally {
     submitLoading.value = false;
@@ -971,7 +970,7 @@ const handleUpdate = async (): Promise<void> => {
     fetchRecordRules();
     closeEditModal();
   } catch (error: any) {
-    console.error('更新记录规则失败:', error);
+
     message.error(error.message || '更新记录规则失败');
   } finally {
     submitLoading.value = false;
@@ -992,7 +991,7 @@ const handleDelete = (record: MonitorRecordRule) => {
         message.success('记录规则已删除');
         fetchRecordRules();
       } catch (error: any) {
-        console.error('删除记录规则失败:', error);
+
         message.error(error.message || '删除记录规则失败');
       }
     },
@@ -1012,7 +1011,7 @@ const validateAddExpression = async () => {
     message.success('表达式验证成功');
   } catch (error: any) {
     message.error(error.message || '表达式验证失败，请稍后重试');
-    console.error(error);
+
   } finally {
     validatingExpr.value = false;
   }
@@ -1031,7 +1030,7 @@ const validateEditExpression = async () => {
     message.success('表达式验证成功');
   } catch (error: any) {
     message.error(error.message || '表达式验证失败，请稍后重试');
-    console.error(error);
+
   } finally {
     validatingExpr.value = false;
   }

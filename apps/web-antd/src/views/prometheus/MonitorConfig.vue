@@ -691,7 +691,6 @@ const formRules = {
   ]
 };
 
-
 const getConfigTypeName = (type: ConfigType): string => {
   const typeNames: Record<ConfigType, string> = {
     [ConfigType.Prometheus]: 'Prometheus',
@@ -781,7 +780,7 @@ const fetchConfigs = async (): Promise<void> => {
       updateStats();
     }
   } catch (error: any) {
-    console.error('加载配置列表失败:', error);
+
     message.error(error.message || '加载配置列表失败');
   } finally {
     loading.value = false;
@@ -820,7 +819,7 @@ const loadPoolOptions = async (): Promise<void> => {
         name: item.name
       }));
   } catch (error: any) {
-    console.error('加载实例池列表失败:', error);
+
     poolOptions.value = [];
   }
 };
@@ -886,7 +885,7 @@ const confirmDelete = (record: MonitorConfigItem): void => {
         message.success(`配置 "${record.name}" 已删除`);
         fetchConfigs();
       } catch (error: any) {
-        console.error('删除配置失败:', error);
+
         message.error(error.message || '删除配置失败');
       }
     }
@@ -981,7 +980,7 @@ const handleViewDetail = async (record: MonitorConfigItem): Promise<void> => {
     detailConfig.value = detail;
     isDetailModalVisible.value = true;
   } catch (error: any) {
-    console.error('获取配置详情失败:', error);
+
     message.error('获取配置详情失败: ' + (error.message || '未知错误'));
   }
 };

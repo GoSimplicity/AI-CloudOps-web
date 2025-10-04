@@ -354,7 +354,7 @@ export function useIngressPage() {
       }
     } catch (err) {
       message.error('获取集群列表失败');
-      console.error(err);
+
     } finally {
       clustersLoading.value = false;
     }
@@ -383,7 +383,7 @@ export function useIngressPage() {
       namespacesTotal.value = res?.total || 0;
     } catch (err) {
       message.error('获取命名空间列表失败');
-      console.error(err);
+
     } finally {
       namespacesLoading.value = false;
     }
@@ -422,7 +422,7 @@ export function useIngressPage() {
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取 Ingress 列表失败');
-      console.error(err);
+
     } finally {
       loading.value = false;
     }
@@ -485,7 +485,7 @@ export function useIngressPage() {
       currentIngressDetail.value = processedDetail;
     } catch (err) {
       message.error('获取 Ingress 详情失败');
-      console.error(err);
+
       // 错误时使用原始记录数据
       const fallbackDetail = { 
         ...record, 
@@ -522,7 +522,7 @@ export function useIngressPage() {
       isYamlModalVisible.value = true;
     } catch (err) {
       message.error('获取 Ingress YAML 失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -559,7 +559,7 @@ export function useIngressPage() {
         return;
       }
       message.error('❌ Ingress YAML 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -638,7 +638,7 @@ export function useIngressPage() {
         return;
       }
       message.error('❌ Ingress 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -666,7 +666,7 @@ export function useIngressPage() {
         return;
       }
       message.error('❌ Ingress YAML 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -739,7 +739,7 @@ export function useIngressPage() {
         return;
       }
       message.error('❌ Ingress 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -768,7 +768,7 @@ export function useIngressPage() {
           await fetchIngresses();
         } catch (err) {
           message.error('❌ Ingress 删除失败');
-          console.error(err);
+
         }
       },
     });
@@ -829,7 +829,7 @@ export function useIngressPage() {
           await fetchIngresses();
         } catch (err) {
           message.error(`❌ 批量${operation}失败`);
-          console.error(err);
+
         }
       },
     });

@@ -613,7 +613,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
   PlusOutlined,
@@ -701,7 +701,7 @@ const previewFormData = ref<Record<string, any>>({});
 const formDialogCategories = ref<WorkorderCategoryItem[]>([]);
 const categorySelectorLoading = ref(false);
 const categorySearchKeyword = ref('');
-let categorySearchTimeout: any = null;
+let categorySearchTimeout: NodeJS.Timeout | null = null;
 
 // 分类分页状态
 const categoryPagination = reactive({
@@ -716,7 +716,13 @@ const jsonValidationError = ref('');
 const exampleDialogVisible = ref(false);
 
 // 防抖处理
-let searchTimeout: any = null;
+let searchTimeout: NodeJS.Timeout | null = null;
+
+// 清理定时器
+onBeforeUnmount(() => {
+  if (categorySearchTimeout) clearTimeout(categorySearchTimeout);
+  if (searchTimeout) clearTimeout(searchTimeout);
+});
 
 // 分页配置
 const paginationConfig = reactive({
@@ -894,7 +900,6 @@ const allTypesFieldsExample = JSON.stringify([
   }
 ], null, 2);
 
-
 const getStatusColor = (status: number): string => {
   const colorMap = { 
     [FormDesignStatus.Draft]: 'orange', 
@@ -998,7 +1003,7 @@ const loadFormDialogCategories = async (reset: boolean = false, search?: string)
         formDialogCategories.value.length < categoryPagination.total;
     }
   } catch (error: any) {
-    console.error('加载分类列表失败:', error);
+
     if (reset) {
       message.error(error.message || '加载分类列表失败');
       formDialogCategories.value = [];
@@ -1175,7 +1180,7 @@ const loadFormDesigns = async (): Promise<void> => {
       updateStats(response.items || []);
     }
   } catch (error) {
-    console.error('加载表单列表失败:', error);
+
     message.error('加载表单列表失败');
   } finally {
     loading.value = false;
@@ -1211,7 +1216,7 @@ const loadCategories = async (): Promise<void> => {
 
     categories.value = allCategories;
   } catch (error) {
-    console.error('加载分类列表失败:', error);
+
     message.error('加载分类列表失败');
     categories.value = [];
   }
@@ -1302,7 +1307,7 @@ const handleEditForm = async (record: WorkorderFormDesignItem): Promise<void> =>
       await loadCategoryForEdit(response);
     }
   } catch (error) {
-    console.error('加载表单详情失败:', error);
+
     message.error('加载表单详情失败');
   }
 };
@@ -1331,7 +1336,7 @@ const loadCategoryForEdit = async (formData: WorkorderFormDesignItem): Promise<v
       }
     }
   } catch (error) {
-    console.error('加载编辑模式分类信息失败:', error);
+
     if (formData.category_id && formData.category?.name) {
       const categoryInfo: WorkorderCategoryItem = {
         id: formData.category_id,
@@ -1371,7 +1376,7 @@ const handleViewForm = async (record: WorkorderFormDesignItem): Promise<void> =>
       detailDialogVisible.value = true;
     }
   } catch (error) {
-    console.error('加载表单详情失败:', error);
+
     message.error('加载表单详情失败');
   }
 };
@@ -1407,7 +1412,7 @@ const handlePreviewForm = async (record: WorkorderFormDesignItem): Promise<void>
       initPreviewFormData(response.schema);
     }
   } catch (error) {
-    console.error('加载预览数据失败:', error);
+
     message.error('加载预览数据失败');
   } finally {
     previewLoading.value = false;
@@ -1430,7 +1435,7 @@ const publishForm = async (record: WorkorderFormDesignItem): Promise<void> => {
     message.success(`表单 "${record.name}" 已发布`);
     loadFormDesigns();
   } catch (error) {
-    console.error('发布表单失败:', error);
+
     message.error('发布表单失败');
   }
 };
@@ -1451,7 +1456,7 @@ const archiveForm = async (record: WorkorderFormDesignItem): Promise<void> => {
     message.success(`表单 "${record.name}" 已归档`);
     loadFormDesigns();
   } catch (error) {
-    console.error('归档表单失败:', error);
+
     message.error('归档表单失败');
   }
 };
@@ -1472,7 +1477,7 @@ const unarchiveForm = async (record: WorkorderFormDesignItem): Promise<void> => 
     message.success(`表单 "${record.name}" 已取消归档`);
     loadFormDesigns();
   } catch (error) {
-    console.error('取消归档表单失败:', error);
+
     message.error('取消归档表单失败');
   }
 };
@@ -1490,7 +1495,7 @@ const confirmDelete = (record: WorkorderFormDesignItem): void => {
         message.success(`表单 "${record.name}" 已删除`);
         loadFormDesigns();
       } catch (error) {
-        console.error('删除表单失败:', error);
+
         message.error('删除表单失败');
       }
     }
@@ -1552,7 +1557,7 @@ const saveForm = async (): Promise<void> => {
     formDialogVisible.value = false;
     loadFormDesigns();
   } catch (error) {
-    console.error('保存表单失败:', error);
+
     message.error('保存表单失败');
   }
 };

@@ -507,7 +507,7 @@ const getUserInfo = async (userId: number) => {
     userInfoCache.value.set(userId, userInfo);
     return userInfo;
   } catch (error) {
-    console.error('获取用户信息失败:', error);
+
     return null;
   }
 };
@@ -604,7 +604,7 @@ const fetchAuditLogs = async () => {
     paginationConfig.total = response.total || 0;
     
   } catch (error: any) {
-    console.error('获取审计日志失败:', error);
+
     message.error(error.message || '获取审计日志失败');
     auditLogList.value = [];
     paginationConfig.total = 0;
@@ -618,7 +618,7 @@ const fetchAuditStatistics = async () => {
     const response = await getAuditStatisticsApi();
     auditStatistics.value = response;
   } catch (error: any) {
-    console.error('获取统计数据失败:', error);
+
     message.error(error.message || '获取统计数据失败');
   }
 };
@@ -628,7 +628,7 @@ const fetchAuditTypes = async () => {
     const response = await getAuditTypesApi();
     auditTypes.value = response;
   } catch (error: any) {
-    console.error('获取审计类型失败:', error);
+
   }
 };
 
@@ -647,7 +647,7 @@ const fetchLogDetail = async (id: number) => {
     viewLogData.value = logWithUserInfo;
     viewModalVisible.value = true;
   } catch (error: any) {
-    console.error('获取日志详情失败:', error);
+
     message.error(error.message || '获取日志详情失败');
   }
 };
@@ -701,7 +701,7 @@ const performAdvancedSearch = async () => {
     paginationConfig.total = response.total || 0;
     
   } catch (error: any) {
-    console.error('高级搜索失败:', error);
+
     message.error(error.message || '高级搜索失败');
     auditLogList.value = [];
     paginationConfig.total = 0;
@@ -774,7 +774,7 @@ const handleDelete = async (log: AuditLogWithUser) => {
     fetchAuditLogs();
     fetchAuditStatistics();
   } catch (error: any) {
-    console.error('删除失败:', error);
+
     message.error(error.message || '删除失败');
   }
 };
@@ -792,7 +792,7 @@ const handleBatchDelete = async () => {
     fetchAuditLogs();
     fetchAuditStatistics();
   } catch (error: any) {
-    console.error('批量删除失败:', error);
+
     message.error(error.message || '批量删除失败');
   }
 };

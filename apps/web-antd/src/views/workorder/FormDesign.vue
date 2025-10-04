@@ -415,7 +415,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import {
   PlusOutlined,
@@ -522,7 +522,7 @@ const loadCategories = async (resetPage = false) => {
     categories.value = response.items || [];
     categoryPagination.total = response.total || 0;
   } catch (error) {
-    console.error('加载分类失败:', error);
+
     message.error('加载分类数据失败');
   } finally {
     categoryLoading.value = false;
@@ -567,13 +567,18 @@ const searchCategories = () => {
 /**
  * 分类搜索输入变化（去抖处理）
  */
-let searchTimer: NodeJS.Timeout;
+let searchTimer: NodeJS.Timeout | null = null;
 const onCategorySearchInput = () => {
-  clearTimeout(searchTimer);
+  if (searchTimer) clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
     loadCategories(true);
   }, 500);
 };
+
+// 清理定时器
+onBeforeUnmount(() => {
+  if (searchTimer) clearTimeout(searchTimer);
+});
 
 /**
  * 分类分页改变
@@ -776,9 +781,8 @@ const submitForm = async () => {
 };
 
 // 处理表单提交
-const handleSubmit = (data: Record<string, any>) => {
-  console.log('表单数据:', data);
-  message.success('表单提交成功！数据已输出到控制台');
+const handleSubmit = (_data: Record<string, any>) => {
+  message.success('表单提交成功！');
 };
 
 // 切换JSON查看器

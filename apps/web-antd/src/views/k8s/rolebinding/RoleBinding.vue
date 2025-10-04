@@ -866,7 +866,6 @@ const addNewAnnotation = () => {
   }
 };
 
-
 const onSearch = () => {
   currentPage.value = 1;
   fetchRoleBindings();

@@ -493,7 +493,7 @@ const loadProcesses = async (): Promise<void> => {
     }
   } catch (error: any) {
     message.error('加载流程数据失败');
-    console.error('Failed to load processes:', error);
+
   } finally {
     loading.value = false;
   }
@@ -533,7 +533,7 @@ const loadCategories = async (): Promise<void> => {
 
     categories.value = allCategories;
   } catch (error: any) {
-    console.error('Failed to load categories:', error);
+
     categories.value = [];
   }
 };
@@ -573,7 +573,7 @@ const loadFormDesigns = async (): Promise<void> => {
 
     formDesigns.value = allForms;
   } catch (error: any) {
-    console.error('Failed to load forms:', error);
+
     formDesigns.value = [];
   }
 };
@@ -638,7 +638,7 @@ const handleEditProcess = async (row: WorkorderProcessItem): Promise<void> => {
     }
   } catch (error: any) {
     message.error('获取流程详情失败');
-    console.error('Failed to get process details:', error);
+
   } finally {
     loading.value = false;
   }
@@ -655,7 +655,7 @@ const handleViewProcess = async (row: WorkorderProcessItem): Promise<void> => {
     }
   } catch (error: any) {
     message.error('获取流程详情失败');
-    console.error('Failed to get process details:', error);
+
   } finally {
     loading.value = false;
   }
@@ -884,7 +884,6 @@ const closeDetailDialog = (): void => {
   detailDialog.visible = false;
 };
 
-
 const formatDate = (dateStr: string | undefined): string => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -995,7 +994,7 @@ onMounted(async (): Promise<void> => {
       loadFormDesigns()
     ]);
   } catch (error: any) {
-    console.error('初始化数据加载失败:', error);
+
     message.error(`初始化数据加载失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;

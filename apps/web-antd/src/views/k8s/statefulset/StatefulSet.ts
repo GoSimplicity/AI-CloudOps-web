@@ -386,7 +386,7 @@ export function useStatefulSetPage() {
       }
     } catch (err) {
       message.error('获取集群列表失败');
-      console.error(err);
+
     } finally {
       clustersLoading.value = false;
     }
@@ -415,7 +415,7 @@ export function useStatefulSetPage() {
       namespacesTotal.value = res?.total || 0;
     } catch (err) {
       message.error('获取命名空间列表失败');
-      console.error(err);
+
     } finally {
       namespacesLoading.value = false;
     }
@@ -452,7 +452,7 @@ export function useStatefulSetPage() {
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取 StatefulSet 列表失败');
-      console.error(err);
+
     } finally {
       loading.value = false;
     }
@@ -484,7 +484,7 @@ export function useStatefulSetPage() {
       currentStatefulSetDetail.value = processedDetail;
     } catch (err) {
       message.error('获取 StatefulSet 详情失败');
-      console.error(err);
+
       // 错误时也要处理格式转换
       const fallbackDetail = { 
         ...record, 
@@ -517,7 +517,7 @@ export function useStatefulSetPage() {
       isYamlModalVisible.value = true;
     } catch (err) {
       message.error('获取 StatefulSet YAML 失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -559,7 +559,7 @@ export function useStatefulSetPage() {
         return;
       }
       message.error('StatefulSet YAML 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -626,7 +626,7 @@ export function useStatefulSetPage() {
         return;
       }
       message.error('StatefulSet 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -654,7 +654,7 @@ export function useStatefulSetPage() {
         return;
       }
       message.error('StatefulSet YAML 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -679,7 +679,7 @@ export function useStatefulSetPage() {
           await fetchStatefulSets();
         } catch (err) {
           message.error('StatefulSet 删除失败');
-          console.error(err);
+
         }
       },
     });
@@ -709,7 +709,7 @@ export function useStatefulSetPage() {
           await fetchStatefulSets();
         } catch (err) {
           message.error('StatefulSet 重启失败');
-          console.error(err);
+
         }
       },
     });
@@ -782,7 +782,7 @@ export function useStatefulSetPage() {
         return;
       }
       message.error('StatefulSet 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -832,7 +832,7 @@ export function useStatefulSetPage() {
         return;
       }
       message.error('StatefulSet 伸缩失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -882,7 +882,7 @@ export function useStatefulSetPage() {
         return;
       }
       message.error('StatefulSet 回滚失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -901,7 +901,7 @@ export function useStatefulSetPage() {
       isPodModalVisible.value = true;
     } catch (err) {
       message.error('获取 Pod 列表失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -926,7 +926,7 @@ export function useStatefulSetPage() {
       isHistoryModalVisible.value = true;
     } catch (err) {
       message.error('获取版本历史失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -996,7 +996,7 @@ export function useStatefulSetPage() {
           await fetchStatefulSets();
         } catch (err) {
           message.error(`批量${operation}失败`);
-          console.error(err);
+
         }
       },
     });
@@ -1116,7 +1116,7 @@ export function useStatefulSetPage() {
       message.success('YAML 格式化成功');
     } catch (error: any) {
       message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
-      console.error('YAML 格式化错误:', error);
+
     }
   };
 
@@ -1175,7 +1175,7 @@ export function useStatefulSetPage() {
       }
     } catch (error: any) {
       message.error(`YAML 检查失败: ${error.message || '未知错误'}`);
-      console.error('YAML 检查错误:', error);
+
     }
   };
 
@@ -1218,7 +1218,7 @@ export function useStatefulSetPage() {
       message.success('YAML 格式化成功');
     } catch (error: any) {
       message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
-      console.error('YAML 格式化错误:', error);
+
     }
   };
 
@@ -1277,7 +1277,7 @@ export function useStatefulSetPage() {
       }
     } catch (error: any) {
       message.error(`YAML 检查失败: ${error.message || '未知错误'}`);
-      console.error('YAML 检查错误:', error);
+
     }
   };
 

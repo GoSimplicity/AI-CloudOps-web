@@ -356,7 +356,7 @@ const searchSession = async () => {
     message.success('会话信息获取成功');
   } catch (error: any) {
     message.error(`获取会话信息失败: ${error.message}`);
-    console.error('获取会话信息失败:', error);
+
   } finally {
     searching.value = false;
   }
@@ -483,7 +483,7 @@ const loadHistoryFromStorage = () => {
       sessionHistory.value = JSON.parse(stored);
     }
   } catch (error) {
-    console.error('加载历史记录失败:', error);
+
   }
 };
 

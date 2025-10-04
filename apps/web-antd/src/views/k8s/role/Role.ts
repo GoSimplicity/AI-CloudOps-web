@@ -266,7 +266,7 @@ export function useRolePage() {
         }
       }
     } catch (error: any) {
-      console.error('获取集群列表失败:', error);
+
       message.error('获取集群列表失败：' + (error.message || '未知错误'));
     } finally {
       clustersLoading.value = false;
@@ -312,7 +312,7 @@ export function useRolePage() {
       
       namespacesTotal.value = response?.total || 0;
     } catch (error: any) {
-      console.error('获取命名空间列表失败:', error);
+
       message.error('获取命名空间列表失败：' + (error.message || '未知错误'));
     } finally {
       namespacesLoading.value = false;
@@ -354,7 +354,7 @@ export function useRolePage() {
       roles.value = response?.items || [];
       total.value = response?.total || 0;
     } catch (error: any) {
-      console.error('获取 Role 列表失败:', error);
+
       message.error('获取 Role 列表失败：' + (error.message || '未知错误'));
       roles.value = [];
       total.value = 0;
@@ -382,7 +382,7 @@ export function useRolePage() {
       const response = await getRoleDetailsApi(params);
       currentRoleDetail.value = response || role;
     } catch (error: any) {
-      console.error('获取 Role 详情失败:', error);
+
       message.error('获取 Role 详情失败：' + (error.message || '未知错误'));
       currentRoleDetail.value = role;
     } finally {
@@ -416,7 +416,7 @@ export function useRolePage() {
       yamlFormModel.value.yaml = response?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (error: any) {
-      console.error('获取 Role YAML 失败:', error);
+
       message.error('获取 Role YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
@@ -453,7 +453,7 @@ export function useRolePage() {
       await fetchRoles();
     } catch (error: any) {
       if (error.errorFields) return;
-      console.error('更新 Role YAML 失败:', error);
+
       message.error('❌ 更新 Role YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
@@ -518,7 +518,7 @@ export function useRolePage() {
       await fetchRoles();
     } catch (error: any) {
       if (error.errorFields) return;
-      console.error('创建 Role 失败:', error);
+
       message.error('❌ 创建 Role 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
@@ -558,7 +558,7 @@ export function useRolePage() {
       await fetchRoles();
     } catch (error: any) {
       if (error.errorFields) return;
-      console.error('通过 YAML 创建 Role 失败:', error);
+
       message.error('❌ 通过 YAML 创建 Role 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
@@ -589,7 +589,7 @@ export function useRolePage() {
           message.success('🎉 Role 删除成功');
           await fetchRoles();
         } catch (error: any) {
-          console.error('删除 Role 失败:', error);
+
           message.error('❌ 删除 Role 失败：' + (error.message || '未知错误'));
         }
       },
@@ -652,7 +652,7 @@ export function useRolePage() {
             selectedRows.value = [];
             await fetchRoles();
           } catch (error: any) {
-            console.error('批量删除 Role 失败:', error);
+
             message.error('❌ 批量删除部分 Role 失败：' + (error.message || '未知错误'));
             await fetchRoles();
           }

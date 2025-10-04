@@ -230,11 +230,20 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue';
-import * as echarts from 'echarts';
+// 按需引入echarts，减少打包体积
+import * as echarts from 'echarts/core';
+import { LineChart, BarChart, PieChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, DataZoomComponent } from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
+
+// 注册必需的组件
+echarts.use([
+  LineChart, BarChart, PieChart,
+  GridComponent, TooltipComponent, LegendComponent, TitleComponent, DataZoomComponent,
+  CanvasRenderer
+]);
 import {
   BarChartOutlined, 
-  ReloadOutlined, 
-  ClearOutlined,
   ApiOutlined, 
   DatabaseOutlined, 
   HddOutlined, 
@@ -355,7 +364,7 @@ const refreshAllPredictions = async () => {
     updateCharts();
     message.success('预测数据已更新');
   } catch (error) {
-    console.error('获取预测数据失败:', error);
+
     message.error('获取预测数据失败');
   } finally {
     loading.value = false;
@@ -373,7 +382,7 @@ const fetchQpsPrediction = async () => {
     predictionCache.value.qps = response;
     updateMetricData('qps', response);
   } catch (error) {
-    console.error('QPS预测失败:', error);
+
   }
 };
 
@@ -388,7 +397,7 @@ const fetchCpuPrediction = async () => {
     predictionCache.value.cpu = response;
     updateMetricData('cpu', response);
   } catch (error) {
-    console.error('CPU预测失败:', error);
+
   }
 };
 
@@ -403,7 +412,7 @@ const fetchMemoryPrediction = async () => {
     predictionCache.value.memory = response;
     updateMetricData('memory', response);
   } catch (error) {
-    console.error('内存预测失败:', error);
+
   }
 };
 
@@ -418,7 +427,7 @@ const fetchDiskPrediction = async () => {
     predictionCache.value.disk = response;
     updateMetricData('disk', response);
   } catch (error) {
-    console.error('磁盘预测失败:', error);
+
   }
 };
 
@@ -443,7 +452,6 @@ const updateMetricData = (type: string, response: PredictionResponse) => {
     scalingRecommendations.value.push(...response.scaling_recommendations);
   }
 
-
   if (response.ai_insights) {
     aiInsights.value.push(...response.ai_insights);
   }
@@ -465,7 +473,7 @@ const initTrendChart = () => {
       axisPointer: { type: 'cross' }
     },
     legend: {
-      data: ['QPS', 'CPU使用率', '内存使用率', '磁盘使用率'],
+      data: ['QPS', 'CPU', '内存', '磁盘'],
       textStyle: { color: 'var(--ant-text-color)' }
     },
     grid: {
@@ -646,8 +654,6 @@ const formatTime = (timestamp: string) => {
   });
 };
 
-
-
 const onTimeRangeChange = () => {
   if (hasInitialData.value) {
     refreshAllPredictions();
@@ -698,16 +704,18 @@ const viewDetailAnalysis = () => {
 };
 
 // 生命周期
+const handleChartResize = () => {
+  trendChart?.resize();
+  utilizationChart?.resize();
+};
+
 onMounted(async () => {
   await nextTick();
   initTrendChart();
   initUtilizationChart();
   
   // 窗口大小变化时重新调整图表
-  window.addEventListener('resize', () => {
-    trendChart?.resize();
-    utilizationChart?.resize();
-  });
+  window.addEventListener('resize', handleChartResize);
 });
 
 onUnmounted(() => {
@@ -720,7 +728,7 @@ onUnmounted(() => {
     utilizationChart.dispose();
     utilizationChart = null;
   }
-  window.removeEventListener('resize', () => {});
+  window.removeEventListener('resize', handleChartResize);
 });
 </script>
 

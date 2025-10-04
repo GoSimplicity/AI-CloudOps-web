@@ -1467,7 +1467,7 @@ const rollbackToVersion = (revision: number) => {
           await fetchStatefulSets();
         } catch (err) {
           message.error(`StatefulSet 回滚到版本 ${revision} 失败`);
-          console.error(err);
+
         }
       },
   });

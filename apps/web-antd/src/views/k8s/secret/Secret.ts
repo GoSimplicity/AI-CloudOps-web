@@ -244,7 +244,6 @@ export function useSecretPage() {
     return field;
   };
 
-
   // cluster operations
   const clearSecrets = () => {
     secrets.value = [];
@@ -288,7 +287,7 @@ export function useSecretPage() {
       }
     } catch (err) {
       message.error('获取集群列表失败');
-      console.error(err);
+
     } finally {
       clustersLoading.value = false;
     }
@@ -317,7 +316,7 @@ export function useSecretPage() {
       namespacesTotal.value = res?.total || 0;
     } catch (err) {
       message.error('获取命名空间列表失败');
-      console.error(err);
+
     } finally {
       namespacesLoading.value = false;
     }
@@ -361,7 +360,7 @@ export function useSecretPage() {
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取 Secret 列表失败');
-      console.error(err);
+
     } finally {
       loading.value = false;
     }
@@ -402,7 +401,7 @@ export function useSecretPage() {
       currentSecretDetail.value = processedDetail;
     } catch (err) {
       message.error('获取 Secret 详情失败');
-      console.error(err);
+
       // 错误时也要处理格式转换
       try {
         const fallbackDetail = { 
@@ -639,7 +638,7 @@ export function useSecretPage() {
         return;
       }
       message.error('❌ Secret YAML 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -704,7 +703,7 @@ export function useSecretPage() {
         return;
       }
       message.error('❌ Secret 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -732,7 +731,7 @@ export function useSecretPage() {
         return;
       }
       message.error('❌ Secret YAML 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -784,7 +783,7 @@ export function useSecretPage() {
         return;
       }
       message.error('❌ Secret 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -814,7 +813,7 @@ export function useSecretPage() {
           await fetchSecrets();
         } catch (err) {
           message.error('❌ Secret 删除失败');
-          console.error(err);
+
         }
       },
     });
@@ -877,7 +876,7 @@ export function useSecretPage() {
           await fetchSecrets();
         } catch (err) {
           message.error(`❌ 批量${operation}失败`);
-          console.error(err);
+
         }
       },
     });

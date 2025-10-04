@@ -766,7 +766,6 @@ const columns = [
   { title: '操作', key: 'action', fixed: 'right' as const, width: 200, align: 'center' as const },
 ];
 
-
 const getServerStatusClass = (record: TreeLocalResource): string => {
   switch (record.status) {
     case ResourceStatus.RUNNING:
@@ -864,7 +863,7 @@ const fetchTreeData = async (): Promise<void> => {
     const response = await getTreeList();
     treeData.value = response.items || [];
   } catch (error) {
-    console.error('获取服务树数据失败:', error);
+
     message.error('获取服务树数据失败');
   }
 };
@@ -892,7 +891,7 @@ const fetchLocalResources = async (): Promise<void> => {
     pagination.total = response.total || 0;
   } catch (error) {
     message.error('获取本地资源列表失败');
-    console.error('获取本地资源列表失败:', error);
+
     localResources.value = [];
     pagination.total = 0;
   } finally {
@@ -997,7 +996,7 @@ const handleViewDetail = async (record: TreeLocalResource): Promise<void> => {
       tree_nodes: response.tree_nodes || []
     };
   } catch (error) {
-    console.error('获取资源详情失败:', error);
+
     message.error('获取资源详情失败');
   } finally {
     detailLoading.value = false;
@@ -1044,8 +1043,7 @@ const addTag = (): void => {
     // 让输入框失去焦点
     tagInputRef.value?.blur();
     // 添加调试信息
-    console.log('添加标签后的tags:', formData.value.tags);
-    console.log('newTag值:', newTag.value);
+
   });
 };
 
@@ -1054,7 +1052,7 @@ const removeTag = (index: number): void => {
   if (Array.isArray(formData.value.tags) && index >= 0 && index < formData.value.tags.length) {
     // 使用 Vue 3 推荐的方式更新数组，确保响应式
     formData.value.tags = formData.value.tags.filter((_, i) => i !== index);
-    console.log('删除标签后的tags:', formData.value.tags);
+
   }
 };
 
@@ -1083,7 +1081,7 @@ const handleTestSingleConnection = async (record: TreeLocalResource): Promise<vo
     }
   } catch (error) {
     message.error(`${record.name} 连接测试异常`);
-    console.error('连接测试失败:', error);
+
   } finally {
     hide();
   }
@@ -1111,7 +1109,7 @@ const handleTestConnection = async (): Promise<void> => {
     message.success(`批量测试完成，${onlineCount}/${totalCount} 台服务器在线`);
   } catch (error) {
     message.error('批量测试连接失败');
-    console.error('批量测试失败:', error);
+
   } finally {
     hide();
   }
@@ -1184,7 +1182,7 @@ const handleBind = async (): Promise<void> => {
     }
   } catch (error) {
     message.error('绑定失败');
-    console.error('绑定失败:', error);
+
   } finally {
     bindLoading.value = false;
   }
@@ -1220,7 +1218,7 @@ const handleUnbind = async (): Promise<void> => {
     }
   } catch (error) {
     message.error('解绑失败');
-    console.error('解绑失败:', error);
+
   } finally {
     unbindLoading.value = false;
   }
@@ -1242,8 +1240,6 @@ const handleSubmit = async (): Promise<void> => {
     // 移除 id 字段（用于区分创建和更新）
     const { id, ...rest } = submitData;
     
-    console.log('提交数据:', rest); // 添加调试信息
-    console.log('tags数据:', rest.tags); // 专门查看tags
 
     if (isEdit.value) {
       if (!id) {
@@ -1260,7 +1256,7 @@ const handleSubmit = async (): Promise<void> => {
     await fetchLocalResources();
   } catch (error) {
     message.error(isEdit.value ? '更新服务器失败' : '添加服务器失败');
-    console.error('提交表单失败:', error);
+
   } finally {
     submitLoading.value = false;
   }
@@ -1285,7 +1281,7 @@ const handleDelete = (record: TreeLocalResource): void => {
         await fetchLocalResources();
       } catch (error) {
         message.error('删除服务器失败');
-        console.error('删除服务器失败:', error);
+
       }
     }
   });
@@ -1298,7 +1294,7 @@ onMounted(async () => {
       fetchLocalResources()
     ]);
   } catch (error) {
-    console.error('初始化数据加载失败:', error);
+
     message.error('页面数据加载失败，请刷新页面重试');
   }
 });

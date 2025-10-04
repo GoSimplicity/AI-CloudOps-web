@@ -334,7 +334,6 @@ import {
   FormDesignStatus
 } from '#/api/core/workorder/workorder_form_design';
 
-
 interface UserInfo {
   id: number;
   username: string;
@@ -353,7 +352,6 @@ interface ProcessStep {
   sort_order: number;
 }
 
-
 interface ProcessDefinition {
   steps: ProcessStep[];
   connections: ProcessConnection[];
@@ -363,7 +361,6 @@ interface ProcessDefinition {
 const ProcessStepType = { Start: 'start', Approval: 'approval', Task: 'task', End: 'end' };
 const Action = { Start: 'Start', Approve: 'Approve', Reject: 'Reject', Complete: 'Complete', Notify: 'Notify' };
 const AssigneeType = { User: 'User', Group: 'Group' };
-
 
 // Props & Emits
 interface Props {
@@ -407,7 +404,6 @@ const userPagination = ref({ page: 1, pageSize: 20, total: 0 });
 const userLoading = ref(false);
 const userSearchKeyword = ref('');
 // =============================
-
 
 // 计算属性
 const selectedStep = computed(() => {
@@ -456,7 +452,6 @@ const actionOptions = [
 
 const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE;
 
-
 // === 受理人选项计算属性 ===
 const userOptions = computed(() => {
   return userList.value.map(user => ({
@@ -466,7 +461,6 @@ const userOptions = computed(() => {
   }));
 });
 // ========================
-
 
 // 监听器
 watch(() => props.modelValue, (newValue) => {
@@ -532,7 +526,7 @@ const fetchUserList = async (loadMore = false) => {
 
   } catch (error) {
     message.error('获取用户列表失败');
-    console.error('Failed to fetch user list:', error);
+
   } finally {
     userLoading.value = false;
   }
@@ -672,7 +666,6 @@ const syncToVisual = (): void => {
   }
 };
 
-
 const getOutgoingConnections = (stepId: string) => connections.value.filter(c => c.from === stepId);
 const getStepNameById = (stepId: string) => processSteps.value.find(s => s.id === stepId)?.name || '未知步骤';
 const getStepTypeClass = (type: string): string => `step-${type.toLowerCase()}`;
@@ -725,7 +718,7 @@ const loadCategories = async (): Promise<void> => {
 
     categories.value = allCategories;
   } catch (error: any) {
-    console.error('Failed to load categories:', error);
+
     categories.value = [];
   }
 };
@@ -764,7 +757,7 @@ const loadFormDesigns = async (): Promise<void> => {
 
     formDesigns.value = allForms;
   } catch (error: any) {
-    console.error('Failed to load form designs:', error);
+
     formDesigns.value = [];
   }
 };
@@ -882,7 +875,7 @@ onMounted(async () => {
       loadFormDesigns()
     ]);
   } catch (error: any) {
-    console.error('初始化数据加载失败:', error);
+
     message.error(`初始化数据加载失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;

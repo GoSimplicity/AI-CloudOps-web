@@ -256,7 +256,7 @@ export function useClusterRoleBindingPage() {
         }
       }
     } catch (error: any) {
-      console.error('获取集群列表失败:', error);
+
       message.error('获取集群列表失败：' + (error.message || '未知错误'));
     } finally {
       clustersLoading.value = false;
@@ -292,7 +292,7 @@ export function useClusterRoleBindingPage() {
       clusterRoleBindings.value = response?.items || [];
       total.value = response?.total || 0;
     } catch (error: any) {
-      console.error('获取 ClusterRoleBinding 列表失败:', error);
+
       message.error('获取 ClusterRoleBinding 列表失败：' + (error.message || '未知错误'));
       clusterRoleBindings.value = [];
       total.value = 0;
@@ -319,7 +319,7 @@ export function useClusterRoleBindingPage() {
       const response = await getClusterRoleBindingDetailsApi(params);
       currentClusterRoleBindingDetail.value = response || clusterRoleBinding;
     } catch (error: any) {
-      console.error('获取 ClusterRoleBinding 详情失败:', error);
+
       message.error('获取 ClusterRoleBinding 详情失败：' + (error.message || '未知错误'));
       currentClusterRoleBindingDetail.value = clusterRoleBinding;
     } finally {
@@ -352,7 +352,7 @@ export function useClusterRoleBindingPage() {
       yamlFormModel.value.yaml = response?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (error: any) {
-      console.error('获取 ClusterRoleBinding YAML 失败:', error);
+
       message.error('获取 ClusterRoleBinding YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
@@ -388,7 +388,7 @@ export function useClusterRoleBindingPage() {
       await fetchClusterRoleBindings();
     } catch (error: any) {
       if (error.errorFields) return;
-      console.error('更新 ClusterRoleBinding YAML 失败:', error);
+
       message.error('❌ 更新 ClusterRoleBinding YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
@@ -452,7 +452,7 @@ export function useClusterRoleBindingPage() {
       await fetchClusterRoleBindings();
     } catch (error: any) {
       if (error.errorFields) return;
-      console.error('创建 ClusterRoleBinding 失败:', error);
+
       message.error('❌ 创建 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
@@ -492,7 +492,7 @@ export function useClusterRoleBindingPage() {
       await fetchClusterRoleBindings();
     } catch (error: any) {
       if (error.errorFields) return;
-      console.error('通过 YAML 创建 ClusterRoleBinding 失败:', error);
+
       message.error('❌ 通过 YAML 创建 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
@@ -522,7 +522,7 @@ export function useClusterRoleBindingPage() {
           message.success('🎉 ClusterRoleBinding 删除成功');
           await fetchClusterRoleBindings();
         } catch (error: any) {
-          console.error('删除 ClusterRoleBinding 失败:', error);
+
           message.error('❌ 删除 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
         }
       },
@@ -584,7 +584,7 @@ export function useClusterRoleBindingPage() {
             selectedRows.value = [];
             await fetchClusterRoleBindings();
           } catch (error: any) {
-            console.error('批量删除 ClusterRoleBinding 失败:', error);
+
             message.error('❌ 批量删除部分 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
             await fetchClusterRoleBindings();
           }

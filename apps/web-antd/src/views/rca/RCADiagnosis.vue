@@ -313,15 +313,26 @@
       </div>
     </div>
 
-
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, onUnmounted, watch } from 'vue';
-import * as echarts from 'echarts';
+// 按需引入echarts，减少打包体积
+import * as echarts from 'echarts/core';
+import { BarChart, LineChart } from 'echarts/charts';
+import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
+
+// 注册必需的组件
+echarts.use([
+  BarChart, LineChart,
+  GridComponent, TooltipComponent, LegendComponent, TitleComponent,
+  CanvasRenderer
+]);
 import { message } from 'ant-design-vue';
 import { MedicineBoxOutlined } from '@ant-design/icons-vue';
+import { Icon } from '@iconify/vue';
 import type {
   QuickDiagnosisResponse,
   EventPatternsResponse,
@@ -342,8 +353,6 @@ const chartType = ref('line');
 const diagnosisLevel = ref('standard');
 const autoRefresh = ref(false);
 const hasInitialData = ref(false);
-
-
 
 const inputData = ref({
   namespace: 'default'
@@ -460,8 +469,6 @@ const getCurrentStep = () => {
   return currentStep.value;
 };
 
-
-
 // 刷新诊断
 const refreshAllDiagnosis = async () => {
   if (!isFormValid.value) {
@@ -491,8 +498,8 @@ const refreshAllDiagnosis = async () => {
     promises.push(
       quickDiagnosis({
         namespace: inputData.value.namespace
-      }).catch(error => {
-        console.error('快速诊断失败:', error);
+      }).catch(_error => {
+        // Quick diagnosis failed
         return null;
       })
     );
@@ -506,8 +513,8 @@ const refreshAllDiagnosis = async () => {
         getEventPatterns({
           namespace: inputData.value.namespace,
           hours: Number(timeRange.value)
-        }).catch(error => {
-          console.error('事件模式分析失败:', error);
+        }).catch(_error => {
+          // Event patterns analysis failed
           return null;
         })
       );
@@ -522,16 +529,16 @@ const refreshAllDiagnosis = async () => {
         getErrorSummary({
           namespace: inputData.value.namespace,
           hours: Number(timeRange.value)
-        }).catch(error => {
-          console.error('错误摘要失败:', error);
+        }).catch(_error => {
+          // Error summary analysis failed
           return null;
         }),
         analyzeRootCause({
           namespace: inputData.value.namespace,
           time_window_hours: Number(timeRange.value),
           metrics: []
-        }).catch(error => {
-          console.error('根因分析失败:', error);
+        }).catch(_error => {
+          // Root cause analysis failed
           return null;
         })
       );
@@ -584,7 +591,7 @@ const refreshAllDiagnosis = async () => {
       message.success('快速诊断完成！');
     }
   } catch (error) {
-    console.error('诊断失败:', error);
+
     let errorMessage = '诊断失败';
     if (error instanceof Error) {
       if (error.message.includes('Network Error')) {
@@ -610,7 +617,7 @@ const initCharts = () => {
     initErrorTrendsChart();
     initErrorCategoriesChart();
   } catch (error) {
-    console.error('图表初始化失败:', error);
+
     message.warning('图表渲染失败，但不影响诊断结果');
   }
 };
@@ -765,8 +772,6 @@ const stopAutoRefresh = () => {
     message.info('已停止自动刷新');
   }
 };
-
-
 
 // 生命周期
 onMounted(() => {

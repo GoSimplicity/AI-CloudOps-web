@@ -276,7 +276,7 @@ export function usePVPage() {
         }
       }
     } catch (error: any) {
-      console.error('获取集群列表失败:', error);
+
       message.error(error?.message || '获取集群列表失败');
     } finally {
       clustersLoading.value = false;
@@ -313,7 +313,7 @@ export function usePVPage() {
       pvs.value = pvsWithClusterId;
       total.value = res?.total || 0;
     } catch (error: any) {
-      console.error('获取PV列表失败:', error);
+
       message.error(error?.message || '获取PV列表失败');
       pvs.value = [];
       total.value = 0;
@@ -347,7 +347,7 @@ export function usePVPage() {
         currentPVDetail.value = response;
       }
     } catch (error: any) {
-      console.error('获取PV详情失败:', error);
+
       message.error(error?.message || '获取PV详情失败');
     } finally {
       detailLoading.value = false;
@@ -370,7 +370,7 @@ export function usePVPage() {
         currentYamlContent.value = response.yaml;
       }
     } catch (error: any) {
-      console.error('获取PV YAML失败:', error);
+
       message.error(error?.message || '获取PV YAML失败');
     }
   };
@@ -405,7 +405,7 @@ export function usePVPage() {
       resetCreateForm();
       await fetchPVs();
     } catch (error: any) {
-      console.error('创建PV失败:', error);
+
       message.error(error?.message || '创建PV失败');
     } finally {
       submitLoading.value = false;
@@ -433,7 +433,7 @@ export function usePVPage() {
       resetCreateYamlForm();
       await fetchPVs();
     } catch (error: any) {
-      console.error('通过YAML创建PV失败:', error);
+
       message.error(error?.message || '通过YAML创建PV失败');
     } finally {
       submitLoading.value = false;
@@ -470,7 +470,7 @@ export function usePVPage() {
       resetEditForm();
       await fetchPVs();
     } catch (error: any) {
-      console.error('更新PV失败:', error);
+
       message.error(error?.message || '更新PV失败');
     } finally {
       submitLoading.value = false;
@@ -499,7 +499,7 @@ export function usePVPage() {
       resetYamlForm();
       await fetchPVs();
     } catch (error: any) {
-      console.error('通过YAML更新PV失败:', error);
+
       message.error(error?.message || '通过YAML更新PV失败');
     } finally {
       submitLoading.value = false;
@@ -528,7 +528,7 @@ export function usePVPage() {
           message.success(`删除PV "${record.name}" 成功`);
           await fetchPVs();
         } catch (error: any) {
-          console.error('删除PV失败:', error);
+
           message.error(error?.message || '删除PV失败');
         }
       },
@@ -555,7 +555,7 @@ export function usePVPage() {
           message.success(`回收PV "${record.name}" 成功`);
           await fetchPVs();
         } catch (error: any) {
-          console.error('回收PV失败:', error);
+
           message.error(error?.message || '回收PV失败');
         }
       },
@@ -594,7 +594,7 @@ export function usePVPage() {
           selectedRows.value = [];
           await fetchPVs();
         } catch (error: any) {
-          console.error('批量删除PV失败:', error);
+
           message.error(error?.message || '批量删除PV失败');
         }
       },

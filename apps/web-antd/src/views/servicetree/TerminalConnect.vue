@@ -143,7 +143,7 @@ const connectWebSocket = (id: string) => {
     ws.value = new WebSocket(wsUrl);
 
     ws.value.onopen = () => {
-      console.log('WebSocket连接已建立');
+
       message.success('终端连接成功');
       resetInactivityTimer();
     };
@@ -152,8 +152,8 @@ const connectWebSocket = (id: string) => {
       terminal.value?.write(event.data);
     };
 
-    ws.value.onerror = (error) => {
-      console.error('WebSocket错误:', error);
+    ws.value.onerror = (_error) => {
+      // Terminal connection error
       message.error('终端连接错误');
       isConnected.value = false;
     };
@@ -165,7 +165,7 @@ const connectWebSocket = (id: string) => {
       }
     };
   } catch (error) {
-    console.error('创建WebSocket失败:', error);
+
     message.error('创建终端连接失败');
     isConnected.value = false;
   }
@@ -212,7 +212,7 @@ onBeforeUnmount(() => {
     try {
       ws.value.close(1000, '用户关闭终端');
     } catch (error) {
-      console.error('关闭WebSocket失败:', error);
+
     }
   }
 
@@ -220,7 +220,7 @@ onBeforeUnmount(() => {
     try {
       terminal.value.dispose();
     } catch (error) {
-      console.error('销毁终端失败:', error);
+
     }
   }
 

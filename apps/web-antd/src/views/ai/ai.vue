@@ -402,7 +402,7 @@ const persistState = () => {
     localStorage.setItem(CHAT_STATE_KEY, JSON.stringify(chatState));
     localStorage.setItem(SESSIONS_KEY, JSON.stringify({ sessions: sessions.value, currentLocalSessionId: currentLocalSessionId.value }));
   } catch (e) {
-    console.warn('持久化失败', e);
+
   }
 };
 
@@ -452,7 +452,7 @@ const loadState = () => {
       createNewSession(true);
     }
   } catch (e) {
-    console.warn('加载持久化状态失败', e);
+
     initChatMessages();
   }
 };
@@ -511,7 +511,7 @@ const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
       
       // 指数退避
       const delay = baseDelay * Math.pow(2, attempt - 1);
-      console.log(`重试第 ${attempt} 次，${delay}ms 后重试...`);
+
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -523,7 +523,6 @@ const handleApiError = (error, context = '') => {
   const errorData = error?.response?.data;
   const errorMsg = errorData?.message || error?.message || '未知错误';
   
-  console.error(`${context} 错误:`, { status, errorData, error });
 
   if (status === 429) {
     showError('请求频率过高，请稍后再试', 3000);
@@ -715,8 +714,6 @@ const stopResize = () => {
   document.removeEventListener('mouseup', stopResize);
 };
 
-
-
 // 初始化聊天记录
 const initChatMessages = () => {
   chatMessages.length = 0;
@@ -772,7 +769,6 @@ const sendMessage = async (value) => {
     content: trimmedValue
   });
 
-
   const aiMessagePlaceholder = {
     content: '',
     type: 'ai',
@@ -800,8 +796,6 @@ const sendMessage = async (value) => {
       queryParams.session_id = sessionId.value;
     }
 
-    console.log('发送查询请求:', queryParams);
-
     // 支持取消
     if (abortController.value) {
       try { abortController.value.abort(); } catch {}
@@ -809,7 +803,6 @@ const sendMessage = async (value) => {
     abortController.value = new AbortController();
     const signal = abortController.value.signal;
     const response = await assistantQuery(queryParams, { signal });
-    console.log('查询响应:', response);
 
     if (response?.answer) {
 
@@ -834,13 +827,12 @@ const sendMessage = async (value) => {
       // 保存/更新会话ID
       if (response.session_id) {
         if (!sessionId.value) {
-          console.log('创建新会话，ID:', response.session_id);
+
           showSuccess('会话已建立');
         }
         sessionId.value = response.session_id;
         isConnected.value = true;
       }
-
 
       chatHistory.value.push({
         role: 'assistant',
@@ -881,14 +873,11 @@ const refreshKnowledge = async () => {
 
   try {
     isRefreshing.value = true;
-    console.log('正在刷新知识库...');
 
     // 使用重试机制
     const response = await retryWithBackoff(async () => {
       return await refreshKnowledgeBase();
     });
-
-    console.log('刷新知识库响应:', response);
 
     if (response?.refreshed !== false) {
       const docsCount = response?.documents_count;
@@ -929,10 +918,10 @@ const clearChat = async () => {
     if (sessionId.value) {
       try {
         const response = await clearAssistantCache();
-        console.log('清除缓存响应:', response);
+
         showSuccess('服务器缓存已清除');
       } catch (error) {
-        console.warn('清除服务器缓存失败:', error);
+
         // 继续清空本地记录
       }
     }
@@ -946,7 +935,7 @@ const clearChat = async () => {
     message.success('聊天记录已清空');
     persistState();
   } catch (error) {
-    console.error('清空聊天错误:', error);
+
     // 即使出错也要清空本地记录
     sessionId.value = '';
     chatHistory.value = [];
@@ -985,7 +974,7 @@ const sendQuickMessage = (text) => {
 \`\`\`javascript
 // JavaScript 代码示例
 function hello(name) {
-  console.log(\`Hello, \${name}!\`);
+
   return "Welcome to AI-CloudOps";
 }
 
@@ -1305,7 +1294,7 @@ const renderMarkdown = (content) => {
       ALLOW_DATA_ATTR: true
     });
   } catch (error) {
-    console.error('Markdown 渲染错误:', error);
+
     // 如果解析失败，返回原始内容（转义HTML）
     return escapeHtml(content).replace(/\n/g, '<br>');
   }
@@ -1429,7 +1418,6 @@ onBeforeUnmount(() => {
   z-index: 9999;
 }
 
-
 .assistant-float-button {
   position: fixed;
   bottom: 80px;
@@ -1499,7 +1487,6 @@ onBeforeUnmount(() => {
   border-left-color: #1f2937;
 }
 
-
 .float-window-overlay {
   position: fixed;
   top: 0;
@@ -1509,7 +1496,6 @@ onBeforeUnmount(() => {
   background: rgba(0, 0, 0, 0.3);
   z-index: 9998;
 }
-
 
 .ai-float-window {
   position: fixed;
@@ -1524,7 +1510,6 @@ onBeforeUnmount(() => {
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
 }
-
 
 .float-window-header {
   background: linear-gradient(135deg, #2d3748, #1a202c);
@@ -1606,7 +1591,6 @@ onBeforeUnmount(() => {
   color: white;
 }
 
-
 .status-bar {
   display: flex;
   justify-content: space-between;
@@ -1645,7 +1629,6 @@ onBeforeUnmount(() => {
   color: #d1d5db;
   font-weight: 500;
 }
-
 
 .mode-switcher {
   display: flex;
@@ -1689,7 +1672,6 @@ onBeforeUnmount(() => {
   font-weight: 500;
 }
 
-
 .mode-info {
   display: flex;
   align-items: center;
@@ -1715,7 +1697,6 @@ onBeforeUnmount(() => {
   border-color: #10b981;
   background: rgba(16, 185, 129, 0.1);
 }
-
 
 .error-banner {
   background: #fef2f2;
@@ -1761,7 +1742,6 @@ onBeforeUnmount(() => {
   background: rgba(239, 68, 68, 0.08);
 }
 
-
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -1781,7 +1761,6 @@ onBeforeUnmount(() => {
   background: rgba(156, 163, 175, 0.3);
   border-radius: 2px;
 }
-
 
 .message {
   margin-bottom: 16px;
@@ -2127,7 +2106,6 @@ onBeforeUnmount(() => {
 .message-action-btn .liked {
   color: #3b82f6;
 }
-
 
 .typing-content {
   background: linear-gradient(135deg, #2d3748, #1a202c);

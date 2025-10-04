@@ -424,7 +424,6 @@
       </a-form>
     </a-modal>
 
-
     <!-- 详情对话框 -->
     <a-modal 
       :open="detailDialogVisible" 
@@ -597,7 +596,6 @@ const formDialog = reactive({
   }
 });
 
-
 // 详情对话框数据
 const detailDialog = reactive({
   form: null as MonitorScrapePool | null
@@ -619,7 +617,6 @@ const formRules = {
     { required: true, message: '请输入远程超时时间', trigger: 'blur' }
   ]
 };
-
 
 const getPoolStatusClass = (record: MonitorScrapePool): string => {
   if (record.support_alert === 1 && record.support_record === 1) return 'status-full';
@@ -685,7 +682,7 @@ const loadScrapePoolList = async (): Promise<void> => {
       updateStats();
     }
   } catch (error: any) {
-    console.error('加载采集池列表失败:', error);
+
     message.error(error.message || '加载采集池列表失败');
   } finally {
     loading.value = false;
@@ -767,7 +764,7 @@ const handleViewScrapePool = async (record: MonitorScrapePool): Promise<void> =>
     detailDialog.form = response;
     detailDialogVisible.value = true;
   } catch (error: any) {
-    console.error('获取采集池详情失败:', error);
+
     message.error(error.message || '获取采集池详情失败');
   }
 };
@@ -793,7 +790,7 @@ const confirmDelete = (record: MonitorScrapePool): void => {
         message.success(`采集池 "${record.name}" 已删除`);
         loadScrapePoolList();
       } catch (error: any) {
-        console.error('删除采集池失败:', error);
+
         message.error(error.message || '删除采集池失败');
       }
     }
@@ -838,11 +835,10 @@ const saveScrapePool = async (): Promise<void> => {
     formDialogVisible.value = false;
     loadScrapePoolList();
   } catch (error: any) {
-    console.error('保存采集池失败:', error);
+
     message.error(error.message || '保存采集池失败');
   }
 };
-
 
 // 重置表单对话框
 const resetFormDialog = (): void => {

@@ -998,7 +998,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
   PlusOutlined,
@@ -1101,9 +1101,6 @@ import {
   getSendLogs
 } from '#/api/core/workorder/workorder_notification';
 
-
-
-
 // 列定义
 const columns = [
   {
@@ -1168,8 +1165,6 @@ const total = ref(0);
 const commentsRef = ref()
 const timelineRef = ref()
 const flowRef = ref()
-
-
 
 // 数据列表
 const instanceList = ref<WorkorderInstanceItem[]>([]);
@@ -1283,7 +1278,6 @@ const detailDialog = reactive({
   processDefinition: null as ProcessDefinition | null
 });
 
-
 // 分配处理人对话框
 const assignDialog = reactive({
   visible: false,
@@ -1330,7 +1324,7 @@ const visualFormData = ref<Record<string, any>>({});
 const dialogProcesses = ref<WorkorderProcessItem[]>([]);
 const processSelectorLoading = ref(false);
 const processSearchKeyword = ref('');
-let processSearchTimeout: any = null;
+let processSearchTimeout: NodeJS.Timeout | null = null;
 
 const processPagination = reactive({
   current: 1,
@@ -1343,13 +1337,19 @@ const processPagination = reactive({
 const dialogUsers = ref<UserListItem[]>([]);
 const userSelectorLoading = ref(false);
 const userSearchKeyword = ref('');
-let userSearchTimeout: any = null;
+let userSearchTimeout: NodeJS.Timeout | null = null;
 
 const userPagination = reactive({
   current: 1,
   pageSize: 20,
   total: 0,
   hasMore: false
+});
+
+// 清理定时器
+onBeforeUnmount(() => {
+  if (processSearchTimeout) clearTimeout(processSearchTimeout);
+  if (userSearchTimeout) clearTimeout(userSearchTimeout);
 });
 
 // 响应式对话框宽度
@@ -1407,7 +1407,6 @@ const getFieldColSpan = (fieldType: string): number => {
       return 12; // 默认半宽
   }
 };
-
 
 const getStatusColor = (status: number): string => {
   const colorMap = {
@@ -1553,7 +1552,6 @@ const getAvatarColor = (name: string | undefined) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-
 // 获取表单设计详情
 const loadFormDesign = async (processId: number): Promise<void> => {
   if (!processId) {
@@ -1580,7 +1578,7 @@ const loadFormDesign = async (processId: number): Promise<void> => {
       initializeVisualFormData();
     }
   } catch (error: any) {
-    console.error('获取表单设计失败:', error);
+
     currentFormDesign.value = null;
   } finally {
     formDesignLoading.value = false;
@@ -1602,7 +1600,7 @@ const initializeVisualFormData = (): void => {
       const existingData = JSON.parse(instanceDialog.form.form_data_json);
       Object.assign(newData, existingData);
     } catch (error) {
-      console.warn('解析现有JSON数据失败:', error);
+
     }
   }
 
@@ -1653,7 +1651,7 @@ const handleModeSwitch = (mode: 'visual' | 'json'): void => {
       instanceDialog.form.form_data_json = JSON.stringify(visualFormData.value, null, 2);
       formDataValidationError.value = '';
     } catch (error) {
-      console.error('转换为JSON失败:', error);
+
       message.error('转换为JSON格式失败');
       return;
     }
@@ -1682,7 +1680,7 @@ const handleVisualFormChange = (): void => {
       instanceDialog.form.form_data_json = JSON.stringify(visualFormData.value, null, 2);
       formDataValidationError.value = '';
     } catch (error) {
-      console.error('同步JSON失败:', error);
+
     }
   }
 };
@@ -1759,7 +1757,7 @@ const loadUsers = async (reset: boolean = false, search?: string): Promise<void>
       }
     }
   } catch (error: any) {
-    console.error('加载用户数据失败:', error);
+
     if (reset) {
       message.error(error.message || '加载用户数据失败');
       users.value = [];
@@ -1813,7 +1811,7 @@ const loadDialogProcesses = async (reset: boolean = false, search?: string): Pro
       }
     }
   } catch (error: any) {
-    console.error('加载流程列表失败:', error);
+
     if (reset) {
       message.error(error.message || '加载流程列表失败');
       dialogProcesses.value = [];
@@ -1858,7 +1856,7 @@ const loadProcesses = async (search?: string): Promise<void> => {
 
     processes.value = allProcesses;
   } catch (error: any) {
-    console.error('加载流程数据失败:', error);
+
     processes.value = [];
   }
 };
@@ -1947,7 +1945,7 @@ const loadDialogUsers = async (reset: boolean = false, search?: string): Promise
       }
     }
   } catch (error: any) {
-    console.error('加载用户列表失败:', error);
+
     if (reset) {
       message.error(error.message || '加载用户列表失败');
       dialogUsers.value = [];
@@ -2034,7 +2032,7 @@ const loadInstances = async () => {
     }
   } catch (error) {
     message.error('加载工单数据失败');
-    console.error('Failed to load instances:', error);
+
   } finally {
     loading.value = false;
   }
@@ -2056,7 +2054,7 @@ const loadStats = async () => {
     stats.processing = processingRes?.total || 0;
     stats.completed = completedRes?.total || 0;
   } catch (error) {
-    console.error('Failed to load stats:', error);
+
     // 如果统计API失败，回退到基于当前页的计算
     updateStatsFromCurrentPage();
   }
@@ -2136,7 +2134,7 @@ const loadTemplates = async (search?: string) => {
       dialogTemplates.value = res.results || [];
     }
   } catch (error: any) {
-    console.error('加载模板失败:', error);
+
     message.error(error.message || '加载模板失败');
   } finally {
     templateSelectorLoading.value = false;
@@ -2201,7 +2199,7 @@ const handleTemplateSubmit = async () => {
 
     message.success('已从模板创建工单，请完善信息后提交');
   } catch (error: any) {
-    console.error('从模板创建工单失败:', error);
+
     message.error(error.message || '从模板创建工单失败');
   }
 };
@@ -2223,8 +2221,6 @@ const handleEditInstance = async (row: WorkorderInstanceItem) => {
         due_date: res.due_date ? new Date(res.due_date) : undefined
       };
 
-
-
       // 重置表单编辑相关状态
       formDataValidationError.value = '';
       formEditMode.value = 'visual';
@@ -2239,7 +2235,7 @@ const handleEditInstance = async (row: WorkorderInstanceItem) => {
     }
   } catch (error) {
     message.error('获取工单详情失败');
-    console.error('Failed to get instance details:', error);
+
   } finally {
     loading.value = false;
   }
@@ -2252,7 +2248,7 @@ const loadAvailableActions = async (instanceId: number, retryCount: number = 0) 
     const actions = await getAvailableActions(instanceId);
     detailDialog.availableActions = actions ? actions.map((action: string) => action.toLowerCase()) : [];
   } catch (error) {
-    console.error('Failed to get available actions:', error);
+
     // 如果是第一次失败且重试次数小于2次，则进行重试
     if (retryCount < 2) {
       setTimeout(() => {
@@ -2312,7 +2308,7 @@ const loadProcessStepsNavigation = async (instance: WorkorderInstanceItem) => {
       }
     }
   } catch (error) {
-    console.error('Failed to load process definition:', error);
+
     detailDialog.previousStep = null;
     detailDialog.nextStep = null;
     detailDialog.allSteps = [];
@@ -2335,7 +2331,7 @@ const loadCurrentStep = async (instanceId: number, instance?: WorkorderInstanceI
 
     // 验证返回的步骤信息与 current_step_id 是否一致
     if (instance?.current_step_id && step?.id && step.id !== instance.current_step_id) {
-      console.warn('Step ID mismatch:', {
+      console.warn('Step ID mismatch detected', {
         expected: instance.current_step_id,
         received: step.id,
         instanceId
@@ -2353,7 +2349,7 @@ const loadCurrentStep = async (instanceId: number, instance?: WorkorderInstanceI
     }
 
     // 记录步骤加载成功的日志
-    console.log('Current step loaded successfully:', {
+    console.log('Step loaded successfully', {
       instanceId,
       stepId: step?.id,
       stepName: step?.name,
@@ -2361,13 +2357,10 @@ const loadCurrentStep = async (instanceId: number, instance?: WorkorderInstanceI
     });
 
   } catch (error) {
-    console.error('Failed to get current step:', error);
 
     // 智能重试逻辑
     if (retryCount < 3) {
       const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // 指数退避，最大5秒
-
-      console.log(`Retrying to load current step in ${retryDelay}ms... (attempt ${retryCount + 1}/3)`);
 
       setTimeout(() => {
         loadCurrentStep(instanceId, instance, retryCount + 1);
@@ -2393,14 +2386,13 @@ const refreshInstanceData = async (instanceId: number) => {
       await loadCurrentStep(instanceId, res);
     }
   } catch (error) {
-    console.error('Failed to refresh instance data:', error);
+
   }
 };
 
 // 步骤状态同步函数 - 在执行操作后调用
-const syncStepStatus = async (instanceId: number, operationType: string) => {
-  console.log(`Syncing step status after ${operationType} operation for instance ${instanceId}`);
-
+const syncStepStatus = async (instanceId: number, _operationType: string) => {
+  // Operation type parameter reserved for future use
   try {
     // 短暂延迟确保后端操作完成
     await new Promise(resolve => setTimeout(resolve, 800));
@@ -2414,10 +2406,8 @@ const syncStepStatus = async (instanceId: number, operationType: string) => {
     // 刷新列表数据
     await loadInstances();
 
-    console.log(`Step status synced successfully after ${operationType}`);
-
   } catch (error) {
-    console.error(`Failed to sync step status after ${operationType}:`, error);
+
     message.warning('操作成功，但状态同步失败，请手动刷新页面查看最新状态');
   }
 };
@@ -2447,7 +2437,7 @@ const loadNotificationLogs = async (instanceId?: number, resetPage = false) => {
       notificationLogsPagination.total = 0;
     }
   } catch (error) {
-    console.error('Failed to load notification logs:', error);
+
     message.error('获取通知记录失败');
     notificationLogs.value = [];
     notificationLogsPagination.total = 0;
@@ -2465,7 +2455,7 @@ const handleViewInstance = async (row: WorkorderInstanceItem) => {
       detailDialog.instance = res;
       detailDialog.visible = true;
 
-      console.log('Instance loaded:', {
+      console.log('Instance detail loaded', {
         id: res.id,
         current_step_id: res.current_step_id,
         status: res.status,
@@ -2481,7 +2471,7 @@ const handleViewInstance = async (row: WorkorderInstanceItem) => {
     }
   } catch (error) {
     message.error('获取工单详情失败');
-    console.error('Failed to get instance details:', error);
+    console.error('Failed to load instance detail', error);
   } finally {
     loading.value = false;
   }
@@ -2618,7 +2608,7 @@ const handleActionWithPermission = async (instance: WorkorderInstanceItem, actio
 
     await callback(instance);
   } catch (error) {
-    console.error('Failed to check action permission:', error);
+
   }
 };
 
@@ -2677,7 +2667,7 @@ const handleSubmitInstance = async (instance: WorkorderInstanceItem) => {
         await syncStepStatus(instance.id, 'submit');
       } catch (error: any) {
         message.error(`提交工单失败: ${error.message || '未知错误'}`);
-        console.error('Failed to submit instance:', error);
+
       } finally {
         loading.value = false;
       }
@@ -2691,8 +2681,6 @@ const showAssignDialog = (instance: WorkorderInstanceItem) => {
   assignDialog.visible = true;
   loadDialogUsers(true);
 };
-
-
 
 const saveAssign = async () => {
   try {
@@ -2715,14 +2703,13 @@ const saveAssign = async () => {
 
     message.success(`工单已分配给 ${assigneeName}`);
 
-
     assignDialog.visible = false;
 
     // 使用新的同步机制
     await syncStepStatus(assignDialog.instanceId, 'assign');
   } catch (error: any) {
     message.error(`分配处理人失败: ${error.message || '未知错误'}`);
-    console.error('Failed to assign instance:', error);
+
   } finally {
     loading.value = false;
   }
@@ -2889,7 +2876,7 @@ const saveActionComment = async () => {
   } catch (error: any) {
     const actionName = getActionDialogTitle();
     message.error(`${actionName}失败: ${error.message || '未知错误'}`);
-    console.error(`Failed to ${actionDialog.type} instance:`, error);
+
   } finally {
     loading.value = false;
   }
@@ -2935,7 +2922,7 @@ const saveApproval = async () => {
               await syncStepStatus(approvalDialog.instanceId, 'approve');
             } catch (error: any) {
               message.error(`审批失败: ${error.message || '未知错误'}`);
-              console.error('Failed to approve instance:', error);
+
             }
           }
         });
@@ -2966,7 +2953,7 @@ const saveApproval = async () => {
     await syncStepStatus(approvalDialog.instanceId, operationType);
   } catch (error: any) {
     message.error(`${approvalDialog.type === 'approve' ? '审批' : '拒绝'}失败: ${error.message || '未知错误'}`);
-    console.error('Failed to process approval:', error);
+
   } finally {
     loading.value = false;
   }
@@ -2996,7 +2983,7 @@ const confirmDelete = (instance: WorkorderInstanceItem) => {
         loadInstances();
       } catch (error: any) {
         message.error(`删除工单失败: ${error.message || '未知错误'}`);
-        console.error('Failed to delete instance:', error);
+
       } finally {
         loading.value = false;
       }
@@ -3051,7 +3038,7 @@ const saveInstance = async () => {
     }
 
     loading.value = true;
-    console.log(instanceDialog);
+
     if (instanceDialog.isEdit && instanceDialog.form.id) {
       const updateData: UpdateWorkorderInstanceReq = {
         id: instanceDialog.form.id,
@@ -3090,7 +3077,7 @@ const saveInstance = async () => {
   } catch (error: any) {
     const action = instanceDialog.isEdit ? '更新' : '创建';
     message.error(`${action}工单失败: ${error.message || '未知错误'}`);
-    console.error(`Failed to ${instanceDialog.isEdit ? 'update' : 'create'} instance:`, error);
+
   } finally {
     loading.value = false;
   }
@@ -3132,7 +3119,7 @@ const loadSelectorsForEdit = async (): Promise<void> => {
     // 确保当前选中的处理人在用户列表中
     await ensureCurrentAssigneeInList();
   } catch (error) {
-    console.error('加载编辑模式选择器信息失败:', error);
+
   }
 };
 
@@ -3148,8 +3135,6 @@ const ensureCurrentAssigneeInList = async (): Promise<void> => {
   const isAssigneeInList = dialogUsers.value.some((user: UserListItem) =>
     user.id === Number(currentAssigneeId)
   );
-
-
 
   if (!isAssigneeInList) {
     try {
@@ -3169,7 +3154,7 @@ const ensureCurrentAssigneeInList = async (): Promise<void> => {
         }
       }
     } catch (error) {
-      console.error('Failed to ensure current assignee in list:', error);
+
     }
   }
 };
@@ -3184,7 +3169,7 @@ onMounted(async () => {
       loadProcesses() // 初始化加载流程数据
     ]);
   } catch (error: any) {
-    console.error('初始化数据加载失败:', error);
+
     message.error(`初始化数据加载失败: ${error.message || '未知错误'}, 请刷新页面重试`);
   } finally {
     loading.value = false;

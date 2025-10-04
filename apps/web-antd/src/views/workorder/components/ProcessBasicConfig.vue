@@ -232,7 +232,7 @@ const loadForms = async (search?: string): Promise<void> => {
       forms.value = res.items || [];
     }
   } catch (error: any) {
-    console.error('Failed to load forms:', error);
+
     forms.value = [];
   } finally {
     formSelectorLoading.value = false;
@@ -256,7 +256,7 @@ const loadCategories = async (search?: string): Promise<void> => {
       categories.value = res.items || [];
     }
   } catch (error: any) {
-    console.error('Failed to load categories:', error);
+
     categories.value = [];
   } finally {
     categorySelectorLoading.value = false;

@@ -225,7 +225,7 @@ export function useNodePage() {
       }
     } catch (err) {
       message.error('获取集群列表失败');
-      console.error(err);
+
     } finally {
       clustersLoading.value = false;
     }
@@ -261,7 +261,7 @@ export function useNodePage() {
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取节点列表失败');
-      console.error(err);
+
     } finally {
       loading.value = false;
     }
@@ -291,7 +291,7 @@ export function useNodePage() {
       currentNodeDetail.value = nodeDetailWithDefaults;
     } catch (err) {
       message.error('获取节点详情失败');
-      console.error(err);
+
       currentNodeDetail.value = {
         ...record,
         cluster_id: clusterId,
@@ -343,7 +343,7 @@ export function useNodePage() {
       await fetchNodes();
     } catch (err: unknown) {
       message.error('标签保存失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -379,7 +379,7 @@ export function useNodePage() {
         taintsToDelete: [],
       };
       isTaintModalVisible.value = true;
-      console.error('获取污点信息失败:', err);
+
     }
   };
 
@@ -452,7 +452,7 @@ export function useNodePage() {
       await fetchNodes();
     } catch (err: unknown) {
       message.error('污点更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -479,7 +479,7 @@ export function useNodePage() {
       return true;
     } catch (err) {
       message.error('YAML配置验证失败');
-      console.error(err);
+
       return false;
     }
   };
@@ -525,7 +525,7 @@ export function useNodePage() {
           await fetchNodes();
         } catch (err) {
           message.error(`${action}节点调度失败`);
-          console.error(err);
+
         }
       },
     });
@@ -571,12 +571,11 @@ export function useNodePage() {
         return;
       }
       message.error('节点驱逐失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
   };
-
 
   const removeLabelField = (key: string) => {
     // 覆盖式更新：直接从当前标签中删除即可，提交时会完全覆盖
@@ -603,7 +602,7 @@ export function useNodePage() {
           await fetchNodes();
         } catch (err) {
           message.error(`批量${operation}失败`);
-          console.error(err);
+
         }
       },
     });

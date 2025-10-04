@@ -338,7 +338,7 @@ export function useDeploymentPage() {
       }
     } catch (err) {
       message.error('获取集群列表失败');
-      console.error(err);
+
     } finally {
       clustersLoading.value = false;
     }
@@ -367,7 +367,7 @@ export function useDeploymentPage() {
       namespacesTotal.value = res?.total || 0;
     } catch (err) {
       message.error('获取命名空间列表失败');
-      console.error(err);
+
     } finally {
       namespacesLoading.value = false;
     }
@@ -403,7 +403,7 @@ export function useDeploymentPage() {
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取 Deployment 列表失败');
-      console.error(err);
+
     } finally {
       loading.value = false;
     }
@@ -435,7 +435,7 @@ export function useDeploymentPage() {
       currentDeploymentDetail.value = processedDetail;
     } catch (err) {
       message.error('获取 Deployment 详情失败');
-      console.error(err);
+
       // 错误时也要处理格式转换
       const fallbackDetail = { 
         ...record, 
@@ -468,7 +468,7 @@ export function useDeploymentPage() {
       isYamlModalVisible.value = true;
     } catch (err) {
       message.error('获取 Deployment YAML 失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -507,7 +507,7 @@ export function useDeploymentPage() {
         return;
       }
       message.error('Deployment YAML 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -570,7 +570,7 @@ export function useDeploymentPage() {
         return;
       }
       message.error('Deployment 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -597,7 +597,7 @@ export function useDeploymentPage() {
         return;
       }
       message.error('Deployment YAML 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -657,7 +657,7 @@ export function useDeploymentPage() {
         return;
       }
       message.error('Deployment 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -682,7 +682,7 @@ export function useDeploymentPage() {
           await fetchDeployments();
         } catch (err) {
           message.error('Deployment 删除失败');
-          console.error(err);
+
         }
       },
     });
@@ -707,7 +707,7 @@ export function useDeploymentPage() {
           await fetchDeployments();
         } catch (err) {
           message.error('Deployment 重启失败');
-          console.error(err);
+
         }
       },
     });
@@ -754,7 +754,7 @@ export function useDeploymentPage() {
         return;
       }
       message.error('Deployment 伸缩失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -779,7 +779,7 @@ export function useDeploymentPage() {
           await fetchDeployments();
         } catch (err) {
           message.error('Deployment 暂停失败');
-          console.error(err);
+
         }
       },
     });
@@ -803,7 +803,7 @@ export function useDeploymentPage() {
           await fetchDeployments();
         } catch (err) {
           message.error('Deployment 恢复失败');
-          console.error(err);
+
         }
       },
     });
@@ -822,7 +822,7 @@ export function useDeploymentPage() {
       isPodModalVisible.value = true;
     } catch (err) {
       message.error('获取 Pod 列表失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -847,7 +847,7 @@ export function useDeploymentPage() {
       isHistoryModalVisible.value = true;
     } catch (err) {
       message.error('获取版本历史失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -912,7 +912,7 @@ export function useDeploymentPage() {
           await fetchDeployments();
         } catch (err) {
           message.error(`批量${operation}失败`);
-          console.error(err);
+
         }
       },
     });
@@ -1024,7 +1024,7 @@ export function useDeploymentPage() {
       message.success('YAML 格式化成功');
     } catch (error: any) {
       message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
-      console.error('YAML 格式化错误:', error);
+
     }
   };
 
@@ -1101,7 +1101,7 @@ export function useDeploymentPage() {
         width: 600,
         centered: true,
       });
-      console.error('YAML 验证错误:', error);
+
     }
   };
 
@@ -1144,7 +1144,7 @@ export function useDeploymentPage() {
       message.success('YAML 格式化成功');
     } catch (error: any) {
       message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
-      console.error('YAML 格式化错误:', error);
+
     }
   };
 
@@ -1218,7 +1218,7 @@ export function useDeploymentPage() {
         width: 600,
         centered: true,
       });
-      console.error('YAML 验证错误:', error);
+
     }
   };
 

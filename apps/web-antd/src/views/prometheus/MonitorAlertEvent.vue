@@ -291,7 +291,6 @@ const detailDialog = reactive({
   form: null as MonitorAlertEvent | null
 });
 
-
 const getAlertStatusClass = (record: MonitorAlertEvent): string => {
   switch (record.status) {
     case MonitorAlertEventStatus.FIRING: return 'status-firing';
@@ -381,7 +380,7 @@ const fetchResources = async (): Promise<void> => {
       updateStats();
     }
   } catch (error: any) {
-    console.error('加载告警事件列表失败:', error);
+
     message.error(error.message || '加载告警事件列表失败');
   } finally {
     loading.value = false;
@@ -445,8 +444,6 @@ const showDetailDialog = (record: MonitorAlertEvent): void => {
   detailDialogVisible.value = true;
 };
 
-
-
 // 处理屏蔽告警
 const handleSilence = async (record: MonitorAlertEvent) => {
   Modal.confirm({
@@ -470,7 +467,7 @@ const handleSilence = async (record: MonitorAlertEvent) => {
         detailDialogVisible.value = false;
       } catch (error: any) {
         message.error(error.message || `屏蔽告警 "${record.alert_name}" 失败`);
-        console.error(error);
+
       } finally {
         loading.value = false;
       }
@@ -500,7 +497,7 @@ const handleClaim = async (record: MonitorAlertEvent) => {
         detailDialogVisible.value = false;
       } catch (error: any) {
         message.error(error.message || `认领告警 "${record.alert_name}" 失败`);
-        console.error(error);
+
       } finally {
         loading.value = false;
       }
@@ -529,7 +526,7 @@ const handleCancelSilence = async (record: MonitorAlertEvent) => {
         fetchResources();
       } catch (error: any) {
         message.error(error.message || `取消屏蔽告警 "${record.alert_name}" 失败`);
-        console.error(error);
+
       } finally {
         loading.value = false;
       }
@@ -564,8 +561,6 @@ onMounted(() => {
   gap: 12px;
   align-items: center;
 }
-
-
 
 .search-filters {
   display: flex;
@@ -778,8 +773,6 @@ onMounted(() => {
     width: 100%;
     min-width: auto;
   }
-
-
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;

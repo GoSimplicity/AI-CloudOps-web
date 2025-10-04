@@ -1061,8 +1061,6 @@ const logsPagination = reactive({
   size: 'small' as const
 });
 
-
-
 // 对话框状态
 const notificationDialogVisible = ref(false);
 const detailDialogVisible = ref(false);
@@ -1279,7 +1277,6 @@ const getTriggerTypeName = (type: string): string => {
   return typeMap[type] || type;
 };
 
-
 const getChannelColor = (channel: string): string => {
   const colorMap: Record<string, string> = {
     [NotificationChannel.FEISHU]: 'green',
@@ -1361,8 +1358,6 @@ const getFormName = (templateId?: number): string => {
   return template ? template.name : `模板 ${templateId}`;
 };
 
-
-
 // 实现 getAvailableChannels 函数
 const getAvailableChannels = (): string[] => {
   return getAllNotificationChannels();
@@ -1401,7 +1396,7 @@ const loadProcesses = async (reset = false): Promise<void> => {
       processPagination.hasMore = newItems.length >= processPagination.pageSize;
     }
   } catch (error) {
-    console.error('Failed to load processes:', error);
+
   } finally {
     processLoading.value = false;
   }
@@ -1439,7 +1434,7 @@ const loadTemplates = async (reset = false): Promise<void> => {
       templatePagination.hasMore = newItems.length >= templatePagination.pageSize;
     }
   } catch (error) {
-    console.error('Failed to load templates:', error);
+
   } finally {
     templateLoading.value = false;
   }
@@ -1477,7 +1472,7 @@ const loadCategories = async (reset = false): Promise<void> => {
       categoryPagination.hasMore = newItems.length >= categoryPagination.pageSize;
     }
   } catch (error) {
-    console.error('Failed to load categories:', error);
+
   } finally {
     categoryLoading.value = false;
   }
@@ -1515,7 +1510,7 @@ const loadUsers = async (reset = false): Promise<void> => {
       userPagination.hasMore = newItems.length >= userPagination.pageSize;
     }
   } catch (error) {
-    console.error('Failed to load users:', error);
+
   } finally {
     userLoading.value = false;
   }
@@ -1554,10 +1549,6 @@ const handleCategoryScroll = (e: Event): void => {
     }
   }
 };
-
-
-
-
 
 // 搜索和过滤
 const handleSearch = (): void => {
@@ -1632,7 +1623,7 @@ const loadNotifications = async (): Promise<void> => {
     }
   } catch (error) {
     message.error('加载通知配置失败');
-    console.error('Failed to load notifications:', error);
+
   } finally {
     loading.value = false;
   }
@@ -1667,7 +1658,7 @@ const loadSendLogs = async (notificationId: number): Promise<void> => {
     }
   } catch (error) {
     message.error('加载发送记录失败');
-    console.error('Failed to load send logs:', error);
+
   } finally {
     logsLoading.value = false;
   }
@@ -1751,7 +1742,7 @@ const handleViewNotification = async (record: Notification): Promise<void> => {
     }
   } catch (error) {
     message.error('获取通知配置详情失败');
-    console.error('Failed to get notification detail:', error);
+
   }
 };
 
@@ -1771,7 +1762,7 @@ const handleStatusToggle = async (record: Notification & { statusLoading?: boole
     message.success(`通知配置已${statusText}`);
   } catch (error) {
     message.error('更新状态失败');
-    console.error('Failed to update status:', error);
+
   } finally {
     record.statusLoading = false;
   }
@@ -1854,7 +1845,7 @@ const handleTestSend = (record: Notification): void => {
         }
         
         message.error(errorMessage);
-        console.error('Failed to send test notification:', error);
+
       }
     }
   });
@@ -1931,7 +1922,7 @@ const handleDuplicateNotification = async (record: Notification): Promise<void> 
     }
     
     message.error(errorMessage);
-    console.error('Failed to duplicate notification:', error);
+
   }
 };
 
@@ -1992,7 +1983,7 @@ const handleDeleteNotification = (record: Notification): void => {
         }
         
         message.error(errorMessage);
-        console.error('Failed to delete notification:', error);
+
       }
     }
   });
@@ -2143,13 +2134,11 @@ const saveNotification = async (): Promise<void> => {
     }
     
     message.error(errorMessage);
-    console.error('Failed to save notification:', error);
+
   } finally {
     notificationDialog.saving = false;
   }
 };
-
-
 
 // 对话框关闭
 const closeNotificationDialog = (): void => {
@@ -2249,7 +2238,7 @@ const saveManualSend = async (): Promise<void> => {
     }
     
     message.error(errorMessage);
-    console.error('Failed to send manual notification:', error);
+
   } finally {
     manualSendDialog.saving = false;
   }
@@ -2330,8 +2319,6 @@ onMounted(() => {
 .reset-btn {
   flex-shrink: 0;
 }
-
-
 
 .table-container {
   margin-bottom: 24px;
@@ -2824,8 +2811,6 @@ onMounted(() => {
     transform: translateY(0);
   }
 }
-
-
 
 /* 表格加载优化 */
 .table-container :deep(.ant-table-placeholder) {

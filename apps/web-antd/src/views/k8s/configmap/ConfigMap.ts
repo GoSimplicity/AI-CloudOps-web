@@ -271,7 +271,7 @@ export function useConfigMapPage() {
       }
     } catch (err) {
       message.error('获取集群列表失败');
-      console.error(err);
+
     } finally {
       clustersLoading.value = false;
     }
@@ -300,7 +300,7 @@ export function useConfigMapPage() {
       namespacesTotal.value = res?.total || 0;
     } catch (err) {
       message.error('获取命名空间列表失败');
-      console.error(err);
+
     } finally {
       namespacesLoading.value = false;
     }
@@ -342,7 +342,7 @@ export function useConfigMapPage() {
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取 ConfigMap 列表失败');
-      console.error(err);
+
     } finally {
       loading.value = false;
     }
@@ -383,7 +383,7 @@ export function useConfigMapPage() {
       currentConfigMapDetail.value = processedDetail;
     } catch (err) {
       message.error('获取 ConfigMap 详情失败');
-      console.error(err);
+
       // 错误时也要处理格式转换
       try {
         const fallbackDetail = { 
@@ -434,7 +434,7 @@ export function useConfigMapPage() {
       isYamlModalVisible.value = true;
     } catch (err) {
       message.error('获取 ConfigMap YAML 失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -470,7 +470,7 @@ export function useConfigMapPage() {
         return;
       }
       message.error('❌ ConfigMap YAML 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -521,7 +521,7 @@ export function useConfigMapPage() {
           }
           result[key] = bytes;
         } catch (error) {
-          console.error(`转换二进制数据失败: ${key}`, error);
+
           // 跳过无效的Base64数据
         }
       }
@@ -552,7 +552,7 @@ export function useConfigMapPage() {
             result[key] = value;
           }
         } catch (error) {
-          console.error(`转换二进制数据到表单失败: ${key}`, error);
+
           result[key] = String(value); // 降级处理
         }
       }
@@ -588,7 +588,7 @@ export function useConfigMapPage() {
         return;
       }
       message.error('❌ ConfigMap 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -616,7 +616,7 @@ export function useConfigMapPage() {
         return;
       }
       message.error('❌ ConfigMap YAML 创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -669,7 +669,7 @@ export function useConfigMapPage() {
         return;
       }
       message.error('❌ ConfigMap 更新失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -699,7 +699,7 @@ export function useConfigMapPage() {
           await fetchConfigMaps();
         } catch (err) {
           message.error('❌ ConfigMap 删除失败');
-          console.error(err);
+
         }
       },
     });
@@ -762,7 +762,7 @@ export function useConfigMapPage() {
           await fetchConfigMaps();
         } catch (err) {
           message.error(`❌ 批量${operation}失败`);
-          console.error(err);
+
         }
       },
     });

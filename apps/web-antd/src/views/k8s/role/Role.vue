@@ -1054,7 +1054,7 @@ const getRulesFromRecord = (record: any): any[] => {
         return config.rules;
       }
     } catch (error) {
-      console.warn('Failed to parse role rules from annotations:', error);
+
     }
   }
   
@@ -1090,7 +1090,7 @@ const formatAge = (age: string, creationTimestamp?: string): string => {
       return '刚刚';
     }
   } catch (error) {
-    console.warn('Failed to calculate age:', error);
+
     return '-';
   }
 };

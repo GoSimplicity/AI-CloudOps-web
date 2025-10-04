@@ -1427,7 +1427,7 @@ const rollbackToVersion = (revision: number) => {
           await fetchDeployments();
         } catch (err) {
           message.error(`Deployment 回滚到版本 ${revision} 失败`);
-          console.error(err);
+
         }
       },
   });

@@ -145,7 +145,7 @@ export function useClusterPage() {
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取集群失败');
-      console.error(err);
+
     } finally {
       loading.value = false;
     }
@@ -217,7 +217,7 @@ export function useClusterPage() {
         }
       }
     } catch (err) {
-      console.warn('获取集群详情失败，将使用列表数据:', err);
+
       message.warning('获取集群详细信息失败，部分字段可能不完整');
       // 继续使用列表数据，至少可以进行基本编辑
     } finally {
@@ -263,7 +263,7 @@ export function useClusterPage() {
         return;
       }
       message.error(isEdit.value ? '集群更新失败' : '集群创建失败');
-      console.error(err);
+
     } finally {
       submitLoading.value = false;
     }
@@ -294,7 +294,7 @@ export function useClusterPage() {
       
       return resourceChanged || namespaceChanged;
     } catch (error) {
-      console.warn('检查危险操作失败，跳过确认:', error);
+
       return false;
     }
   };
@@ -341,7 +341,7 @@ export function useClusterPage() {
           await fetchClusters();
         } catch (err) {
           message.error('集群删除失败');
-          console.error(err);
+
         }
       },
     });
@@ -378,7 +378,7 @@ export function useClusterPage() {
           await fetchClusters();
         } catch (err) {
           message.error('批量删除失败');
-          console.error(err);
+
         }
       },
     });
@@ -391,7 +391,7 @@ export function useClusterPage() {
       await fetchClusters();
     } catch (err) {
       message.error('刷新失败');
-      console.error(err);
+
     }
   };
 
@@ -412,7 +412,7 @@ export function useClusterPage() {
       currentClusterDetail.value = res || record;
     } catch (err) {
       message.error('获取集群详情失败');
-      console.error(err);
+
       currentClusterDetail.value = record; // 使用列表中的数据作为fallback
     } finally {
       detailLoading.value = false;
@@ -444,7 +444,7 @@ export function useClusterPage() {
         }
       }
     } catch (error) {
-      console.warn('获取KubeConfig详情失败，使用列表数据:', error);
+
       // 继续显示，使用列表中的数据（可能不完整）
     } finally {
       kubeConfigLoading.value = false;
@@ -466,7 +466,7 @@ export function useClusterPage() {
       message.success('KubeConfig 配置已复制到剪贴板');
     } catch (err) {
       message.error('复制失败，请手动复制');
-      console.error(err);
+
     }
   };
 
@@ -493,7 +493,7 @@ export function useClusterPage() {
       message.success(`KubeConfig 配置已下载为 ${filename}`);
     } catch (err) {
       message.error('下载失败');
-      console.error(err);
+
     }
   };
 
@@ -508,7 +508,7 @@ export function useClusterPage() {
       message.success('KubeConfig 配置已复制到剪贴板');
     } catch (err) {
       message.error('复制失败，请手动复制');
-      console.error(err);
+
     }
   };
 
@@ -535,7 +535,7 @@ export function useClusterPage() {
       message.success(`KubeConfig 配置已下载为 ${filename}`);
     } catch (err) {
       message.error('下载失败');
-      console.error(err);
+
     }
   };
 
@@ -624,7 +624,7 @@ export function useClusterPage() {
       return parts.join(' | ');
       
     } catch (error) {
-      console.warn('解析KubeConfig预览失败:', error);
+
       // 降级方案：显示前50个字符
       return kubeConfigContent.length > 50 
         ? kubeConfigContent.substring(0, 47) + '...' 
