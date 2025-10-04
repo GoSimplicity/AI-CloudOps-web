@@ -1223,6 +1223,10 @@ const {
   
   // pagination operations
   handlePageChange,
+  onSearch,
+  handleFilterChange,
+  handleClusterChange,
+  handleClusterDropdownScroll,
   
   // form field operations
   addPortField,
@@ -1276,47 +1280,10 @@ const addNewSelector = () => {
   }
 };
 
-const onSearch = () => {
-  currentPage.value = 1;
-  fetchServices();
-};
-
-const handleFilterChange = () => {
-  currentPage.value = 1;
-  fetchServices();
-};
-
-const handleClusterChange = () => {
-  currentPage.value = 1;
-  clearNamespaces();
-  clearServices();
-  
-  if (filterClusterId.value) {
-    const selectedCluster = clusters.value.find(c => c.id === filterClusterId.value);
-    if (selectedCluster) {
-      message.info(`已切换到集群: ${selectedCluster.name}`);
-    }
-    fetchNamespaces(true); // 重置命名空间分页
-    fetchServices();
-  } else {
-    message.info('已清空 Service 列表，请选择集群查看 Service');
-  }
-};
-
+// 表格分页变化处理
 const handleTableChange = (pagination: { current?: number; pageSize?: number }) => {
   if (pagination) {
     handlePageChange(pagination.current || currentPage.value, pagination.pageSize);
-  }
-};
-
-// 处理集群下拉选择的滚动事件
-const handleClusterDropdownScroll = (e: Event) => {
-  const { target } = e;
-  if (target && 'scrollTop' in target && 'scrollHeight' in target && 'clientHeight' in target) {
-    const scrollTarget = target as HTMLElement;
-    if (scrollTarget.scrollTop + scrollTarget.clientHeight >= scrollTarget.scrollHeight - 5) {
-      loadMoreClusters();
-    }
   }
 };
 

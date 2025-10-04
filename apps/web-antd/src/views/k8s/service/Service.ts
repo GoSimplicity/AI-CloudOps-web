@@ -364,6 +364,9 @@ export function useServicePage() {
       loading.value = true;
       const params: GetServiceListReq = {
         cluster_id: filterClusterId.value,
+        page: currentPage.value,
+        size: pageSize.value,
+        search: searchText.value || undefined,
         namespace: filterNamespace.value || undefined,
         type: filterType.value || undefined,
         labels: Object.keys(filterLabels.value).length > 0 ? filterLabels.value : undefined,
@@ -783,6 +786,47 @@ export function useServicePage() {
     await fetchServices();
   };
 
+  // 搜索处理
+  const onSearch = () => {
+    currentPage.value = 1; // 搜索时重置到第一页
+    fetchServices();
+  };
+
+  // 筛选条件变化处理
+  const handleFilterChange = () => {
+    currentPage.value = 1; // 筛选时重置到第一页
+    fetchServices();
+  };
+
+  // 集群变化处理
+  const handleClusterChange = () => {
+    currentPage.value = 1;
+    clearNamespaces();
+    clearServices();
+    
+    if (filterClusterId.value) {
+      const selectedCluster = clusters.value.find(c => c.id === filterClusterId.value);
+      if (selectedCluster) {
+        message.info(`已切换到集群: ${selectedCluster.name}`);
+      }
+      fetchNamespaces(true); // 重置命名空间分页
+      fetchServices();
+    } else {
+      message.info('已清空 Service 列表，请选择集群查看 Service');
+    }
+  };
+
+  // 处理集群下拉选择的滚动事件
+  const handleClusterDropdownScroll = (e: Event) => {
+    const { target } = e;
+    if (target && 'scrollTop' in target && 'scrollHeight' in target && 'clientHeight' in target) {
+      const scrollTarget = target as HTMLElement;
+      if (scrollTarget.scrollTop + scrollTarget.clientHeight >= scrollTarget.scrollHeight - 5) {
+        loadMoreClusters();
+      }
+    }
+  };
+
   // 编辑表单辅助变量
   const newEditLabelKey = ref('');
   const newEditSelectorKey = ref('');
@@ -1005,6 +1049,10 @@ export function useServicePage() {
     // pagination operations  
     resetClusters,
     handlePageChange,
+    onSearch,
+    handleFilterChange,
+    handleClusterChange,
+    handleClusterDropdownScroll,
     
     // form field operations
     addPortField,

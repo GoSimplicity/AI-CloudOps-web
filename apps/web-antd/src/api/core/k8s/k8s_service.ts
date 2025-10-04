@@ -120,20 +120,13 @@ export interface K8sServiceYaml {
  * GetServiceListReq Service列表请求
  */
 export interface GetServiceListReq {
+  page?: number;                        // 页码
+  size?: number;                        // 每页条数
   cluster_id: number;                   // 集群ID
   namespace?: string;                   // 命名空间
+  search?: string;                      // Service名称
   type?: string;                        // Service类型
   labels?: Record<string, string>;      // 标签
-  [key: string]: any;                   // 兼容分页等其它参数
-}
-
-/**
- * GetServiceListRes Service列表响应
- */
-export interface GetServiceListRes {
-  items: K8sService[];                  // Service列表
-  total?: number;                       // 总数
-  [key: string]: any;                   // 兼容其它字段
 }
 
 /**
@@ -224,7 +217,7 @@ export interface UpdateResourceByYamlReq {
  * 获取Service列表
  */
 export async function getServiceListApi(cluster_id: number, params: GetServiceListReq) {
-  return requestClient.get<GetServiceListRes>(`/k8s/service/${cluster_id}/list`, { params });
+  return requestClient.get(`/k8s/service/${cluster_id}/list`, { params });
 }
 
 /**
