@@ -15,6 +15,49 @@
   transition: all 0.2s ease;
 }
 
+/* ConfigMap 操作按钮样式 - 与Deployment风格统一 */
+/* 查看详情按钮 - 蓝色主题 */
+.configmap-table .ant-btn[title*="查看详情"] {
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+  border-color: #91d5ff;
+  color: #1890ff;
+}
+
+.configmap-table .ant-btn[title*="查看详情"]:hover {
+  background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
+  border-color: #69c0ff;
+  color: #096dd9;
+  box-shadow: 0 6px 16px rgba(24, 144, 255, 0.25);
+}
+
+/* YAML 操作按钮 - 紫色主题 */
+.configmap-table .ant-btn[title*="YAML"] {
+  background: linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%);
+  border-color: #d3adf7;
+  color: #722ed1;
+}
+
+.configmap-table .ant-btn[title*="YAML"]:hover {
+  background: linear-gradient(135deg, #efdbff 0%, #d3adf7 100%);
+  border-color: #b37feb;
+  color: #531dab;
+  box-shadow: 0 6px 16px rgba(114, 46, 209, 0.25);
+}
+
+/* 编辑按钮 - 金色主题 */
+.configmap-table .ant-btn[title*="编辑"] {
+  background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
+  border-color: #ffe58f;
+  color: #faad14;
+}
+
+.configmap-table .ant-btn[title*="编辑"]:hover {
+  background: linear-gradient(135deg, #fff1b8 0%, #ffe58f 100%);
+  border-color: #ffd666;
+  color: #d48806;
+  box-shadow: 0 6px 16px rgba(250, 173, 20, 0.25);
+}
+
 /* ConfigMap 数据项统计显示 */
 .configmap-data-stats {
   display: flex;
@@ -334,3 +377,5 @@
 .configmap-table .ant-spin-nested-loading > div > .ant-spin .ant-spin-dot-item {
   background-color: #1677ff;
 }
+
+/* ConfigMap页面已继承k8s-common.css中的YAML工具栏样式 */

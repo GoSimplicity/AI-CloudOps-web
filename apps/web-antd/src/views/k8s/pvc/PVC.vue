@@ -295,11 +295,41 @@
           </div>
         </template>
 
-        <template #created_at="{ text, record }">
-          <div>
-            <div>{{ text }}</div>
-            <small style="color: #8c8c8c;">{{ record.age }}</small>
+        <template #annotations="{ text }">
+          <div class="k8s-annotations-display">
+            <template v-if="Array.isArray(text)">
+              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">{{ text.length }} 个注解</a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else-if="text && typeof text === 'object'">
+              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">{{ Object.keys(text).length }} 个注解</a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else>
+              <span class="k8s-no-data">-</span>
+            </template>
           </div>
+        </template>
+
+        <template #uid="{ text }">
+          <a-tooltip v-if="text" :title="text">
+            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: #666;">
+              {{ text.substring(0, 8) }}...
+            </span>
+          </a-tooltip>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
+        <template #createdAt="{ text }">
+          <div v-if="text" style="font-size: 12px; color: #666;">
+            <div>{{ formatDateTime(text) }}</div>
+            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+          </div>
+          <span v-else class="k8s-no-data">-</span>
         </template>
 
         <template #actions="{ record }">
@@ -820,6 +850,7 @@ import {
   ContainerOutlined,
 } from '@ant-design/icons-vue';
 import { usePVCPage } from './PVC';
+import { formatDateTime, getRelativeTime } from '../shared/utils';
 
 const {
   // state
@@ -935,16 +966,18 @@ const {
 } = usePVCPage();
 
 const columns = [
-  { title: 'PVC名称', dataIndex: 'name', key: 'name', width: '12%', slots: { customRender: 'name' } },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '8%', slots: { customRender: 'namespace' } },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', slots: { customRender: 'status' } },
-  { title: '容量信息', dataIndex: 'capacity', key: 'capacity', width: '12%', slots: { customRender: 'capacity' } },
-  { title: '访问模式', dataIndex: 'access_modes', key: 'access_modes', width: '10%', slots: { customRender: 'access_modes' } },
-  { title: '存储类', dataIndex: 'storage_class', key: 'storage_class', width: '10%', slots: { customRender: 'storage_class' } },
-  { title: '绑定PV', dataIndex: 'volume_name', key: 'volume_name', width: '10%', slots: { customRender: 'volume_name' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '12%', slots: { customRender: 'labels' } },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: '10%', slots: { customRender: 'created_at' } },
-  { title: '操作', key: 'actions', width: '18%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: 'PVC名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left', slots: { customRender: 'name' } },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true, slots: { customRender: 'namespace' } },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center', slots: { customRender: 'status' } },
+  { title: '容量信息', dataIndex: 'capacity', key: 'capacity', width: 120, align: 'center', slots: { customRender: 'capacity' } },
+  { title: '访问模式', dataIndex: 'access_modes', key: 'access_modes', width: 140, slots: { customRender: 'access_modes' } },
+  { title: '存储类', dataIndex: 'storage_class', key: 'storage_class', width: 130, ellipsis: true, slots: { customRender: 'storage_class' } },
+  { title: '绑定PV', dataIndex: 'volume_name', key: 'volume_name', width: 150, ellipsis: true, slots: { customRender: 'volume_name' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
+  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 // Pod列表表格列定义

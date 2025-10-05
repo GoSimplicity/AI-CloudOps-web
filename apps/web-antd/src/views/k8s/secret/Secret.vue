@@ -128,7 +128,7 @@
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
-            placeholder="🔍 搜索 Secret 名称" 
+            placeholder="搜索 Secret 名称" 
             class="k8s-search-input" 
             @pressEnter="onSearch"
             @input="onSearch"
@@ -220,7 +220,7 @@
         }"
         @change="handleTableChange"
         class="k8s-table secret-table"
-        :scroll="{ x: 1600 }"
+        :scroll="{ x: 1240 }"
       >
         <template #type="{ record }">
           <a-tag 
@@ -231,18 +231,18 @@
           </a-tag>
         </template>
 
-        <template #data_count="{ record }">
-          <a-tag color="cyan">{{ Object.keys(parseJsonField(record.data, {})).length }} 项</a-tag>
+        <template #age="{ record }">
+          <span class="k8s-age-display">{{ formatK8sAge(record.age) }}</span>
         </template>
 
-        <template #string_data_count="{ record }">
-          <a-tag color="green">{{ Object.keys(parseJsonField(record.string_data, {})).length }} 项</a-tag>
+        <template #immutable="{ record }">
+          <a-tag v-if="record.immutable" color="orange" class="secret-immutable-tag">是</a-tag>
+          <span v-else class="k8s-no-data">否</span>
         </template>
 
         <template #labels="{ text }">
           <div class="k8s-labels-display">
             <template v-if="Array.isArray(text)">
-              <!-- 数组格式 -->
               <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
                 <a-tag class="k8s-label-item">
                   {{ label.key }}: {{ label.value }}
@@ -256,7 +256,6 @@
               <span v-if="text.length === 0" class="k8s-no-data">-</span>
             </template>
             <template v-else-if="text && typeof text === 'object'">
-              <!-- 对象格式 -->
               <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
                 <a-tag class="k8s-label-item">
                   {{ key }}: {{ value }}
@@ -273,6 +272,47 @@
               <span class="k8s-no-data">-</span>
             </template>
           </div>
+        </template>
+
+        <template #annotations="{ text }">
+          <div class="k8s-annotations-display">
+            <template v-if="Array.isArray(text)">
+              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ text.length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else-if="text && typeof text === 'object'">
+              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ Object.keys(text).length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else>
+              <span class="k8s-no-data">-</span>
+            </template>
+          </div>
+        </template>
+
+        <template #uid="{ text }">
+          <a-tooltip v-if="text" :title="text">
+            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: #666;">
+              {{ text.substring(0, 8) }}...
+            </span>
+          </a-tooltip>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
+        <template #createdAt="{ record }">
+          <div v-if="record.created_at" style="font-size: 12px; color: #666;">
+            <div>{{ formatDateTime(record.created_at) }}</div>
+            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(record.created_at) }}</div>
+          </div>
+          <span v-else class="k8s-no-data">-</span>
         </template>
 
         <template #actions="{ record }">
@@ -383,9 +423,8 @@
         <!-- 字符串数据配置 -->
         <a-form-item label="字符串数据" name="string_data">
           <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.string_data || Object.keys(createFormModel.string_data).length === 0" class="k8s-empty-state">
-              <div class="empty-icon">💾</div>
-              <div class="empty-text">暂无字符串数据，点击下方按钮添加</div>
+            <div v-if="!createFormModel.string_data || Object.keys(createFormModel.string_data).length === 0" style="text-align: center; color: #999; padding: 16px;">
+              暂无字符串数据，点击下方按钮添加
             </div>
             <div v-for="(_, key) in createFormModel.string_data" :key="key" class="k8s-key-value-row">
               <a-input 
@@ -433,9 +472,8 @@
         <!-- 标签配置 -->
         <a-form-item label="标签配置（可选）" name="labels">
           <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" class="k8s-empty-state">
-              <div class="empty-icon">🏷️</div>
-              <div class="empty-text">暂无标签，点击下方按钮添加</div>
+            <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 16px;">
+              暂无标签，点击下方按钮添加
             </div>
             <div v-for="(_, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
               <a-input 
@@ -473,9 +511,8 @@
         <!-- 注解配置 -->
         <a-form-item label="注解配置（可选）" name="annotations">
           <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" class="k8s-empty-state">
-              <div class="empty-icon">📝</div>
-              <div class="empty-text">暂无注解，点击下方按钮添加</div>
+            <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" style="text-align: center; color: #999; padding: 16px;">
+              暂无注解，点击下方按钮添加
             </div>
             <div v-for="(_, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
               <a-input 
@@ -533,9 +570,27 @@
         :rules="createYamlFormRules"
       >
         <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
+              <template #icon><FileAddOutlined /></template>
+              插入模板
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
+              <template #icon><ClearOutlined /></template>
+              清空
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="createYamlFormModel.yaml" 
-            placeholder="请输入 Secret YAML 内容" 
+            placeholder="请输入 Secret YAML 内容，或点击【插入模板】使用默认模板" 
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -750,7 +805,7 @@
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">创建时间:</span>
-                  <span class="k8s-detail-value">{{ formatTime(currentSecretDetail.created_at) }}</span>
+                  <span class="k8s-detail-value">{{ formatK8sTime(currentSecretDetail.created_at) }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">存在时间:</span>
@@ -761,40 +816,46 @@
             
             <a-col :xs="24" :lg="12">
               <a-card title="数据统计" class="k8s-detail-card" size="small">
-                <div class="k8s-detail-item">
+                <div class="k8s-detail-item" v-if="currentSecretDetail.data && Object.keys(currentSecretDetail.data).length > 0">
                   <span class="k8s-detail-label">加密数据项:</span>
                   <span class="k8s-detail-value">
                     <a-tag color="cyan">{{ Object.keys(currentSecretDetail.data || {}).length }} 项</a-tag>
                   </span>
                 </div>
-                <div class="k8s-detail-item">
+                <div class="k8s-detail-item" v-if="currentSecretDetail.string_data && Object.keys(currentSecretDetail.string_data).length > 0">
                   <span class="k8s-detail-label">字符串数据项:</span>
                   <span class="k8s-detail-value">
                     <a-tag color="green">{{ Object.keys(currentSecretDetail.string_data || {}).length }} 项</a-tag>
                   </span>
                 </div>
-                <div class="k8s-detail-item">
+                <div class="k8s-detail-item" v-if="currentSecretDetail.labels && currentSecretDetail.labels.length > 0">
                   <span class="k8s-detail-label">标签数量:</span>
                   <span class="k8s-detail-value">
                     <a-tag color="blue">{{ (currentSecretDetail.labels || []).length }} 个</a-tag>
                   </span>
                 </div>
-                <div class="k8s-detail-item">
+                <div class="k8s-detail-item" v-if="currentSecretDetail.annotations && currentSecretDetail.annotations.length > 0">
                   <span class="k8s-detail-label">注解数量:</span>
                   <span class="k8s-detail-value">
                     <a-tag color="orange">{{ (currentSecretDetail.annotations || []).length }} 个</a-tag>
                   </span>
                 </div>
-                <div class="k8s-detail-item">
+                <div class="k8s-detail-item" v-if="currentSecretDetail.size">
                   <span class="k8s-detail-label">数据大小:</span>
                   <span class="k8s-detail-value">
-                    <span class="secret-size-display">{{ currentSecretDetail.size || '-' }}</span>
+                    <span class="secret-size-display">{{ currentSecretDetail.size }}</span>
+                  </span>
+                </div>
+                <div class="k8s-detail-item" v-if="currentSecretDetail.data_count">
+                  <span class="k8s-detail-label">数据项总数:</span>
+                  <span class="k8s-detail-value">
+                    <a-tag color="purple">{{ currentSecretDetail.data_count }} 项</a-tag>
                   </span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">不可变:</span>
                   <span class="k8s-detail-value">
-                    <a-tag v-if="currentSecretDetail.immutable" class="secret-immutable-tag">
+                    <a-tag v-if="currentSecretDetail.immutable" color="orange" class="secret-immutable-tag">
                       是
                     </a-tag>
                     <span v-else>否</span>
@@ -854,8 +915,8 @@
           </a-row>
 
           <!-- 标签和注解 -->
-          <a-row :gutter="[24, 16]" style="margin-top: 16px;">
-            <a-col :xs="24" :lg="12">
+          <a-row :gutter="[24, 16]" style="margin-top: 16px;" v-if="(currentSecretDetail.labels && currentSecretDetail.labels.length > 0) || (currentSecretDetail.annotations && currentSecretDetail.annotations.length > 0)">
+            <a-col :xs="24" :lg="12" v-if="currentSecretDetail.labels && currentSecretDetail.labels.length > 0">
               <a-card title="标签信息" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display">
                   <a-tooltip v-for="label in (currentSecretDetail.labels || [])" :key="label.key" :title="`${label.key}: ${label.value}`">
@@ -863,14 +924,11 @@
                       {{ label.key }}: {{ label.value }}
                     </div>
                   </a-tooltip>
-                  <span v-if="!currentSecretDetail.labels || currentSecretDetail.labels.length === 0" class="k8s-no-data">
-                    暂无标签
-                  </span>
                 </div>
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
+            <a-col :xs="24" :lg="12" v-if="currentSecretDetail.annotations && currentSecretDetail.annotations.length > 0">
               <a-card title="注解信息" class="k8s-detail-card" size="small">
                 <div class="k8s-annotations-display">
                   <a-tooltip v-for="annotation in (currentSecretDetail.annotations || [])" :key="annotation.key" :title="`${annotation.key}: ${annotation.value}`" placement="top">
@@ -878,9 +936,6 @@
                       {{ annotation.key }}: {{ annotation.value }}
                     </a-tag>
                   </a-tooltip>
-                  <span v-if="!currentSecretDetail.annotations || currentSecretDetail.annotations.length === 0" class="k8s-no-data">
-                    暂无注解
-                  </span>
                 </div>
               </a-card>
             </a-col>
@@ -920,6 +975,16 @@
         :rules="yamlFormRules"
       >
         <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatEditYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateEditYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="yamlFormModel.yaml" 
             placeholder="YAML 内容" 
@@ -990,6 +1055,7 @@
 import { onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { useSecretPage } from './Secret';
+import { formatK8sTime, formatK8sAge, formatDateTime, getRelativeTime } from '../shared/utils';
 import { 
   PlusOutlined, 
   ReloadOutlined, 
@@ -1005,6 +1071,10 @@ import {
   SecurityScanOutlined,
   ExclamationCircleOutlined,
   CopyOutlined,
+  FileAddOutlined,
+  FormatPainterOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -1062,7 +1132,6 @@ const {
   // helpers
   getEnvText,
   getSecretTypeText,
-  parseJsonField,
   K8sSecretType,
   
   // operations
@@ -1117,6 +1186,14 @@ const {
   removeEditLabelField,
   removeAnnotationField,
   removeEditAnnotationField,
+  
+  // yaml operations
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
 } = useSecretPage();
 
 // 添加新字段的方法
@@ -1184,15 +1261,7 @@ const getSecretTypeClass = (type: string) => {
   return typeClassMap[type] || 'secret-type-default';
 };
 
-// 格式化时间
-const formatTime = (timeStr?: string) => {
-  if (!timeStr) return '-';
-  try {
-    return new Date(timeStr).toLocaleString('zh-CN');
-  } catch {
-    return timeStr;
-  }
-};
+// 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime 和 formatK8sAge
 
 // Base64 解码方法
 const decodeBase64Data = (base64Str?: any) => {
@@ -1298,14 +1367,17 @@ const handleClusterDropdownScroll = (e: Event) => {
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '15%' },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '12%' },
-  { title: '类型', key: 'type', width: '12%', slots: { customRender: 'type' } },
-  { title: '加密数据', key: 'data_count', width: '10%', slots: { customRender: 'data_count' } },
-  { title: '字符串数据', key: 'string_data_count', width: '10%', slots: { customRender: 'string_data_count' } },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: '12%' },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '12%', slots: { customRender: 'labels' } },
-  { title: '操作', key: 'actions', width: '15%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true },
+  { title: '类型', key: 'type', width: 180, ellipsis: true, slots: { customRender: 'type' } },
+  { title: '数据项数', dataIndex: 'data_count', key: 'data_count', width: 90, align: 'center' },
+  { title: '大小', dataIndex: 'size', key: 'size', width: 100, align: 'center' },
+  { title: '不可变', key: 'immutable', width: 90, align: 'center', slots: { customRender: 'immutable' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
+  { title: '创建时间', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
+  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 // 标签过滤器状态

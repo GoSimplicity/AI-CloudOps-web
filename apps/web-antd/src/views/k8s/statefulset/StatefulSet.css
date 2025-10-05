@@ -33,6 +33,36 @@
   color: #722ed1;
 }
 
+/* StatefulSet 更新策略标签样式 */
+.ant-tag[color="cyan"] {
+  background: #e6fffb;
+  border-color: #87e8de;
+  color: #13c2c2;
+}
+
+/* StatefulSet 选择器显示样式 */
+.k8s-selector-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.k8s-selector-display .ant-tag {
+  margin: 0;
+}
+
+/* 优化副本信息展示 */
+.k8s-replicas-display .k8s-replicas-text {
+  font-weight: 600;
+  color: #1890ff;
+  cursor: help;
+}
+
+.k8s-replicas-display .k8s-replicas-text:hover {
+  color: #40a9ff;
+}
+
 /* StatefulSet 表单配置区域样式 */
 .k8s-form .replica-config-section {
   border: 1px solid #e8e8e8;
@@ -152,6 +182,17 @@
   width: 100%;
 }
 
+/* 详情模态框中的选择器卡片样式 */
+.k8s-detail-card .k8s-selector-display .ant-tag {
+  font-size: 13px;
+  padding: 4px 12px;
+}
+
+/* 详情模态框中副本信息的 badge 样式 */
+.k8s-detail-card .k8s-detail-item .ant-badge {
+  font-weight: 600;
+}
+
 /* 响应式设计 */
 @media (max-width: 576px) {
   .k8s-form .replica-config-item {
@@ -163,5 +204,11 @@
   .k8s-form .replica-config-item .ant-input-number,
   .k8s-form .replica-config-item .ant-select {
     width: 100%;
+  }
+  
+  /* 移动端选择器布局优化 */
+  .k8s-selector-display {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

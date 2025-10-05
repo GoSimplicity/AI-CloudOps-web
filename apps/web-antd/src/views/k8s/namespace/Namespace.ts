@@ -184,33 +184,63 @@ export function useNamespacePage() {
   };
 
   const getStatusText = (status?: string) => {
+    if (!status) return '未知';
+    
+    // Handle both Chinese and English status
     const map: Record<string, string> = {
       [NamespaceStatus.Active]: '活跃',
+      'Active': '活跃',
+      '活跃': '活跃',
       [NamespaceStatus.Terminating]: '终止中',
+      'Terminating': '终止中',
+      '终止中': '终止中',
       [NamespaceStatus.Unknown]: '未知',
+      'Unknown': '未知',
+      '未知': '未知',
     };
-    return status ? map[status] || status : '未知';
+    return map[status] || status;
   };
 
   const getStatusColor = (status?: string) => {
+    if (!status) return 'default';
+    
+    // Handle both Chinese and English status
     const map: Record<string, string> = {
       [NamespaceStatus.Active]: 'success',
+      'Active': 'success',
+      '活跃': 'success',
       [NamespaceStatus.Terminating]: 'warning',
+      'Terminating': 'warning',
+      '终止中': 'warning',
       [NamespaceStatus.Unknown]: 'default',
+      'Unknown': 'default',
+      '未知': 'default',
     };
-    return status ? map[status] || 'default' : 'default';
+    return map[status] || 'default';
   };
 
   const getPhaseText = (phase?: string) => {
-    return phase || '-';
+    if (!phase) return '-';
+    
+    const map: Record<string, string> = {
+      'Active': '活跃',
+      'Terminating': '终止中',
+      'Pending': '待定',
+      'Failed': '失败',
+    };
+    return map[phase] || phase;
   };
 
   const getPhaseColor = (phase?: string) => {
+    if (!phase) return 'default';
+    
     const map: Record<string, string> = {
       'Active': 'success',
       'Terminating': 'warning',
+      'Pending': 'processing',
+      'Failed': 'error',
     };
-    return phase ? map[phase] || 'default' : 'default';
+    return map[phase] || 'default';
   };
 
   const getClusterName = (clusterId?: number) => {

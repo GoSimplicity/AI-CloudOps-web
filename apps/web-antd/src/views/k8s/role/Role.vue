@@ -264,6 +264,43 @@
           </div>
         </template>
 
+        <template #annotations="{ text }">
+          <div class="k8s-annotations-display">
+            <template v-if="Array.isArray(text)">
+              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">{{ text.length }} 个注解</a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else-if="text && typeof text === 'object'">
+              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">{{ Object.keys(text).length }} 个注解</a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else>
+              <span class="k8s-no-data">-</span>
+            </template>
+          </div>
+        </template>
+
+        <template #uid="{ text }">
+          <a-tooltip v-if="text" :title="text">
+            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: #666;">
+              {{ text.substring(0, 8) }}...
+            </span>
+          </a-tooltip>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
+        <template #createdAt="{ text }">
+          <div v-if="text" style="font-size: 12px; color: #666;">
+            <div>{{ formatDateTime(text) }}</div>
+            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+          </div>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
         <template #actions="{ record }">
           <div class="k8s-action-column">
             <a-tooltip title="查看详情">
@@ -838,6 +875,7 @@
 import { onMounted, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { useRolePage } from './Role';
+import { formatDateTime, getRelativeTime } from '../shared/utils';
 import type { K8sRole } from '#/api/core/k8s/k8s_role';
 import { 
   PlusOutlined, 
@@ -1105,13 +1143,14 @@ const getTotalResources = (rules: any[]) => {
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '15%' },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '12%' },
-  { title: '策略规则', key: 'rules', width: '30%', slots: { customRender: 'rules' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '15%', slots: { customRender: 'labels' } },
-  { title: '创建时间', dataIndex: 'creation_timestamp', key: 'creation_timestamp', width: '12%' },
-  { title: '存在时间', dataIndex: 'age', key: 'age', width: '8%', customRender: ({ text, record }: any) => formatAge(text, record.creation_timestamp) },
-  { title: '操作', key: 'actions', width: '8%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true },
+  { title: '策略规则', key: 'rules', width: 200, slots: { customRender: 'rules' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
+  { title: '创建时间', dataIndex: 'creation_timestamp', key: 'creation_timestamp', width: 160, slots: { customRender: 'createdAt' } },
+  { title: '操作', key: 'actions', width: 230, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 // 标签过滤器状态

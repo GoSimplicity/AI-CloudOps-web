@@ -220,7 +220,7 @@
         }"
         @change="handleTableChange"
         class="k8s-table daemonset-table"
-        :scroll="{ x: 1600 }"
+        :scroll="{ x: 1340 }"
       >
         <template #status="{ text }">
           <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
@@ -229,7 +229,7 @@
         <template #pods="{ record }">
           <div class="k8s-replicas-display">
             <span class="k8s-replicas-text">
-              {{ record.number_ready }}/{{ record.desired_number_scheduled }}
+              {{ record.number_ready || 0 }}/{{ record.desired_number_scheduled || 0 }}
             </span>
             <a-progress 
               :percent="record.desired_number_scheduled > 0 ? Math.round((record.number_ready / record.desired_number_scheduled) * 100) : 0" 
@@ -238,6 +238,19 @@
               :status="record.number_ready === record.desired_number_scheduled ? 'success' : 'active'"
               style="margin-top: 4px; max-width: 100px;"
             />
+          </div>
+        </template>
+
+        <template #availability="{ record }">
+          <div class="daemonset-availability">
+            <div class="availability-item">
+              <a-tag color="green">可用: {{ record.number_available || 0 }}</a-tag>
+            </div>
+            <div class="availability-item" style="margin-top: 4px;">
+              <a-tag :color="(record.number_unavailable || 0) > 0 ? 'red' : 'default'">
+                不可用: {{ record.number_unavailable || 0 }}
+              </a-tag>
+            </div>
           </div>
         </template>
 
@@ -260,23 +273,6 @@
         <template #update_strategy="{ text }">
           <a-tag color="cyan" v-if="text">{{ text }}</a-tag>
           <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #node_info="{ record }">
-          <div class="daemonset-node-info">
-            <div class="node-info-item">
-              <span class="node-info-label">可用:</span>
-              <span class="node-info-value">{{ record.number_available || 0 }}</span>
-            </div>
-            <div class="node-info-item">
-              <span class="node-info-label">不可用:</span>
-              <span class="node-info-value">{{ record.number_unavailable || 0 }}</span>
-            </div>
-            <div class="node-info-item">
-              <span class="node-info-label">错误调度:</span>
-              <span class="node-info-value">{{ record.number_misscheduled || 0 }}</span>
-            </div>
-          </div>
         </template>
 
         <template #labels="{ text }">
@@ -313,6 +309,47 @@
               <span class="k8s-no-data">-</span>
             </template>
           </div>
+        </template>
+
+        <template #annotations="{ text }">
+          <div class="k8s-annotations-display">
+            <template v-if="Array.isArray(text)">
+              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ text.length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else-if="text && typeof text === 'object'">
+              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ Object.keys(text).length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else>
+              <span class="k8s-no-data">-</span>
+            </template>
+          </div>
+        </template>
+
+        <template #uid="{ text }">
+          <a-tooltip v-if="text" :title="text">
+            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: #666;">
+              {{ text.substring(0, 8) }}...
+            </span>
+          </a-tooltip>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
+        <template #createdAt="{ record }">
+          <div v-if="record.created_at" style="font-size: 12px; color: #666;">
+            <div>{{ formatDateTime(record.created_at) }}</div>
+            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(record.created_at) }}</div>
+          </div>
+          <span v-else class="k8s-no-data">-</span>
         </template>
 
         <template #actions="{ record }">
@@ -935,7 +972,11 @@
           </template>
         </a-table-column>
         <a-table-column title="重启次数" dataIndex="restart_count" key="restart_count" />
-        <a-table-column title="创建时间" dataIndex="created_at" key="created_at" />
+        <a-table-column title="创建时间" key="created_at">
+          <template #default="{ record }">
+            <span class="k8s-time-display">{{ formatK8sTime(record.created_at) }}</span>
+          </template>
+        </a-table-column>
         <a-table-column title="节点名称" dataIndex="node_name" key="node_name" />
       </a-table>
     </a-modal>
@@ -1036,6 +1077,7 @@ import { onMounted, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { useDaemonSetPage } from './DaemonSet';
 import { rollbackDaemonSetApi } from '#/api/core/k8s/k8s_daemonset';
+import { formatK8sTime, formatDateTime, getRelativeTime } from '../shared/utils';
 import { 
   PlusOutlined, 
   ReloadOutlined, 
@@ -1274,15 +1316,18 @@ const handleClusterDropdownScroll = (e: Event) => {
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '14%', ellipsis: true },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '11%', ellipsis: true },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', align: 'center', slots: { customRender: 'status' } },
-  { title: '副本数', key: 'pods', width: '11%', align: 'center', slots: { customRender: 'pods' } },
-  { title: '策略', dataIndex: 'update_strategy', key: 'update_strategy', width: '9%', align: 'center', slots: { customRender: 'update_strategy' } },
-  { title: '节点信息', key: 'node_info', width: '12%', align: 'center', slots: { customRender: 'node_info' } },
-  { title: '镜像', dataIndex: 'images', key: 'images', width: '14%', slots: { customRender: 'images' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '11%', slots: { customRender: 'labels' } },
-  { title: '操作', key: 'actions', width: '20%', fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center', slots: { customRender: 'status' } },
+  { title: 'Pod状态', key: 'pods', width: 110, align: 'center', slots: { customRender: 'pods' } },
+  { title: '可用/不可用', key: 'availability', width: 120, align: 'center', slots: { customRender: 'availability' } },
+  { title: '更新策略', dataIndex: 'update_strategy', key: 'update_strategy', width: 110, align: 'center', slots: { customRender: 'update_strategy' } },
+  { title: '镜像', dataIndex: 'images', key: 'images', width: 200, slots: { customRender: 'images' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
+  { title: '创建时间', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
+  { title: '操作', key: 'actions', width: 350, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 // 标签过滤器状态

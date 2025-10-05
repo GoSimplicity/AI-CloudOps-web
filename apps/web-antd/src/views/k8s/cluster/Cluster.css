@@ -4,6 +4,62 @@
  * 共通样式已移至 k8s-common.css
  */
 
+/* 表格列样式 */
+.cluster-name-cell {
+  display: flex;
+  align-items: center;
+}
+
+.cluster-name-text {
+  font-weight: 600;
+  color: #1677ff;
+  cursor: default;
+}
+
+.api-addr-text {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  color: #666;
+}
+
+.timeout-text {
+  font-weight: 500;
+  color: #52c41a;
+}
+
+.user-name-text {
+  color: #595959;
+  font-weight: 500;
+}
+
+.time-text {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+/* 命名空间单元格 */
+.namespace-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.namespace-tag {
+  font-size: 12px;
+  margin: 2px 0;
+  padding: 0 8px;
+  border-radius: 4px;
+}
+
+/* 标签单元格 */
+.tags-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
 /* 命名空间列表样式 */
 .k8s-namespace-list {
   min-height: 60px;

@@ -137,111 +137,128 @@
         }"
         @change="handleTableChange"
         class="k8s-table cluster-table"
-        :scroll="{ x: 1400 }"
+        :scroll="{ x: 1440 }"
       >
         <template #bodyCell="{ column, text, record }">
-          <template v-if="column.key === 'env'">
-            <a-tag color="blue">{{ getEnvText(text) }}</a-tag>
+          <!-- 集群名称 -->
+          <template v-if="column.key === 'name'">
+            <div class="cluster-name-cell">
+              <a-tooltip :title="text">
+                <span class="cluster-name-text">{{ text || '-' }}</span>
+              </a-tooltip>
+            </div>
+          </template>
+
+          <!-- 环境 -->
+          <template v-else-if="column.key === 'env'">
+            <a-tag :color="getEnvColor(text)">{{ getEnvText(text) }}</a-tag>
           </template>
           
+          <!-- 状态 -->
           <template v-else-if="column.key === 'status'">
-            <a-badge :status="text === ClusterStatus.Running ? 'success' : text === ClusterStatus.Error ? 'error' : 'default'" :text="getStatusText(text)" />
+            <a-badge 
+              :status="text === ClusterStatus.Running ? 'success' : text === ClusterStatus.Error ? 'error' : 'default'" 
+              :text="getStatusText(text)" 
+            />
           </template>
-          
-          <template v-else-if="column.key === 'tags'">
-            <div class="k8s-labels-display">
-              <a-tooltip v-for="tag in (text || []).slice(0, 3)" :key="tag.key" :title="`${tag.key}: ${tag.value}`">
-                <a-tag class="k8s-label-item">
-                  {{ tag.key }}: {{ tag.value }}
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="(text || []).length > 3" :title="(text || []).map((tag: any) => `${tag.key}: ${tag.value}`).join('\n')">
-                <a-tag class="k8s-label-item">
-                  {{ (text || []).length }} 个标签
-                </a-tag>
-              </a-tooltip>
-              <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
-            </div>
+
+          <!-- API Server 地址 -->
+          <template v-else-if="column.key === 'api_server_addr'">
+            <a-tooltip :title="text">
+              <span class="api-addr-text">{{ text || '-' }}</span>
+            </a-tooltip>
           </template>
-          
-          <template v-else-if="column.key === 'kubeconfig'">
-            <div class="cluster-kubeconfig-column">
-              <!-- 始终显示有配置状态，因为列表接口可能不返回完整内容 -->
-              <div class="kubeconfig-preview-container">
-                <!-- 配置状态和信息 -->
-                <div class="kubeconfig-status-info">
-                  <a-tag color="green" size="small">
-                    <template #icon><FileTextOutlined /></template>
-                    有配置
+
+          <!-- 版本 -->
+          <template v-else-if="column.key === 'version'">
+            <a-tag v-if="text" color="green">{{ text }}</a-tag>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+
+          <!-- 操作超时时间 -->
+          <template v-else-if="column.key === 'action_timeout_seconds'">
+            <span class="timeout-text">{{ text || '-' }}</span>
+          </template>
+
+          <!-- 命名空间限制 -->
+          <template v-else-if="column.key === 'restrict_namespace'">
+            <div class="namespace-cell">
+              <template v-if="text && text.length > 0">
+                <a-tooltip v-if="text.length <= 2" :title="text.join(', ')">
+                  <a-tag v-for="(ns, idx) in text" :key="idx" color="cyan" class="namespace-tag">
+                    {{ ns }}
                   </a-tag>
-                  <span v-if="record.kube_config_content" class="config-length-info">
-                    {{ Math.ceil((record.kube_config_content?.length || 0) / 1024) }}KB
-                  </span>
-                </div>
-                
-                <!-- 配置预览 - 可点击 -->
-                <div 
-                  v-if="record.kube_config_content" 
-                  class="kubeconfig-preview-content kubeconfig-clickable"
-                  @click.stop="showKubeConfigModal(record)"
-                  title="点击查看完整配置"
-                >
-                  <a-tooltip placement="topLeft" overlayClassName="kubeconfig-tooltip">
-                    <template #title>
-                      <div class="kubeconfig-tooltip-content">
-                        <div class="tooltip-header">KubeConfig 预览：</div>
-                        <pre class="tooltip-config-content">{{ (record.kube_config_content || '').substring(0, 500) }}{{ (record.kube_config_content || '').length > 500 ? '\n...' : '' }}</pre>
-                      </div>
-                    </template>
-                    <div class="config-preview-text">
-                      {{ getKubeConfigPreview(record.kube_config_content) }}
-                    </div>
-                  </a-tooltip>
-                </div>
-                
-                <!-- 如果没有详细内容，显示简化信息 - 可点击 -->
-                <div 
-                  v-else 
-                  class="kubeconfig-preview-content kubeconfig-clickable"
-                  @click.stop="showKubeConfigModal(record)"
-                  title="点击查看完整配置"
-                >
-                  <div class="config-preview-text">
-                    集群: {{ record.name }} (点击查看完整配置)
-                  </div>
-                </div>
-              </div>
+                </a-tooltip>
+                <a-tooltip v-else :title="text.join(', ')">
+                  <a-tag color="cyan" class="namespace-tag">
+                    {{ text.length }} 个命名空间
+                  </a-tag>
+                </a-tooltip>
+              </template>
+              <span v-else class="k8s-no-data">无限制</span>
             </div>
           </template>
           
+          <!-- 标签 -->
+          <template v-else-if="column.key === 'tags'">
+            <div class="tags-cell">
+              <template v-if="text && text.length > 0">
+                <a-tooltip v-if="text.length === 1" :title="`${text[0].key}: ${text[0].value}`">
+                  <a-tag class="k8s-label-item">
+                    {{ text[0].key }}: {{ text[0].value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip v-else :title="text.map((tag: any) => `${tag.key}: ${tag.value}`).join('\n')">
+                  <a-tag class="k8s-label-item">
+                    <template #icon><TagOutlined /></template>
+                    {{ text.length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+              </template>
+              <span v-else class="k8s-no-data">-</span>
+            </div>
+          </template>
+
+          <!-- 创建者 -->
+          <template v-else-if="column.key === 'create_user_name'">
+            <a-tooltip :title="text">
+              <span class="user-name-text">{{ text || '-' }}</span>
+            </a-tooltip>
+          </template>
+
+          <!-- 创建时间 -->
+          <template v-else-if="column.key === 'created_at'">
+            <div v-if="text" style="font-size: 12px; color: #666;">
+              <div>{{ formatDateTime(text) }}</div>
+              <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          
+          <!-- 操作列 -->
           <template v-else-if="column.key === 'actions'">
             <div class="k8s-action-column">
               <a-tooltip title="查看详情">
-                <a-button title="查看详情" @click="showClusterDetail(record)">
+                <a-button size="small" @click="showClusterDetail(record)">
                   <template #icon><EyeOutlined /></template>
                 </a-button>
               </a-tooltip>
-              <a-tooltip title="编辑集群">
-                <a-button title="编辑" @click="openEdit(record)">
+              <a-tooltip title="编辑">
+                <a-button size="small" @click="openEdit(record)">
                   <template #icon><EditOutlined /></template>
                 </a-button>
               </a-tooltip>
-              <a-tooltip title="删除集群">
+              <a-tooltip title="删除">
                 <a-popconfirm 
                   title="确定要删除该集群吗?" 
                   @confirm="confirmDelete(record)" 
                   ok-text="确定" 
                   cancel-text="取消"
                 >
-                  <a-button title="删除" danger>
+                  <a-button size="small" danger>
                     <template #icon><DeleteOutlined /></template>
                   </a-button>
                 </a-popconfirm>
-              </a-tooltip>
-              <a-tooltip title="刷新集群">
-                <a-button title="刷新" @click="refreshCluster(record.id!)">
-                  <template #icon><ReloadOutlined /></template>
-                </a-button>
               </a-tooltip>
             </div>
           </template>
@@ -543,7 +560,7 @@
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">创建时间:</span>
-                  <span class="k8s-detail-value">{{ currentClusterDetail.created_at || '-' }}</span>
+                  <span class="k8s-detail-value">{{ formatK8sTime(currentClusterDetail.created_at) }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">更新时间:</span>
@@ -714,6 +731,7 @@
 <script lang="ts" setup>
 import { onMounted } from 'vue';
 import { useClusterPage } from './Cluster';
+import { formatK8sTime, formatDateTime, getRelativeTime } from '../shared/utils';
 import './Cluster.css';
 import { 
   PlusOutlined, 
@@ -726,7 +744,8 @@ import {
   FileTextOutlined,
   CopyOutlined,
   DownloadOutlined,
-  SearchOutlined
+  SearchOutlined,
+  TagOutlined
 } from '@ant-design/icons-vue';
 
 const {
@@ -747,6 +766,7 @@ const {
   filteredClusters,
   rowSelection,
   getEnvText,
+  getEnvColor,
   getStatusText,
   fetchClusters,
   openCreate,
@@ -799,16 +819,17 @@ const handleTableChange = (pagination: { current?: number; pageSize?: number }) 
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '12%', ellipsis: true },
-  { title: '环境', dataIndex: 'env', key: 'env', width: '8%', align: 'center' },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', align: 'center' },
-  { title: 'API 地址', dataIndex: 'api_server_addr', key: 'api_server_addr', width: '16%', ellipsis: true },
-  { title: '版本', dataIndex: 'version', key: 'version', width: '8%', align: 'center' },
-  { title: 'KubeConfig', key: 'kubeconfig', width: '16%' },
-  { title: '创建者', dataIndex: 'create_user_name', key: 'create_user_name', width: '9%', ellipsis: true },
-  { title: '标签', dataIndex: 'tags', key: 'tags', width: '9%' },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: '10%', align: 'center' },
-  { title: '操作', key: 'actions', width: '14%', fixed: 'right', align: 'center' },
+  { title: '集群名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '环境', dataIndex: 'env', key: 'env', width: 90, align: 'center' },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center' },
+  { title: 'API Server', dataIndex: 'api_server_addr', key: 'api_server_addr', width: 200, ellipsis: true },
+  { title: '版本', dataIndex: 'version', key: 'version', width: 100, align: 'center' },
+  { title: '超时(秒)', dataIndex: 'action_timeout_seconds', key: 'action_timeout_seconds', width: 90, align: 'center' },
+  { title: '命名空间限制', dataIndex: 'restrict_namespace', key: 'restrict_namespace', width: 140, ellipsis: true },
+  { title: '标签', dataIndex: 'tags', key: 'tags', width: 140 },
+  { title: '创建者', dataIndex: 'create_user_name', key: 'create_user_name', width: 100, ellipsis: true },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
+  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center' },
 ];
 
 onMounted(async () => {

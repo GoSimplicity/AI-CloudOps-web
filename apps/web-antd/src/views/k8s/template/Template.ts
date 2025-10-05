@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+import { formatK8sTime } from '../shared/utils';
 import {
   type K8sYamlTemplate,
   type YamlTemplateListReq,
@@ -141,14 +142,7 @@ export function useTemplatePage() {
     return map[value] || '未知环境';
   };
 
-  const formatTime = (timeStr?: string) => {
-    if (!timeStr) return '-';
-    try {
-      return new Date(timeStr).toLocaleString('zh-CN');
-    } catch {
-      return timeStr;
-    }
-  };
+  // 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime
 
   // cluster operations
   const clearTemplates = () => {
@@ -524,7 +518,7 @@ export function useTemplatePage() {
     // helpers
     validateClusterId,
     getEnvText,
-    formatTime,
+    formatK8sTime,
     
     // operations
     fetchClusters,

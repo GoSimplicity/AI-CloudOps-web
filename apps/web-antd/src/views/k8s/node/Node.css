@@ -4,17 +4,73 @@
  * 共通样式已移至 k8s-common.css
  */
 
-/* 节点角色和污点标签样式 (使用 k8s-common.css 中定义的基础样式) */
+/* 节点角色标签样式 */
+.k8s-roles-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 .k8s-roles-display .k8s-role-tag {
   background: #fff7e6;
   border: 1px solid #ffd591;
   color: #fa8c16;
+  margin: 0;
+  padding: 2px 8px;
+  font-size: 12px;
+  border-radius: 4px;
 }
 
-.k8s-taints-display .k8s-taint-item {
+/* 详情页键值对样式 */
+.k8s-detail-kv-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  background: #fafafa;
+  border-radius: 4px;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.k8s-kv-key {
+  font-weight: 600;
+  color: #1890ff;
+  min-width: 150px;
+  flex-shrink: 0;
+}
+
+.k8s-kv-separator {
+  margin: 0 8px;
+  color: #999;
+}
+
+.k8s-kv-value {
+  color: #333;
+  word-break: break-all;
+}
+
+/* 详情页污点项样式 */
+.k8s-detail-taint-item {
+  padding: 12px;
+  margin-bottom: 8px;
   background: #fff2f0;
   border: 1px solid #ffccc7;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.k8s-detail-taint-item > div {
+  margin-bottom: 4px;
+}
+
+.k8s-detail-taint-item > div:last-child {
+  margin-bottom: 0;
+}
+
+.k8s-detail-taint-item strong {
   color: #ff4d4f;
+  margin-right: 8px;
 }
 
 /* 节点表格行状态指示器 */

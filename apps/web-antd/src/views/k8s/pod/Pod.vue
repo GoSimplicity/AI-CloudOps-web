@@ -211,7 +211,7 @@
         }"
         @change="handleTableChange"
         class="k8s-table pod-table"
-        :scroll="{ x: 1800 }"
+        :scroll="{ x: 2000 }"
       >
         <template #status="{ text }">
           <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
@@ -288,6 +288,49 @@
               <span class="k8s-no-data">-</span>
             </template>
           </div>
+        </template>
+
+        <template #annotations="{ text }">
+          <div class="k8s-annotations-display">
+            <template v-if="Array.isArray(text)">
+              <!-- 数组格式 -->
+              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ text.length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else-if="text && typeof text === 'object'">
+              <!-- 对象格式 -->
+              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ Object.keys(text).length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else>
+              <span class="k8s-no-data">-</span>
+            </template>
+          </div>
+        </template>
+
+        <template #uid="{ text }">
+          <a-tooltip v-if="text" :title="text">
+            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: #666;">
+              {{ text.substring(0, 8) }}...
+            </span>
+          </a-tooltip>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
+        <template #createdAt="{ text }">
+          <div v-if="text" style="font-size: 12px; color: #666;">
+            <div>{{ formatDateTime(text) }}</div>
+            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+          </div>
+          <span v-else class="k8s-no-data">-</span>
         </template>
 
         <template #actions="{ record }">
@@ -776,15 +819,15 @@
               <a-card title="时间信息" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">创建时间:</span>
-                  <span class="k8s-detail-value">{{ formatTime(currentPodDetail.creation_timestamp) }}</span>
+                  <span class="k8s-detail-value">{{ formatK8sTime(currentPodDetail.creation_timestamp) }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">启动时间:</span>
-                  <span class="k8s-detail-value">{{ formatTime(currentPodDetail.start_time) || '-' }}</span>
+                  <span class="k8s-detail-value">{{ formatK8sTime(currentPodDetail.start_time) }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">删除时间:</span>
-                  <span class="k8s-detail-value">{{ formatTime(currentPodDetail.deletion_timestamp) || '-' }}</span>
+                  <span class="k8s-detail-value">{{ formatK8sTime(currentPodDetail.deletion_timestamp) }}</span>
                 </div>
               </a-card>
             </a-col>
@@ -1450,6 +1493,7 @@
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { usePodPage } from './Pod';
+import { formatK8sTime, formatDateTime, getRelativeTime } from '../shared/utils';
 import { 
   PlusOutlined, 
   ReloadOutlined, 
@@ -1712,15 +1756,7 @@ const getQosClassColor = (qosClass: string) => {
   return map[qosClass] || 'default';
 };
 
-// 格式化时间
-const formatTime = (timeStr?: string) => {
-  if (!timeStr) return '-';
-  try {
-    return new Date(timeStr).toLocaleString('zh-CN');
-  } catch {
-    return timeStr;
-  }
-};
+// 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime
 
 const onSearch = () => {
   currentPage.value = 1;
@@ -1767,17 +1803,20 @@ const handleClusterDropdownScroll = (e: Event) => {
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '12%' },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '10%' },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', slots: { customRender: 'status' } },
-  { title: '阶段', dataIndex: 'phase', key: 'phase', width: '8%', slots: { customRender: 'phase' } },
-  { title: '就绪', dataIndex: 'ready', key: 'ready', width: '8%', slots: { customRender: 'ready' } },
-  { title: '重启', dataIndex: 'restart_count', key: 'restart_count', width: '6%', slots: { customRender: 'restarts' } },
-  { title: '节点', dataIndex: 'node_name', key: 'node_name', width: '10%', slots: { customRender: 'node_name' } },
-  { title: 'Pod IP', dataIndex: 'pod_ip', key: 'pod_ip', width: '10%', slots: { customRender: 'pod_ip' } },
-  { title: 'QoS等级', dataIndex: 'qos_class', key: 'qos_class', width: '8%', slots: { customRender: 'qos_class' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '10%', slots: { customRender: 'labels' } },
-  { title: '操作', key: 'actions', width: '20%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center', slots: { customRender: 'status' } },
+  { title: '阶段', dataIndex: 'phase', key: 'phase', width: 90, align: 'center', slots: { customRender: 'phase' } },
+  { title: '就绪', dataIndex: 'ready', key: 'ready', width: 100, align: 'center', slots: { customRender: 'ready' } },
+  { title: '重启次数', dataIndex: 'restart_count', key: 'restart_count', width: 90, align: 'center', slots: { customRender: 'restarts' } },
+  { title: '节点', dataIndex: 'node_name', key: 'node_name', width: 150, ellipsis: true, slots: { customRender: 'node_name' } },
+  { title: 'Pod IP', dataIndex: 'pod_ip', key: 'pod_ip', width: 130, slots: { customRender: 'pod_ip' } },
+  { title: 'QoS等级', dataIndex: 'qos_class', key: 'qos_class', width: 100, align: 'center', slots: { customRender: 'qos_class' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
+  { title: '操作', key: 'actions', width: 350, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 // 标签过滤器状态

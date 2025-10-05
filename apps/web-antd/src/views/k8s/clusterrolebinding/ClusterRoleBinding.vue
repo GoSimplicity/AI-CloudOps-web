@@ -747,6 +747,7 @@
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
+import { formatK8sTime } from '../shared/utils';
 import { useClusterRoleBindingPage } from './ClusterRoleBinding';
 import { 
   PlusOutlined, 
@@ -910,27 +911,8 @@ const formatAge = (age: string, creationTimestamp?: string): string => {
   }
 };
 
-// 格式化创建时间显示
-const formatCreationTime = (timestamp?: string): string => {
-  if (!timestamp) {
-    return '-';
-  }
-  
-  try {
-    const date = new Date(timestamp);
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  } catch (error) {
-
-    return timestamp;
-  }
-};
+// 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime
+const formatCreationTime = formatK8sTime;
 
 const onSearch = () => {
   currentPage.value = 1;

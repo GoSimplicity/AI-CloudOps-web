@@ -223,7 +223,7 @@
         }"
         @change="handleTableChange"
         class="k8s-table service-table"
-        :scroll="{ x: 1600 }"
+        :scroll="{ x: 1240 }"
       >
         <template #status="{ text }">
           <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
@@ -258,51 +258,17 @@
           <span v-else class="k8s-no-data">-</span>
         </template>
 
-        <template #external_ips="{ text }">
-          <div class="service-external-ips">
-            <a-tag 
-              v-for="(ip, index) in (text || []).slice(0, 2)" 
-              :key="index" 
-              class="ip-tag"
-              color="orange"
-              size="small"
-            >
-              {{ ip }}
-            </a-tag>
-            <a-tooltip v-if="(text || []).length > 2" :title="(text || []).join('\n')">
-              <a-tag class="ip-tag" color="orange" size="small">
-                +{{ (text || []).length - 2 }} 更多
-              </a-tag>
-            </a-tooltip>
-            <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
-          </div>
-        </template>
-
-        <template #selector="{ text }">
-          <div class="k8s-labels-display">
-            <a-tag v-for="[key, value] in Object.entries(text || {}).slice(0, 2)" :key="key" class="k8s-label-item" size="small">
-              {{ key }}: {{ value }}
-            </a-tag>
-            <a-tooltip v-if="Object.keys(text || {}).length > 2" :title="Object.entries(text || {}).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
-              <a-tag class="k8s-label-item" size="small">
-                {{ Object.keys(text || {}).length }} 个选择器
-              </a-tag>
-            </a-tooltip>
-            <span v-if="!text || Object.keys(text).length === 0" class="k8s-no-data">-</span>
-          </div>
-        </template>
-
         <template #labels="{ text }">
           <div class="k8s-labels-display">
             <template v-if="Array.isArray(text)">
               <!-- 数组格式 -->
               <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
-                <a-tag class="k8s-label-item" size="small">
+                <a-tag class="k8s-label-item">
                   {{ label.key }}: {{ label.value }}
                 </a-tag>
               </a-tooltip>
               <a-tooltip v-if="text && text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-                <a-tag class="k8s-label-item" size="small">
+                <a-tag class="k8s-label-item">
                   {{ text.length }} 个标签
                 </a-tag>
               </a-tooltip>
@@ -311,12 +277,12 @@
             <template v-else-if="text && typeof text === 'object'">
               <!-- 对象格式 -->
               <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
-                <a-tag class="k8s-label-item" size="small">
+                <a-tag class="k8s-label-item">
                   {{ key }}: {{ value }}
                 </a-tag>
               </a-tooltip>
               <a-tooltip v-if="text && Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
-                <a-tag class="k8s-label-item" size="small">
+                <a-tag class="k8s-label-item">
                   {{ Object.keys(text).length }} 个标签
                 </a-tag>
               </a-tooltip>
@@ -326,6 +292,47 @@
               <span class="k8s-no-data">-</span>
             </template>
           </div>
+        </template>
+
+        <template #annotations="{ text }">
+          <div class="k8s-annotations-display">
+            <template v-if="Array.isArray(text)">
+              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ text.length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else-if="text && typeof text === 'object'">
+              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ Object.keys(text).length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else>
+              <span class="k8s-no-data">-</span>
+            </template>
+          </div>
+        </template>
+
+        <template #uid="{ text }">
+          <a-tooltip v-if="text" :title="text">
+            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: #666;">
+              {{ text.substring(0, 8) }}...
+            </span>
+          </a-tooltip>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
+        <template #createdAt="{ text }">
+          <div v-if="text" style="font-size: 12px; color: #666;">
+            <div>{{ formatDateTime(text) }}</div>
+            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+          </div>
+          <span v-else class="k8s-no-data">-</span>
         </template>
 
         <template #actions="{ record }">
@@ -892,56 +899,66 @@
                   <span class="k8s-detail-label">类型:</span>
                   <a-tag :color="getServiceTypeColor(currentServiceDetail.type)">{{ getServiceTypeText(currentServiceDetail.type) }}</a-tag>
                 </div>
-                <div class="k8s-detail-item">
+                <div class="k8s-detail-item" v-if="currentServiceDetail.cluster_ip && currentServiceDetail.cluster_ip !== 'None'">
                   <span class="k8s-detail-label">集群IP:</span>
-                  <span class="k8s-detail-value">{{ currentServiceDetail.cluster_ip || '-' }}</span>
+                  <span class="k8s-detail-value">{{ currentServiceDetail.cluster_ip }}</span>
                 </div>
-                <div class="k8s-detail-item">
+                <div class="k8s-detail-item" v-if="currentServiceDetail.uid">
                   <span class="k8s-detail-label">UID:</span>
-                  <span class="k8s-detail-value">{{ currentServiceDetail.uid || '-' }}</span>
+                  <span class="k8s-detail-value">{{ currentServiceDetail.uid }}</span>
                 </div>
               </a-card>
             </a-col>
             
             <a-col :xs="24" :lg="12">
-              <a-card title="网络信息" class="k8s-detail-card" size="small">
-                <div class="k8s-detail-item">
+              <a-card title="时间信息" class="k8s-detail-card" size="small">
+                <div class="k8s-detail-item" v-if="currentServiceDetail.created_at">
+                  <span class="k8s-detail-label">创建时间:</span>
+                  <span class="k8s-detail-value">{{ formatK8sTime(currentServiceDetail.created_at) }}</span>
+                </div>
+                <div class="k8s-detail-item" v-if="currentServiceDetail.age">
+                  <span class="k8s-detail-label">存在时间:</span>
+                  <span class="k8s-detail-value">{{ currentServiceDetail.age }}</span>
+                </div>
+                <!-- 只有当有外部IP时才显示 -->
+                <div class="k8s-detail-item" v-if="currentServiceDetail.external_ips && currentServiceDetail.external_ips.length > 0">
                   <span class="k8s-detail-label">外部IP:</span>
                   <div class="k8s-detail-value">
-                    <a-tag v-for="ip in currentServiceDetail.external_ips" :key="ip" color="orange" size="small" style="margin-right: 4px;">
+                    <a-tag v-for="ip in currentServiceDetail.external_ips" :key="ip" color="orange" size="small" style="margin-right: 4px; margin-bottom: 4px;">
                       {{ ip }}
                     </a-tag>
-                    <span v-if="!currentServiceDetail.external_ips || currentServiceDetail.external_ips.length === 0">-</span>
                   </div>
                 </div>
-                <div class="k8s-detail-item">
+                <!-- 只有当有负载均衡IP时才显示 -->
+                <div class="k8s-detail-item" v-if="currentServiceDetail.load_balancer_ip && currentServiceDetail.load_balancer_ip.trim()">
                   <span class="k8s-detail-label">负载均衡IP:</span>
-                  <span class="k8s-detail-value">{{ currentServiceDetail.load_balancer_ip || '-' }}</span>
-                </div>
-                <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">创建时间:</span>
-                  <span class="k8s-detail-value">{{ currentServiceDetail.created_at || '-' }}</span>
-                </div>
-                <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">存在时间:</span>
-                  <span class="k8s-detail-value">{{ currentServiceDetail.age || '-' }}</span>
+                  <span class="k8s-detail-value">{{ currentServiceDetail.load_balancer_ip }}</span>
                 </div>
               </a-card>
             </a-col>
           </a-row>
 
-          <a-row :gutter="[24, 16]" style="margin-top: 16px;">
+          <!-- 只有当有端口配置时才显示 -->
+          <a-row :gutter="[24, 16]" style="margin-top: 16px;" v-if="currentServiceDetail.ports && currentServiceDetail.ports.length > 0">
             <a-col :xs="24">
               <a-card title="端口配置" class="k8s-detail-card" size="small">
                 <a-table
-                  :data-source="currentServiceDetail.ports || []"
-                  :columns="portColumns"
+                  :data-source="currentServiceDetail.ports"
+                  :columns="getVisiblePortColumns(currentServiceDetail.ports)"
                   :pagination="false"
                   size="small"
                   class="k8s-table"
                 >
+                  <template #name="{ text }">
+                    <span v-if="text">{{ text }}</span>
+                    <span v-else class="k8s-no-data">-</span>
+                  </template>
                   <template #protocol="{ text }">
-                    <a-tag color="blue" size="small">{{ text }}</a-tag>
+                    <a-tag color="blue" size="small">{{ text || 'TCP' }}</a-tag>
+                  </template>
+                  <template #node_port="{ text }">
+                    <span v-if="text">{{ text }}</span>
+                    <span v-else class="k8s-no-data">-</span>
                   </template>
                 </a-table>
               </a-card>
@@ -949,47 +966,41 @@
           </a-row>
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px;">
-            <a-col :xs="24" :lg="12">
+            <!-- 只有当有选择器时才显示 -->
+            <a-col :xs="24" :lg="12" v-if="currentServiceDetail.selector && Object.keys(currentServiceDetail.selector).length > 0">
               <a-card title="Pod 选择器" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display">
-                  <a-tag v-for="[key, value] in Object.entries(currentServiceDetail.selector || {})" :key="key" class="k8s-label-item" style="margin-bottom: 8px;">
+                  <a-tag v-for="[key, value] in Object.entries(currentServiceDetail.selector)" :key="key" class="k8s-label-item" style="margin-bottom: 8px;">
                     {{ key }}: {{ value }}
                   </a-tag>
-                  <span v-if="!currentServiceDetail.selector || Object.keys(currentServiceDetail.selector).length === 0" class="k8s-no-data">
-                    无选择器
-                  </span>
                 </div>
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
+            <!-- 只有当有标签时才显示 -->
+            <a-col :xs="24" :lg="12" v-if="currentServiceDetail.labels && Object.keys(currentServiceDetail.labels).length > 0">
               <a-card title="标签信息" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display">
-                  <a-tooltip v-for="(value, key) in (currentServiceDetail.labels || {})" :key="key" :title="`${key}: ${value}`" placement="top">
+                  <a-tooltip v-for="(value, key) in currentServiceDetail.labels" :key="key" :title="`${key}: ${value}`" placement="top">
                     <a-tag class="k8s-label-item" style="margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                       {{ key }}: {{ value }}
                     </a-tag>
                   </a-tooltip>
-                  <span v-if="!currentServiceDetail.labels || Object.keys(currentServiceDetail.labels).length === 0" class="k8s-no-data">
-                    暂无标签
-                  </span>
                 </div>
               </a-card>
             </a-col>
           </a-row>
 
-          <a-row :gutter="[24, 16]" style="margin-top: 16px;">
+          <!-- 只有当有注解时才显示 -->
+          <a-row :gutter="[24, 16]" style="margin-top: 16px;" v-if="currentServiceDetail.annotations && Object.keys(currentServiceDetail.annotations).length > 0">
             <a-col :xs="24">
               <a-card title="注解信息" class="k8s-detail-card" size="small">
                 <div class="k8s-annotations-display">
-                  <a-tooltip v-for="(value, key) in (currentServiceDetail.annotations || {})" :key="key" :title="`${key}: ${value}`">
+                  <a-tooltip v-for="(value, key) in currentServiceDetail.annotations" :key="key" :title="`${key}: ${value}`">
                     <div class="k8s-annotation-item" style="margin-bottom: 8px; display: inline-block; max-width: 100%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; margin-right: 8px;">
                       {{ key }}: {{ value }}
                     </div>
                   </a-tooltip>
-                  <span v-if="!currentServiceDetail.annotations || Object.keys(currentServiceDetail.annotations).length === 0" class="k8s-no-data">
-                    暂无注解
-                  </span>
                 </div>
               </a-card>
             </a-col>
@@ -1039,18 +1050,25 @@
       :maskClosable="false"
       destroyOnClose
     >
-      <a-table
-        :data-source="serviceEndpoints"
-        :pagination="false"
-        :loading="submitLoading"
-        size="small"
-        class="k8s-table"
-        :columns="endpointColumns"
-      >
-        <template #ready="{ text }">
-          <a-badge :status="text ? 'success' : 'error'" :text="text ? '就绪' : '未就绪'" />
+      <div v-if="serviceEndpoints && serviceEndpoints.length > 0">
+        <a-table
+          :data-source="serviceEndpoints"
+          :pagination="false"
+          :loading="submitLoading"
+          size="small"
+          class="k8s-table"
+          :columns="endpointColumns"
+        >
+          <template #ready="{ text }">
+            <a-badge :status="text ? 'success' : 'error'" :text="text ? '就绪' : '未就绪'" />
+          </template>
+        </a-table>
+      </div>
+      <a-empty v-else description="暂无端点数据" :image="undefined">
+        <template #image>
+          <NodeIndexOutlined style="font-size: 48px; color: #d9d9d9;" />
         </template>
-      </a-table>
+      </a-empty>
     </a-modal>
 
     <!-- 标签过滤模态框 -->
@@ -1113,6 +1131,7 @@
 import { onMounted, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { useServicePage } from './Service';
+import { formatK8sTime, formatDateTime, getRelativeTime } from '../shared/utils';
 import yaml from 'js-yaml';
 import { 
   PlusOutlined, 
@@ -1311,25 +1330,41 @@ const handleTableChange = (pagination: { current?: number; pageSize?: number }) 
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '14%', ellipsis: true },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '11%', ellipsis: true },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', align: 'center', slots: { customRender: 'status' } },
-  { title: '类型', dataIndex: 'type', key: 'type', width: '9%', align: 'center', slots: { customRender: 'type' } },
-  { title: '集群IP', dataIndex: 'cluster_ip', key: 'cluster_ip', width: '11%', slots: { customRender: 'cluster_ip' } },
-  { title: '外部IP', dataIndex: 'external_ips', key: 'external_ips', width: '10%', slots: { customRender: 'external_ips' } },
-  { title: '端口', dataIndex: 'ports', key: 'ports', width: '12%', slots: { customRender: 'ports' } },
-  { title: '选择器', dataIndex: 'selector', key: 'selector', width: '10%', slots: { customRender: 'selector' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '11%', slots: { customRender: 'labels' } },
-  { title: '操作', key: 'actions', width: '14%', fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center', slots: { customRender: 'status' } },
+  { title: '类型', dataIndex: 'type', key: 'type', width: 110, align: 'center', slots: { customRender: 'type' } },
+  { title: '集群IP', dataIndex: 'cluster_ip', key: 'cluster_ip', width: 130, slots: { customRender: 'cluster_ip' } },
+  { title: '端口', dataIndex: 'ports', key: 'ports', width: 200, slots: { customRender: 'ports' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
+  { title: '操作', key: 'actions', width: 230, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 const portColumns = [
-  { title: '名称', dataIndex: 'name', key: 'name' },
+  { title: '名称', dataIndex: 'name', key: 'name', slots: { customRender: 'name' } },
   { title: '协议', dataIndex: 'protocol', key: 'protocol', slots: { customRender: 'protocol' } },
   { title: '端口', dataIndex: 'port', key: 'port' },
   { title: '目标端口', dataIndex: 'target_port', key: 'target_port' },
-  { title: '节点端口', dataIndex: 'node_port', key: 'node_port' },
+  { title: '节点端口', dataIndex: 'node_port', key: 'node_port', slots: { customRender: 'node_port' } },
 ];
+
+// 动态获取可见的端口列（只显示有数据的列）
+const getVisiblePortColumns = (ports: any[]) => {
+  if (!ports || ports.length === 0) return portColumns;
+  
+  // 检查是否有任何端口配置了 node_port
+  const hasNodePort = ports.some(port => port.node_port && port.node_port > 0);
+  
+  // 如果没有 node_port，则过滤掉该列
+  if (!hasNodePort) {
+    return portColumns.filter(col => col.key !== 'node_port');
+  }
+  
+  return portColumns;
+};
 
 const endpointColumns = [
   { title: 'IP地址', dataIndex: 'ip', key: 'ip' },

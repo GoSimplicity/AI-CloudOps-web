@@ -209,7 +209,7 @@
         }"
         @change="handleTableChange"
         class="k8s-table ingress-table"
-        :scroll="{ x: 1800 }"
+        :scroll="{ x: 1640 }"
       >
         <template #status="{ text }">
           <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
@@ -336,6 +336,47 @@
               <span class="k8s-no-data">-</span>
             </template>
           </div>
+        </template>
+
+        <template #annotations="{ text }">
+          <div class="k8s-annotations-display">
+            <template v-if="Array.isArray(text)">
+              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ text.length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else-if="text && typeof text === 'object'">
+              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ Object.keys(text).length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else>
+              <span class="k8s-no-data">-</span>
+            </template>
+          </div>
+        </template>
+
+        <template #uid="{ text }">
+          <a-tooltip v-if="text" :title="text">
+            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: #666;">
+              {{ text.substring(0, 8) }}...
+            </span>
+          </a-tooltip>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
+        <template #createdAt="{ text }">
+          <div v-if="text" style="font-size: 12px; color: #666;">
+            <div>{{ formatDateTime(text) }}</div>
+            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+          </div>
+          <span v-else class="k8s-no-data">-</span>
         </template>
 
         <template #actions="{ record }">
@@ -1116,6 +1157,7 @@
 import { onMounted, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { useIngressPage } from './Ingress';
+import { formatDateTime, getRelativeTime } from '../shared/utils';
 import yaml from 'js-yaml';
 import { 
   PlusOutlined, 
@@ -1329,16 +1371,19 @@ const handleClusterDropdownScroll = (e: Event) => {
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '14%', ellipsis: true },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '11%', ellipsis: true },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', align: 'center', slots: { customRender: 'status' } },
-  { title: 'Ingress类', dataIndex: 'ingress_class_name', key: 'ingress_class_name', width: '9%', align: 'center', slots: { customRender: 'ingress_class_name' } },
-  { title: '主机', dataIndex: 'hosts', key: 'hosts', width: '14%', slots: { customRender: 'hosts' } },
-  { title: '负载均衡器', dataIndex: 'load_balancer', key: 'load_balancer', width: '12%', slots: { customRender: 'load_balancer' } },
-  { title: '规则', dataIndex: 'rules', key: 'rules', width: '10%', align: 'center', slots: { customRender: 'rules' } },
-  { title: 'TLS', dataIndex: 'tls', key: 'tls', width: '8%', align: 'center', slots: { customRender: 'tls' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '11%', slots: { customRender: 'labels' } },
-  { title: '操作', key: 'actions', width: '13%', fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center', slots: { customRender: 'status' } },
+  { title: 'Ingress类', dataIndex: 'ingress_class_name', key: 'ingress_class_name', width: 130, align: 'center', slots: { customRender: 'ingress_class_name' } },
+  { title: '主机', dataIndex: 'hosts', key: 'hosts', width: 180, slots: { customRender: 'hosts' } },
+  { title: '负载均衡器', dataIndex: 'load_balancer', key: 'load_balancer', width: 160, slots: { customRender: 'load_balancer' } },
+  { title: '规则', dataIndex: 'rules', key: 'rules', width: 90, align: 'center', slots: { customRender: 'rules' } },
+  { title: 'TLS', dataIndex: 'tls', key: 'tls', width: 80, align: 'center', slots: { customRender: 'tls' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
+  { title: '操作', key: 'actions', width: 230, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 const ruleColumns = [

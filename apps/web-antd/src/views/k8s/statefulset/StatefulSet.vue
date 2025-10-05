@@ -232,7 +232,7 @@
         }"
         @change="handleTableChange"
         class="k8s-table statefulset-table"
-        :scroll="{ x: 1600 }"
+        :scroll="{ x: 1440 }"
       >
         <template #status="{ text }">
           <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
@@ -240,9 +240,17 @@
 
         <template #replicas="{ record }">
           <div class="k8s-replicas-display">
-            <span class="k8s-replicas-text">
-              {{ record.ready_replicas }}/{{ record.replicas }}
-            </span>
+            <a-tooltip>
+              <template #title>
+                <div>期望: {{ record.replicas }}</div>
+                <div>就绪: {{ record.ready_replicas }}</div>
+                <div>当前: {{ record.current_replicas }}</div>
+                <div>已更新: {{ record.updated_replicas }}</div>
+              </template>
+              <span class="k8s-replicas-text">
+                {{ record.ready_replicas }}/{{ record.replicas }}
+              </span>
+            </a-tooltip>
             <a-progress 
               :percent="record.replicas > 0 ? Math.round((record.ready_replicas / record.replicas) * 100) : 0" 
               size="small" 
@@ -274,8 +282,18 @@
           <span v-else class="k8s-no-data">-</span>
         </template>
 
+        <template #update_strategy="{ text }">
+          <a-tag color="cyan" v-if="text">{{ text }}</a-tag>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
         <template #pod_management_policy="{ text }">
           <a-tag color="geekblue" v-if="text">{{ text }}</a-tag>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
+        <template #created_at="{ text }">
+          <span v-if="text">{{ formatTime(text) }}</span>
           <span v-else class="k8s-no-data">-</span>
         </template>
 
@@ -313,6 +331,49 @@
               <span class="k8s-no-data">-</span>
             </template>
           </div>
+        </template>
+
+        <template #annotations="{ text }">
+          <div class="k8s-annotations-display">
+            <template v-if="Array.isArray(text)">
+              <!-- 数组格式 -->
+              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ text.length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else-if="text && typeof text === 'object'">
+              <!-- 对象格式 -->
+              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ Object.keys(text).length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else>
+              <span class="k8s-no-data">-</span>
+            </template>
+          </div>
+        </template>
+
+        <template #uid="{ text }">
+          <a-tooltip v-if="text" :title="text">
+            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: #666;">
+              {{ text.substring(0, 8) }}...
+            </span>
+          </a-tooltip>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
+        <template #createdAt="{ text }">
+          <div v-if="text" style="font-size: 12px; color: #666;">
+            <div>{{ formatDateTime(text) }}</div>
+            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+          </div>
+          <span v-else class="k8s-no-data">-</span>
         </template>
 
         <template #actions="{ record }">
@@ -782,6 +843,14 @@
                   <span class="k8s-detail-label">UID:</span>
                   <span class="k8s-detail-value">{{ currentStatefulSetDetail.uid || '-' }}</span>
                 </div>
+                <div class="k8s-detail-item">
+                  <span class="k8s-detail-label">创建时间:</span>
+                  <span class="k8s-detail-value">{{ formatTime(currentStatefulSetDetail.created_at) || '-' }}</span>
+                </div>
+                <div class="k8s-detail-item">
+                  <span class="k8s-detail-label">更新时间:</span>
+                  <span class="k8s-detail-value">{{ formatTime(currentStatefulSetDetail.updated_at) || '-' }}</span>
+                </div>
               </a-card>
             </a-col>
             
@@ -789,19 +858,33 @@
               <a-card title="副本信息" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">期望副本数:</span>
-                  <span class="k8s-detail-value">{{ currentStatefulSetDetail.replicas }}</span>
+                  <span class="k8s-detail-value">
+                    <a-badge :count="currentStatefulSetDetail.replicas" :number-style="{ backgroundColor: '#52c41a' }" />
+                  </span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">就绪副本数:</span>
-                  <span class="k8s-detail-value">{{ currentStatefulSetDetail.ready_replicas }}</span>
+                  <span class="k8s-detail-value">
+                    <a-badge :count="currentStatefulSetDetail.ready_replicas" :number-style="{ backgroundColor: currentStatefulSetDetail.ready_replicas === currentStatefulSetDetail.replicas ? '#52c41a' : '#faad14' }" />
+                  </span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">当前副本数:</span>
-                  <span class="k8s-detail-value">{{ currentStatefulSetDetail.current_replicas }}</span>
+                  <span class="k8s-detail-value">
+                    <a-badge :count="currentStatefulSetDetail.current_replicas" :number-style="{ backgroundColor: '#1890ff' }" />
+                  </span>
                 </div>
                 <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">更新副本数:</span>
-                  <span class="k8s-detail-value">{{ currentStatefulSetDetail.updated_replicas }}</span>
+                  <span class="k8s-detail-label">已更新副本数:</span>
+                  <span class="k8s-detail-value">
+                    <a-badge :count="currentStatefulSetDetail.updated_replicas" :number-style="{ backgroundColor: '#722ed1' }" />
+                  </span>
+                </div>
+                <div class="k8s-detail-item" style="margin-top: 12px;">
+                  <a-progress 
+                    :percent="currentStatefulSetDetail.replicas > 0 ? Math.round((currentStatefulSetDetail.ready_replicas / currentStatefulSetDetail.replicas) * 100) : 0"
+                    :status="currentStatefulSetDetail.ready_replicas === currentStatefulSetDetail.replicas ? 'success' : 'active'"
+                  />
                 </div>
               </a-card>
             </a-col>
@@ -809,18 +892,27 @@
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px;">
             <a-col :xs="24" :lg="12">
-              <a-card title="服务信息" class="k8s-detail-card" size="small">
+              <a-card title="服务配置" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">服务名称:</span>
-                  <span class="k8s-detail-value">{{ currentStatefulSetDetail.service_name || '-' }}</span>
+                  <span class="k8s-detail-value">
+                    <a-tag color="purple" v-if="currentStatefulSetDetail.service_name">{{ currentStatefulSetDetail.service_name }}</a-tag>
+                    <span v-else class="k8s-no-data">-</span>
+                  </span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">Pod 管理策略:</span>
-                  <span class="k8s-detail-value">{{ currentStatefulSetDetail.pod_management_policy || '-' }}</span>
+                  <span class="k8s-detail-value">
+                    <a-tag color="geekblue" v-if="currentStatefulSetDetail.pod_management_policy">{{ currentStatefulSetDetail.pod_management_policy }}</a-tag>
+                    <span v-else class="k8s-no-data">-</span>
+                  </span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">更新策略:</span>
-                  <span class="k8s-detail-value">{{ currentStatefulSetDetail.update_strategy || '-' }}</span>
+                  <span class="k8s-detail-value">
+                    <a-tag color="cyan" v-if="currentStatefulSetDetail.update_strategy">{{ currentStatefulSetDetail.update_strategy }}</a-tag>
+                    <span v-else class="k8s-no-data">-</span>
+                  </span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">历史版本限制:</span>
@@ -833,7 +925,7 @@
               <a-card title="容器镜像" class="k8s-detail-card" size="small">
                 <div class="k8s-images-display">
                   <a-tooltip v-for="(image, index) in (currentStatefulSetDetail.images || [])" :key="index" :title="image">
-                    <a-tag class="k8s-image-tag" style="margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;">
+                    <a-tag color="blue" class="k8s-image-tag" style="margin-bottom: 8px; max-width: 100%; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                       {{ image }}
                     </a-tag>
                   </a-tooltip>
@@ -846,15 +938,32 @@
           </a-row>
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px;">
+            <a-col :xs="24">
+              <a-card title="选择器 (Selector)" class="k8s-detail-card" size="small">
+                <div class="k8s-selector-display">
+                  <template v-if="currentStatefulSetDetail.selector && typeof currentStatefulSetDetail.selector === 'object' && Object.keys(currentStatefulSetDetail.selector).length > 0">
+                    <a-tag v-for="[key, value] in Object.entries(currentStatefulSetDetail.selector)" :key="key" color="processing" style="margin-bottom: 8px; margin-right: 8px;">
+                      {{ key }}: {{ value }}
+                    </a-tag>
+                  </template>
+                  <template v-else>
+                    <span class="k8s-no-data">暂无选择器</span>
+                  </template>
+                </div>
+              </a-card>
+            </a-col>
+          </a-row>
+
+          <a-row :gutter="[24, 16]" style="margin-top: 16px;">
             <a-col :xs="24" :lg="12">
               <a-card title="标签信息" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display">
                   <template v-if="Array.isArray(currentStatefulSetDetail.labels)">
                     <!-- 数组格式 -->
                     <a-tooltip v-for="label in currentStatefulSetDetail.labels" :key="label.key" :title="`${label.key}: ${label.value}`">
-                      <div class="k8s-label-item" style="margin-bottom: 8px; display: inline-block; max-width: 100%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; margin-right: 8px;">
+                      <a-tag color="blue" style="margin-bottom: 8px; margin-right: 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block;">
                         {{ label.key }}: {{ label.value }}
-                      </div>
+                      </a-tag>
                     </a-tooltip>
                     <span v-if="currentStatefulSetDetail.labels.length === 0" class="k8s-no-data">
                       暂无标签
@@ -863,9 +972,9 @@
                   <template v-else-if="currentStatefulSetDetail.labels && typeof currentStatefulSetDetail.labels === 'object'">
                     <!-- 对象格式 -->
                     <a-tooltip v-for="[key, value] in Object.entries(currentStatefulSetDetail.labels)" :key="key" :title="`${key}: ${value}`">
-                      <div class="k8s-label-item" style="margin-bottom: 8px; display: inline-block; max-width: 100%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; margin-right: 8px;">
+                      <a-tag color="blue" style="margin-bottom: 8px; margin-right: 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block;">
                         {{ key }}: {{ value }}
-                      </div>
+                      </a-tag>
                     </a-tooltip>
                     <span v-if="Object.keys(currentStatefulSetDetail.labels).length === 0" class="k8s-no-data">
                       暂无标签
@@ -886,9 +995,9 @@
                   <template v-if="Array.isArray(currentStatefulSetDetail.annotations)">
                     <!-- 数组格式 -->
                     <a-tooltip v-for="annotation in currentStatefulSetDetail.annotations" :key="annotation.key" :title="`${annotation.key}: ${annotation.value}`">
-                      <div class="k8s-annotation-item" style="margin-bottom: 8px; display: inline-block; max-width: 100%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; margin-right: 8px;">
+                      <a-tag color="orange" style="margin-bottom: 8px; margin-right: 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block;">
                         {{ annotation.key }}: {{ annotation.value }}
-                      </div>
+                      </a-tag>
                     </a-tooltip>
                     <span v-if="currentStatefulSetDetail.annotations.length === 0" class="k8s-no-data">
                       暂无注解
@@ -897,9 +1006,9 @@
                   <template v-else-if="currentStatefulSetDetail.annotations && typeof currentStatefulSetDetail.annotations === 'object'">
                     <!-- 对象格式 -->
                     <a-tooltip v-for="[key, value] in Object.entries(currentStatefulSetDetail.annotations)" :key="key" :title="`${key}: ${value}`">
-                      <div class="k8s-annotation-item" style="margin-bottom: 8px; display: inline-block; max-width: 100%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; margin-right: 8px;">
+                      <a-tag color="orange" style="margin-bottom: 8px; margin-right: 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block;">
                         {{ key }}: {{ value }}
-                      </div>
+                      </a-tag>
                     </a-tooltip>
                     <span v-if="Object.keys(currentStatefulSetDetail.annotations).length === 0" class="k8s-no-data">
                       暂无注解
@@ -1126,6 +1235,7 @@ import { onMounted, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { useStatefulSetPage } from './StatefulSet';
 import { rollbackStatefulSetApi } from '#/api/core/k8s/k8s_statefulset';
+import { formatDateTime, getRelativeTime } from '../shared/utils';
 import { 
   PlusOutlined, 
   ReloadOutlined, 
@@ -1295,6 +1405,9 @@ const {
   
   // constants
   K8sStatefulSetStatus,
+  
+  // formatters
+  formatTime,
 } = useStatefulSetPage();
 
 // 添加新标签/注解的方法
@@ -1376,15 +1489,19 @@ const handleClusterDropdownScroll = (e: Event) => {
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '14%', ellipsis: true },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '11%', ellipsis: true },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', align: 'center', slots: { customRender: 'status' } },
-  { title: '副本数', key: 'replicas', width: '11%', align: 'center', slots: { customRender: 'replicas' } },
-  { title: '服务名称', dataIndex: 'service_name', key: 'service_name', width: '11%', ellipsis: true, slots: { customRender: 'service_name' } },
-  { title: 'Pod管理策略', dataIndex: 'pod_management_policy', key: 'pod_management_policy', width: '9%', align: 'center', slots: { customRender: 'pod_management_policy' } },
-  { title: '镜像', dataIndex: 'images', key: 'images', width: '14%', slots: { customRender: 'images' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '11%', slots: { customRender: 'labels' } },
-  { title: '操作', key: 'actions', width: '21%', fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center', slots: { customRender: 'status' } },
+  { title: '副本详情', key: 'replicas', width: 130, align: 'center', slots: { customRender: 'replicas' } },
+  { title: '服务名称', dataIndex: 'service_name', key: 'service_name', width: 130, ellipsis: true, slots: { customRender: 'service_name' } },
+  { title: '更新策略', dataIndex: 'update_strategy', key: 'update_strategy', width: 100, align: 'center', slots: { customRender: 'update_strategy' } },
+  { title: 'Pod策略', dataIndex: 'pod_management_policy', key: 'pod_management_policy', width: 100, align: 'center', slots: { customRender: 'pod_management_policy' } },
+  { title: '镜像', dataIndex: 'images', key: 'images', width: 200, slots: { customRender: 'images' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
+  { title: '操作', key: 'actions', width: 380, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 // 标签过滤器状态

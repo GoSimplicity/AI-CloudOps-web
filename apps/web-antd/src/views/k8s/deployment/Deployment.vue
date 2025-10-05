@@ -221,24 +221,26 @@
         }"
         @change="handleTableChange"
         class="k8s-table deployment-table"
-        :scroll="{ x: 1600 }"
+        :scroll="{ x: 2080 }"
       >
         <template #status="{ text }">
           <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
         </template>
 
-        <template #replicas="{ record }">
-          <div class="k8s-replicas-display">
-            <span class="k8s-replicas-text">
-              {{ record.ready_replicas }}/{{ record.replicas }}
-            </span>
-            <a-progress 
-              :percent="record.replicas > 0 ? Math.round((record.ready_replicas / record.replicas) * 100) : 0" 
-              size="small" 
-              :show-info="false"
-              :status="record.ready_replicas === record.replicas ? 'success' : 'active'"
-              style="margin-top: 4px; max-width: 100px;"
-            />
+        <template #strategyDetails="{ record }">
+          <div class="k8s-strategy-display" style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
+            <div v-if="record.strategy">
+              <a-tag color="geekblue">{{ record.strategy }}</a-tag>
+            </div>
+            <div v-if="record.max_unavailable" style="display: flex; align-items: center; gap: 4px;">
+              <span style="color: #999;">不可用:</span>
+              <a-tag color="orange" size="small">{{ record.max_unavailable }}</a-tag>
+            </div>
+            <div v-if="record.max_surge" style="display: flex; align-items: center; gap: 4px;">
+              <span style="color: #999;">超出:</span>
+              <a-tag color="cyan" size="small">{{ record.max_surge }}</a-tag>
+            </div>
+            <span v-if="!record.strategy && !record.max_unavailable && !record.max_surge" class="k8s-no-data">-</span>
           </div>
         </template>
 
@@ -292,8 +294,62 @@
           </div>
         </template>
 
-        <template #strategy="{ text }">
-          <a-tag color="geekblue" v-if="text">{{ text }}</a-tag>
+        <template #annotations="{ text }">
+          <div class="k8s-annotations-display">
+            <template v-if="Array.isArray(text)">
+              <!-- 数组格式 -->
+              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ text.length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else-if="text && typeof text === 'object'">
+              <!-- 对象格式 -->
+              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ Object.keys(text).length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else>
+              <span class="k8s-no-data">-</span>
+            </template>
+          </div>
+        </template>
+
+        <template #selector="{ text }">
+          <div class="k8s-selector-display">
+            <template v-if="text && typeof text === 'object'">
+              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                <a-tag class="k8s-selector-item" color="cyan">
+                  {{ Object.keys(text).length }} 个选择器
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else>
+              <span class="k8s-no-data">-</span>
+            </template>
+          </div>
+        </template>
+
+        <template #uid="{ text }">
+          <a-tooltip v-if="text" :title="text">
+            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: #666;">
+              {{ text.substring(0, 8) }}...
+            </span>
+          </a-tooltip>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
+        <template #createdAt="{ text }">
+          <div v-if="text" style="font-size: 12px; color: #666;">
+            <div>{{ formatDateTime(text) }}</div>
+            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+          </div>
           <span v-else class="k8s-no-data">-</span>
         </template>
 
@@ -1298,6 +1354,42 @@ const addNewEditAnnotation = () => {
   }
 };
 
+// 时间格式化函数
+const formatDateTime = (dateStr: string) => {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
+
+// 相对时间函数
+const getRelativeTime = (dateStr: string) => {
+  if (!dateStr) return '';
+  const now = new Date().getTime();
+  const past = new Date(dateStr).getTime();
+  const diff = now - past;
+  
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const months = Math.floor(days / 30);
+  const years = Math.floor(days / 365);
+  
+  if (years > 0) return `${years}年前`;
+  if (months > 0) return `${months}个月前`;
+  if (days > 0) return `${days}天前`;
+  if (hours > 0) return `${hours}小时前`;
+  if (minutes > 0) return `${minutes}分钟前`;
+  if (seconds > 0) return `${seconds}秒前`;
+  return '刚刚';
+};
+
 const onSearch = () => {
   currentPage.value = 1;
   fetchDeployments();
@@ -1343,14 +1435,17 @@ const handleClusterDropdownScroll = (e: Event) => {
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '14%', ellipsis: true },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '11%', ellipsis: true },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', align: 'center', slots: { customRender: 'status' } },
-  { title: '副本数', key: 'replicas', width: '11%', align: 'center', slots: { customRender: 'replicas' } },
-  { title: '策略', dataIndex: 'strategy', key: 'strategy', width: '9%', align: 'center', slots: { customRender: 'strategy' } },
-  { title: '镜像', dataIndex: 'images', key: 'images', width: '14%', slots: { customRender: 'images' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '11%', slots: { customRender: 'labels' } },
-  { title: '操作', key: 'actions', width: '22%', fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center', slots: { customRender: 'status' } },
+  { title: '部署策略', key: 'strategyDetails', width: 180, align: 'center', slots: { customRender: 'strategyDetails' } },
+  { title: '镜像', dataIndex: 'images', key: 'images', width: 200, slots: { customRender: 'images' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
+  { title: '选择器', dataIndex: 'selector', key: 'selector', width: 150, slots: { customRender: 'selector' } },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
+  { title: '操作', key: 'actions', width: 450, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 // 标签过滤器状态

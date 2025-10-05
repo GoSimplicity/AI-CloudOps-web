@@ -174,7 +174,7 @@
         }"
         @change="handleTableChange"
         class="k8s-table namespace-table"
-        :scroll="{ x: 1400 }"
+        :scroll="{ x: 1080 }"
       >
         <template #status="{ text }">
           <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
@@ -184,35 +184,62 @@
           <a-badge :status="getPhaseColor(text)" :text="getPhaseText(text)" />
         </template>
 
+        <template #cluster="{ text }">
+          <span class="k8s-cluster-name">{{ getClusterName(text) }}</span>
+        </template>
+
+        <template #uid="{ text }">
+          <div class="k8s-uid-display">
+            <span class="uid-text" :title="text">{{ text }}</span>
+            <a-button 
+              type="text" 
+              size="small" 
+              class="uid-copy-btn"
+              @click="() => copyToClipboard(text)"
+              :title="'复制 UID'"
+            >
+              <template #icon><CopyOutlined /></template>
+            </a-button>
+          </div>
+        </template>
+
         <template #labels="{ text }">
           <div class="k8s-labels-display">
-            <a-tooltip v-for="label in (text || []).slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
-              <a-tag class="k8s-label-item">
-                {{ label.key }}: {{ label.value }}
-              </a-tag>
-            </a-tooltip>
-            <a-tooltip v-if="(text || []).length > 3" :title="(text || []).map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-              <a-tag class="k8s-label-item">
-                {{ (text || []).length }} 个标签
-              </a-tag>
-            </a-tooltip>
-            <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
+            <template v-if="text && text.length > 0">
+              <a-tooltip 
+                v-for="label in text.slice(0, 2)" 
+                :key="label.key" 
+                :title="`${label.key}: ${label.value}`"
+              >
+                <a-tag class="k8s-label-item" color="blue">
+                  <span class="label-key">{{ label.key.split('/').pop() }}</span>
+                  <span class="label-separator">:</span>
+                  <span class="label-value">{{ label.value }}</span>
+                </a-tag>
+              </a-tooltip>
+              <a-tooltip 
+                v-if="text.length > 2" 
+                :title="text.slice(2).map((item: any) => `${item.key}: ${item.value}`).join('\n')"
+              >
+                <a-tag class="k8s-label-count" color="blue">
+                  +{{ text.length - 2 }} 更多
+                </a-tag>
+              </a-tooltip>
+            </template>
+            <span v-else class="k8s-no-data">无标签</span>
           </div>
         </template>
 
         <template #annotations="{ text }">
           <div class="k8s-annotations-display">
-            <a-tooltip v-for="annotation in (text || []).slice(0, 3)" :key="annotation.key" :title="`${annotation.key}: ${annotation.value}`">
-              <a-tag class="k8s-annotation-item">
-                {{ annotation.key }}: {{ annotation.value }}
-              </a-tag>
-            </a-tooltip>
-            <a-tooltip v-if="(text || []).length > 3" :title="(text || []).map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-              <a-tag class="k8s-annotation-item">
-                {{ (text || []).length }} 个注解
-              </a-tag>
-            </a-tooltip>
-            <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
+            <template v-if="text && text.length > 0">
+              <a-tooltip :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                <a-tag class="k8s-annotation-count" color="purple">
+                  {{ text.length }} 个注解
+                </a-tag>
+              </a-tooltip>
+            </template>
+            <span v-else class="k8s-no-data">无注解</span>
           </div>
         </template>
 
@@ -507,32 +534,40 @@
             
             <a-col :xs="24" :lg="12">
               <a-card title="标签信息" class="k8s-detail-card" size="small">
-                <div class="k8s-labels-display">
-                  <a-tooltip v-for="label in (currentNamespaceDetail.labels || [])" :key="label.key" :title="`${label.key}: ${label.value}`">
-                    <a-tag class="k8s-label-item">
-                      {{ label.key }}: {{ label.value }}
-                    </a-tag>
-                  </a-tooltip>
-                  <span v-if="!currentNamespaceDetail.labels || currentNamespaceDetail.labels.length === 0" class="k8s-no-data">
-                    暂无标签
-                  </span>
+                <div class="k8s-detail-labels-list">
+                  <template v-if="currentNamespaceDetail.labels && currentNamespaceDetail.labels.length > 0">
+                    <div 
+                      v-for="label in currentNamespaceDetail.labels" 
+                      :key="label.key" 
+                      class="k8s-detail-label-item"
+                    >
+                      <span class="detail-label-key">{{ label.key }}</span>
+                      <span class="detail-label-separator">=</span>
+                      <span class="detail-label-value">{{ label.value }}</span>
+                    </div>
+                  </template>
+                  <span v-else class="k8s-no-data">暂无标签</span>
                 </div>
               </a-card>
             </a-col>
           </a-row>
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px;">
-            <a-col :xs="24" :lg="12">
+            <a-col :xs="24">
               <a-card title="注解信息" class="k8s-detail-card" size="small">
-                <div class="k8s-annotations-display">
-                  <a-tooltip v-for="annotation in (currentNamespaceDetail.annotations || [])" :key="annotation.key" :title="`${annotation.key}: ${annotation.value}`" placement="top">
-                    <a-tag class="k8s-annotation-item">
-                      {{ annotation.key }}: {{ annotation.value }}
-                    </a-tag>
-                  </a-tooltip>
-                  <span v-if="!currentNamespaceDetail.annotations || currentNamespaceDetail.annotations.length === 0" class="k8s-no-data">
-                    暂无注解
-                  </span>
+                <div class="k8s-detail-annotations-list">
+                  <template v-if="currentNamespaceDetail.annotations && currentNamespaceDetail.annotations.length > 0">
+                    <div 
+                      v-for="annotation in currentNamespaceDetail.annotations" 
+                      :key="annotation.key" 
+                      class="k8s-detail-annotation-item"
+                    >
+                      <span class="detail-annotation-key">{{ annotation.key }}</span>
+                      <span class="detail-annotation-separator">=</span>
+                      <span class="detail-annotation-value">{{ annotation.value }}</span>
+                    </div>
+                  </template>
+                  <span v-else class="k8s-no-data">暂无注解</span>
                 </div>
               </a-card>
             </a-col>
@@ -692,6 +727,7 @@ import {
   DeploymentUnitOutlined,
   FireOutlined,
   SearchOutlined,
+  CopyOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -874,14 +910,14 @@ const handleClusterDropdownScroll = (e: Event) => {
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '15%' },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '8%', slots: { customRender: 'status' } },
-  { title: '阶段', dataIndex: 'phase', key: 'phase', width: '8%', slots: { customRender: 'phase' } },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: '18%', ellipsis: true },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: '12%' },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '15%', slots: { customRender: 'labels' } },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: '12%', slots: { customRender: 'annotations' } },
-  { title: '操作', key: 'actions', width: '12%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '集群', dataIndex: 'cluster_id', key: 'cluster_id', width: 130, slots: { customRender: 'cluster' } },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center', slots: { customRender: 'status' } },
+  { title: '阶段', dataIndex: 'phase', key: 'phase', width: 90, align: 'center', slots: { customRender: 'phase' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
+  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 // 标签过滤器状态
@@ -926,6 +962,16 @@ const resetFilters = () => {
   // 清空命名空间列表
   clearNamespaces();
   message.success('已重置所有筛选条件');
+};
+
+// 复制到剪贴板
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    message.success('已复制到剪贴板');
+  } catch (err) {
+    message.error('复制失败');
+  }
 };
 
 onMounted(async () => {

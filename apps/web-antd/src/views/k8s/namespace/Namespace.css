@@ -36,6 +36,56 @@
   line-height: 1.6;
 }
 
+/* 详情页标签和注解列表样式 */
+.k8s-detail-labels-list,
+.k8s-detail-annotations-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.k8s-detail-label-item,
+.k8s-detail-annotation-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.k8s-detail-label-item:hover,
+.k8s-detail-annotation-item:hover {
+  background: #e9ecef;
+  border-color: #1677ff;
+}
+
+.detail-label-key,
+.detail-annotation-key {
+  color: #1677ff;
+  font-weight: 600;
+  word-break: break-word;
+  flex-shrink: 0;
+  max-width: 40%;
+}
+
+.detail-label-separator,
+.detail-annotation-separator {
+  color: #666;
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+
+.detail-label-value,
+.detail-annotation-value {
+  color: #262626;
+  word-break: break-word;
+  flex: 1;
+}
+
 .k8s-detail-content .ant-table-small .ant-table-tbody > tr > td {
   padding: 8px 12px;
   font-size: 12px;
@@ -47,27 +97,111 @@
   font-weight: 600;
 }
 
-/* 标签和注解显示 - 统一样式 */
-.k8s-labels-display,
-.k8s-annotations-display {
-  min-height: 30px;
+/* 集群名称列样式 */
+.k8s-cluster-name {
+  font-weight: 500;
+  color: #1677ff;
+  font-size: 13px;
 }
 
-.k8s-labels-display .k8s-label-item,
-.k8s-annotations-display .k8s-annotation-item {
-  background: #e6f7ff;
-  border: 1px solid #91d5ff;
-  color: #1677ff;
+/* UID 列样式 */
+.k8s-uid-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.k8s-uid-display .uid-text {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
-  border-radius: 6px;
-  margin: 2px 4px 2px 0;
-  padding: 2px 6px;
-  display: inline-block;
-  word-break: break-all;
-  max-width: 200px;
+  color: #666;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+}
+
+.k8s-uid-display .uid-copy-btn {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+  padding: 2px 4px;
+  height: 20px;
+  min-width: 20px;
+}
+
+.k8s-uid-display:hover .uid-copy-btn {
+  opacity: 1;
+}
+
+.k8s-uid-display .uid-copy-btn:hover {
+  color: #1677ff;
+}
+
+/* 标签和注解显示 - 优化样式 */
+.k8s-labels-display,
+.k8s-annotations-display {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.k8s-labels-display .k8s-label-item {
+  font-size: 12px;
+  border-radius: 4px;
+  margin: 0;
+  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 180px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.k8s-labels-display .k8s-label-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.k8s-labels-display .label-key {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 80px;
+}
+
+.k8s-labels-display .label-separator {
+  font-weight: 500;
+  opacity: 0.6;
+}
+
+.k8s-labels-display .label-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60px;
+}
+
+.k8s-labels-display .k8s-label-count {
+  font-size: 12px;
+  border-radius: 4px;
+  margin: 0;
+  padding: 2px 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.k8s-annotations-display .k8s-annotation-count {
+  font-size: 12px;
+  border-radius: 4px;
+  margin: 0;
+  padding: 2px 8px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .k8s-system-label {
@@ -88,10 +222,8 @@
 
 .k8s-no-data {
   color: #999;
+  font-size: 12px;
   font-style: italic;
-  text-align: center;
-  height: 40px;
-  line-height: 40px;
 }
 
 /* 命名空间配置区域 */

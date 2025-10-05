@@ -128,7 +128,7 @@
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
-            placeholder="🔍 搜索 ConfigMap 名称" 
+            placeholder="搜索 ConfigMap 名称" 
             class="k8s-search-input" 
             @pressEnter="onSearch"
             @input="onSearch"
@@ -209,20 +209,21 @@
         }"
         @change="handleTableChange"
         class="k8s-table configmap-table"
-        :scroll="{ x: 1600 }"
+        :scroll="{ x: 1440 }"
       >
         <template #data_count="{ record }">
           <a-tag color="cyan">{{ Object.keys(parseJsonField(record.data, {})).length }} 项</a-tag>
         </template>
 
-        <template #binary_data_count="{ record }">
-          <a-tag color="purple">{{ Object.keys(parseJsonField(record.binary_data, {})).length }} 项</a-tag>
+        <template #age="{ record }">
+          <a-tooltip :title="`原始值: ${record.age}`">
+            <span style="color: #1890ff;">{{ formatAge(record.age) }}</span>
+          </a-tooltip>
         </template>
 
         <template #labels="{ text }">
           <div class="k8s-labels-display">
             <template v-if="Array.isArray(text)">
-              <!-- 数组格式 -->
               <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
                 <a-tag class="k8s-label-item">
                   {{ label.key }}: {{ label.value }}
@@ -236,7 +237,6 @@
               <span v-if="text.length === 0" class="k8s-no-data">-</span>
             </template>
             <template v-else-if="text && typeof text === 'object'">
-              <!-- 对象格式 -->
               <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
                 <a-tag class="k8s-label-item">
                   {{ key }}: {{ value }}
@@ -253,6 +253,47 @@
               <span class="k8s-no-data">-</span>
             </template>
           </div>
+        </template>
+
+        <template #annotations="{ text }">
+          <div class="k8s-annotations-display">
+            <template v-if="Array.isArray(text)">
+              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ text.length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else-if="text && typeof text === 'object'">
+              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                <a-tag class="k8s-annotation-item" color="purple">
+                  {{ Object.keys(text).length }} 个注解
+                </a-tag>
+              </a-tooltip>
+              <span v-else class="k8s-no-data">-</span>
+            </template>
+            <template v-else>
+              <span class="k8s-no-data">-</span>
+            </template>
+          </div>
+        </template>
+
+        <template #uid="{ text }">
+          <a-tooltip v-if="text" :title="text">
+            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: #666;">
+              {{ text.substring(0, 8) }}...
+            </span>
+          </a-tooltip>
+          <span v-else class="k8s-no-data">-</span>
+        </template>
+
+        <template #createdAt="{ text }">
+          <div v-if="text" style="font-size: 12px; color: #666;">
+            <div>{{ formatDateTime(text) }}</div>
+            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+          </div>
+          <span v-else class="k8s-no-data">-</span>
         </template>
 
         <template #actions="{ record }">
@@ -531,9 +572,27 @@
         :rules="createYamlFormRules"
       >
         <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
+              <template #icon><FileAddOutlined /></template>
+              插入模板
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
+              <template #icon><ClearOutlined /></template>
+              清空
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="createYamlFormModel.yaml" 
-            placeholder="请输入 ConfigMap YAML 内容" 
+            placeholder="请输入 ConfigMap YAML 内容，或点击【插入模板】使用默认模板" 
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -779,7 +838,7 @@
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">创建时间:</span>
-                  <span class="k8s-detail-value">{{ formatTime(currentConfigMapDetail.creation_timestamp) }}</span>
+                  <span class="k8s-detail-value">{{ formatK8sTime(currentConfigMapDetail.creation_timestamp) }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">存在时间:</span>
@@ -901,6 +960,16 @@
         :rules="yamlFormRules"
       >
         <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatEditYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateEditYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="yamlFormModel.yaml" 
             placeholder="YAML 内容" 
@@ -971,6 +1040,7 @@
 import { onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { useConfigMapPage } from './ConfigMap';
+import { formatK8sTime, formatDateTime, getRelativeTime } from '../shared/utils';
 import { 
   PlusOutlined, 
   ReloadOutlined, 
@@ -984,6 +1054,10 @@ import {
   EditOutlined,
   DatabaseOutlined,
   KeyOutlined,
+  FileAddOutlined,
+  FormatPainterOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -1096,6 +1170,14 @@ const {
   removeEditLabelField,
   removeAnnotationField,
   removeEditAnnotationField,
+  
+  // yaml operations
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
 } = useConfigMapPage();
 
 // 添加新字段的方法
@@ -1164,15 +1246,7 @@ const addNewEditAnnotation = () => {
   }
 };
 
-// 格式化时间
-const formatTime = (timeStr?: string) => {
-  if (!timeStr) return '-';
-  try {
-    return new Date(timeStr).toLocaleString('zh-CN');
-  } catch {
-    return timeStr;
-  }
-};
+// 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime
 
 const onSearch = () => {
   currentPage.value = 1;
@@ -1218,15 +1292,54 @@ const handleClusterDropdownScroll = (e: Event) => {
   }
 };
 
+const formatAge = (age?: string) => {
+  if (!age) return '-';
+  
+  try {
+    // 解析时间字符串，提取小时、分钟、秒
+    const hourMatch = age.match(/(\d+)h/);
+    const minuteMatch = age.match(/(\d+)m/);
+    const secondMatch = age.match(/(\d+(?:\.\d+)?)s/);
+    
+    const hours = hourMatch && hourMatch[1] ? parseInt(hourMatch[1]) : 0;
+    const minutes = minuteMatch && minuteMatch[1] ? parseInt(minuteMatch[1]) : 0;
+    const seconds = secondMatch && secondMatch[1] ? parseFloat(secondMatch[1]) : 0;
+    
+    // 转换为天、小时、分钟
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    
+    // 根据时间长度选择合适的显示格式
+    if (days > 0) {
+      if (remainingHours > 0) {
+        return `${days}天 ${remainingHours}小时`;
+      }
+      return `${days}天`;
+    } else if (hours > 0) {
+      if (minutes > 0) {
+        return `${hours}小时 ${minutes}分钟`;
+      }
+      return `${hours}小时`;
+    } else if (minutes > 0) {
+      return `${minutes}分钟`;
+    } else {
+      return `${Math.floor(seconds)}秒`;
+    }
+  } catch (error) {
+    return age; // 如果解析失败，返回原始值
+  }
+};
+
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: '15%' },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: '12%' },
-  { title: '数据项', key: 'data_count', width: '10%', slots: { customRender: 'data_count' } },
-  { title: '二进制数据', key: 'binary_data_count', width: '12%', slots: { customRender: 'binary_data_count' } },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: '18%', ellipsis: true },
-  { title: '创建时间', dataIndex: 'creation_timestamp', key: 'creation_timestamp', width: '12%' },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: '12%', slots: { customRender: 'labels' } },
-  { title: '操作', key: 'actions', width: '15%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true },
+  { title: '数据项', key: 'data_count', width: 90, align: 'center', slots: { customRender: 'data_count' } },
+  { title: '大小', dataIndex: 'size', key: 'size', width: 100, align: 'center' },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
+  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 // 标签过滤器状态

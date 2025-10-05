@@ -1,6 +1,7 @@
-import { ref, computed } from 'vue';
+import { ref, computed, h } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+import yaml from 'js-yaml';
 import {
   type K8sSecret,
   type GetSecretListReq,
@@ -33,6 +34,22 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
+
+// YAML 模板常量
+const SECRET_YAML_TEMPLATE = `apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secret
+  labels:
+    app: my-app
+type: Opaque
+stringData:
+  username: admin
+  password: mypassword
+  database.properties: |
+    db.host=localhost
+    db.port=5432
+    db.name=mydb`;
 
 export function useSecretPage() {
   // state
@@ -629,7 +646,7 @@ export function useSecretPage() {
       };
       
       await updateSecretByYamlApi(params);
-      message.success('🎉 Secret YAML 更新成功');
+      message.success('Secret YAML 更新成功');
       isYamlModalVisible.value = false;
       await fetchSecrets();
     } catch (err: unknown) {
@@ -637,7 +654,7 @@ export function useSecretPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ Secret YAML 更新失败');
+      message.error('Secret YAML 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -694,7 +711,7 @@ export function useSecretPage() {
       };
       
       await createSecretApi(params);
-      message.success('🎉 Secret 创建成功');
+      message.success('Secret 创建成功');
       isCreateModalVisible.value = false;
       await fetchSecrets();
     } catch (err: unknown) {
@@ -702,7 +719,7 @@ export function useSecretPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ Secret 创建失败');
+      message.error('Secret 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -722,7 +739,7 @@ export function useSecretPage() {
       };
       
       await createSecretByYamlApi(params);
-      message.success('🎉 Secret YAML 创建成功');
+      message.success('Secret YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchSecrets();
     } catch (err: unknown) {
@@ -730,7 +747,7 @@ export function useSecretPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ Secret YAML 创建失败');
+      message.error('Secret YAML 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -774,7 +791,7 @@ export function useSecretPage() {
       };
       
       await updateSecretApi(params);
-      message.success('🎉 Secret 更新成功');
+      message.success('Secret 更新成功');
       isEditModalVisible.value = false;
       await fetchSecrets();
     } catch (err: unknown) {
@@ -782,7 +799,7 @@ export function useSecretPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ Secret 更新失败');
+      message.error('Secret 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -809,10 +826,10 @@ export function useSecretPage() {
             name: record.name,
           };
           await deleteSecretApi(params);
-          message.success('✅ Secret 删除成功');
+          message.success('Secret 删除成功');
           await fetchSecrets();
         } catch (err) {
-          message.error('❌ Secret 删除失败');
+          message.error('Secret 删除失败');
 
         }
       },
@@ -870,12 +887,12 @@ export function useSecretPage() {
             }
           }
           
-          message.success(`✅ 批量${operation}操作已完成`);
+          message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchSecrets();
         } catch (err) {
-          message.error(`❌ 批量${operation}失败`);
+          message.error(`批量${operation}失败`);
 
         }
       },
@@ -954,6 +971,228 @@ export function useSecretPage() {
 
   const removeEditAnnotationField = (key: string) => {
     delete editFormModel.value.annotations[key];
+  };
+
+  // YAML 操作辅助函数
+  const insertYamlTemplate = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认操作',
+        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+        okText: '确认',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = SECRET_YAML_TEMPLATE;
+          message.success('模板已插入');
+        },
+      });
+    } else {
+      createYamlFormModel.value.yaml = SECRET_YAML_TEMPLATE;
+      message.success('模板已插入');
+    }
+  };
+
+  const formatYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      // 解析 YAML
+      const parsed = yaml.load(yamlContent);
+      // 重新格式化为 YAML（缩进2空格）
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1, // 不限制行宽
+        noRefs: true,  // 不使用引用
+        sortKeys: false, // 保持原有顺序
+      });
+      createYamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+    }
+  };
+
+  const validateYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      // 尝试解析 YAML
+      const parsed = yaml.load(yamlContent);
+      
+      // 检查是否是有效的对象
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      // 基本的 Secret 字段检查
+      const secret = parsed as any;
+      const issues: string[] = [];
+
+      if (!secret.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!secret.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (secret.kind !== 'Secret') {
+        issues.push(`kind 应为 "Secret"，当前为 "${secret.kind}"`);
+      }
+      if (!secret.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!secret.type) {
+        issues.push('建议设置 type 字段');
+      }
+      if (!secret.data && !secret.stringData) {
+        issues.push('建议至少设置 data 或 stringData 字段之一');
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+    }
+  };
+
+  const clearYaml = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认清空',
+        content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+        okText: '确认清空',
+        okType: 'danger',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = '';
+          message.success('YAML 内容已清空');
+        },
+      });
+    } else {
+      message.info('YAML 内容已为空');
+    }
+  };
+
+  // 编辑 YAML 的格式化和验证函数
+  const formatEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      yamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+    }
+  };
+
+  const validateEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      // 基本的 Secret 字段检查
+      const secret = parsed as any;
+      const issues: string[] = [];
+
+      if (!secret.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!secret.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (secret.kind !== 'Secret') {
+        issues.push(`kind 应为 "Secret"，当前为 "${secret.kind}"`);
+      }
+      if (!secret.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!secret.type) {
+        issues.push('建议设置 type 字段');
+      }
+      if (!secret.data && !secret.stringData) {
+        issues.push('建议至少设置 data 或 stringData 字段之一');
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+    }
   };
 
   return {
@@ -1078,5 +1317,13 @@ export function useSecretPage() {
     removeEditLabelField,
     removeAnnotationField,
     removeEditAnnotationField,
+    
+    // yaml operations
+    insertYamlTemplate,
+    formatYaml,
+    validateYaml,
+    clearYaml,
+    formatEditYaml,
+    validateEditYaml,
   };
 }

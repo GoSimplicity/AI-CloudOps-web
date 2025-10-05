@@ -107,7 +107,7 @@ export function useClusterPage() {
 
   // helpers
   const getEnvText = (env?: Env | string) => {
-    if (env === undefined || env === null) return '未知环境';
+    if (env === undefined || env === null) return '未知';
     const value = typeof env === 'string' ? parseInt(env) : env;
     const map: Record<number, string> = {
       [Env.Prod]: '生产',
@@ -116,7 +116,20 @@ export function useClusterPage() {
       [Env.Rc]: '测试',
       [Env.Press]: '灰度',
     };
-    return map[value] || '未知环境';
+    return map[value] || '未知';
+  };
+
+  const getEnvColor = (env?: Env | string) => {
+    if (env === undefined || env === null) return 'default';
+    const value = typeof env === 'string' ? parseInt(env) : env;
+    const map: Record<number, string> = {
+      [Env.Prod]: 'red',
+      [Env.Dev]: 'blue',
+      [Env.Stage]: 'orange',
+      [Env.Rc]: 'green',
+      [Env.Press]: 'purple',
+    };
+    return map[value] || 'default';
   };
 
   const getStatusText = (s?: ClusterStatus) => {
@@ -654,6 +667,7 @@ export function useClusterPage() {
     filteredClusters,
     rowSelection,
     getEnvText,
+    getEnvColor,
     getStatusText,
     fetchClusters,
     openCreate,

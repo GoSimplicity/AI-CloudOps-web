@@ -1,6 +1,7 @@
-import { ref, computed } from 'vue';
+import { ref, computed, h } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+import yaml from 'js-yaml';
 import {
   type K8sConfigMap,
   type GetConfigMapListReq,
@@ -32,6 +33,25 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
+
+// YAML 模板常量
+const CONFIGMAP_YAML_TEMPLATE = `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-configmap
+  labels:
+    app: my-app
+data:
+  config.properties: |
+    database.host=localhost
+    database.port=5432
+    database.name=mydb
+  application.yaml: |
+    server:
+      port: 8080
+      host: 0.0.0.0
+    logging:
+      level: info`;
 
 export function useConfigMapPage() {
   // state
@@ -81,7 +101,7 @@ export function useConfigMapPage() {
     name: string;
     namespace: string;
     data: Record<string, string>;
-    binary_data: Record<string, string>; // 在表单中暂存为string，提交时转换
+    binary_data: Record<string, string>;
     labels: Record<string, string>;
     annotations: Record<string, string>;
     immutable: boolean;
@@ -99,7 +119,7 @@ export function useConfigMapPage() {
     name: string;
     namespace: string;
     data: Record<string, string>;
-    binary_data: Record<string, string>; // 在表单中暂存为string，提交时转换
+    binary_data: Record<string, string>;
     labels: Record<string, string>;
     annotations: Record<string, string>;
     immutable: boolean;
@@ -187,7 +207,6 @@ export function useConfigMapPage() {
     return map[value] || '未知环境';
   };
 
-  // 转换函数：Record<string, string> -> KeyValueList
   const recordToKeyValueList = (record: Record<string, string> | null | undefined): KeyValueList => {
     if (!record || typeof record !== 'object') {
       return [];
@@ -195,16 +214,13 @@ export function useConfigMapPage() {
     return Object.entries(record).map(([key, value]: [string, string]) => ({ key, value }));
   };
 
-  // 转换函数：KeyValueList 或对象 -> Record<string, string>
   const keyValueListToRecord = (data?: KeyValueList | Record<string, string>): Record<string, string> => {
     if (!data) return {};
     
-    // 如果已经是对象格式，直接返回
     if (typeof data === 'object' && !Array.isArray(data)) {
       return data as Record<string, string>;
     }
     
-    // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
       return data.reduce((acc, { key, value }) => {
         acc[key] = value;
@@ -215,7 +231,6 @@ export function useConfigMapPage() {
     return {};
   };
 
-  // 解析JSON字段
   const parseJsonField = (field: any, fallback: any = {}) => {
     if (!field) return fallback;
     if (typeof field === 'string') {
@@ -258,13 +273,11 @@ export function useConfigMapPage() {
       }
       clustersTotal.value = res?.total || 0;
       
-      // 如果当前没有选择集群且有可用集群，自动选择第一个
       if (!filterClusterId.value && clusters.value.length > 0) {
         const firstCluster = clusters.value[0];
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
           message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
-          // 自动加载该集群的命名空间和ConfigMap数据
           await fetchNamespaces();
           await fetchConfigMaps();
         }
@@ -327,11 +340,9 @@ export function useConfigMapPage() {
       };
       const res = await getConfigMapListApi(params);
       
-      // 确保每个configmap对象都有正确的cluster_id和解析的JSON字段
       const configMapsWithClusterId = (res?.items || []).map((configMap: K8sConfigMap) => ({
         ...configMap,
         cluster_id: configMap.cluster_id || filterClusterId.value || 0,
-        // 解析JSON字段
         data: parseJsonField(configMap.data, {}),
         binary_data: parseJsonField(configMap.binary_data, {}),
         labels: parseJsonField(configMap.labels, {}),
@@ -363,7 +374,6 @@ export function useConfigMapPage() {
       };
       const res = await getConfigMapDetailsApi(params);
       
-      // 转换标签和注解格式：从对象转为数组
       const processedDetail = res ? {
         ...res,
         cluster_id: clusterId,
@@ -384,7 +394,6 @@ export function useConfigMapPage() {
     } catch (err) {
       message.error('获取 ConfigMap 详情失败');
 
-      // 错误时也要处理格式转换
       try {
         const fallbackDetail = { 
           ...record, 
@@ -396,7 +405,6 @@ export function useConfigMapPage() {
         };
         currentConfigMapDetail.value = fallbackDetail;
       } catch (fallbackError) {
-        // 最终的安全fallback
         currentConfigMapDetail.value = {
           ...record,
           cluster_id: clusterId,
@@ -429,7 +437,9 @@ export function useConfigMapPage() {
         namespace: record.namespace,
         name: record.name
       };
+      
       const res = await getConfigMapYamlApi(params);
+      
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (err) {
@@ -461,7 +471,7 @@ export function useConfigMapPage() {
       };
       
       await updateConfigMapByYamlApi(params);
-      message.success('🎉 ConfigMap YAML 更新成功');
+      message.success('ConfigMap YAML 更新成功');
       isYamlModalVisible.value = false;
       await fetchConfigMaps();
     } catch (err: unknown) {
@@ -469,7 +479,7 @@ export function useConfigMapPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ ConfigMap YAML 更新失败');
+      message.error('ConfigMap YAML 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -505,55 +515,56 @@ export function useConfigMapPage() {
     createYamlFormModel.value.yaml = '';
   };
 
-  // 转换二进制数据的辅助函数
-  const convertBinaryData = (binaryDataForm: Record<string, string>): Record<string, Uint8Array> | undefined => {
-    if (!binaryDataForm || Object.keys(binaryDataForm).length === 0) return undefined;
+  const convertBinaryData = (binaryDataForm: Record<string, string>): Record<string, string> | undefined => {
+    if (!binaryDataForm || typeof binaryDataForm !== 'object') return undefined;
     
-    const result: Record<string, Uint8Array> = {};
-    for (const [key, value] of Object.entries(binaryDataForm)) {
-      if (value && value.trim()) {
-        try {
-          // 将Base64字符串转换为Uint8Array
-          const binaryString = atob(value.trim());
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
+    const entries = Object.entries(binaryDataForm);
+    if (entries.length === 0) {
+      return undefined;
+    }
+    
+    const result: Record<string, string> = {};
+    const invalidKeys: string[] = [];
+    
+    for (const [key, value] of entries) {
+      if (key && typeof key === 'string' && value !== undefined && value !== null) {
+        if (typeof value === 'string') {
+          const trimmedValue = value.trim();
+          if (trimmedValue === '') {
+            result[key] = '';
+          } else {
+            const cleanValue = trimmedValue.replace(/\s/g, '');
+            if (/^[A-Za-z0-9+/]*={0,2}$/.test(cleanValue)) {
+              if (cleanValue.length % 4 === 0) {
+                result[key] = cleanValue;
+              } else {
+                const paddingNeeded = (4 - (cleanValue.length % 4)) % 4;
+                const paddedValue = cleanValue + '='.repeat(paddingNeeded);
+                result[key] = paddedValue;
+              }
+            } else {
+              invalidKeys.push(key);
+            }
           }
-          result[key] = bytes;
-        } catch (error) {
-
-          // 跳过无效的Base64数据
         }
       }
     }
+    
+    if (invalidKeys.length > 0) {
+      message.warning(`以下二进制数据键包含无效的 base64 字符，已被跳过：${invalidKeys.join(', ')}`);
+    }
+    
     return Object.keys(result).length > 0 ? result : undefined;
   };
 
-  // 反向转换二进制数据（从Uint8Array转为Base64字符串用于表单显示）
-  const convertBinaryDataToForm = (binaryData: Record<string, Uint8Array> | any): Record<string, string> => {
+  const convertBinaryDataToForm = (binaryData: Record<string, string> | any): Record<string, string> => {
     if (!binaryData || typeof binaryData !== 'object') return {};
     
     const result: Record<string, string> = {};
     for (const [key, value] of Object.entries(binaryData)) {
-      if (value) {
-        try {
-          if (value instanceof Uint8Array) {
-            // 将Uint8Array转换为Base64字符串
-            let binaryString = '';
-            for (let i = 0; i < value.length; i++) {
-              const byte = value[i];
-              if (byte !== undefined) {
-                binaryString += String.fromCharCode(byte);
-              }
-            }
-            result[key] = btoa(binaryString);
-          } else if (typeof value === 'string') {
-            // 如果已经是字符串，直接使用
-            result[key] = value;
-          }
-        } catch (error) {
-
-          result[key] = String(value); // 降级处理
+      if (key && typeof key === 'string' && value !== undefined && value !== null) {
+        if (typeof value === 'string') {
+          result[key] = value;
         }
       }
     }
@@ -567,19 +578,21 @@ export function useConfigMapPage() {
       await formRef.value.validate();
       submitLoading.value = true;
       
+      const convertedBinaryData = convertBinaryData(createFormModel.value.binary_data);
+      
       const params: CreateConfigMapReq = {
         cluster_id: filterClusterId.value,
         namespace: createFormModel.value.namespace,
         name: createFormModel.value.name,
         data: Object.keys(createFormModel.value.data).length > 0 ? createFormModel.value.data : undefined,
-        binary_data: convertBinaryData(createFormModel.value.binary_data),
+        binary_data: convertedBinaryData,
         labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
         annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
         immutable: createFormModel.value.immutable,
       };
       
       await createConfigMapApi(params);
-      message.success('🎉 ConfigMap 创建成功');
+      message.success('ConfigMap 创建成功');
       isCreateModalVisible.value = false;
       await fetchConfigMaps();
     } catch (err: unknown) {
@@ -587,7 +600,7 @@ export function useConfigMapPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ ConfigMap 创建失败');
+      message.error('ConfigMap 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -607,7 +620,7 @@ export function useConfigMapPage() {
       };
       
       await createConfigMapByYamlApi(params);
-      message.success('🎉 ConfigMap YAML 创建成功');
+      message.success('ConfigMap YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchConfigMaps();
     } catch (err: unknown) {
@@ -615,7 +628,7 @@ export function useConfigMapPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('❌ ConfigMap YAML 创建失败');
+      message.error('ConfigMap YAML 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -632,7 +645,7 @@ export function useConfigMapPage() {
       binary_data: convertBinaryDataToForm(parseJsonField(record.binary_data, {})),
       labels: parseJsonField(record.labels, {}),
       annotations: parseJsonField(record.annotations, {}),
-      immutable: false, // ConfigMap的immutable字段通常在创建后不可修改
+      immutable: false,
     };
     isEditModalVisible.value = true;
   };
@@ -649,18 +662,20 @@ export function useConfigMapPage() {
       await formRef.value.validate();
       submitLoading.value = true;
       
+      const convertedBinaryData = convertBinaryData(editFormModel.value.binary_data);
+      
       const params: UpdateConfigMapReq = {
         cluster_id: currentOperationConfigMap.value.cluster_id,
         namespace: currentOperationConfigMap.value.namespace,
         name: currentOperationConfigMap.value.name,
         data: Object.keys(editFormModel.value.data).length > 0 ? editFormModel.value.data : undefined,
-        binary_data: convertBinaryData(editFormModel.value.binary_data),
+        binary_data: convertedBinaryData,
         labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
         annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
       };
       
       await updateConfigMapApi(params);
-      message.success('🎉 ConfigMap 更新成功');
+      message.success('ConfigMap 更新成功');
       isEditModalVisible.value = false;
       await fetchConfigMaps();
     } catch (err: unknown) {
@@ -668,7 +683,7 @@ export function useConfigMapPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ ConfigMap 更新失败');
+      message.error('ConfigMap 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -695,10 +710,10 @@ export function useConfigMapPage() {
             name: record.name,
           };
           await deleteConfigMapApi(params);
-          message.success('✅ ConfigMap 删除成功');
+          message.success('ConfigMap 删除成功');
           await fetchConfigMaps();
         } catch (err) {
-          message.error('❌ ConfigMap 删除失败');
+          message.error('ConfigMap 删除失败');
 
         }
       },
@@ -756,12 +771,12 @@ export function useConfigMapPage() {
             }
           }
           
-          message.success(`✅ 批量${operation}操作已完成`);
+          message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchConfigMaps();
         } catch (err) {
-          message.error(`❌ 批量${operation}失败`);
+          message.error(`批量${operation}失败`);
 
         }
       },
@@ -806,22 +821,12 @@ export function useConfigMapPage() {
     await fetchConfigMaps();
   };
 
-  // 表单字段操作 - 数据字段
-  const addDataField = () => {
-    // 数据字段通过键值对输入组件管理
-  };
-
   const removeDataField = (key: string) => {
     delete createFormModel.value.data[key];
   };
 
   const removeEditDataField = (key: string) => {
     delete editFormModel.value.data[key];
-  };
-
-  // 表单字段操作 - 二进制数据字段
-  const addBinaryDataField = () => {
-    // 二进制数据字段通过键值对输入组件管理
   };
 
   const removeBinaryDataField = (key: string) => {
@@ -832,11 +837,6 @@ export function useConfigMapPage() {
     delete editFormModel.value.binary_data[key];
   };
 
-  // 表单字段操作 - 标签字段
-  const addLabelField = () => {
-    // 标签字段通过键值对输入组件管理
-  };
-
   const removeLabelField = (key: string) => {
     delete createFormModel.value.labels[key];
   };
@@ -845,17 +845,228 @@ export function useConfigMapPage() {
     delete editFormModel.value.labels[key];
   };
 
-  // 表单字段操作 - 注解字段
-  const addAnnotationField = () => {
-    // 注解字段通过键值对输入组件管理
-  };
-
   const removeAnnotationField = (key: string) => {
     delete createFormModel.value.annotations[key];
   };
 
   const removeEditAnnotationField = (key: string) => {
     delete editFormModel.value.annotations[key];
+  };
+
+  // YAML 操作辅助函数
+  const insertYamlTemplate = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认操作',
+        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+        okText: '确认',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = CONFIGMAP_YAML_TEMPLATE;
+          message.success('模板已插入');
+        },
+      });
+    } else {
+      createYamlFormModel.value.yaml = CONFIGMAP_YAML_TEMPLATE;
+      message.success('模板已插入');
+    }
+  };
+
+  const formatYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      // 解析 YAML
+      const parsed = yaml.load(yamlContent);
+      // 重新格式化为 YAML（缩进2空格）
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1, // 不限制行宽
+        noRefs: true,  // 不使用引用
+        sortKeys: false, // 保持原有顺序
+      });
+      createYamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+    }
+  };
+
+  const validateYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      // 尝试解析 YAML
+      const parsed = yaml.load(yamlContent);
+      
+      // 检查是否是有效的对象
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      // 基本的 ConfigMap 字段检查
+      const configmap = parsed as any;
+      const issues: string[] = [];
+
+      if (!configmap.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!configmap.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (configmap.kind !== 'ConfigMap') {
+        issues.push(`kind 应为 "ConfigMap"，当前为 "${configmap.kind}"`);
+      }
+      if (!configmap.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!configmap.data && !configmap.binaryData) {
+        issues.push('建议至少设置 data 或 binaryData 字段之一');
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+    }
+  };
+
+  const clearYaml = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认清空',
+        content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+        okText: '确认清空',
+        okType: 'danger',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = '';
+          message.success('YAML 内容已清空');
+        },
+      });
+    } else {
+      message.info('YAML 内容已为空');
+    }
+  };
+
+  // 编辑 YAML 的格式化和验证函数
+  const formatEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      yamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+    }
+  };
+
+  const validateEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      // 基本的 ConfigMap 字段检查
+      const configmap = parsed as any;
+      const issues: string[] = [];
+
+      if (!configmap.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!configmap.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (configmap.kind !== 'ConfigMap') {
+        issues.push(`kind 应为 "ConfigMap"，当前为 "${configmap.kind}"`);
+      }
+      if (!configmap.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!configmap.data && !configmap.binaryData) {
+        issues.push('建议至少设置 data 或 binaryData 字段之一');
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+    }
   };
 
   return {
@@ -970,17 +1181,21 @@ export function useConfigMapPage() {
     handlePageChange,
     
     // form field operations
-    addDataField,
     removeDataField,
     removeEditDataField,
-    addBinaryDataField,
     removeBinaryDataField,
     removeEditBinaryDataField,
-    addLabelField,
     removeLabelField,
     removeEditLabelField,
-    addAnnotationField,
     removeAnnotationField,
     removeEditAnnotationField,
+    
+    // yaml operations
+    insertYamlTemplate,
+    formatYaml,
+    validateYaml,
+    clearYaml,
+    formatEditYaml,
+    validateEditYaml,
   };
 }

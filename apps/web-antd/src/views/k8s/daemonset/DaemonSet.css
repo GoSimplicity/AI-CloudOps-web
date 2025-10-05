@@ -9,55 +9,25 @@
   vertical-align: middle;
 }
 
-/* DaemonSet 节点信息显示样式 */
-.daemonset-node-info {
+/* DaemonSet 可用性信息显示样式 */
+.daemonset-availability {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  align-items: center;
 }
 
-.node-info-item {
+.availability-item {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
+  justify-content: center;
 }
 
-.node-info-label {
-  font-weight: 500;
-  color: #8c8c8c;
-  min-width: 50px;
-}
-
-.node-info-value {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-weight: 600;
-  color: #262626;
-  background: #fafafa;
-  border: 1px solid #e8e8e8;
-  border-radius: 3px;
-  padding: 1px 4px;
-  min-width: 20px;
-  text-align: center;
-}
-
-/* 节点信息不同类型的颜色 */
-.daemonset-node-info .node-info-item:nth-child(1) .node-info-value {
-  background: #f6ffed;
-  border-color: #b7eb8f;
-  color: #52c41a;
-}
-
-.daemonset-node-info .node-info-item:nth-child(2) .node-info-value {
-  background: #fff2f0;
-  border-color: #ffccc7;
-  color: #ff4d4f;
-}
-
-.daemonset-node-info .node-info-item:nth-child(3) .node-info-value {
-  background: #fff7e6;
-  border-color: #ffd591;
-  color: #fa8c16;
+.daemonset-availability .ant-tag {
+  margin: 0;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 /* DaemonSet 表单配置区域样式 */
@@ -161,12 +131,13 @@
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .daemonset-node-info {
-    gap: 1px;
+  .daemonset-availability {
+    gap: 2px;
   }
   
-  .node-info-item {
-    font-size: 10px;
+  .daemonset-availability .ant-tag {
+    font-size: 11px;
+    padding: 1px 6px;
   }
 }
 
@@ -177,9 +148,10 @@
     gap: 8px;
   }
   
-  .daemonset-node-info {
+  .daemonset-availability {
     flex-direction: row;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 4px;
   }
 }

@@ -7,7 +7,7 @@ export interface K8sConfigMap {
   cluster_id: number; // 所属集群ID
   uid: string; // ConfigMap UID
   data: Record<string, string>; // 字符串数据
-  binary_data: Record<string, Uint8Array>; // 二进制数据
+  binary_data?: Record<string, string>; // 二进制数据（map，每个value是base64编码的字符串）
   labels: Record<string, string>; // 标签
   annotations: Record<string, string>; // 注解
   immutable: boolean; // 是否不可变
@@ -47,7 +47,7 @@ export interface CreateConfigMapReq {
   name: string; // ConfigMap名称，必填
   namespace: string; // 命名空间，必填
   data?: Record<string, string>; // 字符串数据
-  binary_data?: Record<string, Uint8Array>; // 二进制数据
+  binary_data?: Record<string, string>; // 二进制数据（map，每个value是base64编码的字符串）
   labels?: Record<string, string>; // 标签
   annotations?: Record<string, string>; // 注解
   immutable?: boolean; // 是否不可变
@@ -59,7 +59,7 @@ export interface UpdateConfigMapReq {
   name: string; // ConfigMap名称，必填
   namespace: string; // 命名空间，必填
   data?: Record<string, string>; // 字符串数据
-  binary_data?: Record<string, Uint8Array>; // 二进制数据
+  binary_data?: Record<string, string>; // 二进制数据（map，每个value是base64编码的字符串）
   labels?: Record<string, string>; // 标签
   annotations?: Record<string, string>; // 注解
 }
@@ -116,7 +116,7 @@ export async function getConfigMapDetailsApi(params: GetConfigMapDetailsReq) {
  */
 export async function getConfigMapYamlApi(params: GetConfigMapYamlReq) {
   return requestClient.get(
-    `/k8s/configmap/${params.cluster_id}/${params.namespace}/${params.name}/yaml`,
+    `/k8s/configmap/${params.cluster_id}/${params.namespace}/${params.name}/detail/yaml`,
   );
 }
 

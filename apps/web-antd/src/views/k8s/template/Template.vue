@@ -179,12 +179,20 @@
           </div>
         </template>
 
-        <template #created_at="{ text }">
-          <span class="template-time">{{ formatTime(text) }}</span>
+        <template #createdAt="{ text }">
+          <div v-if="text" style="font-size: 12px; color: #666;">
+            <div>{{ formatDateTime(text) }}</div>
+            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+          </div>
+          <span v-else class="k8s-no-data">-</span>
         </template>
 
-        <template #updated_at="{ text }">
-          <span class="template-time">{{ formatTime(text) }}</span>
+        <template #updatedAt="{ text }">
+          <div v-if="text" style="font-size: 12px; color: #666;">
+            <div>{{ formatDateTime(text) }}</div>
+            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+          </div>
+          <span v-else class="k8s-no-data">-</span>
         </template>
 
         <template #emptyText>
@@ -342,11 +350,11 @@
               <a-card title="时间信息" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">创建时间:</span>
-                  <span class="k8s-detail-value">{{ formatTime(currentTemplateDetail.created_at) }}</span>
+                  <span class="k8s-detail-value">{{ formatK8sTime(currentTemplateDetail.created_at) }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">更新时间:</span>
-                  <span class="k8s-detail-value">{{ formatTime(currentTemplateDetail.updated_at) }}</span>
+                  <span class="k8s-detail-value">{{ formatK8sTime(currentTemplateDetail.updated_at) }}</span>
                 </div>
               </a-card>
             </a-col>
@@ -407,6 +415,7 @@
 import { onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { useTemplatePage } from './Template';
+import { formatDateTime, getRelativeTime, formatK8sTime } from '../shared/utils';
 import { 
   PlusOutlined, 
   ReloadOutlined, 
@@ -467,7 +476,7 @@ const {
   
   // helpers
   getEnvText,
-  formatTime,
+  formatK8sTime,
   
   // operations
   fetchClusters,
@@ -564,12 +573,12 @@ const copyYamlContent = () => {
 };
 
 const columns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: '6%' },
-  { title: '名称', dataIndex: 'name', key: 'name', width: '18%' },
-  { title: 'YAML 内容', dataIndex: 'content', key: 'content', width: '28%', slots: { customRender: 'content' } },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: '14%', slots: { customRender: 'created_at' } },
-  { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: '14%', slots: { customRender: 'updated_at' } },
-  { title: '操作', key: 'actions', width: '20%', fixed: 'right', slots: { customRender: 'actions' } },
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
+  { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: 'YAML 内容', dataIndex: 'content', key: 'content', width: 250, slots: { customRender: 'content' } },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
+  { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: 160, slots: { customRender: 'updatedAt' } },
+  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 
 // 重置所有筛选条件
