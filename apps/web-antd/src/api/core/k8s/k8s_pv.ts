@@ -55,17 +55,17 @@ export interface GetPVYamlReq {
 
 // 创建PV请求
 export interface CreatePVReq {
-  cluster_id: number;                        // 集群ID
-  name: string;                              // PV名称
-  capacity: string;                          // 存储容量
-  access_modes: string[];                    // 访问模式
-  reclaim_policy?: string;                   // 回收策略
-  storage_class?: string;                    // 存储类
-  volume_mode?: string;                      // 卷模式
-  volume_source: Record<string, any>;        // 卷源配置
-  node_affinity?: Record<string, any>;       // 节点亲和性
-  labels?: Record<string, string>;           // 标签
-  annotations?: Record<string, string>;      // 注解
+  cluster_id: number;                              // 集群ID
+  name: string;                                    // PV名称
+  capacity: string;                                // 存储容量
+  access_modes: string[];                          // 访问模式
+  reclaim_policy: string;                          // 回收策略
+  storage_class: string;                           // 存储类
+  volume_mode: string;                             // 卷模式
+  volume_source: Record<string, any>;              // 卷源配置
+  node_affinity: Record<string, any>;              // 节点亲和性
+  labels: Record<string, string>;                  // 标签
+  annotations: Record<string, string>;             // 注解
 }
 
 // 通过YAML创建PV请求

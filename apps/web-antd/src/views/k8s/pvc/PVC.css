@@ -415,9 +415,9 @@
   box-shadow: 0 2px 8px rgba(82, 196, 26, 0.25) !important;
 }
 
-/* ==================== 统一模态框样式 ==================== */
+/* ==================== 模态框样式 ==================== */
 
-/* 详情模态框样式 - 统一为其他K8s页面的样式 */
+/* 详情模态框样式 */
 .k8s-detail-content {
   padding: 12px;
 }
@@ -453,12 +453,13 @@
   line-height: 1.6;
 }
 
-/* 标签和注解显示样式 - 统一为其他K8s页面的样式 */
-.k8s-labels-display,
-.k8s-annotations-display {
+/* 标签和注解显示区域 */
+.k8s-annotations-display,
+.k8s-labels-display {
   min-height: 30px;
 }
 
+/* 标签项样式 */
 .k8s-labels-display .k8s-label-item {
   background: #e6f7ff;
   border: 1px solid #91d5ff;
@@ -488,8 +489,7 @@
   color: #1677ff;
 }
 
-.k8s-label-separator,
-.k8s-annotation-separator {
+.k8s-label-separator {
   color: #999;
   font-weight: normal;
   margin: 0 2px;
@@ -497,49 +497,6 @@
 
 .k8s-label-value {
   color: #1677ff;
-}
-
-.k8s-annotation-item {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin-bottom: 8px;
-  padding: 8px 12px;
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
-  transition: all 0.2s ease;
-}
-
-.k8s-annotation-item:hover {
-  border-color: #d9d9d9;
-  background: #fafafa;
-}
-
-.k8s-annotation-item:last-child {
-  margin-bottom: 0;
-}
-
-.k8s-annotation-key {
-  background: #f0f2ff;
-  color: #1677ff;
-  border: 1px solid #d6e4ff;
-  font-weight: 600;
-  font-size: 12px;
-  border-radius: 4px;
-  padding: 2px 6px;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.k8s-annotation-value {
-  flex: 1;
-  color: #262626;
-  word-break: break-all;
-  font-size: 12px;
-  line-height: 1.4;
 }
 
 .k8s-no-data {
@@ -552,9 +509,7 @@
   width: 100%;
 }
 
-/* YAML编辑器统一样式：已集中于 shared/k8s-common.css */
-
-/* 操作列按钮通用样式：已集中于 shared/k8s-common.css */
+/* YAML编辑器样式 */
 
 /* 扩容按钮 - 绿色主题 */
 .k8s-action-column .ant-btn[title*="扩容"] {
@@ -721,7 +676,7 @@
   border-radius: 4px;
 }
 
-/* 表格样式统一 */
+/* 表格样式 */
 .k8s-table {
   background: #fff;
 }

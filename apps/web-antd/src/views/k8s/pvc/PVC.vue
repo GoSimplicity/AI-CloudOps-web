@@ -95,11 +95,11 @@
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
-            <a-select-option :value="K8sPVCStatus.Pending">⏳ 等待中</a-select-option>
-            <a-select-option :value="K8sPVCStatus.Bound">✅ 已绑定</a-select-option>
-            <a-select-option :value="K8sPVCStatus.Lost">❌ 丢失</a-select-option>
-            <a-select-option :value="K8sPVCStatus.Terminating">🔄 终止中</a-select-option>
-            <a-select-option :value="K8sPVCStatus.Unknown">❓ 未知</a-select-option>
+            <a-select-option :value="K8sPVCStatus.Pending">等待中</a-select-option>
+            <a-select-option :value="K8sPVCStatus.Bound">已绑定</a-select-option>
+            <a-select-option :value="K8sPVCStatus.Lost">丢失</a-select-option>
+            <a-select-option :value="K8sPVCStatus.Terminating">终止中</a-select-option>
+            <a-select-option :value="K8sPVCStatus.Unknown">未知</a-select-option>
           </a-select>
 
           <a-select 
@@ -120,7 +120,7 @@
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
-            placeholder="🔍 搜索 PVC 名称" 
+            placeholder="搜索 PVC 名称" 
             class="k8s-search-input" 
             @pressEnter="onSearch"
             @input="onSearch"
@@ -389,6 +389,10 @@
       :width="800"
       @ok="createPVC"
       @cancel="resetCreateForm"
+      :maskClosable="false"
+      destroyOnClose
+      okText="创建"
+      cancelText="取消"
     >
       <a-form
         ref="formRef"
@@ -399,35 +403,68 @@
       >
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="PVC名称" name="name">
-              <a-input v-model:value="createFormModel.name" placeholder="输入PVC名称" class="k8s-form-input" />
+            <a-form-item label="PVC名称" name="name" :required="true">
+              <a-input 
+                v-model:value="createFormModel.name" 
+                placeholder="请输入 PVC 名称（例如：pvc-web-data）" 
+                class="k8s-form-input"
+                :maxlength="63"
+              />
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                只能包含小写字母、数字和连字符，且不能以连字符开头或结尾
+              </div>
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="命名空间" name="namespace">
-              <a-select v-model:value="createFormModel.namespace" placeholder="选择命名空间" class="k8s-form-input">
+            <a-form-item label="命名空间" name="namespace" :required="true">
+              <a-select 
+                v-model:value="createFormModel.namespace" 
+                placeholder="请选择命名空间" 
+                class="k8s-form-input"
+                :disabled="!filterClusterId"
+              >
                 <a-select-option v-for="ns in namespaces" :key="ns.name" :value="ns.name">
                   {{ ns.name }}
                 </a-select-option>
               </a-select>
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                PVC 必须属于某个命名空间
+              </div>
             </a-form-item>
           </a-col>
         </a-row>
 
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="请求存储" name="spec.request_storage">
-              <a-input v-model:value="createFormModel.spec.request_storage" placeholder="如: 10Gi" class="k8s-form-input" />
+            <a-form-item label="请求存储" :name="['spec', 'request_storage']" :required="true">
+              <a-input 
+                v-model:value="createFormModel.spec.request_storage" 
+                placeholder="如: 10Gi, 500Mi, 1Ti" 
+                class="k8s-form-input"
+                :maxlength="20"
+              />
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                请求的存储容量大小
+              </div>
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="访问模式" name="spec.access_modes">
-              <a-select v-model:value="createFormModel.spec.access_modes" mode="multiple" placeholder="选择访问模式" class="k8s-form-input">
+            <a-form-item label="访问模式" :name="['spec', 'access_modes']" :required="true">
+              <a-select 
+                v-model:value="createFormModel.spec.access_modes" 
+                mode="multiple" 
+                placeholder="选择访问模式" 
+                class="k8s-form-input"
+                :maxTagCount="1"
+              >
                 <a-select-option value="ReadWriteOnce">ReadWriteOnce (RWO)</a-select-option>
                 <a-select-option value="ReadOnlyMany">ReadOnlyMany (ROX)</a-select-option>
                 <a-select-option value="ReadWriteMany">ReadWriteMany (RWX)</a-select-option>
                 <a-select-option value="ReadWriteOncePod">ReadWriteOncePod (RWOP)</a-select-option>
               </a-select>
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                定义 PVC 可以请求的访问方式，可多选
+              </div>
             </a-form-item>
           </a-col>
         </a-row>
@@ -435,7 +472,15 @@
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="存储类">
-              <a-input v-model:value="createFormModel.spec.storage_class" placeholder="输入存储类名称" class="k8s-form-input" />
+              <a-input 
+                v-model:value="createFormModel.spec.storage_class" 
+                placeholder="输入存储类名称（可选）" 
+                class="k8s-form-input"
+                :maxlength="253"
+              />
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                留空表示使用默认存储类
+              </div>
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -444,72 +489,230 @@
                 <a-select-option value="Filesystem">Filesystem (文件系统)</a-select-option>
                 <a-select-option value="Block">Block (块设备)</a-select-option>
               </a-select>
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                默认为 Filesystem 模式
+              </div>
             </a-form-item>
           </a-col>
         </a-row>
 
         <a-row :gutter="16">
           <a-col :span="24">
-            <a-form-item label="指定PV名称">
-              <a-input v-model:value="createFormModel.spec.volume_name" placeholder="指定绑定的PV名称（可选）" class="k8s-form-input" />
+            <a-form-item label="绑定PV（可选）">
+              <a-select 
+                v-model:value="createFormModel.spec.volume_name" 
+                placeholder="留空将自动选择合适的 PV" 
+                class="k8s-form-input"
+                allow-clear
+                show-search
+                :loading="pvsLoading"
+                :filter-option="(input: string, option: any) => {
+                  if (!input || !option?.label) return true;
+                  return option.label.toLowerCase().includes(input.toLowerCase());
+                }"
+                @popup-scroll="handlePVDropdownScroll"
+                :dropdown-match-select-width="false"
+                :dropdown-style="{ minWidth: '550px', maxWidth: '650px' }"
+                :options="pvOptions"
+              >
+                <template #option="{ value, label, capacity, accessModes }">
+                  <div 
+                    v-if="value === '__load_more_pvs__'" 
+                    style="text-align: center; color: #999; padding: 8px 0;"
+                  >
+                    <a-spin size="small" :spinning="pvsLoading" />
+                    <span v-if="!pvsLoading" style="margin-left: 8px;">滚动加载更多...</span>
+                  </div>
+                  <div 
+                    v-else
+                    style="
+                      display: flex; 
+                      align-items: center; 
+                      justify-content: space-between; 
+                      gap: 12px; 
+                      padding: 6px 4px;
+                      min-height: 32px;
+                    "
+                  >
+                    <span 
+                      style="
+                        flex: 1; 
+                        min-width: 0; 
+                        overflow: hidden; 
+                        text-overflow: ellipsis; 
+                        white-space: nowrap; 
+                        font-weight: 500;
+                        color: #262626;
+                      "
+                      :title="label"
+                    >
+                      {{ label }}
+                    </span>
+                    <div style="flex: 0 0 auto; display: flex; align-items: center; gap: 6px;">
+                      <a-tag color="blue" size="small" style="margin: 0; font-size: 12px;">
+                        {{ capacity }}
+                      </a-tag>
+                      <a-tag 
+                        v-for="(mode, idx) in (accessModes || []).slice(0, 2)" 
+                        :key="idx" 
+                        color="green" 
+                        size="small"
+                        style="margin: 0; font-size: 11px;"
+                      >
+                        {{ mode === 'ReadWriteOnce' ? 'RWO' : mode === 'ReadOnlyMany' ? 'ROX' : mode === 'ReadWriteMany' ? 'RWX' : 'RWOP' }}
+                      </a-tag>
+                      <a-tooltip 
+                        v-if="(accessModes || []).length > 2" 
+                        :title="(accessModes || []).slice(2).map((m: string) => m === 'ReadWriteOnce' ? 'RWO' : m === 'ReadOnlyMany' ? 'ROX' : m === 'ReadWriteMany' ? 'RWX' : 'RWOP').join(', ')"
+                      >
+                        <a-tag size="small" style="margin: 0; cursor: help; font-size: 11px;">
+                          +{{ (accessModes || []).length - 2 }}
+                        </a-tag>
+                      </a-tooltip>
+                    </div>
+                  </div>
+                </template>
+              </a-select>
+              <div style="color: #999; font-size: 12px; margin-top: 4px; line-height: 1.5;">
+                <span v-if="availablePVs.length > 0">
+                  已加载 <strong style="color: #1890ff;">{{ availablePVs.length }}</strong> / <strong>{{ pvsTotal }}</strong> 个可用 PV
+                </span>
+                <span v-else-if="pvsLoading">
+                  正在加载可用的 PV...
+                </span>
+                <span v-else>
+                  当前集群暂无可用 PV，留空将自动匹配或动态创建
+                </span>
+              </div>
             </a-form-item>
           </a-col>
         </a-row>
 
-        <a-form-item label="PV选择器">
+        <a-form-item label="PV选择器（可选）">
           <div class="k8s-key-value-inputs">
-            <div v-for="(value, key) in createFormModel.spec.selector" :key="key" class="k8s-key-value-row">
-              <a-input :value="key" placeholder="选择器键" class="k8s-form-input" @change="(e: any) => { if(key !== e.target.value && e.target.value) { createFormModel.spec.selector[e.target.value] = value; delete createFormModel.spec.selector[key]; } }" />
-              <a-input v-model:value="createFormModel.spec.selector[key]" placeholder="选择器值" class="k8s-form-input" />
-              <a-button type="link" danger @click="removeSelectorItem(key)">
+            <div v-if="!createFormModel.spec.selector || Object.keys(createFormModel.spec.selector).length === 0" style="text-align: center; color: #999; padding: 16px;">
+              暂无选择器，点击下方按钮添加
+            </div>
+            <div v-for="(_value, key) in createFormModel.spec.selector" :key="key" class="k8s-key-value-row">
+              <a-input 
+                :value="key" 
+                placeholder="选择器键" 
+                class="k8s-form-input"
+                disabled
+                :maxlength="63"
+              />
+              <a-input 
+                v-model:value="createFormModel.spec.selector[key]" 
+                placeholder="选择器值" 
+                class="k8s-form-input"
+                :maxlength="63"
+              />
+              <a-button type="text" danger @click="removeSelectorItem(key)" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
-            <a-button type="dashed" @click="addSelectorItem" style="width: 100%;">
-              <template #icon><PlusOutlined /></template>
-              添加选择器
-            </a-button>
+            <div class="add-input-row" style="margin-top: 8px;">
+              <a-input
+                v-model:value="newSelectorKey"
+                placeholder="选择器键"
+                style="flex: 1; margin-right: 8px;"
+                @press-enter="addSelectorItem"
+              />
+              <a-input
+                v-model:value="newSelectorValue"
+                placeholder="选择器值"
+                style="flex: 1; margin-right: 8px;"
+                @press-enter="addSelectorItem"
+              />
+              <a-button type="primary" @click="addSelectorItem" :disabled="!newSelectorKey.trim()">
+                <template #icon><PlusOutlined /></template>
+                添加
+              </a-button>
+            </div>
+          </div>
+          <div style="color: #999; font-size: 12px; margin-top: 4px;">
+            通过标签选择器筛选符合条件的 PV
           </div>
         </a-form-item>
 
-        <a-form-item label="标签">
-          <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" class="k8s-empty-state">
-              <div class="empty-icon">🏷️</div>
-              <div class="empty-text">暂无标签，点击下方按钮添加</div>
+        <a-form-item label="标签配置（可选）">
+          <a-form-item-rest>
+            <div class="k8s-key-value-inputs">
+              <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 16px;">
+                暂无标签，点击下方按钮添加
+              </div>
+              <div v-for="(_value, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
+                <a-input 
+                  :value="key" 
+                  placeholder="标签键" 
+                  class="k8s-form-input"
+                  disabled
+                  :maxlength="63"
+                />
+                <a-input 
+                  v-model:value="createFormModel.labels[key]" 
+                  placeholder="标签值" 
+                  class="k8s-form-input"
+                  :maxlength="63"
+                />
+                <a-button type="text" danger @click="removeLabelItem(key, 'labels')" size="small" class="k8s-remove-btn">
+                  <template #icon><DeleteOutlined /></template>
+                </a-button>
+              </div>
+              <div class="add-input-row" style="margin-top: 8px;">
+                <a-input
+                  v-model:value="newLabelKey"
+                  placeholder="标签键"
+                  style="flex: 1; margin-right: 8px;"
+                  @press-enter="addLabelItem('labels')"
+                />
+                <a-button type="primary" @click="addLabelItem('labels')" :disabled="!newLabelKey.trim()">
+                  <template #icon><PlusOutlined /></template>
+                  添加标签
+                </a-button>
+              </div>
             </div>
-            <div v-for="(value, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
-              <a-input :value="key" placeholder="标签键" class="k8s-form-input" @change="(e: any) => { if(key !== e.target.value && e.target.value) { createFormModel.labels[e.target.value] = value; delete createFormModel.labels[key]; } }" />
-              <a-input v-model:value="createFormModel.labels[key]" placeholder="标签值" class="k8s-form-input" />
-              <a-button type="text" danger @click="removeLabelItem(key, 'labels')" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
-              </a-button>
-            </div>
-            <a-button type="dashed" @click="addLabelItem('labels')" block class="k8s-add-btn">
-              <template #icon><PlusOutlined /></template>
-              添加标签
-            </a-button>
-          </div>
+          </a-form-item-rest>
         </a-form-item>
 
-        <a-form-item label="注解">
-          <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" class="k8s-empty-state">
-              <div class="empty-icon">📝</div>
-              <div class="empty-text">暂无注解，点击下方按钮添加</div>
+        <a-form-item label="注解配置（可选）">
+          <a-form-item-rest>
+            <div class="k8s-key-value-inputs">
+              <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" style="text-align: center; color: #999; padding: 16px;">
+                暂无注解，点击下方按钮添加
+              </div>
+              <div v-for="(_value, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
+                <a-input 
+                  :value="key" 
+                  placeholder="注解键" 
+                  class="k8s-form-input"
+                  disabled
+                  :maxlength="253"
+                />
+                <a-input 
+                  v-model:value="createFormModel.annotations[key]" 
+                  placeholder="注解值" 
+                  class="k8s-form-input"
+                  :maxlength="500"
+                />
+                <a-button type="text" danger @click="removeLabelItem(key, 'annotations')" size="small" class="k8s-remove-btn">
+                  <template #icon><DeleteOutlined /></template>
+                </a-button>
+              </div>
+              <div class="add-input-row" style="margin-top: 8px;">
+                <a-input
+                  v-model:value="newAnnotationKey"
+                  placeholder="注解键"
+                  style="flex: 1; margin-right: 8px;"
+                  @press-enter="addLabelItem('annotations')"
+                />
+                <a-button type="primary" @click="addLabelItem('annotations')" :disabled="!newAnnotationKey.trim()">
+                  <template #icon><PlusOutlined /></template>
+                  添加注解
+                </a-button>
+              </div>
             </div>
-            <div v-for="(value, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
-              <a-input :value="key" placeholder="注解键" class="k8s-form-input" @change="(e: any) => { if(key !== e.target.value && e.target.value) { createFormModel.annotations[e.target.value] = value; delete createFormModel.annotations[key]; } }" />
-              <a-input v-model:value="createFormModel.annotations[key]" placeholder="注解值" class="k8s-form-input" />
-              <a-button type="text" danger @click="removeLabelItem(key, 'annotations')" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
-              </a-button>
-            </div>
-            <a-button type="dashed" @click="addLabelItem('annotations')" block class="k8s-add-btn">
-              <template #icon><PlusOutlined /></template>
-              添加注解
-            </a-button>
-          </div>
+          </a-form-item-rest>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -522,6 +725,10 @@
       :width="900"
       @ok="createPVCByYaml"
       @cancel="resetCreateYamlForm"
+      :maskClosable="false"
+      destroyOnClose
+      okText="创建"
+      cancelText="取消"
     >
       <a-form
         ref="createYamlFormRef"
@@ -530,10 +737,28 @@
         layout="vertical"
         class="k8s-form"
       >
-        <a-form-item label="YAML 配置" name="yaml">
+        <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
+              <template #icon><FileAddOutlined /></template>
+              插入模板
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
+              <template #icon><ClearOutlined /></template>
+              清空
+            </a-button>
+          </div>
           <a-textarea
             v-model:value="createYamlFormModel.yaml"
-            placeholder="请输入 PVC 的 YAML 配置..."
+            placeholder="请输入 PVC 的 YAML 配置，或点击【插入模板】使用默认模板"
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -549,6 +774,10 @@
       :width="800"
       @ok="updatePVC"
       @cancel="resetEditForm"
+      :maskClosable="false"
+      destroyOnClose
+      okText="保存"
+      cancelText="取消"
     >
       <a-form
         ref="formRef"
@@ -569,35 +798,121 @@
           </a-col>
         </a-row>
 
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="请求存储（只读）">
+              <a-input v-model:value="editFormModel.spec.request_storage" disabled class="k8s-form-input" />
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                创建后不可修改，如需扩容请使用扩容功能
+              </div>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="存储类（只读）">
+              <a-input v-model:value="editFormModel.spec.storage_class" placeholder="默认存储类" disabled class="k8s-form-input" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="访问模式（只读）">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a-tag 
+                  v-for="mode in editFormModel.spec.access_modes" 
+                  :key="mode" 
+                  color="green"
+                >
+                  {{ mode === 'ReadWriteOnce' ? 'RWO' : mode === 'ReadOnlyMany' ? 'ROX' : mode === 'ReadWriteMany' ? 'RWX' : 'RWOP' }}
+                </a-tag>
+                <span v-if="!editFormModel.spec.access_modes || editFormModel.spec.access_modes.length === 0">-</span>
+              </div>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="卷模式（只读）">
+              <a-input v-model:value="editFormModel.spec.volume_mode" disabled class="k8s-form-input" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-form-item label="绑定PV（只读）">
+          <a-input v-model:value="editFormModel.spec.volume_name" placeholder="未绑定" disabled class="k8s-form-input" />
+        </a-form-item>
+
         <a-form-item label="标签">
           <div class="k8s-key-value-inputs">
+            <div v-if="!editFormModel.labels || Object.keys(editFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 16px;">
+              暂无标签，点击下方按钮添加
+            </div>
             <div v-for="(_value, key) in editFormModel.labels" :key="key" class="k8s-key-value-row">
-              <a-input :value="key" placeholder="标签键" class="k8s-form-input" @blur="(e: any) => updateEditLabelKey(key, e.target.value, 'labels')" />
-              <a-input v-model:value="editFormModel.labels[key]" placeholder="标签值" class="k8s-form-input" />
-              <a-button type="link" danger @click="removeEditLabelItem(key, 'labels')">
+              <a-input 
+                :value="key" 
+                placeholder="标签键" 
+                class="k8s-form-input" 
+                disabled
+                :maxlength="63"
+              />
+              <a-input 
+                v-model:value="editFormModel.labels[key]" 
+                placeholder="标签值" 
+                class="k8s-form-input"
+                :maxlength="63"
+              />
+              <a-button type="text" danger @click="removeEditLabelItem(key, 'labels')" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
-            <a-button type="dashed" @click="addEditLabelItem('labels')" style="width: 100%;">
-              <template #icon><PlusOutlined /></template>
-              添加标签
-            </a-button>
+            <div class="add-input-row" style="margin-top: 8px;">
+              <a-input
+                v-model:value="newEditLabelKey"
+                placeholder="标签键"
+                style="flex: 1; margin-right: 8px;"
+                @press-enter="addEditLabelItem('labels')"
+              />
+              <a-button type="primary" @click="addEditLabelItem('labels')" :disabled="!newEditLabelKey.trim()">
+                <template #icon><PlusOutlined /></template>
+                添加标签
+              </a-button>
+            </div>
           </div>
         </a-form-item>
 
         <a-form-item label="注解">
           <div class="k8s-key-value-inputs">
+            <div v-if="!editFormModel.annotations || Object.keys(editFormModel.annotations).length === 0" style="text-align: center; color: #999; padding: 16px;">
+              暂无注解，点击下方按钮添加
+            </div>
             <div v-for="(_value, key) in editFormModel.annotations" :key="key" class="k8s-key-value-row">
-              <a-input :value="key" placeholder="注解键" class="k8s-form-input" @blur="(e: any) => updateEditLabelKey(key, e.target.value, 'annotations')" />
-              <a-input v-model:value="editFormModel.annotations[key]" placeholder="注解值" class="k8s-form-input" />
-              <a-button type="link" danger @click="removeEditLabelItem(key, 'annotations')">
+              <a-input 
+                :value="key" 
+                placeholder="注解键" 
+                class="k8s-form-input"
+                disabled
+                :maxlength="253"
+              />
+              <a-input 
+                v-model:value="editFormModel.annotations[key]" 
+                placeholder="注解值" 
+                class="k8s-form-input"
+                :maxlength="500"
+              />
+              <a-button type="text" danger @click="removeEditLabelItem(key, 'annotations')" size="small" class="k8s-remove-btn">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
             </div>
-            <a-button type="dashed" @click="addEditLabelItem('annotations')" style="width: 100%;">
-              <template #icon><PlusOutlined /></template>
-              添加注解
-            </a-button>
+            <div class="add-input-row" style="margin-top: 8px;">
+              <a-input
+                v-model:value="newEditAnnotationKey"
+                placeholder="注解键"
+                style="flex: 1; margin-right: 8px;"
+                @press-enter="addEditLabelItem('annotations')"
+              />
+              <a-button type="primary" @click="addEditLabelItem('annotations')" :disabled="!newEditAnnotationKey.trim()">
+                <template #icon><PlusOutlined /></template>
+                添加注解
+              </a-button>
+            </div>
           </div>
         </a-form-item>
       </a-form>
@@ -610,6 +925,8 @@
       :footer="null"
       :width="900"
       class="k8s-detail-modal"
+      :maskClosable="false"
+      destroyOnClose
     >
       <div class="k8s-detail-content" v-if="currentPVCDetail">
         <a-card title="基本信息" size="small" class="k8s-detail-card">
@@ -698,14 +1015,14 @@
 
         <a-card title="注解" size="small" class="k8s-detail-card">
           <div class="k8s-annotations-display">
-            <template v-if="currentPVCDetail.annotations && Object.keys(currentPVCDetail.annotations).length > 0">
-              <div v-for="(value, key) in currentPVCDetail.annotations" :key="key" class="k8s-annotation-item">
-                <span class="k8s-annotation-key">{{ key }}</span>
-                <span class="k8s-annotation-separator">:</span>
-                <span class="k8s-annotation-value">{{ value }}</span>
-              </div>
-            </template>
-            <span v-else class="k8s-no-data">暂无注解</span>
+            <a-tooltip v-for="(value, key) in currentPVCDetail.annotations" :key="key" :title="`${key}: ${value}`" placement="top">
+              <a-tag class="k8s-annotation-item" style="margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {{ key }}: {{ value }}
+              </a-tag>
+            </a-tooltip>
+            <span v-if="!currentPVCDetail.annotations || Object.keys(currentPVCDetail.annotations).length === 0" class="k8s-no-data">
+              暂无注解
+            </span>
           </div>
         </a-card>
       </div>
@@ -718,11 +1035,15 @@
     <!-- YAML编辑模态框 -->
     <a-modal
       v-model:open="isYamlModalVisible"
-      :title="`编辑 PVC YAML: ${currentOperationPVC?.name}`"
+      :title="`查看/编辑 ${currentOperationPVC?.name} YAML`"
       :confirm-loading="submitLoading"
       :width="900"
       @ok="updatePVCByYaml"
       @cancel="resetYamlForm"
+      :maskClosable="false"
+      destroyOnClose
+      okText="保存修改"
+      cancelText="取消"
     >
       <a-form
         ref="yamlFormRef"
@@ -731,10 +1052,20 @@
         layout="vertical"
         class="k8s-form"
       >
-        <a-form-item label="YAML 配置" name="yaml">
+        <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatEditYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateEditYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+          </div>
           <a-textarea
             v-model:value="yamlFormModel.yaml"
-            placeholder="加载 YAML 配置中..."
+            placeholder="YAML 内容"
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -750,6 +1081,10 @@
       :width="600"
       @ok="expandPVC"
       @cancel="resetExpandForm"
+      :maskClosable="false"
+      destroyOnClose
+      okText="确认扩容"
+      cancelText="取消"
     >
       <a-form
         ref="expandFormRef"
@@ -797,6 +1132,8 @@
       :footer="null"
       :width="800"
       class="k8s-detail-modal"
+      :maskClosable="false"
+      destroyOnClose
     >
       <div v-if="podsLoading" style="text-align: center; padding: 50px;">
         <a-spin size="large" />
@@ -848,6 +1185,10 @@ import {
   EditOutlined,
   ExpandOutlined,
   ContainerOutlined,
+  FileAddOutlined,
+  FormatPainterOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
 } from '@ant-design/icons-vue';
 import { usePVCPage } from './PVC';
 import { formatDateTime, getRelativeTime } from '../shared/utils';
@@ -856,9 +1197,11 @@ const {
   // state
   clusters,
   namespaces,
+  availablePVs,
   loading,
   clustersLoading,
   namespacesLoading,
+  pvsLoading,
   searchText,
   filterClusterId,
   filterNamespace,
@@ -870,6 +1213,7 @@ const {
   total,
   clustersTotal,
   namespacesTotal,
+  pvsTotal,
   
   // form refs
   formRef,
@@ -910,6 +1254,7 @@ const {
   // computed
   filteredPVCs,
   rowSelection,
+  pvOptions,
   
   // helpers
   getEnvText,
@@ -949,17 +1294,31 @@ const {
   handleFilterChange,
   handleClusterDropdownScroll,
   loadMoreNamespaces,
+  loadMorePVs,
   
   // label/annotation helpers
+  newLabelKey,
+  newAnnotationKey,
   addLabelItem,
   removeLabelItem,
+  newEditLabelKey,
+  newEditAnnotationKey,
   addEditLabelItem,
   removeEditLabelItem,
-  updateEditLabelKey,
   
   // selector helpers
+  newSelectorKey,
+  newSelectorValue,
   addSelectorItem,
   removeSelectorItem,
+  
+  // yaml operations
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
   
   // constants
   K8sPVCStatus,
@@ -1039,6 +1398,16 @@ const handleTableChange = (pagination: { current?: number; pageSize?: number }) 
       pageSize.value = pagination.pageSize;
     }
     fetchPVCs();
+  }
+};
+
+// PV 下拉框滚动处理
+const handlePVDropdownScroll = (e: Event) => {
+  const target = e.target as HTMLElement;
+  if (target.scrollTop + target.offsetHeight === target.scrollHeight) {
+    if (availablePVs.value.length < pvsTotal.value && !pvsLoading.value) {
+      loadMorePVs();
+    }
   }
 };
 

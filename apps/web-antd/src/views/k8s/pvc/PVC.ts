@@ -1,6 +1,7 @@
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, h } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+import yaml from 'js-yaml';
 import {
   type K8sPVC,
   type PVCSpec,
@@ -37,15 +38,35 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
+import {
+  type K8sPV,
+  type GetPVListReq,
+  K8sPVStatus,
+  getK8sPVList,
+} from '#/api/core/k8s/k8s_pv';
+
+// PVC YAML 模板
+const PVC_YAML_TEMPLATE = `apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi`;
 
 export function usePVCPage() {
-  // state
   const pvcs = ref<K8sPVC[]>([]);
   const clusters = ref<K8sCluster[]>([]);
   const namespaces = ref<K8sNamespace[]>([]);
+  const availablePVs = ref<K8sPV[]>([]);
   const loading = ref(false);
   const clustersLoading = ref(false);
   const namespacesLoading = ref(false);
+  const pvsLoading = ref(false);
   const searchText = ref('');
   const filterClusterId = ref<number | undefined>(undefined);
   const filterNamespace = ref<string | undefined>(undefined);
@@ -62,14 +83,15 @@ export function usePVCPage() {
   const namespacesTotal = ref(0);
   const namespacesPage = ref(1);
   const namespacesSize = ref(50);
+  const pvsTotal = ref(0);
+  const pvsPage = ref(1);
+  const pvsSize = ref(50);
 
-  // form refs
   const formRef = ref<FormInstance>();
   const yamlFormRef = ref<FormInstance>();
   const createYamlFormRef = ref<FormInstance>();
   const expandFormRef = ref<FormInstance>();
 
-  // modal/form state
   const isCreateModalVisible = ref(false);
   const isCreateYamlModalVisible = ref(false);
   const isEditModalVisible = ref(false);
@@ -81,13 +103,10 @@ export function usePVCPage() {
   const detailLoading = ref(false);
   const podsLoading = ref(false);
 
-  // current operation target
   const currentOperationPVC = ref<K8sPVC | null>(null);
   const currentPVCDetail = ref<K8sPVC | null>(null);
   const currentYamlContent = ref('');
   const currentPVCPods = ref<any[]>([]);
-
-  // form models
   const createFormModel = ref<{
     name: string;
     namespace: string;
@@ -148,8 +167,7 @@ export function usePVCPage() {
     new_capacity: ''
   });
 
-  // form validation rules
-  const createFormRules: Record<string, Rule[]> = {
+  const createFormRules: Record<string, any> = {
     name: [
       { required: true, message: '请输入 PVC 名称', trigger: 'blur' },
       { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'PVC 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
@@ -158,13 +176,15 @@ export function usePVCPage() {
     namespace: [
       { required: true, message: '请选择命名空间', trigger: 'change' }
     ],
-    'spec.request_storage': [
-      { required: true, message: '请输入请求存储容量', trigger: 'blur' },
-      { pattern: /^[0-9]+[KMGTPE]i?$/, message: '请输入有效的存储容量，如: 1Gi, 100Mi', trigger: 'blur' }
-    ],
-    'spec.access_modes': [
-      { required: true, message: '请选择访问模式', trigger: 'change' }
-    ]
+    spec: {
+      request_storage: [
+        { required: true, message: '请输入请求存储容量', trigger: 'blur' },
+        { pattern: /^[0-9]+[KMGTPE]i?$/, message: '请输入有效的存储容量，如: 1Gi, 100Mi', trigger: 'blur' }
+      ],
+      access_modes: [
+        { required: true, message: '请选择访问模式', trigger: 'change', type: 'array' }
+      ]
+    }
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
@@ -188,7 +208,6 @@ export function usePVCPage() {
     ]
   };
 
-  // computed
   const filteredPVCs = computed(() => {
     return pvcs.value;
   });
@@ -201,7 +220,27 @@ export function usePVCPage() {
     },
   }));
 
-  // helpers
+  const pvOptions = computed(() => {
+    const options = availablePVs.value.map((pv: K8sPV) => ({
+      value: pv.name,
+      label: pv.name,
+      capacity: pv.capacity,
+      accessModes: pv.access_modes,
+    }));
+
+    if (availablePVs.value.length > 0 && availablePVs.value.length < pvsTotal.value) {
+      options.push({
+        value: '__load_more_pvs__',
+        label: '加载更多',
+        capacity: '',
+        accessModes: [],
+        disabled: true,
+      } as any);
+    }
+
+    return options;
+  });
+
   const validateClusterId = (record: K8sPVC): number | null => {
     const clusterId = record.cluster_id || filterClusterId.value;
     if (!clusterId || clusterId === 0) {
@@ -224,7 +263,6 @@ export function usePVCPage() {
     return map[value] || '未知环境';
   };
 
-  // 获取PVC状态显示文本
   const getPVCStatusText = (status: K8sPVCStatus): string => {
     const statusMap: Record<K8sPVCStatus, string> = {
       [K8sPVCStatus.Pending]: '等待中',
@@ -236,7 +274,6 @@ export function usePVCPage() {
     return statusMap[status] || '未知';
   };
 
-  // 获取PVC状态颜色
   const getPVCStatusColor = (status: K8sPVCStatus): string => {
     const colorMap: Record<K8sPVCStatus, string> = {
       [K8sPVCStatus.Pending]: 'warning',
@@ -248,7 +285,6 @@ export function usePVCPage() {
     return colorMap[status] || 'default';
   };
 
-  // 获取访问模式显示文本
   const getAccessModeText = (mode: string): string => {
     const modeMap: Record<string, string> = {
       'ReadWriteOnce': 'RWO',
@@ -259,7 +295,6 @@ export function usePVCPage() {
     return modeMap[mode] || mode;
   };
 
-  // cluster operations
   const clearPVCs = () => {
     pvcs.value = [];
     selectedRowKeys.value = [];
@@ -282,7 +317,12 @@ export function usePVCPage() {
     namespacesTotal.value = 0;
   };
 
-  // api calls
+  const resetPVs = () => {
+    pvsPage.value = 1;
+    availablePVs.value = [];
+    pvsTotal.value = 0;
+  };
+
   const fetchClusters = async (reset: boolean = false) => {
     if (reset) {
       resetClusters();
@@ -304,13 +344,11 @@ export function usePVCPage() {
       }
       clustersTotal.value = res?.total || 0;
       
-      // 如果当前没有选择集群且有可用集群，自动选择第一个
       if (!filterClusterId.value && clusters.value.length > 0) {
         const firstCluster = clusters.value[0];
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
           message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
-          // 自动加载该集群的命名空间和PVC数据
           await fetchNamespaces();
           await fetchPVCs();
         }
@@ -355,6 +393,49 @@ export function usePVCPage() {
     }
   };
 
+  const fetchAvailablePVs = async (reset: boolean = false) => {
+    if (!filterClusterId.value) return;
+    
+    if (reset) {
+      resetPVs();
+    }
+    
+    try {
+      pvsLoading.value = true;
+
+      const params: GetPVListReq = {
+        cluster_id: filterClusterId.value,
+        page: pvsPage.value,
+        size: pvsSize.value,
+        status: String(K8sPVStatus.Available),
+      };
+
+      const res = await getK8sPVList(params);
+      
+      if (pvsPage.value === 1) {
+        availablePVs.value = res?.items || [];
+      } else {
+        availablePVs.value = [...availablePVs.value, ...(res?.items || [])];
+      }
+      pvsTotal.value = res?.total || 0;
+    } catch (error: any) {
+      message.error(error?.message || '获取可用PV列表失败');
+      if (pvsPage.value === 1) {
+        availablePVs.value = [];
+      }
+    } finally {
+      pvsLoading.value = false;
+    }
+  };
+
+  const loadMorePVs = async () => {
+    if (pvsPage.value * pvsSize.value >= pvsTotal.value) {
+      return;
+    }
+    pvsPage.value += 1;
+    await fetchAvailablePVs();
+  };
+
   const fetchPVCs = async () => {
     if (!filterClusterId.value || filterClusterId.value === 0) {
       message.warning('请先选择有效的集群');
@@ -377,7 +458,6 @@ export function usePVCPage() {
 
       const res = await getK8sPVCList(params);
       
-      // 确保每个PVC对象都有正确的cluster_id
       const pvcsWithClusterId = (res?.items || []).map((pvc: K8sPVC) => ({
         ...pvc,
         cluster_id: pvc.cluster_id || filterClusterId.value || 0
@@ -694,17 +774,16 @@ export function usePVCPage() {
     });
   };
 
-  // modal handlers
-  const openCreateModal = () => {
+  const openCreateModal = async () => {
     if (!filterClusterId.value) {
       message.warning('请先选择集群');
       return;
     }
     resetCreateForm();
-    // 如果选择了命名空间，预填充
     if (filterNamespace.value) {
       createFormModel.value.namespace = filterNamespace.value;
     }
+    await fetchAvailablePVs(true);
     isCreateModalVisible.value = true;
   };
 
@@ -720,7 +799,6 @@ export function usePVCPage() {
   const openEditModal = async (record: K8sPVC) => {
     currentOperationPVC.value = record;
     resetEditForm();
-    // 填充编辑表单
     editFormModel.value = {
       name: record.name,
       namespace: record.namespace,
@@ -764,7 +842,6 @@ export function usePVCPage() {
     await fetchPVCPods(record);
   };
 
-  // form helpers
   const resetCreateForm = () => {
     createFormModel.value = {
       name: '',
@@ -822,7 +899,6 @@ export function usePVCPage() {
     expandFormRef.value?.resetFields();
   };
 
-  // filter handlers
   const handleClusterChange = (value: number | undefined) => {
     filterClusterId.value = value;
     filterNamespace.value = undefined;
@@ -871,12 +947,28 @@ export function usePVCPage() {
     await fetchNamespaces();
   };
 
-  // label/annotation helpers
+  const newLabelKey = ref('');
+  const newAnnotationKey = ref('');
+  
   const addLabelItem = (type: 'labels' | 'annotations') => {
-    if (type === 'labels') {
-      createFormModel.value.labels[''] = '';
+    const key = type === 'labels' ? newLabelKey : newAnnotationKey;
+    if (key.value && key.value.trim()) {
+      if (type === 'labels') {
+        if (createFormModel.value.labels[key.value.trim()]) {
+          message.warning('该标签键已存在');
+          return;
+        }
+        createFormModel.value.labels[key.value.trim()] = '';
+      } else {
+        if (createFormModel.value.annotations[key.value.trim()]) {
+          message.warning('该注解键已存在');
+          return;
+        }
+        createFormModel.value.annotations[key.value.trim()] = '';
+      }
+      key.value = '';
     } else {
-      createFormModel.value.annotations[''] = '';
+      message.warning(type === 'labels' ? '请输入标签键' : '请输入注解键');
     }
   };
 
@@ -888,11 +980,28 @@ export function usePVCPage() {
     }
   };
 
+  const newEditLabelKey = ref('');
+  const newEditAnnotationKey = ref('');
+
   const addEditLabelItem = (type: 'labels' | 'annotations') => {
-    if (type === 'labels') {
-      editFormModel.value.labels[''] = '';
+    const key = type === 'labels' ? newEditLabelKey : newEditAnnotationKey;
+    if (key.value && key.value.trim()) {
+      if (type === 'labels') {
+        if (editFormModel.value.labels[key.value.trim()]) {
+          message.warning('该标签键已存在');
+          return;
+        }
+        editFormModel.value.labels[key.value.trim()] = '';
+      } else {
+        if (editFormModel.value.annotations[key.value.trim()]) {
+          message.warning('该注解键已存在');
+          return;
+        }
+        editFormModel.value.annotations[key.value.trim()] = '';
+      }
+      key.value = '';
     } else {
-      editFormModel.value.annotations[''] = '';
+      message.warning(type === 'labels' ? '请输入标签键' : '请输入注解键');
     }
   };
 
@@ -904,62 +1013,258 @@ export function usePVCPage() {
     }
   };
 
-  const updateEditLabelKey = async (oldKey: string, newKey: string, type: 'labels' | 'annotations') => {
-    if (oldKey === newKey || !newKey.trim()) {
-      return;
-    }
-    
-    // 使用 nextTick 确保在下一个事件循环中执行，避免和当前的DOM更新冲突
-    await nextTick();
-    
-    if (type === 'labels') {
-      if (editFormModel.value.labels[newKey] !== undefined) {
-        message.warning('标签键已存在');
-        return;
-      }
-      const value = editFormModel.value.labels[oldKey];
-      if (value !== undefined) {
-        editFormModel.value.labels[newKey] = value;
-        delete editFormModel.value.labels[oldKey];
-      }
-    } else {
-      if (editFormModel.value.annotations[newKey] !== undefined) {
-        message.warning('注解键已存在');
-        return;
-      }
-      const value = editFormModel.value.annotations[oldKey];
-      if (value !== undefined) {
-        editFormModel.value.annotations[newKey] = value;
-        delete editFormModel.value.annotations[oldKey];
-      }
-    }
-  };
-
-  // selector helpers
+  const newSelectorKey = ref('');
+  const newSelectorValue = ref('');
+  
   const addSelectorItem = () => {
-    createFormModel.value.spec.selector[''] = '';
+    if (newSelectorKey.value && newSelectorKey.value.trim()) {
+      if (createFormModel.value.spec.selector[newSelectorKey.value.trim()]) {
+        message.warning('该选择器键已存在');
+        return;
+      }
+      createFormModel.value.spec.selector[newSelectorKey.value.trim()] = newSelectorValue.value || '';
+      newSelectorKey.value = '';
+      newSelectorValue.value = '';
+    } else {
+      message.warning('请输入选择器键');
+    }
   };
 
   const removeSelectorItem = (key: string) => {
     delete createFormModel.value.spec.selector[key];
   };
 
-  const addEditSelectorItem = () => {
-    editFormModel.value.spec.selector[''] = '';
+  const insertYamlTemplate = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认操作',
+        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+        okText: '确认',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = PVC_YAML_TEMPLATE;
+          message.success('模板已插入');
+        },
+      });
+    } else {
+      createYamlFormModel.value.yaml = PVC_YAML_TEMPLATE;
+      message.success('模板已插入');
+    }
   };
 
-  const removeEditSelectorItem = (key: string) => {
-    delete editFormModel.value.spec.selector[key];
+  const formatYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      createYamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+    }
+  };
+
+  const validateYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      const pvc = parsed as any;
+      const issues: string[] = [];
+
+      if (!pvc.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!pvc.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (pvc.kind !== 'PersistentVolumeClaim') {
+        issues.push(`kind 应为 "PersistentVolumeClaim"，当前为 "${pvc.kind}"`);
+      }
+      if (!pvc.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!pvc.spec) {
+        issues.push('缺少 spec 字段');
+      } else {
+        if (!pvc.spec.resources?.requests?.storage) {
+          issues.push('缺少 spec.resources.requests.storage 字段');
+        }
+        if (!pvc.spec.accessModes || pvc.spec.accessModes.length === 0) {
+          issues.push('缺少 spec.accessModes 字段');
+        }
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+    }
+  };
+
+  const clearYaml = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认清空',
+        content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+        okText: '确认清空',
+        okType: 'danger',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = '';
+          message.success('YAML 内容已清空');
+        },
+      });
+    } else {
+      message.info('YAML 内容已为空');
+    }
+  };
+
+  const formatEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      yamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+    }
+  };
+
+  const validateEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      const pvc = parsed as any;
+      const issues: string[] = [];
+
+      if (!pvc.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!pvc.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (pvc.kind !== 'PersistentVolumeClaim') {
+        issues.push(`kind 应为 "PersistentVolumeClaim"，当前为 "${pvc.kind}"`);
+      }
+      if (!pvc.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!pvc.spec) {
+        issues.push('缺少 spec 字段');
+      } else {
+        if (!pvc.spec.resources?.requests?.storage) {
+          issues.push('缺少 spec.resources.requests.storage 字段');
+        }
+        if (!pvc.spec.accessModes || pvc.spec.accessModes.length === 0) {
+          issues.push('缺少 spec.accessModes 字段');
+        }
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+    }
   };
 
   return {
-    // state
     pvcs,
     clusters,
     namespaces,
+    availablePVs,
     loading,
     clustersLoading,
     namespacesLoading,
+    pvsLoading,
     searchText,
     filterClusterId,
     filterNamespace,
@@ -975,13 +1280,11 @@ export function usePVCPage() {
     namespacesPage,
     namespacesSize,
     
-    // form refs
     formRef,
     yamlFormRef,
     createYamlFormRef,
     expandFormRef,
     
-    // modal state
     isCreateModalVisible,
     isCreateYamlModalVisible,
     isEditModalVisible,
@@ -993,38 +1296,35 @@ export function usePVCPage() {
     detailLoading,
     podsLoading,
     
-    // current operation
     currentOperationPVC,
     currentPVCDetail,
     currentYamlContent,
     currentPVCPods,
     
-    // form models
     createFormModel,
     editFormModel,
     yamlFormModel,
     createYamlFormModel,
     expandFormModel,
     
-    // form rules
     createFormRules,
     yamlFormRules,
     createYamlFormRules,
     expandFormRules,
     
-    // computed
     filteredPVCs,
     rowSelection,
+    pvOptions,
     
-    // helpers
     getEnvText,
     getPVCStatusText,
     getPVCStatusColor,
     getAccessModeText,
     
-    // operations
     fetchClusters,
     fetchNamespaces,
+    fetchAvailablePVs,
+    loadMorePVs,
     fetchPVCs,
     fetchPVCDetails,
     fetchPVCYaml,
@@ -1035,8 +1335,8 @@ export function usePVCPage() {
     loadMoreNamespaces,
     resetClusters,
     resetNamespaces,
+    resetPVs,
     
-    // crud operations
     createPVC,
     createPVCByYaml,
     updatePVC,
@@ -1045,7 +1345,6 @@ export function usePVCPage() {
     expandPVC,
     deleteBatchPVCs,
     
-    // modal handlers
     openCreateModal,
     openCreateYamlModal,
     openEditModal,
@@ -1054,38 +1353,45 @@ export function usePVCPage() {
     openExpandModal,
     openPodsModal,
     
-    // form helpers
     resetCreateForm,
     resetEditForm,
     resetYamlForm,
     resetCreateYamlForm,
     resetExpandForm,
     
-    // filter handlers
     handleClusterChange,
     handleFilterChange,
     handleSearch,
     handlePageChange,
     handleClusterDropdownScroll,
     
-    // label/annotation helpers
+    newLabelKey,
+    newAnnotationKey,
     addLabelItem,
     removeLabelItem,
+    newEditLabelKey,
+    newEditAnnotationKey,
     addEditLabelItem,
     removeEditLabelItem,
-    updateEditLabelKey,
     
-    // selector helpers
+    newSelectorKey,
+    newSelectorValue,
     addSelectorItem,
     removeSelectorItem,
-    addEditSelectorItem,
-    removeEditSelectorItem,
     
-    // constants
+    insertYamlTemplate,
+    formatYaml,
+    validateYaml,
+    clearYaml,
+    formatEditYaml,
+    validateEditYaml,
+    
     K8sPVCStatus,
     
-    // additional required properties
     clustersTotal,
     namespacesTotal,
+    pvsTotal,
+    pvsPage,
+    pvsSize,
   };
 }

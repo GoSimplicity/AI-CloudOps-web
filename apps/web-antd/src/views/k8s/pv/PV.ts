@@ -1,6 +1,7 @@
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, h } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+import yaml from 'js-yaml';
 import {
   type K8sPV,
   type GetPVListReq,
@@ -29,6 +30,22 @@ import {
   getClustersListApi,
   Env,
 } from '#/api/core/k8s/k8s_cluster';
+
+// PV YAML 模板
+const PV_YAML_TEMPLATE = `apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: my-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"`;
 
 export function usePVPage() {
   // state
@@ -77,6 +94,7 @@ export function usePVPage() {
     reclaim_policy: string;
     storage_class: string;
     volume_mode: string;
+    volume_type: string;  // 卷类型
     volume_source: Record<string, any>;
     node_affinity: Record<string, any>;
     labels: Record<string, string>;
@@ -88,6 +106,7 @@ export function usePVPage() {
     reclaim_policy: 'Retain',
     storage_class: '',
     volume_mode: 'Filesystem',
+    volume_type: 'hostPath',  // 默认使用 hostPath
     volume_source: {},
     node_affinity: {},
     labels: {},
@@ -383,7 +402,58 @@ export function usePVPage() {
 
     try {
       await formRef.value?.validate();
+
+      // 验证卷类型和配置
+      if (!createFormModel.value.volume_type) {
+        message.error('请选择卷类型');
+        return;
+      }
+
+      if (!createFormModel.value.volume_source || Object.keys(createFormModel.value.volume_source).length === 0) {
+        message.error('卷源配置不能为空，请至少添加一项配置');
+        return;
+      }
+
+      // 验证必需字段是否已填写
+      const requiredFields: Record<string, string[]> = {
+        hostPath: ['path'],
+        nfs: ['server', 'path'],
+        csi: ['driver', 'volumeHandle'],
+        local: ['path'],
+        cephfs: ['monitors'],
+        iscsi: ['targetPortal', 'iqn'],
+        glusterfs: ['endpoints', 'path'],
+        rbd: ['monitors', 'image'],
+      };
+
+      const required = requiredFields[createFormModel.value.volume_type] || [];
+      const missingFields: string[] = [];
+      
+      for (const field of required) {
+        if (!createFormModel.value.volume_source[field] || createFormModel.value.volume_source[field].trim() === '') {
+          missingFields.push(field);
+        }
+      }
+
+      if (missingFields.length > 0) {
+        message.error(`请填写 ${createFormModel.value.volume_type} 的必需字段: ${missingFields.join(', ')}`);
+        return;
+      }
+
       submitLoading.value = true;
+
+      // 过滤掉空值字段
+      const filteredVolumeSource = Object.entries(createFormModel.value.volume_source)
+        .filter(([_, value]) => value && value.trim() !== '')
+        .reduce((acc, [key, value]) => {
+          acc[key] = value;
+          return acc;
+        }, {} as Record<string, any>);
+
+      // 根据卷类型构造正确的 volume_source 结构
+      const volumeSource: Record<string, any> = {
+        [createFormModel.value.volume_type]: filteredVolumeSource
+      };
 
       const params: CreatePVReq = {
         cluster_id: filterClusterId.value,
@@ -391,12 +461,12 @@ export function usePVPage() {
         capacity: createFormModel.value.capacity,
         access_modes: createFormModel.value.access_modes,
         reclaim_policy: createFormModel.value.reclaim_policy,
-        storage_class: createFormModel.value.storage_class || undefined,
-        volume_mode: createFormModel.value.volume_mode || undefined,
-        volume_source: createFormModel.value.volume_source,
-        node_affinity: Object.keys(createFormModel.value.node_affinity).length > 0 ? createFormModel.value.node_affinity : undefined,
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
+        storage_class: createFormModel.value.storage_class || '',
+        volume_mode: createFormModel.value.volume_mode || 'Filesystem',
+        volume_source: volumeSource,  // 使用正确结构的 volume_source
+        node_affinity: createFormModel.value.node_affinity || {},
+        labels: createFormModel.value.labels || {},
+        annotations: createFormModel.value.annotations || {},
       };
 
       await createK8sPV(params);
@@ -526,9 +596,18 @@ export function usePVPage() {
 
           await deleteK8sPV(params);
           message.success(`删除PV "${record.name}" 成功`);
+          
+          // 清除选中状态
+          selectedRowKeys.value = [];
+          selectedRows.value = [];
+          
+          // 如果当前页没有数据了，返回上一页
+          if (pvs.value.length === 1 && currentPage.value > 1) {
+            currentPage.value--;
+          }
+          
           await fetchPVs();
         } catch (error: any) {
-
           message.error(error?.message || '删除PV失败');
         }
       },
@@ -553,9 +632,10 @@ export function usePVPage() {
 
           await reclaimK8sPV(params);
           message.success(`回收PV "${record.name}" 成功`);
+          
+          // 刷新数据
           await fetchPVs();
         } catch (error: any) {
-
           message.error(error?.message || '回收PV失败');
         }
       },
@@ -568,8 +648,10 @@ export function usePVPage() {
       return;
     }
 
+    const deleteCount = selectedRows.value.length;
+
     Modal.confirm({
-      title: `确认删除选中的 ${selectedRows.value.length} 个PV?`,
+      title: `确认删除选中的 ${deleteCount} 个PV?`,
       content: '此操作不可恢复，请确认！',
       okText: '确认删除',
       cancelText: '取消',
@@ -589,13 +671,23 @@ export function usePVPage() {
           });
 
           await Promise.all(promises);
-          message.success(`成功删除 ${selectedRows.value.length} 个PV`);
+          message.success(`成功删除 ${deleteCount} 个PV`);
+          
+          // 清除选中状态
           selectedRowKeys.value = [];
           selectedRows.value = [];
+          
+          // 如果当前页删除后没有数据了，返回上一页
+          if (pvs.value.length <= deleteCount && currentPage.value > 1) {
+            currentPage.value--;
+          }
+          
+          // 刷新数据
           await fetchPVs();
         } catch (error: any) {
-
           message.error(error?.message || '批量删除PV失败');
+          // 即使失败也刷新一次，因为可能部分删除成功
+          await fetchPVs();
         }
       },
     });
@@ -662,12 +754,51 @@ export function usePVPage() {
       reclaim_policy: 'Retain',
       storage_class: '',
       volume_mode: 'Filesystem',
-      volume_source: {},
+      volume_type: 'hostPath',
+      volume_source: { path: '', type: '' },  // 默认 hostPath 的必需字段
       node_affinity: {},
       labels: {},
       annotations: {},
     };
     formRef.value?.resetFields();
+  };
+
+  // 判断某个字段是否为必需字段
+  const isRequiredField = (volumeType: string, fieldKey: string): boolean => {
+    const requiredFields: Record<string, string[]> = {
+      hostPath: ['path'],
+      nfs: ['server', 'path'],
+      csi: ['driver', 'volumeHandle'],
+      local: ['path'],
+      cephfs: ['monitors'],
+      iscsi: ['targetPortal', 'iqn'],
+      glusterfs: ['endpoints', 'path'],
+      rbd: ['monitors', 'image'],
+    };
+    
+    return requiredFields[volumeType]?.includes(fieldKey) || false;
+  };
+
+  // 卷类型变化时的处理
+  const handleVolumeTypeChange = (type: string) => {
+    createFormModel.value.volume_type = type;
+    
+    // 根据卷类型自动填充必需字段（带空值，用户需要填写）
+    const defaultConfigs: Record<string, Record<string, string>> = {
+      hostPath: { path: '', type: '' },
+      nfs: { server: '', path: '' },
+      csi: { driver: '', volumeHandle: '' },
+      local: { path: '' },
+      cephfs: { monitors: '', path: '', user: '' },
+      iscsi: { targetPortal: '', iqn: '', lun: '' },
+      glusterfs: { endpoints: '', path: '' },
+      rbd: { monitors: '', image: '', pool: '' },
+    };
+    
+    // 自动填充该类型的必需配置字段
+    createFormModel.value.volume_source = defaultConfigs[type] || {};
+    
+    message.info(`已切换到 ${type} 卷类型，请填写必需的配置参数`);
   };
 
   const resetEditForm = () => {
@@ -738,85 +869,348 @@ export function usePVPage() {
     }
   };
 
-  // label/annotation helpers
-  const addLabelItem = (type: 'labels' | 'annotations') => {
-    if (type === 'labels') {
-      createFormModel.value.labels[''] = '';
-    } else {
-      createFormModel.value.annotations[''] = '';
-    }
-  };
-
-  const removeLabelItem = (key: string, type: 'labels' | 'annotations') => {
-    if (type === 'labels') {
-      delete createFormModel.value.labels[key];
-    } else {
-      delete createFormModel.value.annotations[key];
-    }
-  };
-
-  const addEditLabelItem = (type: 'labels' | 'annotations') => {
-    if (type === 'labels') {
-      editFormModel.value.labels[''] = '';
-    } else {
-      editFormModel.value.annotations[''] = '';
-    }
-  };
-
-  const removeEditLabelItem = (key: string, type: 'labels' | 'annotations') => {
-    if (type === 'labels') {
-      delete editFormModel.value.labels[key];
-    } else {
-      delete editFormModel.value.annotations[key];
-    }
-  };
-
-  const updateEditLabelKey = async (oldKey: string, newKey: string, type: 'labels' | 'annotations') => {
-    if (oldKey === newKey || !newKey.trim()) {
-      return;
-    }
-    
-    // 使用 nextTick 确保在下一个事件循环中执行，避免和当前的DOM更新冲突
-    await nextTick();
-    
-    if (type === 'labels') {
-      if (editFormModel.value.labels[newKey] !== undefined) {
-        message.warning('标签键已存在');
+  // label/annotation helpers for create form
+  const newLabelKey = ref('');
+  const newAnnotationKey = ref('');
+  
+  const addNewLabel = () => {
+    if (newLabelKey.value && newLabelKey.value.trim()) {
+      if (createFormModel.value.labels[newLabelKey.value.trim()]) {
+        message.warning('该标签键已存在');
         return;
       }
-      const value = editFormModel.value.labels[oldKey];
-      if (value !== undefined) {
-        editFormModel.value.labels[newKey] = value;
-        delete editFormModel.value.labels[oldKey];
-      }
+      createFormModel.value.labels[newLabelKey.value.trim()] = '';
+      newLabelKey.value = '';
     } else {
-      if (editFormModel.value.annotations[newKey] !== undefined) {
-        message.warning('注解键已存在');
-        return;
-      }
-      const value = editFormModel.value.annotations[oldKey];
-      if (value !== undefined) {
-        editFormModel.value.annotations[newKey] = value;
-        delete editFormModel.value.annotations[oldKey];
-      }
+      message.warning('请输入标签键');
     }
   };
 
-  // volume source helpers
-  const addVolumeSourceItem = () => {
-    createFormModel.value.volume_source[''] = '';
+  const removeLabelField = (key: string) => {
+    delete createFormModel.value.labels[key];
   };
 
-  const removeVolumeSourceItem = (key: string) => {
+  const addNewAnnotation = () => {
+    if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
+      if (createFormModel.value.annotations[newAnnotationKey.value.trim()]) {
+        message.warning('该注解键已存在');
+        return;
+      }
+      createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
+      newAnnotationKey.value = '';
+    } else {
+      message.warning('请输入注解键');
+    }
+  };
+
+  const removeAnnotationField = (key: string) => {
+    delete createFormModel.value.annotations[key];
+  };
+
+  // label/annotation helpers for edit form
+  const newEditLabelKey = ref('');
+  const newEditAnnotationKey = ref('');
+  
+  const addNewEditLabel = () => {
+    if (newEditLabelKey.value && newEditLabelKey.value.trim()) {
+      if (editFormModel.value.labels[newEditLabelKey.value.trim()]) {
+        message.warning('该标签键已存在');
+        return;
+      }
+      editFormModel.value.labels[newEditLabelKey.value.trim()] = '';
+      newEditLabelKey.value = '';
+    } else {
+      message.warning('请输入标签键');
+    }
+  };
+
+  const removeEditLabelField = (key: string) => {
+    delete editFormModel.value.labels[key];
+  };
+
+  const addNewEditAnnotation = () => {
+    if (newEditAnnotationKey.value && newEditAnnotationKey.value.trim()) {
+      if (editFormModel.value.annotations[newEditAnnotationKey.value.trim()]) {
+        message.warning('该注解键已存在');
+        return;
+      }
+      editFormModel.value.annotations[newEditAnnotationKey.value.trim()] = '';
+      newEditAnnotationKey.value = '';
+    } else {
+      message.warning('请输入注解键');
+    }
+  };
+
+  const removeEditAnnotationField = (key: string) => {
+    delete editFormModel.value.annotations[key];
+  };
+
+  // volume source helpers for create form
+  const newVolumeSourceKey = ref('');
+  const newVolumeSourceValue = ref('');
+  
+  const addNewVolumeSource = () => {
+    if (newVolumeSourceKey.value && newVolumeSourceKey.value.trim()) {
+      if (createFormModel.value.volume_source[newVolumeSourceKey.value.trim()]) {
+        message.warning('该配置键已存在');
+        return;
+      }
+      createFormModel.value.volume_source[newVolumeSourceKey.value.trim()] = newVolumeSourceValue.value || '';
+      newVolumeSourceKey.value = '';
+      newVolumeSourceValue.value = '';
+    } else {
+      message.warning('请输入配置键');
+    }
+  };
+
+  const removeVolumeSourceField = (key: string) => {
     delete createFormModel.value.volume_source[key];
   };
 
-  const addEditVolumeSourceItem = () => {
-    editFormModel.value.volume_source[''] = '';
+  // volume source helpers for edit form
+  const newEditVolumeSourceKey = ref('');
+  const newEditVolumeSourceValue = ref('');
+  
+  const addNewEditVolumeSource = () => {
+    if (newEditVolumeSourceKey.value && newEditVolumeSourceKey.value.trim()) {
+      if (editFormModel.value.volume_source[newEditVolumeSourceKey.value.trim()]) {
+        message.warning('该配置键已存在');
+        return;
+      }
+      editFormModel.value.volume_source[newEditVolumeSourceKey.value.trim()] = newEditVolumeSourceValue.value || '';
+      newEditVolumeSourceKey.value = '';
+      newEditVolumeSourceValue.value = '';
+    } else {
+      message.warning('请输入配置键');
+    }
   };
 
-  const removeEditVolumeSourceItem = (key: string) => {
+  const removeEditVolumeSourceField = (key: string) => {
     delete editFormModel.value.volume_source[key];
+  };
+
+  // YAML 操作
+  const insertYamlTemplate = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认操作',
+        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+        okText: '确认',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = PV_YAML_TEMPLATE;
+          message.success('模板已插入');
+        },
+      });
+    } else {
+      createYamlFormModel.value.yaml = PV_YAML_TEMPLATE;
+      message.success('模板已插入');
+    }
+  };
+
+  const formatYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      createYamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+    }
+  };
+
+  const validateYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      const pv = parsed as any;
+      const issues: string[] = [];
+
+      if (!pv.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!pv.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (pv.kind !== 'PersistentVolume') {
+        issues.push(`kind 应为 "PersistentVolume"，当前为 "${pv.kind}"`);
+      }
+      if (!pv.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!pv.spec) {
+        issues.push('缺少 spec 字段');
+      } else {
+        if (!pv.spec.capacity?.storage) {
+          issues.push('缺少 spec.capacity.storage 字段');
+        }
+        if (!pv.spec.accessModes || pv.spec.accessModes.length === 0) {
+          issues.push('缺少 spec.accessModes 字段');
+        }
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+    }
+  };
+
+  const clearYaml = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认清空',
+        content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+        okText: '确认清空',
+        okType: 'danger',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = '';
+          message.success('YAML 内容已清空');
+        },
+      });
+    } else {
+      message.info('YAML 内容已为空');
+    }
+  };
+
+  // 编辑 YAML 的格式化和验证函数
+  const formatEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      yamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+    }
+  };
+
+  const validateEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      const pv = parsed as any;
+      const issues: string[] = [];
+
+      if (!pv.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!pv.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (pv.kind !== 'PersistentVolume') {
+        issues.push(`kind 应为 "PersistentVolume"，当前为 "${pv.kind}"`);
+      }
+      if (!pv.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!pv.spec) {
+        issues.push('缺少 spec 字段');
+      } else {
+        if (!pv.spec.capacity?.storage) {
+          issues.push('缺少 spec.capacity.storage 字段');
+        }
+        if (!pv.spec.accessModes || pv.spec.accessModes.length === 0) {
+          issues.push('缺少 spec.accessModes 字段');
+        }
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+    }
   };
 
   return {
@@ -908,6 +1302,8 @@ export function usePVPage() {
     resetEditForm,
     resetYamlForm,
     resetCreateYamlForm,
+    handleVolumeTypeChange,
+    isRequiredField,
     
     // filter handlers
     handleClusterChange,
@@ -917,17 +1313,36 @@ export function usePVPage() {
     handleClusterDropdownScroll,
     
     // label/annotation helpers
-    addLabelItem,
-    removeLabelItem,
-    addEditLabelItem,
-    removeEditLabelItem,
-    updateEditLabelKey,
+    newLabelKey,
+    newAnnotationKey,
+    addNewLabel,
+    removeLabelField,
+    addNewAnnotation,
+    removeAnnotationField,
+    newEditLabelKey,
+    newEditAnnotationKey,
+    addNewEditLabel,
+    removeEditLabelField,
+    addNewEditAnnotation,
+    removeEditAnnotationField,
     
     // volume source helpers
-    addVolumeSourceItem,
-    removeVolumeSourceItem,
-    addEditVolumeSourceItem,
-    removeEditVolumeSourceItem,
+    newVolumeSourceKey,
+    newVolumeSourceValue,
+    addNewVolumeSource,
+    removeVolumeSourceField,
+    newEditVolumeSourceKey,
+    newEditVolumeSourceValue,
+    addNewEditVolumeSource,
+    removeEditVolumeSourceField,
+    
+    // yaml operations
+    insertYamlTemplate,
+    formatYaml,
+    validateYaml,
+    clearYaml,
+    formatEditYaml,
+    validateEditYaml,
     
     // constants
     K8sPVStatus,
