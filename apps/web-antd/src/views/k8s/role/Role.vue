@@ -115,7 +115,7 @@
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
-            placeholder="🔍 搜索 Role 名称" 
+            placeholder="搜索 Role 名称" 
             class="k8s-search-input" 
             @pressEnter="onSearch"
             @input="onSearch"
@@ -308,6 +308,11 @@
                 <template #icon><EyeOutlined /></template>
               </a-button>
             </a-tooltip>
+            <a-tooltip title="编辑">
+              <a-button title="编辑" @click="openEditModal(record)">
+                <template #icon><EditOutlined /></template>
+              </a-button>
+            </a-tooltip>
             <a-tooltip title="查看 YAML">
               <a-button title="查看 YAML" @click="showYamlModal(record)">
                 <template #icon><FileTextOutlined /></template>
@@ -395,13 +400,16 @@
             <div v-for="(rule, ruleIndex) in createFormModel.rules" :key="ruleIndex" class="rule-input-group">
               <div class="rule-header">
                 <span class="rule-title">规则 {{ ruleIndex + 1 }}</span>
-                <a-button type="text" danger 
+                <a-button 
+                  type="text" 
+                  danger 
                   @click="removeRuleField(ruleIndex)" 
                   :disabled="createFormModel.rules.length <= 1"
                   size="small"
-                 class="k8s-remove-btn">
+                  class="k8s-remove-btn"
+                  title="删除此规则"
+                >
                   <template #icon><DeleteOutlined /></template>
-                  删除规则
                 </a-button>
               </div>
 
@@ -468,13 +476,25 @@
                     <a-input
                       :value="newApiGroups[ruleIndex]"
                       @input="(e: any) => newApiGroups[ruleIndex] = e.target.value"
-                      placeholder="输入API组，空白表示core组"
+                      placeholder="输入API组，留空表示core组"
                       style="flex: 1; margin-right: 8px;"
-                      @press-enter="() => { addApiGroupToRule(ruleIndex, newApiGroups[ruleIndex] || ''); newApiGroups[ruleIndex] = ''; }"
+                      @press-enter="() => { 
+                        const value = newApiGroups[ruleIndex];
+                        if (value !== undefined) {
+                          addApiGroupToRule(ruleIndex, value.trim()); 
+                          newApiGroups[ruleIndex] = ''; 
+                        }
+                      }"
                     />
                     <a-button 
                       type="primary" 
-                      @click="() => { addApiGroupToRule(ruleIndex, newApiGroups[ruleIndex] || ''); newApiGroups[ruleIndex] = ''; }"
+                      @click="() => { 
+                        const value = newApiGroups[ruleIndex];
+                        if (value !== undefined) {
+                          addApiGroupToRule(ruleIndex, value.trim()); 
+                          newApiGroups[ruleIndex] = ''; 
+                        }
+                      }"
                       size="small"
                     >
                       <template #icon><PlusOutlined /></template>
@@ -489,8 +509,9 @@
                 <div class="rule-tags-input">
                   <div class="tags-display">
                     <a-tag 
-                      v-for="(resource, resourceIndex) in rule.resources" 
+                      v-for="(resource, resourceIndex) in (rule.resources || [])" 
                       :key="resourceIndex"
+                      v-show="resource && resource.trim()"
                       closable
                       @close="removeResourceFromRule(ruleIndex, resourceIndex)"
                       color="orange"
@@ -504,11 +525,23 @@
                       @input="(e: any) => newResources[ruleIndex] = e.target.value"
                       placeholder="输入资源类型，如: pods, services"
                       style="flex: 1; margin-right: 8px;"
-                      @press-enter="() => { addResourceToRule(ruleIndex, newResources[ruleIndex] || ''); newResources[ruleIndex] = ''; }"
+                      @press-enter="() => { 
+                        const value = newResources[ruleIndex];
+                        if (value && value.trim()) {
+                          addResourceToRule(ruleIndex, value.trim()); 
+                          newResources[ruleIndex] = ''; 
+                        }
+                      }"
                     />
                     <a-button 
                       type="primary" 
-                      @click="() => { addResourceToRule(ruleIndex, newResources[ruleIndex] || ''); newResources[ruleIndex] = ''; }"
+                      @click="() => { 
+                        const value = newResources[ruleIndex];
+                        if (value && value.trim()) {
+                          addResourceToRule(ruleIndex, value.trim()); 
+                          newResources[ruleIndex] = ''; 
+                        }
+                      }"
                       :disabled="!newResources[ruleIndex]?.trim()"
                       size="small"
                     >
@@ -602,6 +635,299 @@
       </a-form>
     </a-modal>
 
+    <!-- 编辑 Role 模态框 -->
+    <a-modal
+      v-model:open="isEditModalVisible"
+      title="编辑 Role"
+      @ok="submitEditForm"
+      @cancel="closeEditModal"
+      :confirmLoading="submitLoading"
+      width="900px"
+      :maskClosable="false"
+      destroyOnClose
+      okText="保存"
+      cancelText="取消"
+    >
+      <a-form 
+        ref="editFormRef"
+        :model="editFormModel" 
+        layout="vertical" 
+        class="k8s-form"
+        :rules="editFormRules"
+      >
+        <!-- 基础配置 -->
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="Role 名称" name="name">
+              <a-input 
+                v-model:value="editFormModel.name" 
+                placeholder="Role 名称" 
+                class="k8s-form-input"
+                disabled
+              />
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                名称不可修改
+              </div>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="命名空间" name="namespace">
+              <a-input 
+                v-model:value="editFormModel.namespace" 
+                placeholder="命名空间" 
+                class="k8s-form-input"
+                disabled
+              />
+              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+                命名空间不可修改
+              </div>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <!-- 策略规则 -->
+        <a-form-item label="策略规则">
+          <div class="role-rules-inputs">
+            <div v-for="(rule, ruleIndex) in editFormModel.rules" :key="ruleIndex" class="rule-input-group">
+              <div class="rule-header">
+                <span class="rule-title">规则 {{ ruleIndex + 1 }}</span>
+                <a-button 
+                  type="text" 
+                  danger 
+                  @click="removeRuleField(ruleIndex)" 
+                  :disabled="editFormModel.rules.length <= 1"
+                  size="small"
+                  class="k8s-remove-btn"
+                  title="删除此规则"
+                >
+                  <template #icon><DeleteOutlined /></template>
+                </a-button>
+              </div>
+
+              <!-- 动词 -->
+              <div class="rule-field">
+                <label class="rule-field-label">动词 (Verbs) *</label>
+                <div class="rule-tags-input">
+                  <div class="tags-display">
+                    <a-tag 
+                      v-for="(verb, verbIndex) in rule.verbs" 
+                      :key="verbIndex"
+                      closable
+                      @close="removeVerbFromRule(ruleIndex, verbIndex)"
+                      color="blue"
+                    >
+                      {{ verb }}
+                    </a-tag>
+                  </div>
+                  <div class="add-tag-row">
+                    <a-select
+                      :value="newVerbs[ruleIndex]"
+                      @change="(value: string) => newVerbs[ruleIndex] = value"
+                      placeholder="选择动词"
+                      style="flex: 1; margin-right: 8px;"
+                    >
+                      <a-select-option value="get">get</a-select-option>
+                      <a-select-option value="list">list</a-select-option>
+                      <a-select-option value="watch">watch</a-select-option>
+                      <a-select-option value="create">create</a-select-option>
+                      <a-select-option value="update">update</a-select-option>
+                      <a-select-option value="patch">patch</a-select-option>
+                      <a-select-option value="delete">delete</a-select-option>
+                      <a-select-option value="deletecollection">deletecollection</a-select-option>
+                      <a-select-option value="*">* (全部)</a-select-option>
+                    </a-select>
+                    <a-button 
+                      type="primary" 
+                      @click="() => { addVerbToRule(ruleIndex, newVerbs[ruleIndex] || ''); newVerbs[ruleIndex] = ''; }"
+                      :disabled="!newVerbs[ruleIndex]"
+                      size="small"
+                    >
+                      <template #icon><PlusOutlined /></template>
+                    </a-button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- API 组 -->
+              <div class="rule-field">
+                <label class="rule-field-label">API 组 (API Groups)</label>
+                <div class="rule-tags-input">
+                  <div class="tags-display">
+                    <a-tag 
+                      v-for="(apiGroup, groupIndex) in rule.api_groups" 
+                      :key="groupIndex"
+                      closable
+                      @close="removeApiGroupFromRule(ruleIndex, groupIndex)"
+                      color="green"
+                    >
+                      {{ apiGroup || '""(core)' }}
+                    </a-tag>
+                  </div>
+                  <div class="add-tag-row">
+                    <a-input
+                      :value="newApiGroups[ruleIndex]"
+                      @input="(e: any) => newApiGroups[ruleIndex] = e.target.value"
+                      placeholder="输入API组，留空表示core组"
+                      style="flex: 1; margin-right: 8px;"
+                      @press-enter="() => { 
+                        const value = newApiGroups[ruleIndex];
+                        if (value !== undefined) {
+                          addApiGroupToRule(ruleIndex, value.trim()); 
+                          newApiGroups[ruleIndex] = ''; 
+                        }
+                      }"
+                    />
+                    <a-button 
+                      type="primary" 
+                      @click="() => { 
+                        const value = newApiGroups[ruleIndex];
+                        if (value !== undefined) {
+                          addApiGroupToRule(ruleIndex, value.trim()); 
+                          newApiGroups[ruleIndex] = ''; 
+                        }
+                      }"
+                      size="small"
+                    >
+                      <template #icon><PlusOutlined /></template>
+                    </a-button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 资源 -->
+              <div class="rule-field">
+                <label class="rule-field-label">资源 (Resources) *</label>
+                <div class="rule-tags-input">
+                  <div class="tags-display">
+                    <a-tag 
+                      v-for="(resource, resourceIndex) in (rule.resources || [])" 
+                      :key="resourceIndex"
+                      v-show="resource && resource.trim()"
+                      closable
+                      @close="removeResourceFromRule(ruleIndex, resourceIndex)"
+                      color="orange"
+                    >
+                      {{ resource }}
+                    </a-tag>
+                  </div>
+                  <div class="add-tag-row">
+                    <a-input
+                      :value="newResources[ruleIndex]"
+                      @input="(e: any) => newResources[ruleIndex] = e.target.value"
+                      placeholder="输入资源类型，如: pods, services"
+                      style="flex: 1; margin-right: 8px;"
+                      @press-enter="() => { 
+                        const value = newResources[ruleIndex];
+                        if (value && value.trim()) {
+                          addResourceToRule(ruleIndex, value.trim()); 
+                          newResources[ruleIndex] = ''; 
+                        }
+                      }"
+                    />
+                    <a-button 
+                      type="primary" 
+                      @click="() => { 
+                        const value = newResources[ruleIndex];
+                        if (value && value.trim()) {
+                          addResourceToRule(ruleIndex, value.trim()); 
+                          newResources[ruleIndex] = ''; 
+                        }
+                      }"
+                      :disabled="!newResources[ruleIndex]?.trim()"
+                      size="small"
+                    >
+                      <template #icon><PlusOutlined /></template>
+                    </a-button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <a-button type="dashed" @click="addRuleField" style="margin-top: 16px; width: 100%;">
+              <template #icon><PlusOutlined /></template>
+              添加策略规则
+            </a-button>
+          </div>
+        </a-form-item>
+
+        <!-- 标签配置 -->
+        <a-form-item label="标签配置（可选）" name="labels">
+          <div class="k8s-key-value-inputs">
+            <div v-if="!editFormModel.labels || Object.keys(editFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 16px;">
+              暂无标签，点击下方按钮添加
+            </div>
+            <div v-for="(_, key) in editFormModel.labels" :key="key" class="k8s-key-value-row">
+              <a-input 
+                :value="key" 
+                :placeholder="`标签键: ${key}`" 
+                disabled
+                class="k8s-form-input"
+              />
+              <a-input 
+                v-model:value="editFormModel.labels[key]" 
+                placeholder="标签值" 
+                class="k8s-form-input"
+                :maxlength="100"
+              />
+              <a-button type="text" danger @click="removeLabelField(key)" size="small" class="k8s-remove-btn">
+                <template #icon><DeleteOutlined /></template>
+              </a-button>
+            </div>
+            <div class="add-input-row" style="margin-top: 8px;">
+              <a-input
+                v-model:value="newLabelKey"
+                placeholder="输入标签键"
+                style="flex: 1; margin-right: 8px;"
+                @press-enter="addNewLabel"
+              />
+              <a-button type="primary" @click="addNewLabel" :disabled="!newLabelKey.trim()">
+                <template #icon><PlusOutlined /></template>
+                添加
+              </a-button>
+            </div>
+          </div>
+        </a-form-item>
+
+        <!-- 注解配置 -->
+        <a-form-item label="注解配置（可选）" name="annotations">
+          <div class="k8s-key-value-inputs">
+            <div v-if="!editFormModel.annotations || Object.keys(editFormModel.annotations).length === 0" style="text-align: center; color: #999; padding: 16px;">
+              暂无注解，点击下方按钮添加
+            </div>
+            <div v-for="(_, key) in editFormModel.annotations" :key="key" class="k8s-key-value-row">
+              <a-input 
+                :value="key" 
+                :placeholder="`注解键: ${key}`" 
+                disabled
+                class="k8s-form-input"
+              />
+              <a-input 
+                v-model:value="editFormModel.annotations[key]" 
+                placeholder="注解值" 
+                class="k8s-form-input"
+                :maxlength="500"
+              />
+              <a-button type="text" danger @click="removeAnnotationField(key)" size="small" class="k8s-remove-btn">
+                <template #icon><DeleteOutlined /></template>
+              </a-button>
+            </div>
+            <div class="add-input-row" style="margin-top: 8px;">
+              <a-input
+                v-model:value="newAnnotationKey"
+                placeholder="输入注解键"
+                style="flex: 1; margin-right: 8px;"
+                @press-enter="addNewAnnotation"
+              />
+              <a-button type="primary" @click="addNewAnnotation" :disabled="!newAnnotationKey.trim()">
+                <template #icon><PlusOutlined /></template>
+                添加
+              </a-button>
+            </div>
+          </div>
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
     <!-- 通过 YAML 创建 Role 模态框 -->
     <a-modal
       v-model:open="isCreateYamlModalVisible"
@@ -623,9 +949,27 @@
         :rules="createYamlFormRules"
       >
         <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
+              <template #icon><FileAddOutlined /></template>
+              插入模板
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
+              <template #icon><ClearOutlined /></template>
+              清空
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="createYamlFormModel.yaml" 
-            placeholder="请输入 Role YAML 内容" 
+            placeholder="请输入 Role YAML 内容，或点击【插入模板】使用默认模板" 
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -666,11 +1010,11 @@
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">创建时间:</span>
-                  <span class="k8s-detail-value">{{ currentRoleDetail.creation_timestamp || '-' }}</span>
+                  <span class="k8s-detail-value">{{ currentRoleDetail.created_at || '-' }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">存在时间:</span>
-                  <span class="k8s-detail-value">{{ formatAge(currentRoleDetail.age, currentRoleDetail.creation_timestamp) }}</span>
+                  <span class="k8s-detail-value">{{ formatAge(currentRoleDetail.age, currentRoleDetail.created_at) }}</span>
                 </div>
               </a-card>
             </a-col>
@@ -805,6 +1149,16 @@
         :rules="yamlFormRules"
       >
         <a-form-item name="yaml">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatEditYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateEditYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="yamlFormModel.yaml" 
             placeholder="YAML 内容" 
@@ -884,10 +1238,15 @@ import {
   SafetyCertificateOutlined,
   AppstoreOutlined,
   EyeOutlined,
+  EditOutlined,
   TagsOutlined,
   DeploymentUnitOutlined,
   SearchOutlined,
   FileTextOutlined,
+  FileAddOutlined,
+  FormatPainterOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -911,6 +1270,7 @@ const {
   // modal state
   isCreateModalVisible,
   isCreateYamlModalVisible,
+  isEditModalVisible,
   isDetailModalVisible,
   isYamlModalVisible,
   submitLoading,
@@ -922,16 +1282,19 @@ const {
   
   // form models
   createFormModel,
+  editFormModel,
   createYamlFormModel,
   yamlFormModel,
   
   // form refs
   formRef,
+  editFormRef,
   yamlFormRef,
   createYamlFormRef,
   
   // form rules
   createFormRules,
+  editFormRules,
   createYamlFormRules,
   yamlFormRules,
   
@@ -968,6 +1331,11 @@ const {
   closeCreateYamlModal,
   submitCreateYamlForm,
   
+  // edit operations
+  openEditModal,
+  closeEditModal,
+  submitEditForm,
+  
   // role operations
   deleteRole,
   
@@ -993,6 +1361,14 @@ const {
   removeResourceFromRule,
   removeLabelField,
   removeAnnotationField,
+  
+  // YAML utility functions
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
 } = useRolePage();
 
 // 添加新标签/注解的方法
@@ -1001,14 +1377,16 @@ const newAnnotationKey = ref('');
 
 const addNewLabel = () => {
   if (newLabelKey.value && newLabelKey.value.trim()) {
-    createFormModel.value.labels[newLabelKey.value.trim()] = '';
+    const formModel = isEditModalVisible.value ? editFormModel.value : createFormModel.value;
+    formModel.labels[newLabelKey.value.trim()] = '';
     newLabelKey.value = '';
   }
 };
 
 const addNewAnnotation = () => {
   if (newAnnotationKey.value && newAnnotationKey.value.trim()) {
-    createFormModel.value.annotations[newAnnotationKey.value.trim()] = '';
+    const formModel = isEditModalVisible.value ? editFormModel.value : createFormModel.value;
+    formModel.annotations[newAnnotationKey.value.trim()] = '';
     newAnnotationKey.value = '';
   }
 };
@@ -1149,7 +1527,7 @@ const columns = [
   { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
   { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
   { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
-  { title: '创建时间', dataIndex: 'creation_timestamp', key: 'creation_timestamp', width: 160, slots: { customRender: 'createdAt' } },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
   { title: '操作', key: 'actions', width: 230, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
 ];
 

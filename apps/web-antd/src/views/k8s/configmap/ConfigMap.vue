@@ -838,7 +838,7 @@
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">创建时间:</span>
-                  <span class="k8s-detail-value">{{ formatK8sTime(currentConfigMapDetail.creation_timestamp) }}</span>
+                  <span class="k8s-detail-value">{{ formatK8sTime(currentConfigMapDetail.created_at) }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">存在时间:</span>

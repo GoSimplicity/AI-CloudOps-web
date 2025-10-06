@@ -89,7 +89,7 @@ export interface K8sServiceAccount {
   namespace: string;
   cluster_id: number;
   uid: string;
-  creation_timestamp: string;
+  created_at: string;
   labels: Record<string, string>;
   annotations: Record<string, string>;
   automount_service_account_token?: boolean;
@@ -103,7 +103,7 @@ export interface K8sServiceAccount {
 export interface ServiceAccountTokenInfo {
   token: string;
   expiration_seconds?: number;
-  creation_timestamp: string;
+  created_at: string;
   expiration_time: string;
 }
 

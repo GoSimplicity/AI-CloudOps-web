@@ -819,7 +819,7 @@
               <a-card title="时间信息" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">创建时间:</span>
-                  <span class="k8s-detail-value">{{ formatK8sTime(currentPodDetail.creation_timestamp) }}</span>
+                  <span class="k8s-detail-value">{{ formatK8sTime(currentPodDetail.created_at) }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">启动时间:</span>
@@ -827,7 +827,7 @@
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">删除时间:</span>
-                  <span class="k8s-detail-value">{{ formatK8sTime(currentPodDetail.deletion_timestamp) }}</span>
+                  <span class="k8s-detail-value">{{ formatK8sTime(currentPodDetail.deleted_at) }}</span>
                 </div>
               </a-card>
             </a-col>

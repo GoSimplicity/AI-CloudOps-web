@@ -24,7 +24,7 @@ export interface K8sRole {
   namespace: string;
   cluster_id: number;
   uid: string;
-  creation_timestamp: string;
+  created_at: string;
   labels: Record<string, string>;
   annotations: Record<string, string>;
   rules: PolicyRule[] | null;

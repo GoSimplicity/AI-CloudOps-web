@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+import yaml from 'js-yaml';
 import { formatK8sTime } from '../shared/utils';
 import {
   type K8sYamlTemplate,
@@ -23,6 +24,37 @@ import {
   getClustersListApi,
   Env,
 } from '#/api/core/k8s/k8s_cluster';
+
+// YAML 模板常量
+const DEFAULT_YAML_TEMPLATE = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+  namespace: default
+  labels:
+    app: my-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"`;
 
 export function useTemplatePage() {
   // state
@@ -284,7 +316,7 @@ export function useTemplatePage() {
       };
       
       await createYamlTemplate(params);
-      message.success('🎉 模板创建成功');
+      message.success('模板创建成功');
       isCreateModalVisible.value = false;
       await fetchTemplates();
     } catch (err: unknown) {
@@ -292,7 +324,7 @@ export function useTemplatePage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ 模板创建失败');
+      message.error('模板创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -332,7 +364,7 @@ export function useTemplatePage() {
       };
       
       await updateYamlTemplate(params);
-      message.success('🎉 模板更新成功');
+      message.success('模板更新成功');
       isEditModalVisible.value = false;
       await fetchTemplates();
     } catch (err: unknown) {
@@ -340,7 +372,7 @@ export function useTemplatePage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ 模板更新失败');
+      message.error('模板更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -366,10 +398,10 @@ export function useTemplatePage() {
       };
       
       await checkYamlTemplate(params);
-      message.success('✅ YAML 格式检查通过');
+      message.success('YAML 格式检查通过');
       return true;
     } catch (err) {
-      message.error('❌ YAML 格式检查失败');
+      message.error('YAML 格式检查失败');
 
       return false;
     } finally {
@@ -396,10 +428,10 @@ export function useTemplatePage() {
             cluster_id: clusterId
           };
           await deleteYamlTemplate(params);
-          message.success('✅ 模板删除成功');
+          message.success('模板删除成功');
           await fetchTemplates();
         } catch (err) {
-          message.error('❌ 模板删除失败');
+          message.error('模板删除失败');
 
         }
       },
@@ -431,12 +463,12 @@ export function useTemplatePage() {
               await deleteYamlTemplate(params);
             }
           }
-          message.success(`✅ 批量${operation}操作已完成`);
+          message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchTemplates();
         } catch (err) {
-          message.error(`❌ 批量${operation}失败`);
+          message.error(`批量${operation}失败`);
 
         }
       },
@@ -465,6 +497,183 @@ export function useTemplatePage() {
       pageSize.value = size;
     }
     await fetchTemplates();
+  };
+
+  // YAML 操作方法
+  // 插入默认模板（用于创建表单）
+  const insertYamlTemplate = () => {
+    if (createFormModel.value.content && createFormModel.value.content.trim()) {
+      Modal.confirm({
+        title: '确认操作',
+        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+        okText: '确认',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createFormModel.value.content = DEFAULT_YAML_TEMPLATE;
+          message.success('模板已插入');
+        },
+      });
+    } else {
+      createFormModel.value.content = DEFAULT_YAML_TEMPLATE;
+      message.success('模板已插入');
+    }
+  };
+
+  // 格式化 YAML（用于创建表单）
+  const formatYaml = () => {
+    const yamlContent = createFormModel.value.content;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      createFormModel.value.content = formatted;
+      message.success('YAML 格式化成功');
+    } catch (err) {
+      message.error('YAML 格式化失败：格式不正确');
+    }
+  };
+
+  // 验证 YAML（用于创建表单）
+  const validateYaml = () => {
+    const yamlContent = createFormModel.value.content;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      const obj = parsed as any;
+      
+      // 基本结构检查
+      if (!obj.apiVersion) {
+        message.warning('YAML 缺少 apiVersion 字段');
+        return;
+      }
+      
+      if (!obj.kind) {
+        message.warning('YAML 缺少 kind 字段');
+        return;
+      }
+      
+      if (!obj.metadata) {
+        message.warning('YAML 缺少 metadata 字段');
+        return;
+      }
+      
+      if (!obj.spec && obj.kind !== 'Namespace') {
+        message.warning('YAML 缺少 spec 字段');
+        return;
+      }
+
+      message.success('YAML 格式检查通过');
+    } catch (err) {
+      message.error(`YAML 格式检查失败：${err instanceof Error ? err.message : '未知错误'}`);
+    }
+  };
+
+  // 清空 YAML（用于创建表单）
+  const clearYaml = () => {
+    if (createFormModel.value.content && createFormModel.value.content.trim()) {
+      Modal.confirm({
+        title: '确认清空',
+        content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+        okText: '确认清空',
+        okType: 'danger',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createFormModel.value.content = '';
+          message.success('YAML 内容已清空');
+        },
+      });
+    } else {
+      message.info('YAML 内容已为空');
+    }
+  };
+
+  // 格式化 YAML（用于编辑表单）
+  const formatEditYaml = () => {
+    const yamlContent = editFormModel.value.content;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      editFormModel.value.content = formatted;
+      message.success('YAML 格式化成功');
+    } catch (err) {
+      message.error('YAML 格式化失败：格式不正确');
+    }
+  };
+
+  // 验证 YAML（用于编辑表单）
+  const validateEditYaml = () => {
+    const yamlContent = editFormModel.value.content;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      const obj = parsed as any;
+      
+      // 基本结构检查
+      if (!obj.apiVersion) {
+        message.warning('YAML 缺少 apiVersion 字段');
+        return;
+      }
+      
+      if (!obj.kind) {
+        message.warning('YAML 缺少 kind 字段');
+        return;
+      }
+      
+      if (!obj.metadata) {
+        message.warning('YAML 缺少 metadata 字段');
+        return;
+      }
+      
+      if (!obj.spec && obj.kind !== 'Namespace') {
+        message.warning('YAML 缺少 spec 字段');
+        return;
+      }
+
+      message.success('YAML 格式检查通过');
+    } catch (err) {
+      message.error(`YAML 格式检查失败：${err instanceof Error ? err.message : '未知错误'}`);
+    }
   };
 
   return {
@@ -554,5 +763,13 @@ export function useTemplatePage() {
     // pagination operations
     resetClusters,
     handlePageChange,
+    
+    // YAML operations
+    insertYamlTemplate,
+    formatYaml,
+    validateYaml,
+    clearYaml,
+    formatEditYaml,
+    validateEditYaml,
   };
 }

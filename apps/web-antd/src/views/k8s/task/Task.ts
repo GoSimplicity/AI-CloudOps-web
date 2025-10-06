@@ -363,7 +363,7 @@ export function useTaskPage() {
       };
       
       await createYamlTask(params);
-      message.success('🎉 任务创建成功');
+      message.success('任务创建成功');
       isCreateModalVisible.value = false;
       await fetchTasks();
     } catch (err: unknown) {
@@ -371,7 +371,7 @@ export function useTaskPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ 任务创建失败');
+      message.error('任务创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -413,7 +413,7 @@ export function useTaskPage() {
       };
       
       await updateYamlTask(params);
-      message.success('🎉 任务更新成功');
+      message.success('任务更新成功');
       isEditModalVisible.value = false;
       await fetchTasks();
     } catch (err: unknown) {
@@ -421,7 +421,7 @@ export function useTaskPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('❌ 任务更新失败');
+      message.error('任务更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -458,11 +458,11 @@ export function useTaskPage() {
       };
       
       await applyYamlTask(params);
-      message.success(executeFormModel.value.dry_run ? '🎉 任务预检查成功' : '🎉 任务执行成功');
+      message.success(executeFormModel.value.dry_run ? '任务预检查成功' : '任务执行成功');
       isExecuteModalVisible.value = false;
       await fetchTasks();
     } catch (err) {
-      message.error(executeFormModel.value.dry_run ? '❌ 任务预检查失败' : '❌ 任务执行失败');
+      message.error(executeFormModel.value.dry_run ? '任务预检查失败' : '任务执行失败');
 
     } finally {
       executeLoading.value = false;
@@ -488,10 +488,10 @@ export function useTaskPage() {
             cluster_id: clusterId
           };
           await deleteYamlTask(params);
-          message.success('✅ 任务删除成功');
+          message.success('任务删除成功');
           await fetchTasks();
         } catch (err) {
-          message.error('❌ 任务删除失败');
+          message.error('任务删除失败');
 
         }
       },
@@ -529,12 +529,12 @@ export function useTaskPage() {
               });
             }
           }
-          message.success(`✅ 批量${operation}操作已完成`);
+          message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchTasks();
         } catch (err) {
-          message.error(`❌ 批量${operation}失败`);
+          message.error(`批量${operation}失败`);
 
         }
       },

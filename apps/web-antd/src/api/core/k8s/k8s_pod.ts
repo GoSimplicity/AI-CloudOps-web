@@ -41,9 +41,9 @@ export interface K8sPod {
   containers: string; // 容器列表(JSON字符串)
   init_containers: string; // 初始化容器列表(JSON字符串)
   volumes: string; // 卷列表(JSON字符串)
-  creation_timestamp: string; // 创建时间
+  created_at: string; // 创建时间
   start_time?: string; // 启动时间
-  deletion_timestamp?: string; // 删除时间戳
+  deleted_at?: string; // 删除时间戳
   owner_references: string; // 所有者引用(JSON字符串)
   resource_version: string; // 资源版本
   generation: number; // 生成版本号

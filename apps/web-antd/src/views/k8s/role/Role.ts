@@ -1,15 +1,16 @@
-import { ref, computed } from 'vue';
+import { ref, computed, h } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+import yaml from 'js-yaml';
 import {
   type K8sRole,
-  type PolicyRule,
   type PolicyRuleParam,
   type GetRoleListReq,
   type GetRoleDetailsReq,
   type GetRoleYamlReq,
   type CreateRoleReq,
   type CreateRoleByYamlReq,
+  type UpdateRoleReq,
   type UpdateRoleByYamlReq,
   type DeleteRoleReq,
   getRoleListApi,
@@ -17,6 +18,7 @@ import {
   getRoleYamlApi,
   createRoleApi,
   createRoleByYamlApi,
+  updateRoleApi,
   updateRoleYamlApi,
   deleteRoleApi,
 } from '#/api/core/k8s/k8s_role';
@@ -30,6 +32,20 @@ import {
   type K8sNamespace,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
+
+// YAML 模板常量
+const ROLE_YAML_TEMPLATE = `apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: my-role
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list"]`;
 
 export function useRolePage() {
   // state
@@ -57,6 +73,7 @@ export function useRolePage() {
 
   // form refs
   const formRef = ref<FormInstance>();
+  const editFormRef = ref<FormInstance>();
   const yamlFormRef = ref<FormInstance>();
   const createYamlFormRef = ref<FormInstance>();
 
@@ -86,8 +103,8 @@ export function useRolePage() {
     namespace: '',
     rules: [{
       verbs: [],
-      api_groups: [''],
-      resources: [''],
+      api_groups: [],
+      resources: [],
       resource_names: [],
     }],
     labels: {},
@@ -136,15 +153,26 @@ export function useRolePage() {
     ],
   };
 
+  const editFormRules: Record<string, Rule[]> = {
+    name: [
+      { required: true, message: '请输入 Role 名称', trigger: 'blur' },
+    ],
+    namespace: [
+      { required: true, message: '请选择命名空间', trigger: 'change' },
+    ],
+  };
+
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
     ],
   };
 
@@ -448,13 +476,13 @@ export function useRolePage() {
       };
 
       await updateRoleYamlApi(params);
-      message.success('🎉 Role YAML 更新成功');
+      message.success('Role YAML 更新成功');
       closeYamlModal();
       await fetchRoles();
     } catch (error: any) {
       if (error.errorFields) return;
 
-      message.error('❌ 更新 Role YAML 失败：' + (error.message || '未知错误'));
+      message.error('更新 Role YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -482,8 +510,8 @@ export function useRolePage() {
       namespace: filterNamespace.value || '',
       rules: [{
         verbs: [],
-        api_groups: [''],
-        resources: [''],
+        api_groups: [],
+        resources: [],
         resource_names: [],
       }],
       labels: {},
@@ -499,27 +527,170 @@ export function useRolePage() {
       await formRef.value.validateFields();
       submitLoading.value = true;
 
+      // 清理并过滤 rules
+      const cleanedRules = createFormModel.value.rules
+        .filter(rule => 
+          rule.verbs.length > 0 && 
+          (rule.resources || []).some(resource => resource && resource.trim())
+        )
+        .map(rule => {
+          // 清理 api_groups
+          const rawApiGroups = (rule.api_groups || [])
+            .map(group => typeof group === 'string' ? group.trim() : '')
+            .filter(group => group !== null && group !== undefined);
+          
+          // 如果同时有空字符串和非空值，去掉空字符串（很可能是意外产生的）
+          // 如果只有空字符串，保留它（代表 core API group）
+          const hasNonEmpty = rawApiGroups.some(group => group !== '');
+          const cleanedApiGroups = hasNonEmpty 
+            ? rawApiGroups.filter(group => group !== '')
+            : rawApiGroups;
+          
+          // 清理 resources：只保留非空字符串
+          const cleanedResources = (rule.resources || [])
+            .map(resource => typeof resource === 'string' ? resource.trim() : '')
+            .filter(resource => resource);
+          
+          return {
+            verbs: rule.verbs,
+            api_groups: cleanedApiGroups,
+            resources: cleanedResources,
+            resource_names: rule.resource_names || [],
+          };
+        });
+
       const params: CreateRoleReq = {
         cluster_id: filterClusterId.value,
         namespace: createFormModel.value.namespace,
         name: createFormModel.value.name,
-        rules: createFormModel.value.rules.filter(rule => 
-          rule.verbs.length > 0 && 
-          (rule.api_groups || []).some(group => group.trim()) && 
-          (rule.resources || []).some(resource => resource.trim())
-        ),
+        rules: cleanedRules,
         labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
         annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
       };
 
+      console.log('创建 Role 请求参数:', JSON.stringify(params, null, 2));
       await createRoleApi(params);
-      message.success('🎉 Role 创建成功');
+      message.success('Role 创建成功');
       closeCreateModal();
       await fetchRoles();
     } catch (error: any) {
       if (error.errorFields) return;
 
-      message.error('❌ 创建 Role 失败：' + (error.message || '未知错误'));
+      message.error('创建 Role 失败：' + (error.message || '未知错误'));
+    } finally {
+      submitLoading.value = false;
+    }
+  };
+
+  const openEditModal = async (role: K8sRole) => {
+    const clusterId = validateClusterId(role);
+    if (!clusterId) return;
+
+    currentOperationRole.value = role;
+    
+    // 获取详细信息
+    try {
+      submitLoading.value = true;
+      const params = {
+        cluster_id: clusterId,
+        namespace: role.namespace,
+        name: role.name,
+      };
+      
+      const response = await getRoleDetailsApi(params);
+      
+      // 填充表单
+      editFormModel.value = {
+        name: response.name,
+        namespace: response.namespace,
+        rules: (response.rules || []).map((rule: any) => ({
+          verbs: rule.verbs || [],
+          api_groups: rule.apiGroups || [],
+          resources: rule.resources || [],
+          resource_names: rule.resourceNames || [],
+        })),
+        labels: response.labels || {},
+        annotations: response.annotations || {},
+      };
+      
+      isEditModalVisible.value = true;
+    } catch (error: any) {
+      message.error('获取 Role 详情失败：' + (error.message || '未知错误'));
+    } finally {
+      submitLoading.value = false;
+    }
+  };
+
+  const closeEditModal = () => {
+    isEditModalVisible.value = false;
+    editFormModel.value = {
+      name: '',
+      namespace: '',
+      rules: [],
+      labels: {},
+      annotations: {},
+    };
+    editFormRef.value?.resetFields();
+  };
+
+  const submitEditForm = async () => {
+    if (!editFormRef.value || !currentOperationRole.value) return;
+
+    const clusterId = validateClusterId(currentOperationRole.value);
+    if (!clusterId) return;
+
+    try {
+      await editFormRef.value.validateFields();
+      submitLoading.value = true;
+
+      // 清理并过滤 rules
+      const cleanedRules = editFormModel.value.rules
+        .filter(rule => 
+          rule.verbs.length > 0 && 
+          (rule.resources || []).some(resource => resource && resource.trim())
+        )
+        .map(rule => {
+          // 清理 api_groups
+          const rawApiGroups = (rule.api_groups || [])
+            .map(group => typeof group === 'string' ? group.trim() : '')
+            .filter(group => group !== null && group !== undefined);
+          
+          const hasNonEmpty = rawApiGroups.some(group => group !== '');
+          const cleanedApiGroups = hasNonEmpty 
+            ? rawApiGroups.filter(group => group !== '')
+            : rawApiGroups;
+          
+          // 清理 resources
+          const cleanedResources = (rule.resources || [])
+            .map(resource => typeof resource === 'string' ? resource.trim() : '')
+            .filter(resource => resource);
+          
+          return {
+            verbs: rule.verbs,
+            api_groups: cleanedApiGroups,
+            resources: cleanedResources,
+            resource_names: rule.resource_names || [],
+          };
+        });
+
+      const params: UpdateRoleReq = {
+        cluster_id: clusterId,
+        namespace: currentOperationRole.value.namespace,
+        name: currentOperationRole.value.name,
+        rules: cleanedRules,
+        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
+        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
+      };
+
+      console.log('更新 Role 请求参数:', JSON.stringify(params, null, 2));
+      await updateRoleApi(params);
+      message.success('Role 更新成功');
+      closeEditModal();
+      await fetchRoles();
+    } catch (error: any) {
+      if (error.errorFields) return;
+
+      message.error('更新 Role 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -553,13 +724,13 @@ export function useRolePage() {
       };
 
       await createRoleByYamlApi(params);
-      message.success('🎉 Role 创建成功');
+      message.success('Role 创建成功');
       closeCreateYamlModal();
       await fetchRoles();
     } catch (error: any) {
       if (error.errorFields) return;
 
-      message.error('❌ 通过 YAML 创建 Role 失败：' + (error.message || '未知错误'));
+      message.error('通过 YAML 创建 Role 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -586,11 +757,11 @@ export function useRolePage() {
           };
 
           await deleteRoleApi(params);
-          message.success('🎉 Role 删除成功');
+          message.success('Role 删除成功');
           await fetchRoles();
         } catch (error: any) {
 
-          message.error('❌ 删除 Role 失败：' + (error.message || '未知错误'));
+          message.error('删除 Role 失败：' + (error.message || '未知错误'));
         }
       },
     });
@@ -647,13 +818,13 @@ export function useRolePage() {
 
           try {
             await Promise.all(deletePromises);
-            message.success(`🎉 成功删除 ${selectedRows.value.length} 个 Role`);
+            message.success(`成功删除 ${selectedRows.value.length} 个 Role`);
             selectedRowKeys.value = [];
             selectedRows.value = [];
             await fetchRoles();
           } catch (error: any) {
 
-            message.error('❌ 批量删除部分 Role 失败：' + (error.message || '未知错误'));
+            message.error('批量删除部分 Role 失败：' + (error.message || '未知错误'));
             await fetchRoles();
           }
         },
@@ -670,68 +841,303 @@ export function useRolePage() {
     fetchRoles();
   };
 
-  // form field operations
+  // form field operations (支持create和edit两种模式)
+  const getCurrentFormModel = () => {
+    return isEditModalVisible.value ? editFormModel.value : createFormModel.value;
+  };
+
   const addRuleField = () => {
-    createFormModel.value.rules.push({
+    getCurrentFormModel().rules.push({
       verbs: [],
-      api_groups: [''],
-      resources: [''],
+      api_groups: [],
+      resources: [],
       resource_names: [],
     });
   };
 
   const removeRuleField = (index: number) => {
-    if (createFormModel.value.rules.length > 1) {
-      createFormModel.value.rules.splice(index, 1);
+    const formModel = getCurrentFormModel();
+    if (formModel.rules.length > 1) {
+      formModel.rules.splice(index, 1);
     }
   };
 
   const addVerbToRule = (ruleIndex: number, verb: string) => {
-    if (verb && !createFormModel.value.rules[ruleIndex]?.verbs?.includes(verb)) {
-      createFormModel.value.rules[ruleIndex]?.verbs?.push(verb);
+    const formModel = getCurrentFormModel();
+    if (verb && !formModel.rules[ruleIndex]?.verbs?.includes(verb)) {
+      formModel.rules[ruleIndex]?.verbs?.push(verb);
     }
   };
 
   const removeVerbFromRule = (ruleIndex: number, verbIndex: number) => {
-    createFormModel.value.rules[ruleIndex]?.verbs?.splice(verbIndex, 1);
+    getCurrentFormModel().rules[ruleIndex]?.verbs?.splice(verbIndex, 1);
   };
 
   const addApiGroupToRule = (ruleIndex: number, apiGroup: string) => {
-    if (!createFormModel.value.rules[ruleIndex]?.api_groups) {
-      if (createFormModel.value.rules[ruleIndex]) {
-        createFormModel.value.rules[ruleIndex].api_groups = [];
+    const formModel = getCurrentFormModel();
+    if (!formModel.rules[ruleIndex]?.api_groups) {
+      if (formModel.rules[ruleIndex]) {
+        formModel.rules[ruleIndex].api_groups = [];
       }
     }
-    if (apiGroup !== undefined && !createFormModel.value.rules[ruleIndex]?.api_groups?.includes(apiGroup)) {
-      createFormModel.value.rules[ruleIndex]?.api_groups?.push(apiGroup);
+    if (apiGroup !== undefined && !formModel.rules[ruleIndex]?.api_groups?.includes(apiGroup)) {
+      formModel.rules[ruleIndex]?.api_groups?.push(apiGroup);
     }
   };
 
   const removeApiGroupFromRule = (ruleIndex: number, groupIndex: number) => {
-    createFormModel.value.rules[ruleIndex]?.api_groups?.splice(groupIndex, 1);
+    getCurrentFormModel().rules[ruleIndex]?.api_groups?.splice(groupIndex, 1);
   };
 
   const addResourceToRule = (ruleIndex: number, resource: string) => {
-    if (!createFormModel.value.rules[ruleIndex]?.resources) {
-      if (createFormModel.value.rules[ruleIndex]) {
-        createFormModel.value.rules[ruleIndex].resources = [];
+    const formModel = getCurrentFormModel();
+    if (!formModel.rules[ruleIndex]?.resources) {
+      if (formModel.rules[ruleIndex]) {
+        formModel.rules[ruleIndex].resources = [];
       }
     }
-    if (resource && !createFormModel.value.rules[ruleIndex]?.resources?.includes(resource)) {
-      createFormModel.value.rules[ruleIndex]?.resources?.push(resource);
+    if (resource && !formModel.rules[ruleIndex]?.resources?.includes(resource)) {
+      formModel.rules[ruleIndex]?.resources?.push(resource);
     }
   };
 
   const removeResourceFromRule = (ruleIndex: number, resourceIndex: number) => {
-    createFormModel.value.rules[ruleIndex]?.resources?.splice(resourceIndex, 1);
+    getCurrentFormModel().rules[ruleIndex]?.resources?.splice(resourceIndex, 1);
   };
 
   const removeLabelField = (key: string) => {
-    delete createFormModel.value.labels[key];
+    const formModel = getCurrentFormModel();
+    delete formModel.labels[key];
   };
 
   const removeAnnotationField = (key: string) => {
-    delete createFormModel.value.annotations[key];
+    const formModel = getCurrentFormModel();
+    delete formModel.annotations[key];
+  };
+
+  // YAML 操作辅助函数
+  const insertYamlTemplate = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认操作',
+        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+        okText: '确认',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = ROLE_YAML_TEMPLATE;
+          message.success('模板已插入');
+        },
+      });
+    } else {
+      createYamlFormModel.value.yaml = ROLE_YAML_TEMPLATE;
+      message.success('模板已插入');
+    }
+  };
+
+  const formatYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      // 解析 YAML
+      const parsed = yaml.load(yamlContent);
+      // 重新格式化为 YAML（缩进2空格）
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1, // 不限制行宽
+        noRefs: true,  // 不使用引用
+        sortKeys: false, // 保持原有顺序
+      });
+      createYamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+    }
+  };
+
+  const validateYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      // 尝试解析 YAML
+      const parsed = yaml.load(yamlContent);
+      
+      // 检查是否是有效的对象
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      // 基本的 Role 字段检查
+      const role = parsed as any;
+      const issues: string[] = [];
+
+      if (!role.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!role.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (role.kind !== 'Role') {
+        issues.push(`kind 应为 "Role"，当前为 "${role.kind}"`);
+      }
+      if (!role.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!role.metadata?.namespace) {
+        issues.push('缺少 metadata.namespace 字段');
+      }
+      if (!role.rules) {
+        issues.push('缺少 rules 字段');
+      } else if (!Array.isArray(role.rules)) {
+        issues.push('rules 应为数组格式');
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+    }
+  };
+
+  const clearYaml = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认清空',
+        content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+        okText: '确认清空',
+        okType: 'danger',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = '';
+          message.success('YAML 内容已清空');
+        },
+      });
+    } else {
+      message.info('YAML 内容已为空');
+    }
+  };
+
+  // 编辑 YAML 的格式化和验证函数
+  const formatEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      yamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+    }
+  };
+
+  const validateEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      const role = parsed as any;
+      const issues: string[] = [];
+
+      if (!role.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!role.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (role.kind !== 'Role') {
+        issues.push(`kind 应为 "Role"，当前为 "${role.kind}"`);
+      }
+      if (!role.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!role.metadata?.namespace) {
+        issues.push('缺少 metadata.namespace 字段');
+      }
+      if (!role.rules) {
+        issues.push('缺少 rules 字段');
+      } else if (!Array.isArray(role.rules)) {
+        issues.push('rules 应为数组格式');
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+    }
   };
 
   return {
@@ -774,11 +1180,13 @@ export function useRolePage() {
     
     // form refs
     formRef,
+    editFormRef,
     yamlFormRef,
     createYamlFormRef,
     
     // form rules
     createFormRules,
+    editFormRules,
     createYamlFormRules,
     yamlFormRules,
     
@@ -816,6 +1224,11 @@ export function useRolePage() {
     closeCreateYamlModal,
     submitCreateYamlForm,
     
+    // edit operations
+    openEditModal,
+    closeEditModal,
+    submitEditForm,
+    
     // role operations
     deleteRole,
     
@@ -841,5 +1254,13 @@ export function useRolePage() {
     removeResourceFromRule,
     removeLabelField,
     removeAnnotationField,
+    
+    // YAML utility functions
+    insertYamlTemplate,
+    formatYaml,
+    validateYaml,
+    clearYaml,
+    formatEditYaml,
+    validateEditYaml,
   };
 }

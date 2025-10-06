@@ -95,11 +95,11 @@
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
-            <a-select-option :value="TaskStatus.PENDING">⏳ 等待中</a-select-option>
-            <a-select-option :value="TaskStatus.RUNNING">▶️ 运行中</a-select-option>
-            <a-select-option :value="TaskStatus.SUCCESS">✅ 成功</a-select-option>
-            <a-select-option :value="TaskStatus.FAILED">❌ 失败</a-select-option>
-            <a-select-option :value="TaskStatus.CANCELLED">⏸️ 已取消</a-select-option>
+            <a-select-option :value="TaskStatus.PENDING">等待中</a-select-option>
+            <a-select-option :value="TaskStatus.RUNNING">运行中</a-select-option>
+            <a-select-option :value="TaskStatus.SUCCESS">成功</a-select-option>
+            <a-select-option :value="TaskStatus.FAILED">失败</a-select-option>
+            <a-select-option :value="TaskStatus.CANCELLED">已取消</a-select-option>
           </a-select>
         </div>
         

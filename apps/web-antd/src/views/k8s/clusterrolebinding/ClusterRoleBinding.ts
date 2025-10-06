@@ -1,6 +1,7 @@
-import { ref, computed } from 'vue';
+import { ref, computed, h } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+import yaml from 'js-yaml';
 import {
   type K8sClusterRoleBinding,
   type RoleRef,
@@ -10,6 +11,7 @@ import {
   type GetClusterRoleBindingYamlReq,
   type CreateClusterRoleBindingReq,
   type CreateClusterRoleBindingByYamlReq,
+  type UpdateClusterRoleBindingReq,
   type UpdateClusterRoleBindingByYamlReq,
   type DeleteClusterRoleBindingReq,
   getClusterRoleBindingListApi,
@@ -17,6 +19,7 @@ import {
   getClusterRoleBindingYamlApi,
   createClusterRoleBindingApi,
   createClusterRoleBindingByYamlApi,
+  updateClusterRoleBindingApi,
   updateClusterRoleBindingYamlApi,
   deleteClusterRoleBindingApi,
 } from '#/api/core/k8s/k8s_clusterrolebinding';
@@ -26,6 +29,21 @@ import {
   getClustersListApi,
   Env,
 } from '#/api/core/k8s/k8s_cluster';
+
+// ClusterRoleBinding YAML 模板
+const CLUSTERROLEBINDING_YAML_TEMPLATE = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: my-clusterrolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: my-clusterrole
+subjects:
+- kind: User
+  name: user@example.com
+  apiGroup: rbac.authorization.k8s.io
+`;
 
 export function useClusterRoleBindingPage() {
   // state
@@ -47,6 +65,7 @@ export function useClusterRoleBindingPage() {
 
   // form refs
   const formRef = ref<FormInstance>();
+  const editFormRef = ref<FormInstance>();
   const yamlFormRef = ref<FormInstance>();
   const createYamlFormRef = ref<FormInstance>();
 
@@ -128,20 +147,23 @@ export function useClusterRoleBindingPage() {
       },
       { max: 63, message: '名称长度不能超过63个字符', trigger: 'blur' },
     ],
-    'role_ref.name': [
-      { required: true, message: '请输入角色名称', trigger: 'blur' },
-    ],
+  };
+
+  const editFormRules: Record<string, Rule[]> = {
+    // 编辑时名称无法修改，只验证其他字段
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
     ],
   };
 
@@ -383,13 +405,13 @@ export function useClusterRoleBindingPage() {
       };
 
       await updateClusterRoleBindingYamlApi(params);
-      message.success('🎉 ClusterRoleBinding YAML 更新成功');
+      message.success(' ClusterRoleBinding YAML 更新成功');
       closeYamlModal();
       await fetchClusterRoleBindings();
     } catch (error: any) {
       if (error.errorFields) return;
 
-      message.error('❌ 更新 ClusterRoleBinding YAML 失败：' + (error.message || '未知错误'));
+      message.error('更新 ClusterRoleBinding YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -447,13 +469,88 @@ export function useClusterRoleBindingPage() {
       };
 
       await createClusterRoleBindingApi(params);
-      message.success('🎉 ClusterRoleBinding 创建成功');
+      message.success('ClusterRoleBinding 创建成功');
       closeCreateModal();
       await fetchClusterRoleBindings();
     } catch (error: any) {
       if (error.errorFields) return;
 
-      message.error('❌ 创建 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
+      message.error('创建 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
+    } finally {
+      submitLoading.value = false;
+    }
+  };
+
+  // edit operations
+  const openEditModal = (clusterRoleBinding: K8sClusterRoleBinding) => {
+    const clusterId = validateClusterId(clusterRoleBinding);
+    if (!clusterId) return;
+
+    currentOperationClusterRoleBinding.value = clusterRoleBinding;
+    
+    // 解析并填充编辑表单
+    editFormModel.value = {
+      name: clusterRoleBinding.name,
+      role_ref: {
+        api_group: clusterRoleBinding.role_ref?.api_group || 'rbac.authorization.k8s.io',
+        kind: clusterRoleBinding.role_ref?.kind || 'ClusterRole',
+        name: clusterRoleBinding.role_ref?.name || '',
+      },
+      subjects: clusterRoleBinding.subjects && clusterRoleBinding.subjects.length > 0 
+        ? clusterRoleBinding.subjects.map(subject => ({
+            kind: subject.kind || 'User',
+            name: subject.name || '',
+            namespace: subject.namespace,
+            api_group: subject.api_group || (subject.kind === 'ServiceAccount' ? '' : 'rbac.authorization.k8s.io'),
+          }))
+        : [{
+            kind: 'User',
+            name: '',
+            api_group: 'rbac.authorization.k8s.io',
+          }],
+      labels: clusterRoleBinding.labels && typeof clusterRoleBinding.labels === 'object' 
+        ? { ...clusterRoleBinding.labels } 
+        : {},
+      annotations: clusterRoleBinding.annotations && typeof clusterRoleBinding.annotations === 'object' 
+        ? { ...clusterRoleBinding.annotations } 
+        : {},
+    };
+    
+    isEditModalVisible.value = true;
+  };
+
+  const closeEditModal = () => {
+    isEditModalVisible.value = false;
+    currentOperationClusterRoleBinding.value = null;
+  };
+
+  const submitEditForm = async () => {
+    if (!editFormRef.value || !currentOperationClusterRoleBinding.value) return;
+    
+    const clusterId = validateClusterId(currentOperationClusterRoleBinding.value);
+    if (!clusterId) return;
+
+    try {
+      await editFormRef.value.validateFields();
+      submitLoading.value = true;
+
+      const params: UpdateClusterRoleBindingReq = {
+        cluster_id: clusterId,
+        name: currentOperationClusterRoleBinding.value.name,
+        role_ref: editFormModel.value.role_ref,
+        subjects: editFormModel.value.subjects.filter(subject => subject.name.trim()),
+        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
+        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
+      };
+
+      await updateClusterRoleBindingApi(params);
+      message.success('ClusterRoleBinding 更新成功');
+      closeEditModal();
+      await fetchClusterRoleBindings();
+    } catch (error: any) {
+      if (error.errorFields) return;
+
+      message.error('更新 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -487,13 +584,13 @@ export function useClusterRoleBindingPage() {
       };
 
       await createClusterRoleBindingByYamlApi(params);
-      message.success('🎉 ClusterRoleBinding 创建成功');
+      message.success(' ClusterRoleBinding 创建成功');
       closeCreateYamlModal();
       await fetchClusterRoleBindings();
     } catch (error: any) {
       if (error.errorFields) return;
 
-      message.error('❌ 通过 YAML 创建 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
+      message.error('通过 YAML 创建 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -519,11 +616,11 @@ export function useClusterRoleBindingPage() {
           };
 
           await deleteClusterRoleBindingApi(params);
-          message.success('🎉 ClusterRoleBinding 删除成功');
+          message.success(' ClusterRoleBinding 删除成功');
           await fetchClusterRoleBindings();
         } catch (error: any) {
 
-          message.error('❌ 删除 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
+          message.error('删除 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
         }
       },
     });
@@ -579,13 +676,13 @@ export function useClusterRoleBindingPage() {
 
           try {
             await Promise.all(deletePromises);
-            message.success(`🎉 成功删除 ${selectedRows.value.length} 个 ClusterRoleBinding`);
+            message.success(` 成功删除 ${selectedRows.value.length} 个 ClusterRoleBinding`);
             selectedRowKeys.value = [];
             selectedRows.value = [];
             await fetchClusterRoleBindings();
           } catch (error: any) {
 
-            message.error('❌ 批量删除部分 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
+            message.error('批量删除部分 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
             await fetchClusterRoleBindings();
           }
         },
@@ -625,6 +722,268 @@ export function useClusterRoleBindingPage() {
     delete createFormModel.value.annotations[key];
   };
 
+  // 编辑表单字段操作
+  const addEditSubjectField = () => {
+    editFormModel.value.subjects.push({
+      kind: 'User',
+      name: '',
+      api_group: 'rbac.authorization.k8s.io',
+    });
+  };
+
+  const removeEditSubjectField = (index: number) => {
+    if (editFormModel.value.subjects.length > 1) {
+      editFormModel.value.subjects.splice(index, 1);
+    }
+  };
+
+  const removeEditLabelField = (key: string) => {
+    delete editFormModel.value.labels[key];
+  };
+
+  const removeEditAnnotationField = (key: string) => {
+    delete editFormModel.value.annotations[key];
+  };
+
+  // YAML 操作辅助函数
+  const insertYamlTemplate = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认操作',
+        content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
+        okText: '确认',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = CLUSTERROLEBINDING_YAML_TEMPLATE;
+          message.success('模板已插入');
+        },
+      });
+    } else {
+      createYamlFormModel.value.yaml = CLUSTERROLEBINDING_YAML_TEMPLATE;
+      message.success('模板已插入');
+    }
+  };
+
+  const formatYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      // 解析 YAML
+      const parsed = yaml.load(yamlContent);
+      // 重新格式化为 YAML（缩进2空格）
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1, // 不限制行宽
+        noRefs: true,  // 不使用引用
+        sortKeys: false, // 保持原有顺序
+      });
+      createYamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+    }
+  };
+
+  const validateYaml = () => {
+    const yamlContent = createYamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      // 尝试解析 YAML
+      const parsed = yaml.load(yamlContent);
+      
+      // 检查是否是有效的对象
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      // 基本的 ClusterRoleBinding 字段检查
+      const clusterRoleBinding = parsed as any;
+      const issues: string[] = [];
+
+      if (!clusterRoleBinding.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!clusterRoleBinding.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (clusterRoleBinding.kind !== 'ClusterRoleBinding') {
+        issues.push(`kind 应为 "ClusterRoleBinding"，当前为 "${clusterRoleBinding.kind}"`);
+      }
+      if (!clusterRoleBinding.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!clusterRoleBinding.roleRef) {
+        issues.push('缺少 roleRef 字段');
+      } else {
+        if (!clusterRoleBinding.roleRef.name) {
+          issues.push('缺少 roleRef.name 字段');
+        }
+        if (!clusterRoleBinding.roleRef.kind) {
+          issues.push('缺少 roleRef.kind 字段');
+        }
+      }
+      if (!clusterRoleBinding.subjects) {
+        issues.push('缺少 subjects 字段');
+      } else if (!Array.isArray(clusterRoleBinding.subjects)) {
+        issues.push('subjects 应为数组格式');
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+    }
+  };
+
+  const clearYaml = () => {
+    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+      Modal.confirm({
+        title: '确认清空',
+        content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
+        okText: '确认清空',
+        okType: 'danger',
+        cancelText: '取消',
+        centered: true,
+        onOk: () => {
+          createYamlFormModel.value.yaml = '';
+          message.success('YAML 内容已清空');
+        },
+      });
+    } else {
+      message.info('YAML 内容已为空');
+    }
+  };
+
+  // 编辑 YAML 的格式化和验证函数
+  const formatEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法格式化');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      const formatted = yaml.dump(parsed, {
+        indent: 2,
+        lineWidth: -1,
+        noRefs: true,
+        sortKeys: false,
+      });
+      yamlFormModel.value.yaml = formatted;
+      message.success('YAML 格式化成功');
+    } catch (error: any) {
+      message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
+    }
+  };
+
+  const validateEditYaml = () => {
+    const yamlContent = yamlFormModel.value.yaml;
+    if (!yamlContent || !yamlContent.trim()) {
+      message.warning('YAML 内容为空，无法检查');
+      return;
+    }
+
+    try {
+      const parsed = yaml.load(yamlContent);
+      
+      if (!parsed || typeof parsed !== 'object') {
+        message.warning('YAML 内容无效：应为对象格式');
+        return;
+      }
+
+      const clusterRoleBinding = parsed as any;
+      const issues: string[] = [];
+
+      if (!clusterRoleBinding.apiVersion) {
+        issues.push('缺少 apiVersion 字段');
+      }
+      if (!clusterRoleBinding.kind) {
+        issues.push('缺少 kind 字段');
+      } else if (clusterRoleBinding.kind !== 'ClusterRoleBinding') {
+        issues.push(`kind 应为 "ClusterRoleBinding"，当前为 "${clusterRoleBinding.kind}"`);
+      }
+      if (!clusterRoleBinding.metadata?.name) {
+        issues.push('缺少 metadata.name 字段');
+      }
+      if (!clusterRoleBinding.roleRef) {
+        issues.push('缺少 roleRef 字段');
+      } else {
+        if (!clusterRoleBinding.roleRef.name) {
+          issues.push('缺少 roleRef.name 字段');
+        }
+        if (!clusterRoleBinding.roleRef.kind) {
+          issues.push('缺少 roleRef.kind 字段');
+        }
+      }
+      if (!clusterRoleBinding.subjects) {
+        issues.push('缺少 subjects 字段');
+      } else if (!Array.isArray(clusterRoleBinding.subjects)) {
+        issues.push('subjects 应为数组格式');
+      }
+
+      if (issues.length > 0) {
+        Modal.warning({
+          title: 'YAML 格式检查警告',
+          content: () => h('div', [
+            h('p', 'YAML 语法正确，但发现以下问题：'),
+            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
+              issues.map((issue) => h('li', issue))
+            ),
+          ]),
+          width: 500,
+          centered: true,
+        });
+      } else {
+        message.success('YAML 格式检查通过，所有必需字段完整');
+      }
+    } catch (error: any) {
+      Modal.error({
+        title: 'YAML 格式检查失败',
+        content: () => h('div', [
+          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
+          h('pre', { 
+            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
+          }, error.message || '未知错误'),
+        ]),
+        width: 600,
+        centered: true,
+      });
+    }
+  };
+
   return {
     // state
     clusterRoleBindings,
@@ -661,11 +1020,13 @@ export function useClusterRoleBindingPage() {
     
     // form refs
     formRef,
+    editFormRef,
     yamlFormRef,
     createYamlFormRef,
     
     // form rules
     createFormRules,
+    editFormRules,
     createYamlFormRules,
     yamlFormRules,
     
@@ -700,6 +1061,11 @@ export function useClusterRoleBindingPage() {
     closeCreateYamlModal,
     submitCreateYamlForm,
     
+    // edit operations
+    openEditModal,
+    closeEditModal,
+    submitEditForm,
+    
     // clusterRoleBinding operations
     deleteClusterRoleBinding,
     
@@ -719,5 +1085,17 @@ export function useClusterRoleBindingPage() {
     removeSubjectField,
     removeLabelField,
     removeAnnotationField,
+    addEditSubjectField,
+    removeEditSubjectField,
+    removeEditLabelField,
+    removeEditAnnotationField,
+    
+    // YAML utility functions
+    insertYamlTemplate,
+    formatYaml,
+    validateYaml,
+    clearYaml,
+    formatEditYaml,
+    validateEditYaml,
   };
 }

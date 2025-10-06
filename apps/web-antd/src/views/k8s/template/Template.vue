@@ -238,24 +238,31 @@
         </a-form-item>
 
         <a-form-item label="YAML 内容" name="content" :required="true">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
+              <template #icon><FileAddOutlined /></template>
+              插入模板
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
+              <template #icon><ClearOutlined /></template>
+              清空
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="createFormModel.content" 
-            placeholder="请输入 Kubernetes YAML 配置内容..." 
+            placeholder="请输入 Kubernetes YAML 配置内容，或点击【插入模板】使用默认模板" 
             :rows="15"
             class="k8s-config-textarea"
             show-count
           />
-          <div class="yaml-form-actions" style="margin-top: 8px;">
-            <a-button 
-              type="dashed" 
-              @click="() => checkTemplate(createFormModel.content)"
-              :loading="checkLoading"
-              :disabled="!createFormModel.content"
-            >
-              <template #icon><CheckCircleOutlined /></template>
-              检查 YAML 格式
-            </a-button>
-          </div>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -290,6 +297,16 @@
         </a-form-item>
 
         <a-form-item label="YAML 内容" name="content" :required="true">
+          <div class="yaml-toolbar">
+            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatEditYaml">
+              <template #icon><FormatPainterOutlined /></template>
+              格式化
+            </a-button>
+            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateEditYaml">
+              <template #icon><CheckCircleOutlined /></template>
+              检查格式
+            </a-button>
+          </div>
           <a-textarea 
             v-model:value="editFormModel.content" 
             placeholder="请输入 Kubernetes YAML 配置内容..." 
@@ -297,17 +314,6 @@
             class="k8s-config-textarea"
             show-count
           />
-          <div class="yaml-form-actions" style="margin-top: 8px;">
-            <a-button 
-              type="dashed" 
-              @click="() => checkTemplate(editFormModel.content)"
-              :loading="checkLoading"
-              :disabled="!editFormModel.content"
-            >
-              <template #icon><CheckCircleOutlined /></template>
-              检查 YAML 格式
-            </a-button>
-          </div>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -428,6 +434,9 @@ import {
   DatabaseOutlined,
   CopyOutlined,
   PlayCircleOutlined,
+  FileAddOutlined,
+  FormatPainterOutlined,
+  ClearOutlined,
 } from '@ant-design/icons-vue';
 
 const {
@@ -511,6 +520,14 @@ const {
   
   // pagination operations
   handlePageChange,
+  
+  // YAML operations
+  insertYamlTemplate,
+  formatYaml,
+  validateYaml,
+  clearYaml,
+  formatEditYaml,
+  validateEditYaml,
 } = useTemplatePage();
 
 const onSearch = () => {
