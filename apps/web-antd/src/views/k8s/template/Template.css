@@ -354,10 +354,36 @@
   background: #bfbfbf;
 }
 
+/* YAML工具栏 - 修复超出模态框问题 */
+.yaml-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.yaml-toolbar-btn {
+  height: 32px;
+  font-size: 13px;
+}
+
+/* 小屏幕优化 */
+@media (max-width: 576px) {
+  .yaml-toolbar {
+    gap: 6px;
+  }
+  
+  .yaml-toolbar-btn {
+    flex: 1 1 calc(50% - 3px);
+    min-width: 0;
+  }
+}
+
 /* 打印样式 */
 @media print {
   .yaml-form-actions,
-  .yaml-actions {
+  .yaml-actions,
+  .yaml-toolbar {
     display: none !important;
   }
   

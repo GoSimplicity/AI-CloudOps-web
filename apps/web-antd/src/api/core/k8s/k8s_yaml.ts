@@ -18,8 +18,10 @@ export interface K8sYamlTemplate {
   id?: number;
   name: string;
   user_id: number;
+  username?: string; // 用户名（后端可能返回）
   content: string;
   cluster_id: number;
+  cluster_name?: string; // 集群名称（前端补充）
   created_at?: string;
   updated_at?: string;
 }

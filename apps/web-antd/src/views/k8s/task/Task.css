@@ -475,6 +475,19 @@
   color: #1677ff;
 }
 
+/* 模板选择器下拉选项优化 */
+.ant-select-dropdown .ant-select-item-option-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  overflow: hidden;
+}
+
+.ant-select-dropdown .ant-select-item-option-content > div {
+  width: 100%;
+  min-width: 0;
+}
+
 /* 打印样式 */
 @media print {
   .task-variables-config,

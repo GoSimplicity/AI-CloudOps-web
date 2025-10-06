@@ -139,6 +139,14 @@
         class="k8s-table template-table"
         :scroll="{ x: 1200 }"
       >
+        <template #clusterName="{ record }">
+          <a-tag color="blue">{{ getClusterName(record.cluster_id) }}</a-tag>
+        </template>
+
+        <template #userName="{ record }">
+          <a-tag color="green">{{ getUserDisplay(record.user_id, record.username) }}</a-tag>
+        </template>
+
         <template #actions="{ record }">
           <div class="k8s-action-column">
             <a-tooltip title="查看详情">
@@ -180,27 +188,23 @@
         </template>
 
         <template #createdAt="{ text }">
-          <div v-if="text" style="font-size: 12px; color: #666;">
+          <div v-if="text" style="font-size: 13px; color: #595959;">
             <div>{{ formatDateTime(text) }}</div>
-            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            <div style="color: #8c8c8c; font-size: 12px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
           </div>
-          <span v-else class="k8s-no-data">-</span>
+          <span v-else style="color: #bfbfbf;">-</span>
         </template>
 
         <template #updatedAt="{ text }">
-          <div v-if="text" style="font-size: 12px; color: #666;">
+          <div v-if="text" style="font-size: 13px; color: #595959;">
             <div>{{ formatDateTime(text) }}</div>
-            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            <div style="color: #8c8c8c; font-size: 12px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
           </div>
-          <span v-else class="k8s-no-data">-</span>
+          <span v-else style="color: #bfbfbf;">-</span>
         </template>
 
         <template #emptyText>
-          <div class="k8s-empty-state">
-            <FileTextOutlined />
-            <p>暂无模板数据</p>
-            <p>请先选择集群</p>
-          </div>
+          <a-empty description="暂无模板数据，请先选择集群" />
         </template>
       </a-table>
     </div>
@@ -212,11 +216,12 @@
       @ok="submitCreateForm"
       @cancel="closeCreateModal"
       :confirmLoading="submitLoading"
-      width="800px"
+      width="900px"
       :maskClosable="false"
       destroyOnClose
       okText="创建"
       cancelText="取消"
+      centered
     >
       <a-form 
         ref="formRef"
@@ -258,10 +263,11 @@
           </div>
           <a-textarea 
             v-model:value="createFormModel.content" 
-            placeholder="请输入 Kubernetes YAML 配置内容，或点击【插入模板】使用默认模板" 
-            :rows="15"
+            placeholder="请输入 Kubernetes YAML 配置内容，或点击上方【插入模板】按钮使用默认模板" 
+            :rows="16"
             class="k8s-config-textarea"
             show-count
+            :maxlength="50000"
           />
         </a-form-item>
       </a-form>
@@ -274,11 +280,12 @@
       @ok="submitEditForm"
       @cancel="closeEditModal"
       :confirmLoading="submitLoading"
-      width="800px"
+      width="900px"
       :maskClosable="false"
       destroyOnClose
       okText="保存"
       cancelText="取消"
+      centered
     >
       <a-form 
         ref="editFormRef"
@@ -309,10 +316,11 @@
           </div>
           <a-textarea 
             v-model:value="editFormModel.content" 
-            placeholder="请输入 Kubernetes YAML 配置内容..." 
-            :rows="15"
+            placeholder="请输入 Kubernetes YAML 配置内容" 
+            :rows="16"
             class="k8s-config-textarea"
             show-count
+            :maxlength="50000"
           />
         </a-form-item>
       </a-form>
@@ -324,9 +332,9 @@
       title="模板详情"
       :footer="null"
       @cancel="closeDetailModal"
-      width="800px"
-      :maskClosable="false"
+      width="900px"
       destroyOnClose
+      centered
     >
       <a-spin :spinning="detailLoading">
         <div v-if="currentTemplateDetail" class="k8s-detail-content">
@@ -342,12 +350,16 @@
                   <span class="k8s-detail-value">{{ currentTemplateDetail.name }}</span>
                 </div>
                 <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">集群ID:</span>
-                  <span class="k8s-detail-value">{{ currentTemplateDetail.cluster_id }}</span>
+                  <span class="k8s-detail-label">所属集群:</span>
+                  <span class="k8s-detail-value">
+                    <a-tag color="blue">{{ getClusterName(currentTemplateDetail.cluster_id) }}</a-tag>
+                  </span>
                 </div>
                 <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">用户ID:</span>
-                  <span class="k8s-detail-value">{{ currentTemplateDetail.user_id || '-' }}</span>
+                  <span class="k8s-detail-label">创建用户:</span>
+                  <span class="k8s-detail-value">
+                    <a-tag color="green">{{ getUserDisplay(currentTemplateDetail.user_id, currentTemplateDetail.username) }}</a-tag>
+                  </span>
                 </div>
               </a-card>
             </a-col>
@@ -421,7 +433,7 @@
 import { onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { useTemplatePage } from './Template';
-import { formatDateTime, getRelativeTime, formatK8sTime } from '../shared/utils';
+import { formatDateTime, getRelativeTime } from '../shared/utils';
 import { 
   PlusOutlined, 
   ReloadOutlined, 
@@ -433,7 +445,6 @@ import {
   CheckCircleOutlined,
   DatabaseOutlined,
   CopyOutlined,
-  PlayCircleOutlined,
   FileAddOutlined,
   FormatPainterOutlined,
   ClearOutlined,
@@ -441,7 +452,6 @@ import {
 
 const {
   // state
-  templates,
   clusters,
   loading,
   clustersLoading,
@@ -485,6 +495,8 @@ const {
   
   // helpers
   getEnvText,
+  getClusterName,
+  getUserDisplay,
   formatK8sTime,
   
   // operations
@@ -592,6 +604,8 @@ const copyYamlContent = () => {
 const columns = [
   { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
   { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '所属集群', dataIndex: 'cluster_id', key: 'cluster_id', width: 130, slots: { customRender: 'clusterName' } },
+  { title: '创建用户', dataIndex: 'user_id', key: 'user_id', width: 120, slots: { customRender: 'userName' } },
   { title: 'YAML 内容', dataIndex: 'content', key: 'content', width: 250, slots: { customRender: 'content' } },
   { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
   { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: 160, slots: { customRender: 'updatedAt' } },

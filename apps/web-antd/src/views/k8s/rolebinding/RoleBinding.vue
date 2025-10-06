@@ -797,8 +797,10 @@
                   <span class="k8s-detail-value">{{ currentRoleBindingDetail.namespace }}</span>
                 </div>
                 <div class="k8s-detail-item">
-                  <span class="k8s-detail-label">集群ID:</span>
-                  <span class="k8s-detail-value">{{ currentRoleBindingDetail.cluster_id }}</span>
+                  <span class="k8s-detail-label">所属集群:</span>
+                  <span class="k8s-detail-value">
+                    <a-tag color="blue">{{ getClusterName(currentRoleBindingDetail.cluster_id) }}</a-tag>
+                  </span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">UID:</span>
@@ -1078,6 +1080,7 @@ const {
   
   // helpers
   getEnvText,
+  getClusterName,
   
   // operations
   fetchClusters,

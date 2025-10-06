@@ -341,6 +341,20 @@ export function useRoleBindingPage() {
     return map[value] || '未知环境';
   };
 
+  // 获取集群名称
+  const getClusterName = (clusterId?: number) => {
+    if (!clusterId) return '-';
+    const cluster = clusters.value.find(c => c.id === clusterId);
+    return cluster?.name || `集群 ${clusterId}`;
+  };
+
+  // 获取用户显示名称
+  const getUserDisplay = (userId?: number, username?: string) => {
+    if (username) return username;
+    if (userId) return `用户 ${userId}`;
+    return '-';
+  };
+
   // cluster operations
   const clearRoleBindings = () => {
     roleBindings.value = [];
@@ -1234,6 +1248,8 @@ export function useRoleBindingPage() {
     // helpers
     validateClusterId,
     getEnvText,
+    getClusterName,
+    getUserDisplay,
     
     // operations
     fetchClusters,

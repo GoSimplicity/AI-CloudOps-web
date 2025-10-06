@@ -174,6 +174,20 @@ export function useTemplatePage() {
     return map[value] || '未知环境';
   };
 
+  // 获取集群名称
+  const getClusterName = (clusterId?: number) => {
+    if (!clusterId) return '-';
+    const cluster = clusters.value.find(c => c.id === clusterId);
+    return cluster?.name || `集群 ${clusterId}`;
+  };
+
+  // 获取用户显示名称
+  const getUserDisplay = (userId?: number, username?: string) => {
+    if (username) return username;
+    if (userId) return `用户 ${userId}`;
+    return '-';
+  };
+
   // 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime
 
   // cluster operations
@@ -211,9 +225,8 @@ export function useTemplatePage() {
           await fetchTemplates();
         }
       }
-    } catch (err) {
-      message.error('获取集群列表失败');
-
+    } catch (err: any) {
+      message.error('获取集群列表失败：' + (err.message || '未知错误'));
     } finally {
       clustersLoading.value = false;
     }
@@ -238,9 +251,8 @@ export function useTemplatePage() {
       const res = await getYamlTemplateList(params);
       templates.value = res?.items || [];
       total.value = res?.total || 0;
-    } catch (err) {
-      message.error('获取模板列表失败');
-
+    } catch (err: any) {
+      message.error('获取模板列表失败：' + (err.message || '未知错误'));
     } finally {
       loading.value = false;
     }
@@ -259,9 +271,8 @@ export function useTemplatePage() {
         cluster_id: clusterId
       });
       currentTemplateDetail.value = res || record;
-    } catch (err) {
-      message.error('获取模板详情失败');
-
+    } catch (err: any) {
+      message.error('获取模板详情失败：' + (err.message || '未知错误'));
       currentTemplateDetail.value = record;
     } finally {
       detailLoading.value = false;
@@ -319,13 +330,9 @@ export function useTemplatePage() {
       message.success('模板创建成功');
       isCreateModalVisible.value = false;
       await fetchTemplates();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
-        return;
-      }
-      message.error('模板创建失败');
-
+    } catch (err: any) {
+      if (err.errorFields) return;
+      message.error('创建模板失败：' + (err.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -367,13 +374,9 @@ export function useTemplatePage() {
       message.success('模板更新成功');
       isEditModalVisible.value = false;
       await fetchTemplates();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
-        return;
-      }
-      message.error('模板更新失败');
-
+    } catch (err: any) {
+      if (err.errorFields) return;
+      message.error('更新模板失败：' + (err.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -400,9 +403,8 @@ export function useTemplatePage() {
       await checkYamlTemplate(params);
       message.success('YAML 格式检查通过');
       return true;
-    } catch (err) {
-      message.error('YAML 格式检查失败');
-
+    } catch (err: any) {
+      message.error('YAML 格式检查失败：' + (err.message || '未知错误'));
       return false;
     } finally {
       checkLoading.value = false;
@@ -430,9 +432,8 @@ export function useTemplatePage() {
           await deleteYamlTemplate(params);
           message.success('模板删除成功');
           await fetchTemplates();
-        } catch (err) {
-          message.error('模板删除失败');
-
+        } catch (err: any) {
+          message.error('删除模板失败：' + (err.message || '未知错误'));
         }
       },
     });
@@ -467,9 +468,8 @@ export function useTemplatePage() {
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchTemplates();
-        } catch (err) {
-          message.error(`批量${operation}失败`);
-
+        } catch (err: any) {
+          message.error(`批量${operation}失败：` + (err.message || '未知错误'));
         }
       },
     });
@@ -538,8 +538,8 @@ export function useTemplatePage() {
       });
       createFormModel.value.content = formatted;
       message.success('YAML 格式化成功');
-    } catch (err) {
-      message.error('YAML 格式化失败：格式不正确');
+    } catch (err: any) {
+      message.error('YAML 格式化失败：' + (err.message || '格式不正确'));
     }
   };
 
@@ -583,8 +583,8 @@ export function useTemplatePage() {
       }
 
       message.success('YAML 格式检查通过');
-    } catch (err) {
-      message.error(`YAML 格式检查失败：${err instanceof Error ? err.message : '未知错误'}`);
+    } catch (err: any) {
+      message.error('YAML 格式检查失败：' + (err.message || '未知错误'));
     }
   };
 
@@ -626,8 +626,8 @@ export function useTemplatePage() {
       });
       editFormModel.value.content = formatted;
       message.success('YAML 格式化成功');
-    } catch (err) {
-      message.error('YAML 格式化失败：格式不正确');
+    } catch (err: any) {
+      message.error('YAML 格式化失败：' + (err.message || '格式不正确'));
     }
   };
 
@@ -671,8 +671,8 @@ export function useTemplatePage() {
       }
 
       message.success('YAML 格式检查通过');
-    } catch (err) {
-      message.error(`YAML 格式检查失败：${err instanceof Error ? err.message : '未知错误'}`);
+    } catch (err: any) {
+      message.error('YAML 格式检查失败：' + (err.message || '未知错误'));
     }
   };
 
@@ -727,6 +727,8 @@ export function useTemplatePage() {
     // helpers
     validateClusterId,
     getEnvText,
+    getClusterName,
+    getUserDisplay,
     formatK8sTime,
     
     // operations

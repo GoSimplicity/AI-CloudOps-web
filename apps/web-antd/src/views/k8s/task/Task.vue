@@ -327,9 +327,9 @@
             @popup-scroll="handleTemplateDropdownScroll"
           >
             <a-select-option v-for="template in templates" :key="template.id" :value="template.id">
-              <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span>{{ template.name }}</span>
-                <a-tag color="green" size="small">ID: {{ template.id }}</a-tag>
+              <div style="display: flex; align-items: center; width: 100%; gap: 8px;">
+                <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ template.name }}</span>
+                <a-tag color="green" size="small" style="flex-shrink: 0;">ID: {{ template.id }}</a-tag>
               </div>
             </a-select-option>
             <a-select-option 
@@ -413,9 +413,9 @@
             :loading="templatesLoading"
           >
             <a-select-option v-for="template in templates" :key="template.id" :value="template.id">
-              <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span>{{ template.name }}</span>
-                <a-tag color="green" size="small">ID: {{ template.id }}</a-tag>
+              <div style="display: flex; align-items: center; width: 100%; gap: 8px;">
+                <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ template.name }}</span>
+                <a-tag color="green" size="small" style="flex-shrink: 0;">ID: {{ template.id }}</a-tag>
               </div>
             </a-select-option>
           </a-select>
