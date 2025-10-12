@@ -782,12 +782,39 @@ const handleVerifyAndSubmit = async (): Promise<void> => {
     await formRef.value?.validate();
     verifyLoading.value = true;
 
-    // 先创建账户
-    await createCloudAccountApi(formData.value as CreateCloudAccountReq);
-    message.success('云账户创建成功');
+    // 第一步：先创建账户
+    const hideCreating = message.loading('正在创建云账户...', 0);
+    const createResponse = await createCloudAccountApi(formData.value as CreateCloudAccountReq);
+    hideCreating();
+    
+    // 获取创建的账户 ID
+    const accountId = createResponse?.id;
+    if (!accountId) {
+      message.error('创建云账户失败：未获取到账户ID');
+      return;
+    }
 
-    modalVisible.value = false;
-    fetchCloudAccounts();
+    // 第二步：验证凭证
+    try {
+      const hideVerifying = message.loading('正在验证凭证...', 0);
+      await verifyCloudAccountApi(accountId);
+      hideVerifying();
+      
+      // 验证成功
+      message.success('云账户创建并验证成功');
+      modalVisible.value = false;
+      fetchCloudAccounts();
+    } catch (verifyError) {
+      // 验证失败，自动删除刚创建的账户
+      try {
+        await deleteCloudAccountApi(accountId);
+        message.error('凭证验证失败，账户已自动删除，请检查 Access Key 和 Secret Key');
+      } catch (deleteError) {
+        message.error('凭证验证失败，且删除账户失败，请手动删除该账户');
+      }
+      // 不关闭对话框，让用户可以修改凭证重试
+      return;
+    }
   } catch (error: any) {
     if (error?.errorFields) {
       return;
