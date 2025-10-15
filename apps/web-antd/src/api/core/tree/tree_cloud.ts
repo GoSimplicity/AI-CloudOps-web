@@ -182,7 +182,6 @@ export interface GetTreeNodeCloudResourcesReq {
 // 连接云资源终端请求
 export interface ConnectTreeCloudResourceTerminalReq {
   id: number;
-  user_id?: number;
 }
 
 // 更新云资源状态请求
@@ -240,7 +239,8 @@ export interface CloudResourceChangeLog {
 // 获取资源变更日志请求
 export interface GetCloudResourceChangeLogReq {
   page?: number;
-  page_size?: number;
+  size?: number;
+  search?: string;
   resource_id?: number;
   change_type?: string;
 }
@@ -255,28 +255,8 @@ export async function getTreeCloudResourceDetailApi(id: number) {
   return requestClient.get(`/tree/cloud/${id}/detail`);
 }
 
-// 获取树节点下的云资源
-export async function getTreeNodeCloudResourcesApi(id: number, params?: GetTreeNodeCloudResourcesReq) {
-  return requestClient.get(`/tree/cloud/${id}/node`, { params });
-}
-
-// 连接云资源终端
-export async function connectCloudResourceTerminalApi(id: number, params?: ConnectTreeCloudResourceTerminalReq) {
-  return requestClient.get(`/tree/cloud/${id}/terminal`, { params });
-}
-
-// 同步云资源
-export async function syncTreeCloudResourceApi(data: SyncTreeCloudResourceReq) {
-  return requestClient.post('/tree/cloud/sync', data);
-}
-
-// 获取同步历史
-export async function getSyncHistoryApi(params?: GetCloudResourceSyncHistoryReq) {
-  return requestClient.get('/tree/cloud/sync/history', { params });
-}
-
 // 更新云资源
-export async function updateTreeCloudResourceApi(id: number, data: UpdateTreeCloudResourceReq) {
+export async function updateTreeCloudResourceApi(id: number, data: Omit<UpdateTreeCloudResourceReq, 'id'>) {
   return requestClient.put(`/tree/cloud/${id}/update`, data);
 }
 
@@ -285,22 +265,42 @@ export async function deleteTreeCloudResourceApi(id: number) {
   return requestClient.delete(`/tree/cloud/${id}/delete`);
 }
 
-// 更新云资源状态
-export async function updateCloudResourceStatusApi(id: number, data: UpdateCloudResourceStatusReq) {
-  return requestClient.put(`/tree/cloud/${id}/status`, data);
-}
-
 // 绑定云资源到树节点
-export async function bindTreeCloudResourceApi(id: number, data: BindTreeCloudResourceReq) {
+export async function bindTreeCloudResourceApi(id: number, data: Omit<BindTreeCloudResourceReq, 'id'>) {
   return requestClient.post(`/tree/cloud/${id}/bind`, data);
 }
 
 // 解绑云资源与树节点
-export async function unBindTreeCloudResourceApi(id: number, data: UnBindTreeCloudResourceReq) {
+export async function unBindTreeCloudResourceApi(id: number, data: Omit<UnBindTreeCloudResourceReq, 'id'>) {
   return requestClient.post(`/tree/cloud/${id}/unbind`, data);
 }
 
+// 同步云资源
+export async function syncTreeCloudResourceApi(data: SyncTreeCloudResourceReq) {
+  return requestClient.post('/tree/cloud/sync', data);
+}
+
+// 获取同步历史
+export async function getSyncHistoryApi(params: GetCloudResourceSyncHistoryReq) {
+  return requestClient.get('/tree/cloud/sync/history', { params });
+}
+
 // 获取变更日志
-export async function getChangeLogApi(params?: GetCloudResourceChangeLogReq) {
+export async function getChangeLogApi(params: GetCloudResourceChangeLogReq) {
   return requestClient.get('/tree/cloud/changelog', { params });
+}
+
+// 获取树节点下的云资源
+export async function getTreeNodeCloudResourcesApi(nodeId: number, params?: Omit<GetTreeNodeCloudResourcesReq, 'node_id'>) {
+  return requestClient.get(`/tree/cloud/${nodeId}/node`, { params });
+}
+
+// 连接云资源终端
+export async function connectCloudResourceTerminalApi(id: number) {
+  return requestClient.get(`/tree/cloud/${id}/terminal`);
+}
+
+// 更新云资源状态
+export async function updateCloudResourceStatusApi(id: number, data: Omit<UpdateCloudResourceStatusReq, 'id'>) {
+  return requestClient.put(`/tree/cloud/${id}/status`, data);
 }
