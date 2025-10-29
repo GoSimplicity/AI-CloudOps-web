@@ -1,0 +1,237 @@
+/* 云资源管理特定样式 */
+.cloud-resource-manager {
+  /* 云资源特定的样式覆盖 */
+
+  // 表格单元格样式
+  .name-cell {
+    .resource-name {
+      /* 特定于资源名称的额外样式 */
+    }
+
+    .env-tag {
+      margin-left: 4px;
+    }
+  }
+
+  .type-tag .tag-icon {
+    font-size: 14px;
+  }
+
+  .account-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .account-icon {
+      color: #1890ff;
+    }
+  }
+
+  .instance-info,
+  .config-info,
+  .ip-info {
+    font-size: 13px;
+
+    .info-row,
+    .config-item,
+    .ip-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    .info-icon,
+    .config-icon,
+    .ip-icon {
+      font-size: 12px;
+      color: #9ca3af;
+
+      &.public {
+        color: #1890ff;
+      }
+
+      &.private {
+        color: #52c41a;
+      }
+    }
+  }
+
+  .ip-text {
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 12px;
+  }
+
+  .status-badge {
+    cursor: pointer;
+    user-select: none;
+
+    &.clickable:hover {
+      opacity: 0.8;
+    }
+  }
+
+  .nodes-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+
+    .node-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+    }
+  }
+
+  .cost-cell {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+
+    .cost-symbol {
+      font-size: 14px;
+      color: #f5222d;
+      font-weight: 600;
+    }
+
+    .cost-amount {
+      font-size: 16px;
+      font-weight: 700;
+      color: #f5222d;
+    }
+
+    .cost-unit {
+      font-size: 12px;
+      color: #6b7280;
+    }
+  }
+
+  .resource-table {
+    @extend .servicetree-table;
+  }
+
+  .modern-modal {
+    .form-tip {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .sync-mode-radio {
+      display: block;
+      height: auto;
+      line-height: 1.5;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      transition: all 0.3s;
+
+      &:hover {
+        border-color: #1890ff;
+      }
+
+      .radio-content {
+        .radio-title {
+          font-weight: 600;
+          color: #374151;
+          margin-bottom: 4px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .radio-desc {
+          font-size: 12px;
+          color: #6b7280;
+        }
+      }
+    }
+
+    .tags-editor {
+      .tags-list {
+        margin-bottom: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        .tag-item {
+          font-size: 13px;
+          padding: 4px 12px;
+        }
+      }
+
+      .tag-input-group {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+    }
+
+    .current-bindings {
+      .binding-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .binding-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+    }
+
+    .unbind-checkbox {
+      padding: 8px 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      transition: all 0.2s;
+
+      &:hover {
+        background: #f8fafc;
+        border-color: #1890ff;
+      }
+    }
+
+    .change-detail {
+      font-size: 13px;
+
+      .change-field,
+      .change-old,
+      .change-new {
+        margin-bottom: 4px;
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+      }
+
+      .change-old {
+        color: #f5222d;
+      }
+
+      .change-new {
+        color: #52c41a;
+      }
+    }
+  }
+
+  .detail-drawer {
+    .cost-display {
+      font-weight: 600;
+      color: #f5222d;
+    }
+  }
+}
+
+/* 响应式样式覆盖 */
+@media (max-width: 768px) {
+  .cloud-resource-manager {
+    /* 云资源管理响应式特定样式 */
+  }
+}
+

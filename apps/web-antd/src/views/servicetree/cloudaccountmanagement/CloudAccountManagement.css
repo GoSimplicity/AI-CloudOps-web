@@ -1,0 +1,24 @@
+/* 云账户管理特定样式 */
+.cloud-account-management {
+  /* 云账户特定的样式覆盖 */
+}
+
+/* 云账户名称链接特定样式 */
+.account-name {
+  /* 特定于账户名称的额外样式 */
+}
+
+/* 云厂商标签特定样式 */
+.provider-tag .tag-icon {
+  font-size: 14px;
+}
+
+/* 云账户信息展示特定样式 */
+.account-info {
+  /* 账户信息的特殊布局 */
+}
+
+/* 云账户表格特定样式 */
+.account-table {
+  /* 表格的特定样式 */
+}
