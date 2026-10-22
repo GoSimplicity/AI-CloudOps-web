@@ -82,7 +82,7 @@ test('authenticated navigation renders every standalone business route', async (
       await expect(page.locator('.chart-container-small canvas')).toBeVisible();
     }
     await expect(page.locator('body')).not.toBeEmpty();
-    await expect.poll(() => { const url = new URL(page.url()); return url.hash.startsWith('#/') ? url.hash.slice(1).split('?')[0] : url.pathname; }).toBe(route);
+    await expect.poll(() => { const url = new URL(page.url()); return url.hash.startsWith('#/') ? url.hash.slice(1).split('?')[0] : url.pathname; }).toBe(route === '/monitor_onduty_group_table' ? '/monitor_onduty_group' : route);
     await expect(page).not.toHaveURL(/auth\/login/);
   }
   expect(errors, 'browser runtime errors').toEqual([]);

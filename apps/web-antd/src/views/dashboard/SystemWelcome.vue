@@ -1004,7 +1004,7 @@ onUnmounted(() => {
 .dashboard-container {
   min-height: 100vh;
   padding: 24px;
-  background: #f7f8fa;
+  background: var(--ops-ground);
   position: relative;
 }
 
