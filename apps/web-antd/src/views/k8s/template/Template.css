@@ -1,8 +1,8 @@
 /* Template 页面特有样式 */
 
 .template-table {
-  background: #fff;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   overflow: hidden;
 }
 
@@ -17,7 +17,7 @@
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
   line-height: 1.4;
-  color: #333;
+  color: var(--ops-ink);
   background: #f8f9fa;
   padding: 8px;
   border-radius: 4px;
@@ -33,7 +33,7 @@
 /* 时间显示样式 */
 .template-time {
   font-size: 13px;
-  color: #666;
+  color: var(--ops-muted);
   font-weight: 400;
 }
 
@@ -42,10 +42,10 @@
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
   line-height: 1.5;
-  color: #333;
+  color: var(--ops-ink);
   background: #f8f9fa;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   border: 1px solid #e9ecef;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -65,7 +65,7 @@
   align-items: center;
   gap: 8px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 /* YAML 表单操作按钮样式 */
@@ -98,24 +98,24 @@
 }
 
 .yaml-form-actions .ant-btn-dashed:disabled {
-  border-color: #d9d9d9;
+  border-color: var(--ops-border);
   color: #bfbfbf;
-  background: #f5f5f5;
+  background: var(--ops-ground);
   transform: none;
   box-shadow: none;
 }
 
 /* 模板表格特定样式 */
 .template-table .ant-table-thead > tr > th {
-  background: #fafafa;
+  background: var(--ops-ground);
   font-weight: 600;
-  color: #262626;
-  border-bottom: 1px solid #e8e8e8;
+  color: var(--ops-ink);
+  border-bottom: 1px solid var(--ops-border);
   text-align: left;
 }
 
 .template-table .ant-table-tbody > tr:hover > td {
-  background: #f5f5f5;
+  background: var(--ops-ground);
 }
 
 .template-table .ant-table-tbody > tr > td {
@@ -125,14 +125,14 @@
 
 /* 模板卡片样式优化 */
 .template-table .k8s-detail-card {
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   overflow: hidden;
 }
 
 .template-table .k8s-detail-card .ant-card-head {
-  background: #fafafa;
-  border-bottom: 1px solid #e8e8e8;
+  background: var(--ops-ground);
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .template-table .k8s-detail-card .ant-card-body {
@@ -186,26 +186,26 @@
 
 /* 模板操作按钮特殊样式 */
 .template-table .k8s-action-column .ant-btn[title*="检查"] {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  background: #f0f9ff;
   border-color: #0ea5e9;
   color: #0369a1;
 }
 
 .template-table .k8s-action-column .ant-btn[title*="检查"]:hover {
-  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  background: #e0f2fe;
   border-color: #0284c7;
   color: #0c4a6e;
   box-shadow: 0 6px 16px rgba(14, 165, 233, 0.25);
 }
 
 .template-table .k8s-action-column .ant-btn[title*="应用"] {
-  background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
+  background: #e8f5e8;
   border-color: #52c41a;
   color: #2e7d32;
 }
 
 .template-table .k8s-action-column .ant-btn[title*="应用"]:hover {
-  background: linear-gradient(135deg, #d4edda 0%, #dcedc8 100%);
+  background: #d4edda;
   border-color: #389e0d;
   color: #1b5e20;
   box-shadow: 0 6px 16px rgba(82, 196, 26, 0.25);
@@ -252,7 +252,7 @@
 .template-table .k8s-empty-state p:first-of-type {
   font-size: 16px;
   font-weight: 500;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .template-table .k8s-empty-state p:last-of-type {
@@ -304,7 +304,7 @@
 /* 详情模态框优化 */
 .k8s-detail-content .k8s-detail-item {
   padding: 16px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .k8s-detail-content .k8s-detail-item:last-child {
@@ -320,7 +320,7 @@
 }
 
 .k8s-detail-content .k8s-detail-value {
-  color: #262626;
+  color: var(--ops-ink);
   font-weight: 400;
   word-break: break-all;
   text-align: right;
@@ -341,12 +341,12 @@
 }
 
 .yaml-content-detail::-webkit-scrollbar-track {
-  background: #f0f0f0;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
 .yaml-content-detail::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
@@ -389,7 +389,7 @@
   
   .yaml-content-detail {
     border: 1px solid #ddd;
-    background: white;
+    background: var(--ops-surface);
     color: black;
   }
   

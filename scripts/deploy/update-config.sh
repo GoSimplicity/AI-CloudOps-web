@@ -1,49 +1,13 @@
 #!/bin/sh
-
-# 检查是否提供了目标文件路径
-if [ -z "$1" ]; then
-    echo "Error: Please provide the target config file path"
-    exit 1
-fi
-
-TARGET_FILE="$1"
-
-# 检查文件是否存在
-if [ ! -f "$TARGET_FILE" ]; then
-    echo "Error: File $TARGET_FILE does not exist"
-    exit 1
-fi
-
-# 提取原有配置
-ORIGINAL_CONFIG=$(grep -o 'window\._VBEN_ADMIN_PRO_APP_CONF_\s*=\s*{[^}]*}' "$TARGET_FILE" | sed 's/window\._VBEN_ADMIN_PRO_APP_CONF_\s*=\s*//')
-
-# 如果没有找到原有配置，使用空对象
-if [ -z "$ORIGINAL_CONFIG" ]; then
-    ORIGINAL_CONFIG="{}"
-fi
-
-# 创建临时JSON文件
-TMP_JSON=$(mktemp)
-trap 'rm -f "$TMP_JSON"' EXIT
-
-# 将原有配置写入临时文件
-echo "$ORIGINAL_CONFIG" > "$TMP_JSON"
-
-# 使用jq更新配置
-for var in $(env | grep '^VITE_GLOB_'); do
-    name=$(echo "$var" | cut -d'=' -f1)
-    value=$(echo "$var" | cut -d'=' -f2-)
-    
-    if [ -n "$value" ]; then
-        # 使用jq更新JSON，它会自动处理转义
-        ORIGINAL_CONFIG=$(echo "$ORIGINAL_CONFIG" | jq --arg key "$name" --arg val "$value" '. + {($key): $val}')
-    fi
-done
-
-# 构建完整的配置字符串
-FULL_CONFIG="window._VBEN_ADMIN_PRO_APP_CONF_=${ORIGINAL_CONFIG};Object.freeze(window._VBEN_ADMIN_PRO_APP_CONF_);Object.defineProperty(window,\"_VBEN_ADMIN_PRO_APP_CONF_\",{configurable:false,writable:false,});"
-
-# 更新文件
-echo "$FULL_CONFIG" > "$TARGET_FILE"
-
-echo "Configuration updated successfully"
+set -eu
+TARGET_FILE=${1:?Provide the app config path}
+[ -f "$TARGET_FILE" ] || { echo "App configuration file is missing" >&2; exit 1; }
+# jq reads the environment without shell splitting, preserving spaces and equals signs.
+ORIGINAL_CONFIG=$(sed -n 's/^window\._VBEN_ADMIN_PRO_APP_CONF_=\({[^}]*}\);.*/\1/p' "$TARGET_FILE")
+[ -n "$ORIGINAL_CONFIG" ] || { echo "App configuration is malformed" >&2; exit 1; }
+CONFIG=$(printf '%s' "$ORIGINAL_CONFIG" | jq -ce '. + (env | with_entries(select(.key | startswith("VITE_GLOB_"))))')
+TMP_FILE=$(mktemp "${TARGET_FILE}.XXXXXX")
+trap 'rm -f "$TMP_FILE"' EXIT
+printf 'window._VBEN_ADMIN_PRO_APP_CONF_=%s;Object.freeze(window._VBEN_ADMIN_PRO_APP_CONF_);Object.defineProperty(window,"_VBEN_ADMIN_PRO_APP_CONF_",{configurable:false,writable:false});\n' "$CONFIG" > "$TMP_FILE"
+chmod 644 "$TMP_FILE"
+mv "$TMP_FILE" "$TARGET_FILE"

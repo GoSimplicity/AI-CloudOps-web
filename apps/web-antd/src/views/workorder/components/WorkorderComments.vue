@@ -271,16 +271,6 @@
                     >
                       <IconComponent icon="reply" /> 回复
                     </a-button>
-                    <a-button
-                      type="text"
-                      size="small"
-                      @click="likeComment(comment.id)"
-                      class="action-btn like-btn"
-                      :class="{ liked: isCommentLiked(comment.id) }"
-                    >
-                      <IconComponent icon="like" />
-                      {{ getCommentLikes(comment.id) }}
-                    </a-button>
                   </div>
 
                   <!-- 回复输入框 -->
@@ -378,6 +368,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatCommentContent } from "#/utils/comment-content";
 import { ref, reactive, computed, nextTick } from 'vue';
 import { message } from 'ant-design-vue';
 import {
@@ -438,10 +429,6 @@ const replyInputVisible = ref<Record<number, boolean>>({});
 const replyText = ref<Record<number, string>>({});
 const replySubmitting = ref<Record<number, boolean>>({});
 const repliesExpanded = ref<Record<number, boolean>>({});
-
-// 点赞相关（模拟数据，实际应该从后端获取）
-const commentLikes = ref<Record<number, number>>({});
-const userLikedComments = ref<Set<number>>(new Set());
 
 // 评论对话框
 const commentDialog = reactive({
@@ -520,13 +507,7 @@ const formatRelativeTime = (dateStr: string | undefined) => {
   }
 };
 
-const formatCommentContent = (content: string) => {
-  // 简单的内容格式化，可以扩展支持更多格式
-  return content
-    .replace(/\n/g, '<br>')
-    .replace(/@(\w+)/g, '<span class="mention">@$1</span>')
-    .replace(/#(\w+)/g, '<span class="hashtag">#$1</span>');
-};
+
 
 const getInitials = (name: string | undefined) => {
   if (!name) return '';
@@ -667,25 +648,6 @@ const submitReply = async (commentId: number) => {
 // 切换回复展开/收起
 const toggleReplies = (commentId: number) => {
   repliesExpanded.value[commentId] = !repliesExpanded.value[commentId];
-};
-
-// 点赞功能
-const likeComment = (commentId: number) => {
-  if (userLikedComments.value.has(commentId)) {
-    userLikedComments.value.delete(commentId);
-    commentLikes.value[commentId] = (commentLikes.value[commentId] || 0) - 1;
-  } else {
-    userLikedComments.value.add(commentId);
-    commentLikes.value[commentId] = (commentLikes.value[commentId] || 0) + 1;
-  }
-};
-
-const isCommentLiked = (commentId: number) => {
-  return userLikedComments.value.has(commentId);
-};
-
-const getCommentLikes = (commentId: number) => {
-  return commentLikes.value[commentId] || 0;
 };
 
 // 引用评论相关状态
@@ -886,19 +848,19 @@ defineExpose({
 <style scoped>
 /* 评论对话框样式增强 */
 .comment-modal :deep(.ant-modal-header) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--ops-accent);
   border-radius: 12px 12px 0 0;
   border: none;
 }
 
 .comment-modal :deep(.ant-modal-title) {
-  color: white;
+  color: hsl(var(--primary-foreground));
   font-weight: 700;
   font-size: 18px;
 }
 
 .comment-modal :deep(.ant-modal-close) {
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .comment-modal :deep(.ant-modal-close:hover) {
@@ -911,7 +873,7 @@ defineExpose({
 }
 
 .comment-textarea {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   border: 2px solid #e8f0fe;
   transition: all 0.3s ease;
 }
@@ -928,7 +890,7 @@ defineExpose({
   margin-top: 16px;
   padding: 12px;
   background: #f8fafb;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
 }
 
@@ -947,12 +909,12 @@ defineExpose({
 
 /* 评论查看对话框 */
 .comments-dialog :deep(.ant-modal) {
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   overflow: hidden;
 }
 
 .comments-dialog :deep(.ant-modal-content) {
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
 }
 
 .comments-dialog-header {
@@ -960,8 +922,8 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--ops-accent);
+  color: hsl(var(--primary-foreground));
 }
 
 .header-info {
@@ -981,7 +943,7 @@ defineExpose({
 
 .comment-count {
   background: rgba(255, 255, 255, 0.2);
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .header-actions {
@@ -990,7 +952,7 @@ defineExpose({
 }
 
 .header-actions .ant-btn {
-  color: white;
+  color: hsl(var(--primary-foreground));
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
@@ -1002,14 +964,14 @@ defineExpose({
 .comments-content {
   max-height: 70vh;
   overflow-y: auto;
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  background: var(--ops-accent);
   padding: 0;
 }
 
 /* 快速评论区域 */
 .quick-comment-section {
   padding: 20px;
-  background: #ffffff;
+  background: var(--ops-surface);
   border-bottom: 1px solid #e8f0fe;
   position: sticky;
   top: 0;
@@ -1019,9 +981,9 @@ defineExpose({
 /* 引用预览卡片 */
 .quoted-comment-preview {
   margin-bottom: 16px;
-  background: linear-gradient(135deg, #f0f8ff 0%, #ffffff 100%);
+  background: var(--ops-accent);
   border: 2px solid #d9ecf5;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   overflow: hidden;
   animation: slideInDown 0.3s ease;
 }
@@ -1063,15 +1025,15 @@ defineExpose({
 
 .quote-time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   background: rgba(255, 255, 255, 0.7);
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   white-space: nowrap;
 }
 
 .quote-close {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   border: none;
   width: 24px;
   height: 24px;
@@ -1097,16 +1059,16 @@ defineExpose({
   line-height: 1.5;
   background: rgba(255, 255, 255, 0.7);
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   border-left: 3px solid #667eea;
   font-style: italic;
 }
 
 .quick-comment-input {
   border: 2px solid #e8f0fe;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   overflow: hidden;
-  background: white;
+  background: var(--ops-surface);
   transition: all 0.3s ease;
 }
 
@@ -1138,7 +1100,7 @@ defineExpose({
 
 .keyboard-hint {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 /* 评论列表 */
@@ -1150,8 +1112,8 @@ defineExpose({
 }
 
 .comment-item {
-  background: #ffffff;
-  border-radius: 16px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
   overflow: hidden;
   transition: all 0.3s ease;
@@ -1181,7 +1143,7 @@ defineExpose({
 }
 
 .user-avatar {
-  border: 3px solid #ffffff;
+  border: 3px solid var(--ops-surface);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
 }
@@ -1196,14 +1158,14 @@ defineExpose({
   right: -2px;
   width: 16px;
   height: 16px;
-  background: linear-gradient(135deg, #faad14, #ffc53d);
+  background: var(--ops-accent);
   border-radius: 50%;
-  border: 2px solid #ffffff;
+  border: 2px solid var(--ops-surface);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 10px;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .comment-body {
@@ -1234,17 +1196,17 @@ defineExpose({
 }
 
 .system-tag {
-  background: linear-gradient(135deg, #faad14, #ffc53d);
+  background: var(--ops-accent);
   border: none;
-  color: white;
+  color: hsl(var(--primary-foreground));
   font-weight: 600;
 }
 
 .comment-floor {
-  background: linear-gradient(135deg, #e8f0fe, #f0f8ff);
+  background: var(--ops-accent);
   color: #667eea;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   font-size: 12px;
   font-weight: 600;
   border: 1px solid #d9ecf5;
@@ -1258,16 +1220,16 @@ defineExpose({
 
 .comment-time {
   font-size: 13px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   background: #f8f9fa;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
   white-space: nowrap;
 }
 
 .more-actions {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   border: none;
 }
 
@@ -1285,8 +1247,8 @@ defineExpose({
   color: #2c3e50;
   font-size: 15px;
   padding: 20px;
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
-  border-radius: 12px;
+  background: var(--ops-accent);
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
   position: relative;
 }
@@ -1315,9 +1277,9 @@ defineExpose({
 }
 
 .action-btn {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   border: 1px solid #e8f0fe;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   font-size: 13px;
   transition: all 0.3s ease;
 }
@@ -1338,8 +1300,8 @@ defineExpose({
 .reply-input-section {
   margin-top: 16px;
   padding: 16px;
-  background: linear-gradient(135deg, #f0f8ff 0%, #ffffff 100%);
-  border-radius: 12px;
+  background: var(--ops-accent);
+  border-radius: var(--ops-radius);
   border: 1px solid #d9ecf5;
 }
 
@@ -1351,7 +1313,7 @@ defineExpose({
 
 .reply-textarea {
   border: 1px solid #d9ecf5;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   transition: all 0.3s ease;
 }
 
@@ -1379,7 +1341,7 @@ defineExpose({
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-size: 13px;
   font-weight: 600;
 }
@@ -1400,8 +1362,8 @@ defineExpose({
   display: flex;
   gap: 12px;
   padding: 16px;
-  background: #ffffff;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
   transition: all 0.3s ease;
 }
@@ -1435,7 +1397,7 @@ defineExpose({
 
 .reply-time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   background: #f8f9fa;
   padding: 2px 6px;
   border-radius: 6px;
@@ -1451,7 +1413,7 @@ defineExpose({
 .empty-comments {
   text-align: center;
   padding: 80px 20px;
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  background: var(--ops-accent);
 }
 
 .empty-icon {
@@ -1461,7 +1423,7 @@ defineExpose({
 }
 
 .empty-description {
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .empty-title {
@@ -1605,11 +1567,11 @@ defineExpose({
 }
 
 .comments-content::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #c1c1c1, #a8a8a8);
+  background: var(--ops-accent);
   border-radius: 3px;
 }
 
 .comments-content::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #a8a8a8, #959595);
+  background: var(--ops-accent);
 }
 </style>

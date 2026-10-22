@@ -1222,7 +1222,7 @@ onMounted(() => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%);
+  background: var(--ops-accent);
   border: none;
   flex-shrink: 0;
 }
@@ -1254,7 +1254,7 @@ onMounted(() => {
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
 }
@@ -1289,7 +1289,7 @@ onMounted(() => {
 }
 
 .status-disabled {
-  background-color: #d9d9d9;
+  background-color: var(--ops-border);
 }
 
 .rule-name-text {
@@ -1358,9 +1358,9 @@ onMounted(() => {
 }
 
 .more-tag {
-  background-color: #f5f5f5;
-  color: #8c8c8c;
-  border-left: 3px solid #d9d9d9;
+  background-color: var(--ops-ground);
+  color: var(--ops-muted);
+  border-left: 3px solid var(--ops-border);
   cursor: pointer;
 }
 
@@ -1376,7 +1376,7 @@ onMounted(() => {
 
 .label-separator {
   margin: 0 4px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .label-value {
@@ -1404,13 +1404,13 @@ onMounted(() => {
 
 .config-label {
   font-size: 12px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .config-value {
   font-size: 12px;
   font-weight: 500;
-  color: #333;
+  color: var(--ops-ink);
 }
 
 .creator-info {
@@ -1436,7 +1436,7 @@ onMounted(() => {
 
 .time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .action-buttons {
@@ -1456,7 +1456,7 @@ onMounted(() => {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
   border-left: 4px solid #1890ff;
@@ -1471,7 +1471,7 @@ onMounted(() => {
 }
 
 .tech-switch.ant-switch-checked {
-  background: linear-gradient(45deg, #1890ff, #36cfc9);
+  background: var(--ops-accent);
 }
 
 .dynamic-input-container {
@@ -1499,9 +1499,9 @@ onMounted(() => {
 .add-dynamic-button {
   width: 100%;
   margin-top: 8px;
-  background: #f5f5f5;
-  border: 1px dashed #d9d9d9;
-  color: #595959;
+  background: var(--ops-ground);
+  border: 1px dashed var(--ops-border);
+  color: var(--ops-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1527,7 +1527,7 @@ onMounted(() => {
 
 .label-separator {
   font-weight: bold;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .ip-port-container {
@@ -1566,7 +1566,7 @@ onMounted(() => {
 .detail-header h2 {
   margin: 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--ops-ink);
   word-break: break-all;
 }
 

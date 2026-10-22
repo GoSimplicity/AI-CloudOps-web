@@ -287,7 +287,7 @@
                 />
               </a-form-item>
             </a-col>
-            
+
           </a-row>
 
           <a-row :gutter="16">
@@ -418,7 +418,7 @@
                 />
               </a-form-item>
             </a-col>
-            
+
           </a-row>
 
           <a-row :gutter="16">
@@ -1061,7 +1061,7 @@ onMounted(() => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%);
+  background: var(--ops-accent);
   border: none;
   flex-shrink: 0;
 }
@@ -1093,7 +1093,7 @@ onMounted(() => {
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
 }
@@ -1120,7 +1120,7 @@ onMounted(() => {
 }
 
 .status-none {
-  background-color: #d9d9d9;
+  background-color: var(--ops-border);
 }
 
 .pool-name-text {
@@ -1192,7 +1192,7 @@ onMounted(() => {
 
 .time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .action-buttons {
@@ -1212,7 +1212,7 @@ onMounted(() => {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
   border-left: 4px solid #1890ff;
@@ -1227,7 +1227,7 @@ onMounted(() => {
 }
 
 .tech-switch.ant-switch-checked {
-  background: linear-gradient(45deg, #1890ff, #36cfc9);
+  background: var(--ops-accent);
 }
 
 .validate-button {
@@ -1267,7 +1267,7 @@ onMounted(() => {
 .detail-header h2 {
   margin: 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--ops-ink);
   word-break: break-all;
 }
 
@@ -1280,7 +1280,7 @@ onMounted(() => {
 .expr-detail {
   white-space: pre-wrap;
   word-break: break-all;
-  background: #f5f5f5;
+  background: var(--ops-ground);
   padding: 8px;
   border-radius: 4px;
   font-family: monospace;

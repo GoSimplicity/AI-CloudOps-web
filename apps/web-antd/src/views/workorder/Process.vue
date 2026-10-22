@@ -1157,7 +1157,7 @@ onMounted(async (): Promise<void> => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%);
+  background: var(--ops-accent);
   border: none;
 }
 
@@ -1183,7 +1183,7 @@ onMounted(async (): Promise<void> => {
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
 }
@@ -1214,7 +1214,7 @@ onMounted(async (): Promise<void> => {
 }
 
 .status-archived {
-  background-color: #d9d9d9;
+  background-color: var(--ops-border);
 }
 
 .process-name-text {
@@ -1247,7 +1247,7 @@ onMounted(async (): Promise<void> => {
 
 .time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .tags-container {
@@ -1257,7 +1257,7 @@ onMounted(async (): Promise<void> => {
 }
 
 .no-tags {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-style: italic;
 }
 
@@ -1283,7 +1283,7 @@ onMounted(async (): Promise<void> => {
 .detail-header h2 {
   margin: 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--ops-ink);
 }
 
 .process-preview {
@@ -1292,13 +1292,13 @@ onMounted(async (): Promise<void> => {
 
 .process-preview h3 {
   margin: 24px 0 16px 0;
-  color: #1f2937;
+  color: var(--ops-ink);
   font-size: 18px;
   font-weight: 600;
 }
 
 .definition-json {
-  background: #f5f5f5;
+  background: var(--ops-ground);
   padding: 16px;
   border-radius: 4px;
   overflow-x: auto;

@@ -34,7 +34,7 @@
           {{ hasInitialData ? '已配置' : '待配置' }}
         </a-tag>
       </div>
-      
+
       <div class="config-grid">
         <div class="config-item">
           <label>命名空间</label>
@@ -127,7 +127,7 @@
           </div>
           <h3 class="loading-title">正在进行快速诊断...</h3>
           <p class="loading-subtitle">系统正在深度分析故障原因，请稍候</p>
-          
+
           <!-- 诊断步骤指示器 -->
           <div class="diagnosis-steps">
             <div class="step-item" :class="{ active: getCurrentStep() >= 1 }">
@@ -164,7 +164,7 @@
           />
         </div>
       </div>
-      
+
       <!-- 诊断结果 -->
       <div v-else-if="quickDiagnosisResult" class="issues-container">
         <!-- 关键问题 -->
@@ -228,7 +228,7 @@
     <div class="charts-section" v-if="hasInitialData">
       <div class="chart-container">
         <div class="chart-header">
-          <h3>错误趋势分析</h3>
+          <h3>本次诊断错误总量</h3>
           <a-radio-group v-model:value="chartType" size="small">
             <a-radio-button value="line">折线图</a-radio-button>
             <a-radio-button value="bar">柱状图</a-radio-button>
@@ -253,7 +253,7 @@
           置信度: {{ (rcaAnalysisResult.confidence_score * 100).toFixed(1) }}%
         </a-tag>
       </div>
-      
+
       <div class="rca-content">
         <div 
           v-for="(cause, index) in rcaAnalysisResult.root_causes" 
@@ -380,7 +380,7 @@ const isFormValid = computed(() => {
 
 const formattedCriticalIssues = computed(() => {
   if (!quickDiagnosisResult.value?.critical_issues) return [];
-  
+
   return quickDiagnosisResult.value.critical_issues.map((issue: any) => {
     if (typeof issue === 'string') {
       return {
@@ -391,7 +391,7 @@ const formattedCriticalIssues = computed(() => {
         timestamp: null
       };
     }
-    
+
     return {
       type: issue.type || 'unknown',
       severity: issue.severity || 'critical',
@@ -424,12 +424,12 @@ const getHealthScore = () => {
   const issues = getCriticalIssuesCount();
   const warnings = getWarningsCount();
   const errors = getTotalErrors();
-  
+
   let score = 100;
   score -= issues * 10;
   score -= warnings * 5;
   score -= Math.min(errors / 10, 30);
-  
+
   return Math.max(0, Math.round(score));
 };
 
@@ -484,17 +484,17 @@ const refreshAllDiagnosis = async () => {
 
   loading.value = true;
   currentStep.value = 0;
-  
+
   // 开始诊断提示
   message.loading('开始快速诊断，请稍候...', 2);
-  
+
   try {
     const promises: Promise<any>[] = [];
-    
+
     // 步骤1: 快速诊断
     currentStep.value = 1;
     await new Promise(resolve => setTimeout(resolve, 500)); // 模拟进度
-    
+
     promises.push(
       quickDiagnosis({
         namespace: inputData.value.namespace
@@ -508,7 +508,7 @@ const refreshAllDiagnosis = async () => {
       // 步骤2: 事件模式分析
       currentStep.value = 2;
       await new Promise(resolve => setTimeout(resolve, 300));
-      
+
       promises.push(
         getEventPatterns({
           namespace: inputData.value.namespace,
@@ -524,7 +524,7 @@ const refreshAllDiagnosis = async () => {
       // 步骤3: 综合分析
       currentStep.value = 3;
       await new Promise(resolve => setTimeout(resolve, 300));
-      
+
       promises.push(
         getErrorSummary({
           namespace: inputData.value.namespace,
@@ -545,22 +545,22 @@ const refreshAllDiagnosis = async () => {
     }
 
     const results = await Promise.all(promises);
-    
+
     // 完成所有步骤
     currentStep.value = 4;
-    
+
     if (results[0]) {
       quickDiagnosisResult.value = results[0];
     }
-    
+
     if (results[1] && diagnosisLevel.value !== 'quick') {
       eventPatternsResult.value = results[1];
     }
-    
+
     if (results[2] && diagnosisLevel.value === 'comprehensive') {
       errorSummaryResult.value = results[2];
     }
-    
+
     if (results[3] && diagnosisLevel.value === 'comprehensive') {
       rcaAnalysisResult.value = results[3];
     }
@@ -568,12 +568,12 @@ const refreshAllDiagnosis = async () => {
     hasInitialData.value = true;
     await nextTick();
     initCharts();
-    
+
     // 优化完成消息
     if (quickDiagnosisResult.value) {
       const criticalCount = getCriticalIssuesCount();
       const warningCount = getWarningsCount();
-      
+
       if (criticalCount > 0) {
         message.success('快速诊断完成！发现了一些有价值的信息');
         setTimeout(() => {
@@ -624,22 +624,13 @@ const initCharts = () => {
 
 const initErrorTrendsChart = () => {
   if (!errorTrendsChartRef.value) return;
-  
+
   if (!errorTrendsChart) {
     errorTrendsChart = echarts.init(errorTrendsChartRef.value);
   }
 
-  const hours = Number(timeRange.value);
-  const now = new Date();
-  const data = [];
-  
-  for (let i = hours; i >= 0; i -= 1) {
-    const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-    data.push({
-      time: time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-      value: Math.floor(Math.random() * 20) + (getTotalErrors() / hours)
-    });
-  }
+  // Diagnosis returns aggregate counts, not a time-series histogram.
+  const data = [{ time: '本次诊断', value: getTotalErrors() }];
 
   const option = {
     color: ['#6366f1'],
@@ -687,7 +678,7 @@ const initErrorTrendsChart = () => {
 
 const initErrorCategoriesChart = () => {
   if (!errorCategoriesChartRef.value) return;
-  
+
   if (!errorCategoriesChart) {
     errorCategoriesChart = echarts.init(errorCategoriesChartRef.value);
   }
@@ -755,13 +746,13 @@ const startAutoRefresh = () => {
   if (refreshTimer) {
     clearInterval(refreshTimer);
   }
-  
+
   refreshTimer = setInterval(() => {
     if (!loading.value) {
       refreshAllDiagnosis();
     }
   }, 30000);
-  
+
   message.info('已开启自动刷新，每30秒更新一次');
 };
 
@@ -783,9 +774,9 @@ onMounted(() => {
       errorCategoriesChart.resize();
     }
   };
-  
+
   window.addEventListener('resize', handleResize);
-  
+
   onUnmounted(() => {
     window.removeEventListener('resize', handleResize);
   });
@@ -793,7 +784,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopAutoRefresh();
-  
+
   // 安全地销毁ECharts实例
   if (errorTrendsChart && !errorTrendsChart.isDisposed()) {
     errorTrendsChart.dispose();
@@ -809,18 +800,18 @@ onUnmounted(() => {
 <style scoped>
 .rca-diagnosis {
 padding: 24px;
-background: #f5f5f5;
+background: var(--ops-ground);
 min-height: 100vh;
 }
 
 /* 页面头部 */
 .rca-diagnosis .page-header {
-background: #fff;
-border-radius: 12px;
+background: var(--ops-surface);
+border-radius: var(--ops-radius);
 padding: 24px;
 margin-bottom: 24px;
 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-border: 1px solid #f0f0f0;
+border: 1px solid var(--ops-border);
 }
 
 .rca-diagnosis .header-content {
@@ -850,12 +841,12 @@ width: 100%;
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #262626;
+  color: var(--ops-ink);
   line-height: 1.2;
 }
 
 .page-subtitle {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin: 0;
   font-size: 12px;
   margin-top: 4px;
@@ -869,12 +860,12 @@ width: 100%;
 
 /* 配置区域 */
 .config-section {
-  background: white;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .section-header {
@@ -887,7 +878,7 @@ width: 100%;
 .section-header h2 {
   font-size: 16px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin: 0;
 }
 
@@ -908,26 +899,26 @@ width: 100%;
 
 .config-item label {
   font-size: 14px;
-  color: #595959;
+  color: var(--ops-muted);
   font-weight: 500;
 }
 
 .modern-input {
   height: 36px;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
   transition: all 0.3s ease;
 }
 
 .modern-select {
   width: 100%;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
 }
 
 .modern-select :deep(.ant-select-selector) {
   height: 36px !important;
   border-radius: 8px !important;
-  border: 1px solid #d9d9d9 !important;
+  border: 1px solid var(--ops-border) !important;
   transition: all 0.3s ease;
 }
 
@@ -959,7 +950,7 @@ width: 100%;
 }
 
 .modern-select :deep(.ant-select-arrow) {
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .switch-container {
@@ -970,7 +961,7 @@ width: 100%;
 
 .switch-label {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 500;
 }
 
@@ -983,8 +974,8 @@ width: 100%;
 }
 
 .metric-card {
-  background: white;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   display: flex;
@@ -992,7 +983,7 @@ width: 100%;
   gap: 20px;
   transition: all 0.3s ease;
   cursor: pointer;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .metric-card:hover {
@@ -1014,14 +1005,14 @@ width: 100%;
 .metric-value {
   font-size: 28px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   line-height: 1.2;
   margin-bottom: 8px;
 }
 
 .metric-label {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 500;
 }
 
@@ -1057,10 +1048,10 @@ width: 100%;
   justify-content: center;
   align-items: center;
   min-height: 400px;
-  background: white;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .loading-content {
@@ -1107,13 +1098,13 @@ width: 100%;
 .loading-title {
   font-size: 24px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin-bottom: 8px;
 }
 
 .loading-subtitle {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin-bottom: 32px;
 }
 
@@ -1130,7 +1121,7 @@ width: 100%;
   align-items: center;
   gap: 8px;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   transition: all 0.3s ease;
   opacity: 0.5;
 }
@@ -1145,25 +1136,25 @@ width: 100%;
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #f5f5f5;
-  border: 2px solid #d9d9d9;
+  background: var(--ops-ground);
+  border: 2px solid var(--ops-border);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   transition: all 0.3s ease;
 }
 
 .step-item.active .step-icon {
   background: #1890ff;
   border-color: #1890ff;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .step-text {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 500;
   text-align: center;
 }
@@ -1184,11 +1175,11 @@ width: 100%;
 }
 
 .issues-panel {
-  background: white;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 20px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .panel-header {
@@ -1201,15 +1192,15 @@ width: 100%;
 .panel-header h3 {
   font-size: 16px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin: 0;
 }
 
 .issue-count {
-  background: #f5f5f5;
-  color: #8c8c8c;
+  background: var(--ops-ground);
+  color: var(--ops-muted);
   padding: 4px 12px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   font-size: 12px;
   font-weight: 500;
 }
@@ -1223,7 +1214,7 @@ width: 100%;
 .issue-item {
   padding: 16px;
   border-radius: 6px;
-  background: #fafafa;
+  background: var(--ops-ground);
   border-left: 4px solid;
   transition: all 0.2s;
 }
@@ -1244,8 +1235,8 @@ width: 100%;
 }
 
 .issue-type {
-  background: #f0f0f0;
-  color: #262626;
+  background: var(--ops-border);
+  color: var(--ops-ink);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -1263,12 +1254,12 @@ width: 100%;
 
 .issue-time {
   margin-left: auto;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-size: 12px;
 }
 
 .issue-description {
-  color: #595959;
+  color: var(--ops-muted);
   font-size: 14px;
   line-height: 1.5;
   margin-bottom: 8px;
@@ -1283,20 +1274,20 @@ width: 100%;
 .confidence-bar {
   flex: 1;
   height: 4px;
-  background: #f0f0f0;
+  background: var(--ops-border);
   border-radius: 2px;
   overflow: hidden;
 }
 
 .confidence-fill {
   height: 100%;
-  background: linear-gradient(90deg, #1890ff, #40a9ff);
+  background: var(--ops-accent);
   transition: width 0.3s;
 }
 
 .confidence-text {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 500;
 }
 
@@ -1327,13 +1318,13 @@ width: 100%;
 
 .rec-text {
   flex: 1;
-  color: #595959;
+  color: var(--ops-muted);
   font-size: 14px;
 }
 
 .rec-priority {
   background: #52c41a;
-  color: white;
+  color: hsl(var(--primary-foreground));
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -1346,10 +1337,10 @@ width: 100%;
 
 .rec-item {
   font-size: 13px;
-  color: #595959;
+  color: var(--ops-muted);
   line-height: 1.4;
   padding: 4px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .rec-item:last-child {
@@ -1365,11 +1356,11 @@ width: 100%;
 }
 
 .chart-container {
-  background: white;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 20px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .chart-header {
@@ -1382,7 +1373,7 @@ width: 100%;
 .chart-header h3 {
   font-size: 16px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin: 0;
 }
 
@@ -1392,12 +1383,12 @@ width: 100%;
 
 /* 根因分析 */
 .rca-section {
-  background: white;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   margin-bottom: 24px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .rca-content {
@@ -1408,15 +1399,15 @@ width: 100%;
 
 .root-cause-card {
   padding: 20px;
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 6px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
   transition: all 0.2s;
 }
 
 .root-cause-card:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  background: white;
+  background: var(--ops-surface);
 }
 
 .cause-header {
@@ -1428,7 +1419,7 @@ width: 100%;
 
 .cause-type {
   background: #1890ff;
-  color: white;
+  color: hsl(var(--primary-foreground));
   padding: 4px 12px;
   border-radius: 4px;
   font-size: 12px;
@@ -1442,18 +1433,18 @@ width: 100%;
 
 .confidence-mini-bar {
   height: 6px;
-  background: #f0f0f0;
+  background: var(--ops-border);
   border-radius: 3px;
   overflow: hidden;
 }
 
 .confidence-mini-fill {
   height: 100%;
-  background: linear-gradient(90deg, #1890ff, #40a9ff);
+  background: var(--ops-accent);
 }
 
 .cause-description {
-  color: #595959;
+  color: var(--ops-muted);
   font-size: 14px;
   line-height: 1.6;
   margin-bottom: 12px;
@@ -1468,7 +1459,7 @@ width: 100%;
 
 .components-label {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 500;
 }
 
@@ -1485,27 +1476,27 @@ width: 100%;
 
 .rec-item {
   font-size: 13px;
-  color: #595959;
+  color: var(--ops-muted);
   line-height: 1.4;
   padding: 8px 12px;
   background: #f9f9f9;
   border-radius: 4px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
   transition: all 0.2s ease;
 }
 
 .rec-item:hover {
-  background: #f0f0f0;
-  border-color: #d9d9d9;
+  background: var(--ops-border);
+  border-color: var(--ops-border);
 }
 
 /* 摘要 */
 .summary-section {
-  background: white;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .summary-grid {
@@ -1519,21 +1510,21 @@ width: 100%;
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
 }
 
 .summary-label {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   text-transform: uppercase;
   font-weight: 600;
 }
 
 .summary-value {
   font-size: 16px;
-  color: #262626;
+  color: var(--ops-ink);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;

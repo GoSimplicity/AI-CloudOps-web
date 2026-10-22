@@ -10,7 +10,7 @@ const loading = ref(false);
 
 function handleSubmit(value: string) {
   // eslint-disable-next-line no-console
-  console.log('reset email:', value);
+  void value;
 }
 </script>
 

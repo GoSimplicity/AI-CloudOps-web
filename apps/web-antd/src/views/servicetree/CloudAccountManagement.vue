@@ -110,9 +110,9 @@
               @change="handleSearch"
             >
               <a-select-option :value="CloudProvider.AliCloud">阿里云</a-select-option>
-              <a-select-option :value="CloudProvider.TencentCloud">腾讯云</a-select-option>
-              <a-select-option :value="CloudProvider.HuaweiCloud">华为云</a-select-option>
-              <a-select-option :value="CloudProvider.AWS">AWS</a-select-option>
+              <a-select-option disabled :value="CloudProvider.TencentCloud">腾讯云</a-select-option>
+              <a-select-option disabled :value="CloudProvider.HuaweiCloud">华为云</a-select-option>
+              <a-select-option disabled :value="CloudProvider.AWS">AWS</a-select-option>
               <a-select-option :value="CloudProvider.Azure">Azure</a-select-option>
               <a-select-option :value="CloudProvider.GCP">GCP</a-select-option>
             </a-select>
@@ -316,14 +316,14 @@
                 <a-select-option :value="CloudProvider.AliCloud">
                   <cloud-outlined /> 阿里云
                 </a-select-option>
-                <a-select-option :value="CloudProvider.TencentCloud">
-                  <cloud-outlined /> 腾讯云
+                <a-select-option disabled :value="CloudProvider.TencentCloud">
+                  <cloud-outlined /> 腾讯云（暂不支持）
                 </a-select-option>
-                <a-select-option :value="CloudProvider.HuaweiCloud">
-                  <cloud-outlined /> 华为云
+                <a-select-option disabled :value="CloudProvider.HuaweiCloud">
+                  <cloud-outlined /> 华为云（暂不支持）
                 </a-select-option>
-                <a-select-option :value="CloudProvider.AWS">
-                  <cloud-outlined /> AWS
+                <a-select-option disabled :value="CloudProvider.AWS">
+                  <cloud-outlined /> AWS（暂不支持）
                 </a-select-option>
                 <a-select-option :value="CloudProvider.Azure">
                   <cloud-outlined /> Azure
@@ -523,7 +523,7 @@
                 {{ formatDateTime(currentDetail.updated_at) }}
               </a-descriptions-item>
             </a-descriptions>
-            
+
             <!-- 操作按钮 -->
             <div class="drawer-actions">
               <a-button-group>
@@ -586,7 +586,7 @@ import {
   type CreateCloudAccountReq,
   type UpdateCloudAccountReq,
 } from '#/api/core/tree/tree_account';
-import * as XLSX from 'xlsx';
+import { downloadCsv } from '#/utils/export-csv';
 
 // ========== 状态定义 ==========
 const loading = ref(false);
@@ -754,7 +754,7 @@ const fetchCloudAccounts = async (): Promise<void> => {
       page: pagination.current,
       size: pagination.pageSize,
     };
-    
+
     // 使用过滤条件
     if (filterForm.search) params.search = filterForm.search;
     if (filterForm.provider) params.provider = filterForm.provider;
@@ -853,7 +853,7 @@ const handleSubmit = async (): Promise<void> => {
         account_alias: formData.value.account_alias || undefined,
         description: formData.value.description || undefined,
       };
-      
+
       if (formData.value.access_key) updateData.access_key = formData.value.access_key;
       if (formData.value.secret_key) updateData.secret_key = formData.value.secret_key;
 
@@ -882,7 +882,7 @@ const handleVerifyAndSubmit = async (): Promise<void> => {
     const hideCreating = message.loading('正在创建云账户...', 0);
     const createResponse = await createCloudAccountApi(formData.value as CreateCloudAccountReq);
     hideCreating();
-    
+
     const accountId = createResponse?.id;
     if (!accountId) {
       message.error('创建云账户失败：未获取到账户ID');
@@ -893,7 +893,7 @@ const handleVerifyAndSubmit = async (): Promise<void> => {
       const hideVerifying = message.loading('正在验证凭证...', 0);
       await verifyCloudAccountApi(accountId);
       hideVerifying();
-      
+
       message.success('云账户创建并验证成功');
       modalVisible.value = false;
       fetchCloudAccounts();
@@ -937,16 +937,16 @@ const handleDelete = (record: CloudAccount): void => {
 const handleStatusChange = async (record: CloudAccount, checked: boolean): Promise<void> => {
   const newStatus = checked ? CloudAccountStatus.Enabled : CloudAccountStatus.Disabled;
   switchLoading.value[record.id] = true;
-  
+
   try {
     await updateCloudAccountStatusApi(record.id, newStatus);
     message.success(`账户已${checked ? '启用' : '禁用'}`);
-    
+
     const index = cloudAccounts.value.findIndex(item => item.id === record.id);
     if (index !== -1 && cloudAccounts.value[index]) {
       cloudAccounts.value[index]!.status = newStatus;
     }
-    
+
     if (currentDetail.value && currentDetail.value.id === record.id) {
       currentDetail.value.status = newStatus;
     }
@@ -972,7 +972,7 @@ const handleVerify = async (record: CloudAccount): Promise<void> => {
 const handleViewDetail = async (record: CloudAccount): Promise<void> => {
   detailVisible.value = true;
   detailLoading.value = true;
-  
+
   try {
     const response = await getCloudAccountDetailApi(record.id);
     currentDetail.value = response;
@@ -1013,30 +1013,10 @@ const exportToExcel = (data: CloudAccount[]) => {
     '描述': item.description || '-',
   }));
 
-  // 创建工作簿和工作表
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, '云账户列表');
-
-  // 设置列宽
-  const colWidths = [
-    { wch: 20 }, // 账户名称
-    { wch: 12 }, // 云厂商
-    { wch: 15 }, // 地域
-    { wch: 25 }, // 账户ID
-    { wch: 20 }, // 账户别名
-    { wch: 10 }, // 状态
-    { wch: 15 }, // 创建人
-    { wch: 20 }, // 创建时间
-    { wch: 20 }, // 更新时间
-    { wch: 30 }, // 描述
-  ];
-  worksheet['!cols'] = colWidths;
-
   // 导出文件
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-  const filename = `云账户列表_${timestamp}.xlsx`;
-  XLSX.writeFile(workbook, filename);
+  const filename = `云账户列表_${timestamp}.csv`;
+  downloadCsv(filename, [Object.keys(exportData[0]!), ...exportData.map(row => Object.values(row))]);
   message.success(`导出成功：${filename}`);
 };
 
@@ -1094,7 +1074,7 @@ onMounted(() => {
   .page-header {
     margin-bottom: 20px;
   }
-  
+
   .header-actions {
     display: flex;
     flex-wrap: wrap;
@@ -1119,7 +1099,7 @@ onMounted(() => {
   }
 
   .stats-card {
-    border-radius: 8px;
+    border-radius: var(--ops-radius);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     height: 100%;
   }
@@ -1128,8 +1108,8 @@ onMounted(() => {
     margin-bottom: 20px;
 
     .filter-card {
-      border-radius: 8px;
-      border: 1px solid #f0f0f0;
+      border-radius: var(--ops-radius);
+      border: 1px solid var(--ops-border);
       box-shadow: none;
 
       :deep(.ant-card-body) {
@@ -1156,10 +1136,10 @@ onMounted(() => {
 
   .table-section {
     margin-bottom: 24px;
-    
+
     .table-card {
-      border-radius: 8px;
-      border: 1px solid #f0f0f0;
+      border-radius: var(--ops-radius);
+      border: 1px solid var(--ops-border);
       box-shadow: none;
 
       :deep(.ant-card-body) {
@@ -1169,13 +1149,13 @@ onMounted(() => {
 
     .account-table {
       :deep(.ant-table) {
-        border-radius: 8px;
+        border-radius: var(--ops-radius);
         overflow: hidden;
       }
 
       :deep(.ant-table-thead > tr > th) {
         white-space: nowrap;
-        background-color: #fafafa;
+        background-color: var(--ops-ground);
         font-weight: 600;
         color: #374151;
       }
@@ -1185,7 +1165,7 @@ onMounted(() => {
       }
 
       :deep(.ant-table-tbody > tr:hover > td) {
-        background-color: #fafafa;
+        background-color: var(--ops-ground);
       }
 
       :deep(.ant-table-cell) {
@@ -1249,7 +1229,7 @@ onMounted(() => {
       }
 
       .info-label {
-        color: #6b7280;
+        color: var(--ops-muted);
         font-weight: 500;
       }
 
@@ -1273,7 +1253,7 @@ onMounted(() => {
       align-items: center;
       gap: 6px;
       font-size: 13px;
-      color: #6b7280;
+      color: var(--ops-muted);
 
       .date-icon {
         color: #1890ff;
@@ -1287,7 +1267,7 @@ onMounted(() => {
       gap: 4px;
 
       :deep(.ant-btn-text) {
-        color: #6b7280;
+        color: var(--ops-muted);
         transition: all 0.2s;
 
         &:hover {
@@ -1315,19 +1295,19 @@ onMounted(() => {
     }
 
     :deep(.ant-modal-content) {
-      border-radius: 8px;
+      border-radius: var(--ops-radius);
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     }
 
     :deep(.ant-modal-header) {
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid var(--ops-border);
       padding: 16px 24px;
     }
 
     :deep(.ant-modal-title) {
       font-size: 16px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--ops-ink);
     }
 
     :deep(.ant-modal-body) {
@@ -1350,14 +1330,14 @@ onMounted(() => {
 
   .detail-drawer {
     :deep(.ant-drawer-header) {
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid var(--ops-border);
       padding: 16px 24px;
     }
 
     :deep(.ant-drawer-title) {
       font-size: 18px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--ops-ink);
     }
 
     :deep(.ant-drawer-body) {
@@ -1374,11 +1354,11 @@ onMounted(() => {
       gap: 12px;
       margin-bottom: 20px;
       flex-wrap: wrap;
-      
+
       h2 {
         margin: 0;
         font-size: 24px;
-        color: #1f2937;
+        color: var(--ops-ink);
         word-break: break-all;
       }
     }
@@ -1391,11 +1371,11 @@ onMounted(() => {
 
     .detail-section {
       margin-top: 24px;
-      
+
       .section-title {
         font-size: 16px;
         font-weight: 600;
-        color: #1a1a1a;
+        color: var(--ops-ink);
         margin-bottom: 16px;
         padding-left: 12px;
         border-left: 4px solid #1890ff;
@@ -1407,7 +1387,7 @@ onMounted(() => {
       justify-content: space-between;
       margin-top: 24px;
       padding-top: 16px;
-      border-top: 1px solid #f0f0f0;
+      border-top: 1px solid var(--ops-border);
     }
   }
 
@@ -1417,7 +1397,7 @@ onMounted(() => {
     .header-actions {
       flex-direction: column;
       align-items: stretch;
-      
+
       .btn-text {
         display: inline;
       }
@@ -1448,7 +1428,7 @@ onMounted(() => {
 
     .action-buttons {
       gap: 2px;
-      
+
       .ant-btn {
         padding: 0 4px;
         font-size: 12px;
@@ -1458,7 +1438,7 @@ onMounted(() => {
     .drawer-actions {
       flex-direction: column;
       gap: 8px;
-      
+
       .ant-btn-group {
         display: flex;
         flex-direction: column;
@@ -1469,7 +1449,7 @@ onMounted(() => {
         width: 100%;
       }
     }
-    
+
     .modern-modal :deep(.ant-modal-body) {
       padding: 16px;
       max-height: calc(100vh - 160px);
@@ -1479,11 +1459,11 @@ onMounted(() => {
 
   @media (max-width: 480px) {
     padding: 4px;
-    
+
     .stats-card {
       text-align: center;
     }
-    
+
     .modern-modal :deep(.ant-modal) {
       margin: 4px;
       max-width: calc(100vw - 8px);

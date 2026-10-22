@@ -1,8 +1,8 @@
 /* Task 页面特有样式 */
 
 .task-table {
-  background: #fff;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   overflow: hidden;
 }
 
@@ -39,7 +39,7 @@
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 11px;
   line-height: 1.4;
-  color: #333;
+  color: var(--ops-ink);
   background: #f0f9ff;
   padding: 6px;
   border-radius: 4px;
@@ -57,10 +57,10 @@
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
   line-height: 1.5;
-  color: #333;
+  color: var(--ops-ink);
   background: #f0f9ff;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   border: 1px solid #e0f2fe;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -72,16 +72,16 @@
 /* 时间显示样式 */
 .task-time {
   font-size: 13px;
-  color: #666;
+  color: var(--ops-muted);
   font-weight: 400;
 }
 
 /* 任务变量配置样式 */
 .task-variables-config {
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
-  background: #fafafa;
+  background: var(--ops-ground);
   min-height: 80px;
 }
 
@@ -91,14 +91,14 @@
   align-items: center;
   margin-bottom: 12px;
   padding: 8px;
-  background: #ffffff;
+  background: var(--ops-surface);
   border-radius: 6px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
   transition: all 0.2s ease;
 }
 
 .variable-input-row:hover {
-  border-color: #d9d9d9;
+  border-color: var(--ops-border);
 }
 
 .variable-input-row:last-child {
@@ -123,7 +123,7 @@
 .task-info-display {
   background: #f8f9fa;
   border: 1px solid #e9ecef;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   padding: 16px;
 }
 
@@ -132,7 +132,7 @@
   align-items: flex-start;
   margin-bottom: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .info-item:last-child {
@@ -148,7 +148,7 @@
 }
 
 .info-value {
-  color: #262626;
+  color: var(--ops-ink);
   font-weight: 400;
   flex: 1;
 }
@@ -187,15 +187,15 @@
 
 /* 任务表格特定样式 */
 .task-table .ant-table-thead > tr > th {
-  background: #fafafa;
+  background: var(--ops-ground);
   font-weight: 600;
-  color: #262626;
-  border-bottom: 1px solid #e8e8e8;
+  color: var(--ops-ink);
+  border-bottom: 1px solid var(--ops-border);
   text-align: left;
 }
 
 .task-table .ant-table-tbody > tr:hover > td {
-  background: #f5f5f5;
+  background: var(--ops-ground);
 }
 
 .task-table .ant-table-tbody > tr > td {
@@ -205,33 +205,33 @@
 
 /* 任务操作按钮特殊样式 */
 .task-table .k8s-action-column .ant-btn[title*="执行"] {
-  background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
+  background: #e8f5e8;
   border-color: #52c41a;
   color: #2e7d32;
 }
 
 .task-table .k8s-action-column .ant-btn[title*="执行"]:hover:not(:disabled) {
-  background: linear-gradient(135deg, #d4edda 0%, #dcedc8 100%);
+  background: #d4edda;
   border-color: #389e0d;
   color: #1b5e20;
   box-shadow: 0 6px 16px rgba(82, 196, 26, 0.25);
 }
 
 .task-table .k8s-action-column .ant-btn[title*="执行"]:disabled {
-  background: #f5f5f5 !important;
-  border-color: #e8e8e8 !important;
+  background: var(--ops-ground) !important;
+  border-color: var(--ops-border) !important;
   color: #bfbfbf !important;
 }
 
 /* 批量操作按钮特殊样式 */
 .k8s-toolbar .k8s-action-buttons .ant-btn[title*="执行"] {
-  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  background: #52c41a;
   border: none;
-  color: #ffffff;
+  color: hsl(var(--primary-foreground));
 }
 
 .k8s-toolbar .k8s-action-buttons .ant-btn[title*="执行"]:hover {
-  background: linear-gradient(135deg, #73d13d 0%, #95de64 100%);
+  background: #73d13d;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
 }
@@ -348,7 +348,7 @@
 .task-table .k8s-empty-state p:first-of-type {
   font-size: 16px;
   font-weight: 500;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .task-table .k8s-empty-state p:last-of-type {
@@ -388,7 +388,7 @@
 }
 
 .ant-badge-status-default {
-  background-color: #d9d9d9;
+  background-color: var(--ops-border);
   box-shadow: 0 0 0 2px rgba(217, 217, 217, 0.2);
 }
 
@@ -416,7 +416,7 @@
 /* 详情模态框优化 */
 .k8s-detail-content .k8s-detail-item {
   padding: 16px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .k8s-detail-content .k8s-detail-item:last-child {
@@ -432,7 +432,7 @@
 }
 
 .k8s-detail-content .k8s-detail-value {
-  color: #262626;
+  color: var(--ops-ink);
   font-weight: 400;
   word-break: break-all;
   text-align: right;
@@ -449,12 +449,12 @@
 }
 
 .apply-result-detail::-webkit-scrollbar-track {
-  background: #f0f0f0;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
 .apply-result-detail::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
@@ -493,12 +493,12 @@
   .task-variables-config,
   .task-info-display {
     border: 1px solid #ddd;
-    background: white;
+    background: var(--ops-surface);
   }
   
   .apply-result-detail {
     border: 1px solid #ddd;
-    background: white;
+    background: var(--ops-surface);
     color: black;
   }
   
@@ -508,7 +508,7 @@
   
   .variable-tag {
     border: 1px solid #ddd;
-    background: white;
+    background: var(--ops-surface);
     color: black;
   }
 }

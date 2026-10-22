@@ -110,9 +110,9 @@
               @change="handleSearch"
             >
               <a-select-option :value="CloudProvider.AliCloud">阿里云</a-select-option>
-              <a-select-option :value="CloudProvider.TencentCloud">腾讯云</a-select-option>
-              <a-select-option :value="CloudProvider.HuaweiCloud">华为云</a-select-option>
-              <a-select-option :value="CloudProvider.AWS">AWS</a-select-option>
+              <a-select-option disabled :value="CloudProvider.TencentCloud">腾讯云</a-select-option>
+              <a-select-option disabled :value="CloudProvider.HuaweiCloud">华为云</a-select-option>
+              <a-select-option disabled :value="CloudProvider.AWS">AWS</a-select-option>
               <a-select-option :value="CloudProvider.Azure">Azure</a-select-option>
               <a-select-option :value="CloudProvider.GCP">GCP</a-select-option>
             </a-select>
@@ -316,14 +316,14 @@
                 <a-select-option :value="CloudProvider.AliCloud">
                   <cloud-outlined /> 阿里云
                 </a-select-option>
-                <a-select-option :value="CloudProvider.TencentCloud">
-                  <cloud-outlined /> 腾讯云
+                <a-select-option disabled :value="CloudProvider.TencentCloud">
+                  <cloud-outlined /> 腾讯云（暂不支持）
                 </a-select-option>
-                <a-select-option :value="CloudProvider.HuaweiCloud">
-                  <cloud-outlined /> 华为云
+                <a-select-option disabled :value="CloudProvider.HuaweiCloud">
+                  <cloud-outlined /> 华为云（暂不支持）
                 </a-select-option>
-                <a-select-option :value="CloudProvider.AWS">
-                  <cloud-outlined /> AWS
+                <a-select-option disabled :value="CloudProvider.AWS">
+                  <cloud-outlined /> AWS（暂不支持）
                 </a-select-option>
                 <a-select-option :value="CloudProvider.Azure">
                   <cloud-outlined /> Azure
@@ -523,7 +523,7 @@
                 {{ formatDateTime(currentDetail.updated_at) }}
               </a-descriptions-item>
             </a-descriptions>
-            
+
             <!-- 操作按钮 -->
             <div class="drawer-actions">
               <a-button-group>
@@ -570,11 +570,11 @@ const {
   ClearOutlined,
   ExportOutlined,
   FileExcelOutlined,
-  
+
   // Enums
   CloudProvider,
   CloudAccountStatus,
-  
+
   // States
   loading,
   detailLoading,
@@ -590,7 +590,7 @@ const {
   pagination,
   filterForm,
   formData,
-  
+
   // Computed
   enabledCount,
   aliCloudCount,
@@ -598,7 +598,7 @@ const {
   paginationConfig,
   formRules,
   columns,
-  
+
   // Methods
   getProviderColor,
   getProviderText,
@@ -606,7 +606,7 @@ const {
   getInitials,
   formatDateTime,
   truncateText,
-  fetchCloudAccounts,
+
   handleTableChange,
   handleSearch,
   handleSearchChange,
@@ -620,8 +620,7 @@ const {
   handleVerify,
   handleViewDetail,
   handleExportMenuClick,
-  exportToExcel,
-  exportAllToExcel,
+
 } = useCloudAccountManagement();
 </script>
 

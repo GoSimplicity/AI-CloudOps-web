@@ -15,8 +15,8 @@
 }
 
 .role-rules .rule-item {
-  background: #fafafa;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   padding: 10px 12px;
   transition: border-color 0.2s ease;
@@ -40,7 +40,7 @@
   border-radius: 4px;
   font-weight: 500;
   background: #1677ff;
-  color: #ffffff;
+  color: hsl(var(--primary-foreground));
   border: none;
 }
 
@@ -54,7 +54,7 @@
 
 .role-rules .rule-label {
   font-size: 11px;
-  color: #666666;
+  color: var(--ops-muted);
   font-weight: 500;
   margin-right: 6px;
 }
@@ -66,7 +66,7 @@
   border-radius: 4px;
   font-weight: 500;
   background: #52c41a;
-  color: #ffffff;
+  color: hsl(var(--primary-foreground));
   border: none;
 }
 
@@ -74,15 +74,15 @@
   text-align: center;
   padding: 6px 0;
   margin-top: 6px;
-  border-top: 1px dashed #d9d9d9;
+  border-top: 1px dashed var(--ops-border);
 }
 
 .role-rules .rule-more .ant-tag {
   margin: 0;
   font-size: 10px;
   color: #999999;
-  background: #f0f0f0;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-border);
+  border: 1px solid var(--ops-border);
   border-radius: 4px;
   padding: 2px 6px;
 }
@@ -97,10 +97,10 @@
 
 /* ==================== 创建表单的策略规则样式 ==================== */
 .role-rules-inputs {
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
-  background: #fafafa;
+  background: var(--ops-ground);
   max-height: 600px;
   overflow-y: auto;
 }
@@ -110,12 +110,12 @@
 }
 
 .role-rules-inputs::-webkit-scrollbar-track {
-  background: #f0f0f0;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
 .role-rules-inputs::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
@@ -124,16 +124,16 @@
 }
 
 .rule-input-group {
-  background: #ffffff;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
   margin-bottom: 16px;
   transition: all 0.2s ease;
 }
 
 .rule-input-group:hover {
-  border-color: #d9d9d9;
+  border-color: var(--ops-border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
@@ -147,13 +147,13 @@
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .rule-title {
   font-weight: 600;
   font-size: 14px;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .rule-header .ant-btn {
@@ -175,15 +175,15 @@
   display: block;
   font-weight: 500;
   font-size: 13px;
-  color: #595959;
+  color: var(--ops-muted);
   margin-bottom: 8px;
 }
 
 .rule-tags-input {
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   padding: 8px;
-  background: #fafafa;
+  background: var(--ops-ground);
   min-height: 80px;
 }
 
@@ -216,10 +216,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #fff;
+  background: var(--ops-surface);
   padding: 4px;
   border-radius: 4px;
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed var(--ops-border);
   transition: all 0.2s ease;
 }
 
@@ -232,8 +232,8 @@
 .add-tag-row .ant-select {
   flex: 1;
   height: 28px;
-  border: 1px solid #e8e8e8;
-  background: #fff;
+  border: 1px solid var(--ops-border);
+  background: var(--ops-surface);
 }
 
 .add-tag-row .ant-select :deep(.ant-select-selector) {
@@ -266,19 +266,19 @@
 }
 
 .role-rules-detail::-webkit-scrollbar-track {
-  background: #f0f0f0;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
 .role-rules-detail::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
 .rule-detail-item {
-  background: #fafafa;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
   transition: border-color 0.2s ease;
 }
@@ -290,13 +290,13 @@
 .rule-detail-header {
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .rule-detail-title {
   font-weight: 600;
   font-size: 14px;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .rule-detail-content {
@@ -313,7 +313,7 @@
 
 .rule-detail-label {
   font-weight: 500;
-  color: #666666;
+  color: var(--ops-muted);
   min-width: 70px;
   font-size: 12px;
   line-height: 22px;
@@ -332,7 +332,7 @@
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 500;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--ops-border);
 }
 
 .rule-detail-tags .ant-tag-blue {
@@ -376,8 +376,8 @@
   left: 0;
   right: 0;
   z-index: 10;
-  background: #fff;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
   border-top: none;
   border-radius: 0 0 8px 8px;
   padding: 8px 12px;
@@ -439,8 +439,8 @@
   .role-labels-filter .active-filters {
     position: static;
     margin-top: 8px;
-    border: 1px solid #e8e8e8;
-    border-radius: 8px;
+    border: 1px solid var(--ops-border);
+    border-radius: var(--ops-radius);
     box-shadow: none;
   }
 }

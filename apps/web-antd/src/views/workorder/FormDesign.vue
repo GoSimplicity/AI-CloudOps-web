@@ -322,7 +322,7 @@
               class="preview-notice"
             />
           </div>
-          
+
           <DynamicForm 
             :fields="formSchema.fields" 
             v-model:data="formData"
@@ -378,7 +378,7 @@
             allow-clear
           />
         </div>
-        
+
         <div class="category-list">
           <a-spin :spinning="categoryLoading">
             <div v-if="categories.length > 0" class="category-items">
@@ -396,7 +396,7 @@
             <a-empty v-else description="暂无分类数据" />
           </a-spin>
         </div>
-        
+
         <div class="category-pagination" v-if="categoryPagination.total > 0">
           <a-pagination
             v-model:current="categoryPagination.page"
@@ -509,7 +509,7 @@ const loadCategories = async (resetPage = false) => {
   if (resetPage) {
     categoryPagination.page = 1;
   }
-  
+
   categoryLoading.value = true;
   try {
     const params: ListWorkorderCategoryReq = {
@@ -517,7 +517,7 @@ const loadCategories = async (resetPage = false) => {
       size: categoryPagination.size,
       search: categorySearch.value
     };
-    
+
     const response = await listWorkorderCategory(params);
     categories.value = response.items || [];
     categoryPagination.total = response.total || 0;
@@ -639,7 +639,7 @@ const addFieldType = (type: string) => {
     default: getDefaultValue(type),
     options: needsOptions(type) ? ['选项1', '选项2'] : undefined
   };
-  
+
   formSchema.fields.push(field);
   message.success(`已添加${fieldTypeMap[type]}字段`);
 };
@@ -672,11 +672,11 @@ const updateField = (index: number, updatedField: FormField) => {
 const removeField = (index: number) => {
   const field = formSchema.fields[index];
   formSchema.fields.splice(index, 1);
-  
+
   if (field && field.name in formData.value) {
     delete formData.value[field.name];
   }
-  
+
   message.success(`已删除字段: ${field?.label}`);
 };
 
@@ -697,7 +697,7 @@ const togglePreview = () => {
     message.warning('请先添加表单字段');
     return;
   }
-  
+
   showDesigner.value = !showDesigner.value;
   if (!showDesigner.value) {
     initFormData();
@@ -732,7 +732,7 @@ const clearForm = () => {
     message.info('表单已为空');
     return;
   }
-  
+
   formSchema.fields = [];
   formData.value = {};
   message.success('表单配置已清空');
@@ -744,7 +744,7 @@ const saveFormDesign = async () => {
     message.error('请输入表单名称');
     return;
   }
-  
+
   if (formSchema.fields.length === 0) {
     message.error('请至少添加一个表单字段');
     return;
@@ -856,15 +856,15 @@ onMounted(() => {
 <style scoped>
 .dynamic-form-container {
   padding: 20px;
-  background-color: #f5f5f5;
+  background-color: var(--ops-ground);
   min-height: 100vh;
 }
 
 .designer-card,
 .preview-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
   margin-bottom: 20px;
 }
 
@@ -873,17 +873,17 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--ops-ink);
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  background: var(--ops-accent);
   border: none;
   box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+  background: var(--ops-accent);
   box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
 }
 
@@ -892,11 +892,11 @@ onMounted(() => {
 }
 
 .form-meta-config {
-  background: white;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   margin-bottom: 24px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -907,17 +907,17 @@ onMounted(() => {
 
 .config-header h4 {
   margin: 0 0 8px 0;
-  color: #1f2937;
+  color: var(--ops-ink);
   font-size: 16px;
   font-weight: 600;
 }
 
 .field-controls {
-  background: white;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   margin-bottom: 24px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -928,13 +928,13 @@ onMounted(() => {
 
 .controls-header h4 {
   margin: 0 0 8px 0;
-  color: #1f2937;
+  color: var(--ops-ink);
   font-size: 16px;
   font-weight: 600;
 }
 
 .controls-desc {
-  color: #6b7280;
+  color: var(--ops-muted);
   font-size: 14px;
 }
 
@@ -946,15 +946,15 @@ onMounted(() => {
 
 .field-btn {
   height: 48px;
-  border: 2px dashed #d9d9d9;
-  border-radius: 8px;
+  border: 2px dashed var(--ops-border);
+  border-radius: var(--ops-radius);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 4px;
   transition: all 0.3s ease;
-  background: #fafafa;
+  background: var(--ops-ground);
 }
 
 .field-btn:hover {
@@ -971,11 +971,11 @@ onMounted(() => {
 }
 
 .config-actions {
-  background: white;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   margin-bottom: 24px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -986,13 +986,13 @@ onMounted(() => {
 
 .actions-header h4 {
   margin: 0 0 8px 0;
-  color: #1f2937;
+  color: var(--ops-ink);
   font-size: 16px;
   font-weight: 600;
 }
 
 .actions-desc {
-  color: #6b7280;
+  color: var(--ops-muted);
   font-size: 14px;
 }
 
@@ -1004,15 +1004,15 @@ onMounted(() => {
 
 .action-btn {
   height: 48px;
-  border: 1px solid #d9d9d9;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 4px;
   transition: all 0.3s ease;
-  background: #fafafa;
+  background: var(--ops-ground);
   width: 100%;
 }
 
@@ -1039,10 +1039,10 @@ onMounted(() => {
 }
 
 .field-list {
-  background: white;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -1052,35 +1052,35 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .list-header h4 {
   margin: 0;
-  color: #1f2937;
+  color: var(--ops-ink);
   font-size: 16px;
   font-weight: 600;
 }
 
 .field-count {
-  color: #6b7280;
+  color: var(--ops-muted);
   font-size: 14px;
-  background: #f3f4f6;
+  background: var(--ops-ground);
   padding: 4px 12px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
 }
 
 .field-panel :deep(.ant-collapse-header) {
-  background: #fafafa;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   margin-bottom: 8px;
   padding: 12px 16px;
   font-weight: 500;
 }
 
 .field-panel :deep(.ant-collapse-content) {
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
   border-top: none;
   border-radius: 0 0 8px 8px;
   margin-bottom: 8px;
@@ -1103,15 +1103,15 @@ onMounted(() => {
 }
 
 .action-btn-small:hover {
-  background: #f0f0f0;
+  background: var(--ops-border);
 }
 
 .empty-form {
-  background: white;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 60px 24px;
   text-align: center;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
 }
 
 .empty-desc {
@@ -1119,14 +1119,14 @@ onMounted(() => {
 }
 
 .empty-desc p {
-  color: #6b7280;
+  color: var(--ops-muted);
   margin-bottom: 16px;
 }
 
 .preview-content {
   padding: 24px;
-  background: #fafafa;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
   margin: 16px;
 }
 
@@ -1134,21 +1134,21 @@ onMounted(() => {
   text-align: center;
   margin-bottom: 32px;
   padding: 24px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
 }
 
 .preview-header h3 {
   margin: 0 0 12px 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--ops-ink);
   font-weight: 600;
 }
 
 .preview-description {
   margin: 0 0 20px 0;
-  color: #6b7280;
+  color: var(--ops-muted);
   font-size: 16px;
   line-height: 1.6;
 }
@@ -1158,7 +1158,7 @@ onMounted(() => {
 }
 
 .json-modal :deep(.ant-modal-content) {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
 }
 
 .json-viewer {
@@ -1171,7 +1171,7 @@ onMounted(() => {
 .json-actions {
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .json-content {
@@ -1215,7 +1215,7 @@ onMounted(() => {
 
 /* 分类选择弹窗样式 */
 .category-modal :deep(.ant-modal-content) {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
 }
 
 .category-modal-content {
@@ -1228,7 +1228,7 @@ onMounted(() => {
 .category-search {
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .category-list {
@@ -1245,12 +1245,12 @@ onMounted(() => {
 
 .category-item {
   padding: 12px 16px;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   margin-bottom: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: #fafafa;
+  background: var(--ops-ground);
 }
 
 .category-item:hover {
@@ -1273,11 +1273,11 @@ onMounted(() => {
 
 .category-desc {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--ops-muted);
 }
 
 .category-pagination {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
   padding-top: 16px;
   text-align: center;
 }
@@ -1304,50 +1304,50 @@ onMounted(() => {
   .dynamic-form-container {
     padding: 12px;
   }
-  
+
   .field-buttons,
   .action-buttons {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .field-btn,
   .action-btn {
     height: 40px;
     font-size: 12px;
   }
-  
+
   .field-btn span,
   .action-btn span {
     font-size: 11px;
   }
-  
+
   .preview-content {
     padding: 16px;
     margin: 8px;
   }
-  
+
   .preview-header {
     padding: 16px;
   }
-  
+
   .preview-header h3 {
     font-size: 20px;
   }
-  
+
   .list-header {
     flex-direction: column;
     gap: 8px;
     align-items: flex-start;
   }
-  
+
   .field-actions {
     flex-wrap: wrap;
   }
-  
+
   .category-modal-content {
     max-height: 50vh;
   }
-  
+
   .category-items {
     max-height: 200px;
   }
@@ -1358,21 +1358,21 @@ onMounted(() => {
   .action-buttons {
     grid-template-columns: 1fr;
   }
-  
+
   .controls-header,
   .actions-header,
   .config-header {
     text-align: left;
   }
-  
+
   .preview-header h3 {
     font-size: 18px;
   }
-  
+
   .preview-description {
     font-size: 14px;
   }
-  
+
   .category-modal-content {
     max-height: 40vh;
   }

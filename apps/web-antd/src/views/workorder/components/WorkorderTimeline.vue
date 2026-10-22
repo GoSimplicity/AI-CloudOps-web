@@ -50,7 +50,7 @@
           </div>
         </div>
       </template>
-      
+
       <div class="timeline-content">
         <!-- 时间线统计 -->
         <div class="timeline-stats">
@@ -118,7 +118,7 @@
                   </div>
                   <div class="timeline-node-pulse" v-if="isImportantAction(item.action)"></div>
                 </div>
-                
+
                 <!-- 时间线内容 -->
                 <div class="timeline-card">
                   <div class="timeline-card-header">
@@ -140,7 +140,7 @@
                       </a-tooltip>
                     </div>
                   </div>
-                  
+
                   <div class="timeline-card-content">
                     <!-- 操作人信息 -->
                     <div class="operator-section">
@@ -159,7 +159,7 @@
                         {{ getActionStatusText(item.action) }}
                       </div>
                     </div>
-                    
+
                     <!-- 评论内容 -->
                     <div v-if="item.comment" class="comment-section">
                       <div class="comment-label">
@@ -168,7 +168,7 @@
                       </div>
                       <div class="comment-content">{{ item.comment }}</div>
                     </div>
-                    
+
                     <!-- 详细数据 -->
                     <div v-if="item.action_detail && showDetails[item.id]" class="detail-section">
                       <div class="detail-label">
@@ -179,7 +179,7 @@
                         <pre class="json-content">{{ formatActionDetail(item.action_detail) }}</pre>
                       </div>
                     </div>
-                    
+
                     <!-- 操作按钮 -->
                     <div v-if="item.action_detail" class="timeline-card-actions">
                       <a-button 
@@ -194,7 +194,7 @@
                     </div>
                   </div>
                 </div>
-                
+
                 <!-- 绝对时间 -->
                 <div class="absolute-time">
                   {{ formatFullDateTime(item.created_at) }}
@@ -240,7 +240,7 @@
           </div>
           <div class="detail-time">{{ formatFullDateTime(detailDialog.item.created_at) }}</div>
         </div>
-        
+
         <a-descriptions bordered :column="1" size="small">
           <a-descriptions-item label="操作人">{{ detailDialog.item.operator_name }}</a-descriptions-item>
           <a-descriptions-item label="操作时间">{{ formatFullDateTime(detailDialog.item.created_at) }}</a-descriptions-item>
@@ -351,11 +351,11 @@ const formatRelativeTime = (dateStr: string | undefined) => {
   const now = new Date()
   const date = new Date(dateStr)
   const diff = now.getTime() - date.getTime()
-  
+
   const minute = 60 * 1000
   const hour = 60 * minute
   const day = 24 * hour
-  
+
   if (diff < minute) {
     return '刚刚'
   } else if (diff < hour) {
@@ -404,7 +404,7 @@ const getAvatarColor = (name: string | undefined) => {
 // 计算属性
 const filteredTimelineList = computed(() => {
   let filtered = [...timelineList.value]
-  
+
   // 筛选
   if (filterType.value !== 'all') {
     switch (filterType.value) {
@@ -419,7 +419,7 @@ const filteredTimelineList = computed(() => {
         break
     }
   }
-  
+
   // 排序
   filtered.sort((a, b) => {
     const dateA = new Date(a.created_at || '')
@@ -428,7 +428,7 @@ const filteredTimelineList = computed(() => {
       ? dateB.getTime() - dateA.getTime() 
       : dateA.getTime() - dateB.getTime()
   })
-  
+
   return filtered
 })
 
@@ -579,7 +579,7 @@ const getActionText = (action: string): string => {
 const loadTimeline = async (instanceId: number) => {
   try {
     loading.value = true
-    
+
     let allTimelines: any[] = [];
     let currentPage = 1;
     const pageSize = 50;
@@ -593,10 +593,10 @@ const loadTimeline = async (instanceId: number) => {
       }
 
       const res = await listWorkorderInstanceTimeline(params)
-      
+
       if (res && res.items && res.items.length > 0) {
         allTimelines = [...allTimelines, ...res.items];
-        
+
         if (res.items.length < pageSize || allTimelines.length >= (res.total || 0)) {
           hasMoreData = false;
         } else {
@@ -642,13 +642,13 @@ defineExpose({
 <style scoped>
 /* 时间线对话框样式 */
 .timeline-dialog :deep(.ant-modal) {
-  border-radius: 16px;
+  border-radius: var(--ops-radius);
   overflow: hidden;
 }
 
 .timeline-dialog :deep(.ant-modal-content) {
-  border-radius: 16px;
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  border-radius: var(--ops-radius);
+  background: var(--ops-accent);
 }
 
 .timeline-dialog-header {
@@ -656,8 +656,8 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--ops-accent);
+  color: hsl(var(--primary-foreground));
   border-radius: 16px 16px 0 0;
 }
 
@@ -701,10 +701,10 @@ defineExpose({
 }
 
 .header-actions .ant-btn {
-  color: white;
+  color: hsl(var(--primary-foreground));
   border: 1px solid rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   transition: all 0.3s ease;
 }
 
@@ -724,7 +724,7 @@ defineExpose({
 /* 时间线统计 */
 .timeline-stats {
   padding: 24px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafb 100%);
+  background: var(--ops-accent);
   border-bottom: 1px solid #e8f0fe;
   position: sticky;
   top: 0;
@@ -742,8 +742,8 @@ defineExpose({
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafb 100%);
-  border-radius: 12px;
+  background: var(--ops-accent);
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
   transition: all 0.3s ease;
 }
@@ -757,29 +757,29 @@ defineExpose({
 .stat-icon {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--ops-radius);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  color: white;
+  color: hsl(var(--primary-foreground));
   flex-shrink: 0;
 }
 
 .stat-icon.create {
-  background: linear-gradient(135deg, #52c41a, #73d13d);
+  background: var(--ops-accent);
 }
 
 .stat-icon.update {
-  background: linear-gradient(135deg, #1890ff, #40a9ff);
+  background: var(--ops-accent);
 }
 
 .stat-icon.approve {
-  background: linear-gradient(135deg, #722ed1, #9254de);
+  background: var(--ops-accent);
 }
 
 .stat-icon.total {
-  background: linear-gradient(135deg, #faad14, #ffc53d);
+  background: var(--ops-accent);
 }
 
 .stat-text {
@@ -797,7 +797,7 @@ defineExpose({
 
 .stat-label {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 500;
 }
 
@@ -805,7 +805,7 @@ defineExpose({
 .timeline-wrapper {
   position: relative;
   padding: 32px 24px;
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  background: var(--ops-accent);
 }
 
 .timeline-line {
@@ -814,7 +814,7 @@ defineExpose({
   top: 0;
   bottom: 0;
   width: 4px;
-  background: linear-gradient(to bottom, #e8f4f8, #d9ecf5, #e8f4f8);
+  background: var(--ops-accent);
   border-radius: 2px;
   transform: translateX(-50%);
 }
@@ -877,7 +877,7 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
+  background: var(--ops-surface);
   border: 4px solid;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
@@ -942,8 +942,8 @@ defineExpose({
 }
 
 .timeline-node.action-cancel {
-  border-color: #8c8c8c;
-  color: #8c8c8c;
+  border-color: var(--ops-muted);
+  color: var(--ops-muted);
 }
 
 .timeline-node.action-assign {
@@ -955,8 +955,8 @@ defineExpose({
 .timeline-card {
   flex: 1;
   max-width: 480px;
-  background: white;
-  border-radius: 16px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   overflow: hidden;
@@ -973,7 +973,7 @@ defineExpose({
   justify-content: space-between;
   align-items: flex-start;
   padding: 20px;
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  background: var(--ops-accent);
   border-bottom: 1px solid #e8f0fe;
   gap: 16px;
 }
@@ -988,31 +988,31 @@ defineExpose({
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  border-radius: 20px;
+  border-radius: var(--ops-radius);
   font-size: 14px;
   font-weight: 600;
-  color: white;
+  color: hsl(var(--primary-foreground));
   margin-bottom: 12px;
 }
 
 .action-type-badge.action-create {
-  background: linear-gradient(135deg, #52c41a, #73d13d);
+  background: var(--ops-accent);
 }
 
 .action-type-badge.action-update {
-  background: linear-gradient(135deg, #1890ff, #40a9ff);
+  background: var(--ops-accent);
 }
 
 .action-type-badge.action-submit {
-  background: linear-gradient(135deg, #faad14, #ffc53d);
+  background: var(--ops-accent);
 }
 
 .action-type-badge.action-approve {
-  background: linear-gradient(135deg, #52c41a, #73d13d);
+  background: var(--ops-accent);
 }
 
 .action-type-badge.action-reject {
-  background: linear-gradient(135deg, #ff4d4f, #ff7875);
+  background: var(--ops-accent);
 }
 
 .action-type-icon {
@@ -1024,10 +1024,10 @@ defineExpose({
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   background: #f0f8ff;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   border: 1px solid #e1f3ff;
 }
 
@@ -1038,7 +1038,7 @@ defineExpose({
 
 .card-actions .ant-btn {
   border: 1px solid #e8f0fe;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .card-actions .ant-btn:hover {
@@ -1057,14 +1057,14 @@ defineExpose({
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background: linear-gradient(135deg, #f0f8ff 0%, #ffffff 100%);
-  border-radius: 12px;
+  background: var(--ops-accent);
+  border-radius: var(--ops-radius);
   margin-bottom: 16px;
   border: 1px solid #e1f3ff;
 }
 
 .operator-avatar {
-  border: 2px solid #fff;
+  border: 2px solid var(--ops-surface);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -1082,40 +1082,40 @@ defineExpose({
 
 .operator-role {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin-top: 2px;
 }
 
 .action-status {
   padding: 4px 12px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .action-status.status-success {
-  background: linear-gradient(135deg, #f6ffed, #d9f7be);
+  background: var(--ops-accent);
   color: #52c41a;
   border: 1px solid #d9f7be;
 }
 
 .action-status.status-error {
-  background: linear-gradient(135deg, #fff2f0, #ffccc7);
+  background: var(--ops-accent);
   color: #ff4d4f;
   border: 1px solid #ffccc7;
 }
 
 .action-status.status-processing {
-  background: linear-gradient(135deg, #e6f7ff, #bae7ff);
+  background: var(--ops-accent);
   color: #1890ff;
   border: 1px solid #bae7ff;
 }
 
 .action-status.status-default {
-  background: linear-gradient(135deg, #fafafa, #f0f0f0);
-  color: #8c8c8c;
-  border: 1px solid #f0f0f0;
+  background: var(--ops-ground);
+  color: var(--ops-muted);
+  border: 1px solid var(--ops-border);
 }
 
 /* 评论和详情部分 */
@@ -1123,17 +1123,17 @@ defineExpose({
 .detail-section {
   margin-top: 16px;
   padding: 16px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
 }
 
 .comment-section {
-  background: linear-gradient(135deg, #f6ffed 0%, #ffffff 100%);
+  background: var(--ops-accent);
   border-color: #d9f7be;
 }
 
 .detail-section {
-  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  background: var(--ops-accent);
   border-color: #e8eaed;
 }
 
@@ -1169,7 +1169,7 @@ defineExpose({
   word-break: break-all;
   background: #f8f9fa;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   border: 1px solid #e8eaed;
   max-height: 200px;
   overflow-y: auto;
@@ -1187,7 +1187,7 @@ defineExpose({
   color: #667eea;
   border: 1px solid #d9ecf5;
   background: #f0f8ff;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   font-size: 13px;
   transition: all 0.3s ease;
 }
@@ -1203,10 +1203,10 @@ defineExpose({
   position: absolute;
   top: 8px;
   font-size: 11px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   background: rgba(255, 255, 255, 0.9);
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
   white-space: nowrap;
   backdrop-filter: blur(4px);
@@ -1226,7 +1226,7 @@ defineExpose({
 .empty-timeline {
   text-align: center;
   padding: 80px 20px;
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  background: var(--ops-accent);
 }
 
 .empty-icon {
@@ -1236,7 +1236,7 @@ defineExpose({
 }
 
 .empty-description {
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .empty-title {
@@ -1252,7 +1252,7 @@ defineExpose({
 
 /* 详情对话框 */
 .timeline-detail-dialog :deep(.ant-modal-content) {
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
 }
 
 .timeline-detail-content {
@@ -1273,18 +1273,18 @@ defineExpose({
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  border-radius: 20px;
+  border-radius: var(--ops-radius);
   font-size: 14px;
   font-weight: 600;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .detail-time {
   font-size: 13px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   background: #f8f9fa;
   padding: 6px 12px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
 }
 
@@ -1322,61 +1322,61 @@ defineExpose({
     align-items: flex-start;
     padding: 16px 20px;
   }
-  
+
   .header-actions {
     align-self: stretch;
     justify-content: center;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
-  
+
   .stat-item {
     padding: 12px;
   }
-  
+
   .stat-number {
     font-size: 18px;
   }
-  
+
   .timeline-wrapper {
     padding: 20px 16px;
   }
-  
+
   .timeline-item-wrapper {
     flex-direction: column !important;
     align-items: center;
     gap: 16px;
   }
-  
+
   .timeline-node {
     width: 40px;
     height: 40px;
   }
-  
+
   .timeline-card {
     max-width: 100%;
     width: 100%;
   }
-  
+
   .timeline-card-header {
     padding: 16px;
     flex-direction: column;
     gap: 12px;
     align-items: flex-start;
   }
-  
+
   .timeline-card-content {
     padding: 16px;
   }
-  
+
   .operator-section {
     padding: 12px;
     gap: 10px;
   }
-  
+
   .absolute-time {
     position: static !important;
     margin: 0 !important;
@@ -1389,30 +1389,30 @@ defineExpose({
   .timeline-stats {
     padding: 16px;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 8px;
   }
-  
+
   .timeline-wrapper {
     padding: 16px 12px;
   }
-  
+
   .timeline-card-header {
     padding: 12px;
   }
-  
+
   .timeline-card-content {
     padding: 12px;
   }
-  
+
   .comment-section,
   .detail-section {
     padding: 12px;
     margin-top: 12px;
   }
-  
+
   .json-content {
     font-size: 11px;
     padding: 8px;
@@ -1437,13 +1437,13 @@ defineExpose({
 .timeline-content::-webkit-scrollbar-thumb,
 .json-content::-webkit-scrollbar-thumb,
 .detail-json::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #c1c1c1, #a8a8a8);
+  background: var(--ops-accent);
   border-radius: 3px;
 }
 
 .timeline-content::-webkit-scrollbar-thumb:hover,
 .json-content::-webkit-scrollbar-thumb:hover,
 .detail-json::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #a8a8a8, #959595);
+  background: var(--ops-accent);
 }
 </style>

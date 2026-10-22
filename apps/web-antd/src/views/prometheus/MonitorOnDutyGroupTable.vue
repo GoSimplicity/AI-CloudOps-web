@@ -45,7 +45,7 @@
             <div class="stat-label">值班成员</div>
           </div>
         </div>
-        
+
         <div class="stat-card">
           <div class="stat-icon">
             <Icon icon="carbon:user-online" />
@@ -55,7 +55,7 @@
             <div class="stat-label">今日值班</div>
           </div>
         </div>
-        
+
         <div class="stat-card">
           <div class="stat-icon">
             <Icon icon="carbon:calendar-heat-map" />
@@ -65,7 +65,7 @@
             <div class="stat-label">本月值班天数</div>
           </div>
         </div>
-        
+
         <div class="stat-card">
           <div class="stat-icon">
             <Icon icon="carbon:change-catalog" />
@@ -94,7 +94,7 @@
               <Icon icon="carbon:chevron-right" />
             </a-button>
           </div>
-          
+
           <div class="calendar-actions">
             <a-button size="small" @click="goToToday" :disabled="isCurrentMonthToday">
               今日
@@ -140,7 +140,7 @@
                     </div>
                   </div>
                 </div>
-                
+
                 <div class="day-content">
                   <div class="duty-info" v-if="day.user">
                     <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(day.user.real_name || day.user.username) }">
@@ -262,7 +262,7 @@
             :disabled-date="disabledDate"
           />
         </a-form-item>
-        
+
         <a-form-item label="原值班人" required>
           <a-select 
             v-model:value="formDialog.form.origin_user_id" 
@@ -277,7 +277,7 @@
             </a-select-option>
           </a-select>
         </a-form-item>
-        
+
         <a-form-item label="新值班人" required>
           <a-select 
             v-model:value="formDialog.form.on_duty_user_id" 
@@ -342,12 +342,12 @@
                 <div class="user-role">值班人员</div>
               </div>
             </div>
-            
+
             <div v-if="selectedDay.originUser" class="change-info">
               <Icon icon="carbon:change-catalog" class="change-icon" />
               <span>原值班人：{{ selectedDay.originUser }}</span>
             </div>
-            
+
             <div class="duty-actions-full">
               <a-button type="primary" @click="openSwapModal(selectedDay)" :disabled="isPastDate(selectedDay.date)" block>
                 <Icon icon="carbon:change-catalog" />
@@ -355,7 +355,7 @@
               </a-button>
             </div>
           </div>
-          
+
           <div v-else class="duty-unassigned">
             <Icon icon="carbon:user-off" class="unassigned-icon" />
             <div class="unassigned-text">该日期暂无值班安排</div>
@@ -381,7 +381,7 @@ import {
   type MonitorOnDutyHistory,
   type MonitorOnDutyGroup,
   type CreateMonitorOnDutyGroupChangeReq,
-  type GetMonitorOnDutyHistoryReq,
+
 } from '#/api/core/prometheus/prometheus_onduty';
 
 // Define User type locally
@@ -410,12 +410,6 @@ interface DutyPlanDetail {
 }
 
 // 修复API响应结构处理
-interface FuturePlanResponse {
-  details?: DutyPlanDetail[];
-  items?: DutyPlanDetail[];
-  data?: DutyPlanDetail[];
-  list?: DutyPlanDetail[];
-}
 
 const route = useRoute();
 const router = useRouter();
@@ -503,14 +497,12 @@ const fetchDutyGroups = async (): Promise<void> => {
       message.error('无效的值班组ID');
       return;
     }
-    
 
     const response = await getMonitorOnDutyGroupDetailApi(id);
 
-    
     // 改进的API响应结构处理 - 使用与值班组页面相同的逻辑
     let groupData = null;
-    
+
     if (response) {
 
       if (response.id && response.name) {
@@ -533,11 +525,10 @@ const fetchDutyGroups = async (): Promise<void> => {
         groupData = response.items[0];
       }
     }
-    
+
     if (groupData) {
       dutyGroupDetail.value = groupData;
 
-      
       // 初始化用户缓存
         if (groupData.users && Array.isArray(groupData.users)) {
         groupData.users.forEach((user: User) => {
@@ -546,9 +537,9 @@ const fetchDutyGroups = async (): Promise<void> => {
         });
 
       }
-      
+
       updateStats();
-      
+
       // 在获取到值班组详情后立即加载其他数据
       await Promise.all([
         fetchDutySchedule(),
@@ -561,13 +552,12 @@ const fetchDutyGroups = async (): Promise<void> => {
     }
   } catch (error: any) {
 
-    
     // 更详细的错误信息
     let errorMessage = '获取值班组信息失败';
     if (error.response) {
       const status = error.response.status;
       const responseData = error.response.data;
-      
+
       if (status === 404) {
         errorMessage = '值班组不存在或已被删除';
       } else if (status === 403) {
@@ -582,9 +572,9 @@ const fetchDutyGroups = async (): Promise<void> => {
     } else {
       errorMessage = error.message || '未知错误';
     }
-    
+
     message.error(errorMessage);
-    
+
     // 错误时跳转回列表页
     setTimeout(() => {
       router.push('/monitor_onduty_group');
@@ -597,7 +587,7 @@ const fetchDutySchedule = async (): Promise<void> => {
 
     return;
   }
-  
+
   loading.value = true;
   try {
     const id = dutyGroupId.value;
@@ -612,7 +602,7 @@ const fetchDutySchedule = async (): Promise<void> => {
 
     // 改进的响应数据处理 - 兼容多种响应格式
     let planDetails: DutyPlanDetail[] = [];
-    
+
     if (response) {
       // 直接是数组的情况
       if (Array.isArray(response)) {
@@ -647,7 +637,7 @@ const fetchDutySchedule = async (): Promise<void> => {
 
     if (planDetails.length > 0) {
       const days: Day[] = [];
-      
+
       // 生成完整的日历网格
       for (let date = startOfCalendar; date.isBefore(endOfCalendar) || date.isSame(endOfCalendar); date = date.add(1, 'day')) {
         const dateStr = date.format('YYYY-MM-DD');
@@ -674,7 +664,7 @@ const fetchDutySchedule = async (): Promise<void> => {
               };
             }
           }
-          
+
           // 处理原值班人信息（如果有换班）
           if (detail.origin_user && detail.origin_user.trim()) {
             originUser = detail.origin_user;
@@ -690,7 +680,7 @@ const fetchDutySchedule = async (): Promise<void> => {
           isAdjusted: isAdjusted
         });
       }
-      
+
       calendarDays.value = days;
 
     } else {
@@ -699,7 +689,7 @@ const fetchDutySchedule = async (): Promise<void> => {
       for (let date = startOfCalendar; date.isBefore(endOfCalendar) || date.isSame(endOfCalendar); date = date.add(1, 'day')) {
         const dateStr = date.format('YYYY-MM-DD');
         const isCurrentMonth = date.isSame(currentMonth, 'month');
-        
+
         days.push({
           date: dateStr,
           user: null,
@@ -711,11 +701,10 @@ const fetchDutySchedule = async (): Promise<void> => {
       calendarDays.value = days;
 
     }
-    
+
     updateStats();
   } catch (error: any) {
 
-    
     let errorMessage = '获取值班计划失败';
     if (error.response?.status === 404) {
       errorMessage = '未找到值班计划数据';
@@ -724,7 +713,7 @@ const fetchDutySchedule = async (): Promise<void> => {
     } else {
       errorMessage = error.message || '获取值班计划失败';
     }
-    
+
     message.error(errorMessage);
     calendarDays.value = [];
   } finally {
@@ -737,7 +726,7 @@ const loadHistoryRecords = async (): Promise<void> => {
 
     return;
   }
-  
+
   try {
     const currentMonth = dayjs(currentDate.value);
     const startDate = currentMonth.startOf('month').format('YYYY-MM-DD');
@@ -753,7 +742,7 @@ const loadHistoryRecords = async (): Promise<void> => {
     // 改进的历史数据响应处理 - 使用与值班组页面相同的逻辑
     let historyData: MonitorOnDutyHistory[] = [];
     let total = 0;
-    
+
     if (response) {
       // 直接包含items字段
       if (response.items && Array.isArray(response.items)) {
@@ -791,16 +780,13 @@ const loadHistoryRecords = async (): Promise<void> => {
         }
       }
     }
-    
 
-    
     historyList.value = historyData;
     paginationConfig.total = total;
-    
+
     updateStats();
   } catch (error: any) {
 
-    
     let errorMessage = '加载值班历史失败';
     if (error.response?.status === 404) {
       errorMessage = '未找到值班历史数据';
@@ -809,7 +795,7 @@ const loadHistoryRecords = async (): Promise<void> => {
     } else {
       errorMessage = error.message || '加载值班历史失败';
     }
-    
+
     message.error(errorMessage);
     historyList.value = [];
     paginationConfig.total = 0;
@@ -830,7 +816,7 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
 
     return;
   }
-  
+
   try {
     const response = await getMonitorOnDutyGroupChangeListApi(dutyGroupId.value, {
       page,
@@ -840,7 +826,7 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
     // 改进的调班记录响应处理
     let changeData: any[] = [];
     let total = 0;
-    
+
     if (response) {
       // 直接包含items字段
       if (response.items && Array.isArray(response.items)) {
@@ -868,21 +854,18 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
         total = response.total || response.list.length;
       }
     }
-    
 
-    
     if (append) {
       changeRecordsList.value = [...changeRecordsList.value, ...changeData];
     } else {
       changeRecordsList.value = changeData;
     }
-    
+
     changeRecordsPagination.total = total;
     changeRecordsPagination.hasMore = page * changeRecordsPagination.pageSize < total;
     updateStats();
   } catch (error: any) {
 
-    
     let errorMessage = '加载调班记录失败';
     if (error.response?.status === 404) {
       errorMessage = '未找到调班记录';
@@ -891,7 +874,7 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
     } else {
       errorMessage = error.message || '加载调班记录失败';
     }
-    
+
     message.error(errorMessage);
     if (!append) {
       changeRecordsList.value = [];
@@ -904,7 +887,6 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
 const initializeData = async (): Promise<void> => {
   const id = parseInt(route.query.id as string) || 0;
 
-  
   if (id) {
     dutyGroupId.value = id;
     await fetchDutyGroups();
@@ -945,7 +927,7 @@ const getUserName = (userId: number): string => {
   if (userCache.value.has(userId)) {
     return userCache.value.get(userId)!;
   }
-  
+
   // 从值班组详情中查找
   const user = dutyGroupDetail.value?.users?.find(u => u.id === userId);
   if (user) {
@@ -953,7 +935,7 @@ const getUserName = (userId: number): string => {
     userCache.value.set(userId, userName);
     return userName;
   }
-  
+
   return `用户${userId}`;
 };
 
@@ -1005,15 +987,15 @@ const updateStats = (): void => {
   if (dutyGroupDetail.value) {
     stats.totalMembers = dutyGroupDetail.value.users?.length || 0;
   }
-  
+
   // 今日值班 - 显示值班人姓名
   const todayStr = dayjs().format('YYYY-MM-DD');
   const todayDuty = calendarDays.value.find(day => day.date === todayStr && day.user);
   stats.todayOnDuty = todayDuty?.user ? (todayDuty.user.real_name || todayDuty.user.username) : '无安排';
-  
+
   // 本月值班天数
   stats.monthlyDutyDays = calendarDays.value.filter(day => day.isCurrentMonth && day.user).length;
-  
+
   // 调班记录数
   stats.changeRecords = changeRecordsList.value.length;
 };
@@ -1110,7 +1092,7 @@ const handleCreateChange = (): void => {
 
 const handleDayClick = (day: Day): void => {
   if (!day.isCurrentMonth) return;
-  
+
   selectedDay.value = day;
   dayDetailVisible.value = true;
 };
@@ -1159,7 +1141,7 @@ const saveChange = async (): Promise<void> => {
     if (response) {
       message.success('换班申请已提交');
       formDialogVisible.value = false;
-      
+
       // 重新加载数据
       await Promise.all([
         loadHistoryRecords(),
@@ -1238,7 +1220,7 @@ onMounted(async () => {
 .back-btn {
   height: 40px;
   width: 40px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1247,7 +1229,7 @@ onMounted(async () => {
 .page-title {
   font-size: 24px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--ops-ink);
   margin: 0;
 }
 
@@ -1256,7 +1238,7 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #666;
+  color: var(--ops-muted);
   margin-top: 4px;
 }
 
@@ -1291,9 +1273,9 @@ onMounted(async () => {
 }
 
 .stat-card {
-  background: white;
+  background: var(--ops-surface);
   padding: 20px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
@@ -1303,13 +1285,13 @@ onMounted(async () => {
 .stat-icon {
   width: 48px;
   height: 48px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   background: #1890ff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .stat-content {
@@ -1319,13 +1301,13 @@ onMounted(async () => {
 .stat-number {
   font-size: 24px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--ops-ink);
   margin-bottom: 4px;
 }
 
 .stat-label {
   font-size: 14px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 /* 日历区域 */
@@ -1334,7 +1316,7 @@ onMounted(async () => {
 }
 
 .calendar-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -1365,13 +1347,13 @@ onMounted(async () => {
 .calendar-title h2 {
   font-size: 20px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--ops-ink);
   margin: 0;
 }
 
 .calendar-subtitle {
   font-size: 14px;
-  color: #666;
+  color: var(--ops-muted);
   margin-top: 4px;
 }
 
@@ -1382,8 +1364,8 @@ onMounted(async () => {
 
 /* 日历样式 */
 .calendar {
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   overflow: hidden;
 }
 
@@ -1397,7 +1379,7 @@ onMounted(async () => {
   padding: 12px;
   text-align: center;
   font-weight: 500;
-  color: white;
+  color: hsl(var(--primary-foreground));
   font-size: 14px;
 }
 
@@ -1407,10 +1389,10 @@ onMounted(async () => {
 }
 
 .calendar-day {
-  border-right: 1px solid #f0f0f0;
-  border-bottom: 1px solid #f0f0f0;
+  border-right: 1px solid var(--ops-border);
+  border-bottom: 1px solid var(--ops-border);
   min-height: 100px;
-  background: white;
+  background: var(--ops-surface);
   display: flex;
   flex-direction: column;
   transition: all 0.2s;
@@ -1446,13 +1428,13 @@ onMounted(async () => {
 }
 
 .calendar-day:not(.current-month) {
-  background: #fafafa;
+  background: var(--ops-ground);
   opacity: 0.5;
 }
 
 .day-header {
   padding: 8px 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ops-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1461,7 +1443,7 @@ onMounted(async () => {
 .day-number {
   font-size: 16px;
   font-weight: 500;
-  color: #333;
+  color: var(--ops-ink);
 }
 
 .day-badges {
@@ -1476,7 +1458,7 @@ onMounted(async () => {
   font-size: 10px;
   padding: 2px 4px;
   border-radius: 4px;
-  color: white;
+  color: hsl(var(--primary-foreground));
   font-weight: 500;
 }
 
@@ -1513,7 +1495,7 @@ onMounted(async () => {
 
 .duty-name {
   font-size: 12px;
-  color: #333;
+  color: var(--ops-ink);
   font-weight: 500;
   word-break: break-all;
 }
@@ -1524,8 +1506,8 @@ onMounted(async () => {
 
 .original-user {
   font-size: 10px;
-  color: #666;
-  background: #f0f0f0;
+  color: var(--ops-muted);
+  background: var(--ops-border);
   padding: 2px 4px;
   border-radius: 4px;
 }
@@ -1565,7 +1547,7 @@ onMounted(async () => {
 }
 
 .records-table {
-  background: white;
+  background: var(--ops-surface);
 }
 
 .date-cell {
@@ -1576,7 +1558,7 @@ onMounted(async () => {
 
 .date-main {
   font-weight: 500;
-  color: #333;
+  color: var(--ops-ink);
 }
 
 .date-sub {
@@ -1600,7 +1582,7 @@ onMounted(async () => {
 
 .user-name {
   font-size: 14px;
-  color: #333;
+  color: var(--ops-ink);
   word-break: break-all;
 }
 
@@ -1623,14 +1605,14 @@ onMounted(async () => {
 
 .empty-title {
   font-size: 16px;
-  color: #333;
+  color: var(--ops-ink);
   margin-bottom: 8px;
   font-weight: 500;
 }
 
 .empty-description {
   font-size: 14px;
-  color: #666;
+  color: var(--ops-muted);
   line-height: 1.5;
 }
 
@@ -1645,7 +1627,7 @@ onMounted(async () => {
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid var(--ops-border);
 }
 
 .date-display {
@@ -1670,12 +1652,12 @@ onMounted(async () => {
 .date-month {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--ops-ink);
 }
 
 .date-weekday {
   font-size: 14px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .day-badges {
@@ -1700,7 +1682,7 @@ onMounted(async () => {
   gap: 12px;
   padding: 16px;
   background: #f0f9ff;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   border: 1px solid #bae7ff;
 }
 
@@ -1717,7 +1699,7 @@ onMounted(async () => {
 
 .user-role {
   font-size: 14px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .change-info {
@@ -1727,7 +1709,7 @@ onMounted(async () => {
   padding: 12px 16px;
   background: #f9f0ff;
   border: 1px solid #d3adf7;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   color: #722ed1;
   font-size: 14px;
 }
@@ -1756,7 +1738,7 @@ onMounted(async () => {
 
 .unassigned-text {
   font-size: 16px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 /* 响应式设计 */
@@ -1764,30 +1746,30 @@ onMounted(async () => {
   .duty-schedule-container {
     padding: 16px;
   }
-  
+
   .header-content {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .search-section {
     flex-direction: column;
   }
-  
+
   .search-input,
   .filter-select {
     width: 100%;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .calendar-header {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .calendar-day {
     min-height: 80px;
   }
@@ -1817,19 +1799,19 @@ onMounted(async () => {
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .calendar-day {
     min-height: 70px;
   }
-  
+
   .duty-name {
     font-size: 11px;
   }
-  
+
   .day-number {
     font-size: 14px;
   }
-  
+
   .stat-number {
     font-size: 20px;
   }

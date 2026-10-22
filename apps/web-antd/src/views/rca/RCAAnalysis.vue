@@ -91,7 +91,7 @@
               </a-tooltip>
             </template>
           </a-statistic>
-          
+
           <a-statistic
             title="置信度"
             :value="(analysisResult?.confidence_score * 100).toFixed(1)"
@@ -195,9 +195,9 @@
                           置信度 {{ (cause.confidence * 100).toFixed(0) }}%
                         </a-tag>
                       </div>
-                      
+
                       <p class="cause-description">{{ cause.description }}</p>
-                      
+
                       <!-- 证据展示 -->
                       <div v-if="cause.evidence" class="evidence-section">
                         <!-- 事件证据 -->
@@ -223,7 +223,7 @@
                             </div>
                           </div>
                         </div>
-                        
+
                         <!-- 日志证据 -->
                         <div v-if="cause.evidence.logs?.length" class="evidence-block">
                           <h5 class="evidence-title">
@@ -364,7 +364,7 @@
                         {{ (correlation.confidence * 100).toFixed(0) }}%
                       </a-tag>
                     </div>
-                    
+
                     <div class="correlation-evidence">
                       <h5>证据链</h5>
                       <div class="evidence-list">
@@ -377,7 +377,7 @@
                         </a-tag>
                       </div>
                     </div>
-                    
+
                     <div v-if="correlation.timeline?.length" class="timeline-section">
                       <h5>时间线</h5>
                       <div class="timeline-list">
@@ -616,14 +616,14 @@ const startAnalysis = async () => {
 
     const response = await analyzeRootCause(request);
     analysisResult.value = response;
-    
+
     await nextTick();
     if (activeResultTab.value === 'anomalies') {
       initCharts();
     }
-    
+
     message.success('根因分析完成！发现了一些有价值的信息');
-    
+
     // 如果有根因结果，显示摘要
     if (response?.root_causes?.length > 0) {
       const criticalCount = response.root_causes.filter(cause => cause.confidence > 0.7).length;
@@ -905,7 +905,7 @@ const formatShortTime = (timestamp?: string) => {
   if (!timestamp) return '-';
   const date = new Date(timestamp);
   if (isNaN(date.getTime())) return timestamp;
-  
+
   return date.toLocaleString('zh-CN', {
     month: '2-digit',
     day: '2-digit',
@@ -947,18 +947,18 @@ onUnmounted(() => {
 <style scoped>
 .rca-analysis {
 padding: 24px;
-background: #f5f5f5;
+background: var(--ops-ground);
 min-height: 100vh;
 }
 
 /* 页面头部 */
 .rca-analysis .page-header {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 16px 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .rca-analysis .header-content {
@@ -988,12 +988,12 @@ display: flex;
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #262626;
+  color: var(--ops-ink);
   line-height: 1.2;
 }
 
 .rca-analysis .page-subtitle {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin: 0;
   font-size: 12px;
   margin-top: 4px;
@@ -1011,9 +1011,9 @@ align-items: center;
 .result-card,
 .empty-card,
 .loading-card {
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
   overflow: hidden;
 }
 
@@ -1045,13 +1045,13 @@ align-items: center;
 .loading-title {
   font-size: 20px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin-bottom: 8px;
 }
 
 .loading-subtitle {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin-bottom: 32px;
   line-height: 1.5;
 }
@@ -1069,9 +1069,9 @@ align-items: center;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
   transition: all 0.3s ease;
 }
 
@@ -1090,12 +1090,12 @@ align-items: center;
 }
 
 .step-icon.pending {
-  color: #d9d9d9;
+  color: var(--ops-border);
 }
 
 .step-text {
   font-size: 14px;
-  color: #595959;
+  color: var(--ops-muted);
   font-weight: 500;
 }
 
@@ -1183,7 +1183,7 @@ align-items: center;
 /* 元信息样式 */
 .meta-info {
   padding: 16px;
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 6px;
   margin-bottom: 20px;
 }
@@ -1196,13 +1196,13 @@ align-items: center;
 
 .meta-label {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .meta-value {
   font-size: 14px;
   font-weight: 500;
-  color: #262626;
+  color: var(--ops-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1223,9 +1223,9 @@ align-items: center;
 
 .root-cause-card {
   padding: 16px;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
-  background: white;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
+  background: var(--ops-surface);
   transition: box-shadow 0.3s;
 }
 
@@ -1249,7 +1249,7 @@ align-items: center;
 .cause-type {
   font-size: 16px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   max-width: 300px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1257,7 +1257,7 @@ align-items: center;
 }
 
 .cause-description {
-  color: #595959;
+  color: var(--ops-muted);
   line-height: 1.6;
   margin-bottom: 16px;
   word-wrap: break-word;
@@ -1266,7 +1266,7 @@ align-items: center;
 
 /* 证据样式 */
 .evidence-section {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
   padding-top: 16px;
 }
 
@@ -1280,7 +1280,7 @@ align-items: center;
   gap: 6px;
   font-size: 14px;
   font-weight: 500;
-  color: #595959;
+  color: var(--ops-muted);
   margin-bottom: 8px;
 }
 
@@ -1295,7 +1295,7 @@ align-items: center;
   align-items: center;
   gap: 8px;
   padding: 8px;
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 4px;
 }
 
@@ -1312,7 +1312,7 @@ align-items: center;
 .event-message {
   flex: 1;
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1320,7 +1320,7 @@ align-items: center;
 
 .more-indicator {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-style: italic;
 }
 
@@ -1337,21 +1337,21 @@ align-items: center;
 
 .stat-card {
   padding: 16px;
-  background: white;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   text-align: center;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .stat-value {
   font-size: 24px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .stat-label {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin-top: 4px;
 }
 
@@ -1361,17 +1361,17 @@ align-items: center;
 }
 
 .chart-wrapper {
-  background: white;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 16px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .chart-title {
   margin: 0 0 12px 0;
   font-size: 14px;
   font-weight: 500;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .chart-container {
@@ -1397,7 +1397,7 @@ align-items: center;
   margin: 0 0 12px 0;
   font-size: 14px;
   font-weight: 500;
-  color: #262626;
+  color: var(--ops-ink);
   padding-left: 8px;
   border-left: 3px solid #1890ff;
 }
@@ -1421,15 +1421,15 @@ align-items: center;
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  background: white;
-  border: 1px solid #f0f0f0;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
   border-radius: 4px;
 }
 
 .error-name {
   flex: 0 0 200px;
   font-size: 12px;
-  color: #595959;
+  color: var(--ops-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1456,9 +1456,9 @@ align-items: center;
 
 .correlation-card {
   padding: 16px;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
-  background: white;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
+  background: var(--ops-surface);
 }
 
 .correlation-header {
@@ -1474,14 +1474,14 @@ align-items: center;
   gap: 8px;
   font-size: 16px;
   font-weight: 500;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .correlation-evidence h5,
 .timeline-section h5 {
   font-size: 13px;
   font-weight: 500;
-  color: #595959;
+  color: var(--ops-muted);
   margin-bottom: 8px;
 }
 
@@ -1503,19 +1503,19 @@ align-items: center;
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 4px;
   font-size: 12px;
 }
 
 .timeline-time {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   flex-shrink: 0;
 }
 
 .timeline-desc {
   flex: 1;
-  color: #595959;
+  color: var(--ops-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1529,9 +1529,9 @@ align-items: center;
 
 .recommendation-card {
   padding: 16px;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
-  background: white;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
+  background: var(--ops-surface);
 }
 
 .rec-header {
@@ -1547,11 +1547,11 @@ align-items: center;
   gap: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .rec-content {
-  color: #595959;
+  color: var(--ops-muted);
   line-height: 1.6;
   margin-bottom: 12px;
   word-wrap: break-word;
@@ -1568,10 +1568,10 @@ align-items: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
-  background: white;
+  border: 1px solid var(--ops-border);
+  background: var(--ops-surface);
 }
 
 /* 时间窗口滑块样式 */
@@ -1581,7 +1581,7 @@ align-items: center;
 
 .time-window-slider :deep(.ant-slider-mark-text) {
   font-size: 11px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   transform: translateX(-50%);
   white-space: nowrap;
   line-height: 1.2;
@@ -1662,20 +1662,20 @@ align-items: center;
   .error-name {
     flex: 0 0 120px;
   }
-  
+
   .chart-container {
     height: 200px;
   }
-  
+
   .chart-container-small {
     height: 180px;
   }
-  
+
   /* 小屏幕下的滑块标记样式 */
   .time-window-slider :deep(.ant-slider-mark-text) {
     font-size: 10px;
   }
-  
+
   .time-window-slider :deep(.ant-slider-mark) {
     margin-top: 12px;
   }
@@ -1689,15 +1689,15 @@ align-items: center;
   .rca-analysis .page-header {
     padding: 16px;
   }
-  
+
   .rca-analysis .page-title {
     font-size: 18px;
   }
-  
+
   .rca-analysis .page-subtitle {
     font-size: 12px;
   }
-  
+
   .rca-analysis .header-icon {
     font-size: 32px;
   }
@@ -1736,15 +1736,15 @@ align-items: center;
     font-size: 11px;
     padding: 10px;
   }
-  
+
   .cause-type {
     max-width: 200px;
   }
-  
+
   .error-freq-item {
     flex-wrap: wrap;
   }
-  
+
   .error-name {
     flex: 0 0 100%;
     margin-bottom: 8px;

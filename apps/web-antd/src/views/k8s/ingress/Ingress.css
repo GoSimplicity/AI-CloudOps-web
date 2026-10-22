@@ -100,13 +100,13 @@
   align-items: center;
   margin-bottom: 8px;
   padding: 8px;
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 6px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .rule-config-row:hover {
-  border-color: #d9d9d9;
+  border-color: var(--ops-border);
 }
 
 .rule-config-row .ant-input,
@@ -159,7 +159,7 @@
   padding: 10px 12px;
   font-size: 12px;
   font-weight: 600;
-  background: #fafafa;
+  background: var(--ops-ground);
 }
 
 /* TLS 表格样式 */
@@ -176,13 +176,13 @@
   padding: 10px 12px;
   font-size: 12px;
   font-weight: 600;
-  background: #fafafa;
+  background: var(--ops-ground);
 }
 
 /* Ingress 表单样式增强 */
 .k8s-form .ingress-rule-config-section {
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
   background: #f6ffed;
 }
@@ -198,7 +198,7 @@
   font-size: 14px;
   font-weight: 600;
   margin: 0;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .k8s-form .ingress-rule-config-item {
@@ -207,13 +207,13 @@
   align-items: center;
   margin-bottom: 8px;
   padding: 8px;
-  background: #ffffff;
+  background: var(--ops-surface);
   border-radius: 6px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .k8s-form .ingress-rule-config-item:hover {
-  border-color: #d9d9d9;
+  border-color: var(--ops-border);
 }
 
 .k8s-form .ingress-rule-config-item .ant-input,
@@ -238,8 +238,8 @@
 
 /* Ingress TLS 配置样式 */
 .tls-config-section {
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
   background: #f0f7ff;
   margin-top: 8px;
@@ -247,7 +247,7 @@
 
 .tls-empty-state {
   text-align: center;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   padding: 20px;
   font-style: italic;
 }
@@ -289,7 +289,7 @@
 
 .ingress-host-help {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin-top: 4px;
 }
 

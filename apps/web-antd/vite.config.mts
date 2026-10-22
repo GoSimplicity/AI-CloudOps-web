@@ -9,13 +9,13 @@ export default defineConfig(async () => {
         proxy: {
           '/api/v1': {
             changeOrigin: true,
-            target: 'http://localhost:8080',
+            target: process.env.VITE_PROXY_TARGET || 'http://localhost:8889',
             ws: true,
           },
           '/api': {
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/api/, ''),
-            target: 'http://localhost:8889/api',
+            target: `${process.env.VITE_PROXY_TARGET || 'http://localhost:8889'}/api`,
             ws: true,
           },
         },

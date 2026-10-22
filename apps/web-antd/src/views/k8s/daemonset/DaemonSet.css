@@ -32,8 +32,8 @@
 
 /* DaemonSet 表单配置区域样式 */
 .k8s-form .daemonset-config-section {
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
   background: #fff7e6;
 }
@@ -49,7 +49,7 @@
   font-size: 14px;
   font-weight: 600;
   margin: 0;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .k8s-form .daemonset-config-item {
@@ -58,13 +58,13 @@
   align-items: center;
   margin-bottom: 8px;
   padding: 8px;
-  background: #ffffff;
+  background: var(--ops-surface);
   border-radius: 6px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .k8s-form .daemonset-config-item:hover {
-  border-color: #d9d9d9;
+  border-color: var(--ops-border);
 }
 
 .k8s-form .daemonset-config-item .ant-input,
@@ -86,8 +86,8 @@
 
 /* DaemonSet 调度配置样式 */
 .schedule-config-section {
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
   background: #f0f5ff;
   margin-top: 8px;
@@ -95,7 +95,7 @@
 
 .schedule-empty-state {
   text-align: center;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   padding: 20px;
   font-style: italic;
 }
@@ -110,18 +110,18 @@
 /* DaemonSet 说明样式 */
 .daemonset-description {
   background: #f0f2f5;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   padding: 12px;
   margin: 16px 0;
   font-size: 13px;
-  color: #595959;
+  color: var(--ops-muted);
   line-height: 1.5;
 }
 
 .daemonset-description .description-title {
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin-bottom: 8px;
 }
 

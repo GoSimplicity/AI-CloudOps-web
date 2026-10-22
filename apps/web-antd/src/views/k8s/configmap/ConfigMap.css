@@ -1,30 +1,30 @@
 /* ConfigMap 页面特定样式 */
 .configmap-table {
-  background: #fff;
+  background: var(--ops-surface);
 }
 
 .configmap-table :deep(.ant-table-thead > tr > th) {
-  background: #fafafa;
+  background: var(--ops-ground);
   font-weight: 600;
-  color: #262626;
-  border-bottom: 1px solid #e8e8e8;
+  color: var(--ops-ink);
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .configmap-table :deep(.ant-table-tbody > tr:hover > td) {
-  background: #f5f5f5;
+  background: var(--ops-ground);
   transition: all 0.2s ease;
 }
 
 /* ConfigMap 操作按钮样式 - 与Deployment风格统一 */
 /* 查看详情按钮 - 蓝色主题 */
 .configmap-table .ant-btn[title*="查看详情"] {
-  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+  background: #e6f7ff;
   border-color: #91d5ff;
   color: #1890ff;
 }
 
 .configmap-table .ant-btn[title*="查看详情"]:hover {
-  background: linear-gradient(135deg, #bae7ff 0%, #91d5ff 100%);
+  background: #bae7ff;
   border-color: #69c0ff;
   color: #096dd9;
   box-shadow: 0 6px 16px rgba(24, 144, 255, 0.25);
@@ -32,13 +32,13 @@
 
 /* YAML 操作按钮 - 紫色主题 */
 .configmap-table .ant-btn[title*="YAML"] {
-  background: linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%);
+  background: #f9f0ff;
   border-color: #d3adf7;
   color: #722ed1;
 }
 
 .configmap-table .ant-btn[title*="YAML"]:hover {
-  background: linear-gradient(135deg, #efdbff 0%, #d3adf7 100%);
+  background: #efdbff;
   border-color: #b37feb;
   color: #531dab;
   box-shadow: 0 6px 16px rgba(114, 46, 209, 0.25);
@@ -46,13 +46,13 @@
 
 /* 编辑按钮 - 金色主题 */
 .configmap-table .ant-btn[title*="编辑"] {
-  background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
+  background: #fffbe6;
   border-color: #ffe58f;
   color: #faad14;
 }
 
 .configmap-table .ant-btn[title*="编辑"]:hover {
-  background: linear-gradient(135deg, #fff1b8 0%, #ffe58f 100%);
+  background: #fff1b8;
   border-color: #ffd666;
   color: #d48806;
   box-shadow: 0 6px 16px rgba(250, 173, 20, 0.25);
@@ -66,23 +66,23 @@
 }
 
 .configmap-data-count {
-  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  background: #e3f2fd;
   border: 1px solid #bbdefb;
   color: #1976d2;
 }
 
 .configmap-binary-data-count {
-  background: linear-gradient(135deg, #f3e5f5 0%, #fce4ec 100%);
+  background: #f3e5f5;
   border: 1px solid #ce93d8;
   color: #7b1fa2;
 }
 
 /* ConfigMap 特定的键值对输入样式 */
 .configmap-key-value-inputs {
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
-  background: #fafafa;
+  background: var(--ops-ground);
   min-height: 120px;
 }
 
@@ -92,14 +92,14 @@
   align-items: flex-start;
   margin-bottom: 12px;
   padding: 12px;
-  background: #ffffff;
+  background: var(--ops-surface);
   border-radius: 6px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
   transition: all 0.2s ease;
 }
 
 .configmap-key-value-row:hover {
-  border-color: #d9d9d9;
+  border-color: var(--ops-border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
@@ -132,7 +132,7 @@
   display: flex;
   align-items: flex-start;
   padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .configmap-data-item:last-child {
@@ -151,10 +151,10 @@
   flex: 1;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
-  background: #f5f5f5;
+  background: var(--ops-ground);
   padding: 8px 12px;
   border-radius: 4px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
   max-height: 200px;
   overflow-y: auto;
   white-space: pre-wrap;
@@ -171,8 +171,8 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: #fff;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   padding: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -181,13 +181,13 @@
 
 /* ConfigMap 详情模态框样式 */
 .configmap-detail-content .ant-collapse {
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
 }
 
 .configmap-detail-content .ant-collapse > .ant-collapse-item {
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .configmap-detail-content .ant-collapse > .ant-collapse-item:last-child {
@@ -195,15 +195,15 @@
 }
 
 .configmap-detail-content .ant-collapse .ant-collapse-header {
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 6px 6px 0 0;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   padding: 12px 16px;
 }
 
 .configmap-detail-content .ant-collapse .ant-collapse-content {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
 }
 
 .configmap-detail-content .ant-collapse .ant-collapse-content > .ant-collapse-content-box {
@@ -219,7 +219,7 @@
 
 /* 不可变ConfigMap标识 */
 .configmap-immutable-tag {
-  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  background: #fff3cd;
   border: 1px solid #f39c12;
   color: #d68910;
   font-weight: 500;
@@ -229,24 +229,24 @@
 .configmap-empty-state {
   text-align: center;
   padding: 60px 0;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .configmap-empty-state .anticon {
   font-size: 48px;
-  color: #d9d9d9;
+  color: var(--ops-border);
   margin-bottom: 16px;
 }
 
 .configmap-empty-state p {
   margin: 12px 0;
   font-size: 14px;
-  color: #595959;
+  color: var(--ops-muted);
 }
 
 .configmap-empty-state p:last-child {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 /* 数据键过滤器样式 */
@@ -333,18 +333,18 @@
 
 /* 编辑表单只读字段样式 */
 .configmap-edit-form .ant-input:disabled {
-  background: #f5f5f5;
-  color: #8c8c8c;
+  background: var(--ops-ground);
+  color: var(--ops-muted);
   cursor: not-allowed;
-  border-color: #e8e8e8;
+  border-color: var(--ops-border);
 }
 
 /* 数据统计卡片样式 */
 .configmap-stats-card {
   text-align: center;
   padding: 20px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: var(--ops-radius);
+  background: #f8f9fa;
   border: 1px solid #e9ecef;
   transition: all 0.3s ease;
 }

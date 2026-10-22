@@ -27,7 +27,7 @@
   align-items: flex-start;
   padding: 8px 12px;
   margin-bottom: 4px;
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 4px;
   font-size: 12px;
   word-break: break-all;
@@ -46,7 +46,7 @@
 }
 
 .k8s-kv-value {
-  color: #333;
+  color: var(--ops-ink);
   word-break: break-all;
 }
 
@@ -97,7 +97,7 @@
 .node-table :deep(.ant-table-tbody td[data-index="3"]) {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .node-table :deep(.ant-table-tbody td[data-index="4"]) {
@@ -141,9 +141,9 @@
 
 .delete-config-form .ant-radio-wrapper {
   padding: 8px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
-  background: #fafafa;
+  background: var(--ops-ground);
   margin-bottom: 6px;
 }
 
@@ -174,7 +174,7 @@
   padding: 10px 12px;
   font-size: 12px;
   font-weight: 600;
-  background: #fafafa;
+  background: var(--ops-ground);
 }
 
 /* 响应式优化 */

@@ -6,3 +6,12 @@ dist
 .turbo
 *.log
 *.cpuprofile
+**/node_modules
+**/dist
+**/.turbo
+.playwright-mcp
+
+**/.env.local
+**/.env.*.local
+test-results
+playwright-report

@@ -1058,12 +1058,12 @@ const loadTemplates = async () => {
     if (res && res.items) {
       templateList.value = res.items || [];
       total.value = res.total || 0;
-      
+
       // 计算统计数据
       stats.total = res.total || 0;
       stats.enabled = res.items?.filter((item: any) => item.status === TemplateStatus.Enabled).length || 0;
       stats.disabled = res.items?.filter((item: any) => item.status === TemplateStatus.Disabled).length || 0;
-      
+
       // 计算本月新增（简单示例）
       const thisMonth = new Date();
       thisMonth.setDate(1);
@@ -1092,10 +1092,10 @@ const loadCategories = async () => {
         page: currentPage, 
         size: pageSize 
       });
-      
+
       if (res && res.items && res.items.length > 0) {
         allCategories = [...allCategories, ...res.items];
-        
+
         // 检查是否还有更多数据
         if (res.items.length < pageSize || allCategories.length >= (res.total || 0)) {
           hasMoreData = false;
@@ -1471,7 +1471,7 @@ onMounted(async () => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%);
+  background: var(--ops-accent);
   border: none;
   flex-shrink: 0;
 }
@@ -1500,7 +1500,7 @@ onMounted(async () => {
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
 }
@@ -1527,7 +1527,7 @@ onMounted(async () => {
 }
 
 .status-disabled {
-  background-color: #d9d9d9;
+  background-color: var(--ops-border);
 }
 
 .template-name-text {
@@ -1571,7 +1571,7 @@ onMounted(async () => {
 
 .time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .action-buttons {
@@ -1588,7 +1588,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   padding: 8px 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-size: 14px;
 }
 
@@ -1604,14 +1604,14 @@ onMounted(async () => {
 .process-name,
 .form-name {
   font-weight: 500;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .category-desc,
 .process-desc,
 .form-desc {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1620,13 +1620,13 @@ onMounted(async () => {
 
 .load-more-option {
   text-align: center;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
   margin-top: 4px;
-  background-color: #fafafa !important;
+  background-color: var(--ops-ground) !important;
 }
 
 .load-more-option:hover {
-  background-color: #f0f0f0 !important;
+  background-color: var(--ops-border) !important;
 }
 
 .load-more-content {
@@ -1659,7 +1659,7 @@ onMounted(async () => {
 .detail-header h2 {
   margin: 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--ops-ink);
   word-break: break-all;
 }
 

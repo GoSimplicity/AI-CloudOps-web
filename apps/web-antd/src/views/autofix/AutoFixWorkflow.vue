@@ -584,15 +584,15 @@ onMounted(() => {
 .autofix-workflow {
   min-height: 100vh;
   padding: 24px;
-  background-color: var(--ant-background-color-light, #fafafa);
+  background-color: var(--ant-background-color-light, var(--ops-ground));
 }
 
 .autofix-workflow .page-header {
   padding: 18px 22px;
   margin-bottom: 24px;
-  background: #fff;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
@@ -623,7 +623,7 @@ onMounted(() => {
   height: 48px;
   color: #1890ff;
   background: #e6f4ff;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
 }
 
 .autofix-workflow .page-title {
@@ -631,12 +631,12 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 600;
   line-height: 1.2;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .autofix-workflow .page-subtitle {
   margin: 4px 0 0;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -655,7 +655,7 @@ onMounted(() => {
   min-width: 96px;
   height: 40px;
   padding-inline: 14px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
 }
 
 .autofix-workflow .tool-button-primary,
@@ -670,7 +670,7 @@ onMounted(() => {
 .execution-card,
 .review-card {
   margin-bottom: 24px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
@@ -690,7 +690,7 @@ onMounted(() => {
 }
 
 .service-name {
-  color: #595959;
+  color: var(--ops-muted);
   font-weight: 500;
 }
 
@@ -707,9 +707,9 @@ onMounted(() => {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
 }
 
 .service-meta-item-stack {
@@ -719,13 +719,13 @@ onMounted(() => {
 
 .service-meta-label {
   flex-shrink: 0;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-size: 12px;
   line-height: 1.4;
 }
 
 .service-meta-value {
-  color: #262626;
+  color: var(--ops-ink);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
@@ -751,9 +751,9 @@ onMounted(() => {
   min-height: 92px;
   padding: 18px;
   gap: 14px;
-  background: #fff;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
@@ -765,7 +765,7 @@ onMounted(() => {
   height: 42px;
   color: #1890ff;
   background: #e6f4ff;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
 }
 
 .summary-card.fault .summary-icon {
@@ -785,12 +785,12 @@ onMounted(() => {
 
 .summary-label {
   margin-bottom: 6px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-size: 12px;
 }
 
 .summary-value {
-  color: #262626;
+  color: var(--ops-ink);
   font-size: 18px;
   font-weight: 600;
 }
@@ -807,9 +807,9 @@ onMounted(() => {
   align-items: flex-start;
   padding: 12px;
   gap: 10px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
 }
 
 .agent-message-icon {
@@ -827,13 +827,13 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  color: #595959;
+  color: var(--ops-muted);
   font-size: 12px;
   gap: 4px;
 }
 
 .agent-message-content strong {
-  color: #262626;
+  color: var(--ops-ink);
   font-size: 13px;
 }
 
@@ -849,10 +849,10 @@ onMounted(() => {
 
 .insight-item {
   padding: 12px;
-  color: #262626;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  color: var(--ops-ink);
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -864,14 +864,14 @@ onMounted(() => {
 }
 
 .action-name {
-  color: #262626;
+  color: var(--ops-ink);
   font-weight: 500;
 }
 
 .action-desc {
   max-width: 360px;
   margin-top: 2px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -880,7 +880,7 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 12px;
-  color: #595959;
+  color: var(--ops-muted);
   font-size: 12px;
 }
 
@@ -905,9 +905,9 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
 }
 
 .execution-left {
@@ -917,20 +917,20 @@ onMounted(() => {
 }
 
 .execution-title {
-  color: #262626;
+  color: var(--ops-ink);
   font-weight: 500;
 }
 
 .execution-meta {
   margin-top: 2px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-size: 12px;
 }
 
 .confirm-panel {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
 }
 
 .confirm-panel-header {
@@ -942,7 +942,7 @@ onMounted(() => {
 }
 
 .confirm-panel-title {
-  color: #262626;
+  color: var(--ops-ink);
   font-size: 13px;
   font-weight: 600;
 }
@@ -958,9 +958,9 @@ onMounted(() => {
   align-items: flex-start;
   gap: 10px;
   padding: 12px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
 }
 
 .confirm-action-content {
@@ -968,7 +968,7 @@ onMounted(() => {
 }
 
 .confirm-action-title {
-  color: #262626;
+  color: var(--ops-ink);
   font-size: 13px;
   font-weight: 600;
 }
@@ -978,7 +978,7 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 8px 12px;
   margin-top: 4px;
-  color: #595959;
+  color: var(--ops-muted);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -1000,10 +1000,10 @@ onMounted(() => {
   padding: 16px;
   margin: 0;
   overflow: auto;
-  color: #262626;
+  color: var(--ops-ink);
   background: #f7f8fa;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   font-size: 12px;
   line-height: 1.6;
 }

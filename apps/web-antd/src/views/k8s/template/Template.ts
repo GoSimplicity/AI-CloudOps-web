@@ -10,7 +10,7 @@ import {
   type YamlTemplateUpdateReq,
   type YamlTemplateCheckReq,
   type YamlTemplateDeleteReq,
-  type YamlTemplateDetailReq,
+
   getYamlTemplateList,
   createYamlTemplate,
   updateYamlTemplate,
@@ -214,7 +214,7 @@ export function useTemplatePage() {
         clusters.value = [...clusters.value, ...(res?.items || [])];
       }
       clustersTotal.value = res?.total || 0;
-      
+
       // 如果当前没有选择集群且有可用集群，自动选择第一个
       if (!filterClusterId.value && clusters.value.length > 0) {
         const firstCluster = clusters.value[0];
@@ -262,7 +262,7 @@ export function useTemplatePage() {
   const showTemplateDetail = async (record: K8sYamlTemplate) => {
     const clusterId = validateClusterId();
     if (!clusterId) return;
-    
+
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
@@ -312,20 +312,20 @@ export function useTemplatePage() {
 
   const submitCreateForm = async () => {
     if (!formRef.value) return;
-    
+
     const clusterId = validateClusterId();
     if (!clusterId) return;
-    
+
     try {
       await formRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: YamlTemplateCreateReq = {
         name: createFormModel.value.name,
         content: createFormModel.value.content,
         cluster_id: clusterId,
       };
-      
+
       await createYamlTemplate(params);
       message.success('模板创建成功');
       isCreateModalVisible.value = false;
@@ -355,21 +355,21 @@ export function useTemplatePage() {
 
   const submitEditForm = async () => {
     if (!editFormRef.value || !currentOperationTemplate.value) return;
-    
+
     const clusterId = validateClusterId();
     if (!clusterId) return;
-    
+
     try {
       await editFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: YamlTemplateUpdateReq = {
         id: currentOperationTemplate.value.id!,
         name: editFormModel.value.name,
         content: editFormModel.value.content,
         cluster_id: clusterId,
       };
-      
+
       await updateYamlTemplate(params);
       message.success('模板更新成功');
       isEditModalVisible.value = false;
@@ -399,7 +399,7 @@ export function useTemplatePage() {
         content: content,
         cluster_id: clusterId,
       };
-      
+
       await checkYamlTemplate(params);
       message.success('YAML 格式检查通过');
       return true;
@@ -415,7 +415,7 @@ export function useTemplatePage() {
   const deleteTemplate = (record: K8sYamlTemplate) => {
     const clusterId = validateClusterId();
     if (!clusterId) return;
-    
+
     Modal.confirm({
       title: '删除模板',
       content: `确定要删除模板 "${record.name}" 吗？此操作不可逆！`,
@@ -442,10 +442,10 @@ export function useTemplatePage() {
   // 批量操作
   const batchOperation = (operation: string) => {
     if (!selectedRows.value.length) return;
-    
+
     const clusterId = validateClusterId();
     if (!clusterId) return;
-    
+
     Modal.confirm({
       title: `批量${operation}`,
       content: `确定要对选中的 ${selectedRows.value.length} 个模板执行${operation}操作吗？`,
@@ -553,30 +553,30 @@ export function useTemplatePage() {
 
     try {
       const parsed = yaml.load(yamlContent);
-      
+
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
         return;
       }
 
       const obj = parsed as any;
-      
+
       // 基本结构检查
       if (!obj.apiVersion) {
         message.warning('YAML 缺少 apiVersion 字段');
         return;
       }
-      
+
       if (!obj.kind) {
         message.warning('YAML 缺少 kind 字段');
         return;
       }
-      
+
       if (!obj.metadata) {
         message.warning('YAML 缺少 metadata 字段');
         return;
       }
-      
+
       if (!obj.spec && obj.kind !== 'Namespace') {
         message.warning('YAML 缺少 spec 字段');
         return;
@@ -641,30 +641,30 @@ export function useTemplatePage() {
 
     try {
       const parsed = yaml.load(yamlContent);
-      
+
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
         return;
       }
 
       const obj = parsed as any;
-      
+
       // 基本结构检查
       if (!obj.apiVersion) {
         message.warning('YAML 缺少 apiVersion 字段');
         return;
       }
-      
+
       if (!obj.kind) {
         message.warning('YAML 缺少 kind 字段');
         return;
       }
-      
+
       if (!obj.metadata) {
         message.warning('YAML 缺少 metadata 字段');
         return;
       }
-      
+
       if (!obj.spec && obj.kind !== 'Namespace') {
         message.warning('YAML 缺少 spec 字段');
         return;
@@ -692,12 +692,12 @@ export function useTemplatePage() {
     clustersTotal,
     clustersPage,
     clustersSize,
-    
+
     // form refs
     formRef,
     yamlFormRef,
     editFormRef,
-    
+
     // modal state
     isCreateModalVisible,
     isEditModalVisible,
@@ -706,66 +706,66 @@ export function useTemplatePage() {
     submitLoading,
     detailLoading,
     checkLoading,
-    
+
     // operation targets
     currentOperationTemplate,
     currentTemplateDetail,
-    
+
     // form models
     createFormModel,
     editFormModel,
     yamlFormModel,
-    
+
     // form rules
     createFormRules,
     editFormRules,
-    
+
     // computed
     filteredTemplates,
     rowSelection,
-    
+
     // helpers
     validateClusterId,
     getEnvText,
     getClusterName,
     getUserDisplay,
     formatK8sTime,
-    
+
     // operations
     fetchClusters,
     fetchTemplates,
     clearTemplates,
     loadMoreClusters,
-    
+
     // detail operations
     showTemplateDetail,
     closeDetailModal,
-    
+
     // YAML operations
     showYamlModal,
     closeYamlModal,
-    
+
     // create operations
     openCreateModal,
     closeCreateModal,
     submitCreateForm,
-    
+
     // edit operations
     openEditModal,
     closeEditModal,
     submitEditForm,
-    
+
     // template operations
     deleteTemplate,
     checkTemplate,
-    
+
     // batch operations
     batchOperation,
-    
+
     // pagination operations
     resetClusters,
     handlePageChange,
-    
+
     // YAML operations
     insertYamlTemplate,
     formatYaml,

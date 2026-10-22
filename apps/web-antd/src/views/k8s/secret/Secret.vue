@@ -86,7 +86,7 @@
               </a-button>
             </a-select-option>
           </a-select>
-          
+
           <a-select 
             v-model:value="filterType" 
             placeholder="Secret类型" 
@@ -99,7 +99,7 @@
               {{ getSecretTypeText(type) }}
             </a-select-option>
           </a-select>
-          
+
           <!-- 标签过滤器 -->
           <div class="secret-labels-filter">
             <a-button type="dashed" @click="openLabelsFilter" class="k8s-toolbar-btn">
@@ -124,7 +124,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
@@ -140,7 +140,7 @@
           </a-input>
         </div>
       </div>
-      
+
       <!-- 操作区域 -->
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
@@ -153,7 +153,7 @@
             <template #icon><DeleteOutlined /></template>
             重置筛选
           </a-button>
-          
+
           <a-button 
             @click="fetchSecrets" 
             :loading="loading"
@@ -173,7 +173,7 @@
             <template #icon><FileTextOutlined /></template>
             YAML 创建
           </a-button>
-          
+
           <a-button 
             type="primary" 
             danger 
@@ -813,7 +813,7 @@
                 </div>
               </a-card>
             </a-col>
-            
+
             <a-col :xs="24" :lg="12">
               <a-card title="数据统计" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item" v-if="currentSecretDetail.data && Object.keys(currentSecretDetail.data).length > 0">
@@ -889,7 +889,7 @@
                   show-icon
                   style="margin-bottom: 16px;"
                 />
-                
+
                 <a-collapse class="secret-data-collapse">
                   <a-collapse-panel 
                     v-for="[key, value] in Object.entries(currentSecretDetail.data || {})" 
@@ -965,8 +965,7 @@
         closable
         style="margin-bottom: 16px;"
       />
-      
-      
+
       <a-form 
         ref="yamlFormRef"
         :model="yamlFormModel" 
@@ -1095,7 +1094,7 @@ const {
   total,
   clustersTotal,
   namespacesTotal,
-  
+
   // modal state
   isCreateModalVisible,
   isCreateYamlModalVisible,
@@ -1104,36 +1103,36 @@ const {
   isYamlModalVisible,
   submitLoading,
   detailLoading,
-  
+
   // operation targets
   currentOperationSecret,
   currentSecretDetail,
-  
+
   // form models
   createFormModel,
   editFormModel,
   yamlFormModel,
   createYamlFormModel,
-  
+
   // form refs
   formRef,
   yamlFormRef,
   createYamlFormRef,
-  
+
   // form rules
   createFormRules,
   yamlFormRules,
   createYamlFormRules,
-  
+
   // computed
   filteredSecrets,
   rowSelection,
-  
+
   // helpers
   getEnvText,
   getSecretTypeText,
   K8sSecretType,
-  
+
   // operations
   fetchClusters,
   fetchNamespaces,
@@ -1142,16 +1141,16 @@ const {
   clearNamespaces,
   loadMoreClusters,
   loadMoreNamespaces,
-  
+
   // detail operations
   showSecretDetail,
   closeDetailModal,
-  
+
   // YAML operations
   showYamlModal,
   closeYamlModal,
   submitYamlForm,
-  
+
   // create operations
   openCreateModal,
   closeCreateModal,
@@ -1159,26 +1158,26 @@ const {
   openCreateYamlModal,
   closeCreateYamlModal,
   submitCreateYamlForm,
-  
+
   // edit operations
   openEditModal,
   closeEditModal,
   submitEditForm,
-  
+
   // secret operations
   deleteSecret,
-  
+
   // filter operations
   addFilterLabel,
   removeFilterLabel,
   clearFilterLabels,
-  
+
   // batch operations
   batchOperation,
-  
+
   // pagination operations
   handlePageChange,
-  
+
   // form field operations
   removeStringDataField,
   removeEditStringDataField,
@@ -1186,7 +1185,7 @@ const {
   removeEditLabelField,
   removeAnnotationField,
   removeEditAnnotationField,
-  
+
   // yaml operations
   insertYamlTemplate,
   formatYaml,
@@ -1267,15 +1266,15 @@ const getSecretTypeClass = (type: string) => {
 const decodeBase64Data = (base64Str?: any) => {
   // 处理各种数据类型
   if (!base64Str) return '';
-  
+
   // 如果不是字符串，尝试转换为字符串
   const str = typeof base64Str === 'string' ? base64Str : String(base64Str);
-  
+
   // 检查是否是有效的 base64 字符串
   if (!/^[A-Za-z0-9+/]+=*$/.test(str)) {
     return str; // 如果不是 base64，直接返回原始值
   }
-  
+
   try {
     // 使用 atob 解码 base64
     const binaryStr = atob(str);
@@ -1283,7 +1282,7 @@ const decodeBase64Data = (base64Str?: any) => {
     for (let i = 0; i < binaryStr.length; i++) {
       bytes[i] = binaryStr.charCodeAt(i);
     }
-    
+
     // 先尝试 UTF-8 解码
     try {
       const decoder = new TextDecoder('utf-8', { fatal: true });
@@ -1336,7 +1335,7 @@ const handleClusterChange = () => {
   currentPage.value = 1;
   clearNamespaces();
   clearSecrets();
-  
+
   if (filterClusterId.value) {
     const selectedCluster = clusters.value.find(c => c.id === filterClusterId.value);
     if (selectedCluster) {
@@ -1446,14 +1445,14 @@ onMounted(async () => {
 
 /* Secret 数据显示样式 */
 .secret-data-collapse :deep(.ant-collapse-header) {
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 4px !important;
   margin-bottom: 8px;
 }
 
 .secret-data-collapse :deep(.ant-collapse-content) {
-  background: #fff;
-  border: 1px solid #f0f0f0;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
   border-radius: 0 0 4px 4px;
   margin-bottom: 8px;
 }

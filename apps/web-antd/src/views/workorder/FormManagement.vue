@@ -1199,10 +1199,10 @@ const loadCategories = async (): Promise<void> => {
         page: currentPage, 
         size: pageSize 
       });
-      
+
       if (response && response.items && response.items.length > 0) {
         allCategories = [...allCategories, ...response.items];
-        
+
         // 检查是否还有更多数据
         if (response.items.length < pageSize || allCategories.length >= (response.total || 0)) {
           hasMoreData = false;
@@ -1646,7 +1646,7 @@ onMounted(() => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%);
+  background: var(--ops-accent);
   border: none;
   flex-shrink: 0;
 }
@@ -1680,7 +1680,7 @@ onMounted(() => {
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
 }
@@ -1711,7 +1711,7 @@ onMounted(() => {
 }
 
 .status-archived {
-  background-color: #d9d9d9;
+  background-color: var(--ops-border);
 }
 
 .form-name-text {
@@ -1769,7 +1769,7 @@ onMounted(() => {
 
 .time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .action-buttons {
@@ -1786,7 +1786,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 8px 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-size: 14px;
 }
 
@@ -1798,12 +1798,12 @@ onMounted(() => {
 
 .category-name {
   font-weight: 500;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .category-desc {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1812,13 +1812,13 @@ onMounted(() => {
 
 .load-more-option {
   text-align: center;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
   margin-top: 4px;
-  background-color: #fafafa !important;
+  background-color: var(--ops-ground) !important;
 }
 
 .load-more-option:hover {
-  background-color: #f0f0f0 !important;
+  background-color: var(--ops-border) !important;
 }
 
 .load-more-content {
@@ -1837,10 +1837,10 @@ onMounted(() => {
 
 /* 表单字段设计样式 */
 .form-fields-section {
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   padding: 16px;
-  background: #fafafa;
+  background: var(--ops-ground);
 }
 
 .section-header {
@@ -1854,7 +1854,7 @@ onMounted(() => {
 
 .section-header h4 {
   margin: 0;
-  color: #333;
+  color: var(--ops-ink);
   font-size: 16px;
 }
 
@@ -1868,9 +1868,9 @@ onMounted(() => {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.5;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--ops-border);
   border-radius: 4px;
-  background: white;
+  background: var(--ops-surface);
   transition: all 0.3s;
 }
 
@@ -1910,8 +1910,8 @@ onMounted(() => {
 }
 
 .json-example {
-  background: #f5f5f5;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
   border-radius: 4px;
   padding: 16px;
   margin-bottom: 12px;
@@ -1942,7 +1942,7 @@ onMounted(() => {
 .detail-header h2 {
   margin: 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--ops-ink);
   word-break: break-all;
 }
 
@@ -1964,7 +1964,7 @@ onMounted(() => {
 
 .schema-preview h3 {
   margin-bottom: 16px;
-  color: #1f2937;
+  color: var(--ops-ink);
   font-size: 18px;
 }
 
@@ -1977,8 +1977,8 @@ onMounted(() => {
 }
 
 .form-preview-wrapper {
-  background: #fafafa;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
   padding: 16px;
   min-height: 400px;
 }
@@ -1987,20 +1987,20 @@ onMounted(() => {
   text-align: center;
   margin-bottom: 32px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .preview-header h3 {
   margin: 0 0 8px 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--ops-ink);
   font-weight: 600;
   word-break: break-all;
 }
 
 .preview-description {
   margin: 0 0 16px 0;
-  color: #666;
+  color: var(--ops-muted);
   font-size: 14px;
   word-break: break-all;
 }
@@ -2010,8 +2010,8 @@ onMounted(() => {
 }
 
 .preview-form {
-  background: white;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   max-width: 600px;
@@ -2024,7 +2024,7 @@ onMounted(() => {
 
 .dynamic-form .form-field :deep(.ant-form-item-label) {
   font-weight: 500;
-  color: #333;
+  color: var(--ops-ink);
 }
 
 .dynamic-form .form-field :deep(.ant-form-item-required::before) {
@@ -2056,7 +2056,7 @@ onMounted(() => {
 
 .preview-radio-group:hover,
 .preview-checkbox-group:hover {
-  background-color: #f5f5f5;
+  background-color: var(--ops-ground);
 }
 
 .radio-options,
@@ -2082,7 +2082,7 @@ onMounted(() => {
   margin-top: 32px;
   text-align: center;
   padding-top: 24px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
   display: flex;
   justify-content: center;
   gap: 12px;
@@ -2098,11 +2098,11 @@ onMounted(() => {
   .load-more-option.ant-select-item-option-disabled {
     color: #1890ff !important;
     cursor: pointer !important;
-    background-color: #fafafa !important;
+    background-color: var(--ops-ground) !important;
   }
 
   .load-more-option.ant-select-item-option-disabled:hover {
-    background-color: #f0f0f0 !important;
+    background-color: var(--ops-border) !important;
   }
 }
 

@@ -98,7 +98,7 @@ function createRequestClient(baseURL: string) {
       // 返回新的 token
       return newToken;
     } catch (error) {
-      console.error('Failed to refresh token:', error);
+      console.warn('Access token refresh failed');
       throw error;
     }
   }

@@ -50,7 +50,7 @@
           </div>
         </div>
       </template>
-      
+
       <div class="flow-content">
         <!-- 流转统计 -->
         <div class="flow-stats">
@@ -113,7 +113,7 @@
                   </div>
                   <div class="node-pulse" v-if="isImportantFlow(item.action)"></div>
                 </div>
-                
+
                 <!-- 流转卡片 -->
                 <div class="flow-card">
                   <div class="flow-card-header">
@@ -135,7 +135,7 @@
                       </a-tooltip>
                     </div>
                   </div>
-                  
+
                   <div class="flow-card-content">
                     <!-- 操作人信息 -->
                     <div class="operator-section">
@@ -157,7 +157,7 @@
                         <span>系统</span>
                       </div>
                     </div>
-                    
+
                     <!-- 状态变更 -->
                     <div class="status-change-section">
                       <div class="status-flow">
@@ -176,7 +176,7 @@
                         <strong>{{ getStatusText(item.to_status) }}</strong>
                       </div>
                     </div>
-                    
+
                     <!-- 处理说明 -->
                     <div v-if="item.comment" class="comment-section">
                       <div class="comment-header">
@@ -186,7 +186,7 @@
                       <div class="comment-content">{{ item.comment }}</div>
                     </div>
                   </div>
-                  
+
                   <!-- 绝对时间戳 -->
                   <div class="absolute-timestamp">
                     {{ formatFullDateTime(item.created_at) }}
@@ -298,7 +298,7 @@
           </div>
           <div class="detail-time">{{ formatFullDateTime(detailDialog.item.created_at) }}</div>
         </div>
-        
+
         <a-descriptions bordered :column="1" size="small" class="flow-descriptions">
           <a-descriptions-item label="操作类型">
             <div class="description-value">
@@ -421,11 +421,11 @@ const formatRelativeTime = (dateStr: string | undefined) => {
   const now = new Date()
   const date = new Date(dateStr)
   const diff = now.getTime() - date.getTime()
-  
+
   const minute = 60 * 1000
   const hour = 60 * minute
   const day = 24 * hour
-  
+
   if (diff < minute) {
     return '刚刚'
   } else if (diff < hour) {
@@ -446,7 +446,7 @@ const formatDate = (dateStr: string | undefined) => {
 // 计算属性
 const filteredFlowList = computed(() => {
   let filtered = [...flowList.value]
-  
+
   switch (filterType.value) {
     case 'approve':
       filtered = filtered.filter(item => 
@@ -462,7 +462,7 @@ const filteredFlowList = computed(() => {
       )
       break
   }
-  
+
   return filtered.sort((a, b) => {
     const dateA = new Date(a.created_at || '')
     const dateB = new Date(b.created_at || '')
@@ -606,7 +606,7 @@ const getFlowActionText = (action: string): string => {
 const loadFlow = async (instanceId: number) => {
   try {
     loading.value = true
-    
+
     let allFlows: any[] = [];
     let currentPage = 1;
     const pageSize = 50;
@@ -620,10 +620,10 @@ const loadFlow = async (instanceId: number) => {
       }
 
       const res = await listWorkorderInstanceFlow(params)
-      
+
       if (res && res.items && res.items.length > 0) {
         allFlows = [...allFlows, ...res.items];
-        
+
         if (res.items.length < pageSize || allFlows.length >= (res.total || 0)) {
           hasMoreData = false;
         } else {
@@ -666,13 +666,13 @@ defineExpose({
 <style scoped>
 /* 流转对话框样式 */
 .flow-dialog :deep(.ant-modal) {
-  border-radius: 16px;
+  border-radius: var(--ops-radius);
   overflow: hidden;
 }
 
 .flow-dialog :deep(.ant-modal-content) {
-  border-radius: 16px;
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  border-radius: var(--ops-radius);
+  background: var(--ops-accent);
 }
 
 .flow-dialog-header {
@@ -680,8 +680,8 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
-  color: white;
+  background: var(--ops-accent);
+  color: hsl(var(--primary-foreground));
   border-radius: 16px 16px 0 0;
 }
 
@@ -725,10 +725,10 @@ defineExpose({
 }
 
 .header-actions .ant-btn {
-  color: white;
+  color: hsl(var(--primary-foreground));
   border: 1px solid rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   transition: all 0.3s ease;
 }
 
@@ -748,7 +748,7 @@ defineExpose({
 /* 流转统计 */
 .flow-stats {
   padding: 24px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafb 100%);
+  background: var(--ops-accent);
   border-bottom: 1px solid #e8f0fe;
   position: sticky;
   top: 0;
@@ -766,8 +766,8 @@ defineExpose({
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafb 100%);
-  border-radius: 12px;
+  background: var(--ops-accent);
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
   transition: all 0.3s ease;
 }
@@ -781,29 +781,29 @@ defineExpose({
 .stat-icon {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--ops-radius);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  color: white;
+  color: hsl(var(--primary-foreground));
   flex-shrink: 0;
 }
 
 .stat-card.approve .stat-icon {
-  background: linear-gradient(135deg, #52c41a, #73d13d);
+  background: var(--ops-accent);
 }
 
 .stat-card.reject .stat-icon {
-  background: linear-gradient(135deg, #ff4d4f, #ff7875);
+  background: var(--ops-accent);
 }
 
 .stat-card.assign .stat-icon {
-  background: linear-gradient(135deg, #722ed1, #9254de);
+  background: var(--ops-accent);
 }
 
 .stat-card.total .stat-icon {
-  background: linear-gradient(135deg, #faad14, #ffc53d);
+  background: var(--ops-accent);
 }
 
 .stat-info {
@@ -821,14 +821,14 @@ defineExpose({
 
 .stat-label {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 500;
 }
 
 /* 时间线视图 */
 .timeline-view {
   padding: 32px 24px;
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  background: var(--ops-accent);
 }
 
 .flow-timeline {
@@ -845,7 +845,7 @@ defineExpose({
   top: 0;
   bottom: 0;
   width: 4px;
-  background: linear-gradient(to bottom, #e8f4f8, #d9ecf5, #e8f4f8);
+  background: var(--ops-accent);
   border-radius: 2px;
 }
 
@@ -892,7 +892,7 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
+  background: var(--ops-surface);
   border: 4px solid;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
@@ -953,8 +953,8 @@ defineExpose({
 }
 
 .timeline-node.action-cancel {
-  border-color: #8c8c8c;
-  color: #8c8c8c;
+  border-color: var(--ops-muted);
+  color: var(--ops-muted);
 }
 
 .timeline-node.action-complete {
@@ -971,8 +971,8 @@ defineExpose({
 .flow-card {
   flex: 1;
   max-width: 600px;
-  background: white;
-  border-radius: 16px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   overflow: hidden;
@@ -989,7 +989,7 @@ defineExpose({
   justify-content: space-between;
   align-items: flex-start;
   padding: 20px;
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  background: var(--ops-accent);
   border-bottom: 1px solid #e8f0fe;
   gap: 16px;
 }
@@ -1004,39 +1004,39 @@ defineExpose({
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  border-radius: 20px;
+  border-radius: var(--ops-radius);
   font-size: 14px;
   font-weight: 600;
-  color: white;
+  color: hsl(var(--primary-foreground));
   margin-bottom: 12px;
 }
 
 .action-badge.action-submit {
-  background: linear-gradient(135deg, #faad14, #ffc53d);
+  background: var(--ops-accent);
 }
 
 .action-badge.action-approve {
-  background: linear-gradient(135deg, #52c41a, #73d13d);
+  background: var(--ops-accent);
 }
 
 .action-badge.action-reject {
-  background: linear-gradient(135deg, #ff4d4f, #ff7875);
+  background: var(--ops-accent);
 }
 
 .action-badge.action-assign {
-  background: linear-gradient(135deg, #722ed1, #9254de);
+  background: var(--ops-accent);
 }
 
 .action-badge.action-cancel {
-  background: linear-gradient(135deg, #8c8c8c, #a6a6a6);
+  background: var(--ops-accent);
 }
 
 .action-badge.action-complete {
-  background: linear-gradient(135deg, #52c41a, #73d13d);
+  background: var(--ops-accent);
 }
 
 .action-badge.action-return {
-  background: linear-gradient(135deg, #faad14, #ffc53d);
+  background: var(--ops-accent);
 }
 
 .flow-time {
@@ -1044,10 +1044,10 @@ defineExpose({
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   background: #f0f8ff;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   border: 1px solid #e1f3ff;
 }
 
@@ -1058,7 +1058,7 @@ defineExpose({
 
 .card-actions .ant-btn {
   border: 1px solid #e8f0fe;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .card-actions .ant-btn:hover {
@@ -1077,14 +1077,14 @@ defineExpose({
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background: linear-gradient(135deg, #f0f8ff 0%, #ffffff 100%);
-  border-radius: 12px;
+  background: var(--ops-accent);
+  border-radius: var(--ops-radius);
   margin-bottom: 16px;
   border: 1px solid #e1f3ff;
 }
 
 .operator-avatar {
-  border: 2px solid #fff;
+  border: 2px solid var(--ops-surface);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -1102,7 +1102,7 @@ defineExpose({
 
 .operator-role {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin-top: 2px;
 }
 
@@ -1111,9 +1111,9 @@ defineExpose({
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: linear-gradient(135deg, #fff7e6, #ffeaa7);
+  background: var(--ops-accent);
   color: #faad14;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   font-size: 12px;
   font-weight: 600;
   border: 1px solid #ffe7ba;
@@ -1135,7 +1135,7 @@ defineExpose({
 .from-status,
 .to-status {
   padding: 4px 12px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
@@ -1143,44 +1143,44 @@ defineExpose({
 
 .from-status.status-draft,
 .to-status.status-draft {
-  background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
-  color: #666;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-ground);
+  color: var(--ops-muted);
+  border: 1px solid var(--ops-border);
 }
 
 .from-status.status-pending,
 .to-status.status-pending {
-  background: linear-gradient(135deg, #fff7e6, #ffe7ba);
+  background: var(--ops-accent);
   color: #faad14;
   border: 1px solid #ffe7ba;
 }
 
 .from-status.status-processing,
 .to-status.status-processing {
-  background: linear-gradient(135deg, #e6f7ff, #bae7ff);
+  background: var(--ops-accent);
   color: #1890ff;
   border: 1px solid #bae7ff;
 }
 
 .from-status.status-completed,
 .to-status.status-completed {
-  background: linear-gradient(135deg, #f6ffed, #d9f7be);
+  background: var(--ops-accent);
   color: #52c41a;
   border: 1px solid #d9f7be;
 }
 
 .from-status.status-rejected,
 .to-status.status-rejected {
-  background: linear-gradient(135deg, #fff2f0, #ffcccb);
+  background: var(--ops-accent);
   color: #ff4d4f;
   border: 1px solid #ffcccb;
 }
 
 .from-status.status-cancelled,
 .to-status.status-cancelled {
-  background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
-  color: #8c8c8c;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-ground);
+  color: var(--ops-muted);
+  border: 1px solid var(--ops-border);
 }
 
 .flow-arrow {
@@ -1190,15 +1190,15 @@ defineExpose({
 
 .change-summary {
   font-size: 13px;
-  color: #666;
+  color: var(--ops-muted);
   line-height: 1.5;
 }
 
 /* 处理说明 */
 .comment-section {
   padding: 16px;
-  background: linear-gradient(135deg, #f6ffed 0%, #ffffff 100%);
-  border-radius: 12px;
+  background: var(--ops-accent);
+  border-radius: var(--ops-radius);
   border: 1px solid #d9f7be;
   margin-bottom: 16px;
 }
@@ -1225,9 +1225,9 @@ defineExpose({
   padding: 8px 12px;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid #e8f0fe;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   font-size: 11px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   text-align: center;
   margin-top: 12px;
   backdrop-filter: blur(4px);
@@ -1236,12 +1236,12 @@ defineExpose({
 /* 列表视图 */
 .list-view {
   padding: 24px;
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  background: var(--ops-accent);
 }
 
 .flow-table {
-  background: white;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
   overflow: hidden;
 }
@@ -1251,7 +1251,7 @@ defineExpose({
   grid-template-columns: 1fr 1fr 1fr 1fr 120px;
   gap: 16px;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  background: var(--ops-accent);
   border-bottom: 1px solid #e8f0fe;
 }
 
@@ -1297,26 +1297,26 @@ defineExpose({
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   font-size: 12px;
   font-weight: 600;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .action-badge-small.action-submit {
-  background: linear-gradient(135deg, #faad14, #ffc53d);
+  background: var(--ops-accent);
 }
 
 .action-badge-small.action-approve {
-  background: linear-gradient(135deg, #52c41a, #73d13d);
+  background: var(--ops-accent);
 }
 
 .action-badge-small.action-reject {
-  background: linear-gradient(135deg, #ff4d4f, #ff7875);
+  background: var(--ops-accent);
 }
 
 .action-badge-small.action-assign {
-  background: linear-gradient(135deg, #722ed1, #9254de);
+  background: var(--ops-accent);
 }
 
 .operator-info-small {
@@ -1351,14 +1351,14 @@ defineExpose({
 
 .absolute-time {
   font-size: 11px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 /* 空状态 */
 .empty-flow {
   text-align: center;
   padding: 80px 20px;
-  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  background: var(--ops-accent);
 }
 
 .empty-icon {
@@ -1368,7 +1368,7 @@ defineExpose({
 }
 
 .empty-description {
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .empty-title {
@@ -1384,7 +1384,7 @@ defineExpose({
 
 /* 详情对话框 */
 .flow-detail-dialog :deep(.ant-modal-content) {
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
 }
 
 .flow-detail-content {
@@ -1405,34 +1405,34 @@ defineExpose({
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  border-radius: 20px;
+  border-radius: var(--ops-radius);
   font-size: 14px;
   font-weight: 600;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .detail-action-badge.action-submit {
-  background: linear-gradient(135deg, #faad14, #ffc53d);
+  background: var(--ops-accent);
 }
 
 .detail-action-badge.action-approve {
-  background: linear-gradient(135deg, #52c41a, #73d13d);
+  background: var(--ops-accent);
 }
 
 .detail-action-badge.action-reject {
-  background: linear-gradient(135deg, #ff4d4f, #ff7875);
+  background: var(--ops-accent);
 }
 
 .detail-action-badge.action-assign {
-  background: linear-gradient(135deg, #722ed1, #9254de);
+  background: var(--ops-accent);
 }
 
 .detail-time {
   font-size: 13px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   background: #f8f9fa;
   padding: 6px 12px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
 }
 
@@ -1446,7 +1446,7 @@ defineExpose({
 .status-change-detail .from-status,
 .status-change-detail .to-status {
   padding: 4px 8px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   font-size: 12px;
   font-weight: 600;
 }
@@ -1458,7 +1458,7 @@ defineExpose({
   word-break: break-all;
   padding: 12px;
   background: #f8f9fa;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f0fe;
 }
 
@@ -1480,104 +1480,104 @@ defineExpose({
     align-items: flex-start;
     padding: 16px 20px;
   }
-  
+
   .header-actions {
     align-self: stretch;
     justify-content: center;
   }
-  
+
   .flow-stats {
     padding: 16px;
   }
-  
+
   .stats-row {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
-  
+
   .stat-card {
     padding: 12px;
   }
-  
+
   .stat-number {
     font-size: 18px;
   }
-  
+
   .timeline-view {
     padding: 20px 16px;
   }
-  
+
   .flow-timeline::before {
     left: 16px;
   }
-  
+
   .flow-timeline-item {
     gap: 16px;
   }
-  
+
   .timeline-node {
     width: 40px;
     height: 40px;
   }
-  
+
   .flow-card {
     max-width: 100%;
   }
-  
+
   .flow-card-header {
     padding: 16px;
     flex-direction: column;
     gap: 12px;
     align-items: flex-start;
   }
-  
+
   .flow-card-content {
     padding: 16px;
   }
-  
+
   .operator-section {
     padding: 12px;
     gap: 10px;
   }
-  
+
   .status-flow {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-  
+
   .list-view {
     padding: 16px;
   }
-  
+
   .table-header,
   .table-row {
     grid-template-columns: 1fr;
     gap: 8px;
   }
-  
+
   .table-header {
     display: none;
   }
-  
+
   .table-row {
     flex-direction: column;
     padding: 12px;
     border: 1px solid #e8f0fe;
-    border-radius: 8px;
+    border-radius: var(--ops-radius);
     margin-bottom: 8px;
   }
-  
+
   .body-cell {
     justify-content: space-between;
     padding: 4px 0;
     border-bottom: 1px solid #f0f2f5;
   }
-  
+
   .body-cell:last-child {
     border-bottom: none;
   }
-  
+
   .body-cell::before {
     content: attr(data-label);
     font-weight: 600;
@@ -1591,52 +1591,52 @@ defineExpose({
   .flow-stats {
     padding: 12px;
   }
-  
+
   .stats-row {
     grid-template-columns: 1fr;
     gap: 8px;
   }
-  
+
   .timeline-view {
     padding: 16px 12px;
   }
-  
+
   .flow-timeline-item {
     gap: 12px;
   }
-  
+
   .timeline-node {
     width: 36px;
     height: 36px;
   }
-  
+
   .flow-card-header {
     padding: 12px;
   }
-  
+
   .flow-card-content {
     padding: 12px;
   }
-  
+
   .comment-section {
     padding: 12px;
     margin-bottom: 12px;
   }
-  
+
   .status-flow {
     gap: 6px;
   }
-  
+
   .from-status,
   .to-status {
     font-size: 11px;
     padding: 3px 8px;
   }
-  
+
   .list-view {
     padding: 12px;
   }
-  
+
   .table-row {
     padding: 8px;
   }
@@ -1653,11 +1653,11 @@ defineExpose({
 }
 
 .flow-content::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #c1c1c1, #a8a8a8);
+  background: var(--ops-accent);
   border-radius: 4px;
 }
 
 .flow-content::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #a8a8a8, #959595);
+  background: var(--ops-accent);
 }
 </style>

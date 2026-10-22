@@ -9,7 +9,7 @@
           </template>
           创建分类
         </a-button>
-        
+
         <div class="search-filters">
           <a-input-search 
             v-model:value="searchQuery" 
@@ -45,7 +45,7 @@
           </template>
         </a-statistic>
       </a-card>
-      
+
       <a-card class="stats-card">
         <a-statistic 
           title="启用分类" 
@@ -57,7 +57,7 @@
           </template>
         </a-statistic>
       </a-card>
-      
+
       <a-card class="stats-card">
         <a-statistic 
           title="禁用分类" 
@@ -417,11 +417,11 @@ const loadCategoryList = async (): Promise<void> => {
     }
 
     const response = await listWorkorderCategory(params);
-    
+
     if (response) {
       categoryList.value = response.items || [];
       total.value = response.total || 0;
-      
+
       // 更新统计数据
       updateStatistics();
     } else {
@@ -493,12 +493,12 @@ const handleCreate = (): void => {
 const handleEdit = async (record: WorkorderCategoryItem): Promise<void> => {
   try {
     const loadingMsg = message.loading('加载分类详情...', 0);
-    
+
     const params: DetailWorkorderCategoryReq = { id: record.id! };
     const response = await detailWorkorderCategory(params);
-    
+
     loadingMsg();
-    
+
     if (response) {
       formDialog.isEdit = true;
       formDialog.data = {
@@ -519,12 +519,12 @@ const handleEdit = async (record: WorkorderCategoryItem): Promise<void> => {
 const handleView = async (record: WorkorderCategoryItem): Promise<void> => {
   try {
     const loadingMsg = message.loading('加载分类详情...', 0);
-    
+
     const params: DetailWorkorderCategoryReq = { id: record.id! };
     const response = await detailWorkorderCategory(params);
-    
+
     loadingMsg();
-    
+
     if (response) {
       detailDialog.data = response;
       detailDialog.visible = true;
@@ -552,7 +552,7 @@ const handleMenuAction = (key: string, record: WorkorderCategoryItem): void => {
 const handleToggleStatus = async (record: WorkorderCategoryItem): Promise<void> => {
   try {
     const newStatus = record.status === CategoryStatus.Enabled ? CategoryStatus.Disabled : CategoryStatus.Enabled;
-    
+
     const params: UpdateWorkorderCategoryReq = {
       id: record.id!,
       name: record.name,
@@ -561,10 +561,10 @@ const handleToggleStatus = async (record: WorkorderCategoryItem): Promise<void> 
     };
 
     await updateWorkorderCategory(params);
-    
+
     const statusText = newStatus === CategoryStatus.Enabled ? '启用' : '禁用';
     message.success(`分类 "${record.name}" 已${statusText}`);
-    
+
     // 重新加载当前页数据
     await loadCategoryList();
   } catch (error) {
@@ -587,14 +587,14 @@ const handleDelete = (record: WorkorderCategoryItem): void => {
       try {
         const params: DeleteWorkorderCategoryReq = { id: record.id! };
         await deleteWorkorderCategory(params);
-        
+
         message.success(`分类 "${record.name}" 已删除`);
-        
+
         // 如果当前页删除后没有数据且不是第一页，回到上一页
         if (categoryList.value.length === 1 && currentPage.value > 1) {
           currentPage.value = currentPage.value - 1;
         }
-        
+
         await loadCategoryList();
       } catch (error) {
 
@@ -609,7 +609,7 @@ const handleDelete = (record: WorkorderCategoryItem): void => {
  */
 const handleSubmit = async (): Promise<void> => {
   if (!formRef.value) return;
-  
+
   try {
     await formRef.value.validate();
   } catch (error) {
@@ -626,7 +626,7 @@ const handleSubmit = async (): Promise<void> => {
         description: formDialog.data.description,
         status: formDialog.data.status
       };
-      
+
       await updateWorkorderCategory(params);
       message.success(`分类 "${formDialog.data.name}" 更新成功`);
     } else {
@@ -636,14 +636,14 @@ const handleSubmit = async (): Promise<void> => {
         description: formDialog.data.description,
         status: formDialog.data.status
       };
-      
+
       await createWorkorderCategory(params);
       message.success(`分类 "${formDialog.data.name}" 创建成功`);
-      
+
       // 创建成功后跳转到第一页
       currentPage.value = 1;
     }
-    
+
     closeFormDialog();
     await loadCategoryList();
   } catch (error) {
@@ -698,12 +698,12 @@ const getAvatarColor = (name: string): string => {
     '#1890ff', '#52c41a', '#faad14', '#f5222d',
     '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'
   ];
-  
+
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  
+
   return colors[Math.abs(hash) % colors.length]!;
 };
 
@@ -717,7 +717,7 @@ watch([searchQuery, statusFilter], () => {
       handleSearch();
     }
   }, 500);
-  
+
   return () => clearTimeout(timeoutId);
 });
 
@@ -747,7 +747,7 @@ onMounted(() => {
 }
 
 .create-btn {
-  background: linear-gradient(135deg, #1890ff 0%);
+  background: var(--ops-accent);
   border: none;
   flex-shrink: 0;
 }
@@ -778,7 +778,7 @@ onMounted(() => {
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
 }
@@ -821,7 +821,7 @@ onMounted(() => {
 
 .time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .action-buttons {
@@ -867,62 +867,62 @@ onMounted(() => {
   .workorder-category-container {
     padding: 8px;
   }
-  
+
   .header-actions {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .search-filters {
     width: 100%;
   }
-  
+
   .search-input {
     width: 100%;
     min-width: auto;
   }
-  
+
   .status-filter {
     width: 100%;
     min-width: auto;
   }
-  
+
   .create-btn {
     padding: 4px 8px;
     min-width: auto;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  
+
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
   }
-  
+
   .stats-card :deep(.ant-statistic-content) {
     font-size: 16px;
   }
-  
+
   .action-buttons {
     gap: 4px;
   }
-  
+
   .action-buttons .ant-btn {
     padding: 0 4px;
     font-size: 12px;
   }
-  
+
   .detail-footer {
     justify-content: center;
   }
-  
+
   .detail-footer .ant-btn {
     flex: 1;
     max-width: 120px;
   }
-  
+
   :deep(.ant-modal-body) {
     padding: 16px;
     max-height: calc(100vh - 160px);
@@ -935,11 +935,11 @@ onMounted(() => {
   .workorder-category-container {
     padding: 16px;
   }
-  
+
   .search-input {
     width: 200px;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -950,29 +950,29 @@ onMounted(() => {
   .header-actions {
     gap: 8px;
   }
-  
+
   .stats-card {
     text-align: center;
   }
-  
+
   .operator-info {
     flex-direction: column;
     gap: 4px;
     align-items: center;
   }
-  
+
   .operator-name {
     font-size: 12px;
   }
-  
+
   .date-info {
     text-align: center;
   }
-  
+
   .date {
     font-size: 12px;
   }
-  
+
   .time {
     font-size: 10px;
   }

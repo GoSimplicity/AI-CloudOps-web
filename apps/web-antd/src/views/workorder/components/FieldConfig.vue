@@ -180,7 +180,7 @@
               </a-col>
             </a-row>
           </div>
-          
+
           <div class="add-option-area" v-if="!localField.options || localField.options.length === 0">
             <a-button 
               type="dashed" 
@@ -267,14 +267,14 @@ watch(
 // 处理类型变化
 const handleTypeChange = (type: string) => {
   localField.value.type = type;
-  
+
   // 根据类型初始化选项和默认值
   if (needsOptions.value && (!localField.value.options || localField.value.options.length === 0)) {
     localField.value.options = ['选项1', '选项2'];
   } else if (!needsOptions.value) {
     localField.value.options = undefined;
   }
-  
+
   // 重置默认值
   switch (type) {
     case FormFieldType.Checkbox:
@@ -320,8 +320,8 @@ const updateOption = (index: number, value: string) => {
 
 <style scoped>
 .field-config {
-  background: #fafafa;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
   overflow: hidden;
 }
 
@@ -330,17 +330,17 @@ const updateOption = (index: number, value: string) => {
 }
 
 .config-section {
-  background: white;
+  background: var(--ops-surface);
   margin-bottom: 16px;
-  border-radius: 8px;
-  border: 1px solid #e8e8e8;
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
   overflow: hidden;
 }
 
 .section-title {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: var(--ops-accent);
   padding: 12px 20px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--ops-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -396,7 +396,7 @@ const updateOption = (index: number, value: string) => {
 
 .checkbox-item {
   padding: 8px 12px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   transition: all 0.2s ease;
 }
@@ -420,7 +420,7 @@ const updateOption = (index: number, value: string) => {
 .option-item {
   background: #f8f9fa;
   border: 1px solid #e9ecef;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   padding: 16px;
   margin-bottom: 12px;
   transition: all 0.3s ease;
@@ -470,8 +470,8 @@ const updateOption = (index: number, value: string) => {
 
 .add-option-large {
   height: 48px;
-  border: 2px dashed #d9d9d9;
-  border-radius: 8px;
+  border: 2px dashed var(--ops-border);
+  border-radius: var(--ops-radius);
   font-weight: 500;
 }
 
@@ -485,21 +485,21 @@ const updateOption = (index: number, value: string) => {
     padding: 10px 16px;
     font-size: 13px;
   }
-  
+
   .config-section .ant-row {
     padding: 16px;
   }
-  
+
   .option-item {
     padding: 12px;
   }
-  
+
   .option-header {
     flex-direction: column;
     gap: 8px;
     align-items: flex-start;
   }
-  
+
   .options-list {
     padding: 16px;
     padding-top: 0;

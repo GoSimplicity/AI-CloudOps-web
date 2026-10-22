@@ -4,6 +4,7 @@ import { registerAccessDirective } from '@vben/access';
 import { initStores } from '@vben/stores';
 import '@vben/styles';
 import '@vben/styles/antd';
+import './styles/console.css';
 
 import { setupI18n } from '#/locales';
 

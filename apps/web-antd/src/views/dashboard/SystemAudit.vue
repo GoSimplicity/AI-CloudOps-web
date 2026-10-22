@@ -57,7 +57,7 @@
             <Icon icon="material-symbols:search" />
           </template>
         </a-input>
-        
+
         <a-select
           v-model:value="searchParams.operation_type"
           placeholder="操作类型"
@@ -101,7 +101,7 @@
           format="YYYY-MM-DD HH:mm:ss"
           class="date-picker"
         />
-        
+
         <a-date-picker
           v-model:value="endTime"
           show-time
@@ -110,7 +110,7 @@
           class="date-picker"
         />
       </div>
-      
+
       <div class="search-right">
         <a-button type="primary" @click="handleSearch">搜索</a-button>
         <a-button @click="handleReset">重置</a-button>
@@ -139,20 +139,20 @@
               {{ formatTime(record.created_at) }}
             </div>
           </template>
-          
+
           <template v-if="column.key === 'user'">
             <div class="user-info">
               <div class="user-id">{{ getUserDisplayName(record) }}</div>
               <div class="trace-id">{{ record.trace_id }}</div>
             </div>
           </template>
-          
+
           <template v-if="column.key === 'operation'">
             <a-tag :color="getOperationColor(record.operation_type)">
               {{ record.operation_type }}
             </a-tag>
           </template>
-          
+
           <template v-if="column.key === 'request'">
             <div class="request-info">
               <a-tag :color="getMethodColor(record.http_method)" class="method-tag">
@@ -161,21 +161,21 @@
               <div class="endpoint">{{ record.endpoint }}</div>
             </div>
           </template>
-          
+
           <template v-if="column.key === 'status'">
             <a-tag :color="getStatusColor(record.status_code)">
               {{ record.status_code }}
             </a-tag>
           </template>
-          
+
           <template v-if="column.key === 'duration'">
             <span class="duration">{{ record.duration }}ms</span>
           </template>
-          
+
           <template v-if="column.key === 'ip'">
             <span class="ip-address">{{ record.ip_address }}</span>
           </template>
-          
+
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
               <a-button type="text" size="small" @click="handleView(record)">查看</a-button>
@@ -304,7 +304,7 @@
             style="width: 100%"
           />
         </div>
-        
+
         <div class="form-item">
           <label>状态码列表</label>
           <a-select
@@ -321,7 +321,7 @@
             <a-select-option :value="500">500</a-select-option>
           </a-select>
         </div>
-        
+
         <div class="form-row">
           <div class="form-item">
             <label>最小耗时(ms)</label>
@@ -340,7 +340,7 @@
             />
           </div>
         </div>
-        
+
         <div class="form-item">
           <label>接口路径模式</label>
           <a-input 
@@ -348,7 +348,7 @@
             placeholder="如: /api/v1/users/*"
           />
         </div>
-        
+
         <div class="form-item">
           <a-checkbox v-model:checked="advancedSearchParams.has_error">
             仅显示错误日志
@@ -360,6 +360,7 @@
 </template>
 
 <script lang="ts" setup>
+import { downloadCsv } from "#/utils/export-csv";
 import { ref, reactive, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
@@ -586,9 +587,9 @@ const fetchAuditLogs = async () => {
     }
 
     const response = await listAuditLogsApi(params);
-    
+
     const logs = response.items || [];
-    
+
     // 获取用户信息
     const logsWithUserInfo = await Promise.all(
       logs.map(async (log: AuditLog) => {
@@ -599,10 +600,10 @@ const fetchAuditLogs = async () => {
         } as AuditLogWithUser;
       })
     );
-    
+
     auditLogList.value = logsWithUserInfo;
     paginationConfig.total = response.total || 0;
-    
+
   } catch (error: any) {
 
     message.error(error.message || '获取审计日志失败');
@@ -636,14 +637,14 @@ const fetchLogDetail = async (id: number) => {
   try {
     const response = await getAuditLogDetailApi(id);
     const log = response as AuditLog;
-    
+
     // 获取用户信息
     const userInfo = await getUserInfo(log.user_id);
     const logWithUserInfo = {
       ...log,
       user_info: userInfo
     } as AuditLogWithUser;
-    
+
     viewLogData.value = logWithUserInfo;
     viewModalVisible.value = true;
   } catch (error: any) {
@@ -683,9 +684,9 @@ const performAdvancedSearch = async () => {
     }
 
     const response = await searchAuditLogsApi(params);
-    
+
     const logs = response.items || [];
-    
+
     // 获取用户信息
     const logsWithUserInfo = await Promise.all(
       logs.map(async (log: AuditLog) => {
@@ -696,10 +697,10 @@ const performAdvancedSearch = async () => {
         } as AuditLogWithUser;
       })
     );
-    
+
     auditLogList.value = logsWithUserInfo;
     paginationConfig.total = response.total || 0;
-    
+
   } catch (error: any) {
 
     message.error(error.message || '高级搜索失败');
@@ -723,7 +724,7 @@ const handleReset = () => {
   searchParams.status_code = undefined;
   startTime.value = undefined;
   endTime.value = undefined;
-  
+
   // 重置高级搜索参数
   Object.assign(advancedSearchParams, {
     ip_address_list: [],
@@ -733,7 +734,7 @@ const handleReset = () => {
     has_error: false,
     endpoint_pattern: ''
   });
-  
+
   paginationConfig.current = 1;
   fetchAuditLogs();
 };
@@ -744,7 +745,9 @@ const handleRefresh = () => {
 };
 
 const handleExport = () => {
-  message.info('导出功能开发中...');
+  if (!auditLogList.value.length) { message.info('当前页没有可导出的记录'); return; }
+  downloadCsv('cloudops-auditLogList.csv', [['ID', '时间', '用户ID', '方法', '路径', '状态码', '耗时ms'], ...auditLogList.value.map(row => [row.id, row.created_at, row.user_id, row.http_method, row.endpoint, row.status_code, row.duration])]);
+  message.success('已导出当前页记录');
 };
 
 const handleAdvancedSearch = () => {
@@ -813,7 +816,7 @@ onMounted(() => {
 /* 保持原有样式不变 */
 .audit-log {
   padding: 20px;
-  background: #f5f5f5;
+  background: var(--ops-ground);
   min-height: 100vh;
 }
 
@@ -823,16 +826,16 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 20px;
   padding: 20px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
 }
 
 .page-header h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .header-actions {
@@ -854,11 +857,11 @@ onMounted(() => {
 }
 
 .stat-card {
-  background: white;
+  background: var(--ops-surface);
   padding: 20px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   text-align: center;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--ops-border);
 }
 
 .stat-number {
@@ -870,7 +873,7 @@ onMounted(() => {
 
 .stat-label {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .search-section {
@@ -880,9 +883,9 @@ onMounted(() => {
   gap: 16px;
   margin-bottom: 20px;
   padding: 20px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
 }
 
 .search-left {
@@ -913,27 +916,27 @@ onMounted(() => {
 }
 
 .table-container {
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
   overflow: hidden;
 }
 
 .table-container :deep(.ant-table-thead > tr > th) {
-  background: #fafafa;
+  background: var(--ops-ground);
   font-weight: 600;
-  color: #262626;
-  border-bottom: 1px solid #e8e8e8;
+  color: var(--ops-ink);
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .table-container :deep(.ant-table-tbody > tr > td) {
   font-size: 14px;
-  color: #262626;
+  color: var(--ops-ink);
   line-height: 1.5;
 }
 
 .table-container :deep(.ant-table-tbody > tr:hover > td) {
-  background: #f5f5f5;
+  background: var(--ops-ground);
 }
 
 /* 高级搜索表单样式 */
@@ -949,7 +952,7 @@ onMounted(() => {
   display: block;
   margin-bottom: 4px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .form-row {
@@ -961,7 +964,7 @@ onMounted(() => {
 /* 审计日志特有样式 */
 .time-info {
   font-size: 13px;
-  color: #262626;
+  color: var(--ops-ink);
   font-family: 'Courier New', monospace;
   font-weight: 500;
 }
@@ -974,15 +977,15 @@ onMounted(() => {
 
 .user-id {
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   font-size: 14px;
 }
 
 .trace-id {
   font-size: 12px;
-  color: #595959;
+  color: var(--ops-muted);
   font-family: 'Courier New', monospace;
-  background: #f5f5f5;
+  background: var(--ops-ground);
   padding: 2px 6px;
   border-radius: 3px;
 }
@@ -1000,7 +1003,7 @@ onMounted(() => {
 
 .endpoint {
   font-size: 13px;
-  color: #262626;
+  color: var(--ops-ink);
   font-family: 'Courier New', monospace;
   word-break: break-all;
 }
@@ -1008,13 +1011,13 @@ onMounted(() => {
 .duration {
   font-family: 'Courier New', monospace;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   font-size: 14px;
 }
 
 .ip-address {
   font-family: 'Courier New', monospace;
-  color: #262626;
+  color: var(--ops-ink);
   font-size: 14px;
   font-weight: 500;
 }
@@ -1037,9 +1040,9 @@ onMounted(() => {
   margin: 0 0 16px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   padding-bottom: 8px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .detail-grid {
@@ -1050,27 +1053,27 @@ onMounted(() => {
 
 .detail-item {
   padding: 12px;
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 6px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
 }
 
 .detail-item label {
   display: block;
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 600;
   margin-bottom: 4px;
 }
 
 .detail-item span {
   font-size: 14px;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .detail-item .trace-id {
   font-family: 'Courier New', monospace;
-  background: #f0f0f0;
+  background: var(--ops-border);
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -1078,7 +1081,7 @@ onMounted(() => {
 
 .detail-item .endpoint {
   font-family: 'Courier New', monospace;
-  background: #f0f0f0;
+  background: var(--ops-border);
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -1087,7 +1090,7 @@ onMounted(() => {
 
 .detail-item .duration {
   font-family: 'Courier New', monospace;
-  background: #f0f0f0;
+  background: var(--ops-border);
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -1131,22 +1134,22 @@ onMounted(() => {
     align-items: stretch;
     gap: 16px;
   }
-  
+
   .search-left {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .search-input {
     max-width: none;
   }
-  
+
   .status-select,
   .type-select,
   .date-picker {
     width: 100%;
   }
-  
+
   .search-right {
     justify-content: flex-end;
   }
@@ -1156,36 +1159,36 @@ onMounted(() => {
   .audit-log {
     padding: 12px;
   }
-  
+
   .page-header {
     flex-direction: column;
     gap: 16px;
     text-align: center;
   }
-  
+
   .header-actions {
     width: 100%;
     justify-content: center;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .search-right {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .detail-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .action-buttons {
     flex-direction: column;
     width: 100%;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }

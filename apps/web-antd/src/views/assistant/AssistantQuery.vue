@@ -421,18 +421,18 @@ onMounted(() => {
 <style scoped>
 .query-container {
   padding: 24px;
-  background-color: var(--ant-background-color-light, #fafafa);
+  background-color: var(--ant-background-color-light, var(--ops-ground));
   min-height: 100vh;
 }
 
 /* 页面头部 */
 .query-container .page-header {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .query-container .header-content {
@@ -462,12 +462,12 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #262626;
+  color: var(--ops-ink);
   line-height: 1.2;
 }
 
 .query-container .page-subtitle {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin: 0;
   font-size: 14px;
   margin-top: 4px;
@@ -482,8 +482,8 @@ onMounted(() => {
 /* 内容区域 */
 .page-content {
   .content-card {
-    background: var(--bg-color-white, #ffffff);
-    border-radius: 8px;
+    background: var(--bg-color-white, var(--ops-surface));
+    border-radius: var(--ops-radius);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     overflow: hidden;
     display: flex;
@@ -502,8 +502,8 @@ onMounted(() => {
 
   .card-header {
     padding: 16px 24px;
-    border-bottom: 1px solid var(--border-color, #f0f0f0);
-    background: var(--bg-color-light, #fafafa);
+    border-bottom: 1px solid var(--border-color, var(--ops-border));
+    background: var(--bg-color-light, var(--ops-ground));
   }
 
   .header-title {
@@ -512,7 +512,7 @@ onMounted(() => {
     gap: 8px;
     font-size: 16px;
     font-weight: 500;
-    color: var(--text-color-primary, #262626);
+    color: var(--text-color-primary, var(--ops-ink));
   }
 
   .card-content {
@@ -560,9 +560,9 @@ onMounted(() => {
 
         .message-text {
           background: var(--primary-color, #1890ff);
-          color: #ffffff;
+          color: hsl(var(--primary-foreground));
           padding: 12px 16px;
-          border-radius: 16px;
+          border-radius: var(--ops-radius);
           border-bottom-right-radius: 4px;
           word-wrap: break-word;
           font-size: 14px;
@@ -588,15 +588,15 @@ onMounted(() => {
         max-width: 70%;
 
         .message-text {
-          background: var(--bg-color-light, #fafafa);
-          color: var(--text-color-primary, #262626);
+          background: var(--bg-color-light, var(--ops-ground));
+          color: var(--text-color-primary, var(--ops-ink));
           padding: 12px 16px;
-          border-radius: 16px;
+          border-radius: var(--ops-radius);
           border-bottom-left-radius: 4px;
           word-wrap: break-word;
           font-size: 14px;
           line-height: 1.5;
-          border: 1px solid var(--border-color, #f0f0f0);
+          border: 1px solid var(--border-color, var(--ops-border));
 
           :deep(h1),
           :deep(h2),
@@ -620,14 +620,14 @@ onMounted(() => {
           }
 
           :deep(code) {
-            background: #f5f5f5;
+            background: var(--ops-ground);
             padding: 2px 4px;
             border-radius: 3px;
             font-family: monospace;
           }
 
           :deep(pre) {
-            background: #f5f5f5;
+            background: var(--ops-ground);
             padding: 12px;
             border-radius: 6px;
             overflow-x: auto;
@@ -644,7 +644,7 @@ onMounted(() => {
         .source-documents {
           .source-title {
             font-size: 12px;
-            color: var(--text-color-secondary, #8c8c8c);
+            color: var(--text-color-secondary, var(--ops-muted));
             display: flex;
             align-items: center;
             gap: 4px;
@@ -670,7 +670,7 @@ onMounted(() => {
         .follow-up-questions {
           .follow-up-title {
             font-size: 12px;
-            color: var(--text-color-secondary, #8c8c8c);
+            color: var(--text-color-secondary, var(--ops-muted));
             display: flex;
             align-items: center;
             gap: 4px;
@@ -707,7 +707,7 @@ onMounted(() => {
       }
 
       .loading-text {
-        color: var(--text-color-secondary, #8c8c8c);
+        color: var(--text-color-secondary, var(--ops-muted));
         font-size: 14px;
       }
     }
@@ -715,8 +715,8 @@ onMounted(() => {
 
   .chat-input {
     padding: 16px 24px;
-    background: var(--bg-color-light, #fafafa);
-    border-top: 1px solid var(--border-color, #f0f0f0);
+    background: var(--bg-color-light, var(--ops-ground));
+    border-top: 1px solid var(--border-color, var(--ops-border));
   }
 }
 
@@ -737,13 +737,13 @@ onMounted(() => {
   display: block;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-color-secondary, #8c8c8c);
+  color: var(--text-color-secondary, var(--ops-muted));
   margin-bottom: 4px;
 }
 
 .form-value {
   font-size: 13px;
-  color: var(--text-color-primary, #262626);
+  color: var(--text-color-primary, var(--ops-ink));
   word-break: break-all;
 }
 
@@ -778,7 +778,7 @@ onMounted(() => {
 
   h4 {
     margin: 0 0 12px 0;
-    color: var(--text-color-primary, #262626);
+    color: var(--text-color-primary, var(--ops-ink));
     font-weight: 600;
   }
 
@@ -788,7 +788,7 @@ onMounted(() => {
   }
 
   :deep(code) {
-    background: #f5f5f5;
+    background: var(--ops-ground);
     padding: 2px 4px;
     border-radius: 3px;
     font-family: monospace;
@@ -816,12 +816,12 @@ onMounted(() => {
 }
 
 .chat-history::-webkit-scrollbar-track {
-  background: var(--bg-color-light, #fafafa);
+  background: var(--bg-color-light, var(--ops-ground));
   border-radius: 3px;
 }
 
 .chat-history::-webkit-scrollbar-thumb {
-  background: var(--border-color-dark, #d9d9d9);
+  background: var(--border-color-dark, var(--ops-border));
   border-radius: 3px;
 }
 

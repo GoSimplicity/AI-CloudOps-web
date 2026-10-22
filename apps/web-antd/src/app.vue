@@ -25,7 +25,15 @@ const tokenTheme = computed(() => {
 
   return {
     algorithm,
-    token: tokens,
+    token: {
+      ...tokens,
+      borderRadius: 2,
+      fontFamily: '"PingFang SC", "Microsoft YaHei", system-ui, sans-serif',
+      fontSize: 14,
+      motionDurationMid: '0.12s',
+      boxShadow: 'none',
+      boxShadowSecondary: 'none',
+    },
   };
 });
 </script>

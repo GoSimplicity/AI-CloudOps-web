@@ -6,7 +6,7 @@ import type {
 
 import { defineComponent, h, inject, nextTick, provide, reactive } from 'vue';
 
-import { useStore } from '@vben-core/shared';
+import { cn, useStore } from '@vben-core/shared';
 
 import VbenDrawer from './drawer.vue';
 import { DrawerApi } from './drawer-api';
@@ -69,7 +69,7 @@ export function useVbenDrawer<
   const Drawer = defineComponent(
     (props: DrawerProps, { attrs, slots }) => {
       return () =>
-        h(VbenDrawer, { ...props, ...attrs, drawerApi: extendedApi }, slots);
+        h(VbenDrawer, { ...props, ...attrs, class: cn(attrs.class as string), drawerApi: extendedApi }, slots);
     },
     {
       inheritAttrs: false,

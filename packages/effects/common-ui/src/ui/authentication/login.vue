@@ -111,6 +111,7 @@ function handleGo(path: string) {
       :placeholder="usernamePlaceholder || $t('authentication.username')"
       :status="usernameStatus"
       name="username"
+      autocomplete="username"
       required
       type="text"
     />
@@ -121,6 +122,7 @@ function handleGo(path: string) {
       :placeholder="passwordPlaceholder || $t('authentication.password')"
       :status="passwordStatus"
       name="password"
+      autocomplete="current-password"
       required
       type="password"
     />

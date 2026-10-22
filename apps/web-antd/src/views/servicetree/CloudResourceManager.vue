@@ -1299,7 +1299,7 @@ import {
   FileExcelOutlined,
 } from '@ant-design/icons-vue';
 
-import * as XLSX from 'xlsx';
+import { downloadCsv } from '#/utils/export-csv';
 
 // API 导入
 import {
@@ -2184,46 +2184,13 @@ const exportToExcel = (data: TreeCloudResource[]) => {
     描述: item.description || '-',
   }));
 
-  // 创建工作簿和工作表
-  const worksheet = XLSX.utils.json_to_sheet(exportData);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, '云资源列表');
-
-  // 设置列宽
-  const colWidths = [
-    { wch: 25 }, // 资源名称
-    { wch: 12 }, // 资源类型
-    { wch: 20 }, // 云账户
-    { wch: 20 }, // 实例ID
-    { wch: 15 }, // 实例类型
-    { wch: 10 }, // 状态
-    { wch: 10 }, // 环境
-    { wch: 15 }, // 地域
-    { wch: 15 }, // 可用区
-    { wch: 8 }, // CPU
-    { wch: 10 }, // 内存
-    { wch: 10 }, // 磁盘
-    { wch: 15 }, // 公网IP
-    { wch: 15 }, // 私网IP
-    { wch: 20 }, // 操作系统
-    { wch: 12 }, // 计费方式
-    { wch: 15 }, // 月成本
-    { wch: 20 }, // 到期时间
-    { wch: 30 }, // 服务树节点
-    { wch: 15 }, // 创建人
-    { wch: 20 }, // 创建时间
-    { wch: 20 }, // 更新时间
-    { wch: 30 }, // 描述
-  ];
-  worksheet['!cols'] = colWidths;
-
   // 导出文件
   const timestamp = new Date()
     .toISOString()
     .replace(/[:.]/g, '-')
     .substring(0, 19);
-  const filename = `云资源列表_${timestamp}.xlsx`;
-  XLSX.writeFile(workbook, filename);
+  const filename = `云资源列表_${timestamp}.csv`;
+  downloadCsv(filename, [Object.keys(exportData[0]!), ...exportData.map(row => Object.values(row))]);
   message.success(`导出成功：${filename}`);
 };
 
@@ -2273,7 +2240,7 @@ onMounted(async () => {
   }
 
   .stats-card {
-    border-radius: 8px;
+    border-radius: var(--ops-radius);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     height: 100%;
   }
@@ -2282,8 +2249,8 @@ onMounted(async () => {
     margin-bottom: 20px;
 
     .filter-card {
-      border-radius: 8px;
-      border: 1px solid #f0f0f0;
+      border-radius: var(--ops-radius);
+      border: 1px solid var(--ops-border);
       box-shadow: none;
 
       :deep(.ant-card-body) {
@@ -2312,8 +2279,8 @@ onMounted(async () => {
     margin-bottom: 24px;
 
     .table-card {
-      border-radius: 8px;
-      border: 1px solid #f0f0f0;
+      border-radius: var(--ops-radius);
+      border: 1px solid var(--ops-border);
       box-shadow: none;
 
       :deep(.ant-card-body) {
@@ -2323,13 +2290,13 @@ onMounted(async () => {
 
     .resource-table {
       :deep(.ant-table) {
-        border-radius: 8px;
+        border-radius: var(--ops-radius);
         overflow: hidden;
       }
 
       :deep(.ant-table-thead > tr > th) {
         white-space: nowrap;
-        background-color: #fafafa;
+        background-color: var(--ops-ground);
         font-weight: 600;
         color: #374151;
       }
@@ -2339,7 +2306,7 @@ onMounted(async () => {
       }
 
       :deep(.ant-table-tbody > tr:hover > td) {
-        background-color: #fafafa;
+        background-color: var(--ops-ground);
       }
 
       :deep(.ant-table-cell) {
@@ -2412,7 +2379,7 @@ onMounted(async () => {
       }
 
       .info-label {
-        color: #6b7280;
+        color: var(--ops-muted);
         font-weight: 500;
       }
 
@@ -2482,7 +2449,7 @@ onMounted(async () => {
 
       .cost-unit {
         font-size: 12px;
-        color: #6b7280;
+        color: var(--ops-muted);
       }
     }
 
@@ -2493,7 +2460,7 @@ onMounted(async () => {
       gap: 4px;
 
       :deep(.ant-btn-text) {
-        color: #6b7280;
+        color: var(--ops-muted);
         transition: all 0.2s;
 
         &:hover {
@@ -2516,19 +2483,19 @@ onMounted(async () => {
     }
 
     :deep(.ant-modal-content) {
-      border-radius: 8px;
+      border-radius: var(--ops-radius);
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     }
 
     :deep(.ant-modal-header) {
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid var(--ops-border);
       padding: 16px 24px;
     }
 
     :deep(.ant-modal-title) {
       font-size: 16px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--ops-ink);
     }
 
     :deep(.ant-modal-body) {
@@ -2561,8 +2528,8 @@ onMounted(async () => {
       line-height: 1.5;
       padding: 12px 16px;
       margin-bottom: 12px;
-      border: 2px solid #e5e7eb;
-      border-radius: 8px;
+      border: 2px solid var(--ops-border);
+      border-radius: var(--ops-radius);
       transition: all 0.3s;
 
       &:hover {
@@ -2581,7 +2548,7 @@ onMounted(async () => {
 
         .radio-desc {
           font-size: 12px;
-          color: #6b7280;
+          color: var(--ops-muted);
         }
       }
     }
@@ -2621,12 +2588,12 @@ onMounted(async () => {
 
     .unbind-checkbox {
       padding: 8px 12px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--ops-border);
       border-radius: 6px;
       transition: all 0.2s;
 
       &:hover {
-        background: #f8fafc;
+        background: var(--ops-ground);
         border-color: #1890ff;
       }
     }
@@ -2655,14 +2622,14 @@ onMounted(async () => {
 
   .detail-drawer {
     :deep(.ant-drawer-header) {
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid var(--ops-border);
       padding: 16px 24px;
     }
 
     :deep(.ant-drawer-title) {
       font-size: 18px;
       font-weight: 600;
-      color: #1f2937;
+      color: var(--ops-ink);
     }
 
     :deep(.ant-drawer-body) {
@@ -2683,7 +2650,7 @@ onMounted(async () => {
       h2 {
         margin: 0;
         font-size: 24px;
-        color: #1f2937;
+        color: var(--ops-ink);
         word-break: break-all;
       }
     }
@@ -2700,7 +2667,7 @@ onMounted(async () => {
       .section-title {
         font-size: 16px;
         font-weight: 600;
-        color: #1a1a1a;
+        color: var(--ops-ink);
         margin-bottom: 16px;
         padding-left: 12px;
         border-left: 4px solid #1890ff;
@@ -2726,7 +2693,7 @@ onMounted(async () => {
       justify-content: space-between;
       margin-top: 24px;
       padding-top: 16px;
-      border-top: 1px solid #f0f0f0;
+      border-top: 1px solid var(--ops-border);
     }
   }
 

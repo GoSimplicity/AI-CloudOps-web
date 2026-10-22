@@ -38,7 +38,7 @@ import {
   type CreateCloudAccountReq,
   type UpdateCloudAccountReq,
 } from '#/api/core/tree/tree_account';
-import * as XLSX from 'xlsx';
+import { downloadCsv } from '#/utils/export-csv';
 
 export function useCloudAccountManagement() {
   // ========== 状态定义 ==========
@@ -207,7 +207,7 @@ export function useCloudAccountManagement() {
         page: pagination.current,
         size: pagination.pageSize,
       };
-      
+
       // 使用过滤条件
       if (filterForm.search) params.search = filterForm.search;
       if (filterForm.provider) params.provider = filterForm.provider;
@@ -306,7 +306,7 @@ export function useCloudAccountManagement() {
           account_alias: formData.value.account_alias || undefined,
           description: formData.value.description || undefined,
         };
-        
+
         if (formData.value.access_key) updateData.access_key = formData.value.access_key;
         if (formData.value.secret_key) updateData.secret_key = formData.value.secret_key;
 
@@ -335,7 +335,7 @@ export function useCloudAccountManagement() {
       const hideCreating = message.loading('正在创建云账户...', 0);
       const createResponse = await createCloudAccountApi(formData.value as CreateCloudAccountReq);
       hideCreating();
-      
+
       const accountId = createResponse?.id;
       if (!accountId) {
         message.error('创建云账户失败：未获取到账户ID');
@@ -346,7 +346,7 @@ export function useCloudAccountManagement() {
         const hideVerifying = message.loading('正在验证凭证...', 0);
         await verifyCloudAccountApi(accountId);
         hideVerifying();
-        
+
         message.success('云账户创建并验证成功');
         modalVisible.value = false;
         fetchCloudAccounts();
@@ -390,16 +390,16 @@ export function useCloudAccountManagement() {
   const handleStatusChange = async (record: CloudAccount, checked: boolean): Promise<void> => {
     const newStatus = checked ? CloudAccountStatus.Enabled : CloudAccountStatus.Disabled;
     switchLoading.value[record.id] = true;
-    
+
     try {
       await updateCloudAccountStatusApi(record.id, newStatus);
       message.success(`账户已${checked ? '启用' : '禁用'}`);
-      
+
       const index = cloudAccounts.value.findIndex(item => item.id === record.id);
       if (index !== -1 && cloudAccounts.value[index]) {
         cloudAccounts.value[index]!.status = newStatus;
       }
-      
+
       if (currentDetail.value && currentDetail.value.id === record.id) {
         currentDetail.value.status = newStatus;
       }
@@ -425,7 +425,7 @@ export function useCloudAccountManagement() {
   const handleViewDetail = async (record: CloudAccount): Promise<void> => {
     detailVisible.value = true;
     detailLoading.value = true;
-    
+
     try {
       const response = await getCloudAccountDetailApi(record.id);
       currentDetail.value = response;
@@ -466,30 +466,10 @@ export function useCloudAccountManagement() {
       '描述': item.description || '-',
     }));
 
-    // 创建工作簿和工作表
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, '云账户列表');
-
-    // 设置列宽
-    const colWidths = [
-      { wch: 20 }, // 账户名称
-      { wch: 12 }, // 云厂商
-      { wch: 15 }, // 地域
-      { wch: 25 }, // 账户ID
-      { wch: 20 }, // 账户别名
-      { wch: 10 }, // 状态
-      { wch: 15 }, // 创建人
-      { wch: 20 }, // 创建时间
-      { wch: 20 }, // 更新时间
-      { wch: 30 }, // 描述
-    ];
-    worksheet['!cols'] = colWidths;
-
     // 导出文件
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-    const filename = `云账户列表_${timestamp}.xlsx`;
-    XLSX.writeFile(workbook, filename);
+    const filename = `云账户列表_${timestamp}.csv`;
+    downloadCsv(filename, [Object.keys(exportData[0]!), ...exportData.map(row => Object.values(row))]);
     message.success(`导出成功：${filename}`);
   };
 
@@ -560,11 +540,11 @@ export function useCloudAccountManagement() {
     ClearOutlined,
     ExportOutlined,
     FileExcelOutlined,
-    
+
     // Enums
     CloudProvider,
     CloudAccountStatus,
-    
+
     // States
     loading,
     detailLoading,
@@ -580,7 +560,7 @@ export function useCloudAccountManagement() {
     pagination,
     filterForm,
     formData,
-    
+
     // Computed
     enabledCount,
     aliCloudCount,
@@ -588,7 +568,7 @@ export function useCloudAccountManagement() {
     paginationConfig,
     formRules,
     columns,
-    
+
     // Methods
     getProviderColor,
     getProviderText,
@@ -614,4 +594,3 @@ export function useCloudAccountManagement() {
     exportAllToExcel,
   };
 }
-

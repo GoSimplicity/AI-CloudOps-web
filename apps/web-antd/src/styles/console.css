@@ -1,0 +1,23 @@
+:root {
+  --ops-surface: hsl(var(--background));
+  --ops-ground: hsl(var(--background-deep));
+  --ops-ink: hsl(var(--foreground));
+  --ops-muted: hsl(var(--muted-foreground));
+  --ops-border: hsl(var(--border));
+  --ops-accent: hsl(var(--primary));
+  --ops-radius: 2px;
+  --ops-duration: 120ms;
+}
+body { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--ops-accent); outline-offset: 3px; }
+.ant-card, .ant-modal-content, .ant-drawer-content { border-radius: var(--ops-radius); }
+.ant-table-tbody > tr > td { transition: background-color var(--ops-duration) ease-out; }
+.ant-table-tbody > tr:hover > td:first-child { box-shadow: inset 2px 0 var(--ops-accent); }
+.ant-table-wrapper { max-width: 100%; overflow-x: auto; }
+.ant-table-cell { overflow-wrap: anywhere; }
+.ant-empty-description { color: var(--ops-muted); }
+code, pre { font-family: SFMono-Regular, Consolas, monospace; }
+@media (pointer: coarse) { .ant-btn, .ant-input, .ant-select-selector { min-height: 40px; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

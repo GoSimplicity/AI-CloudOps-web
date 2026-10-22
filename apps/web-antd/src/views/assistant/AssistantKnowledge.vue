@@ -219,12 +219,12 @@ const refreshKnowledge = async () => {
     refreshing.value = true;
     const response = await refreshKnowledgeBase();
     const data = response as RefreshKnowledgeResponse;
-    
+
     if (data.refreshed) {
       knowledgeStats.documents_count = data.documents_count;
       knowledgeStats.vector_count = data.vector_count;
       knowledgeStats.last_update = new Date(data.timestamp).toLocaleString();
-      
+
       message.success('知识库刷新成功');
       addLog('success', `知识库刷新成功：${data.message}`);
     } else {
@@ -248,28 +248,28 @@ const beforeUpload = (file: File) => {
     message.error('只能上传 txt, md, pdf, doc, docx 格式的文件');
     return false;
   }
-  
+
   const isLt10M = file.size / 1024 / 1024 < 10;
   if (!isLt10M) {
     message.error('文件大小不能超过 10MB');
     return false;
   }
-  
+
   return true;
 };
 
 // 处理文件上传
 const handleUpload = async (options: any) => {
   const { file } = options;
-  
+
   try {
     const response = await uploadKnowledgeFile(file);
     const data = response as UploadKnowledgeResponse;
-    
+
     if (data.uploaded) {
       message.success(`文件 ${data.filename} 上传成功`);
       addLog('success', `文件上传成功: ${data.filename} (${data.file_size} 字节)`);
-      
+
       // 上传成功后刷新知识库统计
       await refreshKnowledge();
     } else {
@@ -296,21 +296,21 @@ const addDocument = async () => {
     message.warning('请输入文档内容');
     return;
   }
-  
+
   try {
     adding.value = true;
     const response = await addDocumentAPI(documentForm);
     const data = response as AddDocumentResponse;
-    
+
     if (data.added) {
       message.success('文档添加成功');
       addLog('success', `文档添加成功: ${documentForm.title} (ID: ${data.document_id})`);
-      
+
       // 清空表单
       documentForm.title = '';
       documentForm.content = '';
       documentForm.file_name = '';
-      
+
       // 刷新知识库统计
       await refreshKnowledge();
     } else {
@@ -335,18 +335,18 @@ onMounted(() => {
 <style scoped>
 .knowledge-container {
   padding: 24px;
-  background-color: var(--ant-background-color-light, #fafafa);
+  background-color: var(--ant-background-color-light, var(--ops-ground));
   min-height: 100vh;
 }
 
 /* 页面头部 */
 .knowledge-container .page-header {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .knowledge-container .header-content {
@@ -376,12 +376,12 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #262626;
+  color: var(--ops-ink);
   line-height: 1.2;
 }
 
 .knowledge-container .page-subtitle {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin: 0;
   font-size: 14px;
   margin-top: 4px;
@@ -402,7 +402,7 @@ onMounted(() => {
 
     .stat-card {
       text-align: center;
-      border-radius: 8px;
+      border-radius: var(--ops-radius);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       margin-bottom: 24px;
       transition: all 0.3s ease;
@@ -419,7 +419,7 @@ onMounted(() => {
 
     .function-card {
       height: 100%;
-      border-radius: 8px;
+      border-radius: var(--ops-radius);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       margin-bottom: 24px;
       transition: all 0.3s ease;
@@ -432,7 +432,7 @@ onMounted(() => {
 
     .upload-area {
       .upload-dragger {
-        border-radius: 8px;
+        border-radius: var(--ops-radius);
         border: 2px dashed var(--ant-border-color);
         transition: all 0.3s ease;
 
@@ -457,7 +457,7 @@ onMounted(() => {
   }
 
   .log-card {
-    border-radius: 8px;
+    border-radius: var(--ops-radius);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin-bottom: 24px;
 
@@ -534,13 +534,13 @@ onMounted(() => {
   .knowledge-container {
     padding: 16px;
   }
-  
+
   .knowledge-header {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
   }
-  
+
   .header-actions {
     justify-content: center;
   }

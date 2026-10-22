@@ -152,7 +152,7 @@
               </a-button>
             </a-space>
           </template>
-          
+
           <a-tabs v-model:activeKey="activeChartTab" @change="onChartTabChange">
             <a-tab-pane key="trend" tab="趋势预测">
               <div ref="trendChartRef" class="chart-container"></div>
@@ -333,7 +333,7 @@ const startAnalysis = async () => {
   analyzing.value = true;
   try {
     let response: PredictionResponse;
-    
+
     const baseRequest = {
       prediction_hours: formData.predictionHours,
       granularity: formData.granularity,
@@ -374,7 +374,7 @@ const startAnalysis = async () => {
     }
 
     predictionResult.value = response;
-    
+
     await nextTick();
     initCharts();
     message.success('预测分析完成');
@@ -615,16 +615,16 @@ const resetForm = () => {
 
 const exportResult = () => {
   if (!predictionResult.value) return;
-  
+
   const data = JSON.stringify(predictionResult.value, null, 2);
   const blob = new Blob([data], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  
+
   const link = document.createElement('a');
   link.href = url;
   link.download = `prediction-result-${Date.now()}.json`;
   link.click();
-  
+
   URL.revokeObjectURL(url);
   message.success('预测结果已导出');
 };
@@ -655,18 +655,18 @@ onUnmounted(() => {
 <style scoped>
 .predict-analysis {
   padding: 24px;
-  background-color: var(--ant-background-color-light, #fafafa);
+  background-color: var(--ant-background-color-light, var(--ops-ground));
   min-height: 100vh;
 }
 
 /* 页面头部 */
 .predict-analysis .page-header {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 16px 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .predict-analysis .header-content {
@@ -696,12 +696,12 @@ onUnmounted(() => {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #262626;
+  color: var(--ops-ink);
   line-height: 1.2;
 }
 
 .predict-analysis .page-subtitle {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin: 0;
   font-size: 12px;
   margin-top: 4px;
@@ -718,7 +718,7 @@ onUnmounted(() => {
 .empty-result-card,
 .recommendations-card,
 .insights-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 24px;
 }
@@ -757,7 +757,7 @@ onUnmounted(() => {
   gap: 16px;
   padding: 16px;
   border: 1px solid var(--ant-border-color-split);
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   transition: all 0.3s;
 }
 
@@ -774,8 +774,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  background: linear-gradient(135deg, #1890ff, #36cfc9);
-  color: white;
+  background: var(--ops-accent);
+  color: hsl(var(--primary-foreground));
 }
 
 .rec-content {
@@ -846,7 +846,7 @@ onUnmounted(() => {
   .predict-analysis {
     padding: 16px;
   }
-  
+
   .predict-analysis .page-header {
     padding: 20px;
     margin-bottom: 16px;
@@ -874,11 +874,11 @@ onUnmounted(() => {
   .predict-analysis .header-icon {
     font-size: 36px;
   }
-  
+
   .chart-container {
     height: 300px;
   }
-  
+
   .recommendations-grid {
     grid-template-columns: 1fr;
   }

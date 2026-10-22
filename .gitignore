@@ -76,3 +76,7 @@ vite.config.ts.*
 *.sln
 *.sw?
 .history
+
+# Browser verification artifacts (may contain authenticated page content)
+test-results/
+playwright-report/

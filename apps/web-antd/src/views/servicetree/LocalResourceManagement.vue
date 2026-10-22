@@ -3,12 +3,6 @@
     <!-- 页面标题 -->
     <div class="page-header">
       <div class="header-actions">
-        <a-button type="primary" @click="handleTestConnection" class="btn-action">
-          <template #icon>
-            <api-outlined />
-          </template>
-          <span class="btn-text">批量测试连接</span>
-        </a-button>
         <a-button type="primary" @click="showCreateModal" class="btn-create">
           <template #icon>
             <plus-outlined />
@@ -217,9 +211,6 @@
                 <a-dropdown>
                   <template #overlay>
                     <a-menu>
-                      <a-menu-item key="test" @click="handleTestSingleConnection(record)">
-                        <api-outlined /> 测试连接
-                      </a-menu-item>
                       <a-menu-item key="bind" @click="showBindModal(record)">
                         <deployment-unit-outlined /> 绑定服务树
                       </a-menu-item>
@@ -415,14 +406,6 @@
           >
             {{ isEdit ? '更新' : '添加' }}
           </a-button>
-          <a-button 
-            v-if="!isEdit"
-            @click="handleTestAndSubmit" 
-            :loading="testLoading"
-            style="margin-left: 8px;"
-          >
-            <api-outlined /> 测试并添加
-          </a-button>
         </div>
       </a-form>
     </a-modal>
@@ -578,12 +561,9 @@
                 <a-empty v-else :image="Empty.PRESENTED_IMAGE_SIMPLE" description="暂无绑定节点" />
               </div>
             </div>
-            
+
             <div class="drawer-actions">
               <a-button-group>
-                <a-button type="primary" @click="handleTestSingleConnection(currentDetail)">
-                  <api-outlined /> 测试连接
-                </a-button>
                 <a-button @click="handleEdit(currentDetail)">
                   <edit-outlined /> 编辑
                 </a-button>
@@ -608,7 +588,6 @@ import {
   EditOutlined,
   DeleteOutlined,
   DownOutlined,
-  ApiOutlined,
   WindowsOutlined,
   DesktopOutlined,
   DeploymentUnitOutlined,
@@ -639,7 +618,7 @@ import { getTreeList } from '#/api/core/tree/tree_node';
 const loading = ref(false);
 const detailLoading = ref(false);
 const submitLoading = ref(false);
-const testLoading = ref(false);
+
 const modalVisible = ref(false);
 const detailVisible = ref(false);
 const isEdit = ref(false);
@@ -846,11 +825,6 @@ const getAuthModeText = (authMode: AuthMode): string => {
   return authModeMap[authMode] || '未知';
 };
 
-const simulateConnectionTest = async (_name: string): Promise<boolean> => {
-  await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
-  return Math.random() > 0.2;
-};
-
 // 表单验证函数
 async function validatePrivateKey(_rule: any, value: string): Promise<void> {
   if (formData.value.auth_mode === AuthMode.KEY && value && !value.includes('PRIVATE KEY')) {
@@ -875,7 +849,7 @@ const fetchLocalResources = async (): Promise<void> => {
       page: pagination.current,
       size: pagination.pageSize,
     };
-    
+
     if (filterForm.status) {
       params.status = filterForm.status;
     }
@@ -1018,7 +992,7 @@ const addTag = (): void => {
     message.warning('请输入标签内容');
     return;
   }
-  
+
   // 确保 tags 数组存在且为响应式数组
   if (!Array.isArray(formData.value.tags)) {
     formData.value.tags = [];
@@ -1028,15 +1002,15 @@ const addTag = (): void => {
     message.warning('标签已存在');
     return;
   }
-  
+
   if (formData.value.tags.length >= 10) {
     message.warning('最多只能添加10个标签');
     return;
   }
-  
+
   // 使用 Vue 3 推荐的方式更新数组，确保响应式
   formData.value.tags = [...formData.value.tags, tagValue];
-  
+
   // 使用 nextTick 确保DOM更新后再清空输入框
   nextTick(() => {
     newTag.value = '';
@@ -1053,96 +1027,6 @@ const removeTag = (index: number): void => {
     // 使用 Vue 3 推荐的方式更新数组，确保响应式
     formData.value.tags = formData.value.tags.filter((_, i) => i !== index);
 
-  }
-};
-
-const updateResourceStatus = (resourceId: number, status: ResourceStatus): void => {
-  const resource = localResources.value.find((item: TreeLocalResource) => item.id === resourceId);
-  if (resource) {
-    resource.status = status;
-  }
-  if (currentDetail.value && currentDetail.value.id === resourceId) {
-    currentDetail.value.status = status;
-  }
-};
-
-const handleTestSingleConnection = async (record: TreeLocalResource): Promise<void> => {
-  const hide = message.loading(`正在测试 ${record.name} 的连接...`, 0);
-  
-  try {
-    const success = await simulateConnectionTest(record.name);
-    
-    if (success) {
-      message.success(`${record.name} 连接测试成功`);
-      updateResourceStatus(record.id, ResourceStatus.RUNNING);
-    } else {
-      message.error(`${record.name} 连接测试失败`);
-      updateResourceStatus(record.id, ResourceStatus.STOPPED);
-    }
-  } catch (error) {
-    message.error(`${record.name} 连接测试异常`);
-
-  } finally {
-    hide();
-  }
-};
-
-const handleTestConnection = async (): Promise<void> => {
-  if (localResources.value.length === 0) {
-    message.warning('没有可测试的服务器');
-    return;
-  }
-  
-  const hide = message.loading('正在批量测试连接，请稍候...', 0);
-  
-  try {
-    const testPromises = localResources.value.map(async (resource: TreeLocalResource) => {
-      const success = await simulateConnectionTest(resource.name);
-      updateResourceStatus(resource.id, success ? ResourceStatus.RUNNING : ResourceStatus.STOPPED);
-      return success;
-    });
-    
-    const results = await Promise.all(testPromises);
-    const onlineCount = results.filter(Boolean).length;
-    const totalCount = localResources.value.length;
-    
-    message.success(`批量测试完成，${onlineCount}/${totalCount} 台服务器在线`);
-  } catch (error) {
-    message.error('批量测试连接失败');
-
-  } finally {
-    hide();
-  }
-};
-
-const handleTestAndSubmit = async (): Promise<void> => {
-  try {
-    await formRef.value?.validate();
-    
-    testLoading.value = true;
-    
-    const testHide = message.loading(`正在测试 ${formData.value.name!} 的连接...`, 0);
-    
-    try {
-      const testSuccess = await simulateConnectionTest(formData.value.name!);
-      testHide();
-      
-      if (!testSuccess) {
-        message.error('连接测试失败，请检查服务器配置');
-        return;
-      }
-      
-      message.success('连接测试成功，正在添加服务器...');
-      await handleSubmit();
-      
-    } catch (error) {
-      testHide();
-      message.error('连接测试失败');
-    }
-  } catch (error) {
-    message.error('表单验证失败');
-  } finally {
-    testLoading.value = false;
   }
 };
 
@@ -1168,10 +1052,10 @@ const handleBind = async (): Promise<void> => {
     message.success('绑定成功');
     bindModalVisible.value = false;
     selectedTreeNodeIds.value = [];
-    
+
     // 刷新数据以显示最新绑定的节点
     await fetchLocalResources();
-    
+
     // 如果当前有详情显示，也刷新详情
     if (detailVisible.value && currentDetail.value && currentDetail.value.id === currentResource.value.id) {
       const response = await getTreeLocalDetail(currentResource.value.id);
@@ -1204,10 +1088,10 @@ const handleUnbind = async (): Promise<void> => {
     message.success('解绑成功');
     unbindModalVisible.value = false;
     selectedUnbindNodeIds.value = [];
-    
+
     // 刷新数据以显示最新的节点绑定状态
     await fetchLocalResources();
-    
+
     // 如果当前有详情显示，也刷新详情
     if (detailVisible.value && currentDetail.value && currentDetail.value.id === currentResource.value.id) {
       const response = await getTreeLocalDetail(currentResource.value.id);
@@ -1239,7 +1123,6 @@ const handleSubmit = async (): Promise<void> => {
 
     // 移除 id 字段（用于区分创建和更新）
     const { id, ...rest } = submitData;
-    
 
     if (isEdit.value) {
       if (!id) {
@@ -1273,11 +1156,11 @@ const handleDelete = (record: TreeLocalResource): void => {
       try {
         await deleteTreeLocal(record.id);
         message.success('服务器删除成功');
-        
+
         if (detailVisible.value && currentDetail.value?.id === record.id) {
           detailVisible.value = false;
         }
-        
+
         await fetchLocalResources();
       } catch (error) {
         message.error('删除服务器失败');
@@ -1354,7 +1237,7 @@ onMounted(async () => {
 
 .stats-card {
   border-radius: 6px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
   box-shadow: none;
   height: 100%;
 }
@@ -1369,8 +1252,8 @@ onMounted(async () => {
 }
 
 .table-container :deep(.ant-card) {
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
   box-shadow: none;
 }
 
@@ -1400,7 +1283,7 @@ onMounted(async () => {
 }
 
 .status-unknown {
-  background-color: #d9d9d9;
+  background-color: var(--ops-border);
 }
 
 .server-name-text {
@@ -1421,8 +1304,8 @@ onMounted(async () => {
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
 }
 
 .tech-tag:hover {
@@ -1462,13 +1345,13 @@ onMounted(async () => {
 
 .connection-label {
   font-size: 12px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .connection-value {
   font-size: 12px;
   font-weight: 500;
-  color: #333;
+  color: var(--ops-ink);
 }
 
 .creator-info {
@@ -1494,7 +1377,7 @@ onMounted(async () => {
 
 .time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .action-buttons {
@@ -1514,7 +1397,7 @@ onMounted(async () => {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
   border-left: 4px solid #1890ff;
@@ -1534,12 +1417,12 @@ onMounted(async () => {
   .tags-input {
     .current-tags {
       margin-bottom: 12px;
-      
+
       .tech-tag {
         margin-bottom: 8px;
       }
     }
-    
+
     .add-tag {
       display: flex;
       align-items: center;
@@ -1547,20 +1430,20 @@ onMounted(async () => {
       gap: 8px;
     }
   }
-  
+
   .form-actions {
     display: flex;
     justify-content: flex-end;
     margin-top: 24px;
     padding-top: 16px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid var(--ops-border);
   }
 }
 
 .add-tag-btn {
-  background: #f5f5f5;
-  border: 1px dashed #d9d9d9;
-  color: #595959;
+  background: var(--ops-ground);
+  border: 1px dashed var(--ops-border);
+  color: var(--ops-muted);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1588,7 +1471,7 @@ onMounted(async () => {
 .detail-header h2 {
   margin: 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--ops-ink);
   word-break: break-all;
 }
 
@@ -1614,7 +1497,7 @@ onMounted(async () => {
   justify-content: space-between;
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
 }
 
 /* 响应式设计 */
@@ -1738,7 +1621,7 @@ onMounted(async () => {
 
 .table-container :deep(.ant-table-thead > tr > th) {
   white-space: nowrap;
-  background-color: #fafafa;
+  background-color: var(--ops-ground);
 }
 
 .table-container :deep(.ant-table-tbody > tr > td) {
@@ -1746,7 +1629,7 @@ onMounted(async () => {
 }
 
 .table-container :deep(.ant-table-tbody > tr:hover > td) {
-  background-color: #fafafa;
+  background-color: var(--ops-ground);
 }
 
 /* 对话框响应式优化 */
@@ -1756,7 +1639,7 @@ onMounted(async () => {
 }
 
 .responsive-modal :deep(.ant-modal-content) {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
@@ -1780,7 +1663,7 @@ onMounted(async () => {
 
 /* 加载状态优化 */
 .table-container :deep(.ant-spin-nested-loading) {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
 }
 
 /* 分页器样式 */

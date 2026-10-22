@@ -45,7 +45,7 @@
             <Icon icon="material-symbols:search" />
           </template>
         </a-input>
-        
+
         <a-select
           v-model:value="searchParams.enable"
           placeholder="状态筛选"
@@ -66,7 +66,7 @@
           <a-select-option :value="2">服务账号</a-select-option>
         </a-select>
       </div>
-      
+
       <div class="search-right">
         <a-button type="primary" @click="handleSearch">搜索</a-button>
         <a-button @click="handleReset">重置</a-button>
@@ -97,20 +97,20 @@
               </div>
             </div>
           </template>
-          
+
           <template v-if="column.key === 'contact'">
             <div class="contact-info">
               <div v-if="record.mobile">{{ record.mobile }}</div>
               <div v-if="record.email">{{ record.email }}</div>
             </div>
           </template>
-          
+
           <template v-if="column.key === 'type'">
             <a-tag v-if="record.account_type === 2" color="orange">服务账号</a-tag>
             <a-tag v-else-if="isAdminUser(record)" color="red">管理员</a-tag>
             <a-tag v-else color="blue">普通用户</a-tag>
           </template>
-          
+
           <template v-if="column.key === 'status'">
             <a-switch 
               :checked="record.enable === 1" 
@@ -118,15 +118,15 @@
               size="small"
             />
           </template>
-          
+
           <template v-if="column.key === 'roles'">
             {{ record.roles?.length || 0 }}
           </template>
-          
+
           <template v-if="column.key === 'created_at'">
             {{ formatTime(record.created_at) }}
           </template>
-          
+
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
               <a-button type="text" size="small" @click="handleView(record)">查看</a-button>
@@ -292,7 +292,7 @@
             </div>
           </div>
         </a-form-item>
-        
+
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="用户名" name="username">
@@ -305,7 +305,7 @@
             </a-form-item>
           </a-col>
         </a-row>
-        
+
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="手机号" name="mobile">
@@ -318,7 +318,7 @@
             </a-form-item>
           </a-col>
         </a-row>
-        
+
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="飞书ID" name="fei_shu_user_id">
@@ -326,7 +326,7 @@
             </a-form-item>
           </a-col>
         </a-row>
-        
+
         <a-row :gutter="16" v-if="modalTitle === '新建用户'">
           <a-col :span="12">
             <a-form-item label="密码" name="password">
@@ -371,7 +371,7 @@
         <div class="role-header">
           <h4>{{ currentUser.real_name || currentUser.username }} 的角色</h4>
         </div>
-        
+
         <a-tabs>
           <a-tab-pane key="assigned" tab="已分配角色">
             <div class="role-list">
@@ -387,7 +387,7 @@
               </div>
             </div>
           </a-tab-pane>
-          
+
           <a-tab-pane key="available" tab="可分配角色">
             <div class="role-list">
               <div v-if="availableRoles.length === 0" class="empty-state">
@@ -583,7 +583,7 @@ const formChangPwdRules = computed(() => {
       { required: true, message: '请输入密码', trigger: 'blur' },
       { min: 6, message: '密码长度至少6位', trigger: 'blur' }
     ];
-    
+
     rules.confirmPassword = [
       { required: true, message: '请确认密码', trigger: 'blur' },
       {
@@ -634,13 +634,13 @@ const beforeAvatarUpload = (file: File) => {
     message.error('只能上传 JPG/PNG/GIF/WebP 格式的图片!');
     return false;
   }
-  
+
   const isLt2M = file.size / 1024 / 1024 < 2;
   if (!isLt2M) {
     message.error('图片大小不能超过 2MB!');
     return false;
   }
-  
+
   handleAvatarUploadLocal(file);
   return false;
 };
@@ -665,7 +665,7 @@ const handleAvatarChange = (info: any) => {
     avatarUploading.value = true;
     return;
   }
-  
+
   if (info.file.status === 'done') {
     avatarUploading.value = false;
     if (info.file.response && info.file.response.data && info.file.response.data.url) {
@@ -678,7 +678,7 @@ const handleAvatarChange = (info: any) => {
       message.error('头像上传失败，返回数据格式错误');
     }
   }
-  
+
   if (info.file.status === 'error') {
     avatarUploading.value = false;
     message.error('头像上传失败');
@@ -722,10 +722,10 @@ const fetchUserList = async () => {
     }
 
     const response = await getUserList(params);
-    
+
     userList.value = response.items || [];
     paginationConfig.total = response.total || 0;
-    
+
   } catch (error: any) {
     message.error(error.message || '获取用户列表失败');
     userList.value = [];
@@ -747,10 +747,10 @@ const fetchRoleList = async () => {
         page: currentPage, 
         size: pageSize 
       });
-      
+
       if (response && response.items && response.items.length > 0) {
         allRoles = [...allRoles, ...response.items];
-        
+
         if (response.items.length < pageSize || allRoles.length >= (response.total || 0)) {
           hasMoreData = false;
         } else {
@@ -892,11 +892,11 @@ const handleDelete = async (user: UserInfo) => {
 // 修复状态变更函数
 const handleStatusChange = async (user: UserInfo, newStatus: number) => {
   const originalStatus = user.enable;
-  
+
   try {
     // 乐观更新
     user.enable = newStatus;
-    
+
     const updateData: UpdateProfileReq = {
       id: user.id,
       real_name: user.real_name || '',
@@ -909,10 +909,10 @@ const handleStatusChange = async (user: UserInfo, newStatus: number) => {
       email: user.email || '',
       avatar: user.avatar || ''
     };
-    
+
     await updateUserInfo(updateData);
     message.success('状态更新成功');
-    
+
     // 更新统计数据
     await fetchUserStatistics();
   } catch (error: any) {
@@ -951,7 +951,7 @@ const handleSubmit = async () => {
   try {
     await formRef.value?.validate();
     submitLoading.value = true;
-    
+
     if (modalTitle.value === '新建用户') {
       const signUpData: UserSignUpReq = {
         username: formData.username,
@@ -964,21 +964,21 @@ const handleSubmit = async () => {
         home_path: formData.home_path,
         fei_shu_user_id: formData.fei_shu_user_id || ''
       };
-      
+
       // 添加可选字段
       if (formData.email) {
         (signUpData as any).email = formData.email;
       }
-      
+
       if (formData.avatar) {
         (signUpData as any).avatar = formData.avatar;
       }
-      
+
       // 修复：添加飞书ID字段
       if (formData.fei_shu_user_id) {
         (signUpData as any).fei_shu_user_id = formData.fei_shu_user_id;
       }
-      
+
       await registerApi(signUpData);
       message.success('创建成功');
     } else {
@@ -997,7 +997,7 @@ const handleSubmit = async () => {
       await updateUserInfo(updateData);
       message.success('更新成功');
     }
-    
+
     modalVisible.value = false;
     await fetchUserList();
     await fetchUserStatistics(); // 更新统计数据
@@ -1052,7 +1052,7 @@ onMounted(() => {
 /* 原有样式保持不变 */
 .user-management {
   padding: 20px;
-  background: #f5f5f5;
+  background: var(--ops-ground);
   min-height: 100vh;
 }
 
@@ -1062,16 +1062,16 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 20px;
   padding: 20px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
 }
 
 .page-header h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .header-actions {
@@ -1093,11 +1093,11 @@ onMounted(() => {
 }
 
 .stat-card {
-  background: white;
+  background: var(--ops-surface);
   padding: 20px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   text-align: center;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--ops-border);
 }
 
 .stat-number {
@@ -1109,7 +1109,7 @@ onMounted(() => {
 
 .stat-label {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .search-section {
@@ -1119,9 +1119,9 @@ onMounted(() => {
   gap: 16px;
   margin-bottom: 20px;
   padding: 20px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
 }
 
 .search-left {
@@ -1148,21 +1148,21 @@ onMounted(() => {
 }
 
 .table-container {
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
   overflow: hidden;
 }
 
 .table-container :deep(.ant-table-thead > tr > th) {
-  background: #fafafa;
+  background: var(--ops-ground);
   font-weight: 600;
-  color: #262626;
-  border-bottom: 1px solid #e8e8e8;
+  color: var(--ops-ink);
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .table-container :deep(.ant-table-tbody > tr:hover > td) {
-  background: #f5f5f5;
+  background: var(--ops-ground);
 }
 
 .user-info {
@@ -1175,11 +1175,11 @@ onMounted(() => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #f0f0f0;
+  background: var(--ops-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: hsl(var(--primary-foreground));
   font-weight: 600;
   overflow: hidden;
   flex-shrink: 0;
@@ -1199,8 +1199,8 @@ onMounted(() => {
 }
 
 .default-avatar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--ops-accent);
+  color: hsl(var(--primary-foreground));
   font-weight: 600;
   font-size: 14px;
   display: flex;
@@ -1213,18 +1213,18 @@ onMounted(() => {
 
 .user-name {
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin-bottom: 2px;
 }
 
 .user-username {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .contact-info {
   font-size: 13px;
-  color: #595959;
+  color: var(--ops-muted);
   line-height: 1.4;
 }
 
@@ -1243,11 +1243,11 @@ onMounted(() => {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  border: 2px solid #d9d9d9;
+  border: 2px solid var(--ops-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fafafa;
+  background: var(--ops-ground);
   overflow: hidden;
   flex-shrink: 0;
   position: relative;
@@ -1320,9 +1320,9 @@ onMounted(() => {
   margin: 0 0 16px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   padding-bottom: 8px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .detail-grid {
@@ -1333,22 +1333,22 @@ onMounted(() => {
 
 .detail-item {
   padding: 12px;
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 6px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
 }
 
 .detail-item label {
   display: block;
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 600;
   margin-bottom: 4px;
 }
 
 .detail-item span {
   font-size: 14px;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .avatar-detail {
@@ -1361,12 +1361,12 @@ onMounted(() => {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  border: 2px solid #d9d9d9;
+  border: 2px solid var(--ops-border);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fafafa;
+  background: var(--ops-ground);
   margin-top: 8px;
 }
 
@@ -1389,13 +1389,13 @@ onMounted(() => {
 .role-header {
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .role-header h4 {
   margin: 0;
   font-size: 16px;
-  color: #262626;
+  color: var(--ops-ink);
   font-weight: 600;
 }
 
@@ -1406,10 +1406,10 @@ onMounted(() => {
 
 .empty-state {
   text-align: center;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   padding: 40px 0;
-  background: #fafafa;
-  border: 1px dashed #d9d9d9;
+  background: var(--ops-ground);
+  border: 1px dashed var(--ops-border);
   border-radius: 6px;
 }
 
@@ -1418,14 +1418,14 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background: #fafafa;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   margin-bottom: 8px;
 }
 
 .role-item:hover {
-  background: #f0f0f0;
+  background: var(--ops-border);
 }
 
 .role-info {
@@ -1434,13 +1434,13 @@ onMounted(() => {
 
 .role-name {
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin-bottom: 4px;
 }
 
 .role-desc {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .table-container :deep(.ant-btn-text) {
@@ -1467,21 +1467,21 @@ onMounted(() => {
     align-items: stretch;
     gap: 16px;
   }
-  
+
   .search-left {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .search-input {
     max-width: none;
   }
-  
+
   .status-select,
   .type-select {
     width: 100%;
   }
-  
+
   .search-right {
     justify-content: flex-end;
   }
@@ -1491,58 +1491,58 @@ onMounted(() => {
   .user-management {
     padding: 12px;
   }
-  
+
   .page-header {
     flex-direction: column;
     gap: 16px;
     text-align: center;
   }
-  
+
   .header-actions {
     width: 100%;
     justify-content: center;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .search-right {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .detail-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .action-buttons {
     flex-direction: column;
     width: 100%;
   }
-  
+
   .user-info {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-  
+
   .avatar-upload {
     flex-direction: column;
     gap: 12px;
     text-align: center;
   }
-  
+
   .avatar-preview {
     width: 60px;
     height: 60px;
   }
-  
+
   .user-avatar {
     width: 32px;
     height: 32px;
   }
-  
+
   .detail-avatar {
     width: 50px;
     height: 50px;
@@ -1554,12 +1554,12 @@ onMounted(() => {
 }
 
 .role-list::-webkit-scrollbar-track {
-  background: #f0f0f0;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
 .role-list::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 

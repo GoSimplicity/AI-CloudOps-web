@@ -49,7 +49,7 @@ import {
   FileExcelOutlined,
 } from '@ant-design/icons-vue';
 
-import * as XLSX from 'xlsx';
+import { downloadCsv } from '#/utils/export-csv';
 
 // API 导入
 import {
@@ -405,16 +405,16 @@ export function useCloudResourceManager() {
         });
         const items = (response as any).items || [];
         const total = (response as any).total || 0;
-        
+
         allAccounts = [...allAccounts, ...items];
-        
+
         if (items.length < pageSize || allAccounts.length >= total) {
           hasMore = false;
         } else {
           currentPage++;
         }
       }
-      
+
       cloudAccounts.value = allAccounts;
     } catch (error) {
       console.error('获取云账户列表失败', error);
@@ -589,12 +589,12 @@ export function useCloudResourceManager() {
   const addTag = (): void => {
     const key = newTagKey.value.trim();
     const value = newTagValue.value.trim();
-    
+
     if (!key || !value) {
       message.warning('请输入完整的标签信息');
       return;
     }
-    
+
     if (!Array.isArray(editForm.tags)) {
       editForm.tags = [];
     }
@@ -603,7 +603,7 @@ export function useCloudResourceManager() {
       message.warning('标签Key已存在');
       return;
     }
-    
+
     editForm.tags.push({ key, value });
     newTagKey.value = '';
     newTagValue.value = '';
@@ -624,7 +624,7 @@ export function useCloudResourceManager() {
       message.success('更新成功');
       editModalVisible.value = false;
       await fetchResources();
-      
+
       if (detailVisible.value && currentDetail.value?.id === id) {
         const response = await getTreeCloudResourceDetailApi(id);
         currentDetail.value = (response as any).data || response;
@@ -690,7 +690,7 @@ export function useCloudResourceManager() {
       message.success('绑定成功');
       bindModalVisible.value = false;
       await fetchResources();
-      
+
       if (detailVisible.value && currentDetail.value?.id === currentResource.value.id) {
         const response = await getTreeCloudResourceDetailApi(currentResource.value.id);
         currentDetail.value = (response as any).data || response;
@@ -724,7 +724,7 @@ export function useCloudResourceManager() {
       unbindModalVisible.value = false;
       selectedUnbindNodeIds.value = [];
       await fetchResources();
-      
+
       if (detailVisible.value && currentDetail.value?.id === currentResource.value.id) {
         const response = await getTreeCloudResourceDetailApi(currentResource.value.id);
         currentDetail.value = (response as any).data || response;
@@ -742,7 +742,7 @@ export function useCloudResourceManager() {
       await updateCloudResourceStatusApi(record.id, { status: newStatus });
       message.success('状态更新成功');
       await fetchResources();
-      
+
       if (detailVisible.value && currentDetail.value?.id === record.id) {
         const response = await getTreeCloudResourceDetailApi(record.id);
         currentDetail.value = (response as any).data || response;
@@ -776,11 +776,11 @@ export function useCloudResourceManager() {
         try {
           await deleteTreeCloudResourceApi(record.id);
           message.success('删除成功');
-          
+
           if (detailVisible.value && currentDetail.value?.id === record.id) {
             detailVisible.value = false;
           }
-          
+
           await fetchResources();
         } catch (error) {
           message.error('删除失败');
@@ -872,43 +872,10 @@ export function useCloudResourceManager() {
       '描述': item.description || '-',
     }));
 
-    // 创建工作簿和工作表
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, '云资源列表');
-
-    // 设置列宽
-    const colWidths = [
-      { wch: 25 }, // 资源名称
-      { wch: 12 }, // 资源类型
-      { wch: 20 }, // 云账户
-      { wch: 20 }, // 实例ID
-      { wch: 15 }, // 实例类型
-      { wch: 10 }, // 状态
-      { wch: 10 }, // 环境
-      { wch: 15 }, // 地域
-      { wch: 15 }, // 可用区
-      { wch: 8 },  // CPU
-      { wch: 10 }, // 内存
-      { wch: 10 }, // 磁盘
-      { wch: 15 }, // 公网IP
-      { wch: 15 }, // 私网IP
-      { wch: 20 }, // 操作系统
-      { wch: 12 }, // 计费方式
-      { wch: 15 }, // 月成本
-      { wch: 20 }, // 到期时间
-      { wch: 30 }, // 服务树节点
-      { wch: 15 }, // 创建人
-      { wch: 20 }, // 创建时间
-      { wch: 20 }, // 更新时间
-      { wch: 30 }, // 描述
-    ];
-    worksheet['!cols'] = colWidths;
-
     // 导出文件
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-    const filename = `云资源列表_${timestamp}.xlsx`;
-    XLSX.writeFile(workbook, filename);
+    const filename = `云资源列表_${timestamp}.csv`;
+    downloadCsv(filename, [Object.keys(exportData[0]!), ...exportData.map(row => Object.values(row))]);
     message.success(`导出成功：${filename}`);
   };
 
@@ -1068,4 +1035,3 @@ export function useCloudResourceManager() {
     exportToExcel,
   };
 }
-

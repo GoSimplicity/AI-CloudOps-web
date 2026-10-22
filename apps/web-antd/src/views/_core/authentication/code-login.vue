@@ -17,7 +17,7 @@ const loading = ref(false);
  */
 async function handleLogin(values: LoginCodeParams) {
   // eslint-disable-next-line no-console
-  console.log(values);
+  void values;
 }
 </script>
 

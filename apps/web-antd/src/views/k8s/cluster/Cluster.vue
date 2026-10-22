@@ -48,7 +48,7 @@
             <a-select-option :value="Env.Rc">测试环境</a-select-option>
             <a-select-option :value="Env.Press">灰度环境</a-select-option>
           </a-select>
-          
+
           <a-select 
             v-model:value="filterStatus" 
             placeholder="状态筛选" 
@@ -62,7 +62,7 @@
             <a-select-option :value="ClusterStatus.Error">异常</a-select-option>
           </a-select>
         </div>
-        
+
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
@@ -78,7 +78,7 @@
           </a-input>
         </div>
       </div>
-      
+
       <!-- 操作区域 -->
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
@@ -91,7 +91,7 @@
             <template #icon><DeleteOutlined /></template>
             重置筛选
           </a-button>
-          
+
           <a-button 
             @click="fetchClusters" 
             :loading="loading"
@@ -101,7 +101,7 @@
             <template #icon><ReloadOutlined /></template>
             刷新
           </a-button>
-          
+
           <a-button 
             type="primary" 
             danger 
@@ -153,7 +153,7 @@
           <template v-else-if="column.key === 'env'">
             <a-tag :color="getEnvColor(text)">{{ getEnvText(text) }}</a-tag>
           </template>
-          
+
           <!-- 状态 -->
           <template v-else-if="column.key === 'status'">
             <a-badge 
@@ -198,7 +198,7 @@
               <span v-else class="k8s-no-data">无限制</span>
             </div>
           </template>
-          
+
           <!-- 标签 -->
           <template v-else-if="column.key === 'tags'">
             <div class="tags-cell">
@@ -234,7 +234,7 @@
             </div>
             <span v-else class="k8s-no-data">-</span>
           </template>
-          
+
           <!-- 操作列 -->
           <template v-else-if="column.key === 'actions'">
             <div class="k8s-action-column">
@@ -350,7 +350,7 @@
         <a-divider orientation="left">
           <span style="color: #666; font-size: 14px;">资源配置</span>
         </a-divider>
-        
+
         <a-alert
           message="危险操作警告"
           description="修改资源配置可能影响集群性能和稳定性，请谨慎操作。生产环境建议经过充分测试后再进行调整。"
@@ -568,7 +568,7 @@
                 </div>
               </a-card>
             </a-col>
-            
+
             <a-col :xs="24" :lg="12">
               <a-card title="资源配置" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
@@ -608,7 +608,7 @@
                 </div>
               </a-card>
             </a-col>
-            
+
             <a-col :xs="24" :lg="12">
               <a-card title="标签信息" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display">
@@ -741,7 +741,7 @@ import {
   EditOutlined, 
   DeploymentUnitOutlined,
   EyeOutlined,
-  FileTextOutlined,
+
   CopyOutlined,
   DownloadOutlined,
   SearchOutlined,
@@ -775,7 +775,7 @@ const {
   submitForm,
   confirmDelete,
   batchDelete,
-  refreshCluster,
+
   Env,
   ClusterStatus,
   addTag,
@@ -790,7 +790,7 @@ const {
   isKubeConfigModalVisible,
   kubeConfigLoading,
   currentKubeConfigCluster,
-  showKubeConfigModal,
+
   closeKubeConfigModal,
   copyKubeConfig,
   downloadKubeConfig,
@@ -804,7 +804,7 @@ const {
   onSearchInput,
   total,
   // kubeconfig preview
-  getKubeConfigPreview,
+
 } = useClusterPage();
 
 const handleFilterChange = () => {
@@ -842,4 +842,3 @@ onMounted(async () => {
 </style>
 
 <style scoped src="./Cluster.css"></style>
-

@@ -25,7 +25,7 @@
 .clusterrolebinding-role-ref .role-name {
   font-size: 13px;
   font-weight: 500;
-  color: #262626;
+  color: var(--ops-ink);
   max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -102,16 +102,16 @@
 }
 
 .subject-detail-item {
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 12px 16px;
   transition: all 0.2s ease;
 }
 
 .subject-detail-item:hover {
-  border-color: #d9d9d9;
-  background: #f5f5f5;
+  border-color: var(--ops-border);
+  background: var(--ops-ground);
 }
 
 .subject-detail-row {
@@ -127,13 +127,13 @@
 
 .subject-label {
   font-weight: 600;
-  color: #595959;
+  color: var(--ops-muted);
   min-width: 80px;
   font-size: 13px;
 }
 
 .subject-value {
-  color: #262626;
+  color: var(--ops-ink);
   font-size: 13px;
   font-weight: 500;
   word-break: break-all;
@@ -151,8 +151,8 @@
   left: 0;
   right: 0;
   z-index: 10;
-  background: #fff;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
   border-top: none;
   border-radius: 0 0 8px 8px;
   padding: 8px 12px;
@@ -168,14 +168,14 @@
   align-items: flex-start;
   margin-bottom: 8px;
   padding: 12px;
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
   transition: all 0.2s ease;
 }
 
 .k8s-form .k8s-key-value-row:hover {
-  border-color: #d9d9d9;
+  border-color: var(--ops-border);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
@@ -204,7 +204,7 @@
   margin: 0 0 12px 0;
   font-size: 14px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .filter-tags {
@@ -214,7 +214,7 @@
 .add-filter-section {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
 }
 
 .filter-input-row {
@@ -246,14 +246,14 @@
 
 .k8s-time-display .creation-time {
   font-size: 12px;
-  color: #595959;
+  color: var(--ops-muted);
   line-height: 1.3;
   cursor: help;
 }
 
 .k8s-time-display .age-display {
   font-size: 11px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 500;
 }
 
@@ -271,7 +271,7 @@
   padding: 8px;
   background: #f8f9fa;
   border-radius: 6px;
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed var(--ops-border);
   transition: all 0.2s ease;
 }
 
@@ -283,8 +283,8 @@
 .add-input-row .ant-input {
   flex: 1;
   height: 32px;
-  border: 1px solid #e8e8e8;
-  background: #fff;
+  border: 1px solid var(--ops-border);
+  background: var(--ops-surface);
 }
 
 .add-input-row .ant-btn {
@@ -375,8 +375,8 @@
   .clusterrolebinding-labels-filter .active-filters {
     position: static;
     margin-top: 8px;
-    border: 1px solid #e8e8e8;
-    border-radius: 8px;
+    border: 1px solid var(--ops-border);
+    border-radius: var(--ops-radius);
     box-shadow: none;
   }
 }
@@ -406,7 +406,7 @@
 
 /* 主体类型禁用状态 */
 .k8s-form .k8s-key-value-row .ant-input:disabled {
-  background: #f5f5f5;
+  background: var(--ops-ground);
   color: #bfbfbf;
   cursor: not-allowed;
 }
@@ -476,9 +476,9 @@
 .empty-subjects {
   text-align: center;
   padding: 24px;
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 6px;
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed var(--ops-border);
 }
 
 .empty-subjects .ant-tag {
@@ -487,7 +487,7 @@
 
 /* 详情模态框空状态提示 */
 .k8s-detail-card .empty-state-message {
-  color: #666;
+  color: var(--ops-muted);
   font-size: 14px;
   text-align: center;
   padding: 16px;

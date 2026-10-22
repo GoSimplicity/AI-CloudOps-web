@@ -1093,15 +1093,15 @@ onMounted(async () => {
 /* 基本信息表单样式 */
 .basic-info-form {
   padding: 20px;
-  background: #fafafa;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
   margin-bottom: 16px;
 }
 
 .form-actions {
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
   text-align: right;
 }
 
@@ -1126,10 +1126,10 @@ onMounted(async () => {
 }
 
 .-canvas {
-  border: 2px dashed #d9d9d9;
-  border-radius: 8px;
+  border: 2px dashed var(--ops-border);
+  border-radius: var(--ops-radius);
   min-height: 400px;
-  background: #fafafa;
+  background: var(--ops-ground);
   position: relative;
   padding: 20px;
 }
@@ -1157,9 +1157,9 @@ onMounted(async () => {
 }
 
 .-step {
-  background: white;
+  background: var(--ops-surface);
   border: 2px solid #e6f7ff;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   padding: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1191,7 +1191,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: hsl(var(--primary-foreground));
   font-size: 16px;
   flex-shrink: 0;
 }
@@ -1213,7 +1213,7 @@ onMounted(async () => {
 }
 
 .step-default {
-  background: #8c8c8c;
+  background: var(--ops-muted);
 }
 
 .step-info {
@@ -1223,12 +1223,12 @@ onMounted(async () => {
 .step-title {
   font-weight: 600;
   font-size: 16px;
-  color: #1f2937;
+  color: var(--ops-ink);
 }
 
 .step-type {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .step-actions {
@@ -1256,7 +1256,7 @@ onMounted(async () => {
 }
 
 .connector-arrow {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-size: 16px;
 }
 
@@ -1270,13 +1270,13 @@ onMounted(async () => {
 
 .step-detail-panel {
   margin-top: 20px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
   padding-top: 20px;
 }
 
 .field-hint {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin-top: 4px;
 }
 
@@ -1305,7 +1305,7 @@ onMounted(async () => {
 .preview-container {
   background-color: #f0f2f5;
   padding: 24px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   min-height: 400px;
   max-height: 60vh;
   overflow-y: auto;
@@ -1341,8 +1341,8 @@ onMounted(async () => {
 .preview-step {
   display: flex;
   align-items: center;
-  background: white;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 16px;
   width: 100%;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -1357,7 +1357,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: hsl(var(--primary-foreground));
   font-size: 20px;
   margin-right: 16px;
   flex-shrink: 0;
@@ -1370,12 +1370,12 @@ onMounted(async () => {
 .preview-step-title {
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--ops-ink);
 }
 
 .preview-step-type {
   font-size: 14px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .preview-connections {
@@ -1402,7 +1402,7 @@ onMounted(async () => {
 
 .field-hint {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin-top: 4px;
   line-height: 1.4;
 }

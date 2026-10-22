@@ -568,7 +568,6 @@ export function useRolePage() {
         annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
       };
 
-      console.log('创建 Role 请求参数:', JSON.stringify(params, null, 2));
       await createRoleApi(params);
       message.success('Role 创建成功');
       closeCreateModal();
@@ -682,7 +681,6 @@ export function useRolePage() {
         annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
       };
 
-      console.log('更新 Role 请求参数:', JSON.stringify(params, null, 2));
       await updateRoleApi(params);
       message.success('Role 更新成功');
       closeEditModal();

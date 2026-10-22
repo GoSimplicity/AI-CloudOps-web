@@ -49,7 +49,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="活跃成员" :value="stats.activeusers" :value-style="{ color: '#52c41a' }">
+            <a-statistic title="当前页成员" :value="stats.activeusers" :value-style="{ color: '#52c41a' }">
               <template #prefix>
                 <Icon icon="carbon:user-activity" />
               </template>
@@ -67,7 +67,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="今日值班" :value="stats.todayOnDuty" :value-style="{ color: '#cf1322' }">
+            <a-statistic title="当前页今日值班" :value="stats.todayOnDuty" :value-style="{ color: '#cf1322' }">
               <template #prefix>
                 <Icon icon="carbon:user-certification" />
               </template>
@@ -842,7 +842,6 @@ import {
   updateMonitorOnDutyGroupApi,
   deleteMonitorOnDutyGroupApi,
   getMonitorOnDutyGroupDetailApi,
-  getMonitorOnDutyGroupFuturePlanApi,
   getMonitorOnDutyHistoryApi,
   createMonitorOnDutyGroupChangeApi,
   getMonitorOnDutyGroupChangeListApi,
@@ -852,9 +851,8 @@ import {
   type MonitorOnDutyHistory,
   type MonitorOnDutyChange,
   type CreateMonitorOnDutyGroupChangeReq,
-  type GetMonitorOnDutyHistoryReq,
+
   type GetMonitorOnDutyGroupListReq,
-  type GetMonitorOnDutyGroupChangeListReq,
 } from '#/api/core/prometheus/prometheus_onduty';
 import dayjs, { type Dayjs } from 'dayjs';
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
@@ -862,11 +860,6 @@ import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 const router = useRouter();
 
 // 用户接口类型
-interface User {
-  id: number;
-  username: string;
-  real_name?: string;
-}
 
 // 响应式对话框宽度
 const formDialogWidth = computed(() => {
@@ -1193,10 +1186,6 @@ const getPlanTimelineColor = (date: string, index: number): string => {
   return index % 2 === 0 ? 'blue' : 'green';
 };
 
-const getHistoryTimelineColor = (index: number): string => {
-  return index % 2 === 0 ? 'blue' : 'green';
-};
-
 const getCycleDay = (index: number): number => {
   return (index % futurePlanDialog.shiftDays) + 1;
 };
@@ -1205,23 +1194,18 @@ const filterOption = (input: string, option: any) => {
   return option.value.toLowerCase().indexOf(input.toLowerCase()) >= 0;
 };
 
-const filterUserOption = (input: string, option: any) => {
-  return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
-};
-
 // 更新统计数据
 const updateStats = (): void => {
   stats.total = paginationConfig.total;
-  
+
   if (data.value.length > 0) {
     const currentPageActiveusers = data.value.reduce((total, item) => total + (item.users?.length || 0), 0);
     const currentPageAvgShiftDays = Math.round(data.value.reduce((sum, item) => sum + item.shift_days, 0) / data.value.length);
     const currentPageTodayOnDuty = data.value.filter(item => item.today_duty_user).length;
-    
-    const pageRatio = paginationConfig.total / data.value.length;
-    stats.activeusers = Math.round(currentPageActiveusers * pageRatio);
+
+    stats.activeusers = currentPageActiveusers;
     stats.avgShiftDays = currentPageAvgShiftDays;
-    stats.todayOnDuty = Math.round(currentPageTodayOnDuty * pageRatio);
+    stats.todayOnDuty = currentPageTodayOnDuty;
   } else {
     stats.activeusers = 0;
     stats.avgShiftDays = 0;
@@ -1233,13 +1217,13 @@ const updateStats = (): void => {
 const fetchOnDutyGroups = async (): Promise<void> => {
   loading.value = true;
   try {
+
     const params: GetMonitorOnDutyGroupListReq = {
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
       search: searchText.value.trim() || undefined,
-      enable: enableFilter.value
+      enable: enableFilter.value,
     };
-
     const response = await getMonitorOnDutyGroupListApi(params);
 
     if (response && response.items) {
@@ -1274,24 +1258,24 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
       search: search || '',
     };
     const res = await getUserList(req);
-    
+
     // 处理返回数据
     const items = res?.items || res?.list || res?.data || [];
     const total = res?.total || res?.count || 0;
-    
+
     const newOptions = items.map((user: any) => {
       const userId = user.id || user.userId || user.user_id;
       const userName = user.real_name || user.username || user.realName || `用户${userId}`;
-      
+
       // 缓存用户信息
       userCache.value.set(userId, userName);
-      
+
       return {
         value: userId,
         label: userName,
       };
     });
-    
+
     if (page === 1) {
       userOptions.value = newOptions;
     } else {
@@ -1301,7 +1285,7 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
         ...newOptions.filter((opt: any) => !existingIds.has(opt.value)),
       ];
     }
-    
+
     userPaginationConfig.total = total;
     userPaginationConfig.hasMore = page * userPaginationConfig.pageSize < total;
   } catch (error: any) {
@@ -1366,54 +1350,12 @@ const fetchOnDutyGroupDetail = async (id: number): Promise<void> => {
 };
 
 // 获取未来排班计划
-const fetchFuturePlan = async (id: number): Promise<void> => {
-  try {
-    const startTime = dayjs().format('YYYY-MM-DD');
-    const endTime = dayjs().add(30, 'day').format('YYYY-MM-DD');
-
-    futurePlanDialog.loading = true;
-    const response = await getMonitorOnDutyGroupFuturePlanApi(id, {
-      start_time: startTime,
-      end_time: endTime
-    });
-
-    if (response) {
-      futurePlanDialog.data = response;
-      planPaginationConfig.total = response?.details?.length || 0;
-      planPaginationConfig.current = 1;
-
-      const uniqueUsers: string[] = [];
-      if (response?.details) {
-        response.details.forEach((item: any) => {
-          if (item.user?.username && !uniqueUsers.includes(item.user.username)) {
-            uniqueUsers.push(item.user.username);
-          }
-        });
-      }
-
-      futurePlanDialog.availableUsers = uniqueUsers;
-      planUserOptions.value = uniqueUsers.map(user => ({
-        value: user,
-        label: user
-      }));
-    } else {
-      message.error('获取未来排班计划失败');
-      futurePlanDialog.data = null;
-    }
-  } catch (error: any) {
-
-    message.error(error.message || '获取未来排班计划失败');
-    futurePlanDialog.data = null;
-  } finally {
-    futurePlanDialog.loading = false;
-  }
-};
 
 // 获取值班历史
 const fetchOnDutyHistory = async (id: number, startDate?: string, endDate?: string, page = 1, append = false): Promise<void> => {
   try {
     historyDialog.loading = true;
-    
+
     // 构建API请求参数
     const apiParams: {
       start_date?: string;
@@ -1424,7 +1366,7 @@ const fetchOnDutyHistory = async (id: number, startDate?: string, endDate?: stri
       page,
       size: historyPaginationConfig.pageSize
     };
-    
+
     if (startDate) apiParams.start_date = startDate;
     if (endDate) apiParams.end_date = endDate;
 
@@ -1463,11 +1405,6 @@ const fetchOnDutyHistory = async (id: number, startDate?: string, endDate?: stri
 const fetchChangeRecords = async (page = 1, append = false): Promise<void> => {
   try {
     changeDialog.loading = true;
-    const params: GetMonitorOnDutyGroupChangeListReq = {
-      on_duty_group_id: changeDialog.groupId,
-      page,
-      size: changePaginationConfig.pageSize
-    };
 
     const response = await getMonitorOnDutyGroupChangeListApi(changeDialog.groupId, {
       page,
@@ -1678,13 +1615,6 @@ const resetHistoryFilters = (): void => {
 };
 
 // 处理历史记录分页变化
-const handleHistoryTableChange = (pagination: any): void => {
-  historyPaginationConfig.current = pagination.current;
-  historyPaginationConfig.pageSize = pagination.pageSize;
-  const startDate = historyDateRange.value ? historyDateRange.value[0].format('YYYY-MM-DD') : undefined;
-  const endDate = historyDateRange.value ? historyDateRange.value[1].format('YYYY-MM-DD') : undefined;
-  fetchOnDutyHistory(historyDialog.groupId, startDate, endDate, pagination.current);
-};
 
 // 处理历史分页页码变化
 const handleHistoryPageChange = (page: number): void => {
@@ -1720,12 +1650,12 @@ const exportPlan = (): void => {
 
 const exportHistory = async (): Promise<void> => {
   if (!historyDialog.data.length) return;
-  
+
   try {
     // 导出前获取所有历史记录
     historyDialog.loading = true;
     message.loading('正在准备导出数据...');
-    
+
     // 获取所有历史记录
     const apiParams: {
       start_date?: string;
@@ -1734,16 +1664,16 @@ const exportHistory = async (): Promise<void> => {
     } = {
       size: 1000 // 设置较大的size以获取尽可能多的记录
     };
-    
+
     // 如果有日期范围筛选，添加到参数中
     if (historyDateRange.value) {
       apiParams.start_date = historyDateRange.value[0].format('YYYY-MM-DD');
       apiParams.end_date = historyDateRange.value[1].format('YYYY-MM-DD');
     }
-    
+
     const response = await getMonitorOnDutyHistoryApi(historyDialog.groupId, apiParams);
     const exportData = response?.items || historyDialog.data;
-    
+
     const headers = ['日期', '星期', '值班人员ID', '原值班人员ID', '创建时间'];
     const csvContent = [
       headers.join(','),
@@ -1802,7 +1732,7 @@ const showEditModal = (record: MonitorOnDutyGroup): void => {
   editForm.user_ids = record.users?.map(user => user.id) || [];
   editForm.description = record.description || '';
   editForm.enable = record.enable;
-  
+
   userSearchText.value = '';
   userPaginationConfig.current = 1;
   fetchUserList(1).then(() => {
@@ -1818,7 +1748,7 @@ const showEditModal = (record: MonitorOnDutyGroup): void => {
       });
     }
   });
-  
+
   isEditModalVisible.value = true;
 };
 
@@ -1856,14 +1786,14 @@ const showCreateChangeModal = (): void => {
   createChangeForm.origin_user_id = null;
   createChangeForm.on_duty_user_id = null;
   createChangeForm.reason = '';
-  
+
   // 加载用户列表
   changeUserSearchText.value = '';
   userPaginationConfig.current = 1;
   fetchUserList(1).then(() => {
     changeUserOptions.value = [...userOptions.value];
   });
-  
+
   isCreateChangeModalVisible.value = true;
 };
 
@@ -1878,7 +1808,7 @@ const closeCreateChangeModal = (): void => {
 const handleAdd = async (): Promise<void> => {
   try {
     await addFormRef.value.validate();
-    
+
     loading.value = true;
     const payload: CreateMonitorOnDutyGroupReq = {
       name: addForm.name.trim(),
@@ -1908,7 +1838,7 @@ const handleAdd = async (): Promise<void> => {
 const handleUpdate = async (): Promise<void> => {
   try {
     await editFormRef.value.validate();
-    
+
     loading.value = true;
     const payload: UpdateMonitorOnDutyGroupReq = {
       id: editForm.id,
@@ -1939,7 +1869,7 @@ const handleUpdate = async (): Promise<void> => {
 const handleCreateChange = async (): Promise<void> => {
   try {
     await createChangeFormRef.value.validate();
-    
+
     loading.value = true;
     const payload: CreateMonitorOnDutyGroupChangeReq = {
       on_duty_group_id: createChangeForm.on_duty_group_id,
@@ -1978,14 +1908,6 @@ const loadMoreChangeRecords = async (): Promise<void> => {
 };
 
 // 加载更多历史记录
-const loadMoreHistoryRecords = async (): Promise<void> => {
-  if (historyPaginationConfig.total > historyDialog.data.length) {
-    const nextPage = Math.floor(historyDialog.data.length / historyPaginationConfig.pageSize) + 1;
-    const startDate = historyDateRange.value ? historyDateRange.value[0].format('YYYY-MM-DD') : undefined;
-    const endDate = historyDateRange.value ? historyDateRange.value[1].format('YYYY-MM-DD') : undefined;
-    await fetchOnDutyHistory(historyDialog.groupId, startDate, endDate, nextPage, true);
-  }
-};
 
 const handleCreatePlanFromDialog = (): void => {
   router.push({
@@ -2016,7 +1938,7 @@ const handleViewChange = async (record: MonitorOnDutyGroup): Promise<void> => {
   changeDialog.groupName = record.name;
   changeDialog.loading = true;
   changePaginationConfig.current = 1;
-  
+
   try {
     await fetchChangeRecords(1);
     changeDialogVisible.value = true;
@@ -2042,11 +1964,11 @@ const confirmDelete = (record: MonitorOnDutyGroup): void => {
 
         if (response) {
           message.success(`值班组 "${record.name}" 已删除`);
-          
+
           if (data.value.length === 1 && paginationConfig.current > 1) {
             paginationConfig.current--;
           }
-          
+
           fetchOnDutyGroups();
         } else {
           message.error('删除值班组失败');
@@ -2063,7 +1985,7 @@ const confirmDelete = (record: MonitorOnDutyGroup): void => {
 onMounted(async () => {
   paginationConfig.current = 1;
   paginationConfig.pageSize = 10;
-  
+
   await Promise.all([
     fetchOnDutyGroups(),
     fetchUserList(1)
@@ -2075,7 +1997,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
   if (date && changeDialog.groupId) {
     // 根据选择的日期，从未来排班计划中查找原值班人
     const dateStr = date.format('YYYY-MM-DD');
-    
+
     // 如果当前有未来排班计划数据，从中查找
     if (futurePlanDialog.data?.details) {
       const planDetail = futurePlanDialog.data.details.find((item: any) => item.date === dateStr);
@@ -2083,7 +2005,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
         createChangeForm.origin_user_id = planDetail.user.id;
       }
     }
-    
+
     // 如果没有找到，尝试从值班组详情中获取今日值班人作为默认值
     if (!createChangeForm.origin_user_id && detailDialog.data?.today_duty_user) {
       createChangeForm.origin_user_id = detailDialog.data.today_duty_user.id;
@@ -2110,7 +2032,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%);
+  background: var(--ops-accent);
   border: none;
   flex-shrink: 0;
 }
@@ -2137,7 +2059,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
 }
@@ -2215,13 +2137,13 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
 .config-label {
   font-size: 12px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .config-value {
   font-size: 12px;
   font-weight: 500;
-  color: #333;
+  color: var(--ops-ink);
 }
 
 .duty-status-container {
@@ -2268,12 +2190,12 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
 .time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .weekday {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .action-buttons {
@@ -2292,7 +2214,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
   border-left: 4px solid #1890ff;
@@ -2317,7 +2239,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 .detail-header h2 {
   margin: 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--ops-ink);
   word-break: break-all;
 }
 
@@ -2375,7 +2297,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 .change-header h3 {
   margin: 0;
   font-size: 20px;
-  color: #1f2937;
+  color: var(--ops-ink);
 }
 
 .plan-info,
@@ -2389,8 +2311,8 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 .history-filters {
   margin-bottom: 20px;
   padding: 16px;
-  background: #f5f5f5;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -2407,7 +2329,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 }
 
 .history-table :deep(.ant-table-thead > tr > th) {
-  background-color: #f5f5f5;
+  background-color: var(--ops-ground);
   font-weight: 600;
 }
 
@@ -2429,17 +2351,17 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 .date-main {
   font-weight: 600;
   font-size: 14px;
-  color: #1f2937;
+  color: var(--ops-ink);
 }
 
 .date-sub {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--ops-muted);
 }
 
 .timeline-content {
   padding: 8px 12px;
-  background: #f8fafc;
+  background: var(--ops-ground);
   border-radius: 6px;
   border-left: 3px solid #1890ff;
 }
@@ -2453,7 +2375,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
 .user-name {
   font-weight: 500;
-  color: #1f2937;
+  color: var(--ops-ink);
 }
 
 .today-tag,
@@ -2467,7 +2389,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
   display: flex;
   gap: 12px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--ops-muted);
 }
 
 .duty-type {
@@ -2482,8 +2404,8 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 .plan-summary {
   margin-bottom: 20px;
   padding: 16px;
-  background: #f8fafc;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
 }
 
 .user-change-info {
@@ -2501,7 +2423,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
 .label {
   font-size: 12px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .user-id {
@@ -2511,7 +2433,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
 .create-time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 /* 响应式设计 */
@@ -2688,7 +2610,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
   justify-content: center;
   padding: 40px;
   background-color: #f8f9fa;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
 }
 
 .empty-icon {
@@ -2699,13 +2621,13 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
 .empty-title {
   font-size: 18px;
-  color: #333;
+  color: var(--ops-ink);
   margin-bottom: 10px;
 }
 
 .empty-description {
   font-size: 14px;
-  color: #666;
+  color: var(--ops-muted);
   text-align: center;
 }
 
@@ -2726,7 +2648,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 }
 
 .reason-text {
-  color: #666;
+  color: var(--ops-muted);
   font-style: italic;
 }
 
@@ -2738,7 +2660,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 .change-dialog .ant-table-thead > tr > th {
   position: sticky;
   top: 0;
-  background: #fafafa;
+  background: var(--ops-ground);
   z-index: 1;
 }
 
@@ -2748,7 +2670,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
   align-items: center;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
 }
 
 .change-dialog .ant-table-tbody > tr > td {
@@ -2757,6 +2679,6 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 }
 
 .change-dialog .ant-table-tbody > tr:hover > td {
-  background-color: #f5f5f5;
+  background-color: var(--ops-ground);
 }
 </style>

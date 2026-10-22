@@ -107,7 +107,7 @@
 
     .cost-unit {
       font-size: 12px;
-      color: #6b7280;
+      color: var(--ops-muted);
     }
   }
 
@@ -128,8 +128,8 @@
       line-height: 1.5;
       padding: 12px 16px;
       margin-bottom: 12px;
-      border: 2px solid #e5e7eb;
-      border-radius: 8px;
+      border: 2px solid var(--ops-border);
+      border-radius: var(--ops-radius);
       transition: all 0.3s;
 
       &:hover {
@@ -148,7 +148,7 @@
 
         .radio-desc {
           font-size: 12px;
-          color: #6b7280;
+          color: var(--ops-muted);
         }
       }
     }
@@ -188,12 +188,12 @@
 
     .unbind-checkbox {
       padding: 8px 12px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--ops-border);
       border-radius: 6px;
       transition: all 0.2s;
 
       &:hover {
-        background: #f8fafc;
+        background: var(--ops-ground);
         border-color: #1890ff;
       }
     }

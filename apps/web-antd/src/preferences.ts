@@ -9,11 +9,14 @@ export const overridesPreferences = defineOverridesPreferences({
   app: {
     // accessMode: 'backend',
     accessMode: 'frontend',
+    locale: 'zh-CN',
+    compact: true,
     enableRefreshToken: true,
     name: import.meta.env.VITE_APP_TITLE,
   },
   theme: {
     mode: 'light',
+    colorPrimary: 'hsl(205 84% 39%)',
   },
   tabbar: {
     // 确保页面缓存功能启用，避免切换页面时重新加载

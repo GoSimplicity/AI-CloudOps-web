@@ -779,7 +779,7 @@ const formatFullDateTime = (dateString: string): string => {
 // 修复的通知方式处理方法
 const getNotifyMethods = (record: MonitorSendGroup): string[] => {
   if (!record.notify_methods) return [];
-  
+
   try {
     if (Array.isArray(record.notify_methods)) {
       return record.notify_methods.map(method => {
@@ -798,7 +798,7 @@ const getNotifyMethods = (record: MonitorSendGroup): string[] => {
         return method;
       }).flat();
     }
-    
+
     // 如果是字符串，尝试解析为JSON
     if (typeof record.notify_methods === 'string') {
       try {
@@ -808,7 +808,7 @@ const getNotifyMethods = (record: MonitorSendGroup): string[] => {
         return [record.notify_methods];
       }
     }
-    
+
     return [];
   } catch (error) {
 
@@ -838,7 +838,7 @@ const loadSendGroupList = async (): Promise<void> => {
     const response = await getMonitorSendGroupListApi(params) as ApiListResponse<MonitorSendGroup>;
     if (response) {
       let list = response.items || [];
-      
+
       // 过滤升级配置
       if (upgradeFilter.value !== undefined) {
         list = list.filter((item: MonitorSendGroup) => item.need_upgrade === upgradeFilter.value);
@@ -902,10 +902,10 @@ const loadOptionsData = async (): Promise<void> => {
         page: currentPage,
         size: pageSize
       }) as ApiListResponse<MonitorScrapePool>;
-      
+
       if (scrapePoolResponse && scrapePoolResponse.items && scrapePoolResponse.items.length > 0) {
         allScrapePools = [...allScrapePools, ...scrapePoolResponse.items];
-        
+
         if (scrapePoolResponse.items.length < pageSize || allScrapePools.length >= (scrapePoolResponse.total || 0)) {
           hasMoreData = false;
         } else {
@@ -927,10 +927,10 @@ const loadOptionsData = async (): Promise<void> => {
         page: currentPage,
         size: pageSize
       }) as ApiListResponse<MonitorOnDutyGroup>;
-      
+
       if (onDutyGroupResponse && onDutyGroupResponse.items && onDutyGroupResponse.items.length > 0) {
         allOnDutyGroups = [...allOnDutyGroups, ...onDutyGroupResponse.items];
-        
+
         if (onDutyGroupResponse.items.length < pageSize || allOnDutyGroups.length >= (onDutyGroupResponse.total || 0)) {
           hasMoreData = false;
         } else {
@@ -953,10 +953,10 @@ const loadOptionsData = async (): Promise<void> => {
         size: pageSize,
         search: ''
       }) as ApiListResponse<UserInfo>;
-      
+
       if (userResponse && userResponse.items && userResponse.items.length > 0) {
         allUsers = [...allUsers, ...userResponse.items];
-        
+
         if (userResponse.items.length < pageSize || allUsers.length >= (userResponse.total || 0)) {
           hasMoreData = false;
         } else {
@@ -1185,16 +1185,16 @@ const handleResetFilters = (): void => {
 const handleCreateSendGroup = (): void => {
   formDialog.isEdit = false;
   resetFormDialog();
-  
+
   // 重置并加载动态数据
   dialogPoolSearch.value = '';
   dialogOnDutyGroupSearch.value = '';
   dialogUserSearch.value = '';
-  
+
   loadDialogPools(true);
   loadDialogOnDutyGroups(true);
   loadDialogUsers(true);
-  
+
   formDialogVisible.value = true;
 };
 
@@ -1217,12 +1217,12 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
     first_upgrade_users: (record.first_upgrade_users || []).map((user: any) => user.id) || [],
     second_upgrade_users: (record.second_upgrade_users || []).map((user: any) => user.id) || []
   };
-  
+
   // 重置并加载动态数据
   dialogPoolSearch.value = '';
   dialogOnDutyGroupSearch.value = '';
   dialogUserSearch.value = '';
-  
+
   // 加载动态数据
   loadDialogPools(true).then(() => {
     // 确保当前选中的采集池在列表中
@@ -1234,7 +1234,7 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
       }
     }
   });
-  
+
   loadDialogOnDutyGroups(true).then(() => {
     // 确保当前选中的值班组在列表中
     const selectedGroupInList = dialogOnDutyGroups.value.some(g => g.id === record.on_duty_group_id);
@@ -1245,7 +1245,7 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
       }
     }
   });
-  
+
   loadDialogUsers(true).then(() => {
     // 确保当前选中的用户在列表中
     const selectedUserIds = [
@@ -1253,7 +1253,7 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
       ...(record.first_upgrade_users?.map((u: any) => u.id) || []),
       ...(record.second_upgrade_users?.map((u: any) => u.id) || [])
     ];
-    
+
     // 将已选用户添加到列表
     selectedUserIds.forEach(userId => {
       const userInList = dialogUsers.value.some(u => u.value === userId);
@@ -1265,13 +1265,13 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
         } else {
           // 如果在现有选项中找不到用户，则从记录中获取用户名
           let username = '';
-          
+
           // 尝试从static_receive_users中查找
           const staticUser = record.static_receive_users?.find((u: any) => u.id === userId);
           if (staticUser?.username) {
             username = staticUser.username;
           }
-          
+
           // 尝试从first_upgrade_users中查找
           if (!username) {
             const firstUpgradeUser = record.first_upgrade_users?.find((u: any) => u.id === userId);
@@ -1279,7 +1279,7 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
               username = firstUpgradeUser.username;
             }
           }
-          
+
           // 尝试从second_upgrade_users中查找
           if (!username) {
             const secondUpgradeUser = record.second_upgrade_users?.find(u => u.id === userId);
@@ -1287,7 +1287,7 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
               username = secondUpgradeUser.username;
             }
           }
-          
+
           // 如果找到了用户名，添加到选项列表中
           if (username) {
             dialogUsers.value.unshift({
@@ -1305,7 +1305,7 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
       }
     });
   });
-  
+
   formDialogVisible.value = true;
   detailDialogVisible.value = false;
 };
@@ -1377,12 +1377,12 @@ const saveSendGroup = async (): Promise<void> => {
         id,
         username: userIdToUsername.get(id) || ''
       }));
-      
+
       const firstUpgradeUsers = formData.first_upgrade_users.map((id: number) => ({
         id,
         username: userIdToUsername.get(id) || ''
       }));
-      
+
       const secondUpgradeUsers = formData.second_upgrade_users.map((id: number) => ({
         id,
         username: userIdToUsername.get(id) || ''
@@ -1413,12 +1413,12 @@ const saveSendGroup = async (): Promise<void> => {
         id,
         username: userIdToUsername.get(id) || ''
       }));
-      
+
       const firstUpgradeUsers = formData.first_upgrade_users.map((id: number) => ({
         id,
         username: userIdToUsername.get(id) || ''
       }));
-      
+
       const secondUpgradeUsers = formData.second_upgrade_users.map((id: number) => ({
         id,
         username: userIdToUsername.get(id) || ''
@@ -1507,7 +1507,7 @@ onMounted(() => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%);
+  background: var(--ops-accent);
   border: none;
   flex-shrink: 0;
 }
@@ -1539,7 +1539,7 @@ onMounted(() => {
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
 }
@@ -1570,7 +1570,7 @@ onMounted(() => {
 }
 
 .status-none {
-  background-color: #d9d9d9;
+  background-color: var(--ops-border);
 }
 
 .pool-name-text {
@@ -1633,13 +1633,13 @@ onMounted(() => {
 
 .config-label {
   font-size: 12px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .config-value {
   font-size: 12px;
   font-weight: 500;
-  color: #333;
+  color: var(--ops-ink);
 }
 
 .creator-info {
@@ -1665,7 +1665,7 @@ onMounted(() => {
 
 .time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .action-buttons {
@@ -1685,7 +1685,7 @@ onMounted(() => {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
   border-left: 4px solid #1890ff;
@@ -1700,7 +1700,7 @@ onMounted(() => {
 }
 
 .tech-switch.ant-switch-checked {
-  background: linear-gradient(45deg, #1890ff, #36cfc9);
+  background: var(--ops-accent);
 }
 
 /* 详情对话框样式 */
@@ -1719,7 +1719,7 @@ onMounted(() => {
 .detail-header h2 {
   margin: 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--ops-ink);
   word-break: break-all;
 }
 

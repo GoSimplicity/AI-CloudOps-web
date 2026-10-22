@@ -12,5 +12,6 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    include: ['apps/**/*.test.ts', 'packages/**/*.test.ts', 'internal/**/*.test.ts'],
   },
 });

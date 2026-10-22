@@ -241,10 +241,10 @@ defineExpose({
 }
 
 .form-container {
-  background: white;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 32px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -267,8 +267,8 @@ defineExpose({
 }
 
 .form-input {
-  border-radius: 8px;
-  border: 1.5px solid #e5e7eb;
+  border-radius: var(--ops-radius);
+  border: 1.5px solid var(--ops-border);
   transition: all 0.3s ease;
   font-size: 15px;
 }
@@ -295,9 +295,9 @@ defineExpose({
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  background: #f8fafc;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border: 1.5px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   transition: all 0.3s ease;
 }
 
@@ -312,8 +312,8 @@ defineExpose({
   padding: 12px 16px;
   border-radius: 6px;
   transition: all 0.2s ease;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
   font-size: 15px;
   font-weight: 500;
 }
@@ -335,14 +335,14 @@ defineExpose({
 .form-actions {
   margin-top: 40px;
   padding-top: 32px;
-  border-top: 2px solid #f3f4f6;
+  border-top: 2px solid var(--ops-ground);
   text-align: center;
 }
 
 .submit-btn {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  background: var(--ops-accent);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   font-weight: 600;
   height: 48px;
   padding: 0 32px;
@@ -352,19 +352,19 @@ defineExpose({
 }
 
 .submit-btn:hover {
-  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  background: var(--ops-accent);
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
 }
 
 .reset-btn {
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
+  border: 2px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   font-weight: 600;
   height: 48px;
   padding: 0 32px;
   font-size: 16px;
-  color: #6b7280;
+  color: var(--ops-muted);
   transition: all 0.3s ease;
 }
 
@@ -378,37 +378,37 @@ defineExpose({
 @media (max-width: 768px) {
   .form-container {
     padding: 20px;
-    border-radius: 8px;
+    border-radius: var(--ops-radius);
   }
-  
+
   .form-field {
     margin-bottom: 20px;
   }
-  
+
   .field-label {
     font-size: 14px;
   }
-  
+
   .form-input {
     font-size: 14px;
   }
-  
+
   .radio-options,
   .checkbox-options {
     padding: 12px;
   }
-  
+
   .radio-option,
   .checkbox-option {
     padding: 10px 12px;
     font-size: 14px;
   }
-  
+
   .form-actions {
     margin-top: 32px;
     padding-top: 24px;
   }
-  
+
   .submit-btn,
   .reset-btn {
     width: 100%;
@@ -416,7 +416,7 @@ defineExpose({
     height: 44px;
     font-size: 15px;
   }
-  
+
   .form-actions .ant-space {
     width: 100%;
     flex-direction: column;
@@ -427,12 +427,12 @@ defineExpose({
   .form-container {
     padding: 16px;
   }
-  
+
   .radio-options,
   .checkbox-options {
     gap: 8px;
   }
-  
+
   .submit-btn,
   .reset-btn {
     height: 40px;

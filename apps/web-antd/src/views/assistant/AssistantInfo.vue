@@ -266,18 +266,18 @@ onMounted(() => {
 <style scoped>
 .info-container {
   padding: 24px;
-  background-color: var(--ant-background-color-light, #fafafa);
+  background-color: var(--ant-background-color-light, var(--ops-ground));
   min-height: 100vh;
 }
 
 /* 页面头部 */
 .info-container .page-header {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 16px 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .info-container .header-content {
@@ -307,12 +307,12 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #262626;
+  color: var(--ops-ink);
   line-height: 1.2;
 }
 
 .info-container .page-subtitle {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin: 0;
   font-size: 12px;
   margin-top: 4px;
@@ -329,7 +329,7 @@ onMounted(() => {
     margin-bottom: 24px;
 
     .status-card {
-      border-radius: 8px;
+      border-radius: var(--ops-radius);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       margin-bottom: 24px;
       transition: all 0.3s ease;
@@ -348,12 +348,12 @@ onMounted(() => {
         .status-icon {
           width: 56px;
           height: 56px;
-          border-radius: 12px;
+          border-radius: var(--ops-radius);
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 18px;
-          color: #fff;
+          color: hsl(var(--primary-foreground));
 
           &.online {
             background: #52c41a;
@@ -393,7 +393,7 @@ onMounted(() => {
   }
 
   .info-card {
-    border-radius: 8px;
+    border-radius: var(--ops-radius);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin-bottom: 24px;
     transition: all 0.3s ease;
@@ -424,7 +424,7 @@ onMounted(() => {
       gap: 16px;
       padding: 16px;
       border: 1px solid var(--ant-border-color-split);
-      border-radius: 8px;
+      border-radius: var(--ops-radius);
       transition: all 0.3s;
 
       &:hover {
@@ -436,8 +436,8 @@ onMounted(() => {
         width: 48px;
         height: 48px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #1890ff, #36cfc9);
-        color: white;
+        background: var(--ops-accent);
+        color: hsl(var(--primary-foreground));
         display: flex;
         align-items: center;
         justify-content: center;
@@ -463,7 +463,7 @@ onMounted(() => {
     margin-bottom: 16px;
     padding: 16px;
     border: 1px solid var(--ant-border-color-split);
-    border-radius: 8px;
+    border-radius: var(--ops-radius);
     transition: all 0.3s;
 
     &:hover {

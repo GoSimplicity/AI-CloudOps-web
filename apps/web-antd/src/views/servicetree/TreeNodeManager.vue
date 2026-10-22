@@ -781,14 +781,14 @@ const loadTreeData = async (): Promise<void> => {
     const response = await getTreeList(params);
     if (response && response.items) {
       let nodes = response.items as TreeNodeWithRelations[];
-      
+
       // 应用搜索过滤
       if (searchQuery.value) {
         nodes = nodes.filter((node: TreeNodeWithRelations) => 
           node.name.toLowerCase().includes(searchQuery.value.toLowerCase())
         );
       }
-      
+
       // 由于接口返回的已经是树状结构，直接使用
       treeData.value = nodes;
       updateStats(nodes);
@@ -991,7 +991,7 @@ const handleBindResource = (): void => {
 
 const handleUnbindResource = async (resourceId: number): Promise<void> => {
   if (!selectedNode.value) return;
-  
+
   try {
     await unbindResource({
       node_id: selectedNode.value.id,
@@ -1009,14 +1009,14 @@ const handleUnbindResource = async (resourceId: number): Promise<void> => {
 
 const removeMember = async (userId: number, memberType: TreeNodeMemberType): Promise<void> => {
   if (!selectedNode.value) return;
-  
+
   try {
     await removeNodeMember(selectedNode.value.id, {
       node_id: selectedNode.value.id,
       user_id: userId,
       member_type: memberType
     });
-    
+
     message.success('成员已移除');
     // 重新加载节点详情
     handleTreeSelect([selectedNode.value.id]);
@@ -1080,7 +1080,7 @@ const saveNode = async (): Promise<void> => {
 
     formDialogVisible.value = false;
     loadTreeData();
-    
+
     // 如果是编辑模式，重新选择该节点
     if (formDialog.isEdit && formDialog.form.id) {
       selectedKeys.value = [formDialog.form.id];
@@ -1106,7 +1106,7 @@ const handleMoveNode = async (): Promise<void> => {
     message.success('节点移动成功');
     moveDialogVisible.value = false;
     loadTreeData();
-    
+
     // 重新选择该节点
     selectedKeys.value = [moveDialog.nodeId];
     handleTreeSelect([moveDialog.nodeId]);
@@ -1130,10 +1130,10 @@ const handleAddMemberConfirm = async (): Promise<void> => {
         member_type: addMemberDialog.memberType
       });
     }
-    
+
     message.success('成员添加成功');
     addMemberDialogVisible.value = false;
-    
+
     // 重新加载节点详情
     if (selectedNode.value) {
       handleTreeSelect([selectedNode.value.id]);
@@ -1156,10 +1156,10 @@ const handleBindResourceConfirm = async (): Promise<void> => {
       node_id: selectedNode.value.id,
       resource_ids: selectedResourceIds.value
     });
-    
+
     message.success('资源绑定成功');
     bindResourceDialogVisible.value = false;
-    
+
     // 重新加载节点详情
     handleTreeSelect([selectedNode.value.id]);
     loadTreeData();
@@ -1264,7 +1264,7 @@ onMounted(() => {
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
 }
@@ -1307,7 +1307,7 @@ onMounted(() => {
 }
 
 .node-icon-inactive {
-  color: #d9d9d9;
+  color: var(--ops-border);
 }
 
 .detail-card,
@@ -1341,7 +1341,7 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .section-header h4 {
@@ -1364,7 +1364,7 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   transition: all 0.3s;
 }
@@ -1390,7 +1390,7 @@ onMounted(() => {
 .member-email,
 .resource-address {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin-bottom: 4px;
 }
 
@@ -1400,7 +1400,7 @@ onMounted(() => {
   justify-content: center;
   width: 40px;
   height: 40px;
-  background-color: #f5f5f5;
+  background-color: var(--ops-ground);
   border-radius: 6px;
   color: #1890ff;
   font-size: 18px;
@@ -1415,7 +1415,7 @@ onMounted(() => {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
   border-left: 3px solid #1677ff;
@@ -1435,12 +1435,12 @@ onMounted(() => {
   .tree-card {
     max-height: 65vh;
   }
-  
+
   .detail-card,
   .empty-card {
     max-height: 65vh;
   }
-  
+
   .node-tree {
     max-height: 58vh;
   }
@@ -1450,17 +1450,17 @@ onMounted(() => {
   .content-layout {
     margin-bottom: 20px;
   }
-  
+
   .tree-card,
   .detail-card,
   .empty-card {
     max-height: 60vh;
   }
-  
+
   .node-tree {
     max-height: 52vh;
   }
-  
+
   .members-section,
   .resources-section {
     max-height: 50vh;
@@ -1546,7 +1546,7 @@ onMounted(() => {
     justify-content: center;
     flex-wrap: wrap;
   }
-  
+
   .detail-actions .ant-btn {
     flex: 1;
     min-width: 80px;
@@ -1576,32 +1576,32 @@ onMounted(() => {
     gap: 8px;
     align-items: stretch;
   }
-  
+
   .tree-card,
   .detail-card,
   .empty-card {
     min-height: 320px;
   }
-  
+
   .node-tree,
   .members-section,
   .resources-section {
     max-height: 300px;
   }
-  
+
   .member-item,
   .resource-item {
     padding: 12px 4px;
   }
-  
+
   .stats-row {
     margin-bottom: 16px;
   }
-  
+
   .content-layout {
     margin-bottom: 16px;
   }
-  
+
   .page-header {
     margin-bottom: 16px;
   }
@@ -1619,15 +1619,15 @@ onMounted(() => {
     max-height: calc(100vh - 160px);
     overflow-y: auto;
   }
-  
+
   .responsive-modal :deep(.ant-form-item) {
     margin-bottom: 16px;
   }
-  
+
   .responsive-modal :deep(.ant-form-item-label) {
     padding-bottom: 4px;
   }
-  
+
   .responsive-modal :deep(.ant-modal-footer) {
     padding: 12px 16px;
   }
@@ -1638,24 +1638,24 @@ onMounted(() => {
     margin: 4px;
     max-width: calc(100vw - 8px);
   }
-  
+
   .responsive-modal :deep(.ant-modal-body) {
     padding: 12px;
     max-height: calc(100vh - 140px);
   }
-  
+
   .responsive-modal :deep(.ant-modal-header) {
     padding: 12px 16px;
   }
-  
+
   .responsive-modal :deep(.ant-modal-title) {
     font-size: 16px;
   }
-  
+
   .responsive-modal :deep(.ant-form-item) {
     margin-bottom: 12px;
   }
-  
+
   .bind-resource-content {
     max-height: 300px;
   }
@@ -1666,21 +1666,21 @@ onMounted(() => {
   .bind-resource-content :deep(.ant-table) {
     font-size: 12px;
   }
-  
+
   .bind-resource-content :deep(.ant-table-thead > tr > th) {
     font-size: 12px;
     padding: 8px 4px;
   }
-  
+
   .bind-resource-content :deep(.ant-table-tbody > tr > td) {
     padding: 8px 4px;
   }
-  
+
   .bind-resource-content :deep(.ant-table-cell) {
     word-break: break-all;
     white-space: normal;
   }
-  
+
   .bind-resource-content :deep(.ant-pagination) {
     margin-top: 12px;
   }
@@ -1690,31 +1690,31 @@ onMounted(() => {
   .bind-resource-content :deep(.ant-table) {
     font-size: 11px;
   }
-  
+
   .bind-resource-content :deep(.ant-table-thead > tr > th) {
     font-size: 11px;
     padding: 6px 2px;
   }
-  
+
   .bind-resource-content :deep(.ant-table-tbody > tr > td) {
     padding: 6px 2px;
   }
-  
+
   .bind-resource-content :deep(.ant-table-cell) {
     word-break: break-all;
     white-space: normal;
   }
-  
+
   .bind-resource-content :deep(.ant-pagination) {
     margin-top: 8px;
   }
-  
+
   .bind-resource-content :deep(.ant-pagination-item) {
     min-width: 24px;
     height: 24px;
     line-height: 22px;
   }
-  
+
   .bind-resource-content :deep(.ant-pagination-prev),
   .bind-resource-content :deep(.ant-pagination-next) {
     min-width: 24px;
@@ -1738,7 +1738,7 @@ onMounted(() => {
   max-height: 240px;
   overflow-y: auto;
   padding: 8px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
   border-radius: 4px;
 }
 
@@ -1752,7 +1752,7 @@ onMounted(() => {
 }
 
 .user-option-item:hover {
-  background-color: #f5f5f5;
+  background-color: var(--ops-ground);
   border-color: #e6e6e6;
 }
 
@@ -1767,7 +1767,7 @@ onMounted(() => {
 
 .user-email {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 /* 树状结构样式优化 */
@@ -1781,7 +1781,7 @@ onMounted(() => {
 }
 
 .node-tree :deep(.ant-tree-node-content-wrapper:hover) {
-  background-color: #f5f5f5;
+  background-color: var(--ops-ground);
 }
 
 .node-tree :deep(.ant-tree-node-selected .ant-tree-node-content-wrapper) {
@@ -1798,25 +1798,25 @@ onMounted(() => {
   .node-tree :deep(.ant-tree-treenode) {
     padding: 6px 0;
   }
-  
+
   .node-tree :deep(.ant-tree-node-content-wrapper) {
     padding: 4px 8px;
   }
-  
+
   .node-tree :deep(.ant-tree-switcher) {
     width: 20px;
     height: 20px;
     line-height: 20px;
   }
-  
+
   .node-tree :deep(.ant-tree-icon__customize) {
     font-size: 14px;
   }
-  
+
   .tree-node-title {
     font-size: 13px;
   }
-  
+
   .tree-node-badges :deep(.ant-tag) {
     font-size: 10px;
     padding: 1px 4px;
@@ -1829,25 +1829,25 @@ onMounted(() => {
   .node-tree :deep(.ant-tree-treenode) {
     padding: 8px 0;
   }
-  
+
   .node-tree :deep(.ant-tree-node-content-wrapper) {
     padding: 6px 8px;
   }
-  
+
   .node-tree :deep(.ant-tree-switcher) {
     width: 18px;
     height: 18px;
     line-height: 18px;
   }
-  
+
   .node-tree :deep(.ant-tree-icon__customize) {
     font-size: 12px;
   }
-  
+
   .tree-node-title {
     font-size: 12px;
   }
-  
+
   .tree-node-badges :deep(.ant-tag) {
     font-size: 9px;
     padding: 1px 3px;
@@ -1863,13 +1863,13 @@ onMounted(() => {
     min-height: 48px;
     padding: 12px;
   }
-  
+
   .node-tree :deep(.ant-tree-node-content-wrapper) {
     min-height: 44px;
     display: flex;
     align-items: center;
   }
-  
+
   .btn-create,
   .reset-btn,
   .detail-actions .ant-btn {
@@ -1879,24 +1879,24 @@ onMounted(() => {
     align-items: center;
     justify-content: center;
   }
-  
+
   .search-input :deep(.ant-input),
   .filter-select :deep(.ant-select-selector) {
     min-height: 44px;
   }
-  
+
   .search-input :deep(.ant-input),
   .filter-select :deep(.ant-select-selector) {
     padding: 8px 12px;
     font-size: 16px;
   }
-  
+
   .member-item .ant-btn,
   .resource-item .ant-btn {
     min-height: 40px;
     min-width: 40px;
   }
-  
+
   .tree-node-badges :deep(.ant-tag) {
     min-height: 24px;
     display: inline-flex;

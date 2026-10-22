@@ -1272,7 +1272,7 @@ const insertYamlTemplate = (): void => {
 - action: replace
   source_labels: [__meta_kubernetes_namespace]
   target_label: namespace`;
-  
+
   formDialog.form.relabel_configs_yaml_string = template;
   yamlError.value = '';
   yamlSuccess.value = true;
@@ -1348,7 +1348,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%);
+  background: var(--ops-accent);
   border: none;
   flex-shrink: 0;
 }
@@ -1380,7 +1380,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
 }
@@ -1407,7 +1407,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 }
 
 .status-disabled {
-  background-color: #d9d9d9;
+  background-color: var(--ops-border);
 }
 
 .job-name-text {
@@ -1429,13 +1429,13 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 
 .target-label {
   font-size: 12px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .target-value {
   font-size: 12px;
   font-weight: 500;
-  color: #333;
+  color: var(--ops-ink);
 }
 
 .tech-tag {
@@ -1463,13 +1463,13 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 
 .config-label {
   font-size: 12px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .config-value {
   font-size: 12px;
   font-weight: 500;
-  color: #333;
+  color: var(--ops-ink);
 }
 
 .creator-info {
@@ -1495,7 +1495,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 
 .time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .action-buttons {
@@ -1515,7 +1515,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
   border-left: 4px solid #1890ff;
@@ -1530,13 +1530,13 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 }
 
 .tech-switch.ant-switch-checked {
-  background: linear-gradient(45deg, #1890ff, #36cfc9);
+  background: var(--ops-accent);
 }
 
 .form-help-text {
   margin-top: 4px;
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1558,7 +1558,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 .detail-header h2 {
   margin: 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--ops-ink);
   word-break: break-all;
 }
 
@@ -1737,12 +1737,12 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
     max-height: calc(100vh - 160px);
     overflow-y: auto;
   }
-  
+
   .yaml-toolbar {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .yaml-toolbar .ant-btn {
     justify-content: center;
   }

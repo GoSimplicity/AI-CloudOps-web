@@ -45,7 +45,7 @@
             <Icon icon="material-symbols:search" />
           </template>
         </a-input>
-        
+
         <a-select
           v-model:value="searchParams.method"
           placeholder="请求方法"
@@ -68,7 +68,7 @@
           <a-select-option :value="2">私有</a-select-option>
         </a-select>
       </div>
-      
+
       <div class="search-right">
         <a-button type="primary" @click="handleSearch">搜索</a-button>
         <a-button @click="handleReset">重置</a-button>
@@ -100,12 +100,12 @@
               </div>
             </div>
           </template>
-          
+
           <template v-if="column.key === 'version'">
             <a-tag v-if="record.version" color="blue">{{ record.version }}</a-tag>
             <span v-else class="no-version">-</span>
           </template>
-          
+
           <template v-if="column.key === 'access'">
             <a-switch 
               :checked="record.is_public === 1" 
@@ -113,16 +113,16 @@
               size="small"
             />
           </template>
-          
+
           <template v-if="column.key === 'category'">
             <span v-if="record.category">{{ record.category }}</span>
             <span v-else class="no-category">-</span>
           </template>
-          
+
           <template v-if="column.key === 'created_at'">
             {{ formatTime(record.created_at) }}
           </template>
-          
+
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
               <a-button type="text" size="small" @click="handleView(record)">查看</a-button>
@@ -204,7 +204,7 @@
             </a-form-item>
           </a-col>
         </a-row>
-        
+
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="请求方法" name="method">
@@ -412,10 +412,10 @@ const fetchApiList = async () => {
     }
 
     const response = await listApisApi(params);
-    
+
     apiList.value = response.items || [];
     paginationConfig.total = response.total || 0;
-    
+
   } catch (error: any) {
     message.error(error.message || '获取API列表失败');
     apiList.value = [];
@@ -516,11 +516,11 @@ const handleDelete = async (api: ApiInfo) => {
 
 const handleAccessChange = async (api: ApiInfo, newAccess: number) => {
   const originalAccess = api.is_public;
-  
+
   try {
     // 乐观更新
     api.is_public = newAccess;
-    
+
     const updateData: UpdateApiReq = {
       id: api.id,
       name: api.name,
@@ -531,10 +531,10 @@ const handleAccessChange = async (api: ApiInfo, newAccess: number) => {
       category: api.category,
       is_public: newAccess as 1 | 2
     };
-    
+
     await updateApiApi(updateData);
     message.success('访问权限更新成功');
-    
+
     // 重新获取统计数据
     await fetchApiStatistics();
   } catch (error: any) {
@@ -548,7 +548,7 @@ const handleSubmit = async () => {
   try {
     await formRef.value?.validate();
     submitLoading.value = true;
-    
+
     if (modalTitle.value === '新建API') {
       const createData: CreateApiReq = {
         name: formData.name,
@@ -559,7 +559,7 @@ const handleSubmit = async () => {
         category: formData.category,
         is_public: formData.is_public as 1 | 2
       };
-      
+
       await createApiApi(createData);
       message.success('创建成功');
     } else {
@@ -576,7 +576,7 @@ const handleSubmit = async () => {
       await updateApiApi(updateData);
       message.success('更新成功');
     }
-    
+
     modalVisible.value = false;
     await Promise.all([
       fetchApiList(),
@@ -602,7 +602,7 @@ onMounted(() => {
 /* 继承用户页面的样式风格 */
 .api-management {
   padding: 20px;
-  background: #f5f5f5;
+  background: var(--ops-ground);
   min-height: 100vh;
 }
 
@@ -612,16 +612,16 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 20px;
   padding: 20px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
 }
 
 .page-header h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .header-actions {
@@ -643,11 +643,11 @@ onMounted(() => {
 }
 
 .stat-card {
-  background: white;
+  background: var(--ops-surface);
   padding: 20px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   text-align: center;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--ops-border);
 }
 
 .stat-number {
@@ -659,7 +659,7 @@ onMounted(() => {
 
 .stat-label {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .search-section {
@@ -669,9 +669,9 @@ onMounted(() => {
   gap: 16px;
   margin-bottom: 20px;
   padding: 20px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
 }
 
 .search-left {
@@ -698,21 +698,21 @@ onMounted(() => {
 }
 
 .table-container {
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
   overflow: hidden;
 }
 
 .table-container :deep(.ant-table-thead > tr > th) {
-  background: #fafafa;
+  background: var(--ops-ground);
   font-weight: 600;
-  color: #262626;
-  border-bottom: 1px solid #e8e8e8;
+  color: var(--ops-ink);
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .table-container :deep(.ant-table-tbody > tr:hover > td) {
-  background: #f5f5f5;
+  background: var(--ops-ground);
 }
 
 .api-info {
@@ -736,25 +736,25 @@ onMounted(() => {
 
 .api-name {
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin-bottom: 2px;
 }
 
 .api-path {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-family: 'Roboto Mono', monospace;
-  background: #f5f5f5;
+  background: var(--ops-ground);
   padding: 2px 6px;
   border-radius: 3px;
 }
 
 .api-path-detail {
   font-family: 'Roboto Mono', monospace;
-  background: #f5f5f5;
+  background: var(--ops-ground);
   padding: 4px 8px;
   border-radius: 4px;
-  color: #595959;
+  color: var(--ops-muted);
 }
 
 .no-version,
@@ -780,9 +780,9 @@ onMounted(() => {
   margin: 0 0 16px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   padding-bottom: 8px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .detail-grid {
@@ -793,29 +793,29 @@ onMounted(() => {
 
 .detail-item {
   padding: 12px;
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 6px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
 }
 
 .detail-item label {
   display: block;
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 600;
   margin-bottom: 4px;
 }
 
 .detail-item span {
   font-size: 14px;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .api-preview {
   margin-top: 24px;
   padding: 16px;
-  background: #fafafa;
-  border: 1px dashed #d9d9d9;
+  background: var(--ops-ground);
+  border: 1px dashed var(--ops-border);
   border-radius: 6px;
 }
 
@@ -824,7 +824,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin-bottom: 12px;
 }
 
@@ -843,11 +843,11 @@ onMounted(() => {
 .preview-path {
   flex: 1;
   font-size: 14px;
-  color: #262626;
-  background: #fff;
+  color: var(--ops-ink);
+  background: var(--ops-surface);
   padding: 4px 8px;
   border-radius: 4px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
 }
 
 .preview-access-tag {
@@ -878,21 +878,21 @@ onMounted(() => {
     align-items: stretch;
     gap: 16px;
   }
-  
+
   .search-left {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .search-input {
     max-width: none;
   }
-  
+
   .method-select,
   .access-select {
     width: 100%;
   }
-  
+
   .search-right {
     justify-content: flex-end;
   }
@@ -902,42 +902,42 @@ onMounted(() => {
   .api-management {
     padding: 12px;
   }
-  
+
   .page-header {
     flex-direction: column;
     gap: 16px;
     text-align: center;
   }
-  
+
   .header-actions {
     width: 100%;
     justify-content: center;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .search-right {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .detail-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .action-buttons {
     flex-direction: column;
     width: 100%;
   }
-  
+
   .api-info {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-  
+
   .preview-content {
     flex-direction: column;
     align-items: flex-start;

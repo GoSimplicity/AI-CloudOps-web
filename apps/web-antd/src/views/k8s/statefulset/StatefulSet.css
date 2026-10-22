@@ -15,7 +15,7 @@
 }
 
 .statefulset-table :deep(.ant-table-tbody > tr[data-statefulset-status="Stopped"]) {
-  border-left: 3px solid #d9d9d9;
+  border-left: 3px solid var(--ops-border);
 }
 
 .statefulset-table :deep(.ant-table-tbody > tr[data-statefulset-status="Updating"]) {
@@ -65,8 +65,8 @@
 
 /* StatefulSet 表单配置区域样式 */
 .k8s-form .replica-config-section {
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
   background: #f0f7ff;
 }
@@ -82,7 +82,7 @@
   font-size: 14px;
   font-weight: 600;
   margin: 0;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .k8s-form .replica-config-item {
@@ -91,13 +91,13 @@
   align-items: center;
   margin-bottom: 8px;
   padding: 8px;
-  background: #ffffff;
+  background: var(--ops-surface);
   border-radius: 6px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .k8s-form .replica-config-item:hover {
-  border-color: #d9d9d9;
+  border-color: var(--ops-border);
 }
 
 .k8s-form .replica-config-item .ant-input,
@@ -127,8 +127,8 @@
 
 /* StatefulSet 服务配置样式 */
 .service-config-section {
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
   background: #f9f0ff;
   margin-top: 8px;
@@ -136,7 +136,7 @@
 
 .service-empty-state {
   text-align: center;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   padding: 20px;
   font-style: italic;
 }

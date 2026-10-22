@@ -86,7 +86,7 @@
               </a-button>
             </a-select-option>
           </a-select>
-          
+
           <a-select 
             v-model:value="filterType" 
             placeholder="Service类型" 
@@ -113,7 +113,7 @@
             <a-select-option :value="K8sSvcStatus.Stopped">已停止</a-select-option>
             <a-select-option :value="K8sSvcStatus.Error">异常</a-select-option>
           </a-select>
-          
+
           <!-- 标签过滤器 -->
           <div class="k8s-labels-filter">
             <a-button type="dashed" @click="openLabelsFilter" class="k8s-toolbar-btn">
@@ -138,7 +138,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
@@ -154,7 +154,7 @@
           </a-input>
         </div>
       </div>
-      
+
       <!-- 操作区域 -->
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
@@ -167,7 +167,7 @@
             <template #icon><DeleteOutlined /></template>
             重置筛选
           </a-button>
-          
+
           <a-button 
             @click="fetchServices" 
             :loading="loading"
@@ -187,7 +187,7 @@
             <template #icon><FileTextOutlined /></template>
             YAML 创建
           </a-button>
-          
+
           <a-button 
             type="primary" 
             danger 
@@ -909,7 +909,7 @@
                 </div>
               </a-card>
             </a-col>
-            
+
             <a-col :xs="24" :lg="12">
               <a-card title="时间信息" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item" v-if="currentServiceDetail.created_at">
@@ -1172,7 +1172,7 @@ const {
   total,
   clustersTotal,
   namespacesTotal,
-  
+
   // modal state
   isCreateModalVisible,
   isCreateYamlModalVisible,
@@ -1182,59 +1182,59 @@ const {
   isEndpointsModalVisible,
   submitLoading,
   detailLoading,
-  
+
   // operation targets
   currentOperationService,
   currentServiceDetail,
   serviceEndpoints,
-  
+
   // form models
   createFormModel,
   editFormModel,
   yamlFormModel,
   createYamlFormModel,
-  
+
   // form refs
   formRef,
   editFormRef,
   yamlFormRef,
   createYamlFormRef,
-  
+
   // form rules
   createFormRules,
   editFormRules,
   yamlFormRules,
   createYamlFormRules,
-  
+
   // computed
   filteredServices,
   rowSelection,
-  
+
   // helpers
   getEnvText,
   getStatusText,
   getStatusColor,
   getServiceTypeText,
   getServiceTypeColor,
-  
+
   // operations
   fetchClusters,
-  fetchNamespaces,
+
   fetchServices,
   clearServices,
   clearNamespaces,
-  loadMoreClusters,
+
   loadMoreNamespaces,
-  
+
   // detail operations
   showServiceDetail,
   closeDetailModal,
-  
+
   // YAML operations
   showYamlModal,
   closeYamlModal,
   submitYamlForm,
-  
+
   // create operations
   openCreateModal,
   closeCreateModal,
@@ -1242,41 +1242,41 @@ const {
   openCreateYamlModal,
   closeCreateYamlModal,
   submitCreateYamlForm,
-  
+
   // edit operations
   openEditModal,
   closeEditModal,
   submitEditForm,
-  
+
   // service operations
   deleteService,
-  
+
   // endpoints operations
   showEndpointsModal,
   closeEndpointsModal,
-  
+
   // filter operations
   addFilterLabel,
   removeFilterLabel,
   clearFilterLabels,
-  
+
   // batch operations
   batchOperation,
-  
+
   // pagination operations
   handlePageChange,
   onSearch,
   handleFilterChange,
   handleClusterChange,
   handleClusterDropdownScroll,
-  
+
   // form field operations
   addPortField,
   removePortField,
   removeLabelField,
   removeAnnotationField,
   removeSelectorField,
-  
+
   // edit form field operations
   addEditPortField,
   removeEditPortField,
@@ -1286,12 +1286,12 @@ const {
   removeEditSelectorField,
   addNewEditAnnotation,
   removeEditAnnotationField,
-  
+
   // edit form helper variables
   newEditLabelKey,
   newEditSelectorKey,
   newEditAnnotationKey,
-  
+
   // constants
   K8sSvcStatus,
 } = useServicePage();
@@ -1354,15 +1354,15 @@ const portColumns = [
 // 动态获取可见的端口列（只显示有数据的列）
 const getVisiblePortColumns = (ports: any[]) => {
   if (!ports || ports.length === 0) return portColumns;
-  
+
   // 检查是否有任何端口配置了 node_port
   const hasNodePort = ports.some(port => port.node_port && port.node_port > 0);
-  
+
   // 如果没有 node_port，则过滤掉该列
   if (!hasNodePort) {
     return portColumns.filter(col => col.key !== 'node_port');
   }
-  
+
   return portColumns;
 };
 
@@ -1483,7 +1483,7 @@ const validateYaml = () => {
 
   try {
     const parsed = yaml.load(yamlContent);
-    
+
     if (!parsed || typeof parsed !== 'object') {
       message.warning('YAML 内容无效：应为对象格式');
       return;

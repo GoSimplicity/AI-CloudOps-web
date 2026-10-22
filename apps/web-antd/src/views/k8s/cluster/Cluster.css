@@ -19,7 +19,7 @@
 .api-addr-text {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .timeout-text {
@@ -28,13 +28,13 @@
 }
 
 .user-name-text {
-  color: #595959;
+  color: var(--ops-muted);
   font-weight: 500;
 }
 
 .time-text {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 /* 命名空间单元格 */
@@ -64,9 +64,9 @@
 .k8s-namespace-list {
   min-height: 60px;
   padding: 12px;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
 }
 
 .k8s-namespace-tag {
@@ -82,9 +82,9 @@
 .k8s-tags-display {
   min-height: 60px;
   padding: 12px;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
 }
 
 .k8s-labels-display {
@@ -113,9 +113,9 @@
   gap: 8px;
   margin-bottom: 8px;
   padding: 8px 12px;
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
 }
 
 .k8s-tag-key {
@@ -140,9 +140,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
   margin-bottom: 12px;
 }
 
@@ -155,7 +155,7 @@
 .cluster-name {
   font-size: 18px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .kubeconfig-actions {
@@ -164,10 +164,10 @@
 }
 
 .kubeconfig-content {
-  background: #ffffff;
-  border-radius: 8px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 12px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
 }
 
 .kubeconfig-textarea {
@@ -176,7 +176,7 @@
   line-height: 1.4;
   background: #f8f9fa;
   border: 1px solid #e9ecef;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   padding: 20px;
   resize: none;
 }
@@ -199,8 +199,8 @@
 
 .config-length-info {
   font-size: 11px;
-  color: #666;
-  background: #f0f0f0;
+  color: var(--ops-muted);
+  background: var(--ops-border);
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 500;
@@ -223,12 +223,12 @@
 
 .config-preview-text {
   font-size: 12px;
-  color: #333;
+  color: var(--ops-ink);
   line-height: 1.4;
-  background: #fafafa;
+  background: var(--ops-ground);
   padding: 6px 8px;
   border-radius: 4px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
   word-break: break-all;
   max-height: 40px;
   overflow: hidden;
@@ -262,7 +262,7 @@
   color: #1677ff;
   margin-bottom: 8px;
   padding-bottom: 4px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .tooltip-config-content {
@@ -290,7 +290,7 @@
 .cluster-table :deep(.ant-table-tbody td[data-index="3"]) {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .cluster-table :deep(.ant-table-tbody td[data-index="4"]) {

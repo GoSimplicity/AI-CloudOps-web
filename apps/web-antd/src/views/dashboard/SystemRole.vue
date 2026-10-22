@@ -49,7 +49,7 @@
             <Icon icon="material-symbols:search" />
           </template>
         </a-input>
-        
+
         <a-select
           v-model:value="searchParams.status"
           placeholder="状态筛选"
@@ -70,7 +70,7 @@
           <a-select-option :value="0">自定义角色</a-select-option>
         </a-select>
       </div>
-      
+
       <div class="search-right">
         <a-button type="primary" @click="handleSearch">搜索</a-button>
         <a-button @click="handleReset">重置</a-button>
@@ -103,12 +103,12 @@
               </div>
             </div>
           </template>
-          
+
           <template v-if="column.key === 'type'">
             <a-tag v-if="record.is_system === 1" color="orange">系统角色</a-tag>
             <a-tag v-else color="blue">自定义角色</a-tag>
           </template>
-          
+
           <template v-if="column.key === 'status'">
             <a-switch 
               :checked="record.status === 1" 
@@ -117,23 +117,23 @@
               :disabled="record.is_system === 1"
             />
           </template>
-          
+
           <template v-if="column.key === 'description'">
             <div class="description-text">{{ record.description || '暂无描述' }}</div>
           </template>
-          
+
           <template v-if="column.key === 'apis'">
             {{ record.apis?.length || 0 }}
           </template>
-          
+
           <template v-if="column.key === 'users'">
             {{ record.users?.length || 0 }}
           </template>
-          
+
           <template v-if="column.key === 'created_at'">
             {{ formatTime(record.created_at) }}
           </template>
-          
+
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
               <a-button type="text" size="small" @click="handleView(record)">查看</a-button>
@@ -346,7 +346,7 @@
                   </a-button>
                 </div>
               </div>
-              
+
               <div class="api-list" v-if="modalApiList.length > 0">
                 <div 
                   v-for="api in modalApiList" 
@@ -410,7 +410,7 @@
         <div class="permission-header">
           <h4>{{ currentRole.name }} 的权限</h4>
         </div>
-        
+
         <a-tabs>
           <a-tab-pane key="assigned" tab="已分配权限">
             <div class="permission-list">
@@ -429,7 +429,7 @@
               </div>
             </div>
           </a-tab-pane>
-          
+
           <a-tab-pane key="available" tab="可分配权限">
             <div class="permission-list">
               <div v-if="availableApis.length === 0" class="empty-state">
@@ -576,7 +576,7 @@ const totalUsers = computed(() =>
 
 const filteredRoles = computed(() => {
   let filtered = roleList.value;
-  
+
   if (searchParams.search) {
     const searchText = searchParams.search.toLowerCase();
     filtered = filtered.filter((role: Role) => 
@@ -584,7 +584,7 @@ const filteredRoles = computed(() => {
       role.code.toLowerCase().includes(searchText)
     );
   }
-  
+
   if (searchParams.status !== undefined) {
     filtered = filtered.filter((role: Role) => role.status === searchParams.status);
   }
@@ -592,13 +592,13 @@ const filteredRoles = computed(() => {
   if (typeFilter.value !== undefined) {
     filtered = filtered.filter((role: Role) => role.is_system === typeFilter.value);
   }
-  
+
   return filtered;
 });
 
 const availableApis = computed(() => {
   if (!currentRole.value) return [];
-  
+
   const assignedIds = assignedApis.value.map(api => api.id);
   return apiList.value.filter(api => !assignedIds.includes(api.id));
 });
@@ -665,17 +665,17 @@ const selectCurrentPageApis = () => {
 
 const selectAllSearchedApis = async () => {
   if (selectAllLoading.value) return;
-  
+
   try {
     selectAllLoading.value = true;
-    
+
     // 获取所有搜索结果
     const response = await listApisApi({
       search: apiSearchParams.search || undefined,
       page: 1,
       size: apiPagination.total
     });
-    
+
     const allSearchedApis = (response.items || []).map((api: any) => ({
       ...api,
       method: formatMethod(api.method),
@@ -691,7 +691,7 @@ const selectAllSearchedApis = async () => {
         addedCount++;
       }
     });
-    
+
     updateFormApiIds();
     message.success(`已添加 ${addedCount} 个API到选择列表`);
   } catch (error: any) {
@@ -714,10 +714,10 @@ const fetchRoleList = async () => {
       page: paginationConfig.current,
       size: paginationConfig.pageSize
     });
-    
+
     roleList.value = response.items || [];
     paginationConfig.total = response.total || 0;
-    
+
   } catch (error: any) {
     message.error(error.message || '获取角色列表失败');
     roleList.value = [];
@@ -739,10 +739,10 @@ const fetchApiList = async () => {
         page: currentPage,
         size: pageSize
       });
-      
+
       if (response && response.items && response.items.length > 0) {
         allApis = [...allApis, ...response.items];
-        
+
         if (response.items.length < pageSize || allApis.length >= (response.total || 0)) {
           hasMoreData = false;
         } else {
@@ -752,14 +752,14 @@ const fetchApiList = async () => {
         hasMoreData = false;
       }
     }
-    
+
     const safeApiList = allApis.map((api: any) => ({
       ...api,
       method: formatMethod(api.method),
       name: api.name || '未命名API',
       path: api.path || '/'
     }));
-    
+
     apiList.value = safeApiList;
   } catch (error: any) {
     message.error(error.message || '获取API列表失败');
@@ -774,14 +774,14 @@ const fetchModalApiList = async () => {
       page: apiPagination.current,
       size: apiPagination.pageSize
     });
-    
+
     const safeApiList = (response.items || []).map((api: any) => ({
       ...api,
       method: formatMethod(api.method),
       name: api.name || '未命名API',
       path: api.path || '/'
     }));
-    
+
     modalApiList.value = safeApiList;
     apiPagination.total = response.total || 0;
   } catch (error: any) {
@@ -796,14 +796,14 @@ const fetchModalApiList = async () => {
 const fetchRoleApis = async (roleId: number) => {
   try {
     const response = await getRoleApisApi(roleId);
-    
+
     const safeAssignedApis = (response.items || []).map((api: any) => ({
       ...api,
       method: formatMethod(api.method),
       name: api.name || '未命名API',
       path: api.path || '/'
     }));
-    
+
     assignedApis.value = safeAssignedApis;
   } catch (error: any) {
     message.error(error.message || '获取角色权限失败');
@@ -872,7 +872,7 @@ const handleEdit = async (role: Role) => {
   try {
     modalTitle.value = '编辑角色';
     const response = await getRoleDetailApi(role.id);
-    
+
     // 设置已选择的APIs
     const roleApis = (response.apis || []).map((api: any) => ({
       ...api,
@@ -880,9 +880,9 @@ const handleEdit = async (role: Role) => {
       name: api.name || '未命名API',
       path: api.path || '/'
     }));
-    
+
     selectedApis.value = roleApis;
-    
+
     Object.assign(formData, {
       id: response.id,
       name: response.name,
@@ -891,7 +891,7 @@ const handleEdit = async (role: Role) => {
       status: response.status,
       api_ids: roleApis.map((api: any) => api.id)
     });
-    
+
     // 重置API搜索
     apiSearchParams.search = '';
     apiPagination.current = 1;
@@ -933,10 +933,10 @@ const handleDelete = async (role: Role) => {
 
 const handleStatusChange = async (role: Role, newStatus: 0 | 1) => {
   const originalStatus = role.status;
-  
+
   try {
     role.status = newStatus;
-    
+
     await updateRoleApi({
       id: role.id,
       name: role.name,
@@ -956,7 +956,7 @@ const handleSubmit = async () => {
   try {
     await formRef.value?.validate();
     submitLoading.value = true;
-    
+
     if (formData.id) {
       await updateRoleApi({
         id: formData.id,
@@ -977,7 +977,7 @@ const handleSubmit = async () => {
       });
       message.success('创建成功');
     }
-    
+
     modalVisible.value = false;
     await fetchRoleList();
   } catch (error: any) {
@@ -991,7 +991,7 @@ const handleSubmit = async () => {
 
 const handleAssignApi = async (api: any) => {
   if (!currentRole.value) return;
-  
+
   try {
     await assignApisToRoleApi({
       role_id: currentRole.value.id,
@@ -1007,7 +1007,7 @@ const handleAssignApi = async (api: any) => {
 
 const handleRevokeApi = async (api: any) => {
   if (!currentRole.value) return;
-  
+
   try {
     await revokeApisFromRoleApi({
       role_id: currentRole.value.id,
@@ -1047,7 +1047,7 @@ onMounted(() => {
 /* 保持原有样式不变，只添加新的样式 */
 .role-management {
   padding: 20px;
-  background: #f5f5f5;
+  background: var(--ops-ground);
   min-height: 100vh;
 }
 
@@ -1057,16 +1057,16 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 20px;
   padding: 20px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
 }
 
 .page-header h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .header-actions {
@@ -1088,11 +1088,11 @@ onMounted(() => {
 }
 
 .stat-card {
-  background: white;
+  background: var(--ops-surface);
   padding: 20px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   text-align: center;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--ops-border);
 }
 
 .stat-number {
@@ -1104,7 +1104,7 @@ onMounted(() => {
 
 .stat-label {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .search-section {
@@ -1114,9 +1114,9 @@ onMounted(() => {
   gap: 16px;
   margin-bottom: 20px;
   padding: 20px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
 }
 
 .search-left {
@@ -1143,21 +1143,21 @@ onMounted(() => {
 }
 
 .table-container {
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
   overflow: hidden;
 }
 
 .table-container :deep(.ant-table-thead > tr > th) {
-  background: #fafafa;
+  background: var(--ops-ground);
   font-weight: 600;
-  color: #262626;
-  border-bottom: 1px solid #e8e8e8;
+  color: var(--ops-ink);
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .table-container :deep(.ant-table-tbody > tr:hover > td) {
-  background: #f5f5f5;
+  background: var(--ops-ground);
 }
 
 .role-info {
@@ -1170,7 +1170,7 @@ onMounted(() => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #f0f0f0;
+  background: var(--ops-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1181,21 +1181,21 @@ onMounted(() => {
 
 .role-name {
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin-bottom: 2px;
 }
 
 .role-code {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  background: #f5f5f5;
+  background: var(--ops-ground);
   padding: 2px 6px;
   border-radius: 3px;
 }
 
 .description-text {
-  color: #595959;
+  color: var(--ops-muted);
   line-height: 1.4;
   max-width: 200px;
   word-break: break-word;
@@ -1218,9 +1218,9 @@ onMounted(() => {
   margin: 0 0 16px 0;
   font-size: 16px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   padding-bottom: 8px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .detail-grid {
@@ -1231,22 +1231,22 @@ onMounted(() => {
 
 .detail-item {
   padding: 12px;
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 6px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
 }
 
 .detail-item label {
   display: block;
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 600;
   margin-bottom: 4px;
 }
 
 .detail-item span {
   font-size: 14px;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .apis-list, .users-list {
@@ -1260,8 +1260,8 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #fafafa;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   margin-bottom: 8px;
 }
@@ -1271,7 +1271,7 @@ onMounted(() => {
   font-weight: bold;
   padding: 3px 8px;
   border-radius: 4px;
-  color: white;
+  color: hsl(var(--primary-foreground));
   min-width: 50px;
   text-align: center;
   text-transform: uppercase;
@@ -1305,14 +1305,14 @@ onMounted(() => {
 
 .api-name {
   font-weight: 500;
-  color: #262626;
+  color: var(--ops-ink);
   font-size: 14px;
   line-height: 1.4;
 }
 
 .api-path {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   line-height: 1.4;
 }
@@ -1320,13 +1320,13 @@ onMounted(() => {
 .permission-header {
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .permission-header h4 {
   margin: 0;
   font-size: 16px;
-  color: #262626;
+  color: var(--ops-ink);
   font-weight: 600;
 }
 
@@ -1337,10 +1337,10 @@ onMounted(() => {
 
 .empty-state {
   text-align: center;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   padding: 40px 0;
-  background: #fafafa;
-  border: 1px dashed #d9d9d9;
+  background: var(--ops-ground);
+  border: 1px dashed var(--ops-border);
   border-radius: 6px;
 }
 
@@ -1349,14 +1349,14 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background: #fafafa;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   margin-bottom: 8px;
 }
 
 .permission-item:hover {
-  background: #f0f0f0;
+  background: var(--ops-border);
 }
 
 .permission-info {
@@ -1366,26 +1366,26 @@ onMounted(() => {
 
 .permission-name {
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin-bottom: 4px;
 }
 
 .permission-path {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
 }
 
 /* API选择器样式 */
 .api-selector {
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
-  background: #fafafa;
+  background: var(--ops-ground);
 }
 
 .api-search-container {
   padding: 12px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--ops-border);
   display: flex;
   gap: 8px;
 }
@@ -1396,7 +1396,7 @@ onMounted(() => {
 
 .selected-apis {
   padding: 12px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--ops-border);
   background: #f0f9ff;
 }
 
@@ -1420,8 +1420,8 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 8px;
-  background: white;
-  border: 1px solid #d9d9d9;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
   border-radius: 4px;
   margin-bottom: 6px;
 }
@@ -1441,7 +1441,7 @@ onMounted(() => {
 }
 
 .api-list-container {
-  background: white;
+  background: var(--ops-surface);
 }
 
 .api-list-header {
@@ -1449,10 +1449,10 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  border-bottom: 1px solid #e8e8e8;
-  background: #fafafa;
+  border-bottom: 1px solid var(--ops-border);
+  background: var(--ops-ground);
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .api-actions {
@@ -1471,7 +1471,7 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 10px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
   border-radius: 4px;
   margin-bottom: 6px;
   cursor: pointer;
@@ -1479,7 +1479,7 @@ onMounted(() => {
 }
 
 .api-list-item:hover {
-  background: #f5f5f5;
+  background: var(--ops-ground);
   border-color: #1890ff;
 }
 
@@ -1499,7 +1499,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 40px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   text-align: center;
 }
 
@@ -1514,14 +1514,14 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 40px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   text-align: center;
 }
 
 .api-pagination {
   padding: 12px;
-  border-top: 1px solid #e8e8e8;
-  background: #fafafa;
+  border-top: 1px solid var(--ops-border);
+  background: var(--ops-ground);
   display: flex;
   justify-content: center;
 }
@@ -1554,14 +1554,14 @@ onMounted(() => {
 .selected-list::-webkit-scrollbar-track,
 .api-list::-webkit-scrollbar-track,
 .permission-list::-webkit-scrollbar-track {
-  background: #f0f0f0;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
 .selected-list::-webkit-scrollbar-thumb,
 .api-list::-webkit-scrollbar-thumb,
 .permission-list::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
@@ -1577,21 +1577,21 @@ onMounted(() => {
     align-items: stretch;
     gap: 16px;
   }
-  
+
   .search-left {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .search-input {
     max-width: none;
   }
-  
+
   .status-select,
   .type-select {
     width: 100%;
   }
-  
+
   .search-right {
     justify-content: flex-end;
   }
@@ -1601,42 +1601,42 @@ onMounted(() => {
   .role-management {
     padding: 12px;
   }
-  
+
   .page-header {
     flex-direction: column;
     gap: 16px;
     text-align: center;
   }
-  
+
   .header-actions {
     width: 100%;
     justify-content: center;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .search-right {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .detail-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .action-buttons {
     flex-direction: column;
     width: 100%;
   }
-  
+
   .role-info {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-  
+
   .role-icon {
     width: 32px;
     height: 32px;
@@ -1647,12 +1647,12 @@ onMounted(() => {
     gap: 8px;
     align-items: flex-start;
   }
-  
+
   .api-actions {
     width: 100%;
     justify-content: flex-end;
   }
-  
+
   .selected-header {
     flex-direction: column;
     gap: 8px;

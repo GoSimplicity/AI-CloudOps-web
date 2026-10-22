@@ -1733,6 +1733,7 @@
 </template>
 
 <script setup lang="ts">
+import { downloadCsv } from "#/utils/export-csv";
 import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
@@ -2863,7 +2864,9 @@ const handleProcessChange = handleFilterChange;
 
 // 导出功能
 const handleExport = () => {
-  message.info('导出功能开发中...');
+  if (!instanceList.value.length) { message.info('当前页没有可导出的记录'); return; }
+  downloadCsv('cloudops-instanceList.csv', [['ID', '编号', '标题', '状态', '优先级', '操作人', '更新时间'], ...instanceList.value.map(row => [row.id, row.serial_number, row.title, row.status, row.priority, row.operator_name, row.updated_at])]);
+  message.success('已导出当前页记录');
 };
 
 const handleCreateInstance = () => {
@@ -4013,7 +4016,7 @@ onMounted(async () => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%);
+  background: var(--ops-accent);
   border: none;
   flex-shrink: 0;
 }
@@ -4043,7 +4046,7 @@ onMounted(async () => {
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
 }
@@ -4090,7 +4093,7 @@ onMounted(async () => {
 
 .serial-number {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin-top: 2px;
 }
 
@@ -4124,7 +4127,7 @@ onMounted(async () => {
 
 .time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .action-buttons {
@@ -4141,7 +4144,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   padding: 8px 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-size: 14px;
 }
 
@@ -4155,12 +4158,12 @@ onMounted(async () => {
 .process-name,
 .user-name {
   font-weight: 500;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .process-desc {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4169,18 +4172,18 @@ onMounted(async () => {
 
 .user-real-name {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .load-more-option {
   text-align: center;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
   margin-top: 4px;
-  background-color: #fafafa !important;
+  background-color: var(--ops-ground) !important;
 }
 
 .load-more-option:hover {
-  background-color: #f0f0f0 !important;
+  background-color: var(--ops-border) !important;
 }
 
 .load-more-content {
@@ -4199,19 +4202,19 @@ onMounted(async () => {
 
 /* 表单数据编辑样式 */
 .form-data-section {
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   padding: 16px;
-  background: #fafafa;
+  background: var(--ops-ground);
 }
 
 /* 可视化表单编辑器样式 */
 .visual-form-editor {
   margin-top: 16px;
-  background: white;
+  background: var(--ops-surface);
   border-radius: 6px;
   padding: 16px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
 }
 
 .visual-form-fields {
@@ -4231,9 +4234,9 @@ onMounted(async () => {
 .no-form-design {
   padding: 40px 20px;
   text-align: center;
-  background: white;
+  background: var(--ops-surface);
   border-radius: 6px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
 }
 
 .json-form-editor {
@@ -4251,7 +4254,7 @@ onMounted(async () => {
 
 .section-header h4 {
   margin: 0;
-  color: #333;
+  color: var(--ops-ink);
   font-size: 16px;
 }
 
@@ -4265,9 +4268,9 @@ onMounted(async () => {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.5;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--ops-border);
   border-radius: 4px;
-  background: white;
+  background: var(--ops-surface);
   transition: all 0.3s;
 }
 
@@ -4308,7 +4311,7 @@ onMounted(async () => {
 .title-section h2 {
   margin: 0 0 12px 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--ops-ink);
   word-break: break-all;
 }
 
@@ -4321,8 +4324,8 @@ onMounted(async () => {
 
 .serial-number {
   font-size: 14px;
-  color: #666;
-  background: #f5f5f5;
+  color: var(--ops-muted);
+  background: var(--ops-ground);
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -4330,19 +4333,19 @@ onMounted(async () => {
 .form-data-preview {
   margin-top: 24px;
   padding: 16px;
-  background: #fafafa;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
 }
 
 .form-data-preview h3 {
   margin: 0 0 16px 0;
-  color: #1f2937;
+  color: var(--ops-ink);
   font-size: 18px;
 }
 
 .form-data-content {
-  background: white;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   padding: 16px;
 }
@@ -4572,9 +4575,9 @@ onMounted(async () => {
 .current-step-section {
   margin-top: 20px;
   margin-bottom: 24px;
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
@@ -4584,8 +4587,8 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px 16px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e8e8e8;
+  background: var(--ops-ground);
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .step-title-wrapper {
@@ -4611,12 +4614,12 @@ onMounted(async () => {
 
 .step-icon {
   font-size: 16px;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .step-title {
   margin: 0;
-  color: #262626;
+  color: var(--ops-ink);
   font-size: 18px;
   font-weight: 600;
 }
@@ -4627,9 +4630,9 @@ onMounted(async () => {
 }
 
 .step-status-tag {
-  background: #f0f0f0 !important;
-  border: 1px solid #d9d9d9 !important;
-  color: #595959 !important;
+  background: var(--ops-border) !important;
+  border: 1px solid var(--ops-border) !important;
+  color: var(--ops-muted) !important;
   font-weight: 500 !important;
   padding: 4px 10px !important;
   border-radius: 4px !important;
@@ -4637,7 +4640,7 @@ onMounted(async () => {
 }
 
 .step-content {
-  background: #ffffff;
+  background: var(--ops-surface);
   padding: 20px 24px;
 }
 
@@ -4649,12 +4652,12 @@ onMounted(async () => {
 
 .step-name-section {
   padding-bottom: 16px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .step-name-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--ops-muted);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -4663,7 +4666,7 @@ onMounted(async () => {
 
 .step-name-value {
   font-size: 18px;
-  color: #1f2937;
+  color: var(--ops-ink);
   font-weight: 600;
   line-height: 1.4;
 }
@@ -4679,14 +4682,14 @@ onMounted(async () => {
   align-items: flex-start;
   gap: 12px;
   padding: 16px;
-  background: #fafafa;
+  background: var(--ops-ground);
   border-radius: 6px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--ops-border);
   transition: background-color 0.2s ease;
 }
 
 .step-detail-item:hover {
-  background: #f0f0f0;
+  background: var(--ops-border);
 }
 
 .detail-icon {
@@ -4695,8 +4698,8 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f0f0f0;
-  color: #666666;
+  background: var(--ops-border);
+  color: var(--ops-muted);
   border-radius: 4px;
   font-size: 13px;
   flex-shrink: 0;
@@ -4713,7 +4716,7 @@ onMounted(async () => {
 
 .detail-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--ops-muted);
   font-weight: 500;
   margin-bottom: 4px;
   text-transform: uppercase;
@@ -4735,7 +4738,7 @@ onMounted(async () => {
 .no-step {
   text-align: center;
   padding: 40px 24px;
-  background: #ffffff;
+  background: var(--ops-surface);
 }
 
 .no-step-icon {
@@ -4746,36 +4749,36 @@ onMounted(async () => {
 
 .no-step-text {
   font-size: 16px;
-  color: #595959;
+  color: var(--ops-muted);
   font-weight: 500;
   margin-bottom: 8px;
 }
 
 .no-step-subtitle {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 /* 步骤导航样式 */
 .step-navigation {
   margin-top: 20px;
-  background: #ffffff;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   overflow: hidden;
 }
 
 .navigation-header {
   padding: 16px 20px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e8e8e8;
+  background: var(--ops-ground);
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .navigation-title {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -4798,8 +4801,8 @@ onMounted(async () => {
   min-width: 140px;
   max-width: 200px;
   padding: 16px;
-  background: #fafafa;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   position: relative;
 }
@@ -4828,7 +4831,7 @@ onMounted(async () => {
 
 .nav-step-icon {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .nav-step-icon.current {
@@ -4837,7 +4840,7 @@ onMounted(async () => {
 
 .nav-step-label {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 500;
 }
 
@@ -4849,7 +4852,7 @@ onMounted(async () => {
 
 .nav-step-name {
   font-size: 14px;
-  color: #262626;
+  color: var(--ops-ink);
   font-weight: 500;
   line-height: 1.4;
 }
@@ -4863,7 +4866,7 @@ onMounted(async () => {
 .step-progress {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
 }
 
 .progress-bar {
@@ -4886,8 +4889,8 @@ onMounted(async () => {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #d9d9d9;
-  border: 2px solid #d9d9d9;
+  background: var(--ops-border);
+  border: 2px solid var(--ops-border);
   margin-bottom: 6px;
 }
 
@@ -4903,13 +4906,13 @@ onMounted(async () => {
 }
 
 .progress-item.pending .progress-dot {
-  background: #f5f5f5;
-  border-color: #d9d9d9;
+  background: var(--ops-ground);
+  border-color: var(--ops-border);
 }
 
 .progress-label {
   font-size: 11px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   text-align: center;
   line-height: 1.2;
   max-width: 80px;
@@ -4955,14 +4958,14 @@ onMounted(async () => {
   margin-top: 20px;
   margin-bottom: 24px;
   padding: 20px;
-  background: #f8fafc;
-  border: 1px solid #e8e8e8;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
 }
 
 .available-actions-section h3 {
   margin: 0 0 16px 0;
-  color: #262626;
+  color: var(--ops-ink);
   font-size: 16px;
   font-weight: 600;
 }
@@ -4988,7 +4991,7 @@ onMounted(async () => {
   gap: 12px;
   flex-wrap: wrap;
   padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--ops-border);
 }
 
 .footer-left {
@@ -5039,7 +5042,7 @@ onMounted(async () => {
 }
 
 .approval-step-info .ant-alert-message {
-  color: #262626;
+  color: var(--ops-ink);
   font-weight: 500;
 }
 
@@ -5165,13 +5168,13 @@ onMounted(async () => {
 }
 
 .notification-logs-dialog .meta-item .label {
-  color: #666;
+  color: var(--ops-muted);
   margin-right: 8px;
   min-width: 80px;
 }
 
 .notification-logs-dialog .meta-item .value {
-  color: #333;
+  color: var(--ops-ink);
 }
 
 .notification-logs-dialog .notification-actions {
@@ -5193,6 +5196,6 @@ onMounted(async () => {
   margin-top: 16px;
   text-align: center;
   padding: 16px 0;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
 }
 </style>

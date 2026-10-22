@@ -192,3 +192,26 @@ pnpm run build
 ---
 
 欢迎使用 **AI+CloudOps** 云原生运维平台，期待您的参与和贡献！
+
+## 1.0 验证与部署
+
+使用 Node.js 22 和 `pnpm@9.9.0`，首次安装或移动目录后运行 `pnpm install --frozen-lockfile`，重新生成内部 workspace stub。
+
+```sh
+pnpm -F @vben/web-antd typecheck
+pnpm test:unit --run
+pnpm build:antd
+```
+
+`/api` 和 `/api/v1` 均通过 Go 后端认证。开发环境可设置 `VITE_PROXY_TARGET=http://127.0.0.1:8889`，前端不得配置 AIOps 服务端 API key。默认开发端口 5666。
+
+```sh
+VITE_PROXY_TARGET=http://127.0.0.1:17889 pnpm -F @vben/web-antd exec vite --mode development --port 5667
+CLOUDOPS_WEB_URL=http://127.0.0.1:5667 CLOUDOPS_TEST_ENV_FILE=/absolute/path/to/isolated/.env pnpm test:e2e
+```
+
+浏览器回归默认使用本机 Chrome。CI 可安装 Playwright Chromium 后设置 `PLAYWRIGHT_CHANNEL=chromium`。全路由回归使用隔离环境账号，密码从环境变量或指定 env 文件读取，不录制 trace，不保存登录凭据。无账号时只运行登录页回归并跳过认证场景。
+
+生产镜像固定 pnpm 版本，包含 HTTP 健康检查；入口脚本只接受 `VITE_GLOB_` 公共配置。此类变量会公开到浏览器，禁止传入密钥。建议通过后端仓库的反向代理统一提供静态文件和 API。
+
+界面规则见 [DESIGN.md](DESIGN.md)。当前版本仅支持阿里云账号连接与同步；其他云的已有资产可查看。系统首页使用真实 CPU、内存、磁盘、负载采样，未采集值显示“待采集”，不生成历史数据。导出使用 UTF-8 CSV；审计与工单导出范围为当前页。账号由管理员分配，暂不提供短信、扫码、第三方和自助注册入口。

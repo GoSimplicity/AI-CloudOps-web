@@ -86,7 +86,7 @@
               </a-button>
             </a-select-option>
           </a-select>
-          
+
           <a-select 
             v-model:value="filterStatus" 
             placeholder="状态筛选" 
@@ -102,7 +102,7 @@
             <a-select-option :value="TaskStatus.CANCELLED">已取消</a-select-option>
           </a-select>
         </div>
-        
+
         <div class="k8s-search-group">
           <a-input 
             v-model:value="searchText" 
@@ -118,7 +118,7 @@
           </a-input>
         </div>
       </div>
-      
+
       <!-- 操作区域 -->
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
@@ -131,7 +131,7 @@
             <template #icon><DeleteOutlined /></template>
             重置筛选
           </a-button>
-          
+
           <a-button 
             @click="fetchTasks" 
             :loading="loading"
@@ -141,7 +141,7 @@
             <template #icon><ReloadOutlined /></template>
             刷新
           </a-button>
-          
+
           <a-button 
             type="primary" 
             @click="() => batchOperation('执行')" 
@@ -471,7 +471,7 @@
         show-icon
         style="margin-bottom: 24px;"
       />
-      
+
       <a-form 
         ref="executeFormRef"
         :model="executeFormModel" 
@@ -546,7 +546,7 @@
               </div>
             </a-card>
           </a-col>
-          
+
           <a-col :xs="24" :lg="12">
             <a-card title="执行信息" class="k8s-detail-card" size="small">
               <div class="k8s-detail-item">
@@ -596,7 +596,7 @@
 import { onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { useTaskPage } from './Task';
-import { formatDateTime, getRelativeTime, formatK8sTime } from '../shared/utils';
+import { formatDateTime, getRelativeTime } from '../shared/utils';
 import { 
   PlusOutlined, 
   ReloadOutlined, 
@@ -612,7 +612,7 @@ import {
 
 const {
   // state
-  tasks,
+
   templates,
   clusters,
   loading,
@@ -628,7 +628,7 @@ const {
   total,
   clustersTotal,
   templatesTotal,
-  
+
   // modal state
   isCreateModalVisible,
   isEditModalVisible,
@@ -636,35 +636,35 @@ const {
   isExecuteModalVisible,
   submitLoading,
   executeLoading,
-  
+
   // operation targets
   currentOperationTask,
   currentTaskDetail,
-  
+
   // form models
   createFormModel,
   editFormModel,
   executeFormModel,
-  
+
   // form refs
   formRef,
   editFormRef,
-  
+
   // form rules
   createFormRules,
   editFormRules,
-  
+
   // computed
   filteredTasks,
   rowSelection,
-  
+
   // helpers
   getEnvText,
   getStatusText,
   getStatusColor,
   formatK8sTime,
   getTemplateName,
-  
+
   // operations
   fetchClusters,
   fetchTemplates,
@@ -673,41 +673,41 @@ const {
   clearTemplates,
   loadMoreClusters,
   loadMoreTemplates,
-  
+
   // detail operations
   showTaskDetail,
   closeDetailModal,
-  
+
   // create operations
   openCreateModal,
   closeCreateModal,
   submitCreateForm,
-  
+
   // edit operations
   openEditModal,
   closeEditModal,
   submitEditForm,
-  
+
   // execute operations
   openExecuteModal,
   closeExecuteModal,
   submitExecuteForm,
-  
+
   // task operations
   deleteTask,
-  
+
   // batch operations
   batchOperation,
-  
+
   // pagination operations
   handlePageChange,
-  
+
   // form field operations
   addVariableField,
   removeVariableField,
   addEditVariableField,
   removeEditVariableField,
-  
+
   // constants
   TaskStatus,
 } = useTaskPage();
@@ -726,7 +726,7 @@ const handleClusterChange = () => {
   currentPage.value = 1;
   clearTemplates();
   clearTasks();
-  
+
   if (filterClusterId.value) {
     const selectedCluster = clusters.value.find(c => c.id === filterClusterId.value);
     if (selectedCluster) {

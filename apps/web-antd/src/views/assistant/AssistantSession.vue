@@ -291,7 +291,7 @@ const sessionStats = computed(() => {
   const totalMessages = sessionHistory.value.reduce((sum, session) => sum + (session.message_count || 0), 0);
   const ragSessions = sessionHistory.value.filter(session => session.mode === 1).length;
   const mcpSessions = sessionHistory.value.filter(session => session.mode === 2).length;
-  
+
   return {
     totalSessions: total,
     totalMessages,
@@ -349,10 +349,10 @@ const searchSession = async () => {
     searching.value = true;
     const response = await getSessionInfo(searchSessionId.value.trim());
     const data = response as SessionInfoResponse;
-    
+
     // 更新当前会话信息
     Object.assign(currentSession, data);
-    
+
     message.success('会话信息获取成功');
   } catch (error: any) {
     message.error(`获取会话信息失败: ${error.message}`);
@@ -368,7 +368,7 @@ const refreshSession = async () => {
     message.warning('请先搜索一个会话');
     return;
   }
-  
+
   searchSessionId.value = currentSession.session_id;
   await searchSession();
 };
@@ -379,14 +379,14 @@ const addToHistory = () => {
     message.warning('没有当前会话信息');
     return;
   }
-  
+
   // 检查是否已存在
   const exists = sessionHistory.value.find(session => session.session_id === currentSession.session_id);
   if (exists) {
     message.warning('该会话已在历史记录中');
     return;
   }
-  
+
   // 添加到历史记录
   sessionHistory.value.unshift({ ...currentSession } as SessionInfoResponse);
   saveHistoryToStorage();
@@ -420,7 +420,7 @@ const exportSession = () => {
     message.warning('没有当前会话信息');
     return;
   }
-  
+
   const blob = new Blob([JSON.stringify(currentSession, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -430,7 +430,7 @@ const exportSession = () => {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  
+
   message.success('会话导出成功');
 };
 
@@ -440,13 +440,13 @@ const exportAllSessions = () => {
     message.warning('没有会话历史记录');
     return;
   }
-  
+
   const exportData = {
     timestamp: new Date().toISOString(),
     sessions: sessionHistory.value,
     statistics: sessionStats.value
   };
-  
+
   const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -456,7 +456,7 @@ const exportAllSessions = () => {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  
+
   message.success('所有会话导出成功');
 };
 
@@ -496,18 +496,18 @@ onMounted(() => {
 <style scoped>
 .session-container {
   padding: 24px;
-  background-color: var(--ant-background-color-light, #fafafa);
+  background-color: var(--ant-background-color-light, var(--ops-ground));
   min-height: 100vh;
 }
 
 /* 页面头部 */
 .session-container .page-header {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .session-container .header-content {
@@ -537,12 +537,12 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #262626;
+  color: var(--ops-ink);
   line-height: 1.2;
 }
 
 .session-container .page-subtitle {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin: 0;
   font-size: 14px;
   margin-top: 4px;
@@ -556,7 +556,7 @@ onMounted(() => {
 
 .session-content {
   .search-card {
-    border-radius: 8px;
+    border-radius: var(--ops-radius);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin-bottom: 24px;
     transition: all 0.3s ease;
@@ -572,7 +572,7 @@ onMounted(() => {
   }
 
   .session-detail-card {
-    border-radius: 8px;
+    border-radius: var(--ops-radius);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin-bottom: 24px;
     transition: all 0.3s ease;
@@ -589,7 +589,7 @@ onMounted(() => {
   }
 
   .history-card {
-    border-radius: 8px;
+    border-radius: var(--ops-radius);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin-bottom: 24px;
     transition: all 0.3s ease;
@@ -609,7 +609,7 @@ onMounted(() => {
         margin-bottom: 16px;
         padding: 16px;
         border: 1px solid var(--ant-border-color-split);
-        border-radius: 8px;
+        border-radius: var(--ops-radius);
         cursor: pointer;
         transition: all 0.3s ease;
 
@@ -667,7 +667,7 @@ onMounted(() => {
   }
 
   .quick-actions-card {
-    border-radius: 8px;
+    border-radius: var(--ops-radius);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin-bottom: 24px;
     transition: all 0.3s ease;
@@ -683,7 +683,7 @@ onMounted(() => {
       gap: 16px;
       padding: 16px;
       border: 1px solid var(--ant-border-color-split);
-      border-radius: 8px;
+      border-radius: var(--ops-radius);
       transition: all 0.3s ease;
 
       &:hover {
@@ -695,8 +695,8 @@ onMounted(() => {
         width: 48px;
         height: 48px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #1890ff, #36cfc9);
-        color: white;
+        background: var(--ops-accent);
+        color: hsl(var(--primary-foreground));
         display: flex;
         align-items: center;
         justify-content: center;
@@ -725,7 +725,7 @@ onMounted(() => {
   }
 
   .statistics-card {
-    border-radius: 8px;
+    border-radius: var(--ops-radius);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin-bottom: 24px;
   }
@@ -735,7 +735,7 @@ onMounted(() => {
   .session-container {
     padding: 16px;
   }
-  
+
   .session-container .page-header {
     padding: 20px;
     margin-bottom: 16px;

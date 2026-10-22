@@ -34,7 +34,7 @@
         </div>
         <h3 class="loading-title">正在获取缓存状态...</h3>
         <p class="loading-subtitle">系统正在检查Redis缓存的运行状态和配置</p>
-        
+
         <!-- 检查步骤指示器 -->
         <div class="cache-check-steps">
           <div class="cache-step-item" :class="{ active: getCacheCheckStep() >= 1 }">
@@ -279,7 +279,7 @@
           清空历史
         </a-button>
       </div>
-      
+
       <div class="history-list">
         <div 
           v-for="(record, index) in operationHistory" 
@@ -301,7 +301,7 @@
             </div>
           </div>
         </div>
-        
+
         <div v-if="operationHistory.length === 0" class="empty-history">
           暂无操作历史
         </div>
@@ -383,30 +383,30 @@ const getCacheCheckStep = () => {
 const refreshCacheStats = async () => {
   loadingStats.value = true;
   cacheCheckStep.value = 0;
-  
+
   // 开始获取缓存状态提示
   message.loading('开始获取缓存状态，请稍候...', 1.5);
-  
+
   try {
     // 步骤1: 连接Redis服务
     cacheCheckStep.value = 1;
     await new Promise(resolve => setTimeout(resolve, 300));
-    
+
     // 步骤2: 获取统计信息
     cacheCheckStep.value = 2;
     await new Promise(resolve => setTimeout(resolve, 300));
-    
+
     // 步骤3: 分析缓存健康度
     cacheCheckStep.value = 3;
     await new Promise(resolve => setTimeout(resolve, 300));
-    
+
     const response = await getCacheStats();
-    
+
     // 完成所有步骤
     cacheCheckStep.value = 4;
-    
+
     cacheStats.value = response;
-    
+
     // 根据缓存状态给出不同的反馈
     if (response.healthy && response.available) {
       message.success('缓存状态获取完成！所有指标正常');
@@ -452,16 +452,16 @@ const handleClearNamespaceCache = async () => {
   clearingCache.value = true;
   try {
     const response = await clearNamespaceCache({ namespace: clearNamespaceForm.namespace.trim() });
-    
+
     if (response.success) {
       message.success(`命名空间 "${clearNamespaceForm.namespace}" 的缓存已清除`);
-      
+
       // 添加到操作历史
       addToHistory('清除命名空间缓存', true, response.message, response.cleared_count);
-      
+
       // 清空表单
       clearNamespaceForm.namespace = '';
-      
+
       // 刷新缓存状态
       await refreshCacheStats();
     } else {
@@ -487,16 +487,16 @@ const handleClearOperationCache = async () => {
   clearingCache.value = true;
   try {
     const response = await clearOperationCache({ operation: clearOperationForm.operation });
-    
+
     if (response.success) {
       message.success(`操作 "${clearOperationForm.operation}" 的缓存已清除`);
-      
+
       // 添加到操作历史
       addToHistory('清除操作缓存', true, response.message, response.cleared_count);
-      
+
       // 清空表单
       clearOperationForm.operation = '';
-      
+
       // 刷新缓存状态
       await refreshCacheStats();
     } else {
@@ -522,16 +522,16 @@ const confirmClearAllCache = async () => {
   clearingCache.value = true;
   try {
     const response = await clearAllCache();
-    
+
     if (response.success) {
       message.success(`所有缓存已清除，共清除 ${response.cleared_count} 项`);
-      
+
       // 添加到操作历史
       addToHistory('清除所有缓存', true, response.message, response.cleared_count);
-      
+
       // 关闭模态框
       clearAllModalVisible.value = false;
-      
+
       // 刷新缓存状态
       await refreshCacheStats();
     } else {
@@ -561,7 +561,7 @@ const addToHistory = (
     timestamp: new Date().toISOString(),
     cleared_count: clearedCount
   });
-  
+
   // 限制历史记录数量
   if (operationHistory.value.length > 50) {
     operationHistory.value = operationHistory.value.slice(0, 50);
@@ -650,26 +650,26 @@ onMounted(() => {
 <style scoped>
 .rca-cache {
 padding: 24px;
-background: #f5f5f5;
+background: var(--ops-ground);
 min-height: 100vh;
 }
 
 /* 页面头部 */
 .rca-cache .page-header {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 16px 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 /* 加载状态 */
 .loading-state-card {
 margin-bottom: 24px;
-border-radius: 12px;
+border-radius: var(--ops-radius);
 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-border: 1px solid #f0f0f0;
+border: 1px solid var(--ops-border);
 text-align: center;
 padding: 48px 24px;
 }
@@ -717,13 +717,13 @@ padding: 48px 24px;
 .loading-title {
   font-size: 24px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin-bottom: 8px;
 }
 
 .loading-subtitle {
   font-size: 14px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin-bottom: 32px;
 }
 
@@ -740,7 +740,7 @@ padding: 48px 24px;
   align-items: center;
   gap: 8px;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   transition: all 0.3s ease;
   opacity: 0.5;
 }
@@ -755,25 +755,25 @@ padding: 48px 24px;
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #f5f5f5;
-  border: 2px solid #d9d9d9;
+  background: var(--ops-ground);
+  border: 2px solid var(--ops-border);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   transition: all 0.3s ease;
 }
 
 .cache-step-item.active .cache-step-icon {
   background: #1890ff;
   border-color: #1890ff;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .cache-step-text {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   font-weight: 500;
   text-align: center;
 }
@@ -814,11 +814,11 @@ flex-direction: column;
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .rca-cache .page-subtitle {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin: 0;
   font-size: 12px;
   margin-top: 4px;
@@ -839,11 +839,11 @@ align-items: center;
 }
 
 .overview-card {
-  background: white;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
   display: flex;
   align-items: center;
   gap: 20px;
@@ -871,7 +871,7 @@ align-items: center;
 .card-title {
   font-size: 18px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin-bottom: 8px;
 }
 
@@ -884,7 +884,7 @@ align-items: center;
 
 .card-description {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .card-trend {
@@ -905,8 +905,8 @@ align-items: center;
 }
 
 .trend-stable {
-  background: #f0f0f0;
-  color: #8c8c8c;
+  background: var(--ops-border);
+  color: var(--ops-muted);
 }
 
 .card-value.healthy {
@@ -919,12 +919,12 @@ align-items: center;
 
 /* 操作区域 */
 .operations-section {
-  background: white;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .section-header {
@@ -937,7 +937,7 @@ align-items: center;
 .section-header h2 {
   font-size: 16px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin: 0;
 }
 
@@ -948,9 +948,9 @@ align-items: center;
 }
 
 .operation-card {
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 20px;
   transition: all 0.3s ease;
 }
@@ -970,7 +970,7 @@ align-items: center;
 .operation-header h3 {
   font-size: 14px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin: 0;
 }
 
@@ -983,7 +983,7 @@ align-items: center;
 .operation-input {
   height: 36px;
   border-radius: 6px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--ops-border);
   transition: all 0.3s ease;
 }
 
@@ -994,7 +994,7 @@ align-items: center;
 .operation-select :deep(.ant-select-selector) {
   height: 36px !important;
   border-radius: 6px !important;
-  border: 1px solid #d9d9d9 !important;
+  border: 1px solid var(--ops-border) !important;
   transition: all 0.3s ease !important;
 }
 
@@ -1027,12 +1027,12 @@ align-items: center;
 
 /* 详情区域 */
 .details-section {
-  background: white;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .details-grid {
@@ -1042,19 +1042,19 @@ align-items: center;
 }
 
 .detail-card {
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 20px;
 }
 
 .detail-card h4 {
   font-size: 14px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin: 0 0 16px 0;
   padding-bottom: 8px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .details-tabs :deep(.ant-tabs-nav) {
@@ -1074,7 +1074,7 @@ align-items: center;
 }
 
 .tab-content::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
@@ -1088,8 +1088,8 @@ align-items: center;
   align-items: center;
   gap: 16px;
   padding: 16px;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   margin-bottom: 12px;
   transition: all 0.3s ease;
 }
@@ -1103,7 +1103,7 @@ align-items: center;
   flex: 1;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 13px;
-  color: #262626;
+  color: var(--ops-ink);
   word-break: break-all;
 }
 
@@ -1116,12 +1116,12 @@ align-items: center;
 
 .cache-size {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .cache-ttl {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .cache-actions-btns {
@@ -1138,36 +1138,36 @@ align-items: center;
 
 .view-btn {
   border: 1px solid #1890ff;
-  background: white;
+  background: var(--ops-surface);
   color: #1890ff;
 }
 
 .view-btn:hover {
   background: #1890ff;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .delete-btn {
   border: 1px solid #ff4d4f;
-  background: white;
+  background: var(--ops-surface);
   color: #ff4d4f;
 }
 
 .delete-btn:hover {
   background: #ff4d4f;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 /* 缓存值预览 */
 .cache-value-preview {
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
   border-radius: 6px;
   padding: 16px;
   margin-top: 12px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
-  color: #595959;
+  color: var(--ops-muted);
   max-height: 200px;
   overflow-y: auto;
   white-space: pre-wrap;
@@ -1183,9 +1183,9 @@ align-items: center;
 }
 
 .stat-item {
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
   text-align: center;
 }
@@ -1199,18 +1199,18 @@ align-items: center;
 
 .stat-label {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
   text-transform: uppercase;
   font-weight: 500;
 }
 
 /* 历史区域 */
 .history-section {
-  background: white;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .history-list {
@@ -1224,8 +1224,8 @@ align-items: center;
   align-items: center;
   gap: 16px;
   padding: 16px;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   transition: all 0.3s ease;
 }
 
@@ -1249,7 +1249,7 @@ align-items: center;
 .history-title {
   font-size: 14px;
   font-weight: 600;
-  color: #262626;
+  color: var(--ops-ink);
   margin-bottom: 8px;
 }
 
@@ -1262,12 +1262,12 @@ align-items: center;
 
 .history-time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .history-message {
   font-size: 12px;
-  color: #595959;
+  color: var(--ops-muted);
   flex: 1;
 }
 
@@ -1298,7 +1298,7 @@ align-items: center;
 
 .clear-all-warning p {
   margin: 0 0 8px 0;
-  color: #595959;
+  color: var(--ops-muted);
   line-height: 1.5;
 }
 

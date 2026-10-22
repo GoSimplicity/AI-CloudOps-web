@@ -191,7 +191,7 @@ const resetInactivityTimer = () => {
 const handleGoBack = () => {
   // 清理所有定时器
   clearAllTimers();
-  
+
   // 清理WebSocket资源
   if (ws.value) {
     try {
@@ -203,7 +203,7 @@ const handleGoBack = () => {
     }
     ws.value = null;
   }
-  
+
   router.back();
 };
 
@@ -211,7 +211,7 @@ const handleGoBack = () => {
 const handleClose = () => {
   // 清理所有定时器
   clearAllTimers();
-  
+
   if (ws.value) {
     try {
       if (ws.value.readyState === WebSocket.OPEN || ws.value.readyState === WebSocket.CONNECTING) {
@@ -235,10 +235,10 @@ const handleReconnect = () => {
   if (id) {
     connectionStatus.value = 'connecting';
     errorMessage.value = '';
-    
+
     // 清理所有定时器
     clearAllTimers();
-    
+
     // 清理旧的WebSocket连接
     if (ws.value) {
       try {
@@ -250,18 +250,18 @@ const handleReconnect = () => {
       }
       ws.value = null;
     }
-    
+
     // 清理旧的终端实例
     if (terminal.value) {
       try {
         // 先移除监听器
         terminal.value.onData(() => {});
-        
+
         // 清理fitAddon引用
         if (fitAddon.value) {
           fitAddon.value = null;
         }
-        
+
         // 清理terminal
         terminal.value.dispose();
         terminal.value = null;
@@ -272,7 +272,7 @@ const handleReconnect = () => {
         fitAddon.value = null;
       }
     }
-    
+
     // 重新初始化
     initTerminal();
     connectWebSocket(id);
@@ -282,9 +282,9 @@ const handleReconnect = () => {
 // 处理终端输入
 const handleTerminalInput = (data: string) => {
   if (!ws.value || ws.value.readyState !== WebSocket.OPEN || !terminal.value) return;
-  
+
   resetInactivityTimer();
-  
+
   switch(data) {
     case '\r': // 回车键
       ws.value.send(currentCommand.value + '\n');
@@ -307,7 +307,7 @@ const handleTerminalInput = (data: string) => {
 const connectWebSocket = (id: string) => {
   const accessStore = useAccessStore();
   const token = accessStore.accessToken;
-  
+
   if (!token) {
     connectionStatus.value = 'error';
     errorMessage.value = '未获取到认证信息，请重新登录';
@@ -383,7 +383,7 @@ const initTerminal = () => {
       ...TERMINAL_CONFIG,
       cursorStyle: 'block' as 'block' | 'underline' | 'bar'
     });
-    
+
     fitAddon.value = new FitAddon();
     terminal.value.loadAddon(fitAddon.value);
 
@@ -441,7 +441,7 @@ onBeforeUnmount(() => {
     try {
       // 先移除数据监听
       terminal.value.onData(() => {});
-      
+
       // 清理FitAddon（如果已加载）
       if (fitAddon.value) {
         try {
@@ -451,7 +451,7 @@ onBeforeUnmount(() => {
           console.error('清理FitAddon失败:', error);
         }
       }
-      
+
       // 最后清理terminal
       terminal.value.dispose();
       terminal.value = null;
@@ -473,8 +473,8 @@ onBeforeUnmount(() => {
   width: 100%;
   height: calc(100vh - 100px);
   padding: 20px;
-  background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
-  border-radius: 8px;
+  background: var(--ops-accent);
+  border-radius: var(--ops-radius);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
@@ -502,7 +502,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   align-items: center;
   background: rgba(0, 0, 0, 0.6);
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   padding: 40px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
@@ -512,7 +512,7 @@ onBeforeUnmount(() => {
   margin-top: 24px;
   font-size: 18px;
   font-weight: 600;
-  color: #ffffff;
+  color: hsl(var(--primary-foreground));
 }
 
 .status-hint {
@@ -526,7 +526,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.ant-result-title) {
-  color: #ffffff !important;
+  color: hsl(var(--primary-foreground)) !important;
 }
 
 :deep(.ant-result-subtitle) {
@@ -535,7 +535,7 @@ onBeforeUnmount(() => {
 
 :deep(.ant-result-icon) {
   .anticon {
-    color: #ffffff !important;
+    color: hsl(var(--primary-foreground)) !important;
   }
 }
 
@@ -547,7 +547,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.ant-alert-message) {
-  color: #ffffff !important;
+  color: hsl(var(--primary-foreground)) !important;
 }
 
 :deep(.ant-alert-description) {
@@ -555,7 +555,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.ant-alert ul) {
-  color: #e5e7eb !important;
+  color: var(--ops-border) !important;
 }
 
 :deep(.ant-tag) {
@@ -569,7 +569,7 @@ onBeforeUnmount(() => {
 
 :deep(.ant-spin) {
   .ant-spin-dot-item {
-    background-color: #ffffff !important;
+    background-color: var(--ops-surface) !important;
   }
 }
 
@@ -577,18 +577,17 @@ onBeforeUnmount(() => {
   border-radius: 6px;
   font-weight: 500;
   transition: all 0.3s ease;
-  
+
   &:not(.ant-btn-primary):not(.ant-btn-dangerous) {
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-    
+    color: hsl(var(--primary-foreground));
+
     &:hover {
       background: rgba(255, 255, 255, 0.2);
       border-color: rgba(255, 255, 255, 0.3);
-      color: #ffffff;
+      color: hsl(var(--primary-foreground));
     }
   }
 }
 </style>
-

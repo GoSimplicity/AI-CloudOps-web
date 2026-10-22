@@ -64,7 +64,7 @@
           </template>
         </a-statistic>
       </a-card>
-      
+
       <a-card class="stats-card">
         <a-statistic 
           title="启用中" 
@@ -76,7 +76,7 @@
           </template>
         </a-statistic>
       </a-card>
-      
+
       <a-card class="stats-card">
         <a-statistic 
           title="禁用" 
@@ -88,7 +88,7 @@
           </template>
         </a-statistic>
       </a-card>
-      
+
       <a-card class="stats-card">
         <a-statistic 
           title="今日发送" 
@@ -524,7 +524,7 @@
                       <span class="variable-item">{recipient_addr} - 接收人地址（邮箱/手机号）</span>
                     </div>
                   </div>
-                  
+
                   <div class="variable-group">
                     <strong>🏢 工单相关变量</strong>
                     <div class="variable-list">
@@ -535,7 +535,7 @@
                       <span class="variable-item">{status} - 工单状态</span>
                     </div>
                   </div>
-                  
+
                   <div class="variable-group">
                     <strong>⚡ 优先级变量</strong>
                     <div class="variable-list">
@@ -544,7 +544,7 @@
                       <span class="variable-item">{priority_icon} - 优先级图标</span>
                     </div>
                   </div>
-                  
+
                   <div class="variable-group">
                     <strong>📅 时间相关变量</strong>
                     <div class="variable-list">
@@ -555,7 +555,7 @@
                       <span class="variable-item">{notification_day} - 日期</span>
                     </div>
                   </div>
-                  
+
                   <div class="variable-group">
                     <strong>🎭 事件类型变量</strong>
                     <div class="variable-list">
@@ -564,7 +564,7 @@
                       <span class="variable-item">{event_type_icon} - 事件类型图标</span>
                     </div>
                   </div>
-                  
+
                   <div class="variable-group">
                     <strong>🏢 企业信息变量</strong>
                     <div class="variable-list">
@@ -574,7 +574,7 @@
                       <span class="variable-item">{service_hotline} - 服务热线</span>
                     </div>
                   </div>
-                  
+
                   <div class="variable-group">
                     <strong>👥 人员相关变量</strong>
                     <div class="variable-list">
@@ -584,14 +584,14 @@
                       <span class="variable-item">{updated_time} - 更新时间</span>
                     </div>
                   </div>
-                  
+
                   <div class="variable-group">
                     <strong>🔧 自定义变量</strong>
                     <div class="variable-list">
                       <span class="variable-item">{custom_content} - 自定义内容</span>
                     </div>
                   </div>
-                  
+
                   <div class="variable-deprecated">
                     <strong>❌ 不再支持的变量</strong>
                     <div class="variable-list deprecated">
@@ -1191,7 +1191,7 @@ const manualSendRules = {
           callback(new Error('接收人地址不能为空'));
           return;
         }
-        
+
         // 检查是否包含邮件渠道，如果有则验证邮箱格式
         if (manualSendDialog.form.channels.includes('email')) {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1200,7 +1200,7 @@ const manualSendRules = {
             return;
           }
         }
-        
+
         // 检查是否包含短信渠道，如果有则验证手机号格式
         if (manualSendDialog.form.channels.includes('sms')) {
           const phoneRegex = /^1[3-9]\d{9}$/;
@@ -1209,7 +1209,7 @@ const manualSendRules = {
             return;
           }
         }
-        
+
         callback();
       },
       trigger: 'blur'
@@ -1366,15 +1366,15 @@ const getAvailableChannels = (): string[] => {
 // 联动数据加载函数
 const loadProcesses = async (reset = false): Promise<void> => {
   if (processLoading.value || (!processPagination.hasMore && !reset)) return;
-  
+
   if (reset) {
     processPagination.current = 1;
     processPagination.hasMore = true;
     processes.value = [];
   }
-  
+
   processLoading.value = true;
-  
+
   try {
     const res = await listWorkorderProcess({
       page: processPagination.current,
@@ -1382,7 +1382,7 @@ const loadProcesses = async (reset = false): Promise<void> => {
       search: '',
       status: 2 // 只加载已发布的流程
     });
-    
+
     if (res) {
       const newItems = res.items || [];
       if (reset) {
@@ -1390,7 +1390,7 @@ const loadProcesses = async (reset = false): Promise<void> => {
       } else {
         processes.value.push(...newItems);
       }
-      
+
       processPagination.total = res.total || 0;
       processPagination.current++;
       processPagination.hasMore = newItems.length >= processPagination.pageSize;
@@ -1404,15 +1404,15 @@ const loadProcesses = async (reset = false): Promise<void> => {
 
 const loadTemplates = async (reset = false): Promise<void> => {
   if (templateLoading.value || (!templatePagination.hasMore && !reset)) return;
-  
+
   if (reset) {
     templatePagination.current = 1;
     templatePagination.hasMore = true;
     templates.value = [];
   }
-  
+
   templateLoading.value = true;
-  
+
   try {
     const res = await listWorkorderTemplate({
       page: templatePagination.current,
@@ -1420,7 +1420,7 @@ const loadTemplates = async (reset = false): Promise<void> => {
       search: '',
       status: 1 // 只加载启用的模板
     });
-    
+
     if (res) {
       const newItems = res.items || [];
       if (reset) {
@@ -1428,7 +1428,7 @@ const loadTemplates = async (reset = false): Promise<void> => {
       } else {
         templates.value.push(...newItems);
       }
-      
+
       templatePagination.total = res.total || 0;
       templatePagination.current++;
       templatePagination.hasMore = newItems.length >= templatePagination.pageSize;
@@ -1442,15 +1442,15 @@ const loadTemplates = async (reset = false): Promise<void> => {
 
 const loadCategories = async (reset = false): Promise<void> => {
   if (categoryLoading.value || (!categoryPagination.hasMore && !reset)) return;
-  
+
   if (reset) {
     categoryPagination.current = 1;
     categoryPagination.hasMore = true;
     categories.value = [];
   }
-  
+
   categoryLoading.value = true;
-  
+
   try {
     const res = await listWorkorderCategory({
       page: categoryPagination.current,
@@ -1458,7 +1458,7 @@ const loadCategories = async (reset = false): Promise<void> => {
       search: '',
       status: 1 // 只加载启用的分类
     });
-    
+
     if (res) {
       const newItems = res.items || [];
       if (reset) {
@@ -1466,7 +1466,7 @@ const loadCategories = async (reset = false): Promise<void> => {
       } else {
         categories.value.push(...newItems);
       }
-      
+
       categoryPagination.total = res.total || 0;
       categoryPagination.current++;
       categoryPagination.hasMore = newItems.length >= categoryPagination.pageSize;
@@ -1480,15 +1480,15 @@ const loadCategories = async (reset = false): Promise<void> => {
 
 const loadUsers = async (reset = false): Promise<void> => {
   if (userLoading.value || (!userPagination.hasMore && !reset)) return;
-  
+
   if (reset) {
     userPagination.current = 1;
     userPagination.hasMore = true;
     users.value = [];
   }
-  
+
   userLoading.value = true;
-  
+
   try {
     const res = await getUserList({
       page: userPagination.current,
@@ -1496,7 +1496,7 @@ const loadUsers = async (reset = false): Promise<void> => {
       search: '',
       enable: 1 // 只加载启用的用户
     });
-    
+
     if (res) {
       const newItems = res.items || [];
       if (reset) {
@@ -1504,7 +1504,7 @@ const loadUsers = async (reset = false): Promise<void> => {
       } else {
         users.value.push(...newItems);
       }
-      
+
       userPagination.total = res.total || 0;
       userPagination.current++;
       userPagination.hasMore = newItems.length >= userPagination.pageSize;
@@ -1600,7 +1600,7 @@ const calculateStats = (): void => {
 // 数据加载
 const loadNotifications = async (): Promise<void> => {
   loading.value = true;
-  
+
   try {
     const params: ListNotificationReq = {
       page: paginationConfig.current,
@@ -1609,7 +1609,7 @@ const loadNotifications = async (): Promise<void> => {
       channel: channelFilter.value,
       status: statusFilter.value
     };
-    
+
     const res = await getNotificationList(params);
     if (res) {
       notifications.value = (res.items || []).map((item: any) => ({
@@ -1617,7 +1617,7 @@ const loadNotifications = async (): Promise<void> => {
         statusLoading: false
       }));
       paginationConfig.total = res.total || 0;
-      
+
       // 计算统计数据
       calculateStats();
     }
@@ -1644,7 +1644,7 @@ const handleLogsTableChange = (pagination: any): void => {
 // 加载发送记录
 const loadSendLogs = async (notificationId: number): Promise<void> => {
   logsLoading.value = true;
-  
+
   try {
     const params: ListSendLogReq = {
       page: logsPagination.current,
@@ -1693,7 +1693,7 @@ const handleCreateNotification = (): void => {
     priority: NotificationPriority.Medium,
     isDefault: IsDefault.No
   };
-  
+
   notificationDialogVisible.value = true;
 };
 
@@ -1725,7 +1725,7 @@ const handleEditNotification = (record: Notification): void => {
     priority: record.priority as number,
     isDefault: record.is_default as number
   };
-  
+
   // 关闭详情对话框并显示编辑对话框
   detailDialogVisible.value = false;
   notificationDialogVisible.value = true;
@@ -1754,7 +1754,7 @@ const handleStatusToggle = async (record: Notification & { statusLoading?: boole
 
   record.statusLoading = true;
   const newStatus = checked ? NotificationStatus.Enabled : NotificationStatus.Disabled;
-  
+
   try {
     await updateNotificationStatus(record.id, newStatus);
     record.status = newStatus;
@@ -1793,7 +1793,7 @@ const handleTestSend = (record: Notification): void => {
     message.error('通知配置ID不存在');
     return;
   }
-  
+
   Modal.confirm({
     title: '测试发送',
     content: `确定要向配置的接收人发送测试通知吗？`,
@@ -1803,22 +1803,22 @@ const handleTestSend = (record: Notification): void => {
       let loadingMessage: any = null;
       try {
         loadingMessage = message.loading('正在发送测试通知...', 0);
-        
+
         // 添加超时处理
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('请求超时')), 30000); // 30秒超时
         });
-        
+
         const sendPromise = testSendNotification({ notification_id: record.id! });
-        
+
         await Promise.race([sendPromise, timeoutPromise]);
-        
+
         // 确保关闭loading
         if (loadingMessage) {
           loadingMessage();
           loadingMessage = null;
         }
-        
+
         message.success('测试通知发送成功');
       } catch (error: any) {
         // 确保关闭loading
@@ -1826,7 +1826,7 @@ const handleTestSend = (record: Notification): void => {
           loadingMessage();
           loadingMessage = null;
         }
-        
+
         let errorMessage = '测试通知发送失败';
         if (error.message) {
           if (error.message.includes('timeout') || error.message.includes('超时')) {
@@ -1843,7 +1843,7 @@ const handleTestSend = (record: Notification): void => {
             errorMessage = `发送失败: ${error.message}`;
           }
         }
-        
+
         message.error(errorMessage);
 
       }
@@ -1860,7 +1860,7 @@ const handleManualSend = (record: Notification): void => {
     subject: `AI-CloudOps 工单通知 - {title}`,
     content: getPreviewMessage(record)
   };
-  
+
   // 显示对话框
   manualSendDialogVisible.value = true;
 };
@@ -1882,21 +1882,21 @@ const handleDuplicateNotification = async (record: Notification): Promise<void> 
     message.error('通知配置ID不存在');
     return;
   }
-  
+
   const loadingMessage = message.loading('正在复制通知配置...', 0);
-  
+
   try {
     // 添加超时处理
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('请求超时')), 30000); // 30秒超时
     });
-    
+
     const duplicatePromise = duplicateNotification(record.id!);
-    
+
     const res = await Promise.race([duplicatePromise, timeoutPromise]);
-    
+
     loadingMessage();
-    
+
     if (res && res.id) {
       message.success('复制通知配置成功');
       loadNotifications();
@@ -1905,7 +1905,7 @@ const handleDuplicateNotification = async (record: Notification): Promise<void> 
     }
   } catch (error: any) {
     loadingMessage();
-    
+
     let errorMessage = '复制配置失败';
     if (error.message) {
       if (error.message.includes('timeout') || error.message.includes('超时')) {
@@ -1920,7 +1920,7 @@ const handleDuplicateNotification = async (record: Notification): Promise<void> 
         errorMessage = `复制失败: ${error.message}`;
       }
     }
-    
+
     message.error(errorMessage);
 
   }
@@ -1931,7 +1931,7 @@ const handleDeleteNotification = (record: Notification): void => {
     message.error('通知配置ID不存在');
     return;
   }
-  
+
   Modal.confirm({
     title: '删除确认',
     content: `确定要删除表单"${getFormName(record.template_id)}"的通知配置吗？`,
@@ -1942,21 +1942,21 @@ const handleDeleteNotification = (record: Notification): void => {
       let loadingMessage: any = null;
       try {
         loadingMessage = message.loading('正在删除通知配置...', 0);
-        
+
         // 添加超时处理
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('请求超时')), 30000); // 30秒超时
         });
-        
+
         const deletePromise = deleteNotification(record.id!);
-        
+
         await Promise.race([deletePromise, timeoutPromise]);
-        
+
         if (loadingMessage) {
           loadingMessage();
           loadingMessage = null;
         }
-        
+
         message.success('通知配置已删除');
         loadNotifications();
       } catch (error: any) {
@@ -1964,7 +1964,7 @@ const handleDeleteNotification = (record: Notification): void => {
           loadingMessage();
           loadingMessage = null;
         }
-        
+
         let errorMessage = '删除失败';
         if (error.message) {
           if (error.message.includes('timeout') || error.message.includes('超时')) {
@@ -1981,7 +1981,7 @@ const handleDeleteNotification = (record: Notification): void => {
             errorMessage = `删除失败: ${error.message}`;
           }
         }
-        
+
         message.error(errorMessage);
 
       }
@@ -1998,33 +1998,33 @@ const saveNotification = async (): Promise<void> => {
 
   // 增加额外的业务逻辑验证
   const formData = notificationDialog.form;
-  
+
   // 验证接收人配置完整性
   if (formData.recipientTypes.includes('user') && (!formData.recipientUsers || formData.recipientUsers.length === 0 || formData.recipientUsers.some(u => !u || !u.trim()))) {
     message.error('选择了用户类型接收人时，必须配置有效的用户ID');
     return;
   }
-  
+
   if (formData.recipientTypes.includes('role') && (!formData.recipientRoles || formData.recipientRoles.length === 0 || formData.recipientRoles.some(r => !r || !r.trim()))) {
     message.error('选择了角色类型接收人时，必须配置有效的角色ID');
     return;
   }
-  
+
   if (formData.recipientTypes.includes('dept') && (!formData.recipientDepts || formData.recipientDepts.length === 0 || formData.recipientDepts.some(d => !d || !d.trim()))) {
     message.error('选择了部门类型接收人时，必须配置有效的部门ID');
     return;
   }
-  
+
   // 验证渠道与接收人类型的兼容性
   const hasFeishuChannel = formData.channels.includes('feishu');
   const hasUserRecipient = formData.recipientTypes.includes('user');
-  
+
   if (hasFeishuChannel && !hasUserRecipient && formData.recipientTypes.length === 1 && formData.recipientTypes.includes('creator')) {
     message.warning('使用飞书通知时，建议同时配置用户ID接收人，以确保通知能正常发送');
   }
 
   notificationDialog.saving = true;
-  
+
   try {
     const scheduledTime = formData.scheduledTime ? 
       dayjs(formData.scheduledTime).format('YYYY-MM-DD HH:mm:ss') : 
@@ -2040,7 +2040,7 @@ const saveNotification = async (): Promise<void> => {
         return;
       }
     }
-    
+
     // 清理空的接收人数据
     const cleanRecipientUsers = formData.recipientUsers?.filter(u => u && u.trim()) || [];
     const cleanRecipientRoles = formData.recipientRoles?.filter(r => r && r.trim()) || [];
@@ -2052,7 +2052,7 @@ const saveNotification = async (): Promise<void> => {
         message.error('通知配置ID不存在');
         return;
       }
-      
+
       const updateReq: UpdateNotificationReq = {
         id: formData.id,
         name: formData.name,
@@ -2078,7 +2078,7 @@ const saveNotification = async (): Promise<void> => {
         priority: formData.priority,
         is_default: formData.isDefault
       };
-      
+
       await updateNotification(updateReq);
       message.success('通知配置已更新');
     } else {
@@ -2106,17 +2106,17 @@ const saveNotification = async (): Promise<void> => {
         priority: formData.priority,
         is_default: formData.isDefault
       };
-      
+
       await createNotification(createReq);
       message.success('通知配置已创建');
     }
-    
+
     notificationDialogVisible.value = false;
     loadNotifications();
   } catch (error: any) {
     // 根据错误类型提供更具体的错误信息
     let errorMessage = notificationDialog.isEdit ? '更新失败' : '创建失败';
-    
+
     if (error.message) {
       if (error.message.includes('datetime') || error.message.includes('NOW()')) {
         errorMessage += ': 服务器时间格式错误，请联系管理员';
@@ -2132,7 +2132,7 @@ const saveNotification = async (): Promise<void> => {
         errorMessage += `: ${error.message}`;
       }
     }
-    
+
     message.error(errorMessage);
 
   } finally {
@@ -2173,24 +2173,24 @@ const saveManualSend = async (): Promise<void> => {
     message.error('请选择至少一个通知渠道');
     return;
   }
-  
+
   if (!manualSendDialog.form.recipient.trim()) {
     message.error('请输入接收人地址');
     return;
   }
-  
+
   if (!manualSendDialog.form.subject.trim()) {
     message.error('请输入通知主题');
     return;
   }
-  
+
   if (!manualSendDialog.form.content.trim()) {
     message.error('请输入通知内容');
     return;
   }
 
   manualSendDialog.saving = true;
-  
+
   try {
     const sendData: ManualSendNotificationReq = {
       channels: manualSendDialog.form.channels,
@@ -2198,19 +2198,19 @@ const saveManualSend = async (): Promise<void> => {
       subject: manualSendDialog.form.subject.trim(),
       content: manualSendDialog.form.content.trim()
     };
-    
+
     // 添加超时处理
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('请求超时')), 30000); // 30秒超时
     });
-    
+
     const sendPromise = sendNotificationManually(sendData);
-    
+
     await Promise.race([sendPromise, timeoutPromise]);
-    
+
     message.success('通知发送成功');
     manualSendDialogVisible.value = false;
-    
+
     // 重置表单
     manualSendDialog.form = {
       channels: [],
@@ -2236,7 +2236,7 @@ const saveManualSend = async (): Promise<void> => {
         errorMessage = `发送失败: ${error.message}`;
       }
     }
-    
+
     message.error(errorMessage);
 
   } finally {
@@ -2258,7 +2258,7 @@ onMounted(() => {
 .notification-management-container {
   padding: 12px;
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--ops-ground);
 }
 
 .page-header {
@@ -2273,7 +2273,7 @@ onMounted(() => {
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
 }
@@ -2286,14 +2286,14 @@ onMounted(() => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%);
+  background: var(--ops-accent);
   border: none;
   flex-shrink: 0;
   box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
 }
 
 .btn-create:hover {
-  background: linear-gradient(135deg, #40a9ff 0%);
+  background: var(--ops-accent);
   box-shadow: 0 4px 8px rgba(24, 144, 255, 0.4);
 }
 
@@ -2325,7 +2325,7 @@ onMounted(() => {
 }
 
 .table-container :deep(.ant-card) {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
@@ -2379,12 +2379,12 @@ onMounted(() => {
 .date {
   font-weight: 500;
   font-size: 14px;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .text-gray {
@@ -2408,13 +2408,13 @@ onMounted(() => {
 
 .form-name {
   font-weight: 500;
-  color: #262626;
+  color: var(--ops-ink);
 }
 
 .form-category {
   font-size: 12px;
   color: #999;
-  background: #f0f0f0;
+  background: var(--ops-border);
   padding: 2px 6px;
   border-radius: 3px;
 }
@@ -2453,15 +2453,15 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 12px;
   padding: 16px;
-  background: linear-gradient(135deg, #f6f9fc 0%, #ffffff 100%);
-  border-radius: 8px;
+  background: var(--ops-accent);
+  border-radius: var(--ops-radius);
   border: 1px solid #e8f4f8;
 }
 
 .detail-header h2 {
   margin: 0;
   font-size: 20px;
-  color: #1f2937;
+  color: var(--ops-ink);
   word-break: break-all;
   font-weight: 600;
 }
@@ -2487,25 +2487,25 @@ onMounted(() => {
 
 .message-template-preview {
   margin-top: 24px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
   padding-top: 20px;
 }
 
 .message-template-preview h3 {
   margin-bottom: 12px;
-  color: #1f2937;
+  color: var(--ops-ink);
   font-weight: 600;
 }
 
 .template-content {
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
+  background: var(--ops-accent);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
   white-space: pre-line;
   font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.6;
-  color: #333;
+  color: var(--ops-ink);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -2515,7 +2515,7 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
   padding-top: 16px;
 }
 
@@ -2526,7 +2526,7 @@ onMounted(() => {
 }
 
 .logs-dialog :deep(.ant-table-tbody > tr:hover > td) {
-  background: #f5f5f5;
+  background: var(--ops-ground);
 }
 
 /* 移动端适配 */
@@ -2534,83 +2534,83 @@ onMounted(() => {
   .notification-management-container {
     padding: 8px;
   }
-  
+
   .header-actions {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .search-filters {
     width: 100%;
   }
-  
+
   .search-input,
   .channel-filter,
   .status-filter {
     width: 100%;
     min-width: auto;
   }
-  
+
   .btn-text {
     display: none;
   }
-  
+
   .btn-create {
     padding: 8px 12px;
     min-width: auto;
     justify-content: center;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  
+
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
   }
-  
+
   .stats-card :deep(.ant-statistic-content) {
     font-size: 16px;
   }
-  
+
   .action-buttons {
     gap: 2px;
     flex-direction: column;
   }
-  
+
   .action-buttons .ant-btn {
     padding: 4px 8px;
     font-size: 12px;
     min-width: 60px;
   }
-  
+
   .form-url-cell {
     flex-direction: column;
     align-items: stretch;
     gap: 4px;
   }
-  
+
   .channels-cell {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .detail-header {
     flex-direction: column;
     align-items: stretch;
     text-align: center;
   }
-  
+
   .form-url-display {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .detail-footer {
     justify-content: center;
   }
-  
+
   .detail-footer .ant-btn {
     flex: 1;
     max-width: 120px;
@@ -2622,11 +2622,11 @@ onMounted(() => {
   .notification-management-container {
     padding: 16px;
   }
-  
+
   .search-input {
     width: 200px;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -2643,18 +2643,18 @@ onMounted(() => {
   .stats-card {
     text-align: center;
   }
-  
+
   .channels-display,
   .recipients-display {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .template-content {
     font-size: 12px;
     padding: 12px;
   }
-  
+
   .action-buttons .ant-btn {
     width: 100%;
   }
@@ -2663,12 +2663,12 @@ onMounted(() => {
 /* 响应式表格优化 */
 .table-container :deep(.ant-table-wrapper) {
   overflow: auto;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
 }
 
 .table-container :deep(.ant-table-thead > tr > th) {
   white-space: nowrap;
-  background: #fafafa;
+  background: var(--ops-ground);
   font-weight: 600;
 }
 
@@ -2687,7 +2687,7 @@ onMounted(() => {
 }
 
 .responsive-modal :deep(.ant-modal-content) {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   overflow: hidden;
 }
 
@@ -2697,11 +2697,11 @@ onMounted(() => {
     max-height: calc(100vh - 120px);
     overflow-y: auto;
   }
-  
+
   .responsive-modal :deep(.ant-modal-header) {
     padding: 12px 16px;
   }
-  
+
   .responsive-modal :deep(.ant-modal-footer) {
     padding: 8px 16px;
   }
@@ -2736,7 +2736,7 @@ onMounted(() => {
 .variable-group strong {
   display: block;
   margin-bottom: 6px;
-  color: #1f2937;
+  color: var(--ops-ink);
   font-size: 13px;
 }
 
@@ -2768,7 +2768,7 @@ onMounted(() => {
 .variable-deprecated {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--ops-border);
 }
 
 .variable-list.deprecated .variable-item {
@@ -2788,12 +2788,12 @@ onMounted(() => {
     grid-template-columns: 1fr;
     gap: 2px 4px;
   }
-  
+
   .template-variables-help {
     max-height: 200px;
     font-size: 11px;
   }
-  
+
   .variable-item {
     font-size: 10px;
     padding: 1px 6px;

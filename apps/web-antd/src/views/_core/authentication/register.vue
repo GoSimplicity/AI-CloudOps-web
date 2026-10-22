@@ -12,7 +12,7 @@ const loading = ref(false);
 
 function handleSubmit(value: LoginAndRegisterParams) {
   // eslint-disable-next-line no-console
-  console.log('register submit:', value);
+  void value;
 }
 </script>
 

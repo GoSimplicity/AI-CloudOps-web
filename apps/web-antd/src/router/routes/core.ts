@@ -48,7 +48,7 @@ const coreRoutes: RouteRecordRaw[] = [
       {
         name: 'CodeLogin',
         path: 'code-login',
-        component: () => import('#/views/_core/authentication/code-login.vue'),
+        redirect: '/auth/login',
         meta: {
           title: $t('page.core.codeLogin'),
         },
@@ -56,8 +56,7 @@ const coreRoutes: RouteRecordRaw[] = [
       {
         name: 'QrCodeLogin',
         path: 'qrcode-login',
-        component: () =>
-          import('#/views/_core/authentication/qrcode-login.vue'),
+        redirect: '/auth/login',
         meta: {
           title: $t('page.core.qrcodeLogin'),
         },
@@ -65,8 +64,7 @@ const coreRoutes: RouteRecordRaw[] = [
       {
         name: 'ForgetPassword',
         path: 'forget-password',
-        component: () =>
-          import('#/views/_core/authentication/forget-password.vue'),
+        redirect: '/auth/login',
         meta: {
           title: $t('page.core.forgetPassword'),
         },
@@ -74,7 +72,7 @@ const coreRoutes: RouteRecordRaw[] = [
       {
         name: 'Register',
         path: 'register',
-        component: () => import('#/views/_core/authentication/register.vue'),
+        redirect: '/auth/login',
         meta: {
           title: $t('page.core.register'),
         },

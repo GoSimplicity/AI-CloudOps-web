@@ -56,7 +56,7 @@
               {{ connectionStatus }}
             </span>
           </div>
-          
+
           <!-- 模式切换器 -->
           <div class="mode-switcher">
             <button 
@@ -107,7 +107,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="message-count">
           {{ Math.max(0, chatMessages.length - 1) }} 条对话
         </div>
@@ -477,10 +477,10 @@ const connectionStatus = computed(() => {
 const switchMode = (mode) => {
   const modeNum = mode === 'rag' ? 1 : 2;
   if (currentMode.value === modeNum) return;
-  
+
   currentMode.value = modeNum;
   message.info(`已切换到${mode === 'rag' ? 'RAG' : 'MCP'}模式`);
-  
+
   // 清空聊天历史，重新开始会话
   sessionId.value = '';
   chatHistory.value = [];
@@ -508,7 +508,7 @@ const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
       if (attempt === maxRetries) {
         throw error;
       }
-      
+
       // 指数退避
       const delay = baseDelay * Math.pow(2, attempt - 1);
 
@@ -522,7 +522,6 @@ const handleApiError = (error, context = '') => {
   const status = error?.response?.status;
   const errorData = error?.response?.data;
   const errorMsg = errorData?.message || error?.message || '未知错误';
-  
 
   if (status === 429) {
     showError('请求频率过高，请稍后再试', 3000);
@@ -883,14 +882,14 @@ const refreshKnowledge = async () => {
       const docsCount = response?.documents_count;
       const vectorCount = response?.vector_count;
       let successMsg = '知识库刷新成功';
-      
+
       if (docsCount !== undefined) {
         successMsg += `，处理文档 ${docsCount} 个`;
       }
       if (vectorCount !== undefined) {
         successMsg += `，向量 ${vectorCount} 个`;
       }
-      
+
       showSuccess(successMsg);
     } else {
       throw new Error(response?.message || '刷新知识库失败');
@@ -1026,14 +1025,14 @@ print(f"系统状态: {result}")
         '性能优化建议'
       ]
     };
-    
+
     chatMessages.push(demoMessage);
     nextTick(() => {
       scrollToBottom();
     });
     return;
   }
-  
+
   globalInputMessage.value = text;
   handleSearch();
 };
@@ -1208,7 +1207,7 @@ const highlightCode = (code, lang) => {
   };
 
   let highlightedCode = escapeHtml(code);
-  
+
   if (keywords[lang]) {
     keywords[lang].forEach(keyword => {
       const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
@@ -1218,7 +1217,7 @@ const highlightCode = (code, lang) => {
 
   // 高亮字符串
   highlightedCode = highlightedCode.replace(/(["'])((?:\\.|(?!\1)[^\\])*?)\1/g, '<span class="code-string">$1$2$1</span>');
-  
+
   // 高亮注释
   if (lang === 'javascript' || lang === 'java' || lang === 'cpp') {
     highlightedCode = highlightedCode.replace(/(\/\/.*$)/gm, '<span class="code-comment">$1</span>');
@@ -1265,7 +1264,7 @@ const escapeHtml = (text) => {
 
 const renderMarkdown = (content) => {
   if (!content) return '';
-  
+
   try {
     // 使用 marked 解析 Markdown
     const html = marked(content);
@@ -1424,7 +1423,7 @@ onBeforeUnmount(() => {
   right: 30px;
   width: 60px;
   height: 60px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: var(--ops-accent);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1441,11 +1440,11 @@ onBeforeUnmount(() => {
 }
 
 .assistant-float-button.active {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: var(--ops-accent);
 }
 
 .float-button-icon {
-  color: white;
+  color: hsl(var(--primary-foreground));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1456,10 +1455,10 @@ onBeforeUnmount(() => {
   right: 70px;
   top: 50%;
   transform: translateY(-50%);
-  background: #1f2937;
-  color: #f3f4f6;
+  background: var(--ops-ink);
+  color: var(--ops-ground);
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
@@ -1484,7 +1483,7 @@ onBeforeUnmount(() => {
   top: 50%;
   transform: translateY(-50%);
   border: 6px solid transparent;
-  border-left-color: #1f2937;
+  border-left-color: var(--ops-ink);
 }
 
 .float-window-overlay {
@@ -1499,8 +1498,8 @@ onBeforeUnmount(() => {
 
 .ai-float-window {
   position: fixed;
-  background: #1f2937;
-  border-radius: 12px;
+  background: var(--ops-ink);
+  border-radius: var(--ops-radius);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   border: 1px solid #374151;
   display: flex;
@@ -1512,7 +1511,7 @@ onBeforeUnmount(() => {
 }
 
 .float-window-header {
-  background: linear-gradient(135deg, #2d3748, #1a202c);
+  background: var(--ops-accent);
   padding: 16px 20px;
   display: flex;
   justify-content: space-between;
@@ -1526,18 +1525,18 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #f3f4f6;
+  color: var(--ops-ground);
 }
 
 .title-icon {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: var(--ops-accent);
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .title-content {
@@ -1577,7 +1576,7 @@ onBeforeUnmount(() => {
 }
 
 .action-button:hover {
-  color: #f3f4f6;
+  color: var(--ops-ground);
   background: rgba(255, 255, 255, 0.1);
 }
 
@@ -1588,7 +1587,7 @@ onBeforeUnmount(() => {
 
 .close-btn:hover {
   background: #ef4444;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .status-bar {
@@ -1654,13 +1653,13 @@ onBeforeUnmount(() => {
 }
 
 .mode-button:hover {
-  color: #f3f4f6;
+  color: var(--ops-ground);
   background: rgba(255, 255, 255, 0.05);
 }
 
 .mode-button.active {
-  color: white;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: hsl(var(--primary-foreground));
+  background: var(--ops-accent);
 }
 
 .mode-button:not(:last-child) {
@@ -1787,20 +1786,20 @@ onBeforeUnmount(() => {
 .avatar-container {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .user-avatar {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: white;
+  background: var(--ops-accent);
+  color: hsl(var(--primary-foreground));
 }
 
 .ai-avatar {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
+  background: var(--ops-accent);
+  color: hsl(var(--primary-foreground));
 }
 
 .content {
@@ -1818,7 +1817,7 @@ onBeforeUnmount(() => {
 .name {
   font-weight: 600;
   font-size: 14px;
-  color: #f3f4f6;
+  color: var(--ops-ground);
 }
 
 .time {
@@ -1829,8 +1828,8 @@ onBeforeUnmount(() => {
 .text {
   background: #2d3748;
   padding: 12px 16px;
-  border-radius: 10px;
-  color: #f3f4f6;
+  border-radius: var(--ops-radius);
+  color: var(--ops-ground);
   line-height: 1.6;
   font-size: 14px;
   word-break: break-word;
@@ -1838,8 +1837,8 @@ onBeforeUnmount(() => {
 }
 
 .message.user .text {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: white;
+  background: var(--ops-accent);
+  color: hsl(var(--primary-foreground));
   border-color: #2563eb;
 }
 
@@ -1853,7 +1852,7 @@ onBeforeUnmount(() => {
   margin: 16px 0 8px 0;
   font-weight: 600;
   line-height: 1.4;
-  color: #f3f4f6;
+  color: var(--ops-ground);
 }
 
 .text :deep(h1) { font-size: 24px; border-bottom: 2px solid #374151; padding-bottom: 8px; }
@@ -1902,11 +1901,11 @@ onBeforeUnmount(() => {
   background: rgba(59, 130, 246, 0.1);
   border-radius: 0 4px 4px 0;
   font-style: italic;
-  color: #e5e7eb;
+  color: var(--ops-border);
 }
 
 .text :deep(code) {
-  background: #111827;
+  background: var(--ops-ink);
   padding: 2px 6px;
   border-radius: 4px;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Courier New', monospace;
@@ -1916,9 +1915,9 @@ onBeforeUnmount(() => {
 }
 
 .text :deep(pre) {
-  background: #111827;
+  background: var(--ops-ink);
   border: 1px solid #374151;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   padding: 0;
   margin: 12px 0;
   overflow-x: auto;
@@ -1930,7 +1929,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 16px;
-  background: #1f2937;
+  background: var(--ops-ink);
   border-bottom: 1px solid #374151;
   border-radius: 8px 8px 0 0;
 }
@@ -1969,7 +1968,7 @@ onBeforeUnmount(() => {
   border: none;
   font-size: 13px;
   line-height: 1.5;
-  color: #e5e7eb;
+  color: var(--ops-border);
   white-space: pre;
   display: block;
   overflow-x: auto;
@@ -2024,7 +2023,7 @@ onBeforeUnmount(() => {
 .text :deep(th) {
   background: #374151;
   font-weight: 600;
-  color: #f3f4f6;
+  color: var(--ops-ground);
 }
 
 .text :deep(td) {
@@ -2038,7 +2037,7 @@ onBeforeUnmount(() => {
 .text :deep(hr) {
   border: none;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #374151, transparent);
+  background: var(--ops-accent);
   margin: 16px 0;
 }
 
@@ -2063,12 +2062,12 @@ onBeforeUnmount(() => {
 
 .text :deep(strong) {
   font-weight: 600;
-  color: #f9fafb;
+  color: var(--ops-ground);
 }
 
 .text :deep(em) {
   font-style: italic;
-  color: #e5e7eb;
+  color: var(--ops-border);
 }
 
 .text :deep(del) {
@@ -2108,9 +2107,9 @@ onBeforeUnmount(() => {
 }
 
 .typing-content {
-  background: linear-gradient(135deg, #2d3748, #1a202c);
+  background: var(--ops-accent);
   padding: 16px 20px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   border: 1px solid #374151;
   display: flex;
   align-items: center;
@@ -2127,7 +2126,7 @@ onBeforeUnmount(() => {
 .typing-animation span {
   height: 6px;
   width: 6px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: var(--ops-accent);
   border-radius: 50%;
   display: block;
   animation: typing 1.4s infinite ease-in-out;
@@ -2170,7 +2169,7 @@ onBeforeUnmount(() => {
   background: rgba(59, 130, 246, 0.15);
   color: #3b82f6;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   font-weight: 600;
   border: 1px solid rgba(59, 130, 246, 0.3);
 }
@@ -2213,7 +2212,7 @@ onBeforeUnmount(() => {
   margin-top: 12px;
   padding: 12px;
   background: rgba(59, 130, 246, 0.1);
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
@@ -2242,7 +2241,7 @@ onBeforeUnmount(() => {
 
 .source-title {
   font-weight: 500;
-  color: #e5e7eb;
+  color: var(--ops-border);
   font-size: 13px;
   margin-bottom: 2px;
 }
@@ -2274,7 +2273,7 @@ onBeforeUnmount(() => {
   margin-top: 12px;
   padding: 12px;
   background: rgba(16, 185, 129, 0.1);
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
@@ -2298,7 +2297,7 @@ onBeforeUnmount(() => {
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.3);
   color: #34d399;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   padding: 8px 12px;
   font-size: 13px;
   text-align: left;
@@ -2336,7 +2335,7 @@ onBeforeUnmount(() => {
   background: rgba(59, 130, 246, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.3);
   color: #60a5fa;
-  border-radius: 12px;
+  border-radius: var(--ops-radius);
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 500;
@@ -2362,7 +2361,7 @@ onBeforeUnmount(() => {
 
 .input-wrapper {
   background: #374151;
-  border-radius: 10px;
+  border-radius: var(--ops-radius);
   padding: 12px 16px;
   border: 1px solid #4a5568;
   display: flex;
@@ -2381,7 +2380,7 @@ onBeforeUnmount(() => {
   background: transparent;
   border: none;
   outline: none;
-  color: #f3f4f6;
+  color: var(--ops-ground);
   font-size: 14px;
   line-height: 1.5;
   resize: none;
@@ -2426,7 +2425,7 @@ onBeforeUnmount(() => {
 .advanced-options {
   background: #374151;
   border: 1px solid #4a5568;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   padding: 12px;
   margin-top: 8px;
   font-size: 14px;
@@ -2458,14 +2457,14 @@ onBeforeUnmount(() => {
   background: #2d3748;
   border: 1px solid #4a5568;
   border-radius: 4px;
-  color: #f3f4f6;
+  color: var(--ops-ground);
   padding: 4px 8px;
   font-size: 12px;
   margin-left: auto;
 }
 
 .send-button {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: var(--ops-accent);
   border: none;
   width: 32px;
   height: 32px;
@@ -2475,11 +2474,11 @@ onBeforeUnmount(() => {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .send-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: var(--ops-accent);
   transform: translateY(-1px);
 }
 
@@ -2512,7 +2511,7 @@ onBeforeUnmount(() => {
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  border-top-color: white;
+  border-top-color: var(--ops-surface);
   animation: spin 1s linear infinite;
 }
 
@@ -2569,7 +2568,7 @@ onBeforeUnmount(() => {
   width: 16px;
   height: 16px;
   cursor: nw-resize;
-  background: linear-gradient(-45deg, transparent 30%, #4a5568 30%, #4a5568 40%, transparent 40%, transparent 60%, #4a5568 60%, #4a5568 70%, transparent 70%);
+  background: var(--ops-accent);
 }
 
 /* 会话切换器 */
@@ -2598,9 +2597,9 @@ onBeforeUnmount(() => {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  background: #1f2937;
+  background: var(--ops-ink);
   border: 1px solid #374151;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   width: 220px;
   z-index: 10001;
   box-shadow: 0 10px 20px rgba(0,0,0,0.3);
@@ -2650,7 +2649,7 @@ onBeforeUnmount(() => {
   padding: 8px 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #e5e7eb;
+  color: var(--ops-border);
 }
 
 .session-item:hover {

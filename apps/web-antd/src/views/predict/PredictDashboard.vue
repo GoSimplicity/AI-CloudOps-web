@@ -29,7 +29,7 @@
         <a-tag color="blue" v-if="hasInitialData">数据已输入</a-tag>
         <a-tag color="orange" v-else>请填写指标数据</a-tag>
       </template>
-      
+
       <a-form layout="horizontal" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
         <a-row :gutter="[24, 16]">
           <a-col :xs="24" :md="12">
@@ -359,7 +359,7 @@ const refreshAllPredictions = async () => {
       fetchMemoryPrediction(),
       fetchDiskPrediction()
     ]);
-    
+
     hasInitialData.value = true;
     updateCharts();
     message.success('预测数据已更新');
@@ -378,7 +378,7 @@ const fetchQpsPrediction = async () => {
       prediction_hours: Number(timeRange.value),
       enable_ai_insights: aiEnhanced.value
     });
-    
+
     predictionCache.value.qps = response;
     updateMetricData('qps', response);
   } catch (error) {
@@ -393,7 +393,7 @@ const fetchCpuPrediction = async () => {
       prediction_hours: Number(timeRange.value),
       enable_ai_insights: aiEnhanced.value
     });
-    
+
     predictionCache.value.cpu = response;
     updateMetricData('cpu', response);
   } catch (error) {
@@ -408,7 +408,7 @@ const fetchMemoryPrediction = async () => {
       prediction_hours: Number(timeRange.value),
       enable_ai_insights: aiEnhanced.value
     });
-    
+
     predictionCache.value.memory = response;
     updateMetricData('memory', response);
   } catch (error) {
@@ -423,7 +423,7 @@ const fetchDiskPrediction = async () => {
       prediction_hours: Number(timeRange.value),
       enable_ai_insights: aiEnhanced.value
     });
-    
+
     predictionCache.value.disk = response;
     updateMetricData('disk', response);
   } catch (error) {
@@ -435,7 +435,7 @@ const updateMetricData = (type: string, response: PredictionResponse) => {
   const metric = metricsData.value.find(m => m.type === type);
   if (metric) {
     metric.currentValue = response.current_value;
-    
+
     // 计算趋势
     const predicted = response.predicted_data;
     if (predicted && predicted.length > 0) {
@@ -466,7 +466,7 @@ const initTrendChart = () => {
   if (!trendChartRef.value) return;
 
   trendChart = echarts.init(trendChartRef.value);
-  
+
   const option = {
     tooltip: {
       trigger: 'axis',
@@ -502,7 +502,7 @@ const initUtilizationChart = () => {
   if (!utilizationChartRef.value) return;
 
   utilizationChart = echarts.init(utilizationChartRef.value);
-  
+
   const option = {
     tooltip: {
       trigger: 'item',
@@ -558,10 +558,10 @@ const updateTrendChart = () => {
     if (type === 'cpu') type = 'cpu';
     if (type === '内存') type = 'memory';
     if (type === '磁盘') type = 'disk';
-    
+
     const prediction = predictionCache.value[type];
     const data: number[] = [];
-    
+
     if (prediction && prediction.predicted_data) {
       prediction.predicted_data.forEach(point => {
         data.push(point.predicted_value);
@@ -596,7 +596,7 @@ const updateUtilizationChart = () => {
   const cpuValue = metricsData.value[1]?.currentValue || 0;
   const memoryValue = metricsData.value[2]?.currentValue || 0;
   const diskValue = metricsData.value[3]?.currentValue || 0;
-  
+
   const data = [
     { value: cpuValue, name: 'CPU', itemStyle: { color: '#ff4d4f' } },
     { value: memoryValue, name: '内存', itemStyle: { color: '#faad14' } },
@@ -672,13 +672,13 @@ const resetForm = () => {
   scalingRecommendations.value = [];
   aiInsights.value = [];
   costAnalysis.value = { cost_trend_analysis: {} };
-  
+
   // 重置指标数据
   metricsData.value.forEach(metric => {
     metric.currentValue = 0;
     metric.trend = 0;
   });
-  
+
   // 清空图表
   if (trendChart) {
     trendChart.clear();
@@ -686,7 +686,7 @@ const resetForm = () => {
   if (utilizationChart) {
     utilizationChart.clear();
   }
-  
+
   message.success('表单已重置');
 };
 
@@ -713,7 +713,7 @@ onMounted(async () => {
   await nextTick();
   initTrendChart();
   initUtilizationChart();
-  
+
   // 窗口大小变化时重新调整图表
   window.addEventListener('resize', handleChartResize);
 });
@@ -735,18 +735,18 @@ onUnmounted(() => {
 <style scoped>
 .predict-dashboard {
   padding: 24px;
-  background-color: var(--ant-background-color-light, #fafafa);
+  background-color: var(--ant-background-color-light, var(--ops-ground));
   min-height: 100vh;
 }
 
 /* 页面头部 */
 .predict-dashboard .page-header {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--ops-surface);
+  border-radius: var(--ops-radius);
   padding: 16px 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--ops-border);
 }
 
 .predict-dashboard .header-content {
@@ -776,12 +776,12 @@ onUnmounted(() => {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #262626;
+  color: var(--ops-ink);
   line-height: 1.2;
 }
 
 .predict-dashboard .page-subtitle {
-  color: #8c8c8c;
+  color: var(--ops-muted);
   margin: 0;
   font-size: 12px;
   margin-top: 4px;
@@ -795,7 +795,7 @@ onUnmounted(() => {
 
 .input-card {
   margin-bottom: 24px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -811,7 +811,7 @@ onUnmounted(() => {
 .metric-card {
   cursor: pointer;
   transition: all 0.3s ease;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   overflow: hidden;
 }
 
@@ -839,23 +839,23 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  color: white;
+  color: hsl(var(--primary-foreground));
 }
 
 .metric-qps .metric-icon {
-  background: linear-gradient(135deg, #1890ff, #36cfc9);
+  background: var(--ops-accent);
 }
 
 .metric-cpu .metric-icon {
-  background: linear-gradient(135deg, #ff4d4f, #ff7875);
+  background: var(--ops-accent);
 }
 
 .metric-memory .metric-icon {
-  background: linear-gradient(135deg, #faad14, #ffc53d);
+  background: var(--ops-accent);
 }
 
 .metric-disk .metric-icon {
-  background: linear-gradient(135deg, #52c41a, #73d13d);
+  background: var(--ops-accent);
 }
 
 .metric-info {
@@ -917,7 +917,7 @@ onUnmounted(() => {
 }
 
 .chart-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -936,7 +936,7 @@ onUnmounted(() => {
 }
 
 .insights-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -1018,7 +1018,7 @@ onUnmounted(() => {
 }
 
 .cost-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -1034,7 +1034,7 @@ onUnmounted(() => {
 .cost-savings {
   text-align: center;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   background-color: var(--ant-background-color-light);
 }
 
@@ -1059,7 +1059,7 @@ onUnmounted(() => {
   .predict-dashboard {
     padding: 16px;
   }
-  
+
   .predict-dashboard .page-header {
     padding: 20px;
     margin-bottom: 16px;
@@ -1087,26 +1087,26 @@ onUnmounted(() => {
   .predict-dashboard .header-icon {
     font-size: 36px;
   }
-  
+
   .metric-header {
     gap: 12px;
   }
-  
+
   .metric-icon {
     width: 40px;
     height: 40px;
     font-size: 20px;
   }
-  
+
   .metric-value {
     font-size: 20px;
   }
-  
+
   .chart-container,
   .chart-container-small {
     height: 250px;
   }
-  
+
   .cost-overview {
     grid-template-columns: 1fr;
   }

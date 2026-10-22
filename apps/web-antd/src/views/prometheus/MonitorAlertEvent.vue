@@ -589,7 +589,7 @@ onMounted(() => {
 }
 
 .stats-card {
-  border-radius: 8px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
 }
@@ -628,7 +628,7 @@ onMounted(() => {
 }
 
 .status-unknown {
-  background-color: #d9d9d9;
+  background-color: var(--ops-border);
 }
 
 .alert-name-text {
@@ -674,12 +674,12 @@ onMounted(() => {
 .times-value {
   font-weight: 600;
   font-size: 14px;
-  color: #333;
+  color: var(--ops-ink);
 }
 
 .times-unit {
   font-size: 12px;
-  color: #666;
+  color: var(--ops-muted);
 }
 
 .group-info {
@@ -705,7 +705,7 @@ onMounted(() => {
 
 .time {
   font-size: 12px;
-  color: #8c8c8c;
+  color: var(--ops-muted);
 }
 
 .action-buttons {
@@ -731,7 +731,7 @@ onMounted(() => {
 .detail-header h2 {
   margin: 0;
   font-size: 24px;
-  color: #1f2937;
+  color: var(--ops-ink);
   word-break: break-all;
 }
 
