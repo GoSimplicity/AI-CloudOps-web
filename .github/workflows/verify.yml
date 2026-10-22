@@ -20,3 +20,10 @@ jobs:
       - run: pnpm -F @vben/web-antd typecheck
       - run: pnpm test:unit --run
       - run: pnpm build:antd
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Verify production login bootstrap
+        run: pnpm test:e2e --grep "login is usable"
+        env:
+          CLOUDOPS_PREVIEW: 'true'
+          CLOUDOPS_ROUTER_HISTORY: hash
+          PLAYWRIGHT_CHANNEL: chromium

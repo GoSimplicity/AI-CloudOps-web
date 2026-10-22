@@ -15,6 +15,8 @@ function adminPassword() {
 }
 
 test('login is usable on mobile and supports both themes', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(routePath('/auth/login'));
   await expect(page.getByRole('heading', { name: '登录运维工作台' })).toBeVisible();
@@ -27,6 +29,7 @@ test('login is usable on mobile and supports both themes', async ({ page }) => {
   await expect(page.locator('html')).toHaveClass(/dark/);
   await page.getByRole('button', { name: '切换浅色' }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(errors, 'production bootstrap runtime errors').toEqual([]);
 });
 
 test('authenticated navigation renders every standalone business route', async ({ page }) => {

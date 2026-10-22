@@ -219,3 +219,12 @@ CLOUDOPS_WEB_URL=http://127.0.0.1:5667 CLOUDOPS_TEST_ENV_FILE=/absolute/path/to/
 如果隔离环境有意不接入 AI 修复执行器或 Prometheus，可给 E2E 显式传入 `CLOUDOPS_EXPECT_UNAVAILABLE=/api/v1/autofix/ready,/api/v1/rca/metrics`。仅这些精确路径的 HTTP 503 会作为 `expected-unavailable` 写入测试注解，其他状态码和路径仍失败。此参数不能证明 AI 外部依赖已生产就绪。
 
 受限网络可使用 `docker build --build-arg NPM_REGISTRY=https://registry.npmmirror.com .`；默认仍使用 npm 官方源，锁文件和 TLS 校验不变。构建使用独立 BuildKit pnpm store 缓存。
+
+构建后必须验证真实生产包挂载，不能只检查 Vite 开发模式：
+
+```sh
+pnpm build:antd
+CLOUDOPS_PREVIEW=true CLOUDOPS_ROUTER_HISTORY=hash pnpm test:e2e --grep "login is usable"
+```
+
+此检查自动启动本地 production preview，验证登录表单、窄屏、明暗切换及刷新持久化，并拒绝 `pageerror`。CI 使用 Chromium 执行相同检查，不需要或模拟后端。Rollup 使用自动分包，避免将 Ant Design 的互相依赖模块强制拆成多个初始化顺序不安全的 chunk。
