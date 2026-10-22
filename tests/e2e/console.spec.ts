@@ -3,6 +3,10 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ts from 'typescript';
 
+function routePath(path: string) {
+  return process.env.CLOUDOPS_ROUTER_HISTORY === 'hash' ? `/#${path}` : path;
+}
+
 function adminPassword() {
   if (process.env.CLOUDOPS_TEST_PASSWORD) return process.env.CLOUDOPS_TEST_PASSWORD;
   if (!process.env.CLOUDOPS_TEST_ENV_FILE) return undefined;
@@ -12,7 +16,7 @@ function adminPassword() {
 
 test('login is usable on mobile and supports both themes', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/auth/login');
+  await page.goto(routePath('/auth/login'));
   await expect(page.getByRole('heading', { name: '登录运维工作台' })).toBeVisible();
   await expect(page.getByLabel('账号', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '手机号登录' })).toHaveCount(0);
@@ -39,7 +43,7 @@ test('authenticated navigation renders every standalone business route', async (
       apiFailures.push(`${response.status()} ${new URL(response.url()).pathname}`);
     }
   });
-  await page.goto('/auth/login');
+  await page.goto(routePath('/auth/login'));
   await page.getByLabel('账号', { exact: true }).fill(process.env.CLOUDOPS_TEST_USER || 'admin');
   await page.getByLabel('密码', { exact: true }).fill(password!);
   await page.getByRole('button', { name: '登录', exact: true }).click();
@@ -67,7 +71,7 @@ test('authenticated navigation renders every standalone business route', async (
     visit(source);
   }
   for (const route of [...new Set(routes)]) {
-    await page.goto(route);
+    await page.goto(routePath(route));
     await page.waitForTimeout(700);
     if (route === '/system_welcome') {
       await expect(page.locator('.metric-value').first()).not.toHaveText('待采集', { timeout: 15_000 });
@@ -75,6 +79,7 @@ test('authenticated navigation renders every standalone business route', async (
       await expect(page.locator('.chart-container-small canvas')).toBeVisible();
     }
     await expect(page.locator('body')).not.toBeEmpty();
+    await expect.poll(() => { const url = new URL(page.url()); return url.hash.startsWith('#/') ? url.hash.slice(1).split('?')[0] : url.pathname; }).toBe(route);
     await expect(page).not.toHaveURL(/auth\/login/);
   }
   expect(errors, 'browser runtime errors').toEqual([]);
