@@ -1,9 +1,12 @@
+# syntax=docker/dockerfile:1
 FROM node:22-alpine AS builder
 WORKDIR /app
+ARG NPM_REGISTRY=https://registry.npmjs.org
 RUN corepack enable && corepack prepare pnpm@9.9.0 --activate
 # Workspace scripts and internal packages participate in pnpm install/postinstall.
 COPY . .
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=cloudops-pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --store-dir=/pnpm/store --registry=${NPM_REGISTRY}
 RUN pnpm build:antd
 
 FROM joseluisq/static-web-server:2.33-alpine

@@ -9,33 +9,33 @@
           <span class="btn-text">创建通知配置</span>
         </a-button>
         <div class="search-filters">
-          <a-input-search 
-            v-model:value="searchQuery" 
-            placeholder="搜索通知配置..." 
+          <a-input-search
+            v-model:value="searchQuery"
+            placeholder="搜索通知配置..."
             class="search-input"
             @search="handleSearch"
             @change="handleSearchChange"
-            allow-clear 
+            allow-clear
           />
-          <a-select 
-            v-model:value="channelFilter" 
-            placeholder="选择通知渠道" 
+          <a-select
+            v-model:value="channelFilter"
+            placeholder="选择通知渠道"
             class="channel-filter"
             @change="handleChannelChange"
             allow-clear
           >
             <a-select-option :value="undefined">全部渠道</a-select-option>
-            <a-select-option 
-              v-for="channel in getAvailableChannels()" 
+            <a-select-option
+              v-for="channel in getAvailableChannels()"
               :key="channel"
               :value="channel"
             >
               {{ getNotificationChannelName(channel) }}
             </a-select-option>
           </a-select>
-          <a-select 
-            v-model:value="statusFilter" 
-            placeholder="状态" 
+          <a-select
+            v-model:value="statusFilter"
+            placeholder="状态"
             class="status-filter"
             @change="handleStatusChange"
             allow-clear
@@ -54,9 +54,9 @@
     <!-- 统计卡片 -->
     <div class="stats-grid">
       <a-card class="stats-card">
-        <a-statistic 
-          title="总配置数" 
-          :value="stats.total" 
+        <a-statistic
+          title="总配置数"
+          :value="stats.total"
           :value-style="{ color: '#1890ff' }"
         >
           <template #prefix>
@@ -66,9 +66,9 @@
       </a-card>
 
       <a-card class="stats-card">
-        <a-statistic 
-          title="启用中" 
-          :value="stats.enabled" 
+        <a-statistic
+          title="启用中"
+          :value="stats.enabled"
           :value-style="{ color: '#52c41a' }"
         >
           <template #prefix>
@@ -78,9 +78,9 @@
       </a-card>
 
       <a-card class="stats-card">
-        <a-statistic 
-          title="禁用" 
-          :value="stats.disabled" 
+        <a-statistic
+          title="禁用"
+          :value="stats.disabled"
           :value-style="{ color: '#ff4d4f' }"
         >
           <template #prefix>
@@ -90,9 +90,9 @@
       </a-card>
 
       <a-card class="stats-card">
-        <a-statistic 
-          title="今日发送" 
-          :value="stats.todaySent" 
+        <a-statistic
+          title="今日发送"
+          :value="stats.todaySent"
           :value-style="{ color: '#fa8c16' }"
         >
           <template #prefix>
@@ -104,11 +104,11 @@
 
     <div class="table-container">
       <a-card>
-        <a-table 
-          :data-source="notifications" 
-          :columns="columns" 
-          :pagination="paginationConfig" 
-          :loading="loading" 
+        <a-table
+          :data-source="notifications"
+          :columns="columns"
+          :pagination="paginationConfig"
+          :loading="loading"
           row-key="id"
           bordered
           :scroll="{ x: 1400 }"
@@ -124,8 +124,8 @@
 
             <template v-if="column.key === 'channels'">
               <div class="channels-cell">
-                <a-tag 
-                  v-for="channel in record.channels" 
+                <a-tag
+                  v-for="channel in record.channels"
                   :key="channel"
                   :color="getChannelColor(channel)"
                   class="channel-tag"
@@ -163,7 +163,7 @@
             </template>
 
             <template v-if="column.key === 'status'">
-              <a-switch 
+              <a-switch
                 :checked="record.status === NotificationStatus.Enabled"
                 @change="(checked: boolean) => handleStatusToggle(record, checked)"
                 :loading="record.statusLoading"
@@ -232,11 +232,11 @@
     </div>
 
     <!-- 通知配置创建/编辑对话框 -->
-    <a-modal 
-      :open="notificationDialogVisible" 
-      :title="notificationDialog.isEdit ? '编辑通知配置' : '创建通知配置'" 
+    <a-modal
+      :open="notificationDialogVisible"
+      :title="notificationDialog.isEdit ? '编辑通知配置' : '创建通知配置'"
       :width="notificationDialogWidth"
-      @ok="saveNotification" 
+      @ok="saveNotification"
       @cancel="closeNotificationDialog"
       :destroy-on-close="true"
       :confirm-loading="notificationDialog.saving"
@@ -244,23 +244,23 @@
     >
       <a-form ref="formRef" :model="notificationDialog.form" :rules="notificationRules" layout="vertical">
         <a-form-item label="配置名称" name="name">
-          <a-input 
-            v-model:value="notificationDialog.form.name" 
+          <a-input
+            v-model:value="notificationDialog.form.name"
             placeholder="请输入通知配置名称"
           />
         </a-form-item>
 
         <a-form-item label="配置描述" name="description">
-          <a-textarea 
-            v-model:value="notificationDialog.form.description" 
+          <a-textarea
+            v-model:value="notificationDialog.form.description"
             placeholder="请输入通知配置描述"
             :rows="3"
           />
         </a-form-item>
 
         <a-form-item label="关联流程" name="processId">
-          <a-select 
-            v-model:value="notificationDialog.form.processId" 
+          <a-select
+            v-model:value="notificationDialog.form.processId"
             placeholder="请选择关联流程（可选）"
             allow-clear
             show-search
@@ -270,8 +270,8 @@
             @popup-scroll="(e: Event) => handleProcessScroll(e)"
             @focus="() => loadProcesses(true)"
           >
-            <a-select-option 
-              v-for="process in processes" 
+            <a-select-option
+              v-for="process in processes"
               :key="process.id"
               :value="process.id"
               :label="process.name"
@@ -281,9 +281,9 @@
                 <span v-if="process.category?.name" class="form-category">{{ process.category.name }}</span>
               </div>
             </a-select-option>
-            <a-select-option 
-              v-if="processLoading" 
-              :value="`loading-${Date.now()}`" 
+            <a-select-option
+              v-if="processLoading"
+              :value="`loading-${Date.now()}`"
               disabled
             >
               <div style="text-align: center; padding: 8px;">
@@ -294,8 +294,8 @@
         </a-form-item>
 
         <a-form-item label="关联模板" name="templateId">
-          <a-select 
-            v-model:value="notificationDialog.form.templateId" 
+          <a-select
+            v-model:value="notificationDialog.form.templateId"
             placeholder="请选择关联模板（可选）"
             allow-clear
             show-search
@@ -305,8 +305,8 @@
             @popup-scroll="(e: Event) => handleTemplateScroll(e)"
             @focus="() => loadTemplates(true)"
           >
-            <a-select-option 
-              v-for="template in templates" 
+            <a-select-option
+              v-for="template in templates"
               :key="template.id"
               :value="template.id"
               :label="template.name"
@@ -316,9 +316,9 @@
                 <span v-if="template.category?.name" class="form-category">{{ template.category.name }}</span>
               </div>
             </a-select-option>
-            <a-select-option 
-              v-if="templateLoading" 
-              :value="`loading-${Date.now()}`" 
+            <a-select-option
+              v-if="templateLoading"
+              :value="`loading-${Date.now()}`"
               disabled
             >
               <div style="text-align: center; padding: 8px;">
@@ -329,8 +329,8 @@
         </a-form-item>
 
         <a-form-item label="关联分类" name="categoryId">
-          <a-select 
-            v-model:value="notificationDialog.form.categoryId" 
+          <a-select
+            v-model:value="notificationDialog.form.categoryId"
             placeholder="请选择关联分类（可选）"
             allow-clear
             show-search
@@ -340,8 +340,8 @@
             @popup-scroll="(e: Event) => handleCategoryScroll(e)"
             @focus="() => loadCategories(true)"
           >
-            <a-select-option 
-              v-for="category in categories" 
+            <a-select-option
+              v-for="category in categories"
               :key="category.id"
               :value="category.id"
               :label="category.name"
@@ -351,9 +351,9 @@
                 <span v-if="category.description" class="form-category">{{ category.description }}</span>
               </div>
             </a-select-option>
-            <a-select-option 
-              v-if="categoryLoading" 
-              :value="`loading-${Date.now()}`" 
+            <a-select-option
+              v-if="categoryLoading"
+              :value="`loading-${Date.now()}`"
               disabled
             >
               <div style="text-align: center; padding: 8px;">
@@ -366,9 +366,9 @@
         <a-form-item label="触发事件" name="eventTypes">
           <a-checkbox-group v-model:value="notificationDialog.form.eventTypes" style="width: 100%;">
             <a-row :gutter="[16, 8]">
-              <a-col 
-                :span="12" 
-                v-for="eventType in getAllEventTypes()" 
+              <a-col
+                :span="12"
+                v-for="eventType in getAllEventTypes()"
                 :key="eventType"
               >
                 <a-checkbox :value="eventType">
@@ -399,9 +399,9 @@
           </a-radio-group>
         </a-form-item>
 
-        <a-form-item 
-          label="触发条件" 
-          name="triggerCondition" 
+        <a-form-item
+          label="触发条件"
+          name="triggerCondition"
           v-if="notificationDialog.form.triggerType === 'conditional'"
         >
           <a-textarea
@@ -414,9 +414,9 @@
         <a-form-item label="通知渠道" name="channels">
           <a-checkbox-group v-model:value="notificationDialog.form.channels" style="width: 100%;">
             <a-row :gutter="[16, 16]">
-              <a-col 
-                :span="12" 
-                v-for="channel in getAllNotificationChannels()" 
+              <a-col
+                :span="12"
+                v-for="channel in getAllNotificationChannels()"
                 :key="channel"
               >
                 <a-checkbox :value="channel">
@@ -441,7 +441,7 @@
                     <strong>飞书通知：</strong>需要确保接收人配置了有效的用户ID，系统会根据用户ID查找对应的飞书账号进行消息推送
                   </div>
                   <div v-if="notificationDialog.form.channels.includes('email')">
-                    <strong>邮件通知：</strong>需要确保接收人配置了有效的邮箱地址，支持通过用户ID、角色ID或部门ID自动获取邮箱
+                    <strong>邮件通知：</strong>需要确保接收人配置了有效的邮箱地址，支持通过用户ID或角色ID自动获取邮箱
                   </div>
                 </div>
               </template>
@@ -449,12 +449,13 @@
           </div>
         </a-form-item>
 
+        <a-alert v-if="notificationDialog.form.recipientTypes.some(type => ['dept', 'custom'].includes(type))" type="warning" message="此历史配置包含未支持的部门或自定义接收人，请改为创建人、处理人、指定用户或角色后保存。" show-icon />
         <a-form-item label="接收人类型" name="recipientTypes">
           <a-checkbox-group v-model:value="notificationDialog.form.recipientTypes" style="width: 100%;">
             <a-row :gutter="[16, 8]">
-              <a-col 
-                :span="12" 
-                v-for="recipientType in getAllRecipientTypes()" 
+              <a-col
+                :span="12"
+                v-for="recipientType in getAllRecipientTypes().filter(type => !['dept', 'custom'].includes(type))"
                 :key="recipientType"
               >
                 <a-checkbox :value="recipientType">
@@ -468,8 +469,8 @@
         </a-form-item>
 
         <a-form-item label="自定义接收人用户ID" name="recipientUsers" v-if="notificationDialog.form.recipientTypes.includes('user')">
-          <a-select 
-            v-model:value="notificationDialog.form.recipientUsers" 
+          <a-select
+            v-model:value="notificationDialog.form.recipientUsers"
             mode="tags"
             placeholder="请输入用户ID"
             style="width: 100%"
@@ -478,8 +479,8 @@
         </a-form-item>
 
         <a-form-item label="接收人角色ID" name="recipientRoles" v-if="notificationDialog.form.recipientTypes.includes('role')">
-          <a-select 
-            v-model:value="notificationDialog.form.recipientRoles" 
+          <a-select
+            v-model:value="notificationDialog.form.recipientRoles"
             mode="tags"
             placeholder="请输入角色ID"
             style="width: 100%"
@@ -488,8 +489,8 @@
         </a-form-item>
 
         <a-form-item label="接收人部门ID" name="recipientDepts" v-if="notificationDialog.form.recipientTypes.includes('dept')">
-          <a-select 
-            v-model:value="notificationDialog.form.recipientDepts" 
+          <a-select
+            v-model:value="notificationDialog.form.recipientDepts"
             mode="tags"
             placeholder="请输入部门ID"
             style="width: 100%"
@@ -612,9 +613,9 @@
           />
         </a-form-item>
 
-        <a-form-item 
-          label="定时发送时间" 
-          name="scheduledTime" 
+        <a-form-item
+          label="定时发送时间"
+          name="scheduledTime"
           v-if="notificationDialog.form.triggerType === 'scheduled'"
         >
           <a-date-picker
@@ -663,38 +664,38 @@
         </a-form-item>
 
         <a-form-item label="状态" name="status" v-if="notificationDialog.isEdit">
-          <a-switch 
+          <a-switch
             :checked="notificationDialog.form.status === NotificationStatus.Enabled"
             @change="(checked: boolean) => notificationDialog.form.status = checked ? NotificationStatus.Enabled : NotificationStatus.Disabled"
-            checked-children="启用" 
-            un-checked-children="禁用" 
+            checked-children="启用"
+            un-checked-children="禁用"
           />
         </a-form-item>
 
         <a-form-item label="是否默认配置" name="isDefault" v-if="notificationDialog.isEdit">
-          <a-switch 
+          <a-switch
             :checked="notificationDialog.form.isDefault === IsDefault.Yes"
             @change="(checked: boolean) => notificationDialog.form.isDefault = checked ? IsDefault.Yes : IsDefault.No"
-            checked-children="是" 
-            un-checked-children="否" 
+            checked-children="是"
+            un-checked-children="否"
           />
         </a-form-item>
       </a-form>
     </a-modal>
 
     <!-- 通知详情对话框 -->
-    <a-modal 
-      :open="detailDialogVisible" 
-      title="通知配置详情" 
+    <a-modal
+      :open="detailDialogVisible"
+      title="通知配置详情"
       :width="detailDialogWidth"
-      :footer="null" 
+      :footer="null"
       @cancel="closeDetailDialog"
       class="detail-dialog"
     >
       <div v-if="detailDialog.notification" class="notification-details">
         <div class="detail-header">
           <h2>{{ detailDialog.notification.name }} - 通知配置</h2>
-          <a-switch 
+          <a-switch
             :checked="detailDialog.notification.status === NotificationStatus.Enabled"
             @change="(checked: boolean) => handleStatusToggle(detailDialog.notification!, checked)"
           />
@@ -719,8 +720,8 @@
           </a-descriptions-item>
           <a-descriptions-item label="通知渠道">
             <div class="channels-display">
-              <a-tag 
-                v-for="channel in detailDialog.notification.channels" 
+              <a-tag
+                v-for="channel in detailDialog.notification.channels"
                 :key="channel"
                 :color="getChannelColor(channel)"
               >
@@ -774,20 +775,20 @@
     </a-modal>
 
     <!-- 发送记录对话框 -->
-    <a-modal 
-      :open="logsDialogVisible" 
-      title="发送记录" 
+    <a-modal
+      :open="logsDialogVisible"
+      title="发送记录"
       :width="logsDialogWidth"
-      :footer="null" 
+      :footer="null"
       @cancel="closeLogsDialog"
       class="logs-dialog"
     >
       <div class="send-logs">
-        <a-table 
-          :data-source="sendLogs" 
-          :columns="logsColumns" 
-          :pagination="logsPagination" 
-          :loading="logsLoading" 
+        <a-table
+          :data-source="sendLogs"
+          :columns="logsColumns"
+          :pagination="logsPagination"
+          :loading="logsLoading"
           row-key="id"
           size="small"
           @change="handleLogsTableChange"
@@ -813,11 +814,11 @@
     </a-modal>
 
     <!-- 手动发送对话框 -->
-    <a-modal 
-      :open="manualSendDialogVisible" 
-      title="手动发送通知" 
+    <a-modal
+      :open="manualSendDialogVisible"
+      title="手动发送通知"
       :width="600"
-      @ok="saveManualSend" 
+      @ok="saveManualSend"
       @cancel="closeManualSendDialog"
       :destroy-on-close="true"
       :confirm-loading="manualSendDialog.saving"
@@ -827,9 +828,9 @@
         <a-form-item label="通知渠道" name="channels">
           <a-checkbox-group v-model:value="manualSendDialog.form.channels" style="width: 100%;">
             <a-row :gutter="[16, 16]">
-              <a-col 
-                :span="12" 
-                v-for="channel in getAllNotificationChannels()" 
+              <a-col
+                :span="12"
+                v-for="channel in getAllNotificationChannels()"
                 :key="channel"
               >
                 <a-checkbox :value="channel">
@@ -1700,7 +1701,7 @@ const handleCreateNotification = (): void => {
 const handleEditNotification = (record: Notification): void => {
   notificationDialog.isEdit = true;
   notificationDialog.saving = false;
-  notificationDialog.form = { 
+  notificationDialog.form = {
     id: record.id,
     name: record.name,
     description: record.description || '',
@@ -2026,8 +2027,8 @@ const saveNotification = async (): Promise<void> => {
   notificationDialog.saving = true;
 
   try {
-    const scheduledTime = formData.scheduledTime ? 
-      dayjs(formData.scheduledTime).format('YYYY-MM-DD HH:mm:ss') : 
+    const scheduledTime = formData.scheduledTime ?
+      dayjs(formData.scheduledTime).format('YYYY-MM-DD HH:mm:ss') :
       undefined;
 
     // 处理触发条件

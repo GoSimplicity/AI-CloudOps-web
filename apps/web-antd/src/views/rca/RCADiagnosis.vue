@@ -73,31 +73,31 @@
     <!-- 核心指标卡片 -->
     <div class="metrics-grid">
       <div class="metric-card critical">
-        <div class="metric-icon">⚠️</div>
+        <div class="metric-icon"><Icon icon="mdi:alert-outline" /></div>
         <div class="metric-info">
-          <div class="metric-value">{{ getCriticalIssuesCount() }}</div>
+          <div class="metric-value">{{ quickDiagnosisResult ? getCriticalIssuesCount() : '待诊断' }}</div>
           <div class="metric-label">关键问题</div>
         </div>
         <div class="metric-trend" :class="getCriticalIssuesCount() > 0 ? 'trend-up' : 'trend-stable'">
-          {{ getCriticalIssuesCount() > 0 ? '需要关注' : '状态正常' }}
+          {{ !quickDiagnosisResult ? '暂无结果' : getCriticalIssuesCount() > 0 ? '需要关注' : '本次未见关键问题' }}
         </div>
       </div>
 
       <div class="metric-card warning">
-        <div class="metric-icon">⚡</div>
+        <div class="metric-icon"><Icon icon="mdi:alert-circle-outline" /></div>
         <div class="metric-info">
-          <div class="metric-value">{{ getWarningsCount() }}</div>
+          <div class="metric-value">{{ quickDiagnosisResult ? getWarningsCount() : '待诊断' }}</div>
           <div class="metric-label">警告信息</div>
         </div>
         <div class="metric-trend" :class="getWarningsCount() > 0 ? 'trend-warning' : 'trend-stable'">
-          {{ getWarningsCount() > 0 ? '存在警告' : '无警告' }}
+          {{ !quickDiagnosisResult ? '暂无结果' : getWarningsCount() > 0 ? '存在警告' : '本次无警告' }}
         </div>
       </div>
 
       <div class="metric-card errors">
-        <div class="metric-icon">🐛</div>
+        <div class="metric-icon"><Icon icon="mdi:bug-outline" /></div>
         <div class="metric-info">
-          <div class="metric-value">{{ getTotalErrors() }}</div>
+          <div class="metric-value">{{ errorSummaryResult ? getTotalErrors() : '未查询' }}</div>
           <div class="metric-label">错误总数</div>
         </div>
         <div class="metric-trend" :class="getTotalErrors() > 100 ? 'trend-up' : 'trend-stable'">
@@ -106,13 +106,13 @@
       </div>
 
       <div class="metric-card health">
-        <div class="metric-icon">💚</div>
+        <div class="metric-icon"><Icon icon="mdi:clipboard-check-outline" /></div>
         <div class="metric-info">
-          <div class="metric-value">{{ getHealthScore() }}%</div>
-          <div class="metric-label">健康度</div>
+          <div class="metric-value">{{ quickDiagnosisResult?.status || '待诊断' }}</div>
+          <div class="metric-label">诊断状态</div>
         </div>
-        <div class="metric-trend" :class="getHealthScoreClass()">
-          {{ getHealthStatus() }}
+        <div class="metric-trend">
+          以本次检查范围为准
         </div>
       </div>
     </div>
@@ -171,7 +171,7 @@
         <div class="issues-panel critical-panel">
           <div class="panel-header">
             <h3>关键问题</h3>
-            <span class="issue-count">{{ getCriticalIssuesCount() }}</span>
+            <span class="issue-count">{{ quickDiagnosisResult ? getCriticalIssuesCount() : '待诊断' }}</span>
           </div>
           <div class="issues-list">
             <div 
@@ -225,6 +225,7 @@
     </div>
 
     <!-- 图表区域 -->
+    <a-alert v-if="diagnosisFailures.length" type="warning" :message="`未完成：${diagnosisFailures.join('、')}。当前结果不代表完整健康检查。`" show-icon />
     <div class="charts-section" v-if="hasInitialData">
       <div class="chart-container">
         <div class="chart-header">
@@ -353,6 +354,7 @@ const chartType = ref('line');
 const diagnosisLevel = ref('standard');
 const autoRefresh = ref(false);
 const hasInitialData = ref(false);
+const diagnosisFailures = ref<string[]>([]);
 
 const inputData = ref({
   namespace: 'default'
@@ -419,33 +421,8 @@ const getRecommendationsCount = () => {
   return quickDiagnosisResult.value?.recommendations?.length || 0;
 };
 
-const getHealthScore = () => {
-  if (!quickDiagnosisResult.value) return 100;
-  const issues = getCriticalIssuesCount();
-  const warnings = getWarningsCount();
-  const errors = getTotalErrors();
 
-  let score = 100;
-  score -= issues * 10;
-  score -= warnings * 5;
-  score -= Math.min(errors / 10, 30);
 
-  return Math.max(0, Math.round(score));
-};
-
-const getHealthScoreClass = () => {
-  const score = getHealthScore();
-  if (score >= 80) return 'trend-stable';
-  if (score >= 50) return 'trend-warning';
-  return 'trend-up';
-};
-
-const getHealthStatus = () => {
-  const score = getHealthScore();
-  if (score >= 80) return '系统健康';
-  if (score >= 50) return '轻度异常';
-  return '需要关注';
-};
 
 const getCurrentTime = () => {
   return new Date().toLocaleString('zh-CN');
@@ -483,6 +460,12 @@ const refreshAllDiagnosis = async () => {
   }
 
   loading.value = true;
+  hasInitialData.value = false;
+  quickDiagnosisResult.value = null;
+  eventPatternsResult.value = null;
+  errorSummaryResult.value = null;
+  rcaAnalysisResult.value = null;
+  diagnosisFailures.value = [];
   currentStep.value = 0;
 
   // 开始诊断提示
@@ -493,7 +476,6 @@ const refreshAllDiagnosis = async () => {
 
     // 步骤1: 快速诊断
     currentStep.value = 1;
-    await new Promise(resolve => setTimeout(resolve, 500)); // 模拟进度
 
     promises.push(
       quickDiagnosis({
@@ -507,7 +489,6 @@ const refreshAllDiagnosis = async () => {
     if (diagnosisLevel.value !== 'quick') {
       // 步骤2: 事件模式分析
       currentStep.value = 2;
-      await new Promise(resolve => setTimeout(resolve, 300));
 
       promises.push(
         getEventPatterns({
@@ -523,7 +504,6 @@ const refreshAllDiagnosis = async () => {
     if (diagnosisLevel.value === 'comprehensive') {
       // 步骤3: 综合分析
       currentStep.value = 3;
-      await new Promise(resolve => setTimeout(resolve, 300));
 
       promises.push(
         getErrorSummary({
@@ -545,6 +525,13 @@ const refreshAllDiagnosis = async () => {
     }
 
     const results = await Promise.all(promises);
+
+    const labels = ['快速诊断', '事件模式', '错误汇总', '根因分析'];
+    diagnosisFailures.value = results.flatMap((result, index) => result === null ? [labels[index]!] : []);
+    if (results.every(result => result === null)) {
+      message.error('全部诊断失败，请检查服务状态后重试');
+      return;
+    }
 
     // 完成所有步骤
     currentStep.value = 4;
@@ -569,26 +556,10 @@ const refreshAllDiagnosis = async () => {
     await nextTick();
     initCharts();
 
-    // 优化完成消息
-    if (quickDiagnosisResult.value) {
-      const criticalCount = getCriticalIssuesCount();
-      const warningCount = getWarningsCount();
-
-      if (criticalCount > 0) {
-        message.success('快速诊断完成！发现了一些有价值的信息');
-        setTimeout(() => {
-          message.warning(`发现 ${criticalCount} 个关键问题，请及时处理`, 5);
-        }, 500);
-      } else if (warningCount > 0) {
-        message.success('快速诊断完成！发现了一些有价值的信息');
-        setTimeout(() => {
-          message.info(`发现 ${warningCount} 个警告，建议关注`, 3);
-        }, 500);
-      } else {
-        message.success('快速诊断完成！系统运行正常，未发现异常');
-      }
+    if (diagnosisFailures.value.length) {
+      message.warning('部分诊断完成，失败项目需重试');
     } else {
-      message.success('快速诊断完成！');
+      message.success('诊断完成，请查看各项检查结果');
     }
   } catch (error) {
 

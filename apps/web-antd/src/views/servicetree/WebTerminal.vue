@@ -5,6 +5,8 @@
 </template>
 
 <script setup lang="ts">
+import { useAppConfig } from "@vben/hooks";
+import { websocketUrl } from "#/utils/websocket-url";
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { message } from 'ant-design-vue';
@@ -65,10 +67,8 @@ onMounted(async () => {
       return;
     }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-
-    const host = 'localhost:8889';
-    const wsUrl = `${protocol}//${host}/api/tree/local/terminal/${resourceId}?token=${token}`;
+    const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
+    const wsUrl = websocketUrl(apiURL, `tree/local/terminal/${resourceId}`, token, window.location.origin);
     
     socket = new WebSocket(wsUrl);
 

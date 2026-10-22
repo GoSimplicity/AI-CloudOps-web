@@ -104,10 +104,11 @@
       </a-form>
     </a-card>
 
+<a-alert v-if="predictionFailures.length" type="warning" :message="`以下预测未完成：${predictionFailures.join('、')}，失败项不展示旧数据。`" show-icon class="mb-4" />
     <!-- 关键指标卡片 -->
     <a-row :gutter="[16, 16]" class="metrics-overview">
       <a-col :xs="24" :sm="12" :lg="6" v-for="metric in metricsData" :key="metric.type">
-        <a-card :class="['metric-card', `metric-${metric.type}`]" @click="viewDetailAnalysis">
+        <a-card :class="['metric-card', `metric-${metric.type}`]">
           <div class="metric-content">
             <div class="metric-header">
               <div class="metric-icon">
@@ -115,13 +116,13 @@
               </div>
               <div class="metric-info">
                 <div class="metric-name">{{ metric.name }}</div>
-                <div class="metric-value">{{ metric.currentValue }}{{ metric.unit }}</div>
+                <div class="metric-value">{{ predictionCache[metric.type] ? metric.currentValue + metric.unit : '暂无预测' }}</div>
               </div>
             </div>
             <div class="metric-trend">
               <div class="trend-info">
                 <span class="trend-label">预测趋势:</span>
-                <span :class="['trend-value', metric.trend > 0 ? 'trend-up' : 'trend-down']">
+                <span v-if="predictionCache[metric.type]" :class="['trend-value', metric.trend > 0 ? 'trend-up' : 'trend-down']">
                   <component :is="metric.trend > 0 ? 'ArrowUpOutlined' : 'ArrowDownOutlined'" />
                   {{ Math.abs(metric.trend) }}%
                 </span>
@@ -339,6 +340,7 @@ const costAnalysis = ref<CostAnalysis>({
 
 // 预测数据缓存
 const predictionCache = ref<Record<string, PredictionResponse>>({});
+const predictionFailures = ref<string[]>([]);
 
 // 方法定义
 const refreshAllPredictions = async () => {
@@ -353,16 +355,23 @@ const refreshAllPredictions = async () => {
     scalingRecommendations.value = [];
     aiInsights.value = [];
 
-    await Promise.all([
+    predictionCache.value = {};
+    predictionFailures.value = [];
+    costAnalysis.value = { cost_trend_analysis: {} };
+    const results = await Promise.allSettled([
       fetchQpsPrediction(),
       fetchCpuPrediction(),
       fetchMemoryPrediction(),
       fetchDiskPrediction()
     ]);
 
-    hasInitialData.value = true;
+    const labels = ['QPS', 'CPU', '内存', '磁盘'];
+    predictionFailures.value = results.flatMap((result, index) => result.status === 'rejected' ? [labels[index]!] : []);
+    hasInitialData.value = results.some(result => result.status === 'fulfilled');
     updateCharts();
-    message.success('预测数据已更新');
+    if (predictionFailures.value.length === 4) message.error('全部预测失败，请检查服务状态后重试');
+    else if (predictionFailures.value.length) message.warning('部分预测完成，请重试失败项');
+    else message.success('预测数据已更新');
   } catch (error) {
 
     message.error('获取预测数据失败');
@@ -382,7 +391,7 @@ const fetchQpsPrediction = async () => {
     predictionCache.value.qps = response;
     updateMetricData('qps', response);
   } catch (error) {
-
+    throw error;
   }
 };
 
@@ -397,7 +406,7 @@ const fetchCpuPrediction = async () => {
     predictionCache.value.cpu = response;
     updateMetricData('cpu', response);
   } catch (error) {
-
+    throw error;
   }
 };
 
@@ -412,7 +421,7 @@ const fetchMemoryPrediction = async () => {
     predictionCache.value.memory = response;
     updateMetricData('memory', response);
   } catch (error) {
-
+    throw error;
   }
 };
 
@@ -427,7 +436,7 @@ const fetchDiskPrediction = async () => {
     predictionCache.value.disk = response;
     updateMetricData('disk', response);
   } catch (error) {
-
+    throw error;
   }
 };
 
@@ -442,7 +451,7 @@ const updateMetricData = (type: string, response: PredictionResponse) => {
       const lastPoint = predicted[predicted.length - 1];
       if (lastPoint) {
         const lastValue = lastPoint.predicted_value;
-        metric.trend = ((lastValue - response.current_value) / response.current_value) * 100;
+        metric.trend = response.current_value === 0 ? 0 : ((lastValue - response.current_value) / response.current_value) * 100;
       }
     }
   }
@@ -503,34 +512,7 @@ const initUtilizationChart = () => {
 
   utilizationChart = echarts.init(utilizationChartRef.value);
 
-  const option = {
-    tooltip: {
-      trigger: 'item',
-      formatter: '{a} <br/>{b} : {c}% ({d}%)'
-    },
-    legend: {
-      orient: 'vertical',
-      left: 'left',
-      textStyle: { color: 'var(--ant-text-color)' }
-    },
-    series: [
-      {
-        name: '资源利用率',
-        type: 'pie',
-        radius: '70%',
-        data: [],
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.5)'
-          }
-        }
-      }
-    ]
-  };
-
-  utilizationChart.setOption(option);
+  updateUtilizationChart();
 };
 
 const updateCharts = () => {
@@ -587,28 +569,19 @@ const updateTrendChart = () => {
   trendChart.setOption({
     xAxis: { data: xAxisData },
     series: series
-  });
+  }, { replaceMerge: ['series'] });
 };
 
 const updateUtilizationChart = () => {
   if (!utilizationChart) return;
 
-  const cpuValue = metricsData.value[1]?.currentValue || 0;
-  const memoryValue = metricsData.value[2]?.currentValue || 0;
-  const diskValue = metricsData.value[3]?.currentValue || 0;
-
-  const data = [
-    { value: cpuValue, name: 'CPU', itemStyle: { color: '#ff4d4f' } },
-    { value: memoryValue, name: '内存', itemStyle: { color: '#faad14' } },
-    { value: diskValue, name: '磁盘', itemStyle: { color: '#52c41a' } },
-    { value: Math.max(0, 100 - cpuValue - memoryValue - diskValue), name: '空闲', itemStyle: { color: '#d9d9d9' } }
-  ];
-
   utilizationChart.setOption({
-    series: [{
-      data: data.filter(item => item.value > 0)
-    }]
-  });
+    tooltip: { trigger: 'axis', valueFormatter: (value: number) => `${value}%` },
+    grid: { left: 48, right: 24, top: 24, bottom: 32 },
+    xAxis: { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%' } },
+    yAxis: { type: 'category', data: ['CPU', '内存', '磁盘'] },
+    series: [{ name: '使用率', type: 'bar', data: ['cpu', 'memory', 'disk'].map(key => predictionCache.value[key]?.current_value ?? null) }],
+  }, true);
 };
 
 const getSeriesColor = (index: number) => {
@@ -669,6 +642,7 @@ const resetForm = () => {
   };
   hasInitialData.value = false;
   predictionCache.value = {};
+  predictionFailures.value = [];
   scalingRecommendations.value = [];
   aiInsights.value = [];
   costAnalysis.value = { cost_trend_analysis: {} };
@@ -698,10 +672,7 @@ const onAIToggle = () => {
   refreshAllPredictions();
 };
 
-const viewDetailAnalysis = () => {
-  // 跳转到详细分析页面
-  // router.push(`/predict/analysis`);
-};
+
 
 // 生命周期
 const handleChartResize = () => {

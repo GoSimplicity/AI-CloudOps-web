@@ -30,7 +30,7 @@
           <div class="metric-info">
             <span class="metric-label">{{ metric.label }}</span>
             <span class="metric-value">{{ metric.value }}</span>
-            <span class="metric-unit">{{ metric.unit }}</span>
+            <span v-if="metric.value !== '待采集'" class="metric-unit">{{ metric.unit }}</span>
           </div>
           <div class="metric-trend" :class="`trend-${metric.trend}`">
             <span>{{ metric.change }}</span>
@@ -107,7 +107,8 @@
             <h3 class="card-title">网络流量</h3>
             <a-badge status="processing" text="实时监控" />
           </div>
-          <div ref="networkChart" class="chart-container-small"></div>
+          <a-empty v-if="!moduleData.systemMetrics" description="暂无网络采样" />
+          <div ref="networkChart" v-show="moduleData.systemMetrics" class="chart-container-small"></div>
         </div>
       </a-col>
     </a-row>
@@ -121,7 +122,8 @@
             <h3 class="card-title">当前性能采样</h3>
             <span class="text-muted-foreground text-xs">仅显示最近一次采集值</span>
           </div>
-          <div ref="trendChart" class="chart-container"></div>
+          <a-empty v-if="!moduleData.systemMetrics" description="暂无性能采样" />
+          <div ref="trendChart" v-show="moduleData.systemMetrics" class="chart-container"></div>
         </div>
       </a-col>
 
@@ -133,6 +135,7 @@
             <a-badge status="processing" text="实时更新" />
           </div>
           <div class="event-list">
+            <a-empty v-if="!events.length" description="暂无系统事件" />
             <div v-for="event in events" :key="event.id" class="event-item">
               <div :class="`event-icon icon-${event.type}`">
                 <component :is="getEventIcon(event.type)" />
@@ -148,8 +151,8 @@
     </a-row>
 
     <!-- 资源使用情况 -->
-    <a-row :gutter="[16, 16]" class="resource-section">
-      <a-col :xs="24" :sm="12" :lg="6" v-for="resource in resources" :key="resource.name">
+    <a-row :gutter="[16, 16]" class="resource-section" v-if="moduleData.systemMetrics">
+      <a-col :xs="24" :sm="12" :lg="8" v-for="resource in resources" :key="resource.name">
         <div class="resource-card">
           <div class="resource-header">
             <span class="resource-name">{{ resource.name }}</span>
@@ -290,11 +293,6 @@ const resources = computed(() => {
       name: '存储',
       usage: Math.round(systemMetrics.disk_usage || 0),
       detail: systemMetrics.disk_usage_formatted || (systemMetrics.disk_total > 0 ? `${systemMetrics.disk_used?.toFixed(1) || 0} GB / ${systemMetrics.disk_total?.toFixed(1) || 0} GB` : '暂无数据')
-    },
-    {
-      name: '网络',
-      usage: Math.min(100, Math.round(((systemMetrics.network_in || 0) + (systemMetrics.network_out || 0)) / 1024 / 1024 * 10)), // 网络使用率基于流量大小
-      detail: `入: ${formatBytes(systemMetrics.network_in || 0)} 出: ${formatBytes(systemMetrics.network_out || 0)}`
     }
   ];
 });
@@ -1141,7 +1139,7 @@ onUnmounted(() => {
 
 .metric-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
+  transform: none;
 }
 
 .metric-info {
@@ -1207,16 +1205,17 @@ onUnmounted(() => {
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  height: 320px;
+  box-shadow: none;
+  min-height: 320px;
+  height: auto;
   transition: all 0.3s ease;
   border: 1px solid var(--ops-border);
 }
 
 .system-info-card:hover,
 .network-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  transform: translateY(-2px);
+  box-shadow: none;
+  transform: none;
   border-color: var(--ops-border);
 }
 
@@ -1316,15 +1315,15 @@ onUnmounted(() => {
   border-radius: var(--ops-radius);
   padding: 24px;
   height: 420px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
   transition: all 0.3s ease;
 }
 
 .chart-card:hover,
 .event-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  transform: translateY(-2px);
+  box-shadow: none;
+  transform: none;
   border-color: var(--ops-border);
 }
 
@@ -1445,14 +1444,14 @@ onUnmounted(() => {
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
   transition: all 0.3s ease;
 }
 
 .resource-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  transform: translateY(-2px);
+  box-shadow: none;
+  transform: none;
   border-color: var(--ops-border);
 }
 

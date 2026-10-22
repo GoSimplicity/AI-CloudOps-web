@@ -27,7 +27,7 @@
         <a-card class="stat-card">
           <a-statistic
             title="文档数量"
-            :value="knowledgeStats.documents_count"
+            :value="knowledgeStats.last_update === '暂无数据' ? '未查询' : knowledgeStats.documents_count"
             :value-style="{ color: '#1890ff' }"
           >
             <template #prefix><FileTextOutlined /></template>
@@ -36,7 +36,7 @@
         <a-card class="stat-card">
           <a-statistic
             title="向量数量"
-            :value="knowledgeStats.vector_count"
+            :value="knowledgeStats.last_update === '暂无数据' ? '未查询' : knowledgeStats.vector_count"
             :value-style="{ color: '#52c41a' }"
           >
             <template #prefix><NodeIndexOutlined /></template>
@@ -327,7 +327,6 @@ const addDocument = async () => {
 
 // 页面初始化
 onMounted(() => {
-  refreshKnowledge();
   addLog('info', '知识库管理页面已加载');
 });
 </script>

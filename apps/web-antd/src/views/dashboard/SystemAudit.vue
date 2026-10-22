@@ -497,6 +497,7 @@ const formatJSON = (obj: any) => {
 
 // 获取用户信息
 const getUserInfo = async (userId: number) => {
+  if (!Number.isInteger(userId) || userId <= 0) return null;
   // 检查缓存
   if (userInfoCache.value.has(userId)) {
     return userInfoCache.value.get(userId);
@@ -515,6 +516,7 @@ const getUserInfo = async (userId: number) => {
 
 // 获取用户显示名称
 const getUserDisplayName = (log: AuditLogWithUser) => {
+  if (!log.user_id) return '系统或未认证请求';
   if (log.user_info?.real_name) {
     return log.user_info.real_name;
   }

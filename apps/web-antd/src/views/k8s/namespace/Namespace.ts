@@ -217,6 +217,8 @@ export function useNamespacePage() {
     if (!phase) return '-';
 
     const map: Record<string, string> = {
+      'Active': '活跃',
+      'Terminating': '终止中',
       'Pending': '待定',
       'Failed': '失败',
     };
@@ -227,6 +229,8 @@ export function useNamespacePage() {
     if (!phase) return 'default';
 
     const map: Record<string, string> = {
+      'Active': 'success',
+      'Terminating': 'warning',
       'Pending': 'processing',
       'Failed': 'error',
     };
