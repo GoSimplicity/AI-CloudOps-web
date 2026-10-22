@@ -78,7 +78,7 @@
           <div class="metric-value">{{ quickDiagnosisResult ? getCriticalIssuesCount() : '待诊断' }}</div>
           <div class="metric-label">关键问题</div>
         </div>
-        <div class="metric-trend" :class="getCriticalIssuesCount() > 0 ? 'trend-up' : 'trend-stable'">
+        <div class="metric-trend" :class="!quickDiagnosisResult ? 'trend-unknown' : getCriticalIssuesCount() > 0 ? 'trend-up' : 'trend-stable'">
           {{ !quickDiagnosisResult ? '暂无结果' : getCriticalIssuesCount() > 0 ? '需要关注' : '本次未见关键问题' }}
         </div>
       </div>
@@ -89,7 +89,7 @@
           <div class="metric-value">{{ quickDiagnosisResult ? getWarningsCount() : '待诊断' }}</div>
           <div class="metric-label">警告信息</div>
         </div>
-        <div class="metric-trend" :class="getWarningsCount() > 0 ? 'trend-warning' : 'trend-stable'">
+        <div class="metric-trend" :class="!quickDiagnosisResult ? 'trend-unknown' : getWarningsCount() > 0 ? 'trend-warning' : 'trend-stable'">
           {{ !quickDiagnosisResult ? '暂无结果' : getWarningsCount() > 0 ? '存在警告' : '本次无警告' }}
         </div>
       </div>
@@ -100,7 +100,7 @@
           <div class="metric-value">{{ errorSummaryResult ? getTotalErrors() : '未查询' }}</div>
           <div class="metric-label">错误总数</div>
         </div>
-        <div class="metric-trend" :class="getTotalErrors() > 100 ? 'trend-up' : 'trend-stable'">
+        <div class="metric-trend" :class="!errorSummaryResult ? 'trend-unknown' : getTotalErrors() > 100 ? 'trend-up' : 'trend-stable'">
           过去{{ timeRange }}小时
         </div>
       </div>
@@ -769,6 +769,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.trend-unknown { color: var(--ops-muted); background: var(--ops-ground); }
 .rca-diagnosis {
 padding: 24px;
 background: var(--ops-ground);

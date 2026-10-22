@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+import ts from 'typescript';
 
 function adminPassword() {
   if (process.env.CLOUDOPS_TEST_PASSWORD) return process.env.CLOUDOPS_TEST_PASSWORD;
@@ -16,6 +17,9 @@ test('login is usable on mobile and supports both themes', async ({ page }) => {
   await expect(page.getByLabel('账号', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '手机号登录' })).toHaveCount(0);
   await page.getByRole('button', { name: '切换深色' }).click();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+  await page.waitForTimeout(200);
+  await page.reload();
   await expect(page.locator('html')).toHaveClass(/dark/);
   await page.getByRole('button', { name: '切换浅色' }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -45,16 +49,44 @@ test('authenticated navigation renders every standalone business route', async (
   expect(apiFailures, 'login API errors').toEqual([]);
   await expect(page).not.toHaveURL(/auth\/login/);
   const dir = resolve('apps/web-antd/src/router/routes/modules');
-  const routes = readdirSync(dir).flatMap(file => {
-    const source = readFileSync(resolve(dir, file), 'utf8');
-    return [...source.matchAll(/path:\s*'([^']+)',\s*component:\s*\(\)\s*=>/g)].map(match => match[1]!);
-  }).filter(route => !route.includes(':') && !route.includes('terminal'));
+  const routes: string[] = [];
+  for (const file of readdirSync(dir)) {
+    const source = ts.createSourceFile(file, readFileSync(resolve(dir, file), 'utf8'), ts.ScriptTarget.Latest, true);
+    const visit = (node: ts.Node) => {
+      if (ts.isObjectLiteralExpression(node)) {
+        const properties = node.properties.filter(ts.isPropertyAssignment);
+        const path = properties.find(property => property.name.getText(source) === 'path');
+        const component = properties.find(property => property.name.getText(source) === 'component');
+        if (path && component && ts.isStringLiteral(path.initializer) && ts.isArrowFunction(component.initializer)) {
+          const value = path.initializer.text;
+          if (!value.includes(':') && !value.includes('terminal')) routes.push(value);
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+  }
   for (const route of [...new Set(routes)]) {
     await page.goto(route);
     await page.waitForTimeout(700);
+    if (route === '/system_welcome') {
+      await expect(page.locator('.metric-value').first()).not.toHaveText('待采集', { timeout: 15_000 });
+      await expect(page.locator('.chart-container canvas')).toBeVisible();
+      await expect(page.locator('.chart-container-small canvas')).toBeVisible();
+    }
     await expect(page.locator('body')).not.toBeEmpty();
     await expect(page).not.toHaveURL(/auth\/login/);
   }
   expect(errors, 'browser runtime errors').toEqual([]);
-  expect([...new Set(apiFailures)], 'authenticated API failures').toEqual([]);
+  const expectedUnavailable = new Set((process.env.CLOUDOPS_EXPECT_UNAVAILABLE || '').split(',').filter(Boolean));
+  const observedFailures = [...new Set(apiFailures)];
+  const unexpected = observedFailures.filter(failure => {
+    const [status, path] = failure.split(' ');
+    if (status === '503' && expectedUnavailable.has(path!)) {
+      test.info().annotations.push({ type: 'expected-unavailable', description: path! });
+      return false;
+    }
+    return true;
+  });
+  expect(unexpected, 'authenticated API failures').toEqual([]);
 });

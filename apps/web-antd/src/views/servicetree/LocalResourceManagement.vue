@@ -1236,7 +1236,7 @@ onMounted(async () => {
 }
 
 .stats-card {
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   border: 1px solid var(--ops-border);
   box-shadow: none;
   height: 100%;
@@ -1521,7 +1521,7 @@ onMounted(async () => {
   }
 
   .btn-text {
-    display: none;
+    display: inline;
   }
 
   .btn-create, .btn-action {

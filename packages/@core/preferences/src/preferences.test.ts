@@ -55,6 +55,15 @@ describe('preferences', () => {
     expect(preferenceManager.getPreferences()).toEqual(expected);
   });
 
+  it('preserves a saved theme mode across initialization overrides', async () => {
+    vi.spyOn(preferenceManager as any, 'loadCachedPreferences').mockReturnValue({
+      ...defaultPreferences,
+      theme: { ...defaultPreferences.theme, mode: 'dark' },
+    });
+    await preferenceManager.initPreferences({ namespace: 'theme-reload', overrides: { theme: { mode: 'light' } } });
+    expect(preferenceManager.getPreferences().theme.mode).toBe('dark');
+  });
+
   it('updates theme mode correctly', () => {
     preferenceManager.updatePreferences({
       theme: {

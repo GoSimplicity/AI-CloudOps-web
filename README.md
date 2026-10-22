@@ -215,3 +215,7 @@ CLOUDOPS_WEB_URL=http://127.0.0.1:5667 CLOUDOPS_TEST_ENV_FILE=/absolute/path/to/
 生产镜像固定 pnpm 版本，包含 HTTP 健康检查；入口脚本只接受 `VITE_GLOB_` 公共配置。此类变量会公开到浏览器，禁止传入密钥。建议通过后端仓库的反向代理统一提供静态文件和 API。
 
 界面规则见 [DESIGN.md](DESIGN.md)。当前版本仅支持阿里云账号连接与同步；其他云的已有资产可查看。系统首页使用真实 CPU、内存、磁盘、负载采样，未采集值显示“待采集”，不生成历史数据。导出使用 UTF-8 CSV；审计与工单导出范围为当前页。账号由管理员分配，暂不提供短信、扫码、第三方和自助注册入口。
+
+如果隔离环境有意不接入 AI 修复执行器或 Prometheus，可给 E2E 显式传入 `CLOUDOPS_EXPECT_UNAVAILABLE=/api/v1/autofix/ready,/api/v1/rca/metrics`。仅这些精确路径的 HTTP 503 会作为 `expected-unavailable` 写入测试注解，其他状态码和路径仍失败。此参数不能证明 AI 外部依赖已生产就绪。
+
+受限网络可使用 `docker build --build-arg NPM_REGISTRY=https://registry.npmmirror.com .`；默认仍使用 npm 官方源，锁文件和 TLS 校验不变。构建使用独立 BuildKit pnpm store 缓存。

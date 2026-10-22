@@ -174,7 +174,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
 // 按需引入echarts，减少打包体积
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart, PieChart } from 'echarts/charts';
@@ -922,7 +922,11 @@ const fetchAllSystemData = async () => {
 
     // 更新指标和图表
     updateMetricsFromModuleData();
+    await nextTick();
+    if (systemMetrics && !trendChartInstance) initTrendChart();
+    if (systemMetrics && !networkChartInstance) initNetworkChart();
     updateCharts();
+    handleResize();
   } catch (error) {
 
     systemStatus.value.system = {
@@ -967,13 +971,6 @@ onMounted(async () => {
 
   // 设置定时更新（每30秒更新一次以减少服务器负载）
   dataTimer = setInterval(updateLiveData, 30000);
-
-  // 延迟初始化图表，确保DOM已渲染
-  setTimeout(() => {
-    initTrendChart();
-    initNetworkChart();
-    updateCharts();
-  }, 200);
 
   // 监听窗口大小变化
   window.addEventListener('resize', handleResize);
