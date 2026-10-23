@@ -126,7 +126,17 @@ class RequestClient {
       });
       return response as T;
     } catch (error: any) {
-      throw error.response ? error.response.data : error;
+      if (!error.response) throw error;
+      const { data, status, statusText } = error.response;
+      // 保留业务错误字段及 HTTP 分类，不附带含认证头的 Axios 配置
+      const failure =
+        data && typeof data === 'object'
+          ? Object.assign(Array.isArray(data) ? [] : {}, data)
+          : new Error(typeof data === 'string' ? data : error.message);
+      Object.defineProperty(failure, 'response', {
+        value: { data, status, statusText },
+      });
+      throw failure;
     }
   }
 }

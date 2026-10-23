@@ -48,6 +48,38 @@ describe('requestClient', () => {
     expect(response.data).toEqual(mockData);
   });
 
+  it.each([403, 404])(
+    'preserves HTTP %s and business payload without request credentials',
+    async (status) => {
+      const payload = { code: status, message: 'session denied' };
+      mock.onPost('/assistant/query').reply(status, payload);
+      const error = await requestClient
+        .post(
+          '/assistant/query',
+          {},
+          { headers: { Authorization: 'credential fixture' } },
+        )
+        .catch((error) => error);
+      expect(error).toEqual(payload);
+      expect(error.response).toEqual({
+        data: payload,
+        status,
+        statusText: undefined,
+      });
+      expect(error.response).not.toHaveProperty('config');
+      expect(JSON.stringify(error)).not.toContain('credential fixture');
+    },
+  );
+
+  it('retains status for a text HTTP failure', async () => {
+    mock.onGet('/plain-error').reply(503, 'temporarily unavailable');
+    const error = await requestClient
+      .get('/plain-error')
+      .catch((error) => error);
+    expect(error.message).toBe('temporarily unavailable');
+    expect(error.response.status).toBe(503);
+  });
+
   it('should handle network errors', async () => {
     mock.onGet('/test/error').networkError();
     try {

@@ -2,6 +2,8 @@ import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
 import { reactive, nextTick } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AiAssistant from './ai.vue';
+import { AxiosError } from 'axios';
+import { RequestClient } from '@vben/request';
 import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
 
 const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
@@ -97,6 +99,38 @@ describe('悬浮助手真实状态隔离', () => {
     expect(setup().sessionId).toBe('new-sid');
     expect(JSON.stringify(localStorage)).not.toContain('old private answer');
   });
+  it.each([403, 404])(
+    '真实请求客户端 HTTP %s 到达组件后清除旧会话',
+    async (status) => {
+      const client = new RequestClient({
+        adapter: async (config) => {
+          throw new AxiosError(
+            'session denied',
+            'ERR_BAD_RESPONSE',
+            config,
+            undefined,
+            {
+              data: { code: status, message: 'session denied' },
+              status,
+              statusText: 'Denied',
+              headers: {},
+              config,
+            },
+          );
+        },
+      });
+      api.assistantQuery.mockImplementationOnce(() =>
+        client.post('/assistant/query', {}),
+      );
+      wrapper = mount(AiAssistant);
+      setup().sessionId = 'invalid';
+      await setup().sendMessage('question');
+      expect(setup().sessionId).toBe('');
+      expect(setup().chatHistory).toEqual([]);
+      expect(setup().sending).toBe(false);
+    },
+  );
+
   it.each([403, 404])(
     '会话 %s 清空旧内容/SID，下一次提问新建',
     async (status) => {
