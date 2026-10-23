@@ -15,6 +15,12 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 import { message } from 'ant-design-vue';
 
 import { useAuthStore } from '#/store';
+import {
+  createForbiddenResponseInterceptor,
+  createPermissionDeniedError,
+  FORBIDDEN_STATUS,
+  isPermissionDeniedError,
+} from '#/utils/permission/forbidden';
 
 import { refreshTokenApi } from './core';
 
@@ -143,6 +149,10 @@ function createRequestClient(baseURL: string) {
       if (status >= 200 && status < 400 && code === 0) {
         return data;
       }
+      // 业务码 403 同样按无权限处理，由下方统一提示
+      if (code === FORBIDDEN_STATUS) {
+        throw createPermissionDeniedError(msg);
+      }
       throw new Error(`Error ${status}: ${msg}`);
     },
   });
@@ -159,9 +169,20 @@ function createRequestClient(baseURL: string) {
     }),
   );
 
-  // 通用的错误处理,如果没有进入上面的错误处理逻辑，就会进入这里
+  // 无权限（403）统一提示：同一请求只提示一次，并发 403 通过固定 key 合并为一条
   client.addResponseInterceptor(
-    errorMessageResponseInterceptor((msg: string) => message.error(msg)),
+    createForbiddenResponseInterceptor((content, key) =>
+      message.error({ content, key }),
+    ),
+  );
+
+  // 通用的错误处理,如果没有进入上面的错误处理逻辑，就会进入这里
+  // 已由 403 拦截器提示过的错误不再重复提示
+  client.addResponseInterceptor(
+    errorMessageResponseInterceptor((msg: string, error: any) => {
+      if (isPermissionDeniedError(error)) return;
+      message.error(msg);
+    }),
   );
 
   return client;
