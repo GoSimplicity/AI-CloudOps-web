@@ -2,6 +2,10 @@ import { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  markHttpErrorNotified,
+  resetHttpErrorNoticeTracking,
+} from '#/api/http-error-notice';
+import {
   createBusinessError,
   notifyBusinessError,
 } from '#/utils/permission/business-error';
@@ -75,6 +79,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.restoreAllMocks();
+  resetHttpErrorNoticeTracking();
 });
 
 describe('规则 1：详情不再前端解码，明文按键调 reveal', () => {
@@ -148,6 +153,28 @@ describe('规则 1：详情不再前端解码，明文按键调 reveal', () => {
     await expect(page.revealSecretKey('alpha')).resolves.toBeUndefined();
     expect(message.error).not.toHaveBeenCalled();
     expect(page.revealedValues.value).toEqual({});
+  });
+
+  it('P3-3：reveal 失败且请求层已弹过通用错误（如网络错误）：页面不再弹第二条', async () => {
+    const page = useSecretPage();
+    await page.showSecretDetail(RECORD);
+    const error = new Error('fake network failure');
+    markHttpErrorNotified(
+      error,
+      'http-error:网络异常，请检查您的网络连接后重试。',
+    );
+    api.reveal.mockRejectedValueOnce(error);
+    await expect(page.revealSecretKey('alpha')).resolves.toBeUndefined();
+    expect(message.error).not.toHaveBeenCalled();
+  });
+
+  it('P3-3：reveal 失败且请求层没提示过：页面弹一条「获取明文失败」', async () => {
+    const page = useSecretPage();
+    await page.showSecretDetail(RECORD);
+    api.reveal.mockRejectedValueOnce(new Error('local failure'));
+    await expect(page.revealSecretKey('alpha')).resolves.toBeUndefined();
+    expect(message.error).toHaveBeenCalledTimes(1);
+    expect(message.error).toHaveBeenCalledWith('获取明文失败');
   });
 });
 

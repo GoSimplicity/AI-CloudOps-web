@@ -35,6 +35,7 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
+import { isNotifiedByRequestLayer } from '#/api/http-error-notice';
 import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 import {
   type SecretDataRow,
@@ -486,7 +487,8 @@ export function useSecretPage() {
       if (value === undefined) message.error('未获取到该键的明文');
       return value;
     } catch (err) {
-      if (generation === revealGeneration && !isPermissionDeniedError(err)) {
+      // 复审 P3-3：请求层已弹过（403 / 业务错误 / 通用 http-error 含网络错误）就不再弹第二条
+      if (generation === revealGeneration && !isNotifiedByRequestLayer(err)) {
         message.error('获取明文失败');
       }
       return undefined;

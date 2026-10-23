@@ -9,6 +9,8 @@
  * 每个错误对象另有一个唯一 token，按 key 记录「当前这条提示是哪些错误弹的」：只有这条提示
  * 确实是当前错误弹出的、且没有被别的未处理错误共用时，页面才可以替换它。
  */
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
 const HTTP_ERROR_NOTICE_KEY = Symbol.for('ai-cloudops.httpErrorNoticeKey');
 const HTTP_ERROR_NOTICE_TOKEN = Symbol.for('ai-cloudops.httpErrorNoticeToken');
 
@@ -91,6 +93,17 @@ export function getHttpErrorNoticeKey(error: unknown): string | undefined {
   if (!error || typeof error !== 'object') return undefined;
   const key = (error as Record<symbol, unknown>)[HTTP_ERROR_NOTICE_KEY];
   return typeof key === 'string' ? key : undefined;
+}
+
+/**
+ * 页面 catch 用：请求层是否已为这个错误弹过提示（复审 P3-3）。
+ * 覆盖 403 / 已弹后端原文的业务错误（isPermissionDeniedError），以及通用 http-error 提示（含网络错误）。
+ * 返回 true 时页面不要再弹自己的失败提示。
+ */
+export function isNotifiedByRequestLayer(error: unknown): boolean {
+  return (
+    isPermissionDeniedError(error) || getHttpErrorNoticeKey(error) !== undefined
+  );
 }
 
 /**
