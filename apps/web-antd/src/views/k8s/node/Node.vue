@@ -252,7 +252,10 @@
                 <template #icon><WarningOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip :title="record.schedulable === 1 ? '禁用调度' : '启用调度'">
+            <a-tooltip
+              v-if="record.schedulable === 1 ? can('k8s.node.cordon') : can('k8s.node.uncordon')"
+              :title="record.schedulable === 1 ? '禁用调度' : '启用调度'"
+            >
               <a-button 
                 :title="record.schedulable === 1 ? '禁用调度' : '启用调度'"
                 @click="toggleNodeSchedule(record)"
@@ -440,7 +443,7 @@
                   <a-select-option value="PreferNoSchedule">PreferNoSchedule</a-select-option>
                   <a-select-option value="NoExecute">NoExecute</a-select-option>
                 </a-select>
-                <a-button v-if="can('k8s.node.taintDelete')" type="text" danger @click="removeTaint(idx)" class="k8s-remove-btn">
+                <a-button v-if="can('k8s.node.taintDelete') || isNewTaint(taint)" type="text" danger @click="removeTaint(idx)" class="k8s-remove-btn">
                   <template #icon><DeleteOutlined aria-hidden="true"  /></template>
                   删除
                 </a-button>
@@ -886,6 +889,7 @@ const {
   closeTaintModal,
   addTaint,
   removeTaint,
+  isNewTaint,
   submitTaintForm,
   hasTaintChanges,
   validateTaintYaml,

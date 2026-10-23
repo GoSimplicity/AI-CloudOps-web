@@ -15,6 +15,9 @@ import {
 
 import Node from './Node.vue';
 
+// 挂载完整 Node.vue（antd Table + Modal）在满载 CI 上单条可能超过默认 5s（复审 P3-7）
+vi.setConfig({ testTimeout: 15_000 });
+
 /**
  * FE-02 污点弹窗（fe02-scope-decisions.md (c) c-1..c-9）：挂载真实 Node.vue，
  * 权限走真实 usePermission（pinia 中的 userInfo / accessCodes），只 mock 接口层。
@@ -344,6 +347,80 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     );
     expect(message.success).toHaveBeenCalledWith('节点污点更新成功');
   });
+
+  it('P3-3 只有 add 码：已有污点行没有删除按钮，本次新增、未保存的行可以删除（只改表单，不调删除接口）', async () => {
+    setSubject([ADD]);
+    await mountPage();
+    await openTaintModal();
+    bodyButton('添加污点')!.click();
+    await flushPromises();
+    const rows = () => [...modalRoot()!.querySelectorAll('.k8s-key-value-row')];
+    expect(rows()).toHaveLength(2);
+    expect(rows()[0]!.querySelector('.k8s-remove-btn')).toBeNull();
+    const removeNew =
+      rows()[1]!.querySelector<HTMLButtonElement>('.k8s-remove-btn');
+    expect(removeNew).not.toBeNull();
+    removeNew!.click();
+    await flushPromises();
+    expect(rows()).toHaveLength(1);
+    expect(wrapper.vm.taintFormModel.taintsToDelete).toEqual([]);
+    expect(saveButton()!.disabled).toBe(true);
+    expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
+  });
+
+  it('P3-4 先删后加同一个 key：重新添加的行计入添加，先删再加各发一次', async () => {
+    setSubject([ADD, DELETE]);
+    await mountPage();
+    await openTaintModal();
+    const order: string[] = [];
+    api.deleteK8sNodeTaints.mockImplementationOnce(async () => {
+      order.push('delete');
+    });
+    api.addK8sNodeTaints.mockImplementationOnce(async () => {
+      order.push('add');
+    });
+    bodyButton('删除')!.click();
+    await flushPromises();
+    bodyButton('添加污点')!.click();
+    await flushPromises();
+    // 与原污点完全相同的 key/value/effect，也必须重新添加，否则保存后被删掉
+    Object.assign(wrapper.vm.taintFormModel.taints.at(-1), EXISTING);
+    await flushPromises();
+    expect(saveButton()!.disabled).toBe(false);
+    await save();
+    expect(order).toEqual(['delete', 'add']);
+    expect(api.deleteK8sNodeTaints).toHaveBeenCalledWith(
+      expect.objectContaining({ taint_keys: ['dedicated'] }),
+    );
+    expect(api.addK8sNodeTaints).toHaveBeenCalledWith(
+      expect.objectContaining({ taints: [EXISTING] }),
+    );
+    expect(message.success).toHaveBeenCalledWith('节点污点更新成功');
+  });
+
+  it.each([
+    ['只有 delete 码', (): string[] => [DELETE]],
+    ['只有 add 码', (): string[] => [ADD]],
+  ])(
+    'P3-4 先删后加同一个 key 需要两个码：%s 时整单不发请求，提示无权限',
+    async (_label, codes) => {
+      setSubject(codes());
+      await mountPage();
+      await openTaintModal();
+      // 通过状态构造「删了 dedicated 又加回 dedicated」
+      wrapper.vm.taintFormModel.taintsToDelete.push('dedicated');
+      wrapper.vm.taintFormModel.taints.splice(0, 1, { ...EXISTING });
+      await flushPromises();
+      await save();
+      expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
+      expect(api.addK8sNodeTaints).not.toHaveBeenCalled();
+      expect(message.error).toHaveBeenCalledWith({
+        content: PERMISSION_DENIED_MESSAGE,
+        key: PERMISSION_DENIED_MESSAGE_KEY,
+      });
+      expect(wrapper.vm.isTaintModalVisible).toBe(true);
+    },
+  );
 
   it('admin 放行：用户名 admin、权限码为空时入口、添加、删除、编辑都可用', async () => {
     setSubject([], 'admin');
