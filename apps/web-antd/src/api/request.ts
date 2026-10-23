@@ -60,31 +60,72 @@ function readBadRequestDetail(data: any): string {
 }
 
 /**
- * autofix 接口（路径里有独立的 autofix 段：/autofix、/autofix/…、…/api/v1/autofix/…，可带查询串）。
- * SEC-26 规则 3：autofix 错误提示不透出后端 message；与 P2-2「400 透出后端原文」重叠时以 SEC-26 为准
- * （窝窝头 2026-10-24，待面包最终确认），所以这类接口的 400 仍用通用文案。
+ * 敏感接口（incr4 P2-1）：400 一律用通用文案，不透出后端原文。
+ * - autofix：SEC-26 规则 3，autofix 错误提示不透出后端 message（窝窝头 2026-10-24）；
+ * - Secret：后端 400 可能回显用户提交的 Secret 数据（复审 P2-1）。
+ * 路径判断（incr4 P3-B）只看 error.config.url，不看 baseURL、也不区分 client：
+ * 1. decodeURIComponent 一次（认 %2F 编码的斜杠、%20 等）后再 trim（原文首尾空白与编码的 %20 都去掉）；
+ *    解码失败（不完整或非法的百分号编码）按敏感接口处理（fail closed）；
+ * 2. 敏感段必须是独立路径段：前面是开头或 `/`，后面是 `/`、`?`、`#`、`;` 或结尾，可带 `.json` 后缀，大小写不敏感；
+ *    所以 `/k8s/autofixer`、`/autofix-tasks`、`/k8s/secretary` 不算；
+ * 3. 查询串、hash 里出现 `/autofix`、`/secret` 也会命中（偏保守，少透出）；
+ * 4. 只解码一次，双重编码（%252F）不认；没有 url 的错误按非敏感处理（现有调用都带 url）。
  */
-const AUTOFIX_REQUEST_PATTERN = /(?:^|\/)autofix(?=[/?#]|$)/i;
+const URL_DECODE_FAILED = Symbol('url-decode-failed');
+
+function readRequestPath(
+  error: any,
+): string | typeof URL_DECODE_FAILED | undefined {
+  const url = error?.config?.url;
+  if (typeof url !== 'string') return undefined;
+  try {
+    return decodeURIComponent(url).trim();
+  } catch {
+    return URL_DECODE_FAILED;
+  }
+}
+
+const sensitiveSegmentPattern = (segment: string) =>
+  new RegExp(String.raw`(?:^|/)${segment}(?:\.json)?(?=[/?#;]|$)`, 'i');
+
+/** autofix 接口：独立的 autofix 段（/autofix、/autofix/…、…/api/v1/autofix/…） */
+const AUTOFIX_SEGMENT_PATTERN = sensitiveSegmentPattern('autofix');
+/** Secret 接口：独立的 secret / secrets 段（/k8s/secret/…，含 sec26 的 …/reveal；复数为 K8s 原生写法） */
+const SECRET_SEGMENT_PATTERN = sensitiveSegmentPattern('secrets?');
+
+function matchesSensitivePath(error: any, pattern: RegExp): boolean {
+  const path = readRequestPath(error);
+  if (path === URL_DECODE_FAILED) return true;
+  return typeof path === 'string' && pattern.test(path);
+}
 
 export function isAutofixRequest(error: any): boolean {
-  const url = error?.config?.url;
-  return typeof url === 'string' && AUTOFIX_REQUEST_PATTERN.test(url);
+  return matchesSensitivePath(error, AUTOFIX_SEGMENT_PATTERN);
+}
+
+export function isSecretRequest(error: any): boolean {
+  return matchesSensitivePath(error, SECRET_SEGMENT_PATTERN);
+}
+
+export function isSensitiveRequest(error: any): boolean {
+  return isAutofixRequest(error) || isSecretRequest(error);
 }
 
 /**
  * 按错误改写通用错误拦截器给出的文案（只用于 HTTP / 传输层错误，业务错误不经过这里）：
  * - 400：显示后端原文（去换行、截断到 200 字），原文为空时用通用文案（FE-02b incr3 P2-2）；
- *   autofix 接口除外（isAutofixRequest，仍用通用文案，以 SEC-26 规则 3 为准）；
+ *   敏感接口除外（isSensitiveRequest：autofix 与 Secret 相关路径，仍用通用文案，incr4 P2-1）；
  * - 409 / 429：专门文案（不带错误码）；
  * - 浏览器中止请求（xhr onabort / onloadend status 0 → AxiosError code ECONNABORTED，没有 response）：
  *   packages 里既不算网络错误也不算超时，落到「内部服务器错误」；这里按网络异常提示。
  *   只看 code 与「不是超时」，不依赖 'Request aborted' 原文（incr3 P3-2，axios 1.20 行为由用例锁定）；
+ *   「是不是超时」与 packages 一致，大小写敏感地找 'timeout'（incr4 nit），packages 没判成超时的都按网络异常；
  * - 其余（401/403/5xx 等）保持原文案。
  */
 export function resolveHttpErrorMessage(msg: string, error: any): string {
   const status = error?.response?.status;
   if (status === 400) {
-    if (isAutofixRequest(error)) return msg;
+    if (isSensitiveRequest(error)) return msg;
     return readBadRequestDetail(error.response.data) || msg;
   }
   if (status === 409) return HTTP_CONFLICT_MESSAGE;
@@ -92,7 +133,7 @@ export function resolveHttpErrorMessage(msg: string, error: any): string {
   if (
     !error?.response &&
     error?.code === 'ECONNABORTED' &&
-    !/timeout/i.test(String(error?.message ?? ''))
+    !String(error?.message ?? '').includes('timeout')
   ) {
     return $t('fallback.http.networkError');
   }

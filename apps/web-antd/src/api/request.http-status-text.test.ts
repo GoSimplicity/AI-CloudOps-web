@@ -9,6 +9,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  *   constants/http-error-messages.ts，incr3 P2-1）
  * - incr3 P2-2：400 显示后端原文（去换行、截断到 200 字），原文为空用通用文案；
  *   autofix 接口（/autofix/…）例外，仍不透出后端原文（与 SEC-26 规则 3 重叠时以 SEC-26 为准，窝窝头 2026-10-24）
+ * - incr4 P2-1：敏感接口（autofix 与 Secret 相关路径）的 400 一律用通用文案，其它接口暂时保留后端原文；
+ *   路径先 decodeURIComponent（解码失败按敏感接口处理，fail closed），认 `.json` 后缀与 `;` 参数（P3-B）
  * - P3-C / incr3 P3-2：浏览器中止请求（xhr onabort / onloadend status 0：ECONNABORTED，没有 response，不是超时）
  *   不再显示「内部服务器错误」，按网络异常提示；不依赖 'Request aborted' 原文，axios 行为由 xhr 用例锁定
  * - 401 / 403 / 5xx、业务错误（HTTP 200 + code≠0，含 code 409 / 429）、取消类不受影响
@@ -239,11 +241,117 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
       expectSingleHttpNotice(BACKEND.message);
     });
 
-    it('autofix 接口的 409 / 5xx 不受影响（仍是原有通用文案）', async () => {
+    it.each([
+      [409, HTTP_CONFLICT_MESSAGE],
+      [500, $t('fallback.http.internalServerError')],
+      [503, $t('fallback.http.internalServerError')],
+    ])('autofix 接口的 409 / 5xx 不受影响（%s：仍是原有通用文案，不含后端原文）', async (status, text) => {
       await requestClientAIOps
-        .post('/autofix/workflow/confirm', {}, { adapter: adapterOf(409, BACKEND) })
+        .post('/autofix/workflow/confirm', {}, { adapter: adapterOf(status, { ...BACKEND, code: status }) })
         .catch((error) => error);
-      expectSingleHttpNotice(HTTP_CONFLICT_MESSAGE);
+      expectSingleHttpNotice(text);
+      expect(JSON.stringify(notices.error.mock.calls)).not.toContain('WORKFLOW_APPROVAL_ERROR');
+    });
+  });
+
+  describe('incr4 P2-1 / P3-A / P3-B：敏感接口（autofix、Secret）400 一律通用文案', () => {
+    // 假值：模拟后端 400 回显用户输入（例如 Secret data），不是真实密钥
+    const RAW = '后端原文 SENSITIVE-RAW data=fake-value-not-a-secret';
+    const BODY = { code: 400, data: null, message: RAW };
+    const ERROR_ONLY_BODY = { error: { message: RAW } };
+    const viaAiops = (url: string, body: unknown = BODY) =>
+      requestClientAIOps.post(url, {}, { adapter: adapterOf(400, body) }).catch((error) => error);
+    const viaMain = (url: string, body: unknown = BODY) =>
+      requestClient.post(url, {}, { adapter: adapterOf(400, body) }).catch((error) => error);
+    function expectGeneric400() {
+      expectSingleHttpNotice($t('fallback.http.badRequest'));
+      expect(JSON.stringify(notices.error.mock.calls)).not.toContain('SENSITIVE-RAW');
+    }
+
+    it.each([
+      ['M06 大小写 /AutoFix/info', '/AutoFix/info'],
+      ['M10 裸 /autofix', '/autofix'],
+      ['M08 /autofix?x=1', '/autofix?x=1'],
+      ['M11 /autofix#h', '/autofix#h'],
+      ['P3-B 整段编码 /api%2Fautofix%2Fworkflow', '/api%2Fautofix%2Fworkflow'],
+      ['P3-B 段后编码 /api/autofix%2Fworkflow', '/api/autofix%2Fworkflow'],
+      ['P3-B /autofix%2F', '/autofix%2F'],
+      ['P3-B 小写编码 /api%2fautofix', '/api%2fautofix'],
+      ['P3-B .json 后缀 /autofix.json', '/autofix.json'],
+      ['P3-B .json 后缀带查询串 /autofix.json?x=1', '/autofix.json?x=1'],
+      ['P3-B ; 参数 /autofix;v=1', '/autofix;v=1'],
+      ['P3-B ; 参数在中间 /autofix;v=1/workflow', '/autofix;v=1/workflow'],
+      ['P3-B 尾随空格 "/autofix "', '/autofix '],
+      ['P3-B 编码的尾随空格 /autofix%20', '/autofix%20'],
+    ])('autofix %s：400 只弹通用文案，不含后端原文', async (_label, url) => {
+      await viaAiops(url);
+      expectGeneric400();
+    });
+
+    it('M14 autofix 400 响应体只有 error.message：也不透出', async () => {
+      await viaAiops('/autofix/workflow', ERROR_ONLY_BODY);
+      expectGeneric400();
+    });
+
+    it.each([
+      ['列表', '/k8s/secret/1/list'],
+      ['详情', '/k8s/secret/1/default/s1/detail'],
+      ['YAML 详情', '/k8s/secret/1/default/s1/detail/yaml'],
+      ['表单创建', '/k8s/secret/1/create'],
+      ['YAML 创建', '/k8s/secret/1/create/yaml'],
+      ['表单更新', '/k8s/secret/1/default/s1/update'],
+      ['YAML 更新', '/k8s/secret/1/default/s1/update/yaml'],
+      ['删除', '/k8s/secret/1/default/s1/delete'],
+      ['查看明文（sec26 reveal）', '/k8s/secret/1/default/s1/reveal'],
+      ['复数 /k8s/secrets/…', '/k8s/secrets/1/list'],
+      ['大小写 /K8S/Secret/…', '/K8S/Secret/1/list'],
+      ['无前导斜杠', 'k8s/secret/1/list'],
+      ['查询串', '/k8s/secret/1/list?page=1'],
+      ['hash', '/k8s/secret#h'],
+      ['绝对地址', 'http://127.0.0.1:9/api/k8s/secret/1/create'],
+      ['P3-B 编码 /api/k8s%2Fsecret%2F1%2Fcreate', '/api/k8s%2Fsecret%2F1%2Fcreate'],
+      ['P3-B .json 后缀', '/k8s/secret.json'],
+      ['P3-B ; 参数', '/k8s/secret;v=1/1/list'],
+      ['P3-B 尾随空格', '/k8s/secret '],
+    ])('Secret %s：400 只弹通用文案，不含后端原文', async (_label, url) => {
+      await viaMain(url);
+      expectGeneric400();
+    });
+
+    it('Secret 400 响应体只有 error.message：也不透出', async () => {
+      await viaMain('/k8s/secret/1/create', ERROR_ONLY_BODY);
+      expectGeneric400();
+    });
+
+    it.each([
+      ['不完整的百分号编码', '/rca/analyze%'],
+      ['非法 UTF-8 序列', '/k8s/pod/%E0%A4%A/logs'],
+      ['非法转义', '/x/%ZZ'],
+    ])('P3-B 解码失败（%s）：fail closed，按敏感接口处理', async (_label, url) => {
+      await viaMain(url);
+      expectGeneric400();
+    });
+
+    it.each([
+      ['M01 /xautofix/', () => viaAiops('/xautofix/')],
+      ['/autofix-tasks', () => viaAiops('/autofix-tasks')],
+      ['/autofixes', () => viaAiops('/autofixes')],
+      ['/k8s/secretary/1/list', () => viaMain('/k8s/secretary/1/list')],
+      ['/k8s/secret-store/1/list', () => viaMain('/k8s/secret-store/1/list')],
+      ['/k8s/configmap/1/create', () => viaMain('/k8s/configmap/1/create')],
+      ['/k8s/ingress/1/create（body 里有 secret_name）', () => viaMain('/k8s/ingress/1/create')],
+      ['/k8s/serviceaccount/1/default/sa/update', () => viaMain('/k8s/serviceaccount/1/default/sa/update')],
+      ['编码后仍不是敏感段 /k8s%2Fconfigmap%2F1', () => viaMain('/k8s%2Fconfigmap%2F1')],
+    ])('对照：%s 仍显示后端原文（非敏感接口暂时保留）', async (_label, run) => {
+      await run();
+      expectSingleHttpNotice(RAW);
+    });
+
+    it('nit：ECONNABORTED、无 response、message 为大写 Timeout…（packages 判不成超时）：按网络异常提示，不落到内部服务器错误', async () => {
+      await call(async (config) => {
+        throw new AxiosError('Timeout of 1ms exceeded', AxiosError.ECONNABORTED, config, {});
+      });
+      expectSingleHttpNotice($t('fallback.http.networkError'));
     });
   });
 
