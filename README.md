@@ -37,109 +37,95 @@
 
 ### 克隆项目
 
-首先，将前端项目克隆到本地：
-
 ```bash
-git clone https://github.com/GoSimplicity/AI-CloudOps-Frontend.git
+git clone https://github.com/GoSimplicity/AI-CloudOps-web.git
+cd AI-CloudOps-web
 ```
 
 ### 安装依赖
 
-进入前端项目目录并安装依赖：
+CI 和 Docker 使用 Node.js 22，最低要求 Node.js 20；使用锁定的 pnpm 9.9.0
 
 ```bash
-cd AI-CloudOps-Frontend/web
-# 推荐使用 Node.js 21 版本
-pnpm install
+corepack enable
+corepack prepare pnpm@9.9.0 --activate
+pnpm install --frozen-lockfile
 ```
 
-> **注意**：如果尚未安装 `pnpm`，可以通过以下命令进行安装：
-
-```bash
-npm install -g pnpm
-```
+安装过程会生成内部工作区包的构建入口；移动目录后重新执行安装
 
 ### 配置环境变量
 
-在运行前端项目之前，您需要配置后端 API 的地址。请按照以下步骤操作：
+应用配置位于 `apps/web-antd/.env*`，开发环境默认通过 Vite 代理连接 `http://localhost:8889` 的 Go 后端
 
-1. 在项目根目录创建 `.env` 文件（如果尚未存在）：
+| 变量 | 默认值 | 用途 |
+| --- | --- | --- |
+| `VITE_PORT` | `5666` | 开发服务器端口 |
+| `VITE_GLOB_API_URL` | `/api` | Go 后端接口地址 |
+| `VITE_GLOB_AIOPS_URL` | `/api/v1` | 经 Go 网关转发的 AIOps 接口地址 |
+| `VITE_ROUTER_HISTORY` | `hash`（生产环境） | 路由模式 |
 
-   ```bash
-   touch .env
-   ```
-
-2. 在 `.env` 文件中添加以下内容，设置后端 API 的基地址：
-
-   ```env
-   VITE_API_BASE_URL=http://localhost:8000/api
-   ```
-
-   > **说明**：
-   >
-   > - `VITE_API_BASE_URL`：后端 API 的基础 URL，根据实际情况进行修改。
-   > - 如果使用不同的环境（如开发、生产），可以创建对应的环境文件，例如 `.env.development` 和 `.env.production`。
+`VITE_*` 配置会发送至浏览器，不能存放服务端密钥，参见 [SECURITY.md](SECURITY.md)
 
 ### 运行前端项目
 
-启动前端开发服务器：
-
 ```bash
-pnpm run dev
+pnpm dev
+# 连接其他后端地址
+VITE_PROXY_TARGET=http://127.0.0.1:17889 pnpm dev
 ```
 
-打开浏览器访问 [http://localhost:3000](http://localhost:3000)（默认端口），即可查看运行中的前端应用。
-
-> **提示**：确保后端服务已启动，并且前端配置的 API 地址正确指向后端。
+默认访问 [http://localhost:5666](http://localhost:5666)，开发服务器只绑定本机，代理同时支持 HTTP 与 WebSocket
 
 ## 项目结构
 
-```plaintext
-AI-CloudOps-Frontend/
-│
-├── LICENSE               # 许可证文件
-├── README.md             # 项目说明文档
-├── package.json          # 前端依赖和脚本
-├── pnpm-lock.yaml        # pnpm 依赖锁定文件
-├── .env                  # 环境变量配置
-├── public/               # 公共资源文件
-├── app/                  # 源代码目录
-├── scripts/              # 各种脚本文件
-└── vite.config.js        # Vite 配置文件
+```text
+AI-CloudOps-web/
+├── apps/web-antd/        # 业务应用、路由、API、环境配置
+├── packages/            # Vben 共享组件、请求、状态、工具
+├── internal/            # Vite、TypeScript、样式和 lint 配置
+├── scripts/             # 工作区工具
+├── tests/e2e/           # Playwright 验收
+├── docs/release/        # 页面迁移清单与验收标准
+└── pnpm-lock.yaml       # 锁定依赖
 ```
 
 ## 构建与部署
 
 ### 构建生产版本
 
-在准备部署时，您需要构建生产版本：
-
 ```bash
-pnpm run build
+pnpm -F @vben/web-antd typecheck
+pnpm test:unit --run
+pnpm build:antd
 ```
 
-构建完成后，生成的静态文件将位于 `dist/` 目录中。
+产物位于 `apps/web-antd/dist/`，CI 使用这些命令及生产包登录页浏览器验收
+
+```bash
+CLOUDOPS_PREVIEW=true CLOUDOPS_ROUTER_HISTORY=hash pnpm test:e2e --grep "login is usable"
+```
+
+默认使用本机 Chrome，使用 Playwright Chromium 时设置 `PLAYWRIGHT_CHANNEL=chromium`
+
+完整业务路由测试需要运行隔离后端并提供测试管理员，测试会真实登录、查询 API，不能对生产环境执行
+
+```bash
+VITE_PROXY_TARGET=http://127.0.0.1:17889 pnpm -F @vben/web-antd exec vite --mode development --port 5667
+CLOUDOPS_WEB_URL=http://127.0.0.1:5667 CLOUDOPS_TEST_ENV_FILE=/absolute/path/to/isolated/.env pnpm test:e2e
+```
 
 ### 部署
 
-将 `dist/` 目录中的文件部署到您的静态资源服务器或 CDN。例如，可以使用以下方法之一：
+推荐使用 [后端仓库 deploy/release](https://github.com/GoSimplicity/AI-CloudOps/tree/main/deploy/release) 的整套 Compose，由 nginx 在同一来源下提供控制台和 API
 
-- **使用 Vercel 部署**：
+前端可单独构建 Docker 镜像，容器通过端口 80 提供静态文件及健康检查
 
-  ```bash
-  pnpm install -g vercel
-  vercel
-  ```
+```bash
+docker build -t cloudops-web .
+```
 
-- **使用 Netlify 部署**：
-
-  将 `dist/` 目录连接到 Netlify 进行自动部署。
-
-- **手动部署**：
-
-  将 `dist/` 目录中的文件上传到您的服务器，并配置服务器以提供静态文件。
-
-> **注意**：确保部署后的前端应用能够正确访问后端 API。您可能需要在生产环境中更新 `.env` 文件中的 `VITE_API_BASE_URL`。
+启动脚本仅将公开的 `VITE_GLOB_*` 配置写入 `_app.config.js`；静态部署时应把 `/api`、`/api/v1` 和 WebSocket 转发至实际后端
 
 ## 许可证
 

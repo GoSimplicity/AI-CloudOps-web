@@ -31,10 +31,17 @@ export const authenticateResponseInterceptor = ({
         await doReAuthenticate();
         throw error;
       }
+      // 所有重放请求均只允许重试一次，包括等待刷新完成的请求
+      config.__isRetryRequest = true;
+
       // 如果正在刷新 token，则将请求加入队列，等待刷新完成
       if (client.isRefreshing) {
-        return new Promise((resolve) => {
-          client.refreshTokenQueue.push((newToken: string) => {
+        return new Promise((resolve, reject) => {
+          client.refreshTokenQueue.push((newToken, refreshError) => {
+            if (newToken === null) {
+              reject(refreshError);
+              return;
+            }
             config.headers.Authorization = formatToken(newToken);
             resolve(client.request(config.url, { ...config }));
           });
@@ -43,8 +50,6 @@ export const authenticateResponseInterceptor = ({
 
       // 标记开始刷新 token
       client.isRefreshing = true;
-      // 标记当前请求为重试请求，避免无限循环
-      config.__isRetryRequest = true;
       try {
         const newToken = await doRefreshToken();
         // 更新请求头中的token
@@ -57,7 +62,9 @@ export const authenticateResponseInterceptor = ({
         return client.request(config.url, { ...config });
       } catch (refreshError) {
         // 如果刷新 token 失败，处理错误（如强制登出或跳转登录页面）
-        client.refreshTokenQueue.forEach((callback) => callback(''));
+        client.refreshTokenQueue.forEach((callback) =>
+          callback(null, refreshError),
+        );
         client.refreshTokenQueue = [];
         console.error('Refresh token failed, please login again.');
         await doReAuthenticate();

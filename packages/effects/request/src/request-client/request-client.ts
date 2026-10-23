@@ -24,7 +24,10 @@ class RequestClient {
   // 是否正在刷新token
   public isRefreshing = false;
   // 刷新token队列
-  public refreshTokenQueue: ((token: string) => void)[] = [];
+  public refreshTokenQueue: ((
+    token: null | string,
+    error?: unknown,
+  ) => void)[] = [];
   public upload: FileUploader['upload'];
 
   /**

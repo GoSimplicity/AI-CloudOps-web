@@ -85,8 +85,7 @@ function createRequestClient(baseURL: string) {
 
     try {
       // 调用 refreshTokenApi，确保传入 refreshToken
-      const resp = await refreshTokenApi({ refreshToken });
-      const newToken = (resp as any).data.data;
+      const newToken = await refreshTokenApi({ refreshToken });
       // 检查 newToken 是否为 undefined 或 null
       if (!newToken) {
         console.error('New token is null or undefined.');

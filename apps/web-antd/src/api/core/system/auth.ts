@@ -1,3 +1,5 @@
+import type { AxiosResponse } from 'axios';
+
 import { baseRequestClient, requestClient } from '#/api/request';
 
 export namespace AuthApi {
@@ -11,7 +13,7 @@ export namespace AuthApi {
   export interface RefreshTokenParams {
     refreshToken: string;
   }
-  
+
   /** 登录接口返回值 */
   export interface LoginResult {
     accessToken: string;
@@ -23,8 +25,9 @@ export namespace AuthApi {
   }
 
   export interface RefreshTokenResult {
+    code: number;
     data: string;
-    status: number;
+    message: string;
   }
 }
 
@@ -39,13 +42,20 @@ export async function loginApi(data: AuthApi.LoginParams) {
  * 刷新accessToken
  */
 export async function refreshTokenApi(data: AuthApi.RefreshTokenParams) {
-  return baseRequestClient.post<AuthApi.RefreshTokenResult>(
-    '/user/refresh_token',
-    data, // 直接传递 data 对象
-    {
-      withCredentials: true,
-    },
-  );
+  const response = await baseRequestClient.post<
+    AxiosResponse<AuthApi.RefreshTokenResult>
+  >('/user/refresh_token', data, {
+    withCredentials: true,
+  });
+  const result = response.data;
+  if (
+    result.code !== 0 ||
+    typeof result.data !== 'string' ||
+    !result.data.trim()
+  ) {
+    throw new Error('刷新令牌失败，请重新登录');
+  }
+  return result.data;
 }
 
 /**
