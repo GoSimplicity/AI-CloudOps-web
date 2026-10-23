@@ -3,6 +3,7 @@
 #   第二轮：没有 husky、husky 运行后 core.hooksPath 不是 .husky/_、.husky/_/pre-commit 缺失
 #   第三轮 P3-2：.husky/pre-commit 缺失 / 不可执行 / 没有调用 .githooks/pre-commit（husky 会静默放行）；HUSKY=0 要有明确警告
 #   review3g N3：HUSKY=0 时（包括钩子已安装后重跑）必须失败
+#   review3g N4：.husky/pre-commit 必须与 setup 中内嵌的内容逐字节一致（": .githooks/pre-commit"、提前 exit 0、"|| true" 都要失败）
 # 正常情况使用仓库 node_modules 中真实的 husky（9.x，需先 pnpm install），并做端到端验证：
 #   安装后提交合成密钥被 gitleaks 拦下、提交干净文件成功。
 # 用法: scripts/tests/security/test-setup-git-hooks.sh [--rev <git-rev>]   （对修复前版本运行应报 FAIL）
@@ -53,6 +54,13 @@ run_case() { # run_case <名称> <期望: fail|ok> <husky> [修改函数] [环�
 rm_husky_hook()      { rm -f "$1/.husky/pre-commit"; }
 noexec_husky_hook()  { chmod -x "$1/.husky/pre-commit"; }
 noref_husky_hook()   { printf '#!/usr/bin/env sh\n# 原来这里会调用 .githooks/pre-commit\necho skip\n' >"$1/.husky/pre-commit"; chmod +x "$1/.husky/pre-commit"; }
+# review3g N4：仍“提到” .githooks/pre-commit 但不会生效的写法（旧的 grep 检查能通过）
+edit_husky_hook() { # edit_husky_hook <dir> <sed 表达式>：不用 sed -i（BSD/GNU 不兼容）
+    sed "$2" "$1/.husky/pre-commit" >"$1/.husky/pre-commit.new" && mv "$1/.husky/pre-commit.new" "$1/.husky/pre-commit"; chmod +x "$1/.husky/pre-commit"
+}
+colon_husky_hook()   { edit_husky_hook "$1" 's#^"$(git rev-parse --show-toplevel)/.githooks/pre-commit" || exit 1$#: .githooks/pre-commit#'; }
+early_exit_husky_hook() { { head -n 1 "$1/.husky/pre-commit"; echo 'exit 0'; tail -n +2 "$1/.husky/pre-commit"; } >"$1/.husky/pre-commit.new"; mv "$1/.husky/pre-commit.new" "$1/.husky/pre-commit"; chmod +x "$1/.husky/pre-commit"; }
+or_true_husky_hook() { edit_husky_hook "$1" 's#/.githooks/pre-commit" || exit 1$#/.githooks/pre-commit" || true#'; }
 
 run_case "情况1 没有 node_modules/.bin/husky" fail none || true
 run_case "情况2 HUSKY=0（真实 husky 跳过安装）" fail real "" HUSKY=0 || true
@@ -66,6 +74,16 @@ mkdir -p "$TMP/nochmod"; printf '#!/bin/sh\nexit 1\n' >"$TMP/nochmod/chmod"; chm
 run_case "情况3b .husky/pre-commit 不可执行且 chmod 无法修复" fail real noexec_husky_hook PATH="$TMP/nochmod:$PATH" || true
 run_case "情况3b 对照 .husky/pre-commit 不可执行但 chmod 可修复" ok real noexec_husky_hook || true
 run_case "情况3c .husky/pre-commit 没有调用 .githooks/pre-commit" fail real noref_husky_hook || true
+# 先确认变异确实生效（否则下面的 FAIL/PASS 没有意义），再逐个判定
+d="$(new_repo mutcheck none)"
+for m in colon_husky_hook early_exit_husky_hook or_true_husky_hook; do
+    cp "$d/.husky/pre-commit" "$TMP/orig"; "$m" "$d"
+    if cmp -s "$TMP/orig" "$d/.husky/pre-commit"; then echo "FAIL [测试自检 ${m} 没有改动文件]"; FAILS=$((FAILS+1)); fi
+    cp "$TMP/orig" "$d/.husky/pre-commit"
+done
+run_case "情况3d .husky/pre-commit 写成 \": .githooks/pre-commit\"（不执行）" fail real colon_husky_hook || true
+run_case "情况3e .husky/pre-commit 开头提前 exit 0" fail real early_exit_husky_hook || true
+run_case "情况3f .husky/pre-commit 末尾改成 || true（忽略 gitleaks 失败）" fail real or_true_husky_hook || true
 
 # 情况3 的实际后果（仅说明，不计入结果）：真实 husky 安装后删掉 .husky/pre-commit，带密钥的提交会静默成功
 d="$(new_repo demo real)"; ( cd "$d" && env -u HUSKY bash scripts/setup-git-hooks.sh ) >/dev/null 2>&1 || true

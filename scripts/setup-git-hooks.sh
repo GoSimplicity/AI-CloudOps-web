@@ -6,7 +6,7 @@
 # 因此这里不再把 core.hooksPath 指向 .githooks（否则会与 husky 互相覆盖），而是：
 #   1. 清除旧版本脚本写入的 core.hooksPath=.githooks 覆盖（仅 worktree 级 / 本仓库 local 级）；
 #   2. 运行 husky 生成 .husky/_ 并设置 core.hooksPath；
-#   3. 检查 .husky/pre-commit 存在、可执行且调用 .githooks/pre-commit
+#   3. 检查 .husky/pre-commit 存在、可执行且与预期内容逐字节一致（调用 .githooks/pre-commit，失败即退出）
 #      （husky 的 .husky/_/h 在 .husky/pre-commit 缺失时会静默以 0 退出，钩子形同虚设）；
 #   4. 检查 gitleaks。
 # 任何一步不满足都以非 0 退出；设置了 HUSKY=0 时直接失败。本地钩子可以被 --no-verify / HUSKY=0 跳过，CI 的 gitleaks 工作流才是最终防线。
@@ -83,11 +83,29 @@ if [ ! -x "$husky_hook" ]; then
     log_error "${husky_hook} 不可执行（仓库中应为 100755），检出的钩子文件不完整。请执行 chmod +x ${husky_hook} 或重新检出。"
     exit 1
 fi
-# 必须在非注释行中调用 .githooks/pre-commit（gitleaks 扫描的实现）
-if ! grep -v '^[[:space:]]*#' "$husky_hook" | grep -q '\.githooks/pre-commit'; then
-    log_error "${husky_hook} 没有调用 .githooks/pre-commit：提交前不会运行 gitleaks。请从仓库恢复该文件。"
+# review3g N4：.husky/pre-commit 必须与下面的内容逐字节一致。旧检查只 grep 非注释行里有没有 .githooks/pre-commit，
+# 写成 ": .githooks/pre-commit"、在前面加 "exit 0"、或把 "|| exit 1" 改成 "|| true" 都能通过，gitleaks 实际不生效。
+# 修改 .husky/pre-commit 时必须同步修改这里（scripts/tests/security/test-setup-git-hooks.sh 会核对两者一致）。
+expected_husky_hook="$(mktemp "${TMPDIR:-/tmp}/husky-pre-commit.XXXXXX")"
+cat >"$expected_husky_hook" <<'HUSKY_PRE_COMMIT_EOF'
+#!/usr/bin/env sh
+# husky v9 pre-commit 钩子（由 .husky/_/h 以 `sh -e` 调用；core.hooksPath=.husky/_ 由 `pnpm install` 的 prepare 脚本设置）
+#
+# 1) SEC-01A: gitleaks 扫描暂存内容，发现密钥或未安装 gitleaks 即阻止提交。
+#    具体实现复用 .githooks/pre-commit（与后端 / aiops 仓库保持同一份逻辑）。
+"$(git rev-parse --show-toplevel)/.githooks/pre-commit" || exit 1
+
+# 2) 其余原有钩子命令：在加入本文件之前，仓库中没有任何已跟踪的 .husky 钩子
+#    （core.hooksPath 指向 .husky/_ 但没有 .husky/pre-commit），因此此前提交时不执行 lint。
+#    为保持原有行为，这里不追加命令；如需启用 lint-staged（.lintstagedrc.mjs），在此追加：
+#    pnpm exec lint-staged
+HUSKY_PRE_COMMIT_EOF
+if ! cmp -s "$expected_husky_hook" "$husky_hook"; then
+    rm -f "$expected_husky_hook"
+    log_error "${husky_hook} 与预期内容不一致（逐字节比较）：提交前可能不会运行 gitleaks。请从仓库恢复该文件（git checkout -- ${husky_hook}）。"
     exit 1
 fi
+rm -f "$expected_husky_hook"
 log_info "已运行 husky，core.hooksPath=${actual_hooks_path}"
 
 # 4. 检查 gitleaks
