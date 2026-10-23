@@ -146,6 +146,9 @@ const operations: [
     'YAML 更新',
     'Secret YAML 更新失败',
     async (page) => {
+      // 合并 sec26 后还依赖（incr5 试合并 c9dc762 时核对）：yamlOpenSeq 在 validate 前后不变
+      // （没调 showYamlModal / closeYamlModal）；YAML 里没有 data 段 → 占位符 / 写法 / 编码三道检查都放行。
+      // isYamlLoading 只在「查看 YAML」加载期间禁用按钮，submitYamlForm 不读它，本用例不依赖。
       page.yamlFormRef.value = validForm;
       page.currentOperationSecret.value = record;
       page.yamlFormModel.value.yaml =
@@ -191,6 +194,7 @@ const operations: [
       // - 合并 sec26 后还依赖：editDataLoading 为 false（没调 openEditModal 就不会置 true）；
       //   editOpenSeq 在 validate 前后不变（validForm.validate 不关弹窗）；editDataRows /
       //   editDataOriginalKeys 为空 → isDataEdited 为 false、data 发 null；没有 <redacted> 占位符。
+      //   isYamlLoading 不在表单更新的路径上（submitEditForm 不读它），已在试合并 c9dc762 时核对。
       // 这些守卫改了（例如提交前强制要求打开过编辑），本用例会在「取消」那条的请求断言上先失败。
       page.currentOperationSecret.value = record;
       await page.submitEditForm();
