@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+import AccountRegionsEditor from './cloudaccountmanagement/AccountRegionsEditor.vue';
 import { onBeforeUnmount } from 'vue';
 
 import { ref, reactive, onMounted, computed } from 'vue';
-import { message, Modal } from 'ant-design-vue';
+import { message, Modal, type FormInstance } from 'ant-design-vue';
 import {
   PlusOutlined,
   EditOutlined,
@@ -24,7 +25,6 @@ import {
   GlobalOutlined,
   ClearOutlined,
   ExportOutlined,
-  FileExcelOutlined,
 } from '@ant-design/icons-vue';
 
 import {
@@ -38,6 +38,7 @@ import {
   CloudProvider,
   CloudAccountStatus,
   type CloudAccount,
+  type CloudAccountRegionInput,
   type GetCloudAccountListReq,
   type CreateCloudAccountReq,
   type UpdateCloudAccountReq,
@@ -47,19 +48,20 @@ import { downloadCsv } from '#/utils/export-csv';
 const loadError = ref<string | null>(null);
 let listRequest = 0;
 let detailRequest = 0;
-
+let formRequest = 0;
+const formLoading = ref(false);
+let originalRegions = '';
 
 // ========== 状态定义 ==========
 const loading = ref(false);
 const detailLoading = ref(false);
 const submitLoading = ref(false);
-const verifyLoading = ref(false);
 const modalVisible = ref(false);
 const detailVisible = ref(false);
 const isEdit = ref(false);
 const switchLoading = ref<Record<number, boolean>>({});
 
-const formRef = ref();
+const formRef = ref<FormInstance>();
 const cloudAccounts = ref<CloudAccount[]>([]);
 const currentDetail = ref<CloudAccount | null>(null);
 
@@ -74,14 +76,13 @@ const filterForm = reactive<GetCloudAccountListReq>({
   size: 10,
   search: undefined,
   provider: undefined,
-  region: undefined,
   status: undefined,
 });
 
 const formData = ref<CreateCloudAccountReq & { id?: number }>({
   name: '',
   provider: CloudProvider.AliCloud,
-  region: '',
+  regions: [],
   access_key: '',
   secret_key: '',
   account_id: '',
@@ -91,16 +92,25 @@ const formData = ref<CreateCloudAccountReq & { id?: number }>({
 });
 
 // ========== 计算属性 ==========
-const enabledCount = computed(() =>
-  cloudAccounts.value.filter(item => item.status === CloudAccountStatus.Enabled).length
+const enabledCount = computed(
+  () =>
+    cloudAccounts.value.filter(
+      (item) => item.status === CloudAccountStatus.Enabled,
+    ).length,
 );
 
-const aliCloudCount = computed(() =>
-  cloudAccounts.value.filter(item => item.provider === CloudProvider.AliCloud).length
+const aliCloudCount = computed(
+  () =>
+    cloudAccounts.value.filter(
+      (item) => item.provider === CloudProvider.AliCloud,
+    ).length,
 );
 
-const tencentCloudCount = computed(() =>
-  cloudAccounts.value.filter(item => item.provider === CloudProvider.TencentCloud).length
+const tencentCloudCount = computed(
+  () =>
+    cloudAccounts.value.filter(
+      (item) => item.provider === CloudProvider.TencentCloud,
+    ).length,
 );
 
 const paginationConfig = computed(() => ({
@@ -119,21 +129,53 @@ const formRules = computed(() => ({
     { min: 2, max: 100, message: '名称长度在2-100个字符之间', trigger: 'blur' },
   ],
   provider: [{ required: true, message: '请选择云厂商', trigger: 'change' }],
-  region: [
-    { required: true, message: '请输入地域', trigger: 'blur' },
-    { min: 2, max: 50, message: '地域长度在2-50个字符之间', trigger: 'blur' },
+  regions: [
+    {
+      validator: async (_: unknown, value: CloudAccountRegionInput[]) => {
+        if (!value?.length) throw new Error('至少添加一个授权地域');
+        if (
+          value.some((item) => !item.region.trim() || item.region.length > 50)
+        )
+          throw new Error('地域代码长度为1至50个字符');
+      },
+      trigger: 'change',
+    },
   ],
   access_key: isEdit.value
-    ? []
+    ? [
+        {
+          min: 10,
+          max: 500,
+          message: '新 Access Key 长度需为10至500位',
+          trigger: 'blur',
+        },
+      ]
     : [
         { required: true, message: '请输入 Access Key', trigger: 'blur' },
-        { min: 10, message: 'Access Key 长度至少10位', trigger: 'blur' },
+        {
+          min: 10,
+          max: 500,
+          message: 'Access Key 长度需为10至500位',
+          trigger: 'blur',
+        },
       ],
   secret_key: isEdit.value
-    ? []
+    ? [
+        {
+          min: 10,
+          max: 500,
+          message: '新 Secret Key 长度需为10至500位',
+          trigger: 'blur',
+        },
+      ]
     : [
         { required: true, message: '请输入 Secret Key', trigger: 'blur' },
-        { min: 10, message: 'Secret Key 长度至少10位', trigger: 'blur' },
+        {
+          min: 10,
+          max: 500,
+          message: 'Secret Key 长度需为10至500位',
+          trigger: 'blur',
+        },
       ],
 }));
 
@@ -175,7 +217,14 @@ const getProviderText = (provider: CloudProvider): string => {
 };
 
 const getAvatarColor = (name: string): string => {
-  const colors = ['#f56a00', '#7265e6', '#ffbf00', '#00a2ae', '#1890ff', '#52c41a'];
+  const colors = [
+    '#f56a00',
+    '#7265e6',
+    '#ffbf00',
+    '#00a2ae',
+    '#1890ff',
+    '#52c41a',
+  ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -221,7 +270,6 @@ const fetchCloudAccounts = async (): Promise<void> => {
     // 使用过滤条件
     if (filterForm.search) params.search = filterForm.search;
     if (filterForm.provider) params.provider = filterForm.provider;
-    if (filterForm.region) params.region = filterForm.region;
     if (filterForm.status !== undefined) params.status = filterForm.status;
 
     const response = await getCloudAccountListApi(params);
@@ -263,7 +311,6 @@ const handleSearchChange = (): void => {
 const resetFilter = (): void => {
   filterForm.search = undefined;
   filterForm.provider = undefined;
-  filterForm.region = undefined;
   filterForm.status = undefined;
   pagination.current = 1;
   filterForm.page = 1;
@@ -273,11 +320,14 @@ const resetFilter = (): void => {
 };
 
 const showCreateModal = (): void => {
+  formRequest++;
+  formLoading.value = false;
+  originalRegions = '';
   isEdit.value = false;
   formData.value = {
     name: '',
     provider: CloudProvider.AliCloud,
-    region: '',
+    regions: [],
     access_key: '',
     secret_key: '',
     account_id: '',
@@ -288,99 +338,112 @@ const showCreateModal = (): void => {
   modalVisible.value = true;
 };
 
-const handleEdit = (record: CloudAccount): void => {
-  isEdit.value = true;
+const normalizeRegions = (regions: CloudAccountRegionInput[] = []) =>
+  regions.map((item) => ({
+    region: item.region,
+    region_name: item.region_name ?? '',
+    description: item.description ?? '',
+    is_default: !!item.is_default,
+  }));
+const regionSignature = (regions: CloudAccountRegionInput[]) =>
+  JSON.stringify(
+    normalizeRegions(regions).sort((a, b) => a.region.localeCompare(b.region)),
+  );
+const closeForm = () => {
+  formRequest++;
+  modalVisible.value = false;
+  formLoading.value = false;
+  formData.value.access_key = '';
+  formData.value.secret_key = '';
+};
+const handleEdit = async (record: CloudAccount): Promise<void> => {
+  if (record.provider !== CloudProvider.AliCloud) return;
+  const ticket = ++formRequest;
   formData.value = {
-    id: record.id,
-    name: record.name,
+    name: '',
     provider: record.provider,
-    region: record.region,
+    regions: [],
     access_key: '',
     secret_key: '',
-    account_id: record.account_id || '',
-    account_name: record.account_name || '',
-    account_alias: record.account_alias || '',
-    description: record.description || '',
   };
+  isEdit.value = true;
+  formLoading.value = true;
   modalVisible.value = true;
   detailVisible.value = false;
+  try {
+    const current = await getCloudAccountDetailApi(record.id);
+    if (ticket !== formRequest || !modalVisible.value) return;
+    const regions = normalizeRegions(current.regions);
+    originalRegions = regionSignature(regions);
+    formData.value = {
+      id: current.id,
+      name: current.name,
+      provider: current.provider,
+      regions,
+      access_key: '',
+      secret_key: '',
+      account_id: current.account_id ?? '',
+      account_name: current.account_name ?? '',
+      account_alias: current.account_alias ?? '',
+      description: current.description ?? '',
+    };
+  } catch {
+    if (ticket !== formRequest) return;
+    message.error('获取账户详情失败，请重试');
+    closeForm();
+  } finally {
+    if (ticket === formRequest) formLoading.value = false;
+  }
 };
 
 const handleSubmit = async (): Promise<void> => {
+  if (submitLoading.value || formLoading.value || !formRef.value) return;
+  const ticket = formRequest;
+  const editing = isEdit.value;
+  submitLoading.value = true;
   try {
     await formRef.value?.validate();
-    submitLoading.value = true;
-
-    if (isEdit.value && formData.value.id) {
+    if (ticket !== formRequest || !modalVisible.value) return;
+    const draft = {
+      ...formData.value,
+      regions: normalizeRegions(formData.value.regions),
+    };
+    if (draft.provider !== CloudProvider.AliCloud) { message.error('当前仅支持阿里云账户配置'); return; }
+    if (editing && draft.id) {
       const updateData: Omit<UpdateCloudAccountReq, 'id'> = {
-        name: formData.value.name,
-        account_id: formData.value.account_id || undefined,
-        account_name: formData.value.account_name || undefined,
-        account_alias: formData.value.account_alias || undefined,
-        description: formData.value.description || undefined,
+        name: draft.name,
+        account_id: draft.account_id || undefined,
+        account_name: draft.account_name || undefined,
+        account_alias: draft.account_alias || undefined,
+        description: draft.description || undefined,
       };
-
-      if (formData.value.access_key) updateData.access_key = formData.value.access_key;
-      if (formData.value.secret_key) updateData.secret_key = formData.value.secret_key;
-
-      await updateCloudAccountApi(formData.value.id, updateData);
-      message.success('云账户更新成功');
+      if (draft.access_key) updateData.access_key = draft.access_key;
+      if (draft.secret_key) updateData.secret_key = draft.secret_key;
+      if (regionSignature(draft.regions) !== originalRegions)
+        updateData.regions = draft.regions;
+      await updateCloudAccountApi(draft.id, updateData);
     } else {
-      await createCloudAccountApi(formData.value as CreateCloudAccountReq);
-      message.success('云账户创建成功');
+      const { id: _id, ...createData } = draft;
+      await createCloudAccountApi(createData);
     }
-
-    modalVisible.value = false;
-    fetchCloudAccounts();
+    if (ticket !== formRequest) return;
+    message.success(
+      editing ? '云账户已更新' : '云账户已创建，可从列表显式验证凭据',
+    );
+    closeForm();
+    void fetchCloudAccounts();
   } catch (error: any) {
-    if (error?.errorFields) return;
-    message.error(isEdit.value ? '更新云账户失败' : '创建云账户失败');
+    if (ticket !== formRequest || error?.errorFields) return;
+    message.error(
+      editing ? '更新云账户失败，已保留表单' : '创建云账户失败，已保留表单',
+    );
   } finally {
     submitLoading.value = false;
   }
 };
 
-const handleVerifyAndSubmit = async (): Promise<void> => {
-  try {
-    await formRef.value?.validate();
-    verifyLoading.value = true;
-
-    const hideCreating = message.loading('正在创建云账户...', 0);
-    const createResponse = await createCloudAccountApi(formData.value as CreateCloudAccountReq);
-    hideCreating();
-
-    const accountId = createResponse?.id;
-    if (!accountId) {
-      message.error('创建云账户失败：未获取到账户ID');
-      return;
-    }
-
-    try {
-      const hideVerifying = message.loading('正在验证凭证...', 0);
-      await verifyCloudAccountApi(accountId);
-      hideVerifying();
-
-      message.success('云账户创建并验证成功');
-      modalVisible.value = false;
-      fetchCloudAccounts();
-    } catch (verifyError) {
-      try {
-        await deleteCloudAccountApi(accountId);
-        message.error('凭证验证失败，账户已自动删除，请检查 Access Key 和 Secret Key');
-      } catch (deleteError) {
-        message.error('凭证验证失败，且删除账户失败，请手动删除该账户');
-      }
-      return;
-    }
-  } catch (error: any) {
-    if (error?.errorFields) return;
-    message.error('创建云账户失败');
-  } finally {
-    verifyLoading.value = false;
-  }
-};
-
 const handleDelete = (record: CloudAccount): void => {
+  if (record.provider !== CloudProvider.AliCloud) return;
   Modal.confirm({
     title: '确认删除',
     content: `确定要删除云账户 "${record.name}" 吗？此操作不可恢复。`,
@@ -400,15 +463,23 @@ const handleDelete = (record: CloudAccount): void => {
   });
 };
 
-const handleStatusChange = async (record: CloudAccount, checked: boolean): Promise<void> => {
-  const newStatus = checked ? CloudAccountStatus.Enabled : CloudAccountStatus.Disabled;
+const handleStatusChange = async (
+  record: CloudAccount,
+  checked: boolean,
+): Promise<void> => {
+  if (record.provider !== CloudProvider.AliCloud) return;
+  const newStatus = checked
+    ? CloudAccountStatus.Enabled
+    : CloudAccountStatus.Disabled;
   switchLoading.value[record.id] = true;
 
   try {
     await updateCloudAccountStatusApi(record.id, newStatus);
     message.success(`账户已${checked ? '启用' : '禁用'}`);
 
-    const index = cloudAccounts.value.findIndex(item => item.id === record.id);
+    const index = cloudAccounts.value.findIndex(
+      (item) => item.id === record.id,
+    );
     if (index !== -1 && cloudAccounts.value[index]) {
       cloudAccounts.value[index]!.status = newStatus;
     }
@@ -423,16 +494,25 @@ const handleStatusChange = async (record: CloudAccount, checked: boolean): Promi
   }
 };
 
-const handleVerify = async (record: CloudAccount): Promise<void> => {
-  const hide = message.loading('正在验证凭证...', 0);
-  try {
-    await verifyCloudAccountApi(record.id);
-    hide();
-    message.success('凭证验证成功');
-  } catch (error) {
-    hide();
-    message.error('凭证验证失败，请检查 Access Key 和 Secret Key');
-  }
+const handleVerify = (record: CloudAccount): void => {
+  if (record.provider !== CloudProvider.AliCloud) return;
+  Modal.confirm({
+    title: '验证云账户凭据',
+    content: `将向阿里云验证账户“${record.name}”的凭据，验证失败不会删除账户`,
+    okText: '开始验证',
+    cancelText: '取消',
+    onOk: async () => {
+      const hide = message.loading('正在验证凭据...', 0);
+      try {
+        await verifyCloudAccountApi(record.id);
+        message.success('凭据验证成功');
+      } catch {
+        message.error('凭据验证失败，账户配置已保留');
+      } finally {
+        hide();
+      }
+    },
+  });
 };
 
 const handleViewDetail = async (record: CloudAccount): Promise<void> => {
@@ -448,21 +528,12 @@ const handleViewDetail = async (record: CloudAccount): Promise<void> => {
   } catch (error) {
     if (ticket !== detailRequest) return;
     message.error('获取详情失败');
-
   } finally {
     if (ticket === detailRequest) detailLoading.value = false;
   }
 };
 
 // ========== 导出功能 ==========
-const handleExportMenuClick = ({ key }: { key: string }) => {
-  if (key === 'current') {
-    exportToExcel(cloudAccounts.value);
-  } else if (key === 'all') {
-    exportAllToExcel();
-  }
-};
-
 const exportToExcel = (data: CloudAccount[]) => {
   if (!data || data.length === 0) {
     message.warning('没有可导出的数据');
@@ -471,70 +542,40 @@ const exportToExcel = (data: CloudAccount[]) => {
 
   // 准备导出数据
   const exportData = data.map((item) => ({
-    '账户名称': item.name,
-    '云厂商': getProviderText(item.provider),
-    '地域': item.region,
-    '账户ID': item.account_id || '-',
-    '账户别名': item.account_alias || '-',
-    '状态': item.status === CloudAccountStatus.Enabled ? '已启用' : '已禁用',
-    '创建人': item.create_user_name || '-',
-    '创建时间': formatDateTime(item.created_at),
-    '更新时间': formatDateTime(item.updated_at),
-    '描述': item.description || '-',
+    账户名称: item.name,
+    云厂商: getProviderText(item.provider),
+    地域: (item.regions ?? []).map((region) => region.region).join(', '),
+    账户ID: item.account_id || '-',
+    账户别名: item.account_alias || '-',
+    状态: item.status === CloudAccountStatus.Enabled ? '已启用' : '已禁用',
+    创建人: item.create_user_name || '-',
+    创建时间: formatDateTime(item.created_at),
+    更新时间: formatDateTime(item.updated_at),
+    描述: item.description || '-',
   }));
 
   // 导出文件
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+  const timestamp = new Date()
+    .toISOString()
+    .replace(/[:.]/g, '-')
+    .substring(0, 19);
   const filename = `云账户列表_${timestamp}.csv`;
-  downloadCsv(filename, [Object.keys(exportData[0]!), ...exportData.map(row => Object.values(row))]);
+  downloadCsv(filename, [
+    Object.keys(exportData[0]!),
+    ...exportData.map((row) => Object.values(row)),
+  ]);
   message.success(`导出成功：${filename}`);
-};
-
-const exportAllToExcel = async () => {
-  const hide = message.loading('正在导出所有数据...', 0);
-  try {
-    // 获取所有数据
-    const allData: CloudAccount[] = [];
-    let currentPage = 1;
-    const pageSize = 100;
-    let hasMore = true;
-
-    while (hasMore) {
-      const params: GetCloudAccountListReq = {
-        page: currentPage,
-        size: pageSize,
-        search: filterForm.search,
-        provider: filterForm.provider,
-        region: filterForm.region,
-        status: filterForm.status,
-      };
-
-      const response = await getCloudAccountListApi(params);
-      const items = response.items || [];
-      const total = response.total || 0;
-
-      allData.push(...items);
-
-      if (items.length < pageSize || allData.length >= total) {
-        hasMore = false;
-      } else {
-        currentPage++;
-      }
-    }
-
-    hide();
-    exportToExcel(allData);
-  } catch (error) {
-    hide();
-    message.error('导出失败');
-  }
 };
 
 // ========== 生命周期 ==========
 onMounted(() => {
   fetchCloudAccounts();
 });
-onBeforeUnmount(() => { listRequest++; detailRequest++; });
+onBeforeUnmount(() => {
+  listRequest++;
+  detailRequest++;
+  formRequest++;
+});
 const closeDetails = () => {
   detailRequest++;
   detailVisible.value = false;
@@ -544,31 +585,17 @@ const closeDetails = () => {
 </script>
 
 <template>
-  <OpsPage title="云账户" description="管理云账户配置与授权状态" class="cmdb-console cloud-account-management">
+  <OpsPage title="云账户" description="管理阿里云账户配置，其他云平台存量仅供查看" class="cmdb-console cloud-account-management">
     <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
       <template #action><a-button @click="fetchCloudAccounts()">重试</a-button></template>
     </a-alert>
     <!-- 页面头部 -->
     <template #actions><a-space :size="12">
-          <a-button type="primary" @click="showCreateModal" class="btn-create">
+          <a-button type="primary" aria-label="添加账户" @click="showCreateModal" class="btn-create">
             <template #icon><plus-outlined /></template>
             <span class="btn-text">添加账户</span>
           </a-button>
-          <a-dropdown>
-            <a-button>
-              <export-outlined /> 导出数据
-            </a-button>
-            <template #overlay>
-              <a-menu @click="handleExportMenuClick">
-                <a-menu-item key="current">
-                  <file-excel-outlined /> 导出当前页
-                </a-menu-item>
-                <a-menu-item key="all">
-                  <file-excel-outlined /> 导出全部数据
-                </a-menu-item>
-              </a-menu>
-            </template>
-          </a-dropdown>
+          <a-button @click="exportToExcel(cloudAccounts)"><export-outlined /> 导出当前页</a-button>
         </a-space><a-button @click="fetchCloudAccounts()" :loading="loading">刷新</a-button></template>
 
     <!-- 统计卡片 -->
@@ -648,9 +675,9 @@ const closeDetails = () => {
               @change="handleSearch"
             >
               <a-select-option :value="CloudProvider.AliCloud">阿里云</a-select-option>
-              <a-select-option disabled :value="CloudProvider.TencentCloud">腾讯云</a-select-option>
-              <a-select-option disabled :value="CloudProvider.HuaweiCloud">华为云</a-select-option>
-              <a-select-option disabled :value="CloudProvider.AWS">AWS</a-select-option>
+              <a-select-option :value="CloudProvider.TencentCloud">腾讯云</a-select-option>
+              <a-select-option :value="CloudProvider.HuaweiCloud">华为云</a-select-option>
+              <a-select-option :value="CloudProvider.AWS">AWS</a-select-option>
               <a-select-option :value="CloudProvider.Azure">Azure</a-select-option>
               <a-select-option :value="CloudProvider.GCP">GCP</a-select-option>
             </a-select>
@@ -715,7 +742,7 @@ const closeDetails = () => {
             <template v-else-if="column.key === 'region'">
               <div class="region-cell">
                 <environment-outlined class="region-icon" />
-                <span>{{ record.region }}</span>
+                <a-space wrap><a-tag v-for="region in record.regions ?? []" :key="region.id">{{ region.region_name || region.region }}<span v-if="region.is_default">（默认）</span></a-tag><span v-if="!record.regions?.length">未配置</span></a-space>
               </div>
             </template>
 
@@ -743,7 +770,7 @@ const closeDetails = () => {
             <!-- 状态列 -->
             <template v-else-if="column.key === 'status'">
               <a-switch
-                :checked="record.status === CloudAccountStatus.Enabled"
+                :disabled="record.provider !== CloudProvider.AliCloud" :checked="record.status === CloudAccountStatus.Enabled"
                 :loading="switchLoading[record.id]"
                 @change="(checked: boolean) => handleStatusChange(record, checked)"
                 checked-children="启用"
@@ -781,12 +808,12 @@ const closeDetails = () => {
                   </a-button>
                 </a-tooltip>
                 <a-tooltip title="编辑">
-                  <a-button type="text" size="small" @click="handleEdit(record)">
+                  <a-button type="text" size="small" :disabled="record.provider !== CloudProvider.AliCloud" @click="handleEdit(record)">
                     <edit-outlined />
                   </a-button>
                 </a-tooltip>
                 <a-tooltip title="验证凭证">
-                  <a-button type="text" size="small" @click="handleVerify(record)">
+                  <a-button type="text" size="small" :disabled="record.provider !== CloudProvider.AliCloud" @click="handleVerify(record)">
                     <safety-certificate-outlined />
                   </a-button>
                 </a-tooltip>
@@ -797,7 +824,7 @@ const closeDetails = () => {
                   @confirm="handleDelete(record)"
                 >
                   <a-tooltip title="删除">
-                    <a-button type="text" size="small" danger>
+                    <a-button type="text" size="small" :disabled="record.provider !== CloudProvider.AliCloud" danger>
                       <delete-outlined />
                     </a-button>
                   </a-tooltip>
@@ -812,14 +839,21 @@ const closeDetails = () => {
     <!-- 创建/编辑对话框 -->
     <a-modal
       v-model:open="modalVisible"
+      @cancel="closeForm"
+      :mask-closable="!submitLoading"
+      :closable="!submitLoading"
+      :keyboard="!submitLoading"
       :title="isEdit ? '编辑云账户' : '添加云账户'"
       :width="800"
+      :style="{ top: 'var(--ops-space-xl)' }"
+      :body-style="{ maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto', paddingInline: 'var(--ops-space-sm)' }"
       @ok="handleSubmit"
-      @cancel="modalVisible = false"
       :confirm-loading="submitLoading"
+      :destroy-on-close="true"
       class="modern-modal"
     >
       <a-form
+        :disabled="formLoading || submitLoading"
         ref="formRef"
         :model="formData"
         :rules="formRules"
@@ -841,7 +875,7 @@ const closeDetails = () => {
               </a-input>
             </a-form-item>
           </a-col>
-          <a-col :span="12">
+          <a-col :xs="24" :sm="12">
             <a-form-item label="云厂商" name="provider">
               <a-select
                 v-model:value="formData.provider"
@@ -861,24 +895,18 @@ const closeDetails = () => {
                 <a-select-option disabled :value="CloudProvider.AWS">
                   <cloud-outlined /> AWS（暂不支持）
                 </a-select-option>
-                <a-select-option :value="CloudProvider.Azure">
-                  <cloud-outlined /> Azure
+                <a-select-option disabled :value="CloudProvider.Azure">
+                  <cloud-outlined /> Azure（暂不支持）
                 </a-select-option>
-                <a-select-option :value="CloudProvider.GCP">
-                  <cloud-outlined /> GCP
+                <a-select-option disabled :value="CloudProvider.GCP">
+                  <cloud-outlined /> GCP（暂不支持）
                 </a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
-          <a-col :span="12">
-            <a-form-item label="地域" name="region">
-              <a-input
-                v-model:value="formData.region"
-                placeholder="如: cn-hangzhou"
-                size="large"
-              >
-                <template #prefix><environment-outlined /></template>
-              </a-input>
+          <a-col :xs="24" :sm="12">
+            <a-form-item label="授权地域" name="regions">
+              <AccountRegionsEditor v-model="formData.regions" :disabled="formLoading || submitLoading" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -917,7 +945,7 @@ const closeDetails = () => {
           <tags-outlined /> 账户信息（可选）
         </a-divider>
         <a-row :gutter="16">
-          <a-col :span="12">
+          <a-col :xs="24" :sm="12">
             <a-form-item label="账户ID" name="account_id">
               <a-input
                 v-model:value="formData.account_id"
@@ -926,7 +954,7 @@ const closeDetails = () => {
               />
             </a-form-item>
           </a-col>
-          <a-col :span="12">
+          <a-col :xs="24" :sm="12">
             <a-form-item label="账户名称" name="account_name">
               <a-input
                 v-model:value="formData.account_name"
@@ -960,23 +988,16 @@ const closeDetails = () => {
 
       <template #footer>
         <a-space>
-          <a-button @click="modalVisible = false">取消</a-button>
+          <a-button @click="closeForm" :disabled="submitLoading">取消</a-button>
           <a-button
             type="primary"
             @click="handleSubmit"
             :loading="submitLoading"
+            :disabled="formLoading"
           >
             {{ isEdit ? '更新' : '添加' }}
           </a-button>
-          <a-button
-            v-if="!isEdit"
-            type="primary"
-            ghost
-            @click="handleVerifyAndSubmit"
-            :loading="verifyLoading"
-          >
-            <safety-certificate-outlined /> 验证并添加
-          </a-button>
+
         </a-space>
       </template>
     </a-modal>
@@ -1018,7 +1039,7 @@ const closeDetails = () => {
                 </a-tag>
               </a-descriptions-item>
               <a-descriptions-item label="地域" :span="1">
-                <environment-outlined /> {{ currentDetail.region }}
+                <a-space wrap><a-tag v-for="region in currentDetail.regions ?? []" :key="region.id">{{ region.region_name || region.region }} ({{ region.region }})<span v-if="region.is_default"> 默认</span><span v-if="region.status === 2"> 已停用</span></a-tag></a-space>
               </a-descriptions-item>
               <a-descriptions-item label="云账户ID" :span="2">
                 <a-typography-text v-if="currentDetail.account_id" :copyable="{ text: currentDetail.account_id }">
@@ -1038,7 +1059,7 @@ const closeDetails = () => {
               <a-descriptions-item label="状态" :span="2">
                 <a-switch
                   v-if="currentDetail"
-                  :checked="currentDetail.status === CloudAccountStatus.Enabled"
+                  :disabled="currentDetail.provider !== CloudProvider.AliCloud" :checked="currentDetail.status === CloudAccountStatus.Enabled"
                   :loading="switchLoading[currentDetail.id]"
                   @change="(checked: boolean) => currentDetail && handleStatusChange(currentDetail, checked)"
                   checked-children="启用"
@@ -1065,14 +1086,14 @@ const closeDetails = () => {
             <!-- 操作按钮 -->
             <div class="drawer-actions">
               <a-button-group>
-                <a-button type="primary" @click="handleVerify(currentDetail)">
+                <a-button type="primary" :disabled="currentDetail.provider !== CloudProvider.AliCloud" @click="handleVerify(currentDetail)">
                   <safety-certificate-outlined /> 验证凭证
                 </a-button>
-                <a-button @click="handleEdit(currentDetail)">
+                <a-button :disabled="currentDetail.provider !== CloudProvider.AliCloud" @click="handleEdit(currentDetail)">
                   <edit-outlined /> 编辑
                 </a-button>
               </a-button-group>
-              <a-button danger @click="handleDelete(currentDetail)">
+              <a-button danger :disabled="currentDetail.provider !== CloudProvider.AliCloud" @click="handleDelete(currentDetail)">
                 <delete-outlined /> 删除
               </a-button>
             </div>
