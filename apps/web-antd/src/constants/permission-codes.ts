@@ -339,13 +339,22 @@ export const U3_PERMISSION_CODES = {
 /**
  * Secret 详情路由码（SEC-25/26 第 4 条：详情与明文分层）。
  * 即清单 v4 #46/#47 原来的临时码（permission-codes.md 第 6 节 JSON `k8s.secret.viewPlain/copyPlain.code`、
- * 第 7 节 #27 `GET /api/k8s/secret/:cluster_id/:namespace/:name/detail`，后端 internal/k8s/api/secret.go:51）。
+ * 第 7 节 #27 `GET /api/k8s/secret/:cluster_id/:namespace/:name/detail`，后端 internal/k8s/api/secret.go:54）。
  * 「查看详情」入口按此码走普通权限体系（super/admin 角色、通配码按旧规则放行），详情只返回脱敏内容。
  * 不进 PERMISSION_CODES 等按钮 key 表：v4 清单没有独立的「查看详情」按钮 key，放进去会改变 v4 码集计数，
  * 是否在清单补一个按钮 key 待产品（面包）确认。
  */
 export const SECRET_DETAIL_PERMISSION_CODE =
   '/api/k8s/secret/:cluster_id/:namespace/:name/detail';
+
+/**
+ * Secret 更新路由码（SEC-26 incr6 P2-1）：`PUT /api/k8s/secret/:cluster_id/:namespace/:name/update`，
+ * 后端 internal/k8s/api/secret.go:59（AI-CloudOps@ed683ef）。
+ * 「编辑」入口要求详情码 + 本码：打开编辑先拉详情取最新键，提交走本路由，缺任何一个都会在操作中途 403。
+ * 与详情码一样不进 PERMISSION_CODES：v4 清单没有 Secret「编辑」按钮 key，是否补 key 待产品（面包）确认。
+ */
+export const SECRET_UPDATE_PERMISSION_CODE =
+  '/api/k8s/secret/:cluster_id/:namespace/:name/update';
 
 /** Secret 明文 reveal 路由码（SEC-25/26，显式授权码，只认精确匹配） */
 export const SECRET_REVEAL_PERMISSION_CODE =

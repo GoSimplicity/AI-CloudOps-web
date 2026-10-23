@@ -315,7 +315,8 @@
                 <template #icon><FileTextOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="编辑">
+            <!-- incr6 P2-1：编辑先拉详情再走 update，两个码都要有才显示 -->
+            <a-tooltip v-if="hasPerm(SECRET_DETAIL_PERMISSION_CODE) && hasPerm(SECRET_UPDATE_PERMISSION_CODE)" title="编辑">
               <a-button title="编辑" @click="openEditModal(record)">
                 <template #icon><EditOutlined aria-hidden="true"  /></template>
               </a-button>
@@ -1134,7 +1135,10 @@ import {
   ClearOutlined,
 } from '@ant-design/icons-vue';
 
-import { SECRET_DETAIL_PERMISSION_CODE } from '#/constants/permission-codes';
+import {
+  SECRET_DETAIL_PERMISSION_CODE,
+  SECRET_UPDATE_PERMISSION_CODE,
+} from '#/constants/permission-codes';
 import { usePermission } from '#/utils/permission';
 import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 

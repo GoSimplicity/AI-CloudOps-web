@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   SECRET_DETAIL_PERMISSION_CODE,
   SECRET_REVEAL_PERMISSION_CODE,
+  SECRET_UPDATE_PERMISSION_CODE,
 } from '#/constants/permission-codes';
 
 /**
@@ -55,6 +56,7 @@ const all = (selector: string) => [
   ...document.body.querySelectorAll<HTMLElement>(selector),
 ];
 const detailButtons = () => all('.ant-table-tbody button[title="查看详情"]');
+const editButtons = () => all('.ant-table-tbody button[title="编辑"]');
 
 function setSubject(userInfo: Record<string, unknown>, codes: string[]) {
   useUserStore().setUserInfo(userInfo as any);
@@ -200,5 +202,47 @@ describe('Secret 详情与明文分层（第 4 条）', () => {
     await openDetailByClick();
     expect(all('.secret-data-keys .secret-view-plain')).toHaveLength(1);
     expect(all('.secret-data-keys .secret-copy-plain')).toHaveLength(1);
+  });
+});
+
+describe('incr6 P2-1：「编辑」入口要同时有详情码与更新码', () => {
+  // 打开编辑会先拉详情（getSecretDetailsApi），提交走 update 路由；只有其中一个码的账号点进去必然 403
+  it('只有更新码（无详情码）：没有「编辑」按钮', async () => {
+    setSubject({ roles: ['ops'], username: 'ops' }, [
+      SECRET_UPDATE_PERMISSION_CODE,
+    ]);
+    await mountSecret();
+    expect(all('.ant-table-tbody tr').length).toBeGreaterThan(0);
+    expect(editButtons()).toHaveLength(0);
+  });
+
+  it('只有详情码（无更新码）：没有「编辑」按钮', async () => {
+    setSubject({ roles: ['ops'], username: 'ops' }, [
+      SECRET_DETAIL_PERMISSION_CODE,
+    ]);
+    await mountSecret();
+    expect(all('.ant-table-tbody tr').length).toBeGreaterThan(0);
+    expect(detailButtons()).toHaveLength(1);
+    expect(editButtons()).toHaveLength(0);
+  });
+
+  it('详情码 + 更新码：有「编辑」按钮，点击后拉详情打开编辑弹窗', async () => {
+    setSubject({ roles: ['ops'], username: 'ops' }, [
+      SECRET_DETAIL_PERMISSION_CODE,
+      SECRET_UPDATE_PERMISSION_CODE,
+    ]);
+    await mountSecret();
+    const buttons = editButtons();
+    expect(buttons).toHaveLength(1);
+    buttons[0]!.click();
+    await settle();
+    expect(api.detail).toHaveBeenCalledTimes(1);
+    expect(document.body.textContent).toContain('编辑 Secret');
+  });
+
+  it('用户名 admin + 空码：按 hasPerm 旁路放行「编辑」', async () => {
+    setSubject({ username: 'admin' }, []);
+    await mountSecret();
+    expect(editButtons()).toHaveLength(1);
   });
 });
