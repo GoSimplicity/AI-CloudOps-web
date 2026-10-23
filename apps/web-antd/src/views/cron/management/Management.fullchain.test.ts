@@ -490,10 +490,11 @@ describe('列表加载：其他 4xx、ETIMEDOUT 只提示一次，取消类静�
     expect(notices.success).not.toHaveBeenCalled();
   };
 
+  // FE-02b：409 / 429 在应用层改写为专门文案（api/request.ts）
   it.each([
     [404, 'fallback.http.notFound'],
-    [409, 'fallback.http.internalServerError'],
-    [429, 'fallback.http.internalServerError'],
+    [409, '数据已变化，请刷新后重试'],
+    [429, '请求过于频繁，请稍后重试'],
   ])(
     '列表加载返回 HTTP %s：只弹请求层一条，页面保留错误状态',
     async (status, key) => {

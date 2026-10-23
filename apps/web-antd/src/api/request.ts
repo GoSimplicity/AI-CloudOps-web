@@ -2,6 +2,7 @@
  * 该文件可自行根据业务逻辑进行调整
  */
 import { useAppConfig } from '@vben/hooks';
+import { $t } from '@vben/locales';
 import { preferences } from '@vben/preferences';
 import {
   authenticateResponseInterceptor,
@@ -31,6 +32,31 @@ import { refreshTokenApi } from './core';
 
 /** 通用错误提示的 message key 前缀，key 按文案区分 */
 export const HTTP_ERROR_MESSAGE_KEY_PREFIX = 'http-error:';
+
+/** HTTP 409 / 429 的通用提示（FE-02b）：packages 的通用错误拦截器把它们归到「内部服务器错误」，这里在应用层改写 */
+export const HTTP_CONFLICT_MESSAGE = '数据已变化，请刷新后重试';
+export const HTTP_TOO_MANY_REQUESTS_MESSAGE = '请求过于频繁，请稍后重试';
+
+/**
+ * 按错误改写通用错误拦截器给出的文案（只用于 HTTP / 传输层错误，业务错误不经过这里）：
+ * - 409 / 429：专门文案（不带错误码）；
+ * - P3-C：浏览器中止请求（xhr onabort → AxiosError 'Request aborted'，code ECONNABORTED，没有 response）
+ *   packages 里既不算网络错误也不算超时，落到「内部服务器错误」；这里按网络异常提示；
+ * - 其余保持原文案。
+ */
+export function resolveHttpErrorMessage(msg: string, error: any): string {
+  const status = error?.response?.status;
+  if (status === 409) return HTTP_CONFLICT_MESSAGE;
+  if (status === 429) return HTTP_TOO_MANY_REQUESTS_MESSAGE;
+  if (
+    !error?.response &&
+    error?.code === 'ECONNABORTED' &&
+    error?.message === 'Request aborted'
+  ) {
+    return $t('fallback.http.networkError');
+  }
+  return msg;
+}
 
 const { apiURL, aiopsURL: configuredAiopsURL } = useAppConfig(
   import.meta.env,
@@ -272,10 +298,12 @@ function createRequestClient(baseURL: string) {
         return;
       }
       if (isPermissionDeniedError(error)) return;
+      // 409 / 429 / 浏览器中止请求改写文案（FE-02b，见 resolveHttpErrorMessage）
+      const content = resolveHttpErrorMessage(msg, error);
       // 固定 key：同一文案的并发错误（如批量操作碰上 500 / 网络错误）合并为一条
       message.error({
-        content: msg,
-        key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${msg}`,
+        content,
+        key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${content}`,
       });
     }),
   );
