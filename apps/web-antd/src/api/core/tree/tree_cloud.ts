@@ -1,33 +1,35 @@
+import type { CloudAccount, CloudAccountRegion } from './tree_account';
+
 import { requestClient } from '#/api/request';
 
 // 云厂商类型
 export enum CloudProvider {
-  ALIYUN = 1,   // 阿里云
-  TENCENT = 2,  // 腾讯云
-  AWS = 3,      // AWS
-  HUAWEI = 4,   // 华为云
-  AZURE = 5,    // Azure
-  GCP = 6,      // Google Cloud
+  ALIYUN = 1, // 阿里云
+  TENCENT = 2, // 腾讯云
+  AWS = 3, // AWS
+  HUAWEI = 4, // 华为云
+  AZURE = 5, // Azure
+  GCP = 6, // Google Cloud
 }
 
 // 云资源类型
 export enum CloudResourceType {
-  ECS = 1,   // 云服务器
-  RDS = 2,   // 云数据库
-  SLB = 3,   // 负载均衡
-  OSS = 4,   // 对象存储
-  VPC = 5,   // 虚拟私有云
+  ECS = 1, // 云服务器
+  RDS = 2, // 云数据库
+  SLB = 3, // 负载均衡
+  OSS = 4, // 对象存储
+  VPC = 5, // 虚拟私有云
   OTHER = 6, // 其他资源
 }
 
 // 云资源状态
 export enum CloudResourceStatus {
-  RUNNING = 1,  // 运行中
-  STOPPED = 2,  // 已停止
+  RUNNING = 1, // 运行中
+  STOPPED = 2, // 已停止
   STARTING = 3, // 启动中
   STOPPING = 4, // 停止中
-  DELETED = 5,  // 已删除
-  UNKNOWN = 6,  // 未知状态
+  DELETED = 5, // 已删除
+  UNKNOWN = 6, // 未知状态
 }
 
 // 货币单位
@@ -39,19 +41,19 @@ export enum Currency {
 // 计费方式
 export enum ChargeType {
   POST_PAID = 'PostPaid', // 按量付费
-  PRE_PAID = 'PrePaid',   // 包年包月
+  PRE_PAID = 'PrePaid', // 包年包月
 }
 
 // 同步模式
 export enum SyncMode {
-  FULL = 'full',               // 全量同步
+  FULL = 'full', // 全量同步
   INCREMENTAL = 'incremental', // 增量同步
 }
 
 // SSH认证方式
 export enum AuthMode {
   PASSWORD = 1, // 密码认证
-  KEY = 2,      // 密钥认证
+  KEY = 2, // 密钥认证
 }
 
 // 键值对类型
@@ -74,7 +76,9 @@ export interface TreeCloudResource {
   create_user_id: number;
   create_user_name: string;
   cloud_account_id: number;
-  cloud_account?: any; // CloudAccount类型
+  cloud_account?: CloudAccount;
+  cloud_account_region_id?: number;
+  cloud_account_region?: CloudAccountRegion;
   region?: string;
   instance_id?: string;
   instance_type?: string;
@@ -106,7 +110,7 @@ export interface TreeCloudResource {
 // 获取云资源列表请求
 export interface GetTreeCloudResourceListReq {
   page?: number;
-  page_size?: number;
+  size?: number;
   search?: string;
   cloud_account_id?: number;
   resource_type?: CloudResourceType;
@@ -141,7 +145,7 @@ export interface DeleteTreeCloudResourceReq {
 export interface SyncTreeCloudResourceReq {
   cloud_account_id: number;
   resource_types?: CloudResourceType[];
-  regions?: string[];
+  cloud_account_region_ids?: number[];
   instance_ids?: string[];
   sync_mode?: SyncMode;
   auto_bind?: boolean;
@@ -157,6 +161,7 @@ export interface SyncCloudResourceResp {
   failed_count: number;
   failed_instances: string[];
   sync_time: string;
+  message?: string;
 }
 
 // 绑定云资源到树节点请求
@@ -174,6 +179,8 @@ export interface UnBindTreeCloudResourceReq {
 // 获取树节点下的云资源请求
 export interface GetTreeNodeCloudResourcesReq {
   node_id: number;
+  page?: number;
+  page_size?: number;
   cloud_account_id?: number;
   resource_type?: CloudResourceType;
   status?: CloudResourceStatus;
@@ -246,17 +253,25 @@ export interface GetCloudResourceChangeLogReq {
 }
 
 // 获取云资源列表
-export async function getTreeCloudResourceListApi(params: GetTreeCloudResourceListReq) {
-  return requestClient.get('/tree/cloud/list', { params });
+export async function getTreeCloudResourceListApi(
+  params: GetTreeCloudResourceListReq,
+) {
+  return requestClient.get<{ items: TreeCloudResource[]; total: number }>(
+    '/tree/cloud/list',
+    { params },
+  );
 }
 
 // 获取云资源详情
 export async function getTreeCloudResourceDetailApi(id: number) {
-  return requestClient.get(`/tree/cloud/${id}/detail`);
+  return requestClient.get<TreeCloudResource>(`/tree/cloud/${id}/detail`);
 }
 
 // 更新云资源
-export async function updateTreeCloudResourceApi(id: number, data: Omit<UpdateTreeCloudResourceReq, 'id'>) {
+export async function updateTreeCloudResourceApi(
+  id: number,
+  data: Omit<UpdateTreeCloudResourceReq, 'id'>,
+) {
   return requestClient.put(`/tree/cloud/${id}/update`, data);
 }
 
@@ -266,22 +281,30 @@ export async function deleteTreeCloudResourceApi(id: number) {
 }
 
 // 绑定云资源到树节点
-export async function bindTreeCloudResourceApi(id: number, data: Omit<BindTreeCloudResourceReq, 'id'>) {
+export async function bindTreeCloudResourceApi(
+  id: number,
+  data: Omit<BindTreeCloudResourceReq, 'id'>,
+) {
   return requestClient.post(`/tree/cloud/${id}/bind`, data);
 }
 
 // 解绑云资源与树节点
-export async function unBindTreeCloudResourceApi(id: number, data: Omit<UnBindTreeCloudResourceReq, 'id'>) {
+export async function unBindTreeCloudResourceApi(
+  id: number,
+  data: Omit<UnBindTreeCloudResourceReq, 'id'>,
+) {
   return requestClient.post(`/tree/cloud/${id}/unbind`, data);
 }
 
 // 同步云资源
 export async function syncTreeCloudResourceApi(data: SyncTreeCloudResourceReq) {
-  return requestClient.post('/tree/cloud/sync', data);
+  return requestClient.post<SyncCloudResourceResp>('/tree/cloud/sync', data);
 }
 
 // 获取同步历史
-export async function getSyncHistoryApi(params: GetCloudResourceSyncHistoryReq) {
+export async function getSyncHistoryApi(
+  params: GetCloudResourceSyncHistoryReq,
+) {
   return requestClient.get('/tree/cloud/sync/history', { params });
 }
 
@@ -291,7 +314,10 @@ export async function getChangeLogApi(params: GetCloudResourceChangeLogReq) {
 }
 
 // 获取树节点下的云资源
-export async function getTreeNodeCloudResourcesApi(nodeId: number, params?: Omit<GetTreeNodeCloudResourcesReq, 'node_id'>) {
+export async function getTreeNodeCloudResourcesApi(
+  nodeId: number,
+  params?: Omit<GetTreeNodeCloudResourcesReq, 'node_id'>,
+) {
   return requestClient.get(`/tree/cloud/${nodeId}/node`, { params });
 }
 
@@ -301,6 +327,9 @@ export async function connectCloudResourceTerminalApi(id: number) {
 }
 
 // 更新云资源状态
-export async function updateCloudResourceStatusApi(id: number, data: Omit<UpdateCloudResourceStatusReq, 'id'>) {
+export async function updateCloudResourceStatusApi(
+  id: number,
+  data: Omit<UpdateCloudResourceStatusReq, 'id'>,
+) {
   return requestClient.put(`/tree/cloud/${id}/status`, data);
 }

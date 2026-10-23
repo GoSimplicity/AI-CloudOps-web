@@ -83,6 +83,10 @@ import {
 
 import {
   getCloudAccountListApi,
+  getCloudAccountDetailApi,
+  CloudProvider,
+  CloudAccountStatus,
+  type CloudAccountRegion,
   type CloudAccount,
 } from '#/api/core/tree/tree_account';
 
@@ -92,6 +96,14 @@ import type { TreeNode } from '#/api/core/tree/tree_local';
 const loadError = ref<string | null>(null);
 let listRequest = 0;
 let detailRequest = 0;
+let syncRegionRequest = 0;
+let accountListRequest = 0;
+let syncOperationRequest = 0;
+const syncRegions = ref<CloudAccountRegion[]>([]);
+const syncRegionsLoading = ref(false);
+const syncRegionError = ref<string | null>(null);
+const accountsLoading = ref(false);
+const accountLoadError = ref<string | null>(null);
 
 
 // ========== 状态定义 ==========
@@ -142,10 +154,10 @@ const editForm = reactive<UpdateTreeCloudResourceReq>({
 
 const syncForm = reactive<SyncTreeCloudResourceReq>({
   cloud_account_id: 0,
-  resource_types: [],
-  regions: [],
+  resource_types: [CloudResourceType.ECS],
+  cloud_account_region_ids: [],
   instance_ids: [],
-  sync_mode: SyncMode.FULL,
+  sync_mode: SyncMode.INCREMENTAL,
   auto_bind: false,
   bind_node_id: undefined,
 });
@@ -161,7 +173,7 @@ const selectedUnbindNodeIds = ref<number[]>([]);
 // 过滤表单
 const filterForm = reactive<GetTreeCloudResourceListReq>({
   page: 1,
-  page_size: 10,
+  size: 10,
   search: undefined,
   cloud_account_id: undefined,
   resource_type: undefined,
@@ -437,6 +449,9 @@ const fetchTreeData = async (): Promise<void> => {
 };
 
 const fetchCloudAccounts = async (): Promise<void> => {
+  const ticket = ++accountListRequest;
+  accountsLoading.value = true;
+  accountLoadError.value = null;
   try {
     let allAccounts: CloudAccount[] = [];
     let currentPage = 1;
@@ -460,10 +475,14 @@ const fetchCloudAccounts = async (): Promise<void> => {
       }
     }
 
-    cloudAccounts.value = allAccounts;
+    if (ticket === accountListRequest) cloudAccounts.value = allAccounts;
   } catch (error) {
-    console.error('获取云账户列表失败', error);
-    cloudAccounts.value = [];
+    if (ticket === accountListRequest) {
+      cloudAccounts.value = [];
+      accountLoadError.value = '读取云账户失败，请重试';
+    }
+  } finally {
+    if (ticket === accountListRequest) accountsLoading.value = false;
   }
 };
 
@@ -475,7 +494,7 @@ const fetchResources = async (): Promise<void> => {
   try {
     const params: GetTreeCloudResourceListReq = {
       page: pagination.current,
-      page_size: pagination.pageSize,
+      size: pagination.pageSize,
       search: filterForm.search,
       cloud_account_id: filterForm.cloud_account_id,
       resource_type: filterForm.resource_type,
@@ -553,13 +572,12 @@ const handleSearch = (): void => {
 
 const handleRefresh = (): void => {
   fetchResources();
-  message.success('刷新成功');
 };
 
 const resetFilter = (): void => {
   Object.assign(filterForm, {
     page: 1,
-    page_size: pagination.pageSize, // 使用当前的分页大小
+    size: pagination.pageSize, // 使用当前的分页大小
     search: undefined,
     cloud_account_id: undefined,
     resource_type: undefined,
@@ -570,21 +588,66 @@ const resetFilter = (): void => {
   fetchResources();
 };
 
+const supportsResource = (record: TreeCloudResource): boolean => {
+  const provider = record.cloud_account?.provider ?? cloudAccounts.value.find((account) => account.id === record.cloud_account_id)?.provider;
+  return provider === CloudProvider.AliCloud && record.resource_type === CloudResourceType.ECS;
+};
+const requireSupportedResource = (record: TreeCloudResource): boolean => {
+  if (supportsResource(record)) return true;
+  message.warning('当前仅支持管理阿里云 ECS，其他存量资源可查看');
+  return false;
+};
+const syncAccounts = computed(() => cloudAccounts.value.filter(
+  (account) => account.provider === CloudProvider.AliCloud && account.status === CloudAccountStatus.Enabled,
+));
+const loadSyncRegions = async (id: number): Promise<void> => {
+  const ticket = ++syncRegionRequest;
+  syncRegions.value = [];
+  syncForm.cloud_account_region_ids = [];
+  syncRegionsLoading.value = true;
+  syncRegionError.value = null;
+  try {
+    const account = await getCloudAccountDetailApi(id);
+    if (ticket !== syncRegionRequest || !syncModalVisible.value) return;
+    if (account.id !== id || account.provider !== CloudProvider.AliCloud || account.status !== CloudAccountStatus.Enabled) {
+      throw new Error('Account unavailable');
+    }
+    syncRegions.value = (account.regions ?? []).filter((region) => region.status === 1);
+    if (!syncRegions.value.length) syncRegionError.value = '此账户没有已启用的授权地域，请先在云账户中配置';
+  } catch {
+    if (ticket === syncRegionRequest && syncModalVisible.value) syncRegionError.value = '读取账户地域失败，请重试';
+  } finally {
+    if (ticket === syncRegionRequest) syncRegionsLoading.value = false;
+  }
+};
+const closeSyncModal = (): void => {
+  if (syncLoading.value) return;
+  syncModalVisible.value = false;
+  syncRegionRequest++;
+  syncRegionsLoading.value = false;
+  syncRegions.value = [];
+};
 const showSyncModal = (): void => {
-  if (cloudAccounts.value.length === 0) {
-    message.warning('请先添加云账户');
+  if (accountsLoading.value) return;
+  if (accountLoadError.value) {
+    message.warning('请先重试读取云账户');
+    return;
+  }
+  const account = syncAccounts.value[0];
+  if (!account) {
+    message.warning('请先添加并启用阿里云账户');
     return;
   }
   Object.assign(syncForm, {
-    cloud_account_id: cloudAccounts.value[0]?.id || 0,
-    resource_types: [],
-    regions: [],
-    instance_ids: [],
-    sync_mode: SyncMode.FULL,
+    cloud_account_id: account.id,
+    resource_types: [CloudResourceType.ECS],
+    cloud_account_region_ids: [],
+    sync_mode: SyncMode.INCREMENTAL,
     auto_bind: false,
     bind_node_id: undefined,
   });
   syncModalVisible.value = true;
+  void loadSyncRegions(account.id);
 };
 
 const showSyncHistoryModal = async (): Promise<void> => {
@@ -598,6 +661,7 @@ const showChangeLogModal = async (): Promise<void> => {
 };
 
 const handleEdit = (record: TreeCloudResource): void => {
+  if (!requireSupportedResource(record)) return;
   currentResource.value = record;
   Object.assign(editForm, {
     id: record.id,
@@ -695,24 +759,48 @@ const handleUpdate = async (): Promise<void> => {
 
 // 同步资源
 const handleSync = async (): Promise<void> => {
-  if (!syncForm.cloud_account_id) {
-    message.warning('请选择云账户');
+  if (syncLoading.value || syncRegionsLoading.value) return;
+  if (!syncAccounts.value.some((account) => account.id === syncForm.cloud_account_id) || syncRegionError.value || !syncRegions.value.length) {
+    message.warning('请选择已启用的阿里云账户并读取授权地域');
     return;
   }
-
+  const regionIds = [...(syncForm.cloud_account_region_ids ?? [])];
+  if (regionIds.length > 100 || regionIds.some((id) => !Number.isSafeInteger(id) || !syncRegions.value.some((region) => region.id === id))) {
+    message.warning('所选地域已失效，请重新选择');
+    return;
+  }
+  if (syncForm.auto_bind && !syncForm.bind_node_id) {
+    message.warning('请选择自动绑定的服务树节点');
+    return;
+  }
+  const payload: SyncTreeCloudResourceReq = {
+    cloud_account_id: syncForm.cloud_account_id,
+    cloud_account_region_ids: regionIds,
+    resource_types: [CloudResourceType.ECS],
+    sync_mode: syncForm.sync_mode,
+    auto_bind: syncForm.auto_bind,
+    bind_node_id: syncForm.auto_bind ? syncForm.bind_node_id : undefined,
+  };
+  const ticket = ++syncOperationRequest;
   syncLoading.value = true;
   try {
-    const response = await syncTreeCloudResourceApi(syncForm);
-    const result = (response as any).data || response;
-    message.success(
-      `同步成功！新增${result.new_count || 0}，更新${result.update_count || 0}`,
-    );
+    const result = await syncTreeCloudResourceApi(payload);
+    if (ticket !== syncOperationRequest) return;
+    const counts = [result?.total_count, result?.new_count, result?.update_count, result?.delete_count, result?.failed_count];
+    if (counts.some((count) => !Number.isSafeInteger(count) || count < 0)) {
+      message.error('同步结果格式异常，请检查同步历史后重试');
+      return;
+    }
+    const summary = `新增${result.new_count}，更新${result.update_count}，删除${result.delete_count}，失败${result.failed_count}`;
+    if (result.failed_count > 0) message.warning(`同步部分完成：${summary}`);
+    else message.success(`同步完成：${summary}`);
     syncModalVisible.value = false;
+    syncRegionRequest++;
     await fetchResources();
-  } catch (error) {
-    message.error('同步失败');
+  } catch {
+    if (ticket === syncOperationRequest) message.error('同步失败，请检查同步历史后重试');
   } finally {
-    syncLoading.value = false;
+    if (ticket === syncOperationRequest) syncLoading.value = false;
   }
 };
 
@@ -730,6 +818,7 @@ const handleChangeLogTableChange = (pag: any): void => {
 
 // 绑定服务树
 const showBindModal = (record: TreeCloudResource): void => {
+  if (!requireSupportedResource(record)) return;
   currentResource.value = record;
   selectedTreeNodeIds.value = record.tree_nodes?.map((n) => n.id) || [];
   bindModalVisible.value = true;
@@ -768,6 +857,7 @@ const handleBind = async (): Promise<void> => {
 
 // 解绑服务树
 const showUnbindModal = (record: TreeCloudResource): void => {
+  if (!requireSupportedResource(record)) return;
   currentResource.value = record;
   selectedUnbindNodeIds.value = [];
   unbindModalVisible.value = true;
@@ -810,6 +900,7 @@ const handleUpdateStatus = async (
   record: TreeCloudResource,
   newStatus: CloudResourceStatus,
 ): Promise<void> => {
+  if (!requireSupportedResource(record)) return;
   try {
     await updateCloudResourceStatusApi(record.id, { status: newStatus });
     message.success('状态更新成功');
@@ -833,6 +924,7 @@ const handleStatusMenuClick = (
 
 // 连接终端
 const handleConnectTerminal = (record: TreeCloudResource): void => {
+  if (!requireSupportedResource(record)) return;
   if (record.resource_type !== CloudResourceType.ECS) {
     message.warning('只有云服务器支持终端连接');
     return;
@@ -845,6 +937,7 @@ const handleConnectTerminal = (record: TreeCloudResource): void => {
 
 // 删除资源
 const handleDelete = async (record: TreeCloudResource): Promise<void> => {
+  if (!requireSupportedResource(record)) return;
   Modal.confirm({
     title: '确认删除',
     content: `确定要删除资源 "${record.name}" 吗？此操作不可恢复。`,
@@ -871,51 +964,6 @@ const handleDelete = async (record: TreeCloudResource): Promise<void> => {
 // ========== 导出功能 ==========
 const handleExportCurrent = () => {
   exportToExcel(resources.value);
-};
-
-const handleExportAll = async () => {
-  const hide = message.loading('正在导出所有数据...', 0);
-  try {
-    const allData: TreeCloudResource[] = [];
-    let currentPage = 1;
-    const pageSize = 100;
-    let hasMore = true;
-
-    while (hasMore) {
-      const params: GetTreeCloudResourceListReq = {
-        page: currentPage,
-        page_size: pageSize,
-        search: filterForm.search,
-        cloud_account_id: filterForm.cloud_account_id,
-        resource_type: filterForm.resource_type,
-        status: filterForm.status,
-        environment: filterForm.environment,
-      };
-
-      const response = await getTreeCloudResourceListApi(params);
-      const data = response as any;
-      const items = (data.items || []).map((item: TreeCloudResource) => ({
-        ...item,
-        tree_nodes: item.tree_nodes || [],
-        tags: item.tags || [],
-      }));
-      const total = data.total || 0;
-
-      allData.push(...items);
-
-      if (items.length < pageSize || allData.length >= total) {
-        hasMore = false;
-      } else {
-        currentPage++;
-      }
-    }
-
-    hide();
-    exportToExcel(allData);
-  } catch (error) {
-    hide();
-    message.error('导出失败');
-  }
 };
 
 const exportToExcel = (data: TreeCloudResource[]) => {
@@ -973,7 +1021,7 @@ onMounted(async () => {
     message.error('页面加载失败');
   }
 });
-onBeforeUnmount(() => { listRequest++; detailRequest++; });
+onBeforeUnmount(() => { listRequest++; detailRequest++; syncRegionRequest++; accountListRequest++; syncOperationRequest++; });
 const closeDetails = () => {
   detailRequest++;
   detailVisible.value = false;
@@ -983,12 +1031,15 @@ const closeDetails = () => {
 </script>
 
 <template>
-  <OpsPage title="云资源" description="查询已同步资源并管理绑定关系" class="cmdb-console cloud-resource-manager">
+  <OpsPage title="云资源" description="管理阿里云 ECS 的同步与绑定，其他存量资源可查看" class="cmdb-console cloud-resource-manager">
     <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
       <template #action><a-button @click="fetchResources()">重试</a-button></template>
     </a-alert>
+    <a-alert v-if="accountLoadError" :message="accountLoadError" type="error" show-icon>
+      <template #action><a-button :loading="accountsLoading" @click="fetchCloudAccounts()">重试读取账户</a-button></template>
+    </a-alert>
     <!-- 页面头部 -->
-    <template #actions><a-button type="primary" @click="showSyncModal" class="btn-create">
+    <template #actions><a-button type="primary" aria-label="同步资源" :loading="accountsLoading" :disabled="accountsLoading" @click="showSyncModal" class="btn-create">
           <template #icon><sync-outlined /></template>
           <span class="btn-text">同步资源</span>
         </a-button><a-button @click="handleRefresh" class="btn-action">
@@ -1009,9 +1060,6 @@ const closeDetails = () => {
                 <template #icon><export-outlined /></template>
                 <a-menu-item key="export-current" @click="handleExportCurrent">
                   <file-excel-outlined /> 导出当前页
-                </a-menu-item>
-                <a-menu-item key="export-all" @click="handleExportAll">
-                  <file-excel-outlined /> 导出全部数据
                 </a-menu-item>
               </a-sub-menu>
             </a-menu>
@@ -1310,7 +1358,7 @@ const closeDetails = () => {
 
             <!-- 状态列 -->
             <template v-else-if="column.key === 'status'">
-              <a-dropdown :trigger="['click']">
+              <a-dropdown :trigger="['click']" :disabled="!supportsResource(record)">
                 <a-badge
                   :status="getStatusBadgeType(record.status)"
                   :text="getStatusText(record.status)"
@@ -1408,6 +1456,7 @@ const closeDetails = () => {
                   <a-button
                     type="text"
                     size="small"
+                    :disabled="!supportsResource(record)"
                     @click="handleEdit(record)"
                   >
                     <edit-outlined />
@@ -1417,6 +1466,7 @@ const closeDetails = () => {
                   <a-button
                     type="text"
                     size="small"
+                    :disabled="!supportsResource(record)"
                     @click="showBindModal(record)"
                   >
                     <apartment-outlined />
@@ -1429,6 +1479,7 @@ const closeDetails = () => {
                   <a-button
                     type="text"
                     size="small"
+                    :disabled="!supportsResource(record)"
                     @click="handleConnectTerminal(record)"
                   >
                     <code-outlined />
@@ -1444,7 +1495,7 @@ const closeDetails = () => {
                         key="unbind"
                         @click="showUnbindModal(record)"
                         :disabled="
-                          !record.tree_nodes || record.tree_nodes.length === 0
+                          !supportsResource(record) || !record.tree_nodes || record.tree_nodes.length === 0
                         "
                       >
                         <disconnect-outlined /> 解绑节点
@@ -1453,7 +1504,8 @@ const closeDetails = () => {
                       <a-menu-item
                         key="delete"
                         danger
-                        @click="handleDelete(record)"
+                        :disabled="!supportsResource(record)"
+                    @click="handleDelete(record)"
                       >
                         <delete-outlined /> 删除资源
                       </a-menu-item>
@@ -1631,27 +1683,40 @@ const closeDetails = () => {
       v-model:open="syncModalVisible"
       title="同步云资源"
       @ok="handleSync"
-      @cancel="syncModalVisible = false"
+      @cancel="closeSyncModal"
+      ok-text="开始同步"
+      cancel-text="取消"
+      :ok-button-props="{ disabled: syncRegionsLoading || !!syncRegionError || !syncRegions.length }"
+      :cancel-button-props="{ disabled: syncLoading }"
+      :closable="!syncLoading"
+      :mask-closable="!syncLoading"
+      :keyboard="!syncLoading"
+      :destroy-on-close="true"
+      :style="{ top: 'var(--ops-space-xl)' }"
+      :body-style="{ maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto' }"
       :confirm-loading="syncLoading"
       :width="700"
       class="modern-modal"
     >
       <a-alert
         message="同步说明"
-        description="从云厂商同步最新的资源信息到本地数据库，支持全量同步和增量同步两种模式。全量同步会更新所有资源，增量同步仅同步新增和变更的资源。"
+        description="当前支持阿里云 ECS。点击开始同步才会连接云平台；增量更新已有记录，全量替换所选地域的本地 ECS 记录。"
         type="info"
         show-icon
         style="margin-bottom: 24px"
       />
-      <a-form layout="vertical" class="sync-form">
+      <a-form layout="vertical" class="sync-form cloud-sync-form">
         <a-form-item label="云账户" required>
           <a-select
+            id="cloud-sync-account"
             v-model:value="syncForm.cloud_account_id"
-            placeholder="请选择要同步的云账户"
+            :disabled="syncLoading"
+            @change="loadSyncRegions"
+            placeholder="请选择已启用的阿里云账户"
             size="large"
           >
             <a-select-option
-              v-for="account in cloudAccounts"
+              v-for="account in syncAccounts"
               :key="account.id"
               :value="account.id"
             >
@@ -1660,9 +1725,25 @@ const closeDetails = () => {
           </a-select>
         </a-form-item>
 
+        <a-form-item label="授权地域">
+          <a-select
+            id="cloud-sync-regions"
+            v-model:value="syncForm.cloud_account_region_ids"
+            mode="multiple"
+            :disabled="syncLoading || syncRegionsLoading || !!syncRegionError"
+            :loading="syncRegionsLoading"
+            :options="syncRegions.map((region) => ({ value: region.id, label: region.region_name ? `${region.region_name} (${region.region})` : region.region }))"
+            placeholder="不选择则同步此账户全部已启用地域"
+          />
+          <a-alert v-if="syncRegionError" type="error" :message="syncRegionError" show-icon />
+          <a-button v-if="syncRegionError" type="link" @click="loadSyncRegions(syncForm.cloud_account_id)">重试读取地域</a-button>
+          <div v-else class="form-tip">仅使用账户中已启用的授权地域，未选择表示全部</div>
+        </a-form-item>
+
         <a-form-item label="资源类型">
           <a-checkbox-group
             v-model:value="syncForm.resource_types"
+            disabled
             style="width: 100%"
           >
             <a-row :gutter="[8, 8]">
@@ -1672,42 +1753,42 @@ const closeDetails = () => {
                 </a-checkbox>
               </a-col>
               <a-col :span="12">
-                <a-checkbox :value="CloudResourceType.RDS">
+                <a-checkbox :value="CloudResourceType.RDS" disabled>
                   <database-outlined /> 云数据库
                 </a-checkbox>
               </a-col>
               <a-col :span="12">
-                <a-checkbox :value="CloudResourceType.SLB">
+                <a-checkbox :value="CloudResourceType.SLB" disabled>
                   <cluster-outlined /> 负载均衡
                 </a-checkbox>
               </a-col>
               <a-col :span="12">
-                <a-checkbox :value="CloudResourceType.OSS">
+                <a-checkbox :value="CloudResourceType.OSS" disabled>
                   <cloud-upload-outlined /> 对象存储
                 </a-checkbox>
               </a-col>
               <a-col :span="12">
-                <a-checkbox :value="CloudResourceType.VPC">
+                <a-checkbox :value="CloudResourceType.VPC" disabled>
                   <global-outlined /> 虚拟私有云
                 </a-checkbox>
               </a-col>
             </a-row>
           </a-checkbox-group>
-          <div class="form-tip">不选择则同步所有类型资源</div>
+          <div class="form-tip">当前仅支持 ECS，其他类型保留展示</div>
         </a-form-item>
 
         <a-form-item label="同步模式">
-          <a-radio-group v-model:value="syncForm.sync_mode" size="large">
+          <a-radio-group v-model:value="syncForm.sync_mode" :disabled="syncLoading" size="large">
             <a-radio :value="SyncMode.FULL" class="sync-mode-radio">
               <div class="radio-content">
                 <div class="radio-title"><sync-outlined /> 全量同步</div>
-                <div class="radio-desc">同步所有资源，更新已有资源信息</div>
+                <div class="radio-desc">替换所选地域的本地 ECS 记录</div>
               </div>
             </a-radio>
             <a-radio :value="SyncMode.INCREMENTAL" class="sync-mode-radio">
               <div class="radio-content">
                 <div class="radio-title"><cloud-sync-outlined /> 增量同步</div>
-                <div class="radio-desc">只同步新增和变更的资源</div>
+                <div class="radio-desc">新增或更新 ECS，保留其他本地记录</div>
               </div>
             </a-radio>
           </a-radio-group>
@@ -1716,7 +1797,7 @@ const closeDetails = () => {
         <a-form-item label="自动绑定服务树">
           <a-row align="middle">
             <a-col flex="auto">
-              <a-switch v-model:checked="syncForm.auto_bind" />
+              <a-switch v-model:checked="syncForm.auto_bind" :disabled="syncLoading" />
               <span style="margin-left: 12px"
                 >自动将同步的资源绑定到指定节点</span
               >
@@ -1727,6 +1808,7 @@ const closeDetails = () => {
         <a-form-item v-if="syncForm.auto_bind" label="绑定到节点">
           <a-tree-select
             v-model:value="syncForm.bind_node_id"
+            :disabled="syncLoading"
             :tree-data="treeData"
             placeholder="请选择服务树节点"
             :field-names="{ children: 'children', label: 'name', value: 'id' }"
@@ -1851,8 +1933,8 @@ const closeDetails = () => {
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'sync_status'">
             <a-badge
-              :status="record.sync_status === 'success' ? 'success' : 'error'"
-              :text="record.sync_status === 'success' ? '成功' : '失败'"
+              :status="record.sync_status === 'success' ? 'success' : record.sync_status === 'running' ? 'processing' : record.sync_status === 'partial' ? 'warning' : 'error'"
+              :text="record.sync_status === 'success' ? '成功' : record.sync_status === 'running' ? '进行中' : record.sync_status === 'partial' ? '部分完成' : '失败'"
             />
           </template>
           <template v-else-if="column.key === 'stats'">
@@ -2199,19 +2281,19 @@ const closeDetails = () => {
                   type="primary"
                   @click="handleConnectTerminal(currentDetail)"
                   :disabled="
-                    currentDetail.resource_type !== CloudResourceType.ECS
+                    !supportsResource(currentDetail)
                   "
                 >
                   <code-outlined /> 连接终端
                 </a-button>
-                <a-button @click="handleEdit(currentDetail)">
+                <a-button :disabled="!supportsResource(currentDetail)" @click="handleEdit(currentDetail)">
                   <edit-outlined /> 编辑
                 </a-button>
-                <a-button @click="showBindModal(currentDetail)">
+                <a-button :disabled="!supportsResource(currentDetail)" @click="showBindModal(currentDetail)">
                   <apartment-outlined /> 绑定节点
                 </a-button>
               </a-button-group>
-              <a-button danger @click="handleDelete(currentDetail)">
+              <a-button danger :disabled="!supportsResource(currentDetail)" @click="handleDelete(currentDetail)">
                 <delete-outlined /> 删除
               </a-button>
             </div>
