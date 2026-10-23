@@ -1,423 +1,14 @@
-<template>
-  <div class="user-management">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <h1>用户管理</h1>
-      <div class="header-actions">
-        <a-button @click="handleRefresh">
-          <Icon icon="material-symbols:refresh" />
-          刷新
-        </a-button>
-        <a-button type="primary" @click="handleAdd">
-          <Icon icon="material-symbols:add" />
-          新建用户
-        </a-button>
-      </div>
-    </div>
-
-    <!-- 统计卡片 -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-number">{{ paginationConfig.total }}</div>
-        <div class="stat-label">总用户数</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number">{{ userStatistics.active_user_count || 0 }}</div>
-        <div class="stat-label">活跃用户</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number">{{ userStatistics.admin_count || 0 }}</div>
-        <div class="stat-label">管理员</div>
-      </div>
-    </div>
-
-    <!-- 搜索筛选区域 -->
-    <div class="search-section">
-      <div class="search-left">
-        <a-input
-          v-model:value="searchParams.search"
-          placeholder="搜索用户名"
-          allowClear
-          @pressEnter="handleSearch"
-          class="search-input"
-        >
-          <template #prefix>
-            <Icon icon="material-symbols:search" />
-          </template>
-        </a-input>
-
-        <a-select
-          v-model:value="searchParams.enable"
-          placeholder="状态筛选"
-          allowClear
-          class="status-select"
-        >
-          <a-select-option :value="1">启用</a-select-option>
-          <a-select-option :value="2">禁用</a-select-option>
-        </a-select>
-
-        <a-select
-          v-model:value="searchParams.account_type"
-          placeholder="账号类型"
-          allowClear
-          class="type-select"
-        >
-          <a-select-option :value="1">普通用户</a-select-option>
-          <a-select-option :value="2">服务账号</a-select-option>
-        </a-select>
-      </div>
-
-      <div class="search-right">
-        <a-button type="primary" @click="handleSearch">搜索</a-button>
-        <a-button @click="handleReset">重置</a-button>
-      </div>
-    </div>
-
-    <!-- 用户表格 -->
-    <div class="table-container">
-      <a-table
-        :columns="tableColumns"
-        :data-source="userList"
-        :pagination="paginationConfig"
-        :loading="loading"
-        row-key="id"
-        size="middle"
-        @change="handleTableChange"
-      >
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'user'">
-            <div class="user-info">
-              <div class="user-avatar">
-                <img v-if="record.avatar" :src="getAvatarUrl(record.avatar)" :alt="record.username" @error="handleAvatarError" />
-                <div v-else class="default-avatar">{{ getInitials(record.username) }}</div>
-              </div>
-              <div>
-                <div class="user-name">{{ record.real_name || record.username }}</div>
-                <div class="user-username">{{ record.username }}</div>
-              </div>
-            </div>
-          </template>
-
-          <template v-if="column.key === 'contact'">
-            <div class="contact-info">
-              <div v-if="record.mobile">{{ record.mobile }}</div>
-              <div v-if="record.email">{{ record.email }}</div>
-            </div>
-          </template>
-
-          <template v-if="column.key === 'type'">
-            <a-tag v-if="record.account_type === 2" color="orange">服务账号</a-tag>
-            <a-tag v-else-if="isAdminUser(record)" color="red">管理员</a-tag>
-            <a-tag v-else color="blue">普通用户</a-tag>
-          </template>
-
-          <template v-if="column.key === 'status'">
-            <a-switch 
-              :checked="record.enable === 1" 
-              @change="(checked: boolean) => handleStatusChange(record, checked ? 1 : 2)"
-              size="small"
-            />
-          </template>
-
-          <template v-if="column.key === 'roles'">
-            {{ record.roles?.length || 0 }}
-          </template>
-
-          <template v-if="column.key === 'created_at'">
-            {{ formatTime(record.created_at) }}
-          </template>
-
-          <template v-if="column.key === 'actions'">
-            <div class="action-buttons">
-              <a-button type="text" size="small" @click="handleView(record)">查看</a-button>
-              <a-button type="text" size="small" @click="handleEdit(record)">编辑信息</a-button>
-              <a-button type="text" size="small" @click="handleEPwd(record)">修改密码</a-button>
-              <a-button type="text" size="small" @click="handleRoleManagement(record)">角色</a-button>
-              <a-popconfirm title="确定要删除吗？" @confirm="handleDelete(record)">
-                <a-button type="text" size="small" danger>删除</a-button>
-              </a-popconfirm>
-            </div>
-          </template>
-        </template>
-      </a-table>
-    </div>
-
-    <!-- 查看用户详情 -->
-    <a-modal v-model:open="viewModalVisible" title="用户详情" width="700px" :footer="null">
-      <div v-if="viewUserData" class="user-detail">
-        <div class="detail-section">
-          <h3>基本信息</h3>
-          <div class="detail-grid">
-            <div class="detail-item">
-              <label>用户名</label>
-              <span>{{ viewUserData.username }}</span>
-            </div>
-            <div class="detail-item">
-              <label>真实姓名</label>
-              <span>{{ viewUserData.real_name || '-' }}</span>
-            </div>
-            <div class="detail-item">
-              <label>手机号</label>
-              <span>{{ viewUserData.mobile || '-' }}</span>
-            </div>
-            <div class="detail-item">
-              <label>邮箱</label>
-              <span>{{ viewUserData.email || '-' }}</span>
-            </div>
-            <div class="detail-item">
-              <label>飞书ID</label>
-              <span>{{ viewUserData.fei_shu_user_id || '-' }}</span>
-            </div>
-            <div class="detail-item avatar-detail">
-              <label>头像</label>
-              <div class="detail-avatar">
-                <img v-if="viewUserData.avatar" :src="getAvatarUrl(viewUserData.avatar)" :alt="viewUserData.username" @error="handleAvatarError" />
-                <div v-else class="default-avatar">{{ getInitials(viewUserData.username) }}</div>
-              </div>
-            </div>
-            <div class="detail-item">
-              <label>账号类型</label>
-              <a-tag :color="viewUserData.account_type === 2 ? 'orange' : 'blue'">
-                {{ viewUserData.account_type === 2 ? '服务账号' : '普通用户' }}
-              </a-tag>
-            </div>
-            <div class="detail-item">
-              <label>状态</label>
-              <a-tag :color="viewUserData.enable === 1 ? 'green' : 'red'">
-                {{ viewUserData.enable === 1 ? '启用' : '禁用' }}
-              </a-tag>
-            </div>
-            <div class="detail-item">
-              <label>注册时间</label>
-              <span>{{ formatTime(viewUserData.created_at) }}</span>
-            </div>
-            <div class="detail-item" v-if="viewUserData.desc">
-              <label>用户描述</label>
-              <span>{{ viewUserData.desc }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="detail-section" v-if="viewUserData.roles?.length">
-          <h3>角色信息</h3>
-          <div class="roles-list">
-            <a-tag 
-              v-for="role in viewUserData.roles" 
-              :key="role.id"
-              :color="role.status === 1 ? 'blue' : 'default'"
-            >
-              {{ role.name }}
-            </a-tag>
-          </div>
-        </div>
-      </div>
-    </a-modal>
-    <!-- 修改密码 -->
-    <a-modal
-      v-model:open="pwdModalVisible"
-      :title="modalTitle"
-      width="600px"
-      @ok="handleChangePasswordSubmit"
-      :confirm-loading="submitLoading"
-    >
-      <a-form ref="formRef" :model="formData" :rules="formChangPwdRules" layout="vertical">
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="用户名" name="username">
-              <a-input v-model:value="formData.username" :disabled=true />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item 
-              label="登录密码" 
-              name="password"
-              :rules="[{ required: true, message: '请输入密码' }]"
-            >
-              <a-input-password v-model:value="formData.password" />
-            </a-form-item>
-          </a-col>
-        </a-row>
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="新的密码" name="newPassword">
-              <a-input-password v-model:value="formData.newPassword" />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="密码确认" name="confirmPassword">
-              <a-input-password v-model:value="formData.confirmPassword" />
-            </a-form-item>
-          </a-col>
-        </a-row>
-      </a-form>
-    </a-modal>
-    <!-- 编辑用户,不修改密码 -->
-    <a-modal
-      v-model:open="modalVisible"
-      :title="modalTitle"
-      width="600px"
-      @ok="handleSubmit"
-      :confirm-loading="submitLoading"
-    >
-      <a-form ref="formRef" :model="formData" :rules="formRules" layout="vertical">
-        <a-form-item label="头像" name="avatar">
-          <div class="avatar-upload">
-            <div class="avatar-preview" :class="{ 'avatar-upload-loading': avatarUploading }">
-              <img v-if="formData.avatar" :src="getAvatarUrl(formData.avatar)" alt="用户头像" @error="handleAvatarError" />
-              <div v-else class="default-avatar">
-                <Icon icon="material-symbols:person" style="font-size: 48px;" />
-              </div>
-              <div v-if="avatarUploading" class="upload-loading">
-                <Icon icon="material-symbols:refresh" class="loading-icon" />
-              </div>
-            </div>
-            <div class="avatar-upload-actions">
-              <a-upload
-                name="avatar"
-                :show-upload-list="false"
-                action="/api/upload"
-                :before-upload="beforeAvatarUpload"
-                @change="handleAvatarChange"
-                accept="image/*"
-              >
-                <a-button :loading="avatarUploading">
-                  <Icon icon="material-symbols:upload" />
-                  上传头像
-                </a-button>
-              </a-upload>
-              <a-button v-if="formData.avatar" @click="handleRemoveAvatar" danger>
-                <Icon icon="material-symbols:delete" />
-                移除头像
-              </a-button>
-            </div>
-          </div>
-        </a-form-item>
-
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="用户名" name="username">
-              <a-input v-model:value="formData.username" :disabled="modalTitle === '编辑用户'" />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="真实姓名" name="real_name">
-              <a-input v-model:value="formData.real_name" />
-            </a-form-item>
-          </a-col>
-        </a-row>
-
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="手机号" name="mobile">
-              <a-input v-model:value="formData.mobile" />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="邮箱" name="email">
-              <a-input v-model:value="formData.email" />
-            </a-form-item>
-          </a-col>
-        </a-row>
-
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="飞书ID" name="fei_shu_user_id">
-              <a-input v-model:value="formData.fei_shu_user_id" />
-            </a-form-item>
-          </a-col>
-        </a-row>
-
-        <a-row :gutter="16" v-if="modalTitle === '新建用户'">
-          <a-col :span="12">
-            <a-form-item label="密码" name="password">
-              <a-input-password v-model:value="formData.password" />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="确认密码" name="confirmPassword">
-              <a-input-password v-model:value="formData.confirmPassword" />
-            </a-form-item>
-          </a-col>
-        </a-row>
-
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="账号类型" name="account_type">
-              <a-select v-model:value="formData.account_type">
-                <a-select-option :value="1">普通用户</a-select-option>
-                <a-select-option :value="2">服务账号</a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="状态" name="enable">
-              <a-select v-model:value="formData.enable">
-                <a-select-option :value="1">启用</a-select-option>
-                <a-select-option :value="2">禁用</a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-        </a-row>
-
-        <a-form-item label="用户描述" name="desc">
-          <a-textarea v-model:value="formData.desc" :rows="3" placeholder="请输入用户描述信息" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <!-- 角色管理 -->
-    <a-modal v-model:open="roleModalVisible" title="角色管理" width="700px" :footer="null">
-      <div v-if="currentUser">
-        <div class="role-header">
-          <h4>{{ currentUser.real_name || currentUser.username }} 的角色</h4>
-        </div>
-
-        <a-tabs>
-          <a-tab-pane key="assigned" tab="已分配角色">
-            <div class="role-list">
-              <div v-if="assignedRoles.length === 0" class="empty-state">
-                暂无已分配的角色
-              </div>
-              <div v-for="role in assignedRoles" :key="role.id" class="role-item">
-                <div class="role-info">
-                  <div class="role-name">{{ role.name }}</div>
-                  <div class="role-desc">{{ role.description || '暂无描述' }}</div>
-                </div>
-                <a-button type="text" danger size="small" @click="handleRevokeRole(role)">移除</a-button>
-              </div>
-            </div>
-          </a-tab-pane>
-
-          <a-tab-pane key="available" tab="可分配角色">
-            <div class="role-list">
-              <div v-if="availableRoles.length === 0" class="empty-state">
-                暂无可分配的角色
-              </div>
-              <div v-for="role in availableRoles" :key="role.id" class="role-item">
-                <div class="role-info">
-                  <div class="role-name">{{ role.name }}</div>
-                  <div class="role-desc">{{ role.description || '暂无描述' }}</div>
-                </div>
-                <a-button type="primary" size="small" @click="handleAssignRole(role)">分配</a-button>
-              </div>
-            </div>
-          </a-tab-pane>
-        </a-tabs>
-      </div>
-    </a-modal>
-  </div>
-</template>
-
 <script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { ref, reactive, computed, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import type { FormInstance } from 'ant-design-vue';
 
-import { 
-  getUserList, 
-  registerApi, 
-  updateUserInfo, 
+import {
+  getUserList,
+  registerApi,
+  updateUserInfo,
   deleteUser,
   getUserDetailApi,
   getUserStatistics,
@@ -425,13 +16,13 @@ import {
   type ChangePasswordReq,
   type UserSignUpReq,
   type UpdateProfileReq,
-  type GetUserListReq
+  type GetUserListReq,
 } from '#/api/core/system/user';
-import { 
+import {
   assignRolesToUserApi,
   revokeRolesFromUserApi,
   getUserRolesApi,
-  listRolesApi
+  listRolesApi,
 } from '#/api/core/system/system';
 
 // 类型定义
@@ -475,7 +66,7 @@ const tableColumns = [
   { title: '状态', key: 'status', width: 80, align: 'center' },
   { title: '角色数', key: 'roles', width: 80, align: 'center' },
   { title: '注册时间', key: 'created_at', width: 120 },
-  { title: '操作', key: 'actions', width: 160, fixed: 'right' }
+  { title: '操作', key: 'actions', width: 160, fixed: 'right' },
 ];
 
 // 状态管理
@@ -496,14 +87,14 @@ const assignedRoles = ref<UserRole[]>([]);
 const viewUserData = ref<UserInfo | null>(null);
 const userStatistics = ref<UserStatistics>({
   admin_count: 0,
-  active_user_count: 0
+  active_user_count: 0,
 });
 
 // 搜索参数
 const searchParams = reactive({
   search: '',
   enable: undefined as number | undefined,
-  account_type: undefined as number | undefined
+  account_type: undefined as number | undefined,
 });
 
 // 分页配置
@@ -514,8 +105,8 @@ const paginationConfig = reactive({
   showSizeChanger: true,
   showQuickJumper: true,
   pageSizeOptions: ['10', '20', '50', '100'],
-  showTotal: (total: number, range: [number, number]) => 
-    `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
+  showTotal: (total: number, range: [number, number]) =>
+    `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
 });
 
 // 表单数据初始化
@@ -533,7 +124,7 @@ const initFormData = () => ({
   home_path: '',
   id: 0,
   avatar: '',
-  fei_shu_user_id: ''
+  fei_shu_user_id: '',
 });
 
 const formData = reactive(initFormData());
@@ -543,13 +134,13 @@ const formRules = computed(() => {
   const rules: any = {
     username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
     real_name: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
-    mobile: [{ required: true, message: '请输入手机号', trigger: 'blur' }]
+    mobile: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
   };
 
   if (modalTitle.value === '新建用户') {
     rules.password = [
       { required: true, message: '请输入密码', trigger: 'blur' },
-      { min: 6, message: '密码长度至少6位', trigger: 'blur' }
+      { min: 6, message: '密码长度至少6位', trigger: 'blur' },
     ];
     rules.confirmPassword = [
       { required: true, message: '请确认密码', trigger: 'blur' },
@@ -560,8 +151,8 @@ const formRules = computed(() => {
           }
           return Promise.resolve();
         },
-        trigger: 'blur'
-      }
+        trigger: 'blur',
+      },
     ];
   }
 
@@ -571,17 +162,17 @@ const formRules = computed(() => {
 // 修改密码表单验证规则
 const formChangPwdRules = computed(() => {
   const rules: any = {
-    password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+    password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
   };
 
   if (modalTitle.value === '修改密码') {
     rules.password = [
       { required: true, message: '请输入密码', trigger: 'blur' },
-      { min: 6, message: '密码长度至少6位', trigger: 'blur' }
+      { min: 6, message: '密码长度至少6位', trigger: 'blur' },
     ];
     rules.newPassword = [
       { required: true, message: '请输入密码', trigger: 'blur' },
-      { min: 6, message: '密码长度至少6位', trigger: 'blur' }
+      { min: 6, message: '密码长度至少6位', trigger: 'blur' },
     ];
 
     rules.confirmPassword = [
@@ -593,8 +184,8 @@ const formChangPwdRules = computed(() => {
           }
           return Promise.resolve();
         },
-        trigger: 'blur'
-      }
+        trigger: 'blur',
+      },
     ];
   }
 
@@ -604,8 +195,8 @@ const formChangPwdRules = computed(() => {
 // 计算属性
 const availableRoles = computed(() => {
   if (!currentUser.value) return [];
-  const assignedIds = assignedRoles.value.map(role => role.id);
-  return roleList.value.filter(role => !assignedIds.includes(role.id));
+  const assignedIds = assignedRoles.value.map((role) => role.id);
+  return roleList.value.filter((role) => !assignedIds.includes(role.id));
 });
 
 // 头像相关函数
@@ -629,7 +220,11 @@ const handleAvatarError = (event: Event) => {
 };
 
 const beforeAvatarUpload = (file: File) => {
-  const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/gif' || file.type === 'image/webp';
+  const isJpgOrPng =
+    file.type === 'image/jpeg' ||
+    file.type === 'image/png' ||
+    file.type === 'image/gif' ||
+    file.type === 'image/webp';
   if (!isJpgOrPng) {
     message.error('只能上传 JPG/PNG/GIF/WebP 格式的图片!');
     return false;
@@ -668,7 +263,11 @@ const handleAvatarChange = (info: any) => {
 
   if (info.file.status === 'done') {
     avatarUploading.value = false;
-    if (info.file.response && info.file.response.data && info.file.response.data.url) {
+    if (
+      info.file.response &&
+      info.file.response.data &&
+      info.file.response.data.url
+    ) {
       formData.avatar = info.file.response.data.url;
       message.success('头像上传成功');
     } else if (info.file.response && info.file.response.url) {
@@ -693,8 +292,9 @@ const handleRemoveAvatar = () => {
 // 工具函数
 const formatTime = (timestamp: any) => {
   if (!timestamp) return '-';
-  return new Date(typeof timestamp === 'number' ? timestamp * 1000 : timestamp)
-    .toLocaleDateString('zh-CN');
+  return new Date(
+    typeof timestamp === 'number' ? timestamp * 1000 : timestamp,
+  ).toLocaleDateString('zh-CN');
 };
 
 const isAdminUser = (user: UserInfo) => {
@@ -710,7 +310,7 @@ const fetchUserList = async () => {
       size: paginationConfig.pageSize,
       search: searchParams.search || '',
       enable: 0,
-      account_type: 0
+      account_type: 0,
     };
 
     if (searchParams.enable === 1 || searchParams.enable === 2) {
@@ -725,7 +325,6 @@ const fetchUserList = async () => {
 
     userList.value = response.items || [];
     paginationConfig.total = response.total || 0;
-
   } catch (error: any) {
     message.error(error.message || '获取用户列表失败');
     userList.value = [];
@@ -743,15 +342,18 @@ const fetchRoleList = async () => {
     let hasMoreData = true;
 
     while (hasMoreData) {
-      const response = await listRolesApi({ 
-        page: currentPage, 
-        size: pageSize 
+      const response = await listRolesApi({
+        page: currentPage,
+        size: pageSize,
       });
 
       if (response && response.items && response.items.length > 0) {
         allRoles = [...allRoles, ...response.items];
 
-        if (response.items.length < pageSize || allRoles.length >= (response.total || 0)) {
+        if (
+          response.items.length < pageSize ||
+          allRoles.length >= (response.total || 0)
+        ) {
           hasMoreData = false;
         } else {
           currentPage++;
@@ -786,7 +388,7 @@ const fetchUserStatistics = async () => {
     // 设置默认值避免显示undefined
     userStatistics.value = {
       admin_count: 0,
-      active_user_count: 0
+      active_user_count: 0,
     };
   }
 };
@@ -832,9 +434,9 @@ const handleEPwd = async (user: UserInfo) => {
     });
     pwdModalVisible.value = true;
   } catch (error: any) {
-    message.error(error.message || '获取用户数据失败')
+    message.error(error.message || '获取用户数据失败');
   }
-}
+};
 
 const handleEdit = async (user: UserInfo) => {
   try {
@@ -907,7 +509,7 @@ const handleStatusChange = async (user: UserInfo, newStatus: number) => {
       fei_shu_user_id: user.fei_shu_user_id || '',
       home_path: user.home_path || '',
       email: user.email || '',
-      avatar: user.avatar || ''
+      avatar: user.avatar || '',
     };
 
     await updateUserInfo(updateData);
@@ -933,19 +535,19 @@ const handleChangePasswordSubmit = async () => {
       password: formData.password,
       new_password: formData.newPassword,
       confirm_password: formData.confirmPassword,
-    }
+    };
     //message.info(JSON.stringify(changePasswordData))
     await changePassword(changePasswordData);
     message.success('更新成功');
     pwdModalVisible.value = false;
-  }  catch (error: any) {
+  } catch (error: any) {
     if (!error.errorFields) {
       message.error(error.message || '操作失败');
     }
   } finally {
     submitLoading.value = false;
   }
-}
+};
 
 const handleSubmit = async () => {
   try {
@@ -962,7 +564,7 @@ const handleSubmit = async () => {
         account_type: formData.account_type as 1 | 2,
         enable: formData.enable as 1 | 2,
         home_path: formData.home_path,
-        fei_shu_user_id: formData.fei_shu_user_id || ''
+        fei_shu_user_id: formData.fei_shu_user_id || '',
       };
 
       // 添加可选字段
@@ -992,7 +594,7 @@ const handleSubmit = async () => {
         home_path: formData.home_path,
         email: formData.email || '',
         fei_shu_user_id: formData.fei_shu_user_id || '',
-        avatar: formData.avatar || ''
+        avatar: formData.avatar || '',
       };
       await updateUserInfo(updateData);
       message.success('更新成功');
@@ -1014,7 +616,7 @@ const handleAssignRole = async (role: UserRole) => {
   try {
     await assignRolesToUserApi({
       user_id: currentUser.value!.id,
-      role_ids: [role.id]
+      role_ids: [role.id],
     });
     message.success('角色分配成功');
     await fetchUserRoles(currentUser.value!.id);
@@ -1029,7 +631,7 @@ const handleRevokeRole = async (role: UserRole) => {
   try {
     await revokeRolesFromUserApi({
       user_id: currentUser.value!.id,
-      role_ids: [role.id]
+      role_ids: [role.id],
     });
     message.success('角色移除成功');
     await fetchUserRoles(currentUser.value!.id);
@@ -1048,43 +650,522 @@ onMounted(() => {
 });
 </script>
 
+<template>
+  <OpsPage title="用户管理">
+    <!-- 页面头部 -->
+    <template #actions>
+      <a-button @click="handleRefresh">
+        <Icon icon="material-symbols:refresh" />
+        刷新
+      </a-button>
+      <a-button type="primary" @click="handleAdd">
+        <Icon icon="material-symbols:add" />
+        新建用户
+      </a-button>
+    </template>
+
+    <!-- 统计卡片 -->
+    <template #summary
+      ><div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number">{{ paginationConfig.total }}</div>
+          <div class="stat-label">总用户数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">
+            {{ userStatistics.active_user_count || 0 }}
+          </div>
+          <div class="stat-label">活跃用户</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ userStatistics.admin_count || 0 }}</div>
+          <div class="stat-label">管理员</div>
+        </div>
+      </div></template
+    >
+
+    <!-- 搜索筛选区域 -->
+    <template #filters
+      ><div class="ops-filter-row">
+        <div class="search-left">
+          <a-input
+            v-model:value="searchParams.search"
+            placeholder="搜索用户名"
+            aria-label="搜索用户"
+            allowClear
+            @pressEnter="handleSearch"
+            class="search-input"
+          >
+            <template #prefix>
+              <Icon icon="material-symbols:search" />
+            </template>
+          </a-input>
+
+          <a-select
+            v-model:value="searchParams.enable"
+            placeholder="状态筛选"
+            allowClear
+            class="status-select"
+          >
+            <a-select-option :value="1">启用</a-select-option>
+            <a-select-option :value="2">禁用</a-select-option>
+          </a-select>
+
+          <a-select
+            v-model:value="searchParams.account_type"
+            placeholder="账号类型"
+            allowClear
+            class="type-select"
+          >
+            <a-select-option :value="1">普通用户</a-select-option>
+            <a-select-option :value="2">服务账号</a-select-option>
+          </a-select>
+        </div>
+
+        <div class="search-right">
+          <a-button type="primary" @click="handleSearch">搜索</a-button>
+          <a-button @click="handleReset">重置</a-button>
+        </div>
+      </div></template
+    >
+
+    <!-- 用户表格 -->
+    <div class="table-container">
+      <a-table
+        :scroll="{ x: 'max-content' }"
+        :columns="tableColumns"
+        :data-source="userList"
+        :pagination="paginationConfig"
+        :loading="loading"
+        row-key="id"
+        size="middle"
+        @change="handleTableChange"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'user'">
+            <div class="user-info">
+              <div class="user-avatar">
+                <img
+                  v-if="record.avatar"
+                  :src="getAvatarUrl(record.avatar)"
+                  :alt="record.username"
+                  @error="handleAvatarError"
+                />
+                <div v-else class="default-avatar">
+                  {{ getInitials(record.username) }}
+                </div>
+              </div>
+              <div>
+                <div class="user-name">
+                  {{ record.real_name || record.username }}
+                </div>
+                <div class="user-username">{{ record.username }}</div>
+              </div>
+            </div>
+          </template>
+
+          <template v-if="column.key === 'contact'">
+            <div class="contact-info">
+              <div v-if="record.mobile">{{ record.mobile }}</div>
+              <div v-if="record.email">{{ record.email }}</div>
+            </div>
+          </template>
+
+          <template v-if="column.key === 'type'">
+            <a-tag v-if="record.account_type === 2" color="orange"
+              >服务账号</a-tag
+            >
+            <a-tag v-else-if="isAdminUser(record)" color="red">管理员</a-tag>
+            <a-tag v-else color="blue">普通用户</a-tag>
+          </template>
+
+          <template v-if="column.key === 'status'">
+            <a-switch
+              :checked="record.enable === 1"
+              @change="
+                (checked: boolean) =>
+                  handleStatusChange(record, checked ? 1 : 2)
+              "
+              size="small"
+            />
+          </template>
+
+          <template v-if="column.key === 'roles'">
+            {{ record.roles?.length || 0 }}
+          </template>
+
+          <template v-if="column.key === 'created_at'">
+            {{ formatTime(record.created_at) }}
+          </template>
+
+          <template v-if="column.key === 'actions'">
+            <div class="action-buttons">
+              <a-button type="text" size="small" @click="handleView(record)"
+                >查看</a-button
+              >
+              <a-button type="text" size="small" @click="handleEdit(record)"
+                >编辑信息</a-button
+              >
+              <a-button type="text" size="small" @click="handleEPwd(record)"
+                >修改密码</a-button
+              >
+              <a-button
+                type="text"
+                size="small"
+                @click="handleRoleManagement(record)"
+                >角色</a-button
+              >
+              <a-popconfirm
+                title="确定要删除吗？"
+                @confirm="handleDelete(record)"
+              >
+                <a-button type="text" size="small" danger>删除</a-button>
+              </a-popconfirm>
+            </div>
+          </template>
+        </template>
+      </a-table>
+    </div>
+
+    <!-- 查看用户详情 -->
+    <a-modal
+      v-model:open="viewModalVisible"
+      title="用户详情"
+      width="700px"
+      :footer="null"
+    >
+      <div v-if="viewUserData" class="user-detail">
+        <div class="detail-section">
+          <h3>基本信息</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>用户名</label>
+              <span>{{ viewUserData.username }}</span>
+            </div>
+            <div class="detail-item">
+              <label>真实姓名</label>
+              <span>{{ viewUserData.real_name || '-' }}</span>
+            </div>
+            <div class="detail-item">
+              <label>手机号</label>
+              <span>{{ viewUserData.mobile || '-' }}</span>
+            </div>
+            <div class="detail-item">
+              <label>邮箱</label>
+              <span>{{ viewUserData.email || '-' }}</span>
+            </div>
+            <div class="detail-item">
+              <label>飞书ID</label>
+              <span>{{ viewUserData.fei_shu_user_id || '-' }}</span>
+            </div>
+            <div class="detail-item avatar-detail">
+              <label>头像</label>
+              <div class="detail-avatar">
+                <img
+                  v-if="viewUserData.avatar"
+                  :src="getAvatarUrl(viewUserData.avatar)"
+                  :alt="viewUserData.username"
+                  @error="handleAvatarError"
+                />
+                <div v-else class="default-avatar">
+                  {{ getInitials(viewUserData.username) }}
+                </div>
+              </div>
+            </div>
+            <div class="detail-item">
+              <label>账号类型</label>
+              <a-tag
+                :color="viewUserData.account_type === 2 ? 'orange' : 'blue'"
+              >
+                {{ viewUserData.account_type === 2 ? '服务账号' : '普通用户' }}
+              </a-tag>
+            </div>
+            <div class="detail-item">
+              <label>状态</label>
+              <a-tag :color="viewUserData.enable === 1 ? 'green' : 'red'">
+                {{ viewUserData.enable === 1 ? '启用' : '禁用' }}
+              </a-tag>
+            </div>
+            <div class="detail-item">
+              <label>注册时间</label>
+              <span>{{ formatTime(viewUserData.created_at) }}</span>
+            </div>
+            <div class="detail-item" v-if="viewUserData.desc">
+              <label>用户描述</label>
+              <span>{{ viewUserData.desc }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section" v-if="viewUserData.roles?.length">
+          <h3>角色信息</h3>
+          <div class="roles-list">
+            <a-tag
+              v-for="role in viewUserData.roles"
+              :key="role.id"
+              :color="role.status === 1 ? 'blue' : 'default'"
+            >
+              {{ role.name }}
+            </a-tag>
+          </div>
+        </div>
+      </div>
+    </a-modal>
+    <!-- 修改密码 -->
+    <a-modal
+      v-model:open="pwdModalVisible"
+      :title="modalTitle"
+      width="600px"
+      @ok="handleChangePasswordSubmit"
+      :confirm-loading="submitLoading"
+    >
+      <a-form
+        ref="formRef"
+        :model="formData"
+        :rules="formChangPwdRules"
+        layout="vertical"
+      >
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="用户名" name="username">
+              <a-input v-model:value="formData.username" :disabled="true" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item
+              label="登录密码"
+              name="password"
+              :rules="[{ required: true, message: '请输入密码' }]"
+            >
+              <a-input-password v-model:value="formData.password" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="新的密码" name="newPassword">
+              <a-input-password v-model:value="formData.newPassword" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="密码确认" name="confirmPassword">
+              <a-input-password v-model:value="formData.confirmPassword" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+      </a-form>
+    </a-modal>
+    <!-- 编辑用户,不修改密码 -->
+    <a-modal
+      v-model:open="modalVisible"
+      :title="modalTitle"
+      width="600px"
+      @ok="handleSubmit"
+      :confirm-loading="submitLoading"
+    >
+      <a-form
+        ref="formRef"
+        :model="formData"
+        :rules="formRules"
+        layout="vertical"
+      >
+        <a-form-item label="头像" name="avatar">
+          <div class="avatar-upload">
+            <div
+              class="avatar-preview"
+              :class="{ 'avatar-upload-loading': avatarUploading }"
+            >
+              <img
+                v-if="formData.avatar"
+                :src="getAvatarUrl(formData.avatar)"
+                alt="用户头像"
+                @error="handleAvatarError"
+              />
+              <div v-else class="default-avatar">
+                <Icon icon="material-symbols:person" style="font-size: 48px" />
+              </div>
+              <div v-if="avatarUploading" class="upload-loading">
+                <Icon icon="material-symbols:refresh" class="loading-icon" />
+              </div>
+            </div>
+            <div class="avatar-upload-actions">
+              <a-upload
+                name="avatar"
+                :show-upload-list="false"
+                action="/api/upload"
+                :before-upload="beforeAvatarUpload"
+                @change="handleAvatarChange"
+                accept="image/*"
+              >
+                <a-button :loading="avatarUploading">
+                  <Icon icon="material-symbols:upload" />
+                  上传头像
+                </a-button>
+              </a-upload>
+              <a-button
+                v-if="formData.avatar"
+                @click="handleRemoveAvatar"
+                danger
+              >
+                <Icon icon="material-symbols:delete" />
+                移除头像
+              </a-button>
+            </div>
+          </div>
+        </a-form-item>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="用户名" name="username">
+              <a-input
+                v-model:value="formData.username"
+                :disabled="modalTitle === '编辑用户'"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="真实姓名" name="real_name">
+              <a-input v-model:value="formData.real_name" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="手机号" name="mobile">
+              <a-input v-model:value="formData.mobile" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="邮箱" name="email">
+              <a-input v-model:value="formData.email" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="飞书ID" name="fei_shu_user_id">
+              <a-input v-model:value="formData.fei_shu_user_id" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16" v-if="modalTitle === '新建用户'">
+          <a-col :span="12">
+            <a-form-item label="密码" name="password">
+              <a-input-password v-model:value="formData.password" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="确认密码" name="confirmPassword">
+              <a-input-password v-model:value="formData.confirmPassword" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="账号类型" name="account_type">
+              <a-select v-model:value="formData.account_type">
+                <a-select-option :value="1">普通用户</a-select-option>
+                <a-select-option :value="2">服务账号</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="状态" name="enable">
+              <a-select v-model:value="formData.enable">
+                <a-select-option :value="1">启用</a-select-option>
+                <a-select-option :value="2">禁用</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-form-item label="用户描述" name="desc">
+          <a-textarea
+            v-model:value="formData.desc"
+            :rows="3"
+            placeholder="请输入用户描述信息"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 角色管理 -->
+    <a-modal
+      v-model:open="roleModalVisible"
+      title="角色管理"
+      width="700px"
+      :footer="null"
+    >
+      <div v-if="currentUser">
+        <div class="role-header">
+          <h4>{{ currentUser.real_name || currentUser.username }} 的角色</h4>
+        </div>
+
+        <a-tabs>
+          <a-tab-pane key="assigned" tab="已分配角色">
+            <div class="role-list">
+              <div v-if="assignedRoles.length === 0" class="empty-state">
+                暂无已分配的角色
+              </div>
+              <div
+                v-for="role in assignedRoles"
+                :key="role.id"
+                class="role-item"
+              >
+                <div class="role-info">
+                  <div class="role-name">{{ role.name }}</div>
+                  <div class="role-desc">
+                    {{ role.description || '暂无描述' }}
+                  </div>
+                </div>
+                <a-button
+                  type="text"
+                  danger
+                  size="small"
+                  @click="handleRevokeRole(role)"
+                  >移除</a-button
+                >
+              </div>
+            </div>
+          </a-tab-pane>
+
+          <a-tab-pane key="available" tab="可分配角色">
+            <div class="role-list">
+              <div v-if="availableRoles.length === 0" class="empty-state">
+                暂无可分配的角色
+              </div>
+              <div
+                v-for="role in availableRoles"
+                :key="role.id"
+                class="role-item"
+              >
+                <div class="role-info">
+                  <div class="role-name">{{ role.name }}</div>
+                  <div class="role-desc">
+                    {{ role.description || '暂无描述' }}
+                  </div>
+                </div>
+                <a-button
+                  type="primary"
+                  size="small"
+                  @click="handleAssignRole(role)"
+                  >分配</a-button
+                >
+              </div>
+            </div>
+          </a-tab-pane>
+        </a-tabs>
+      </div>
+    </a-modal>
+  </OpsPage>
+</template>
+
 <style scoped>
 /* 原有样式保持不变 */
-.user-management {
-  padding: 20px;
-  background: var(--ops-ground);
-  min-height: 100vh;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 20px;
-  background: var(--ops-surface);
-  border-radius: var(--ops-radius);
-  border: 1px solid var(--ops-border);
-}
-
-.page-header h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--ops-ink);
-}
-
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.header-actions .ant-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1112,18 +1193,6 @@ onMounted(() => {
   color: var(--ops-muted);
 }
 
-.search-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding: 20px;
-  background: var(--ops-surface);
-  border-radius: var(--ops-radius);
-  border: 1px solid var(--ops-border);
-}
-
 .search-left {
   display: flex;
   gap: 12px;
@@ -1148,6 +1217,7 @@ onMounted(() => {
 }
 
 .table-container {
+  min-width: 0;
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   border: 1px solid var(--ops-border);
@@ -1462,12 +1532,6 @@ onMounted(() => {
 }
 
 @media (max-width: 1200px) {
-  .search-section {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-  }
-
   .search-left {
     flex-direction: column;
     gap: 12px;
@@ -1488,21 +1552,6 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .user-management {
-    padding: 12px;
-  }
-
-  .page-header {
-    flex-direction: column;
-    gap: 16px;
-    text-align: center;
-  }
-
-  .header-actions {
-    width: 100%;
-    justify-content: center;
-  }
-
   .stats-grid {
     grid-template-columns: 1fr;
   }

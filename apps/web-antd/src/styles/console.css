@@ -7,6 +7,11 @@
   --ops-accent: hsl(var(--primary));
   --ops-radius: 2px;
   --ops-duration: 120ms;
+  --ops-space-sm: 8px;
+  --ops-space-md: 12px;
+  --ops-space-lg: 16px;
+  --ops-space-xl: 24px;
+  --ops-font-data: SFMono-Regular, Consolas, monospace;
 }
 body { font-variant-numeric: tabular-nums; }
 :focus-visible { outline: 2px solid var(--ops-accent); outline-offset: 3px; }
@@ -16,7 +21,7 @@ body { font-variant-numeric: tabular-nums; }
 .ant-table-wrapper { max-width: 100%; overflow-x: auto; }
 .ant-table-cell { overflow-wrap: anywhere; }
 .ant-empty-description { color: var(--ops-muted); }
-code, pre { font-family: SFMono-Regular, Consolas, monospace; }
+code, pre { font-family: var(--ops-font-data); }
 @media (pointer: coarse) { .ant-btn, .ant-input, .ant-select-selector { min-height: 40px; } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }

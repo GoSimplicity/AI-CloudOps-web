@@ -1,126 +1,598 @@
+<script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { downloadCsv } from '#/utils/export-csv';
+import { ref, reactive, onMounted, computed } from 'vue';
+import { message } from 'ant-design-vue';
+import { Icon } from '@iconify/vue';
+import type { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
+
+import {
+  listAuditLogsApi,
+  getAuditLogDetailApi,
+  searchAuditLogsApi,
+  getAuditStatisticsApi,
+  getAuditTypesApi,
+  deleteAuditLogApi,
+  batchDeleteLogsApi,
+  type AuditLog,
+  type AuditStatistics,
+  type AuditTypeInfo,
+  type ListAuditLogsRequest,
+  type SearchAuditLogsRequest,
+  type AdvancedSearchOptions,
+} from '#/api/core/system/audit';
+
+import { getUserDetailApi } from '#/api/core/system/user';
+
+// 扩展审计日志类型，包含用户信息
+interface AuditLogWithUser extends AuditLog {
+  user_info?: {
+    id: number;
+    username: string;
+    real_name?: string;
+    avatar?: string;
+  };
+}
+
+// 表格列配置
+const tableColumns = [
+  { title: '时间', key: 'time', width: 150 },
+  { title: '用户/Trace', key: 'user', width: 180 },
+  { title: '操作类型', key: 'operation', width: 120, align: 'center' },
+  { title: '请求信息', key: 'request', width: 200 },
+  { title: '状态码', key: 'status', width: 80, align: 'center' },
+  { title: '耗时', key: 'duration', width: 80, align: 'center' },
+  { title: 'IP地址', key: 'ip', width: 120 },
+  { title: '操作', key: 'actions', width: 120, fixed: 'right' },
+];
+
+// 状态管理
+const loading = ref(false);
+const viewModalVisible = ref(false);
+const advancedSearchVisible = ref(false);
+
+// 数据
+const auditLogList = ref<AuditLogWithUser[]>([]);
+const viewLogData = ref<AuditLogWithUser | null>(null);
+const auditStatistics = ref<AuditStatistics>({
+  total_count: 0,
+  today_count: 0,
+  error_count: 0,
+  avg_duration: 0,
+  type_distribution: [],
+  status_distribution: [],
+  recent_activity: [],
+  hourly_trend: [],
+});
+const auditTypes = ref<AuditTypeInfo[]>([]);
+
+const selectedRowKeys = ref<number[]>([]);
+
+// 用户信息缓存
+const userInfoCache = ref<Map<number, any>>(new Map());
+
+// 时间选择器
+const startTime = ref<Dayjs>();
+const endTime = ref<Dayjs>();
+
+// 搜索参数
+const searchParams = reactive({
+  search: '',
+  operation_type: undefined as string | undefined,
+  target_type: undefined as string | undefined,
+  status_code: undefined as number | undefined,
+});
+
+// 高级搜索参数
+const advancedSearchParams = reactive<AdvancedSearchOptions>({
+  ip_address_list: [],
+  status_code_list: [],
+  duration_min: undefined,
+  duration_max: undefined,
+  has_error: false,
+  endpoint_pattern: '',
+});
+
+// 分页配置
+const paginationConfig = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  pageSizeOptions: ['10', '20', '50', '100'],
+  showTotal: (total: number, range: [number, number]) =>
+    `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+});
+
+// 计算属性
+const getUniqueTargetTypes = computed(() => {
+  const types = new Set<string>();
+  auditLogList.value.forEach((log) => {
+    if (log.target_type) {
+      types.add(log.target_type);
+    }
+  });
+  return Array.from(types);
+});
+
+// 工具函数
+const formatTime = (timestamp: string) => {
+  if (!timestamp) return '-';
+  return dayjs(timestamp).format('YYYY-MM-DD HH:mm:ss');
+};
+
+const formatJSON = (obj: any) => {
+  if (!obj) return '无数据';
+  try {
+    if (typeof obj === 'string') {
+      return JSON.stringify(JSON.parse(obj), null, 2);
+    }
+    return JSON.stringify(obj, null, 2);
+  } catch {
+    return String(obj);
+  }
+};
+
+// 获取用户信息
+const getUserInfo = async (userId: number) => {
+  if (!Number.isInteger(userId) || userId <= 0) return null;
+  // 检查缓存
+  if (userInfoCache.value.has(userId)) {
+    return userInfoCache.value.get(userId);
+  }
+
+  try {
+    const userInfo = await getUserDetailApi(userId);
+    // 缓存用户信息
+    userInfoCache.value.set(userId, userInfo);
+    return userInfo;
+  } catch (error) {
+    return null;
+  }
+};
+
+// 获取用户显示名称
+const getUserDisplayName = (log: AuditLogWithUser) => {
+  if (!log.user_id) return '系统或未认证请求';
+  if (log.user_info?.real_name) {
+    return log.user_info.real_name;
+  }
+  if (log.user_info?.username) {
+    return log.user_info.username;
+  }
+  return `用户 ${log.user_id}`;
+};
+
+const getOperationColor = (operation: string) => {
+  const colorMap: Record<string, string> = {
+    CREATE: 'green',
+    UPDATE: 'blue',
+    DELETE: 'red',
+    VIEW: 'default',
+    LOGIN: 'purple',
+    LOGOUT: 'orange',
+    EXPORT: 'cyan',
+    IMPORT: 'gold',
+  };
+  return colorMap[operation] || 'default';
+};
+
+const getMethodColor = (method: string) => {
+  const colorMap: Record<string, string> = {
+    GET: 'blue',
+    POST: 'green',
+    PUT: 'orange',
+    DELETE: 'red',
+    PATCH: 'cyan',
+  };
+  return colorMap[method] || 'default';
+};
+
+const getStatusColor = (status: number) => {
+  if (status >= 200 && status < 300) return 'green';
+  if (status >= 300 && status < 400) return 'blue';
+  if (status >= 400 && status < 500) return 'orange';
+  if (status >= 500) return 'red';
+  return 'default';
+};
+
+// API 调用函数
+const fetchAuditLogs = async () => {
+  loading.value = true;
+  try {
+    const params: ListAuditLogsRequest = {
+      page: paginationConfig.current,
+      size: paginationConfig.pageSize,
+    };
+
+    // 添加搜索条件
+    if (searchParams.search) {
+      params.search = searchParams.search;
+    }
+    if (searchParams.operation_type) {
+      params.operation_type = searchParams.operation_type;
+    }
+    if (searchParams.target_type) {
+      params.target_type = searchParams.target_type;
+    }
+    if (searchParams.status_code) {
+      params.status_code = searchParams.status_code;
+    }
+    if (startTime.value) {
+      params.start_time = startTime.value.unix();
+    }
+    if (endTime.value) {
+      params.end_time = endTime.value.unix();
+    }
+
+    const response = await listAuditLogsApi(params);
+
+    const logs = response.items || [];
+
+    // 获取用户信息
+    const logsWithUserInfo = await Promise.all(
+      logs.map(async (log: AuditLog) => {
+        const userInfo = await getUserInfo(log.user_id);
+        return {
+          ...log,
+          user_info: userInfo,
+        } as AuditLogWithUser;
+      }),
+    );
+
+    auditLogList.value = logsWithUserInfo;
+    paginationConfig.total = response.total || 0;
+  } catch (error: any) {
+    message.error(error.message || '获取审计日志失败');
+    auditLogList.value = [];
+    paginationConfig.total = 0;
+  } finally {
+    loading.value = false;
+  }
+};
+
+const fetchAuditStatistics = async () => {
+  try {
+    const response = await getAuditStatisticsApi();
+    auditStatistics.value = response;
+  } catch (error: any) {
+    message.error(error.message || '获取统计数据失败');
+  }
+};
+
+const fetchAuditTypes = async () => {
+  try {
+    const response = await getAuditTypesApi();
+    auditTypes.value = response;
+  } catch (error: any) {}
+};
+
+const fetchLogDetail = async (id: number) => {
+  try {
+    const response = await getAuditLogDetailApi(id);
+    const log = response as AuditLog;
+
+    // 获取用户信息
+    const userInfo = await getUserInfo(log.user_id);
+    const logWithUserInfo = {
+      ...log,
+      user_info: userInfo,
+    } as AuditLogWithUser;
+
+    viewLogData.value = logWithUserInfo;
+    viewModalVisible.value = true;
+  } catch (error: any) {
+    message.error(error.message || '获取日志详情失败');
+  }
+};
+
+// 高级搜索
+const performAdvancedSearch = async () => {
+  loading.value = true;
+  try {
+    const params: SearchAuditLogsRequest = {
+      page: paginationConfig.current,
+      size: paginationConfig.pageSize,
+      advanced: { ...advancedSearchParams },
+    };
+
+    // 添加基础搜索条件
+    if (searchParams.search) {
+      params.search = searchParams.search;
+    }
+    if (searchParams.operation_type) {
+      params.operation_type = searchParams.operation_type;
+    }
+    if (searchParams.target_type) {
+      params.target_type = searchParams.target_type;
+    }
+    if (searchParams.status_code) {
+      params.status_code = searchParams.status_code;
+    }
+    if (startTime.value) {
+      params.start_time = startTime.value.unix();
+    }
+    if (endTime.value) {
+      params.end_time = endTime.value.unix();
+    }
+
+    const response = await searchAuditLogsApi(params);
+
+    const logs = response.items || [];
+
+    // 获取用户信息
+    const logsWithUserInfo = await Promise.all(
+      logs.map(async (log: AuditLog) => {
+        const userInfo = await getUserInfo(log.user_id);
+        return {
+          ...log,
+          user_info: userInfo,
+        } as AuditLogWithUser;
+      }),
+    );
+
+    auditLogList.value = logsWithUserInfo;
+    paginationConfig.total = response.total || 0;
+  } catch (error: any) {
+    message.error(error.message || '高级搜索失败');
+    auditLogList.value = [];
+    paginationConfig.total = 0;
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 事件处理
+const handleSearch = () => {
+  paginationConfig.current = 1;
+  fetchAuditLogs();
+};
+
+const handleReset = () => {
+  searchParams.search = '';
+  searchParams.operation_type = undefined;
+  searchParams.target_type = undefined;
+  searchParams.status_code = undefined;
+  startTime.value = undefined;
+  endTime.value = undefined;
+
+  // 重置高级搜索参数
+  Object.assign(advancedSearchParams, {
+    ip_address_list: [],
+    status_code_list: [],
+    duration_min: undefined,
+    duration_max: undefined,
+    has_error: false,
+    endpoint_pattern: '',
+  });
+
+  paginationConfig.current = 1;
+  fetchAuditLogs();
+};
+
+const handleRefresh = () => {
+  fetchAuditLogs();
+  fetchAuditStatistics();
+};
+
+const handleExport = () => {
+  if (!auditLogList.value.length) {
+    message.info('当前页没有可导出的记录');
+    return;
+  }
+  downloadCsv('cloudops-auditLogList.csv', [
+    ['ID', '时间', '用户ID', '方法', '路径', '状态码', '耗时ms'],
+    ...auditLogList.value.map((row) => [
+      row.id,
+      row.created_at,
+      row.user_id,
+      row.http_method,
+      row.endpoint,
+      row.status_code,
+      row.duration,
+    ]),
+  ]);
+  message.success('已导出当前页记录');
+};
+
+const handleAdvancedSearch = () => {
+  advancedSearchVisible.value = true;
+};
+
+const handleAdvancedSearchSubmit = () => {
+  advancedSearchVisible.value = false;
+  paginationConfig.current = 1;
+  performAdvancedSearch();
+};
+
+const handleTableChange = (pagination: any) => {
+  paginationConfig.current = pagination.current;
+  paginationConfig.pageSize = pagination.pageSize;
+  fetchAuditLogs();
+};
+
+const handleView = (log: AuditLogWithUser) => {
+  fetchLogDetail(log.id);
+};
+
+const handleDelete = async (log: AuditLogWithUser) => {
+  try {
+    await deleteAuditLogApi(log.id);
+    message.success('删除成功');
+    fetchAuditLogs();
+    fetchAuditStatistics();
+  } catch (error: any) {
+    message.error(error.message || '删除失败');
+  }
+};
+
+const handleBatchDelete = async () => {
+  if (selectedRowKeys.value.length === 0) {
+    message.warning('请选择要删除的日志');
+    return;
+  }
+
+  try {
+    await batchDeleteLogsApi({ ids: selectedRowKeys.value });
+    message.success(`成功删除 ${selectedRowKeys.value.length} 条日志`);
+    selectedRowKeys.value = [];
+    fetchAuditLogs();
+    fetchAuditStatistics();
+  } catch (error: any) {
+    message.error(error.message || '批量删除失败');
+  }
+};
+
+const onSelectChange = (selectedKeys: number[]) => {
+  selectedRowKeys.value = selectedKeys;
+};
+
+// 初始化
+onMounted(() => {
+  fetchAuditLogs();
+  fetchAuditStatistics();
+  fetchAuditTypes();
+});
+</script>
+
 <template>
-  <div class="audit-log">
+  <OpsPage title="审计日志">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <h1>审计日志</h1>
-      <div class="header-actions">
-        <a-button @click="handleRefresh">
-          <Icon icon="material-symbols:refresh" />
-          刷新
-        </a-button>
-        <a-button @click="handleExport">
-          <Icon icon="material-symbols:download" />
-          导出
-        </a-button>
-        <a-button 
-          v-if="selectedRowKeys.length > 0" 
-          type="primary" 
-          danger 
-          @click="handleBatchDelete"
-        >
-          批量删除 ({{ selectedRowKeys.length }})
-        </a-button>
-      </div>
-    </div>
+    <template #actions>
+      <a-button @click="handleRefresh">
+        <Icon icon="material-symbols:refresh" />
+        刷新
+      </a-button>
+      <a-button @click="handleExport">
+        <Icon icon="material-symbols:download" />
+        导出当前页
+      </a-button>
+      <a-button
+        v-if="selectedRowKeys.length > 0"
+        type="primary"
+        danger
+        @click="handleBatchDelete"
+      >
+        批量删除 ({{ selectedRowKeys.length }})
+      </a-button>
+    </template>
 
     <!-- 统计卡片 -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-number">{{ auditStatistics.total_count || 0 }}</div>
-        <div class="stat-label">总日志数</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number">{{ auditStatistics.today_count || 0 }}</div>
-        <div class="stat-label">今日新增</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number">{{ auditStatistics.error_count || 0 }}</div>
-        <div class="stat-label">错误日志</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number">{{ Math.round(auditStatistics.avg_duration || 0) }}ms</div>
-        <div class="stat-label">平均耗时</div>
-      </div>
-    </div>
+    <template #summary
+      ><div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number">{{ auditStatistics.total_count || 0 }}</div>
+          <div class="stat-label">总日志数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ auditStatistics.today_count || 0 }}</div>
+          <div class="stat-label">今日新增</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ auditStatistics.error_count || 0 }}</div>
+          <div class="stat-label">错误日志</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">
+            {{ Math.round(auditStatistics.avg_duration || 0) }}ms
+          </div>
+          <div class="stat-label">平均耗时</div>
+        </div>
+      </div></template
+    >
 
     <!-- 搜索筛选区域 -->
-    <div class="search-section">
-      <div class="search-left">
-        <a-input
-          v-model:value="searchParams.search"
-          placeholder="搜索关键词、Trace ID..."
-          allowClear
-          @pressEnter="handleSearch"
-          class="search-input"
-        >
-          <template #prefix>
-            <Icon icon="material-symbols:search" />
-          </template>
-        </a-input>
+    <template #filters
+      ><div class="ops-filter-row">
+        <div class="search-left">
+          <a-input
+            v-model:value="searchParams.search"
+            placeholder="搜索关键词、Trace ID..."
+            aria-label="搜索审计日志"
+            allowClear
+            @pressEnter="handleSearch"
+            class="search-input"
+          >
+            <template #prefix>
+              <Icon icon="material-symbols:search" />
+            </template>
+          </a-input>
 
-        <a-select
-          v-model:value="searchParams.operation_type"
-          placeholder="操作类型"
-          allowClear
-          class="status-select"
-        >
-          <a-select-option v-for="type in auditTypes" :key="type.type" :value="type.type">
-            {{ type.type }} - {{ type.description }}
-          </a-select-option>
-        </a-select>
+          <a-select
+            v-model:value="searchParams.operation_type"
+            placeholder="操作类型"
+            allowClear
+            class="status-select"
+          >
+            <a-select-option
+              v-for="type in auditTypes"
+              :key="type.type"
+              :value="type.type"
+            >
+              {{ type.type }} - {{ type.description }}
+            </a-select-option>
+          </a-select>
 
-        <a-select
-          v-model:value="searchParams.target_type"
-          placeholder="目标类型"
-          allowClear
-          class="type-select"
-        >
-          <a-select-option v-for="type in getUniqueTargetTypes" :key="type" :value="type">
-            {{ type }}
-          </a-select-option>
-        </a-select>
+          <a-select
+            v-model:value="searchParams.target_type"
+            placeholder="目标类型"
+            allowClear
+            class="type-select"
+          >
+            <a-select-option
+              v-for="type in getUniqueTargetTypes"
+              :key="type"
+              :value="type"
+            >
+              {{ type }}
+            </a-select-option>
+          </a-select>
 
-        <a-select
-          v-model:value="searchParams.status_code"
-          placeholder="状态码"
-          allowClear
-          class="type-select"
-        >
-          <a-select-option :value="200">200 - 成功</a-select-option>
-          <a-select-option :value="400">400 - 客户端错误</a-select-option>
-          <a-select-option :value="401">401 - 未授权</a-select-option>
-          <a-select-option :value="403">403 - 禁止访问</a-select-option>
-          <a-select-option :value="404">404 - 未找到</a-select-option>
-          <a-select-option :value="500">500 - 服务器错误</a-select-option>
-        </a-select>
+          <a-select
+            v-model:value="searchParams.status_code"
+            placeholder="状态码"
+            allowClear
+            class="type-select"
+          >
+            <a-select-option :value="200">200 - 成功</a-select-option>
+            <a-select-option :value="400">400 - 客户端错误</a-select-option>
+            <a-select-option :value="401">401 - 未授权</a-select-option>
+            <a-select-option :value="403">403 - 禁止访问</a-select-option>
+            <a-select-option :value="404">404 - 未找到</a-select-option>
+            <a-select-option :value="500">500 - 服务器错误</a-select-option>
+          </a-select>
 
-        <a-date-picker
-          v-model:value="startTime"
-          show-time
-          placeholder="开始时间"
-          format="YYYY-MM-DD HH:mm:ss"
-          class="date-picker"
-        />
+          <a-date-picker
+            v-model:value="startTime"
+            show-time
+            placeholder="开始时间"
+            format="YYYY-MM-DD HH:mm:ss"
+            class="date-picker"
+          />
 
-        <a-date-picker
-          v-model:value="endTime"
-          show-time
-          placeholder="结束时间"
-          format="YYYY-MM-DD HH:mm:ss"
-          class="date-picker"
-        />
-      </div>
+          <a-date-picker
+            v-model:value="endTime"
+            show-time
+            placeholder="结束时间"
+            format="YYYY-MM-DD HH:mm:ss"
+            class="date-picker"
+          />
+        </div>
 
-      <div class="search-right">
-        <a-button type="primary" @click="handleSearch">搜索</a-button>
-        <a-button @click="handleReset">重置</a-button>
-        <a-button @click="handleAdvancedSearch">高级搜索</a-button>
-      </div>
-    </div>
+        <div class="search-right">
+          <a-button type="primary" @click="handleSearch">搜索</a-button>
+          <a-button @click="handleReset">重置</a-button>
+          <a-button @click="handleAdvancedSearch">高级搜索</a-button>
+        </div>
+      </div></template
+    >
 
     <!-- 审计日志表格 -->
     <div class="table-container">
       <a-table
+        :scroll="{ x: 'max-content' }"
         :columns="tableColumns"
         :data-source="auditLogList"
         :pagination="paginationConfig"
@@ -155,7 +627,10 @@
 
           <template v-if="column.key === 'request'">
             <div class="request-info">
-              <a-tag :color="getMethodColor(record.http_method)" class="method-tag">
+              <a-tag
+                :color="getMethodColor(record.http_method)"
+                class="method-tag"
+              >
                 {{ record.http_method }}
               </a-tag>
               <div class="endpoint">{{ record.endpoint }}</div>
@@ -178,8 +653,13 @@
 
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
-              <a-button type="text" size="small" @click="handleView(record)">查看</a-button>
-              <a-popconfirm title="确定要删除吗？" @confirm="handleDelete(record)">
+              <a-button type="text" size="small" @click="handleView(record)"
+                >查看</a-button
+              >
+              <a-popconfirm
+                title="确定要删除吗？"
+                @confirm="handleDelete(record)"
+              >
                 <a-button type="text" size="small" danger>删除</a-button>
               </a-popconfirm>
             </div>
@@ -189,7 +669,12 @@
     </div>
 
     <!-- 查看审计日志详情 -->
-    <a-modal v-model:open="viewModalVisible" title="审计日志详情" width="900px" :footer="null">
+    <a-modal
+      v-model:open="viewModalVisible"
+      title="审计日志详情"
+      width="900px"
+      :footer="null"
+    >
       <div v-if="viewLogData" class="log-detail">
         <div class="detail-section">
           <h3>基本信息</h3>
@@ -200,7 +685,11 @@
             </div>
             <div class="detail-item">
               <label>用户</label>
-              <span>{{ viewLogData.user_info?.real_name || viewLogData.user_info?.username || `用户 ${viewLogData.user_id}` }}</span>
+              <span>{{
+                viewLogData.user_info?.real_name ||
+                viewLogData.user_info?.username ||
+                `用户 ${viewLogData.user_id}`
+              }}</span>
             </div>
             <div class="detail-item">
               <label>Trace ID</label>
@@ -288,9 +777,9 @@
     </a-modal>
 
     <!-- 高级搜索模态框 -->
-    <a-modal 
-      v-model:open="advancedSearchVisible" 
-      title="高级搜索" 
+    <a-modal
+      v-model:open="advancedSearchVisible"
+      title="高级搜索"
       width="600px"
       @ok="handleAdvancedSearchSubmit"
     >
@@ -325,16 +814,16 @@
         <div class="form-row">
           <div class="form-item">
             <label>最小耗时(ms)</label>
-            <a-input-number 
-              v-model:value="advancedSearchParams.duration_min" 
+            <a-input-number
+              v-model:value="advancedSearchParams.duration_min"
               placeholder="最小耗时"
               style="width: 100%"
             />
           </div>
           <div class="form-item">
             <label>最大耗时(ms)</label>
-            <a-input-number 
-              v-model:value="advancedSearchParams.duration_max" 
+            <a-input-number
+              v-model:value="advancedSearchParams.duration_max"
               placeholder="最大耗时"
               style="width: 100%"
             />
@@ -343,8 +832,8 @@
 
         <div class="form-item">
           <label>接口路径模式</label>
-          <a-input 
-            v-model:value="advancedSearchParams.endpoint_pattern" 
+          <a-input
+            v-model:value="advancedSearchParams.endpoint_pattern"
             placeholder="如: /api/v1/users/*"
           />
         </div>
@@ -356,501 +845,11 @@
         </div>
       </div>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
-
-<script lang="ts" setup>
-import { downloadCsv } from "#/utils/export-csv";
-import { ref, reactive, onMounted, computed } from 'vue';
-import { message } from 'ant-design-vue';
-import { Icon } from '@iconify/vue';
-import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
-
-import {
-  listAuditLogsApi,
-  getAuditLogDetailApi,
-  searchAuditLogsApi,
-  getAuditStatisticsApi,
-  getAuditTypesApi,
-  deleteAuditLogApi,
-  batchDeleteLogsApi,
-  type AuditLog,
-  type AuditStatistics,
-  type AuditTypeInfo,
-  type ListAuditLogsRequest,
-  type SearchAuditLogsRequest,
-  type AdvancedSearchOptions
-} from '#/api/core/system/audit';
-
-import { getUserDetailApi } from '#/api/core/system/user';
-
-// 扩展审计日志类型，包含用户信息
-interface AuditLogWithUser extends AuditLog {
-  user_info?: {
-    id: number;
-    username: string;
-    real_name?: string;
-    avatar?: string;
-  };
-}
-
-// 表格列配置
-const tableColumns = [
-  { title: '时间', key: 'time', width: 150 },
-  { title: '用户/Trace', key: 'user', width: 180 },
-  { title: '操作类型', key: 'operation', width: 120, align: 'center' },
-  { title: '请求信息', key: 'request', width: 200 },
-  { title: '状态码', key: 'status', width: 80, align: 'center' },
-  { title: '耗时', key: 'duration', width: 80, align: 'center' },
-  { title: 'IP地址', key: 'ip', width: 120 },
-  { title: '操作', key: 'actions', width: 120, fixed: 'right' }
-];
-
-// 状态管理
-const loading = ref(false);
-const viewModalVisible = ref(false);
-const advancedSearchVisible = ref(false);
-
-// 数据
-const auditLogList = ref<AuditLogWithUser[]>([]);
-const viewLogData = ref<AuditLogWithUser | null>(null);
-const auditStatistics = ref<AuditStatistics>({
-  total_count: 0,
-  today_count: 0,
-  error_count: 0,
-  avg_duration: 0,
-  type_distribution: [],
-  status_distribution: [],
-  recent_activity: [],
-  hourly_trend: []
-});
-const auditTypes = ref<AuditTypeInfo[]>([]);
-
-const selectedRowKeys = ref<number[]>([]);
-
-// 用户信息缓存
-const userInfoCache = ref<Map<number, any>>(new Map());
-
-// 时间选择器
-const startTime = ref<Dayjs>();
-const endTime = ref<Dayjs>();
-
-// 搜索参数
-const searchParams = reactive({
-  search: '',
-  operation_type: undefined as string | undefined,
-  target_type: undefined as string | undefined,
-  status_code: undefined as number | undefined,
-});
-
-// 高级搜索参数
-const advancedSearchParams = reactive<AdvancedSearchOptions>({
-  ip_address_list: [],
-  status_code_list: [],
-  duration_min: undefined,
-  duration_max: undefined,
-  has_error: false,
-  endpoint_pattern: ''
-});
-
-// 分页配置
-const paginationConfig = reactive({
-  current: 1,
-  pageSize: 20,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
-  pageSizeOptions: ['10', '20', '50', '100'],
-  showTotal: (total: number, range: [number, number]) => 
-    `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
-});
-
-// 计算属性
-const getUniqueTargetTypes = computed(() => {
-  const types = new Set<string>();
-  auditLogList.value.forEach(log => {
-    if (log.target_type) {
-      types.add(log.target_type);
-    }
-  });
-  return Array.from(types);
-});
-
-// 工具函数
-const formatTime = (timestamp: string) => {
-  if (!timestamp) return '-';
-  return dayjs(timestamp).format('YYYY-MM-DD HH:mm:ss');
-};
-
-const formatJSON = (obj: any) => {
-  if (!obj) return '无数据';
-  try {
-    if (typeof obj === 'string') {
-      return JSON.stringify(JSON.parse(obj), null, 2);
-    }
-    return JSON.stringify(obj, null, 2);
-  } catch {
-    return String(obj);
-  }
-};
-
-// 获取用户信息
-const getUserInfo = async (userId: number) => {
-  if (!Number.isInteger(userId) || userId <= 0) return null;
-  // 检查缓存
-  if (userInfoCache.value.has(userId)) {
-    return userInfoCache.value.get(userId);
-  }
-
-  try {
-    const userInfo = await getUserDetailApi(userId);
-    // 缓存用户信息
-    userInfoCache.value.set(userId, userInfo);
-    return userInfo;
-  } catch (error) {
-
-    return null;
-  }
-};
-
-// 获取用户显示名称
-const getUserDisplayName = (log: AuditLogWithUser) => {
-  if (!log.user_id) return '系统或未认证请求';
-  if (log.user_info?.real_name) {
-    return log.user_info.real_name;
-  }
-  if (log.user_info?.username) {
-    return log.user_info.username;
-  }
-  return `用户 ${log.user_id}`;
-};
-
-const getOperationColor = (operation: string) => {
-  const colorMap: Record<string, string> = {
-    'CREATE': 'green',
-    'UPDATE': 'blue',
-    'DELETE': 'red',
-    'VIEW': 'default',
-    'LOGIN': 'purple',
-    'LOGOUT': 'orange',
-    'EXPORT': 'cyan',
-    'IMPORT': 'gold'
-  };
-  return colorMap[operation] || 'default';
-};
-
-const getMethodColor = (method: string) => {
-  const colorMap: Record<string, string> = {
-    'GET': 'blue',
-    'POST': 'green',
-    'PUT': 'orange',
-    'DELETE': 'red',
-    'PATCH': 'cyan'
-  };
-  return colorMap[method] || 'default';
-};
-
-const getStatusColor = (status: number) => {
-  if (status >= 200 && status < 300) return 'green';
-  if (status >= 300 && status < 400) return 'blue';
-  if (status >= 400 && status < 500) return 'orange';
-  if (status >= 500) return 'red';
-  return 'default';
-};
-
-// API 调用函数
-const fetchAuditLogs = async () => {
-  loading.value = true;
-  try {
-    const params: ListAuditLogsRequest = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize
-    };
-
-    // 添加搜索条件
-    if (searchParams.search) {
-      params.search = searchParams.search;
-    }
-    if (searchParams.operation_type) {
-      params.operation_type = searchParams.operation_type;
-    }
-    if (searchParams.target_type) {
-      params.target_type = searchParams.target_type;
-    }
-    if (searchParams.status_code) {
-      params.status_code = searchParams.status_code;
-    }
-    if (startTime.value) {
-      params.start_time = startTime.value.unix();
-    }
-    if (endTime.value) {
-      params.end_time = endTime.value.unix();
-    }
-
-    const response = await listAuditLogsApi(params);
-
-    const logs = response.items || [];
-
-    // 获取用户信息
-    const logsWithUserInfo = await Promise.all(
-      logs.map(async (log: AuditLog) => {
-        const userInfo = await getUserInfo(log.user_id);
-        return {
-          ...log,
-          user_info: userInfo
-        } as AuditLogWithUser;
-      })
-    );
-
-    auditLogList.value = logsWithUserInfo;
-    paginationConfig.total = response.total || 0;
-
-  } catch (error: any) {
-
-    message.error(error.message || '获取审计日志失败');
-    auditLogList.value = [];
-    paginationConfig.total = 0;
-  } finally {
-    loading.value = false;
-  }
-};
-
-const fetchAuditStatistics = async () => {
-  try {
-    const response = await getAuditStatisticsApi();
-    auditStatistics.value = response;
-  } catch (error: any) {
-
-    message.error(error.message || '获取统计数据失败');
-  }
-};
-
-const fetchAuditTypes = async () => {
-  try {
-    const response = await getAuditTypesApi();
-    auditTypes.value = response;
-  } catch (error: any) {
-
-  }
-};
-
-const fetchLogDetail = async (id: number) => {
-  try {
-    const response = await getAuditLogDetailApi(id);
-    const log = response as AuditLog;
-
-    // 获取用户信息
-    const userInfo = await getUserInfo(log.user_id);
-    const logWithUserInfo = {
-      ...log,
-      user_info: userInfo
-    } as AuditLogWithUser;
-
-    viewLogData.value = logWithUserInfo;
-    viewModalVisible.value = true;
-  } catch (error: any) {
-
-    message.error(error.message || '获取日志详情失败');
-  }
-};
-
-// 高级搜索
-const performAdvancedSearch = async () => {
-  loading.value = true;
-  try {
-    const params: SearchAuditLogsRequest = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      advanced: { ...advancedSearchParams }
-    };
-
-    // 添加基础搜索条件
-    if (searchParams.search) {
-      params.search = searchParams.search;
-    }
-    if (searchParams.operation_type) {
-      params.operation_type = searchParams.operation_type;
-    }
-    if (searchParams.target_type) {
-      params.target_type = searchParams.target_type;
-    }
-    if (searchParams.status_code) {
-      params.status_code = searchParams.status_code;
-    }
-    if (startTime.value) {
-      params.start_time = startTime.value.unix();
-    }
-    if (endTime.value) {
-      params.end_time = endTime.value.unix();
-    }
-
-    const response = await searchAuditLogsApi(params);
-
-    const logs = response.items || [];
-
-    // 获取用户信息
-    const logsWithUserInfo = await Promise.all(
-      logs.map(async (log: AuditLog) => {
-        const userInfo = await getUserInfo(log.user_id);
-        return {
-          ...log,
-          user_info: userInfo
-        } as AuditLogWithUser;
-      })
-    );
-
-    auditLogList.value = logsWithUserInfo;
-    paginationConfig.total = response.total || 0;
-
-  } catch (error: any) {
-
-    message.error(error.message || '高级搜索失败');
-    auditLogList.value = [];
-    paginationConfig.total = 0;
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 事件处理
-const handleSearch = () => {
-  paginationConfig.current = 1;
-  fetchAuditLogs();
-};
-
-const handleReset = () => {
-  searchParams.search = '';
-  searchParams.operation_type = undefined;
-  searchParams.target_type = undefined;
-  searchParams.status_code = undefined;
-  startTime.value = undefined;
-  endTime.value = undefined;
-
-  // 重置高级搜索参数
-  Object.assign(advancedSearchParams, {
-    ip_address_list: [],
-    status_code_list: [],
-    duration_min: undefined,
-    duration_max: undefined,
-    has_error: false,
-    endpoint_pattern: ''
-  });
-
-  paginationConfig.current = 1;
-  fetchAuditLogs();
-};
-
-const handleRefresh = () => {
-  fetchAuditLogs();
-  fetchAuditStatistics();
-};
-
-const handleExport = () => {
-  if (!auditLogList.value.length) { message.info('当前页没有可导出的记录'); return; }
-  downloadCsv('cloudops-auditLogList.csv', [['ID', '时间', '用户ID', '方法', '路径', '状态码', '耗时ms'], ...auditLogList.value.map(row => [row.id, row.created_at, row.user_id, row.http_method, row.endpoint, row.status_code, row.duration])]);
-  message.success('已导出当前页记录');
-};
-
-const handleAdvancedSearch = () => {
-  advancedSearchVisible.value = true;
-};
-
-const handleAdvancedSearchSubmit = () => {
-  advancedSearchVisible.value = false;
-  paginationConfig.current = 1;
-  performAdvancedSearch();
-};
-
-const handleTableChange = (pagination: any) => {
-  paginationConfig.current = pagination.current;
-  paginationConfig.pageSize = pagination.pageSize;
-  fetchAuditLogs();
-};
-
-const handleView = (log: AuditLogWithUser) => {
-  fetchLogDetail(log.id);
-};
-
-const handleDelete = async (log: AuditLogWithUser) => {
-  try {
-    await deleteAuditLogApi(log.id);
-    message.success('删除成功');
-    fetchAuditLogs();
-    fetchAuditStatistics();
-  } catch (error: any) {
-
-    message.error(error.message || '删除失败');
-  }
-};
-
-const handleBatchDelete = async () => {
-  if (selectedRowKeys.value.length === 0) {
-    message.warning('请选择要删除的日志');
-    return;
-  }
-
-  try {
-    await batchDeleteLogsApi({ ids: selectedRowKeys.value });
-    message.success(`成功删除 ${selectedRowKeys.value.length} 条日志`);
-    selectedRowKeys.value = [];
-    fetchAuditLogs();
-    fetchAuditStatistics();
-  } catch (error: any) {
-
-    message.error(error.message || '批量删除失败');
-  }
-};
-
-const onSelectChange = (selectedKeys: number[]) => {
-  selectedRowKeys.value = selectedKeys;
-};
-
-// 初始化
-onMounted(() => {
-  fetchAuditLogs();
-  fetchAuditStatistics();
-  fetchAuditTypes();
-});
-</script>
 
 <style scoped>
 /* 保持原有样式不变 */
-.audit-log {
-  padding: 20px;
-  background: var(--ops-ground);
-  min-height: 100vh;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 20px;
-  background: var(--ops-surface);
-  border-radius: var(--ops-radius);
-  border: 1px solid var(--ops-border);
-}
-
-.page-header h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--ops-ink);
-}
-
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.header-actions .ant-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -876,18 +875,6 @@ onMounted(() => {
 .stat-label {
   font-size: 14px;
   color: var(--ops-muted);
-}
-
-.search-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding: 20px;
-  background: var(--ops-surface);
-  border-radius: var(--ops-radius);
-  border: 1px solid var(--ops-border);
 }
 
 .search-left {
@@ -918,6 +905,7 @@ onMounted(() => {
 }
 
 .table-container {
+  min-width: 0;
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   border: 1px solid var(--ops-border);
@@ -967,7 +955,7 @@ onMounted(() => {
 .time-info {
   font-size: 13px;
   color: var(--ops-ink);
-  font-family: 'Courier New', monospace;
+  font-family: var(--ops-font-data);
   font-weight: 500;
 }
 
@@ -986,7 +974,7 @@ onMounted(() => {
 .trace-id {
   font-size: 12px;
   color: var(--ops-muted);
-  font-family: 'Courier New', monospace;
+  font-family: var(--ops-font-data);
   background: var(--ops-ground);
   padding: 2px 6px;
   border-radius: 3px;
@@ -1006,19 +994,19 @@ onMounted(() => {
 .endpoint {
   font-size: 13px;
   color: var(--ops-ink);
-  font-family: 'Courier New', monospace;
+  font-family: var(--ops-font-data);
   word-break: break-all;
 }
 
 .duration {
-  font-family: 'Courier New', monospace;
+  font-family: var(--ops-font-data);
   font-weight: 600;
   color: var(--ops-ink);
   font-size: 14px;
 }
 
 .ip-address {
-  font-family: 'Courier New', monospace;
+  font-family: var(--ops-font-data);
   color: var(--ops-ink);
   font-size: 14px;
   font-weight: 500;
@@ -1074,7 +1062,7 @@ onMounted(() => {
 }
 
 .detail-item .trace-id {
-  font-family: 'Courier New', monospace;
+  font-family: var(--ops-font-data);
   background: var(--ops-border);
   padding: 4px 8px;
   border-radius: 4px;
@@ -1082,7 +1070,7 @@ onMounted(() => {
 }
 
 .detail-item .endpoint {
-  font-family: 'Courier New', monospace;
+  font-family: var(--ops-font-data);
   background: var(--ops-border);
   padding: 4px 8px;
   border-radius: 4px;
@@ -1091,7 +1079,7 @@ onMounted(() => {
 }
 
 .detail-item .duration {
-  font-family: 'Courier New', monospace;
+  font-family: var(--ops-font-data);
   background: var(--ops-border);
   padding: 4px 8px;
   border-radius: 4px;
@@ -1109,7 +1097,7 @@ onMounted(() => {
 
 .code-content pre {
   margin: 0;
-  font-family: 'Courier New', monospace;
+  font-family: var(--ops-font-data);
   font-size: 12px;
   line-height: 1.5;
   color: #495057;
@@ -1131,12 +1119,6 @@ onMounted(() => {
 }
 
 @media (max-width: 1200px) {
-  .search-section {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-  }
-
   .search-left {
     flex-direction: column;
     gap: 12px;
@@ -1158,21 +1140,6 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .audit-log {
-    padding: 12px;
-  }
-
-  .page-header {
-    flex-direction: column;
-    gap: 16px;
-    text-align: center;
-  }
-
-  .header-actions {
-    width: 100%;
-    justify-content: center;
-  }
-
   .stats-grid {
     grid-template-columns: 1fr;
   }

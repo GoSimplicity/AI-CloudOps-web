@@ -51,7 +51,9 @@
     "test:unit": "vitest",
     "update:deps": "pnpm update --latest --recursive",
     "version": "pnpm exec changeset version && pnpm install --no-frozen-lockfile",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check:layout": "node scripts/layout-inventory.mjs --check",
+    "update:layout": "node scripts/layout-inventory.mjs"
   },
   "dependencies": {
     "jiti": "^2.3.3",

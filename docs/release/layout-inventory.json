@@ -1,6 +1,6 @@
 {
-  "routes": 59,
-  "migratedShells": 3,
+  "routes": 58,
+  "migratedShells": 6,
   "entries": [
     {
       "route": "/assistant/info",
@@ -41,21 +41,21 @@
       "route": "/category",
       "view": "workorder/Category.vue",
       "sharedPage": true,
-      "inlineStyles": 0,
+      "inlineStyles": 1,
       "scopedStyle": true
     },
     {
       "route": "/cloud_account_management",
       "view": "servicetree/CloudAccountManagement.vue",
       "sharedPage": false,
-      "inlineStyles": 4,
+      "inlineStyles": 6,
       "scopedStyle": true
     },
     {
       "route": "/cloud_resource_management",
       "view": "servicetree/CloudResourceManager.vue",
       "sharedPage": false,
-      "inlineStyles": 22,
+      "inlineStyles": 23,
       "scopedStyle": true
     },
     {
@@ -76,21 +76,21 @@
       "route": "/form_management",
       "view": "workorder/FormManagement.vue",
       "sharedPage": false,
-      "inlineStyles": 12,
+      "inlineStyles": 13,
       "scopedStyle": true
     },
     {
       "route": "/instance",
       "view": "workorder/Instance.vue",
       "sharedPage": false,
-      "inlineStyles": 34,
+      "inlineStyles": 27,
       "scopedStyle": true
     },
     {
       "route": "/k8s_cluster",
       "view": "k8s/cluster/Cluster.vue",
       "sharedPage": false,
-      "inlineStyles": 26,
+      "inlineStyles": 27,
       "scopedStyle": true
     },
     {
@@ -160,7 +160,7 @@
       "route": "/k8s_pvc",
       "view": "k8s/pvc/PVC.vue",
       "sharedPage": false,
-      "inlineStyles": 55,
+      "inlineStyles": 56,
       "scopedStyle": true
     },
     {
@@ -216,35 +216,35 @@
       "route": "/local_resource_management",
       "view": "servicetree/LocalResourceManagement.vue",
       "sharedPage": false,
-      "inlineStyles": 6,
+      "inlineStyles": 7,
       "scopedStyle": true
     },
     {
       "route": "/monitor_alert_event",
       "view": "prometheus/MonitorAlertEvent.vue",
       "sharedPage": false,
-      "inlineStyles": 0,
+      "inlineStyles": 1,
       "scopedStyle": true
     },
     {
       "route": "/monitor_alert_pool",
       "view": "prometheus/MonitorAlertPool.vue",
       "sharedPage": false,
-      "inlineStyles": 4,
+      "inlineStyles": 5,
       "scopedStyle": true
     },
     {
       "route": "/monitor_alert_record",
       "view": "prometheus/MonitorAlertRecord.vue",
       "sharedPage": false,
-      "inlineStyles": 0,
+      "inlineStyles": 1,
       "scopedStyle": true
     },
     {
       "route": "/monitor_alert_rule",
       "view": "prometheus/MonitorAlertRule.vue",
       "sharedPage": true,
-      "inlineStyles": 0,
+      "inlineStyles": 1,
       "scopedStyle": true
     },
     {
@@ -258,42 +258,42 @@
       "route": "/monitor_job",
       "view": "prometheus/MonitorScrapeJob.vue",
       "sharedPage": false,
-      "inlineStyles": 2,
+      "inlineStyles": 3,
       "scopedStyle": true
     },
     {
       "route": "/monitor_onduty_group",
       "view": "prometheus/MonitorOnDutyGroup.vue",
       "sharedPage": false,
-      "inlineStyles": 12,
+      "inlineStyles": 17,
       "scopedStyle": true
     },
     {
       "route": "/monitor_onduty_group_table",
       "view": "prometheus/MonitorOnDutyGroupTable.vue",
       "sharedPage": false,
-      "inlineStyles": 3,
+      "inlineStyles": 7,
       "scopedStyle": true
     },
     {
       "route": "/monitor_pool",
       "view": "prometheus/MonitorScrapePool.vue",
       "sharedPage": false,
-      "inlineStyles": 1,
+      "inlineStyles": 2,
       "scopedStyle": true
     },
     {
       "route": "/monitor_send",
       "view": "prometheus/MonitorSend.vue",
       "sharedPage": false,
-      "inlineStyles": 0,
+      "inlineStyles": 1,
       "scopedStyle": true
     },
     {
       "route": "/notification",
       "view": "workorder/Notification.vue",
       "sharedPage": false,
-      "inlineStyles": 23,
+      "inlineStyles": 25,
       "scopedStyle": true
     },
     {
@@ -314,21 +314,21 @@
       "route": "/process",
       "view": "workorder/Process.vue",
       "sharedPage": false,
-      "inlineStyles": 0,
+      "inlineStyles": 1,
       "scopedStyle": true
     },
     {
       "route": "/process_design",
       "view": "workorder/ProcessDesign.vue",
       "sharedPage": false,
-      "inlineStyles": 5,
+      "inlineStyles": 7,
       "scopedStyle": true
     },
     {
       "route": "/rca/analysis",
       "view": "rca/RCAAnalysis.vue",
       "sharedPage": false,
-      "inlineStyles": 3,
+      "inlineStyles": 4,
       "scopedStyle": true
     },
     {
@@ -342,35 +342,28 @@
       "route": "/rca/diagnosis",
       "view": "rca/RCADiagnosis.vue",
       "sharedPage": false,
-      "inlineStyles": 0,
+      "inlineStyles": 2,
       "scopedStyle": true
     },
     {
       "route": "/system_api",
       "view": "dashboard/SystemApi.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 1,
       "scopedStyle": true
     },
     {
       "route": "/system_audit",
       "view": "dashboard/SystemAudit.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 4,
-      "scopedStyle": true
-    },
-    {
-      "route": "/system_department",
-      "view": "dashboard/SystemDepartment.vue",
-      "sharedPage": false,
-      "inlineStyles": 0,
       "scopedStyle": true
     },
     {
       "route": "/system_role",
       "view": "dashboard/SystemRole.vue",
-      "sharedPage": false,
-      "inlineStyles": 0,
+      "sharedPage": true,
+      "inlineStyles": 1,
       "scopedStyle": true
     },
     {
@@ -391,7 +384,7 @@
       "route": "/template",
       "view": "workorder/Template.vue",
       "sharedPage": false,
-      "inlineStyles": 10,
+      "inlineStyles": 11,
       "scopedStyle": true
     },
     {
@@ -405,7 +398,7 @@
       "route": "/tree_node_manager",
       "view": "servicetree/TreeNodeManager.vue",
       "sharedPage": false,
-      "inlineStyles": 0,
+      "inlineStyles": 2,
       "scopedStyle": true
     },
     {

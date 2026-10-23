@@ -8,18 +8,24 @@ function routePath(path: string) {
 }
 
 function adminPassword() {
-  if (process.env.CLOUDOPS_TEST_PASSWORD) return process.env.CLOUDOPS_TEST_PASSWORD;
+  if (process.env.CLOUDOPS_TEST_PASSWORD)
+    return process.env.CLOUDOPS_TEST_PASSWORD;
   if (!process.env.CLOUDOPS_TEST_ENV_FILE) return undefined;
   const content = readFileSync(process.env.CLOUDOPS_TEST_ENV_FILE, 'utf8');
-  return content.match(/^BOOTSTRAP_ADMIN_PASSWORD=(.*)$/m)?.[1]?.trim().replace(/^['"]|['"]$/g, '');
+  return content
+    .match(/^BOOTSTRAP_ADMIN_PASSWORD=(.*)$/m)?.[1]
+    ?.trim()
+    .replace(/^['"]|['"]$/g, '');
 }
 
 test('login is usable on mobile and supports both themes', async ({ page }) => {
   const errors: string[] = [];
-  page.on('pageerror', error => errors.push(error.message));
+  page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(routePath('/auth/login'));
-  await expect(page.getByRole('heading', { name: '登录运维工作台' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '登录运维工作台' }),
+  ).toBeVisible();
   await expect(page.getByLabel('账号', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '手机号登录' })).toHaveCount(0);
   await page.getByRole('button', { name: '切换深色' }).click();
@@ -28,29 +34,56 @@ test('login is usable on mobile and supports both themes', async ({ page }) => {
   await page.reload();
   await expect(page.locator('html')).toHaveClass(/dark/);
   await page.getByRole('button', { name: '切换浅色' }).click();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
   expect(errors, 'production bootstrap runtime errors').toEqual([]);
 });
 
-test('authenticated navigation renders every standalone business route', async ({ page }) => {
+test('authenticated navigation renders every standalone business route', async ({
+  page,
+}) => {
   test.setTimeout(240_000);
   const password = adminPassword();
-  test.skip(!password, 'Set CLOUDOPS_TEST_PASSWORD or CLOUDOPS_TEST_ENV_FILE for isolated test administrator.');
+  test.skip(
+    !password,
+    'Set CLOUDOPS_TEST_PASSWORD or CLOUDOPS_TEST_ENV_FILE for isolated test administrator.',
+  );
   const errors: string[] = [];
   const apiFailures: string[] = [];
   const responses: string[] = [];
-  page.on('response', async response => { if (response.url().includes('/api/')) { try { const body = await response.json(); responses.push(`${new URL(response.url()).pathname} status=${response.status()} code=${body.code} message=${body.message || ''}`); } catch { /* non-JSON response */ } } });
-  page.on('pageerror', error => errors.push(error.message));
-  page.on('response', response => {
+  page.on('response', async (response) => {
+    if (response.url().includes('/api/')) {
+      try {
+        const body = await response.json();
+        responses.push(
+          `${new URL(response.url()).pathname} status=${response.status()} code=${body.code} message=${body.message || ''}`,
+        );
+      } catch {
+        /* non-JSON response */
+      }
+    }
+  });
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('response', (response) => {
     if (response.url().includes('/api/') && response.status() >= 400) {
-      apiFailures.push(`${response.status()} ${new URL(response.url()).pathname}`);
+      apiFailures.push(
+        `${response.status()} ${new URL(response.url()).pathname}`,
+      );
     }
   });
   await page.goto(routePath('/auth/login'));
-  await page.getByLabel('账号', { exact: true }).fill(process.env.CLOUDOPS_TEST_USER || 'admin');
+  await page
+    .getByLabel('账号', { exact: true })
+    .fill(process.env.CLOUDOPS_TEST_USER || 'admin');
   await page.getByLabel('密码', { exact: true }).fill(password!);
   await page.getByRole('button', { name: '登录', exact: true }).click();
-  await page.evaluate(() => { const input = document.querySelector<HTMLInputElement>('#password'); if (input) input.value = ''; });
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>('#password');
+    if (input) input.value = '';
+  });
   await page.waitForTimeout(1200);
   expect(errors, `login runtime errors; ${responses.join('; ')}`).toEqual([]);
   expect(apiFailures, 'login API errors').toEqual([]);
@@ -58,15 +91,30 @@ test('authenticated navigation renders every standalone business route', async (
   const dir = resolve('apps/web-antd/src/router/routes/modules');
   const routes: string[] = [];
   for (const file of readdirSync(dir)) {
-    const source = ts.createSourceFile(file, readFileSync(resolve(dir, file), 'utf8'), ts.ScriptTarget.Latest, true);
+    const source = ts.createSourceFile(
+      file,
+      readFileSync(resolve(dir, file), 'utf8'),
+      ts.ScriptTarget.Latest,
+      true,
+    );
     const visit = (node: ts.Node) => {
       if (ts.isObjectLiteralExpression(node)) {
         const properties = node.properties.filter(ts.isPropertyAssignment);
-        const path = properties.find(property => property.name.getText(source) === 'path');
-        const component = properties.find(property => property.name.getText(source) === 'component');
-        if (path && component && ts.isStringLiteral(path.initializer) && ts.isArrowFunction(component.initializer)) {
+        const path = properties.find(
+          (property) => property.name.getText(source) === 'path',
+        );
+        const component = properties.find(
+          (property) => property.name.getText(source) === 'component',
+        );
+        if (
+          path &&
+          component &&
+          ts.isStringLiteral(path.initializer) &&
+          ts.isArrowFunction(component.initializer)
+        ) {
           const value = path.initializer.text;
-          if (!value.includes(':') && !value.includes('terminal')) routes.push(value);
+          if (!value.includes(':') && !value.includes('terminal'))
+            routes.push(value);
         }
       }
       ts.forEachChild(node, visit);
@@ -77,24 +125,147 @@ test('authenticated navigation renders every standalone business route', async (
     await page.goto(routePath(route));
     await page.waitForTimeout(700);
     if (route === '/system_welcome') {
-      await expect(page.locator('.metric-value').first()).not.toHaveText('待采集', { timeout: 15_000 });
+      await expect(page.locator('.metric-value').first()).not.toHaveText(
+        '待采集',
+        { timeout: 15_000 },
+      );
       await expect(page.locator('.chart-container canvas')).toBeVisible();
       await expect(page.locator('.chart-container-small canvas')).toBeVisible();
     }
     await expect(page.locator('body')).not.toBeEmpty();
-    await expect.poll(() => { const url = new URL(page.url()); return url.hash.startsWith('#/') ? url.hash.slice(1).split('?')[0] : url.pathname; }).toBe(route === '/monitor_onduty_group_table' ? '/monitor_onduty_group' : route);
+    await expect
+      .poll(() => {
+        const url = new URL(page.url());
+        return url.hash.startsWith('#/')
+          ? url.hash.slice(1).split('?')[0]
+          : url.pathname;
+      })
+      .toBe(
+        route === '/monitor_onduty_group_table'
+          ? '/monitor_onduty_group'
+          : route,
+      );
     await expect(page).not.toHaveURL(/auth\/login/);
   }
   expect(errors, 'browser runtime errors').toEqual([]);
-  const expectedUnavailable = new Set((process.env.CLOUDOPS_EXPECT_UNAVAILABLE || '').split(',').filter(Boolean));
+  const expectedUnavailable = new Set(
+    (process.env.CLOUDOPS_EXPECT_UNAVAILABLE || '').split(',').filter(Boolean),
+  );
   const observedFailures = [...new Set(apiFailures)];
-  const unexpected = observedFailures.filter(failure => {
+  const unexpected = observedFailures.filter((failure) => {
     const [status, path] = failure.split(' ');
     if (status === '503' && expectedUnavailable.has(path!)) {
-      test.info().annotations.push({ type: 'expected-unavailable', description: path! });
+      test
+        .info()
+        .annotations.push({ type: 'expected-unavailable', description: path! });
       return false;
     }
     return true;
   });
   expect(unexpected, 'authenticated API failures').toEqual([]);
+});
+
+test('system list layouts preserve responsive filters and role creation controls', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  page.setDefaultTimeout(15_000);
+  page.setDefaultNavigationTimeout(30_000);
+  const password = adminPassword();
+  test.skip(
+    !password,
+    'Set an isolated administrator password for system list acceptance.',
+  );
+  const errors: string[] = [];
+  const apiFailures: string[] = [];
+  page.on('response', (response) => {
+    if (response.url().includes('/api/') && response.status() >= 400)
+      apiFailures.push(
+        `${response.status()} ${new URL(response.url()).pathname}`,
+      );
+  });
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto(routePath('/auth/login'));
+  await page
+    .getByLabel('账号', { exact: true })
+    .fill(process.env.CLOUDOPS_TEST_USER || 'admin');
+  await page.getByLabel('密码', { exact: true }).fill(password!);
+  const loginResponse = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === '/api/user/login' &&
+      response.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>('#password');
+    if (input) input.value = '';
+  });
+  expect((await (await loginResponse).json()).code, 'login API code').toBe(0);
+  await expect(page).not.toHaveURL(/auth\/login/, { timeout: 30_000 });
+
+  const routes = [
+    ['/system_user', '用户管理'],
+    ['/system_role', '角色管理'],
+    ['/system_api', 'API管理'],
+    ['/system_audit', '审计日志'],
+  ];
+  for (const [route, title] of routes) {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(routePath(route!));
+    await expect(page.locator('.ops-page h1')).toHaveText(title!);
+    await expect(
+      page.locator('.ops-page__filters input').first(),
+    ).toBeVisible();
+    await expect(page.locator('.ops-page__content .ant-table')).toBeVisible();
+    await expect(page.locator('.ops-page__actions button').first()).toHaveCSS(
+      'display',
+      'flex',
+    );
+    const toggle = page.getByLabel('深色', { exact: true });
+    if (
+      await page
+        .locator('html')
+        .evaluate((element) => element.classList.contains('dark'))
+    )
+      await page.getByLabel('浅色', { exact: true }).click();
+    await expect(page.locator('html')).not.toHaveClass(/dark/);
+    if (route === '/system_role') {
+      await page.screenshot({
+        path: '.cache/ui-verification/system-role-desktop-light.png',
+        fullPage: true,
+        animations: 'disabled',
+      });
+      await page.getByRole('button', { name: '新建角色' }).click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await expect(page.getByLabel('角色名称', { exact: true })).toBeVisible();
+      await page.getByRole('button', { name: /^取\s*消$/ }).click();
+      await expect(page.getByRole('dialog')).not.toBeVisible();
+    }
+    await toggle.click();
+    await expect(page.locator('html')).toHaveClass(/dark/);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(() =>
+        page
+          .locator('aside')
+          .first()
+          .evaluate((element) => element.getBoundingClientRect().right),
+      )
+      .toBeLessThanOrEqual(1);
+    await expect(page.locator('.ops-page h1')).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      route,
+    ).toBe(true);
+    if (route === '/system_user')
+      await page.screenshot({
+        path: '.cache/ui-verification/system-user-mobile-dark.png',
+        fullPage: true,
+        animations: 'disabled',
+      });
+  }
+  expect(errors, 'system list browser runtime errors').toEqual([]);
+  expect(apiFailures, 'system list API errors').toEqual([]);
 });

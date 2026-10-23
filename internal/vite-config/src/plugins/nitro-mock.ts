@@ -75,7 +75,8 @@ async function runNitroServer(rootDir: string, port: number, verbose: boolean) {
       {
         c12: {
           async onUpdate({ getDiff, newConfig }) {
-            const diff = getDiff();
+            const diff: Array<{ key: string; toString: () => string }> =
+              getDiff();
             if (diff.length === 0) {
               return;
             }

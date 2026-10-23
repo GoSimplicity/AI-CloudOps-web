@@ -17,6 +17,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm check:layout
       - run: pnpm -F @vben/web-antd typecheck
       - run: pnpm test:unit --run
       - run: pnpm build:antd
