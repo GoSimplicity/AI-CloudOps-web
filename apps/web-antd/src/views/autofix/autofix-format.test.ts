@@ -39,3 +39,10 @@ describe('autofix-format', () => {
     expect(result.fault_type).toBe('image_pull_failure');
   });
 });
+
+it('does not invent a workflow completion state or timestamp', () => {
+  const result = normalizeWorkflowResult({});
+  expect(result.status).toBe('unknown');
+  expect(result.timestamp).toBe('');
+  expect(result.next_action).toBe('');
+});

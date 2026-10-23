@@ -104,6 +104,7 @@ export function normalizeWorkflowResult(
   const blockedActions = raw.blocked_actions || review.blocked_actions || execution.blocked_actions || [];
 
   return {
+    approval: raw.approval,
     agents_used: raw.agents_used || [],
     blocked_actions: blockedActions,
     candidate_actions: candidateActions,
@@ -112,11 +113,11 @@ export function normalizeWorkflowResult(
     execution,
     fault_type: plan.fault_type || 'unknown',
     messages: raw.messages || [],
-    next_action: raw.next_action || 'finish',
+    next_action: raw.next_action || '',
     plan,
     review,
-    status: raw.status || 'planned',
-    timestamp: raw.timestamp || new Date().toISOString(),
+    status: raw.status || 'unknown',
+    timestamp: raw.timestamp || '',
     workflow_engine: raw.workflow_engine,
     workflow_nodes: raw.workflow_nodes || [],
   };

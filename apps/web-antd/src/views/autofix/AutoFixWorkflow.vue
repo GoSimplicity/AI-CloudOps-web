@@ -1,18 +1,7 @@
 <template>
-  <div class="autofix-workflow">
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <div class="header-icon">
-            <Icon icon="lucide:wrench" width="34" />
-          </div>
-          <div class="header-text">
-            <h1 class="page-title">自动修复工作流</h1>
-            <p class="page-subtitle">将诊断结果转换为候选动作，并由多智能体完成风险评估与受控执行</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <a-space class="action-toolbar" :size="10">
+  <OpsPage title="自动修复工作流" description="诊断、规划与逐项审批，只执行已验证的原计划动作" class="autofix-workflow">
+    <template #actions>
+<a-space class="action-toolbar" :size="10">
             <a-button class="tool-button" @click="loadServiceInfo" :loading="infoLoading">
               刷新服务
             </a-button>
@@ -24,62 +13,18 @@
               type="primary"
               @click="runWorkflow"
               :loading="running"
-              :disabled="!isFormValid"
+              :disabled="!isFormValid || busy"
             >
               执行工作流
             </a-button>
           </a-space>
-        </div>
-      </div>
-    </div>
+    </template>
+    <a-alert v-if="workflowError" :message="workflowError" type="error" show-icon role="alert" />
+    <a-alert v-if="infoError" :message="infoError" type="warning" show-icon role="alert" />
 
     <a-row :gutter="[24, 24]">
       <a-col :xs="24" :lg="7">
-        <a-card title="修复输入" class="config-card">
-          <a-form layout="vertical" :model="formData">
-            <a-form-item label="命名空间" required>
-              <a-input v-model:value="formData.namespace" placeholder="default" />
-            </a-form-item>
-            <a-form-item label="Deployment">
-              <a-input v-model:value="formData.deployment" placeholder="例如 payment-service" />
-            </a-form-item>
-            <a-form-item label="故障类型模板">
-              <a-select v-model:value="templateKey" @change="applyTemplate">
-                <a-select-option value="crashloop">CrashLoopBackOff</a-select-option>
-                <a-select-option value="resource">资源不足</a-select-option>
-                <a-select-option value="imagepull">镜像拉取失败</a-select-option>
-                <a-select-option value="custom">自定义</a-select-option>
-              </a-select>
-            </a-form-item>
-            <a-form-item label="问题描述" required>
-              <a-textarea
-                v-model:value="formData.problem_description"
-                :auto-size="{ minRows: 4, maxRows: 8 }"
-                placeholder="描述当前故障现象、涉及资源和期望处理方式"
-              />
-            </a-form-item>
-            <a-form-item label="事件/诊断补充">
-              <a-textarea
-                v-model:value="formData.event"
-                :auto-size="{ minRows: 3, maxRows: 6 }"
-                placeholder="可粘贴 K8s Event、Pod 状态、错误日志摘要"
-              />
-            </a-form-item>
-          </a-form>
-
-          <div class="config-actions">
-            <a-button class="config-action-button" @click="resetForm">重置</a-button>
-            <a-button
-              class="config-action-button config-action-button-primary"
-              type="primary"
-              @click="runWorkflow"
-              :loading="running"
-              :disabled="!isFormValid"
-            >
-              执行自动修复
-            </a-button>
-          </div>
-        </a-card>
+        <WorkflowInput v-model:namespace="formData.namespace" v-model:deployment="formData.deployment" v-model:event="formData.event" v-model:description="formData.problem_description" v-model:template-key="templateKey" :busy="busy" :valid="isFormValid" @run="runWorkflow" @reset="resetForm" @template-change="applyTemplate" />
 
         <a-card title="服务状态" class="side-card">
           <a-skeleton v-if="infoLoading && !serviceInfo" active :paragraph="{ rows: 4 }" />
@@ -93,12 +38,12 @@
             <div class="service-desc">
               <div class="service-meta-item">
                 <span class="service-meta-label">工作流引擎</span>
-                <span class="service-meta-value">{{ serviceInfo?.workflow_engine || 'langgraph' }}</span>
+                <span class="service-meta-value">{{ serviceInfo?.workflow_engine || '未读取' }}</span>
               </div>
               <div class="service-meta-item service-meta-item-stack">
                 <span class="service-meta-label">能力</span>
                 <div class="service-capabilities">
-                  <a-tag v-for="item in serviceInfo?.capabilities || defaultCapabilities" :key="item" color="blue">
+                  <a-tag v-for="item in serviceInfo?.capabilities || []" :key="item" color="blue">
                     {{ item }}
                   </a-tag>
                 </div>
@@ -287,50 +232,7 @@
                   :type="reviewApproved ? 'success' : 'warning'"
                   show-icon
                 />
-                <div
-                  v-if="normalizedResult.status === 'needs_human_confirmation' && confirmableBlockedActions.length"
-                  class="confirm-panel"
-                >
-                  <div class="confirm-panel-header">
-                    <span class="confirm-panel-title">待人工确认动作</span>
-                    <a-tag color="orange">{{ confirmableBlockedActions.length }}</a-tag>
-                  </div>
-                  <div class="confirm-action-list">
-                    <label
-                      v-for="action in confirmableBlockedActions"
-                      :key="action.action_id"
-                      class="confirm-action-item"
-                    >
-                      <a-checkbox
-                        :checked="selectedBlockedActionIds.includes(action.action_id || '')"
-                        @change="toggleBlockedAction(action.action_id || '', $event.target.checked)"
-                      />
-                      <div class="confirm-action-content">
-                        <div class="confirm-action-title">{{ getActionLabel(action.action_type) }}</div>
-                        <div class="confirm-action-meta">
-                          <span>{{ action.description || '无动作说明' }}</span>
-                          <span>风险 {{ action.risk_assessment?.risk_level || 'unknown' }}</span>
-                        </div>
-                        <div
-                          v-if="action.risk_assessment?.reasons?.length"
-                          class="confirm-action-reasons"
-                        >
-                          {{ action.risk_assessment.reasons.join(' / ') }}
-                        </div>
-                      </div>
-                    </label>
-                  </div>
-                  <div class="confirm-toolbar">
-                    <a-button
-                      type="primary"
-                      @click="confirmWorkflowExecution"
-                      :loading="confirmLoading"
-                      :disabled="!canConfirmWorkflow"
-                    >
-                      确认并继续执行
-                    </a-button>
-                  </div>
-                </div>
+                <ApprovalPanel v-if="normalizedResult.status === 'needs_human_confirmation'" :actions="confirmableBlockedActions" :selected="selectedBlockedActionIds" :busy="busy" :can-confirm="canConfirmWorkflow" :issue="approvalIssue" :expires-at="workflowResult?.approval?.expires_at" @toggle="toggleBlockedAction" @confirm="confirmWorkflowExecution" />
               </template>
               <a-empty v-else description="执行工作流后展示风险复核结论" />
             </a-card>
@@ -342,26 +244,19 @@
     <a-drawer v-model:open="showRawDrawer" title="自动修复工作流原始响应" width="720">
       <pre class="raw-json">{{ rawResultText }}</pre>
     </a-drawer>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import WorkflowInput from './WorkflowInput.vue';
+import ApprovalPanel from './ApprovalPanel.vue';
+import { useAutoFixWorkflow } from './useAutoFixWorkflow';
 
 import { Icon } from '@iconify/vue';
-import { message } from 'ant-design-vue';
 
-import {
-  confirmAutoFixWorkflow,
-  executeAutoFixWorkflow,
-  getAutoFixInfo,
-  getAutoFixReady,
-  type AutoFixAction,
-  type AutoFixInfoResponse,
-  type AutoFixReadyResponse,
-  type AutoFixWorkflowMessage,
-  type AutoFixWorkflowResponse,
-} from '#/api/core/aiops/autofix';
+import type { AutoFixAction, AutoFixWorkflowMessage } from '#/api/core/aiops/autofix';
 
 import {
   formatBoolean,
@@ -378,25 +273,6 @@ import {
   normalizeWorkflowResult,
 } from './autofix-format';
 
-const templates = {
-  crashloop: {
-    event: 'Pod处于CrashLoopBackOff状态，容器持续重启，需要查看日志、检查配置并评估是否允许重启Deployment。',
-    problem_description: 'Deployment 出现 CrashLoopBackOff，业务实例反复重启，请生成候选修复动作并评估自动执行风险。',
-  },
-  custom: {
-    event: '',
-    problem_description: '',
-  },
-  imagepull: {
-    event: 'ImagePullBackOff: failed to pull image，可能和镜像地址、Secret或网络连通性有关。',
-    problem_description: 'Deployment 镜像拉取失败，请检查镜像地址、镜像拉取密钥和网络连通性，并给出可控修复动作。',
-  },
-  resource: {
-    event: 'FailedScheduling: insufficient cpu or insufficient memory，当前资源不足导致Pod无法调度。',
-    problem_description: 'Deployment 资源不足，Pod调度失败或负载过高，请规划扩容副本或调整资源请求的修复动作。',
-  },
-};
-
 const workflowAgents = [
   { description: '识别任务类型', icon: 'lucide:route', name: 'Coordinator', title: 'Coordinator' },
   { description: '分析事件和日志', icon: 'lucide:search', name: 'Analyzer', title: 'Analyzer' },
@@ -406,25 +282,7 @@ const workflowAgents = [
   { description: '执行允许动作', icon: 'lucide:terminal', name: 'Executor', title: 'Executor' },
 ];
 
-const defaultCapabilities = ['诊断转换', '风险评估', '多智能体协作', '受控执行'];
-const templateKey = ref<keyof typeof templates>('imagepull');
-const running = ref(false);
-const confirmLoading = ref(false);
-const infoLoading = ref(false);
-const showRawDrawer = ref(false);
-const serviceInfo = ref<AutoFixInfoResponse>();
-const readyInfo = ref<AutoFixReadyResponse>();
-const workflowResult = ref<AutoFixWorkflowResponse>();
-const selectedBlockedActionIds = ref<string[]>([]);
-
-const formData = reactive({
-  deployment: 'payment-service',
-  event: templates.imagepull.event,
-  namespace: 'default',
-  problem_description: templates.imagepull.problem_description,
-});
-
-const isFormValid = computed(() => Boolean(formData.namespace.trim() && formData.problem_description.trim()));
+const { templateKey, running, infoLoading, showRawDrawer, serviceInfo, readyInfo, workflowResult, selectedBlockedActionIds, workflowError, infoError, formData, busy, isFormValid, confirmableBlockedActions, approvalIssue, canConfirmWorkflow, applyTemplate, resetForm, toggleBlockedAction, loadServiceInfo, runWorkflow, confirmWorkflowExecution } = useAutoFixWorkflow();
 const normalizedResult = computed(() => (workflowResult.value ? normalizeWorkflowResult(workflowResult.value) : null));
 const candidateActions = computed<AutoFixAction[]>(() => normalizedResult.value?.candidate_actions || []);
 const blockedActions = computed<AutoFixAction[]>(() => normalizedResult.value?.blocked_actions || []);
@@ -443,16 +301,6 @@ const rawResultText = computed(() => JSON.stringify(workflowResult.value || {}, 
 const aiAnalysisHighlights = computed(() => getAiAnalysisHighlights(normalizedResult.value?.diagnosis));
 const aiPlanHighlights = computed(() => getAiPlanHighlights(normalizedResult.value?.plan));
 const aiReviewHighlights = computed(() => getAiReviewHighlights(normalizedResult.value?.review));
-const confirmableBlockedActions = computed<AutoFixAction[]>(() =>
-  blockedActions.value.filter((action) => Boolean(action.action_id && action.executable !== false)),
-);
-const canConfirmWorkflow = computed(
-  () =>
-    normalizedResult.value?.status === 'needs_human_confirmation' &&
-    selectedBlockedActionIds.value.length > 0 &&
-    !confirmLoading.value,
-);
-
 const currentAgentStep = computed(() => {
   const used = normalizedResult.value?.agents_used || [];
   if (!used.length) return 0;
@@ -467,184 +315,17 @@ const actionColumns = [
   { key: 'riskDetails', title: '风险评估明细' },
 ];
 
-function applyTemplate() {
-  const template = templates[templateKey.value];
-  if (!template) return;
-  formData.problem_description = template.problem_description;
-  formData.event = template.event;
-}
-
-function resetForm() {
-  templateKey.value = 'imagepull';
-  formData.deployment = 'payment-service';
-  formData.namespace = 'default';
-  applyTemplate();
-  workflowResult.value = undefined;
-  selectedBlockedActionIds.value = [];
-}
-
-function toggleBlockedAction(actionId: string, checked: boolean) {
-  if (!actionId) return;
-  if (checked) {
-    if (!selectedBlockedActionIds.value.includes(actionId)) {
-      selectedBlockedActionIds.value = [...selectedBlockedActionIds.value, actionId];
-    }
-    return;
-  }
-  selectedBlockedActionIds.value = selectedBlockedActionIds.value.filter(
-    (currentActionId) => currentActionId !== actionId,
-  );
-}
-
-async function loadServiceInfo() {
-  infoLoading.value = true;
-  try {
-    const [info, ready] = await Promise.allSettled([getAutoFixInfo(), getAutoFixReady()]);
-    if (info.status === 'fulfilled') serviceInfo.value = info.value;
-    if (ready.status === 'fulfilled') readyInfo.value = ready.value;
-  } catch (error: any) {
-    message.warning(`自动修复服务状态获取失败: ${error.message || error}`);
-  } finally {
-    infoLoading.value = false;
-  }
-}
-
-async function runWorkflow() {
-  if (!isFormValid.value) {
-    message.warning('请填写命名空间和问题描述');
-    return;
-  }
-
-  running.value = true;
-  try {
-    const response = await executeAutoFixWorkflow({
-      deployment: formData.deployment || undefined,
-      event: formData.event || formData.problem_description,
-      namespace: formData.namespace,
-      problem_description: formData.problem_description,
-    });
-    workflowResult.value = response;
-    selectedBlockedActionIds.value = [];
-    const normalized = normalizeWorkflowResult(response);
-    if (normalized.status === 'needs_human_confirmation') {
-      message.warning('工作流已生成修复计划，高风险动作需要人工确认');
-    } else {
-      message.success('自动修复工作流执行完成');
-    }
-  } catch (error: any) {
-    message.error(`自动修复工作流执行失败: ${error.message || error}`);
-  } finally {
-    running.value = false;
-  }
-}
-
-async function confirmWorkflowExecution() {
-  if (!workflowResult.value) {
-    message.warning('当前没有可确认的工作流结果');
-    return;
-  }
-
-  const planId = workflowResult.value.plan?.plan_id;
-  if (!planId) {
-    message.warning('当前工作流缺少计划ID，无法继续确认执行');
-    return;
-  }
-
-  if (!selectedBlockedActionIds.value.length) {
-    message.warning('请先选择要批准执行的动作');
-    return;
-  }
-
-  confirmLoading.value = true;
-  try {
-    const response = await confirmAutoFixWorkflow({
-      approved_action_ids: selectedBlockedActionIds.value,
-      plan_id: planId,
-    });
-    workflowResult.value = response;
-    selectedBlockedActionIds.value = [];
-    if (response.status === 'needs_human_confirmation') {
-      message.warning('已执行已确认动作，仍有待人工确认项');
-    } else {
-      message.success('已确认高风险动作并继续执行');
-    }
-  } catch (error: any) {
-    message.error(`确认执行失败: ${error.message || error}`);
-  } finally {
-    confirmLoading.value = false;
-  }
-}
-
-onMounted(() => {
-  loadServiceInfo();
-});
 </script>
 
 <style scoped>
-.autofix-workflow {
-  min-height: 100vh;
-  padding: 24px;
-  background-color: var(--ant-background-color-light, var(--ops-ground));
-}
 
-.autofix-workflow .page-header {
-  padding: 18px 22px;
-  margin-bottom: 24px;
-  background: var(--ops-surface);
-  border: 1px solid var(--ops-border);
-  border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
 
-.autofix-workflow .header-content {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  width: 100%;
-  gap: 20px;
-}
 
-.autofix-workflow .header-left {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 16px;
-}
 
-.autofix-workflow .header-text {
-  min-width: 0;
-}
 
-.autofix-workflow .header-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  color: #1890ff;
-  background: #e6f4ff;
-  border-radius: var(--ops-radius);
-}
 
-.autofix-workflow .page-title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--ops-ink);
-}
 
-.autofix-workflow .page-subtitle {
-  margin: 4px 0 0;
-  color: var(--ops-muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
 
-.autofix-workflow .header-actions {
-  display: flex;
-  align-items: center;
-}
 
 .autofix-workflow .action-toolbar {
   align-items: center;
@@ -660,7 +341,7 @@ onMounted(() => {
 
 .autofix-workflow .tool-button-primary,
 .autofix-workflow .config-action-button-primary {
-  box-shadow: 0 10px 18px rgba(24, 144, 255, 0.18);
+  box-shadow: none;
 }
 
 .config-card,
@@ -671,7 +352,7 @@ onMounted(() => {
 .review-card {
   margin-bottom: 24px;
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
 }
 
 .config-actions {
@@ -754,7 +435,7 @@ onMounted(() => {
   background: var(--ops-surface);
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
 }
 
 .summary-icon {
@@ -1009,23 +690,13 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .autofix-workflow {
-    padding: 16px;
-  }
 
-  .autofix-workflow .header-content {
-    align-items: flex-start;
-    flex-direction: column;
-  }
 
   .autofix-workflow .header-actions,
   .autofix-workflow .header-actions :deep(.ant-space) {
     width: 100%;
   }
 
-  .autofix-workflow .header-actions {
-    justify-content: flex-end;
-  }
 
   .config-actions {
     justify-content: flex-start;

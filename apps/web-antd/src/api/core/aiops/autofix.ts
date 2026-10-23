@@ -63,6 +63,7 @@ export interface AutoFixWorkflowConfirmRequest {
 }
 
 export interface AutoFixWorkflowResponse {
+  approval?: { expires_at: string; state: string; retry_safe: boolean };
   agents_used: string[];
   blocked_actions: AutoFixAction[];
   candidate_actions: AutoFixAction[];

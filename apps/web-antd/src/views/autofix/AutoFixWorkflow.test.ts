@@ -1,9 +1,14 @@
-import { defineComponent } from 'vue';
+import { defineComponent, reactive } from 'vue';
 
-import { flushPromises, mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AutoFixWorkflow from './AutoFixWorkflow.vue';
+
+const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
+vi.mock('@vben/stores', () => ({ useUserStore: () => account.user, useAccessStore: () => account.access }));
+const wrappers: VueWrapper[] = [];
+afterEach(() => { for (const wrapper of wrappers.splice(0)) wrapper.unmount(); });
 
 const autofixMocks = vi.hoisted(() => ({
   confirmAutoFixWorkflow: vi.fn(),
@@ -163,7 +168,7 @@ const TableStub = defineComponent({
 });
 
 function createWrapper() {
-  return mount(AutoFixWorkflow, {
+  const wrapper = mount(AutoFixWorkflow, {
     global: {
       stubs: {
         'a-alert': AlertStub,
@@ -191,11 +196,15 @@ function createWrapper() {
       },
     },
   });
+  wrappers.push(wrapper);
+  return wrapper;
 }
 
 describe('AutoFixWorkflow.vue', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    account.user = reactive({ userInfo: { userId: '1' } });
+    account.access = reactive({ accessToken: 'offline-token' });
     autofixMocks.getAutoFixInfo.mockResolvedValue({
       capabilities: ['诊断转换', '风险评估'],
       description: '自动修复服务',
@@ -242,6 +251,10 @@ describe('AutoFixWorkflow.vue', () => {
           executable: true,
           risk_assessment: {
             allowed: false,
+            namespace_allowed: true,
+            permission_allowed: true,
+            resource_exists: true,
+            requires_human_confirmation: true,
             reasons: ['需要密钥确认'],
             risk_level: 'high',
           },
@@ -267,6 +280,7 @@ describe('AutoFixWorkflow.vue', () => {
         plan_id: 'autofix-default-payment-service-123',
       },
       status: 'needs_human_confirmation',
+      approval: { state: 'pending', expires_at: '2099-01-01T00:00:00Z', retry_safe: false },
       timestamp: '2026-06-06T10:30:00Z',
     });
 
@@ -305,6 +319,9 @@ describe('AutoFixWorkflow.vue', () => {
 
     await flushPromises();
 
+    await wrapper.find('select').setValue('imagepull');
+    await wrapper.find('input[placeholder="例如 payment-service"]').setValue('payment-service');
+
     const runButton = wrapper
       .findAll('button')
       .find((button) => button.text().includes('执行工作流'));
@@ -322,7 +339,7 @@ describe('AutoFixWorkflow.vue', () => {
       problem_description:
         'Deployment 镜像拉取失败，请检查镜像地址、镜像拉取密钥和网络连通性，并给出可控修复动作。',
     });
-    expect(messageMocks.warning).toHaveBeenCalledWith('工作流已生成修复计划，高风险动作需要人工确认');
+    expect(messageMocks.warning).toHaveBeenCalledWith('工作流已生成原计划，待执行动作需要明确审批');
     expect(wrapper.text()).toContain('需要人工确认或补充诊断');
     expect(wrapper.text()).toContain('镜像密钥未确认');
     expect(wrapper.text()).toContain('Reviewer');
@@ -344,7 +361,7 @@ describe('AutoFixWorkflow.vue', () => {
       approved_action_ids: ['block-secret-check'],
       plan_id: 'autofix-default-payment-service-123',
     });
-    expect(messageMocks.success).toHaveBeenCalledWith('已确认高风险动作并继续执行');
+    expect(messageMocks.success).toHaveBeenCalledWith('已确认并执行所选原计划动作');
     expect(wrapper.text()).toContain('已执行 1 个经人工确认动作');
   });
 });
