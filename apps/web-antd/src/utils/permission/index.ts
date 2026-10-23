@@ -22,6 +22,7 @@ import { useUserStore } from '@vben/stores';
 
 import {
   ALL_PERMISSION_CODES,
+  isU3AlwaysEnforcedKey,
   isU3PermissionKey,
   type PermissionKey,
   U3_SCOPE_APPROVED,
@@ -61,12 +62,16 @@ export function getPermissionCode(key: PermissionKey): string {
   return ALL_PERMISSION_CODES[key];
 }
 
-/** 该 key 当前是否按权限码判断：U3 key 只在 U3 获批后判断，其余 key 始终判断 */
+/**
+ * 该 key 当前是否按权限码判断：
+ * - 非 U3 key、以及 U3_ALWAYS_ENFORCED_KEYS（Node 调度三个按钮）始终判断；
+ * - 其余 U3 key 只在 U3 获批后判断。
+ */
 export function isPermissionEnforced(
   key: PermissionKey,
   u3Approved: boolean = U3_SCOPE_APPROVED,
 ) {
-  return u3Approved || !isU3PermissionKey(key);
+  return u3Approved || !isU3PermissionKey(key) || isU3AlwaysEnforcedKey(key);
 }
 
 /** 纯函数版本，便于在非组件环境与单测中使用 */

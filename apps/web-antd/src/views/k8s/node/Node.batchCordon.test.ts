@@ -245,20 +245,28 @@ afterEach(() => {
 });
 
 describe('Node 批量禁用调度（逐个调用单节点 cordon）', () => {
-  it('权限码 k8s.node.batchCordon 取单节点 cordon 路由模板，归入 U3（清单 v3 #87），不在主表', () => {
+  it('权限码 k8s.node.batchCordon 取单节点 cordon 路由模板，留在 U3 表（清单 v3 #87）但始终按码判断', () => {
     expect(BATCH_CORDON).toBe('/api/k8s/node/:cluster_id/:node_name/cordon');
     expect('k8s.node.batchCordon' in PERMISSION_CODES).toBe(false);
   });
 
-  it('U3 未获批（默认）：不按码收紧，空权限码选中后也显示批量按钮（与改造前一致）', async () => {
+  it('U3 未获批（默认）：没有 cordon 码时选中节点也隐藏批量按钮（P2-A，与 a21af97 一致）', async () => {
     setSubject([]);
     await mountPage();
+    await selectRows(2);
+    expect(batchButton()).toBeNull();
+  });
+
+  it('U3 未获批（默认）且有 cordon 码：选中后显示批量按钮', async () => {
+    setSubject([BATCH_CORDON]);
+    await mountPage();
+    expect(batchButton()).toBeNull();
     await selectRows(2);
     expect(batchButton()).not.toBeNull();
   });
 
   it('全部成功：选 3 个可调度节点发 3 个 POST，URL 逐一对应，提示成功数并刷新列表', async () => {
-    setSubject([]);
+    setSubject([BATCH_CORDON]);
     await mountPage();
     await selectRows(3);
     const listCalls = api.getK8sNodeList.mock.calls.length;
@@ -280,7 +288,7 @@ describe('Node 批量禁用调度（逐个调用单节点 cordon）', () => {
 
   it('混选：已禁用调度的节点跳过不发请求，汇总里列出跳过的节点', async () => {
     NODES = makeNodes(4, ['node-2', 'node-4']);
-    setSubject([]);
+    setSubject([BATCH_CORDON]);
     await mountPage();
     await selectAll();
     await runBatch();
@@ -295,7 +303,7 @@ describe('Node 批量禁用调度（逐个调用单节点 cordon）', () => {
 
   it('选中的全是已禁用调度节点：不发请求，提示无需操作', async () => {
     NODES = makeNodes(2, ['node-1', 'node-2']);
-    setSubject([]);
+    setSubject([BATCH_CORDON]);
     await mountPage();
     await selectAll();
     await runBatch();
@@ -306,7 +314,7 @@ describe('Node 批量禁用调度（逐个调用单节点 cordon）', () => {
   });
 
   it('部分失败：提示部分成功并列出失败节点；失败节点保持勾选、成功的取消勾选', async () => {
-    setSubject([]);
+    setSubject([BATCH_CORDON]);
     await mountPage();
     await selectRows(3);
     replyFor = (url) =>
@@ -325,7 +333,7 @@ describe('Node 批量禁用调度（逐个调用单节点 cordon）', () => {
   });
 
   it('部分失败中含 403：403 只弹统一文案，仍给出部分成功汇总', async () => {
-    setSubject([]);
+    setSubject([BATCH_CORDON]);
     await mountPage();
     await selectRows(2);
     replyFor = (url) =>
@@ -342,7 +350,7 @@ describe('Node 批量禁用调度（逐个调用单节点 cordon）', () => {
   });
 
   it('全部 403：每个节点都发了请求，只有统一提示，不再叠加批量失败提示，不刷新列表', async () => {
-    setSubject([]);
+    setSubject([BATCH_CORDON]);
     await mountPage();
     await selectRows(2);
     replyFor = () => forbidden403;
@@ -364,7 +372,7 @@ describe('Node 批量禁用调度（逐个调用单节点 cordon）', () => {
   });
 
   it('全部失败且未统一提示（如 500）：提示批量失败并列出节点，不静默', async () => {
-    setSubject([]);
+    setSubject([BATCH_CORDON]);
     await mountPage();
     await selectRows(2);
     replyFor = () => ({
@@ -379,7 +387,7 @@ describe('Node 批量禁用调度（逐个调用单节点 cordon）', () => {
 
   it(`50 个节点全部 500：发 50 个请求，并发不超过 ${BATCH_CORDON_CONCURRENCY}；通用提示最多 1 条（固定 key）+ 汇总 1 条`, async () => {
     NODES = makeNodes(50);
-    setSubject([]);
+    setSubject([BATCH_CORDON]);
     await mountPage();
     // 页面默认每页 10 条；切到每页 50 条（页面自带选项）后全选当前页
     (wrapper.vm as any).pageSize = 50;
@@ -474,16 +482,18 @@ describe('行内禁用/启用调度按钮（toggleNodeSchedule）', () => {
     NODES = makeNodes(2, ['node-2']); // node-1 可调度，node-2 已禁用调度
   });
 
-  it('U3 未获批（默认）：两种按钮都照常显示', async () => {
-    setSubject([]);
-    await mountPage();
-    expect(rowScheduleButton(0)?.getAttribute('title')).toBe('禁用调度');
-    expect(rowScheduleButton(1)?.getAttribute('title')).toBe('启用调度');
+  it('cordon / uncordon 码取各自的单节点路由模板（清单 v3 #84 / #85）', () => {
+    expect(CORDON).toBe('/api/k8s/node/:cluster_id/:node_name/cordon');
+    expect(UNCORDON).toBe('/api/k8s/node/:cluster_id/:node_name/uncordon');
   });
 
-  describe('U3 获批', () => {
+  // P2-A：Node 调度按钮不受 U3 开关豁免，开关关 / 开结果一致
+  describe.each([
+    ['U3 未获批（默认）', undefined],
+    ['U3 获批', true],
+  ] as const)('%s', (_label, override) => {
     beforeEach(() => {
-      u3.override = true;
+      u3.override = override;
     });
 
     it('无码：两行都不渲染', async () => {
@@ -507,9 +517,11 @@ describe('行内禁用/启用调度按钮（toggleNodeSchedule）', () => {
       expect(rowScheduleButton(1)?.getAttribute('title')).toBe('启用调度');
     });
 
-    it('cordon / uncordon 码取各自的单节点路由模板（清单 v3 #84 / #85）', () => {
-      expect(CORDON).toBe('/api/k8s/node/:cluster_id/:node_name/cordon');
-      expect(UNCORDON).toBe('/api/k8s/node/:cluster_id/:node_name/uncordon');
+    it('两个码都有：两行都显示', async () => {
+      setSubject([CORDON, UNCORDON]);
+      await mountPage();
+      expect(rowScheduleButton(0)?.getAttribute('title')).toBe('禁用调度');
+      expect(rowScheduleButton(1)?.getAttribute('title')).toBe('启用调度');
     });
 
     it('admin 放行：两行都显示', async () => {
