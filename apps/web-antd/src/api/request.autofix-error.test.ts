@@ -55,6 +55,7 @@ import {
   PERMISSION_DENIED_MESSAGE_KEY,
 } from '#/utils/permission/forbidden';
 import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
+import { HTTP_CONFLICT_MESSAGE } from '#/constants/http-error-messages';
 
 import { resetHttpErrorNoticeTracking } from './http-error-notice';
 import {
@@ -225,6 +226,8 @@ describe('autofix 错误提示 · 请求链路集成', () => {
 /**
  * SEC-25/26 第 6 条（窝窝头复审）：请求层的 http-error key 按文案共用（FE-02 去重）。
  * autofix 只能替换「确实由当前错误弹出、且没有被别的未处理错误共用」的那条提示。
+ * incr9：共用 key 的场景改用 5xx（两条分支请求层都是「内部服务器错误」同一 key）；
+ * 409 在 fe02b 里请求层改为 HTTP_CONFLICT_MESSAGE、key 跟着变，所以 409 只做不看 key 的断言（见本组最后一条）。
  */
 describe('autofix 错误提示 · 共用 key 不串改', () => {
   const GENERIC = () => $t('fallback.http.internalServerError');
@@ -254,9 +257,9 @@ describe('autofix 错误提示 · 共用 key 不串改', () => {
   it('非 autofix 请求先弹了同 key 提示，autofix 随后失败：不替换成 autofix 文案，行内仍给具体文案', async () => {
     await otherRequestFails();
     const inline = await confirmWith(
-      adapterOf(409, ERROR_BODY('WORKFLOW_APPROVAL_ERROR')),
+      adapterOf(503, ERROR_BODY('WORKFLOW_APPROVAL_ERROR')),
     );
-    expect(inline).toBe(AUTOFIX_ERROR_TEXT.conflict);
+    expect(inline).toBe(AUTOFIX_ERROR_TEXT.unavailable);
     const visible = visibleNotices();
     expect(visible.size).toBe(1);
     expect(visible.get(GENERIC_KEY())).toBe(GENERIC());
@@ -292,12 +295,14 @@ describe('autofix 错误提示 · 共用 key 不串改', () => {
         .post(
           '/autofix/workflow/confirm',
           { plan_id: 'fake-plan', approved_action_ids: ['fake-action'] },
-          { adapter: adapterOf(409, ERROR_BODY('X')) },
+          { adapter: adapterOf(503, ERROR_BODY('X')) },
         )
         .catch((error) => error),
       otherRequestFails(),
     ]);
-    reportAutoFixError(autofixError);
+    expect(reportAutoFixError(autofixError)).toBe(
+      AUTOFIX_ERROR_TEXT.unavailable,
+    );
     expect(visibleNotices().get(GENERIC_KEY())).toBe(GENERIC());
     expect(autofixContents()).toEqual([]);
     expect(notices.error).toHaveBeenCalledTimes(2);
@@ -308,35 +313,50 @@ describe('autofix 错误提示 · 共用 key 不串改', () => {
     notices.error.mockImplementationOnce(() => Promise.resolve());
     await otherRequestFails();
     await Promise.resolve();
-    await confirmWith(adapterOf(409, ERROR_BODY('X')));
+    expect(await confirmWith(adapterOf(503, ERROR_BODY('X')))).toBe(
+      AUTOFIX_ERROR_TEXT.unavailable,
+    );
     const visible = visibleNotices();
     expect(visible.size).toBe(1);
-    expect(visible.get(GENERIC_KEY())).toBe(AUTOFIX_ERROR_TEXT.conflict);
+    expect(visible.get(GENERIC_KEY())).toBe(AUTOFIX_ERROR_TEXT.unavailable);
     // 内容：非 autofix 的通用文案（已关闭）→ autofix 请求层通用文案 → 替换为 autofix 具体文案
     expect(notices.error).toHaveBeenCalledTimes(3);
     expect(noticeContents()).toEqual([
       GENERIC(),
       GENERIC(),
-      AUTOFIX_ERROR_TEXT.conflict,
+      AUTOFIX_ERROR_TEXT.unavailable,
     ]);
   });
 
   it('autofix 连续两次同类错误：仍只有一个 key（不堆叠），显示最后一次的具体文案', async () => {
-    await confirmWith(adapterOf(409, ERROR_BODY('X')));
+    await confirmWith(adapterOf(503, ERROR_BODY('X')));
     await confirmWith(adapterOf(404, ERROR_BODY('X')));
     const keys = new Set(notices.error.mock.calls.map(([arg]) => arg?.key));
     expect(keys.size).toBe(2);
-    // 404 走 notFound 文案、409 走 internalServerError：两条各自一个 key，再来一次 409 不新增
-    await confirmWith(adapterOf(409, ERROR_BODY('X')));
+    // 404 走 notFound 文案、503 走 internalServerError：两条各自一个 key，再来一次 503 不新增
+    await confirmWith(adapterOf(503, ERROR_BODY('X')));
     const after = new Set(notices.error.mock.calls.map(([arg]) => arg?.key));
     expect(after).toEqual(keys);
     expect(visibleNotices().get(GENERIC_KEY())).toBe(
-      AUTOFIX_ERROR_TEXT.conflict,
+      AUTOFIX_ERROR_TEXT.unavailable,
     );
-    // 最后一次 409：请求层通用文案 → 替换为 autofix 具体文案（不是 404 的 expired）
+    // 最后一次 503：请求层通用文案 → 替换为 autofix 具体文案（不是 404 的 expired）
     expect(noticeContents().slice(-2)).toEqual([
       GENERIC(),
-      AUTOFIX_ERROR_TEXT.conflict,
+      AUTOFIX_ERROR_TEXT.unavailable,
     ]);
+  });
+
+  // incr9：409 按 fe02b 的语义断言，不看 key（sec26 请求层是通用文案 key，fe02b 是 HTTP_CONFLICT_MESSAGE 的 key）
+  it('409：最终可见只有一条，且就是 HTTP_CONFLICT_MESSAGE（= AUTOFIX_ERROR_TEXT.conflict），不看 key', async () => {
+    expect(AUTOFIX_ERROR_TEXT.conflict).toBe(HTTP_CONFLICT_MESSAGE);
+    const inline = await confirmWith(
+      adapterOf(409, ERROR_BODY('WORKFLOW_APPROVAL_ERROR')),
+    );
+    expect(inline).toBe(HTTP_CONFLICT_MESSAGE);
+    const visible = [...visibleNotices().values()];
+    expect(visible).toEqual([HTTP_CONFLICT_MESSAGE]);
+    expect(noticeContents().at(-1)).toBe(HTTP_CONFLICT_MESSAGE);
+    expect(JSON.stringify(allNoticeCalls())).not.toContain('后端原文');
   });
 });
