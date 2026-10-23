@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * - 取消：零提示。
  * incr4（复审 P3-D / P2-1）：补 YAML 创建（Secret.ts:794）、表单更新（:846）两处写操作，共 6 处；
  * 每处补 400 / 422：恰好一条请求层通用文案，任何提示都不含后端原文（Secret 是敏感接口，400 不透出原文）。
+ * incr5 F5：adapter 记下收到的请求；「取消：零提示」先确认请求确实发到了该操作的接口，零提示才有意义。
  */
 const notices = vi.hoisted(() => ({
   error: vi.fn(),
@@ -60,9 +61,12 @@ vi.mock('#/api/core/k8s/k8s_secret', async (importOriginal) => {
 
 type Mode = 'badRequest' | 'business' | 'canceled' | 'network' | 'server' | 'unprocessable';
 let mode: Mode = 'server';
+/** adapter 收到的请求（方法 + 路径），每条用例开始前清空（incr5 F5） */
+const sent: string[] = [];
 // 假值：模拟后端 4xx 回显用户提交的 Secret 数据，不是真实密钥
 const RAW_ECHO = 'BACKEND-RAW data.password=fake-password-for-test';
 const adapter: AxiosAdapter = async (config) => {
+  sent.push(`${String(config.method).toUpperCase()} ${config.url}`);
   if (mode === 'network') throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, {});
   if (mode === 'canceled') throw new axios.CanceledError(undefined, config, {});
   const [status, data] =
@@ -89,8 +93,8 @@ const { BUSINESS_ERROR_MESSAGE_KEY_PREFIX, createBusinessError } = await import(
 const record = { cluster_id: 1, name: 's1', namespace: 'default' } as any;
 const validForm = { validate: async () => ({}) } as any;
 
-/** 六处写操作：返回执行入口与页面文案 */
-const operations: [string, string, (page: ReturnType<typeof useSecretPage>) => Promise<unknown>][] = [
+/** 六处写操作：名称、页面文案、执行入口、应发出的请求（incr5 F5） */
+const operations: [string, string, (page: ReturnType<typeof useSecretPage>) => Promise<unknown>, string][] = [
   [
     'YAML 更新',
     'Secret YAML 更新失败',
@@ -100,6 +104,7 @@ const operations: [string, string, (page: ReturnType<typeof useSecretPage>) => P
       page.yamlFormModel.value.yaml = 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: s1\n';
       await page.submitYamlForm();
     },
+    'PUT /k8s/secret/1/default/s1/update/yaml',
   ],
   [
     '表单创建',
@@ -111,6 +116,7 @@ const operations: [string, string, (page: ReturnType<typeof useSecretPage>) => P
       page.createFormModel.value.namespace = 'default';
       await page.submitCreateForm();
     },
+    'POST /k8s/secret/1/create',
   ],
   [
     'YAML 创建',
@@ -121,6 +127,7 @@ const operations: [string, string, (page: ReturnType<typeof useSecretPage>) => P
       page.createYamlFormModel.value.yaml = 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: s1\n';
       await page.submitCreateYamlForm();
     },
+    'POST /k8s/secret/1/create/yaml',
   ],
   [
     '表单更新',
@@ -128,10 +135,18 @@ const operations: [string, string, (page: ReturnType<typeof useSecretPage>) => P
     async (page) => {
       page.formRef.value = validForm;
       // 直接设当前操作对象，只测提交这一处 catch：sec26 的 openEditModal 会先拉详情，
-      // 合并后详情请求也走同一个失败 adapter，弹窗会被关掉、提交走不到
+      // 合并后详情请求也走同一个失败 adapter，弹窗会被关掉、提交走不到。
+      // 依赖的内部状态（incr5 F5；每条用例都是新的 useSecretPage()，下面都是初始值）：
+      // - fe02b：submitEditForm 只要求 formRef、currentOperationSecret 非空；editFormModel 的
+      //   data / string_data / labels / annotations 为空对象 → 参数里都是 undefined；
+      // - 合并 sec26 后还依赖：editDataLoading 为 false（没调 openEditModal 就不会置 true）；
+      //   editOpenSeq 在 validate 前后不变（validForm.validate 不关弹窗）；editDataRows /
+      //   editDataOriginalKeys 为空 → isDataEdited 为 false、data 发 null；没有 <redacted> 占位符。
+      // 这些守卫改了（例如提交前强制要求打开过编辑），本用例会在「取消」那条的请求断言上先失败。
       page.currentOperationSecret.value = record;
       await page.submitEditForm();
     },
+    'PUT /k8s/secret/1/default/s1/update',
   ],
   [
     '删除',
@@ -140,6 +155,7 @@ const operations: [string, string, (page: ReturnType<typeof useSecretPage>) => P
       page.deleteSecret(record);
       await confirm.mock.calls.at(-1)![0].onOk();
     },
+    'DELETE /k8s/secret/1/default/s1/delete',
   ],
   [
     '批量删除',
@@ -149,15 +165,17 @@ const operations: [string, string, (page: ReturnType<typeof useSecretPage>) => P
       page.batchOperation('删除');
       await confirm.mock.calls.at(-1)![0].onOk();
     },
+    'DELETE /k8s/secret/1/default/s1/delete',
   ],
 ];
 
 beforeEach(() => {
   vi.clearAllMocks();
   overrides.error = null;
+  sent.length = 0;
 });
 
-describe.each(operations)('Secret %s 失败提示（incr3 / SEC-26 遗留 21）', (_name, pageText, run) => {
+describe.each(operations)('Secret %s 失败提示（incr3 / SEC-26 遗留 21）', (_name, pageText, run, request) => {
   it('HTTP 5xx：只有请求层一条，页面不叠加', async () => {
     mode = 'server';
     await run(useSecretPage());
@@ -208,9 +226,12 @@ describe.each(operations)('Secret %s 失败提示（incr3 / SEC-26 遗留 21）'
     expect(everything).not.toContain('fake-password-for-test');
   });
 
-  it('取消：零提示', async () => {
+  it('取消：请求确实发出后被取消，零提示', async () => {
     mode = 'canceled';
     await run(useSecretPage());
-    expect(notices.error).not.toHaveBeenCalled();
+    // incr5 F5：请求到了 adapter（才被取消），不是在页面守卫里提前 return 造成的零提示
+    expect(sent).toEqual([request]);
+    for (const fn of [notices.error, notices.warning, notices.info, notices.success])
+      expect(fn).not.toHaveBeenCalled();
   });
 });
