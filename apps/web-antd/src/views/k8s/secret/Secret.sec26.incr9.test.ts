@@ -59,9 +59,6 @@ const RECORD = {
 const HEAD = 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: secret-a\n';
 const OK_YAML = `${HEAD}data:\n  alpha: ${encodeUtf8ToBase64('fake-alpha')}\n`;
 
-function flush() {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((res) => {
