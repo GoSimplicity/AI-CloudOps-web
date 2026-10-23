@@ -1,39 +1,29 @@
 <template>
-  <div class="info-container">
+  <OpsPage title="服务信息" description="查看初始化状态、能力说明与服务配置" class="info-container">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <div class="header-icon">
-            <CheckCircleOutlined />
-          </div>
-          <div class="header-text">
-            <h1 class="page-title">服务信息</h1>
-            <p class="page-subtitle">查看智能助手服务的详细信息和配置</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <a-button type="primary" @click="refreshInfo" :loading="loading">
+    <template #actions>
+<a-button type="primary" @click="refreshInfo" :loading="loading || configLoading">
             <template #icon>
               <ReloadOutlined />
             </template>
             刷新信息
           </a-button>
-        </div>
-      </div>
-    </div>
+    </template>
 
+    <a-alert v-if="loadError" :message="loadError" type="error" show-icon role="alert">
+      <template #action><a-button @click="refreshInfo" :loading="loading || configLoading">重试</a-button></template>
+    </a-alert>
     <div class="info-content">
       <!-- 服务状态概览 -->
       <div class="status-overview">
         <a-card class="status-card">
           <div class="status-item">
-            <div class="status-icon" :class="{ 'online': serviceInfo.status === 'online' }">
-              <CheckCircleOutlined v-if="serviceInfo.status === 'online'" />
+            <div class="status-icon" :class="{ 'online': serviceInfo.status === 'initialized' }">
+              <CheckCircleOutlined v-if="serviceInfo.status === 'initialized'" />
               <CloseCircleOutlined v-else />
             </div>
             <div class="status-content">
-              <div class="status-title">服务状态</div>
+              <div class="status-title">初始化状态</div>
               <div class="status-value" :class="serviceInfo.status">
                 {{ getStatusText(serviceInfo.status || '') }}
               </div>
@@ -44,17 +34,17 @@
 
       <!-- 服务基本信息 -->
       <a-card title="基本信息" class="info-card" :loading="loading">
-        <a-descriptions :column="2" bordered>
+        <a-descriptions :column="{ xs: 1, md: 2 }" bordered>
           <a-descriptions-item label="服务名称">
             <a-tag color="blue">{{ serviceInfo.service || '未知' }}</a-tag>
           </a-descriptions-item>
           <a-descriptions-item label="服务版本">
             <a-tag color="green">{{ serviceInfo.version || '未知' }}</a-tag>
           </a-descriptions-item>
-          <a-descriptions-item label="服务描述" :span="2">
+          <a-descriptions-item label="服务描述">
             {{ serviceInfo.description || '暂无描述' }}
           </a-descriptions-item>
-          <a-descriptions-item label="约束条件" :span="2">
+          <a-descriptions-item label="约束条件">
             <div v-if="serviceInfo.constraints">
               <a-tag v-for="(value, key) in serviceInfo.constraints" :key="key" class="constraint-tag">
                 {{ key }}: {{ value }}
@@ -131,11 +121,12 @@
         </div>
       </a-card>
     </div>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { message } from 'ant-design-vue';
 import {
   ReloadOutlined,
@@ -156,10 +147,17 @@ import {
 // 响应式数据
 const loading = ref(false);
 const configLoading = ref(false);
+const infoError = ref('');
+const configError = ref('');
+const loadError = computed(() => infoError.value || configError.value);
+let infoRequest = 0;
+let configRequest = 0;
+let disposed = false;
+onBeforeUnmount(() => { disposed = true; infoRequest += 1; configRequest += 1; });
 const activeConfigKeys = ref<string[]>([]);
 
 // 服务信息
-const serviceInfo = reactive<Partial<ServiceInfoResponse>>({
+const serviceInfo = ref<Partial<ServiceInfoResponse>>({
   service: '',
   version: '',
   description: '',
@@ -170,7 +168,7 @@ const serviceInfo = reactive<Partial<ServiceInfoResponse>>({
 });
 
 // 配置信息
-const configInfo = reactive<Partial<ServiceConfigResponse>>({
+const configInfo = ref<Partial<ServiceConfigResponse>>({
   service: '',
   config: {},
   version: '',
@@ -180,6 +178,8 @@ const configInfo = reactive<Partial<ServiceConfigResponse>>({
 // 获取状态文本
 const getStatusText = (status: string) => {
   const statusMap: Record<string, string> = {
+    'initialized': '已初始化',
+    'not_initialized': '未初始化',
     'online': '在线',
     'offline': '离线',
     'error': '错误',
@@ -213,39 +213,44 @@ const copyToClipboard = async (text: string) => {
 
 // 获取服务信息
 const fetchServiceInfo = async () => {
+  const request = ++infoRequest;
+  infoError.value = '';
   try {
     loading.value = true;
     const response = await getAssistantInfo();
     const data = response as ServiceInfoResponse;
 
     // 更新服务信息
-    Object.assign(serviceInfo, data);
-
-    message.success('服务信息获取成功');
+    if (disposed || request !== infoRequest) return;
+    serviceInfo.value = data;
   } catch (error: any) {
-    message.error(`获取服务信息失败: ${error.message}`);
-
+    if (disposed || request !== infoRequest) return;
+    serviceInfo.value = {};
+    infoError.value = error instanceof Error ? error.message : '获取服务信息失败';
   } finally {
-    loading.value = false;
+    if (!disposed && request === infoRequest) loading.value = false;
   }
 };
 
 // 获取配置信息
 const fetchConfigInfo = async () => {
+  const request = ++configRequest;
+  configError.value = '';
   try {
     configLoading.value = true;
     const response = await getAssistantConfig();
     const data = response as ServiceConfigResponse;
 
     // 更新配置信息
-    Object.assign(configInfo, data);
-
-    message.success('配置信息获取成功');
+    if (disposed || request !== configRequest) return;
+    configInfo.value = data;
   } catch (error: any) {
-    message.error(`获取配置信息失败: ${error.message}`);
-
+    if (disposed || request !== configRequest) return;
+    configInfo.value = {};
+    activeConfigKeys.value = [];
+    configError.value = error instanceof Error ? error.message : '获取配置信息失败';
   } finally {
-    configLoading.value = false;
+    if (!disposed && request === configRequest) configLoading.value = false;
   }
 };
 
@@ -264,79 +269,28 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.info-container {
-  padding: 24px;
-  background-color: var(--ant-background-color-light, var(--ops-ground));
-  min-height: 100vh;
-}
 
 /* 页面头部 */
-.info-container .page-header {
-  background: var(--ops-surface);
-  border-radius: var(--ops-radius);
-  padding: 16px 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--ops-border);
-}
 
-.info-container .header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
 
-.info-container .header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
 
-.info-container .header-icon {
-  font-size: 32px;
-  color: #1890ff;
-}
 
-.info-container .header-text {
-  display: flex;
-  flex-direction: column;
-}
 
-.info-container .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--ops-ink);
-  line-height: 1.2;
-}
 
-.info-container .page-subtitle {
-  color: var(--ops-muted);
-  margin: 0;
-  font-size: 12px;
-  margin-top: 4px;
-}
 
-.info-container .header-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
 
 .info-content {
   .status-overview {
-    margin-bottom: 24px;
+    margin-bottom: var(--ops-space-lg);
 
     .status-card {
       border-radius: var(--ops-radius);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      margin-bottom: 24px;
-      transition: all 0.3s ease;
+      box-shadow: none;
+      margin-bottom: var(--ops-space-lg);
+      transition: border-color var(--ops-duration) ease-out;
 
       &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        box-shadow: none;
       }
 
       .status-item {
@@ -369,7 +323,7 @@ onMounted(() => {
 
           .status-title {
             font-size: 14px;
-            color: var(--ant-text-color-secondary);
+            color: var(--ops-muted);
             margin-bottom: 4px;
             font-weight: 500;
           }
@@ -394,13 +348,12 @@ onMounted(() => {
 
   .info-card {
     border-radius: var(--ops-radius);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 24px;
-    transition: all 0.3s ease;
+    box-shadow: none;
+    margin-bottom: var(--ops-space-lg);
+    transition: border-color var(--ops-duration) ease-out;
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      box-shadow: none;
     }
 
     .constraint-tag {
@@ -408,7 +361,7 @@ onMounted(() => {
     }
 
     .text-muted {
-      color: #6c757d;
+      color: var(--ops-muted);
       font-style: italic;
     }
   }
@@ -423,13 +376,12 @@ onMounted(() => {
       align-items: center;
       gap: 16px;
       padding: 16px;
-      border: 1px solid var(--ant-border-color-split);
+      border: 1px solid var(--ops-border);
       border-radius: var(--ops-radius);
-      transition: all 0.3s;
+      transition: border-color var(--ops-duration) ease-out;
 
       &:hover {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        transform: translateY(-2px);
+        box-shadow: none;
       }
 
       .capability-icon {
@@ -446,7 +398,7 @@ onMounted(() => {
 
       .capability-text {
         font-size: 14px;
-        color: var(--ant-text-color);
+        color: var(--ops-ink);
         font-weight: 500;
       }
     }
@@ -462,13 +414,12 @@ onMounted(() => {
   .endpoint-item {
     margin-bottom: 16px;
     padding: 16px;
-    border: 1px solid var(--ant-border-color-split);
+    border: 1px solid var(--ops-border);
     border-radius: var(--ops-radius);
-    transition: all 0.3s;
+    transition: border-color var(--ops-duration) ease-out;
 
     &:hover {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      transform: translateY(-2px);
+      box-shadow: none;
     }
 
     &:last-child {
@@ -485,11 +436,11 @@ onMounted(() => {
     .endpoint-url {
       font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
       font-size: 12px;
-      color: var(--ant-text-color);
-      background: var(--ant-background-color-light);
+      color: var(--ops-ink);
+      background: var(--ops-ground);
       padding: 8px 12px;
-      border-radius: 4px;
-      border: 1px solid var(--ant-border-color-split);
+      border-radius: var(--ops-radius);
+      border: 1px solid var(--ops-border);
       word-break: break-all;
       line-height: 1.4;
     }
@@ -497,15 +448,15 @@ onMounted(() => {
 
   .config-content {
     .config-value {
-      background: var(--ant-background-color-light);
-      border: 1px solid var(--ant-border-color-split);
-      border-radius: 6px;
+      background: var(--ops-ground);
+      border: 1px solid var(--ops-border);
+      border-radius: var(--ops-radius);
       padding: 12px;
       margin: 0;
       font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
       font-size: 12px;
       line-height: 1.5;
-      color: var(--ant-text-color);
+      color: var(--ops-ink);
       overflow-x: auto;
     }
   }
@@ -520,13 +471,13 @@ onMounted(() => {
         display: flex;
         align-items: center;
         gap: 8px;
-        color: var(--ant-text-color-secondary);
+        color: var(--ops-muted);
         font-size: 12px;
         font-weight: 500;
 
         .anticon {
           font-size: 14px;
-          color: #1890ff;
+          color: var(--ops-accent);
         }
       }
     }
@@ -534,37 +485,12 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .info-container {
-    padding: 16px;
-  }
 
-  .info-container .page-header {
-    padding: 20px;
-    margin-bottom: 16px;
-  }
 
-  .info-container .header-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
 
-  .info-container .header-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
 
-  .info-container .page-title {
-    font-size: 20px;
-  }
 
-  .info-container .page-subtitle {
-    font-size: 13px;
-  }
 
-  .info-container .header-icon {
-    font-size: 36px;
-  }
 
   .status-card {
     .status-item {

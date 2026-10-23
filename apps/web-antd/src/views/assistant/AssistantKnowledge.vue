@@ -1,33 +1,18 @@
 <template>
-  <div class="knowledge-container">
+  <OpsPage title="知识库管理" description="上传 UTF-8 文档并管理知识索引" class="knowledge-container">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <div class="header-icon">
-            <FileTextOutlined />
-          </div>
-          <div class="header-text">
-            <h1 class="page-title">知识库管理</h1>
-            <p class="page-subtitle">管理智能助手的知识库和文档资源</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <a-button type="primary" @click="refreshKnowledge" :loading="refreshing">
+    <template #actions>
+<a-button type="primary" @click="refreshKnowledge" :loading="refreshing">
             <template #icon><ReloadOutlined /></template>
-            刷新知识库
+            重建知识索引
           </a-button>
-        </div>
-      </div>
-    </div>
-
-    <div class="knowledge-content">
-      <!-- 统计卡片 -->
-      <div class="stats-grid">
+    </template>
+    <template #summary>
+<div class="stats-grid">
         <a-card class="stat-card">
           <a-statistic
             title="文档数量"
-            :value="knowledgeStats.last_update === '暂无数据' ? '未查询' : knowledgeStats.documents_count"
+            :value="!statsKnown ? '未统计' : knowledgeStats.documents_count"
             :value-style="{ color: '#1890ff' }"
           >
             <template #prefix><FileTextOutlined /></template>
@@ -36,7 +21,7 @@
         <a-card class="stat-card">
           <a-statistic
             title="向量数量"
-            :value="knowledgeStats.last_update === '暂无数据' ? '未查询' : knowledgeStats.vector_count"
+            :value="!statsKnown ? '未统计' : knowledgeStats.vector_count"
             :value-style="{ color: '#52c41a' }"
           >
             <template #prefix><NodeIndexOutlined /></template>
@@ -52,12 +37,19 @@
           </a-statistic>
         </a-card>
       </div>
+    </template>
+
+    <a-alert v-if="loadError" :message="loadError" type="error" show-icon role="alert" />
+    <p class="index-note">重建会重新索引全库并调用嵌入模型；上传和添加仅索引当前文档</p>
+    <div class="knowledge-content">
+      <!-- 统计卡片 -->
+
 
       <!-- 功能区域 -->
       <div class="function-area">
         <a-row :gutter="24">
           <!-- 文件上传 -->
-          <a-col :span="12">
+          <a-col :xs="24" :lg="12">
             <a-card title="文档上传" class="function-card">
               <div class="upload-area">
                 <a-upload-dragger
@@ -65,15 +57,15 @@
                   :before-upload="beforeUpload"
                   :custom-request="handleUpload"
                   :multiple="true"
-                  accept=".txt,.md,.pdf,.doc,.docx"
+                  accept=".txt,.md"
                   class="upload-dragger"
                 >
                   <p class="ant-upload-drag-icon">
-                    <InboxOutlined style="font-size: 48px; color: #1890ff;" />
+                    <InboxOutlined style="font-size: 48px; color: var(--ops-accent);" />
                   </p>
                   <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
                   <p class="ant-upload-hint">
-                    支持 .txt, .md, .pdf, .doc, .docx 格式文件
+                    仅支持 UTF-8 .txt 与 .md，最大 10 MiB；上传会索引当前文档
                   </p>
                 </a-upload-dragger>
               </div>
@@ -81,7 +73,7 @@
           </a-col>
 
           <!-- 手动添加文档 -->
-          <a-col :span="12">
+          <a-col :xs="24" :lg="12">
             <a-card title="手动添加文档" class="function-card">
               <a-form layout="vertical" :model="documentForm">
                 <a-form-item label="文档标题" name="title">
@@ -146,12 +138,13 @@
         </div>
       </a-card>
     </div>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { ref, reactive, onMounted } from 'vue';
-import { message } from 'ant-design-vue';
+import { message, Upload, type UploadProps } from 'ant-design-vue';
 import {
   ReloadOutlined,
   FileTextOutlined,
@@ -175,6 +168,8 @@ import {
 // 响应式数据
 const refreshing = ref(false);
 const adding = ref(false);
+const statsKnown = ref(false);
+const loadError = ref('');
 const fileList = ref<any[]>([]);
 
 // 知识库统计
@@ -215,12 +210,14 @@ const addLog = (type: OperationLog['type'], message: string) => {
 
 // 刷新知识库
 const refreshKnowledge = async () => {
+  loadError.value = '';
   try {
     refreshing.value = true;
     const response = await refreshKnowledgeBase();
     const data = response as RefreshKnowledgeResponse;
 
     if (data.refreshed) {
+      statsKnown.value = true;
       knowledgeStats.documents_count = data.documents_count;
       knowledgeStats.vector_count = data.vector_count;
       knowledgeStats.last_update = new Date(data.timestamp).toLocaleString();
@@ -228,11 +225,15 @@ const refreshKnowledge = async () => {
       message.success('知识库刷新成功');
       addLog('success', `知识库刷新成功：${data.message}`);
     } else {
-      message.error('知识库刷新失败');
-      addLog('error', '知识库刷新失败');
+      throw new Error(data.message || '知识库重建失败');
     }
   } catch (error: any) {
-    message.error(`刷新知识库失败: ${error.message}`);
+    statsKnown.value = false;
+    knowledgeStats.documents_count = 0;
+    knowledgeStats.vector_count = 0;
+    loadError.value = error instanceof Error ? error.message : '知识库重建失败';
+    knowledgeStats.last_update = '重建失败';
+    message.error(`刷新知识库失败: ${loadError.value}`);
     addLog('error', `刷新知识库失败: ${error.message}`);
   } finally {
     refreshing.value = false;
@@ -241,44 +242,39 @@ const refreshKnowledge = async () => {
 
 // 文件上传前处理
 const beforeUpload = (file: File) => {
-  const isValidType = ['txt', 'md', 'pdf', 'doc', 'docx'].some(ext => 
+  const isValidType = ['txt', 'md'].some(ext =>
     file.name.toLowerCase().endsWith(`.${ext}`)
   );
   if (!isValidType) {
-    message.error('只能上传 txt, md, pdf, doc, docx 格式的文件');
-    return false;
+    message.error('仅支持 UTF-8 的 .txt 与 .md 文件');
+    return Upload.LIST_IGNORE;
   }
 
-  const isLt10M = file.size / 1024 / 1024 < 10;
+  const isLt10M = file.size <= 10 * 1024 * 1024;
   if (!isLt10M) {
-    message.error('文件大小不能超过 10MB');
-    return false;
+    message.error('文件大小不能超过 10 MiB');
+    return Upload.LIST_IGNORE;
   }
 
   return true;
 };
 
 // 处理文件上传
-const handleUpload = async (options: any) => {
-  const { file } = options;
-
+const handleUpload: NonNullable<UploadProps['customRequest']> = async (options) => {
   try {
-    const response = await uploadKnowledgeFile(file);
-    const data = response as UploadKnowledgeResponse;
-
-    if (data.uploaded) {
-      message.success(`文件 ${data.filename} 上传成功`);
-      addLog('success', `文件上传成功: ${data.filename} (${data.file_size} 字节)`);
-
-      // 上传成功后刷新知识库统计
-      await refreshKnowledge();
-    } else {
-      message.error(`文件上传失败: ${data.message}`);
-      addLog('error', `文件上传失败: ${data.message}`);
-    }
-  } catch (error: any) {
-    message.error(`文件上传失败: ${error.message}`);
-    addLog('error', `文件上传失败: ${error.message}`);
+    if (!(options.file instanceof File)) throw new Error('请选择有效文件');
+    const data = await uploadKnowledgeFile(options.file) as UploadKnowledgeResponse;
+    if (!data.uploaded) throw new Error(data.message || '文件索引失败');
+    options.onSuccess?.(data);
+    statsKnown.value = false;
+    knowledgeStats.last_update = '统计待重建';
+    message.success(`文件 ${data.filename} 已上传并索引`);
+    addLog('success', `文件索引完成: ${data.filename} (${data.file_size} 字节)`);
+  } catch (error) {
+    const failure = error instanceof Error ? error : new Error('文件上传失败');
+    options.onError?.(failure);
+    message.error(`文件上传失败: ${failure.message}`);
+    addLog('error', `文件上传失败: ${failure.message}`);
   }
 };
 
@@ -297,9 +293,13 @@ const addDocument = async () => {
     return;
   }
 
+  if (!/\.(md|txt)$/i.test(documentForm.file_name.trim())) {
+    message.warning('文件名仅支持 .md 与 .txt');
+    return;
+  }
   try {
     adding.value = true;
-    const response = await addDocumentAPI(documentForm);
+    const response = await addDocumentAPI({ ...documentForm });
     const data = response as AddDocumentResponse;
 
     if (data.added) {
@@ -311,8 +311,8 @@ const addDocument = async () => {
       documentForm.content = '';
       documentForm.file_name = '';
 
-      // 刷新知识库统计
-      await refreshKnowledge();
+      statsKnown.value = false;
+      knowledgeStats.last_update = '统计待重建';
     } else {
       message.error(`文档添加失败: ${data.message}`);
       addLog('error', `文档添加失败: ${data.message}`);
@@ -332,122 +332,76 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.knowledge-container {
-  padding: 24px;
-  background-color: var(--ant-background-color-light, var(--ops-ground));
-  min-height: 100vh;
-}
-
-/* 页面头部 */
-.knowledge-container .page-header {
-  background: var(--ops-surface);
-  border-radius: var(--ops-radius);
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--ops-border);
-}
-
-.knowledge-container .header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.knowledge-container .header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.knowledge-container .header-icon {
-  font-size: 32px;
-  color: #1890ff;
-}
-
-.knowledge-container .header-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.knowledge-container .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--ops-ink);
-  line-height: 1.2;
-}
-
-.knowledge-container .page-subtitle {
+.index-note {
   color: var(--ops-muted);
   margin: 0;
-  font-size: 14px;
-  margin-top: 4px;
+  line-height: 1.6;
 }
 
-.knowledge-container .header-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
+
+/* 页面头部 */
+
+
+
+
+
+
+
 
 .knowledge-content {
   .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: var(--ops-space-lg);
 
     .stat-card {
       text-align: center;
       border-radius: var(--ops-radius);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      margin-bottom: 24px;
-      transition: all 0.3s ease;
+      box-shadow: none;
+      margin-bottom: var(--ops-space-lg);
+      transition: border-color var(--ops-duration) ease-out;
 
       &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        box-shadow: none;
       }
     }
   }
 
   .function-area {
-    margin-bottom: 24px;
+    margin-bottom: var(--ops-space-lg);
 
     .function-card {
       height: 100%;
       border-radius: var(--ops-radius);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      margin-bottom: 24px;
-      transition: all 0.3s ease;
+      box-shadow: none;
+      margin-bottom: var(--ops-space-lg);
+      transition: border-color var(--ops-duration) ease-out;
 
       &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        box-shadow: none;
       }
     }
 
     .upload-area {
       .upload-dragger {
         border-radius: var(--ops-radius);
-        border: 2px dashed var(--ant-border-color);
-        transition: all 0.3s ease;
+        border: 2px dashed var(--ops-border);
+        transition: border-color var(--ops-duration) ease-out;
 
         &:hover {
-          border-color: #1890ff;
+          border-color: var(--ops-accent);
         }
 
         .ant-upload-text {
           font-size: 16px;
-          color: var(--ant-text-color);
+          color: var(--ops-ink);
           margin-top: 8px;
           font-weight: 500;
         }
 
         .ant-upload-hint {
-          color: var(--ant-text-color-secondary);
+          color: var(--ops-muted);
           font-size: 14px;
           margin-top: 4px;
         }
@@ -457,8 +411,8 @@ onMounted(() => {
 
   .log-card {
     border-radius: var(--ops-radius);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 24px;
+    box-shadow: none;
+    margin-bottom: var(--ops-space-lg);
 
     .log-container {
       max-height: 400px;
@@ -467,7 +421,7 @@ onMounted(() => {
       .empty-log {
         text-align: center;
         padding: 40px 0;
-        color: var(--ant-text-color-secondary);
+        color: var(--ops-muted);
       }
 
       .log-list {
@@ -476,11 +430,11 @@ onMounted(() => {
           align-items: flex-start;
           padding: 12px 0;
           margin-bottom: 8px;
-          border-bottom: 1px solid var(--ant-border-color-split);
-          transition: all 0.3s;
+          border-bottom: 1px solid var(--ops-border);
+          transition: border-color var(--ops-duration) ease-out;
 
           &:hover {
-            background: var(--ant-background-color-light);
+            background: var(--ops-ground);
           }
 
           &.success {
@@ -497,7 +451,7 @@ onMounted(() => {
 
           &:not(.success):not(.error) {
             .log-icon {
-              color: #1890ff;
+              color: var(--ops-accent);
             }
           }
 
@@ -512,7 +466,7 @@ onMounted(() => {
 
             .log-message {
               font-size: 14px;
-              color: var(--ant-text-color);
+              color: var(--ops-ink);
               margin-bottom: 4px;
               font-weight: 500;
               line-height: 1.4;
@@ -520,7 +474,7 @@ onMounted(() => {
 
             .log-time {
               font-size: 12px;
-              color: var(--ant-text-color-secondary);
+              color: var(--ops-muted);
             }
           }
         }
@@ -530,9 +484,6 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .knowledge-container {
-    padding: 16px;
-  }
 
   .knowledge-header {
     flex-direction: column;
@@ -540,9 +491,6 @@ onMounted(() => {
     align-items: stretch;
   }
 
-  .header-actions {
-    justify-content: center;
-  }
 
   .stats-grid {
     grid-template-columns: 1fr;
