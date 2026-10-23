@@ -10,7 +10,8 @@ import {
   REDACTED_PLACEHOLDER,
   readRevealedValue,
   validateDataRows,
-  yamlContainsRedacted,
+  YAML_QUOTED_REDACTED_MESSAGE,
+  yamlHasQuotedRedacted,
 } from './secret-data';
 
 /**
@@ -164,10 +165,30 @@ describe('findRedactedPlaceholder（最终防线）', () => {
     expect(findRedactedPlaceholder({ data: null })).toBeNull();
   });
 
-  it('YAML 文本中出现占位符（含引号形式）能发现', () => {
-    expect(yamlContainsRedacted('data:\n  a: <redacted>\n')).toBe(true);
-    expect(yamlContainsRedacted('data:\n  a: "<redacted>"\n')).toBe(true);
-    expect(yamlContainsRedacted(`data:\n  a: ${FAKE_B64}\n`)).toBe(false);
+  it('P2-1：裸 <redacted> 合法（后端 RestoreRedactedSecretYAML 还原原值），不拦截', () => {
+    expect(yamlHasQuotedRedacted('data:\n  a: <redacted>\n')).toBe(false);
+    expect(
+      yamlHasQuotedRedacted(
+        'data:\n  a: <redacted>\nstringData:\n  s: <redacted>\n',
+      ),
+    ).toBe(false);
+    expect(yamlHasQuotedRedacted(`data:\n  a: ${FAKE_B64}\n`)).toBe(false);
+    // 值里只是包含这段文本（不是整个值）不算占位符
+    expect(yamlHasQuotedRedacted('data:\n  a: "x <redacted> y"\n')).toBe(false);
+  });
+
+  it('P2-1：带引号的占位符（双引号 / 单引号，data 与 stringData）拦截', () => {
+    expect(yamlHasQuotedRedacted('data:\n  a: "<redacted>"\n')).toBe(true);
+    expect(yamlHasQuotedRedacted("data:\n  a: '<redacted>'\n")).toBe(true);
+    expect(
+      yamlHasQuotedRedacted('stringData:\n  s: "<redacted>"  # 注释\n'),
+    ).toBe(true);
+    expect(yamlHasQuotedRedacted('data:\n  a: "<redacted>"')).toBe(true);
+  });
+
+  it('P2-1：拦截文案准确，不再让用户删除不改的键（YAML 更新是整体覆盖）', () => {
+    expect(YAML_QUOTED_REDACTED_MESSAGE).toContain('去掉引号');
+    expect(YAML_QUOTED_REDACTED_MESSAGE).not.toContain('删除');
   });
 });
 

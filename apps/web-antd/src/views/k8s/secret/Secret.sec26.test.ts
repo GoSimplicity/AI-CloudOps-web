@@ -6,7 +6,11 @@ import {
   notifyBusinessError,
 } from '#/utils/permission/business-error';
 
-import { EMPTY_VALUE_MESSAGE, REDACTED_PLACEHOLDER } from './secret-data';
+import {
+  EMPTY_VALUE_MESSAGE,
+  REDACTED_PLACEHOLDER,
+  YAML_QUOTED_REDACTED_MESSAGE,
+} from './secret-data';
 import { useSecretPage } from './Secret';
 
 /**
@@ -228,14 +232,43 @@ describe('规则 2：更新 Secret 的 data', () => {
     expect(message.warning).toHaveBeenCalledTimes(2);
   });
 
-  it('YAML 保存时还留着 <redacted>：拦截，不发请求', async () => {
+  function yamlPage(yaml: string) {
     const page = useSecretPage();
     page.yamlFormRef.value = { validate: vi.fn(async () => ({})) } as any;
     page.currentOperationSecret.value = { ...RECORD };
-    page.yamlFormModel.value.yaml = `apiVersion: v1\nkind: Secret\ndata:\n  alpha: "${REDACTED_PLACEHOLDER}"\n`;
+    page.yamlFormModel.value.yaml = yaml;
+    return page;
+  }
+
+  it.each([
+    ['双引号', `"${REDACTED_PLACEHOLDER}"`],
+    ['单引号', `'${REDACTED_PLACEHOLDER}'`],
+  ])(
+    'P2-1：YAML 里%s的占位符：拦截并给出准确提示，不发请求',
+    async (_, quoted) => {
+      const page = yamlPage(
+        `apiVersion: v1\nkind: Secret\ndata:\n  alpha: ${quoted}\n`,
+      );
+      await page.submitYamlForm();
+      expect(api.updateByYaml).not.toHaveBeenCalled();
+      expect(message.warning).toHaveBeenCalledTimes(1);
+      expect(message.warning).toHaveBeenCalledWith(
+        YAML_QUOTED_REDACTED_MESSAGE,
+      );
+    },
+  );
+
+  it('P2-1：YAML 里裸的 <redacted> 放行，原样提交由后端还原原值', async () => {
+    api.updateByYaml.mockResolvedValueOnce({});
+    const yaml = `apiVersion: v1\nkind: Secret\nmetadata:\n  name: secret-a\ndata:\n  alpha: ${REDACTED_PLACEHOLDER}\n  beta: ${FAKE_B64}\nstringData:\n  s: ${REDACTED_PLACEHOLDER}\n`;
+    const page = yamlPage(yaml);
     await page.submitYamlForm();
-    expect(api.updateByYaml).not.toHaveBeenCalled();
-    expect(message.warning).toHaveBeenCalledTimes(1);
+    expect(message.warning).not.toHaveBeenCalled();
+    expect(api.updateByYaml).toHaveBeenCalledTimes(1);
+    const sent = api.updateByYaml.mock.calls[0]![0].yaml as string;
+    expect(sent).toContain(`  alpha: ${REDACTED_PLACEHOLDER}\n`);
+    expect(sent).toContain(`  s: ${REDACTED_PLACEHOLDER}\n`);
+    expect(sent).not.toContain(btoa(REDACTED_PLACEHOLDER));
   });
 
   it('冲突（HTTP 200 + code=1）按业务错误处理：只有请求层一条提示，弹窗保留，不提示成功', async () => {

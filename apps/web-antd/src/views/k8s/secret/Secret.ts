@@ -48,8 +48,8 @@ import {
   readRevealedValue,
   REDACTED_VALUE_MESSAGE,
   validateDataRows,
-  YAML_REDACTED_MESSAGE,
-  yamlContainsRedacted,
+  YAML_QUOTED_REDACTED_MESSAGE,
+  yamlHasQuotedRedacted,
 } from './secret-data';
 
 // YAML 模板常量
@@ -773,10 +773,10 @@ export function useSecretPage() {
     
     try {
       await yamlFormRef.value.validate();
-      // SEC-25/26：YAML 接口返回的值是脱敏占位符，原样（或被下面的编码逻辑 base64 后）提交会把占位符写进集群，
-      // 这里一律拦截，不发送 <redacted>
-      if (yamlContainsRedacted(yamlFormModel.value.yaml)) {
-        message.warning(YAML_REDACTED_MESSAGE);
+      // SEC-25/26 P2-1：裸 <redacted> 由后端还原为集群原值，原样放行；
+      // 带引号的会被下面的编码逻辑当明文 base64，后端不再识别，拦截
+      if (yamlHasQuotedRedacted(yamlFormModel.value.yaml)) {
+        message.warning(YAML_QUOTED_REDACTED_MESSAGE);
         return;
       }
       submitLoading.value = true;

@@ -18,7 +18,12 @@ import type { K8sSecretRevealRes } from '#/api/core/k8s/k8s_secret';
 export const REDACTED_PLACEHOLDER = '<redacted>';
 export const EMPTY_VALUE_MESSAGE = '不支持设为空值，请删除该键';
 export const REDACTED_VALUE_MESSAGE = `不能提交脱敏占位符 ${REDACTED_PLACEHOLDER}，请填写真实值或删除该键`;
-export const YAML_REDACTED_MESSAGE = `YAML 中含脱敏占位符 ${REDACTED_PLACEHOLDER}，请填写真实值或删除该键后再保存`;
+/**
+ * YAML 里带引号的占位符（P2-1，契约 a.4 / F7）。裸 `<redacted>` 由后端 RestoreRedactedSecretYAML 还原原值；
+ * 带双引号时 encodeSecretYamlForSubmission 会把 data 下的值当明文 base64 编码，后端不再识别为占位符，
+ * 字面值 `<redacted>` 会被写进集群。单引号按约定同样拦截。
+ */
+export const YAML_QUOTED_REDACTED_MESSAGE = `YAML 中有带引号的脱敏占位符（"${REDACTED_PLACEHOLDER}" 或 '${REDACTED_PLACEHOLDER}'），保存时会被当作普通文本写入 Secret。要保留原值请去掉引号写成 ${REDACTED_PLACEHOLDER}，要修改请填写真实值`;
 export const BINARY_VALUE_NOTICE = '（二进制内容，无法以文本显示或复制）';
 
 /** K8s Secret 键名规则：字母数字、-、_、. */
@@ -173,9 +178,13 @@ export function findRedactedPlaceholder(payload: {
   return null;
 }
 
-/** YAML 文本里是否还留着脱敏占位符（含引号形式） */
-export function yamlContainsRedacted(yamlText: string) {
-  return yamlText.includes(REDACTED_PLACEHOLDER);
+/** 某个键的整个值是带引号（单 / 双）的占位符，允许行尾注释 */
+const QUOTED_REDACTED_VALUE_PATTERN =
+  /^[ \t]*[^\s#:][^:\n]*:[ \t]*(["'])<redacted>\1[ \t]*(?:#.*)?$/m;
+
+/** YAML 文本里是否有带引号的占位符（裸 `<redacted>` 合法，不算） */
+export function yamlHasQuotedRedacted(yamlText: string) {
+  return QUOTED_REDACTED_VALUE_PATTERN.test(yamlText);
 }
 
 /**

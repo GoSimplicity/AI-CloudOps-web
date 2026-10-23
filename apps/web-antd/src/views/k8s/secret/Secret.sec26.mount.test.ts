@@ -158,3 +158,18 @@ describe('Secret 编辑：data 行', () => {
     expect(document.body.textContent).toContain('撤销修改');
   });
 });
+
+describe('Secret YAML 编辑：脱敏说明（P2-1）', () => {
+  it('说明裸 <redacted> 保留原值、带引号会被拦截；不再提示「删除不改的键」', async () => {
+    const vm = await mountSecret();
+    vm.currentOperationSecret = { ...DETAIL };
+    vm.isYamlModalVisible = true;
+    await settle();
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('Secret 数据已脱敏');
+    expect(text).not.toContain('删除不改的键');
+    expect(text).not.toContain('含 <redacted> 的 YAML 不会提交');
+    expect(text).toContain('保留集群中的原值');
+    expect(text).toContain('整体覆盖');
+  });
+});
