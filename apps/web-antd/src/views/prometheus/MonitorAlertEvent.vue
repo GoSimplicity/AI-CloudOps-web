@@ -1,9 +1,8 @@
 <template>
-  <div class="alert-events-container">
+  <OpsPage title="告警事件" description="按状态查询事件，认领或管理静默">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <div class="header-actions">
-        <div class="search-filters">
+    <template #filters>
+      <div class="search-filters">
           <a-input-search v-model:value="searchText" placeholder="搜索告警事件名称..." class="search-input"
             @search="handleSearch" @change="handleSearchChange" allow-clear />
           <a-select v-model:value="statusFilter" placeholder="告警状态" class="filter-select" @change="handleStatusChange"
@@ -14,26 +13,26 @@
             <a-select-option value="claimed">已认领</a-select-option>
             <a-select-option value="resolved">已恢复</a-select-option>
           </a-select>
-          <a-select v-model:value="eventTimesFilter" placeholder="触发次数" class="filter-select"
+          <a-select v-model:value="eventTimesFilter" placeholder="触发次数（本页）" class="filter-select"
             @change="handleEventTimesChange" allow-clear>
             <a-select-option :value="undefined">全部</a-select-option>
-            <a-select-option value="1">1次</a-select-option>
-            <a-select-option value="5">5次以上</a-select-option>
-            <a-select-option value="10">10次以上</a-select-option>
+            <a-select-option :value="1">1次</a-select-option>
+            <a-select-option :value="5">5次以上</a-select-option>
+            <a-select-option :value="10">10次以上</a-select-option>
           </a-select>
           <a-button @click="handleResetFilters" class="reset-btn">
             重置
           </a-button>
         </div>
-      </div>
-    </div>
+    </template>
 
     <!-- 统计卡片 -->
-    <div class="stats-row">
+    <template #summary>
+      <div class="stats-row">
       <a-row :gutter="[16, 16]">
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="总告警事件" :value="stats.total" :value-style="{ color: '#3f8600' }">
+            <a-statistic title="本页总告警事件" :value="loadError ? '未知' : stats.total" :value-style="{ color: '#3f8600' }">
               <template #prefix>
                 <Icon icon="carbon:container-registry" />
               </template>
@@ -42,7 +41,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="告警中事件" :value="stats.firing" :value-style="{ color: '#cf1322' }">
+            <a-statistic title="本页告警中事件" :value="loadError ? '未知' : stats.firing" :value-style="{ color: '#cf1322' }">
               <template #prefix>
                 <Icon icon="carbon:warning-alt" />
               </template>
@@ -51,7 +50,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="已屏蔽事件" :value="stats.silenced" :value-style="{ color: '#faad14' }">
+            <a-statistic title="本页已屏蔽事件" :value="loadError ? '未知' : stats.silenced" :value-style="{ color: '#faad14' }">
               <template #prefix>
                 <Icon icon="carbon:data-table" />
               </template>
@@ -60,7 +59,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="已认领事件" :value="stats.claimed" :value-style="{ color: '#52c41a' }">
+            <a-statistic title="本页已认领事件" :value="loadError ? '未知' : stats.claimed" :value-style="{ color: '#52c41a' }">
               <template #prefix>
                 <Icon icon="carbon:server" />
               </template>
@@ -69,6 +68,11 @@
         </a-col>
       </a-row>
     </div>
+    </template>
+
+    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
+      <template #action><a-button size="small" :loading="loading" @click="fetchResources">重试</a-button></template>
+    </a-alert>
 
     <!-- 表格容器 -->
     <div class="table-container">
@@ -204,11 +208,13 @@
         </div>
       </div>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useListRequest } from './useListRequest';
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { DownOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
@@ -255,13 +261,15 @@ const columns = [
 
 // 状态数据
 const loading = ref(false);
+const { loadError, beginRequest } = useListRequest(loading);
 const searchText = ref('');
 const statusFilter = ref<string | undefined>(undefined);
 const eventTimesFilter = ref<number | undefined>(undefined);
 const data = ref<MonitorAlertEvent[]>([]);
 
 // 防抖处理
-let searchTimeout: any = null;
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+onBeforeUnmount(() => { if (searchTimeout) clearTimeout(searchTimeout); });
 
 // 分页配置
 const paginationConfig = reactive({
@@ -364,7 +372,7 @@ const updateStats = () => {
 
 // 数据加载
 const fetchResources = async (): Promise<void> => {
-  loading.value = true;
+  const request = beginRequest();
   try {
     const params: GetMonitorAlertEventListReq = {
       page: paginationConfig.current,
@@ -374,16 +382,23 @@ const fetchResources = async (): Promise<void> => {
     };
 
     const response = await getMonitorAlertEventListApi(params);
+    if (!request.isCurrent()) return;
     if (response) {
-      data.value = response.items || [];
+      const count = eventTimesFilter.value;
+      data.value = (response.items || []).filter((item: MonitorAlertEvent) =>
+        count === undefined || (count === 1 ? item.event_times === 1 : item.event_times >= count));
       paginationConfig.total = response.total || 0;
       updateStats();
     }
   } catch (error: any) {
 
-    message.error(error.message || '加载告警事件列表失败');
+    if (!request.fail(error, '加载告警事件列表失败')) return;
+    data.value = [];
+    paginationConfig.total = 0;
+    updateStats();
+    message.error(loadError.value);
   } finally {
-    loading.value = false;
+    request.finish();
   }
 };
 
@@ -546,29 +561,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.alert-events-container {
-  padding: 12px;
-  min-height: 100vh;
-}
 
-.page-header {
-  margin-bottom: 20px;
-}
 
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
 
-.search-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
 
 .search-input {
   width: 250px;
@@ -751,18 +746,8 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .alert-events-container {
-    padding: 8px;
-  }
 
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
 
-  .search-filters {
-    width: 100%;
-  }
 
   .search-input {
     width: 100%;
@@ -802,9 +787,6 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-  .header-actions {
-    gap: 8px;
-  }
 
   .stats-card {
     text-align: center;

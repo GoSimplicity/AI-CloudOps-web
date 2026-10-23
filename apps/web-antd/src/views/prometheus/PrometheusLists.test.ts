@@ -6,6 +6,9 @@ import type { Component } from 'vue';
 import MonitorScrapePool from './MonitorScrapePool.vue';
 import MonitorScrapeJob from './MonitorScrapeJob.vue';
 import MonitorSend from './MonitorSend.vue';
+import MonitorAlertPool from './MonitorAlertPool.vue';
+import MonitorAlertRecord from './MonitorAlertRecord.vue';
+import MonitorAlertEvent from './MonitorAlertEvent.vue';
 
 const client = vi.hoisted(() => ({
   get: vi.fn(),
@@ -14,6 +17,9 @@ const client = vi.hoisted(() => ({
   delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
+vi.mock('@vben/stores', () => ({
+  useUserStore: () => ({ userInfo: { userId: 1 } }),
+}));
 
 let wrapper: VueWrapper | undefined;
 beforeEach(() => {
@@ -42,7 +48,8 @@ const pages: {
   component: Component;
   title: string;
   path: string;
-  create: string;
+  create?: string;
+  modalTitle?: string;
 }[] = [
   {
     component: MonitorScrapePool,
@@ -62,8 +69,29 @@ const pages: {
     path: '/monitor/send_groups/list',
     create: '创建发送组',
   },
+  {
+    component: MonitorAlertPool,
+    title: '告警实例池',
+    path: '/monitor/alert_manager_pools/list',
+    create: '新增AlertManager实例池',
+  },
+  {
+    component: MonitorAlertRecord,
+    title: '记录规则',
+    path: '/monitor/record_rules/list',
+    create: '新增记录',
+  },
+  {
+    component: MonitorAlertEvent,
+    title: '告警事件',
+    path: '/monitor/alert_events/list',
+  },
 ];
 const row = (name: string) => ({
+  alert_name: name,
+  status: 1,
+  labels: [],
+  event_times: 5,
   id: 1,
   name,
   name_zh: name,
@@ -157,29 +185,30 @@ describe.each(pages)('$title 页面真实控件', (page) => {
     expect(wrapper!.text()).not.toContain('过期错误');
   });
 
-  it('创建取消不会调用写API', async () => {
-    mountPage(page, vi.fn().mockResolvedValue({ items: [], total: 0 }));
-    await flushPromises();
-    await button(page.create).trigger('click');
-    await flushPromises();
-    const cancel = [
-      ...document.querySelectorAll<HTMLButtonElement>(
-        '.ant-modal-footer button',
-      ),
-    ].find((item) =>
-      /^(取消|Cancel)$/.test(item.textContent?.replace(/\s/g, '') || ''),
-    );
-    expect(cancel).toBeDefined();
-    expect(document.querySelector('.ant-modal-title')?.textContent).toContain(
-      page.create,
-    );
-    cancel!.click();
-    await flushPromises();
-    expect(document.querySelector('.ant-modal-title')).toBeNull();
-    expect(client.post).not.toHaveBeenCalled();
-    expect(client.put).not.toHaveBeenCalled();
-    expect(client.delete).not.toHaveBeenCalled();
-  });
+  if (page.create)
+    it('创建取消不会调用写API', async () => {
+      mountPage(page, vi.fn().mockResolvedValue({ items: [], total: 0 }));
+      await flushPromises();
+      await button(page.create!).trigger('click');
+      await flushPromises();
+      const cancel = [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '.ant-modal-footer button',
+        ),
+      ].find((item) =>
+        /^(取消|Cancel)$/.test(item.textContent?.replace(/\s/g, '') || ''),
+      );
+      expect(cancel).toBeDefined();
+      expect(document.querySelector('.ant-modal-title')?.textContent).toContain(
+        page.modalTitle ?? page.create,
+      );
+      cancel!.click();
+      await flushPromises();
+      expect(document.querySelector('.ant-modal-title')).toBeNull();
+      expect(client.post).not.toHaveBeenCalled();
+      expect(client.put).not.toHaveBeenCalled();
+      expect(client.delete).not.toHaveBeenCalled();
+    });
 });
 
 it('采集任务统计只展示本页观测，不把比例外推到总数', async () => {
@@ -193,4 +222,33 @@ it('采集任务统计只展示本页观测，不把比例外推到总数', asyn
     .findAll('.ant-statistic')
     .find((item) => item.text().includes('本页已启用'))!;
   expect(statistic.find('.ant-statistic-content').text()).toBe('1');
+});
+
+it('告警事件次数筛选明确作用于本页并实际过滤数据', async () => {
+  const page = pages.find((item) => item.title === '告警事件')!;
+  mountPage(
+    page,
+    vi.fn().mockResolvedValue({
+      items: [
+        { ...row('单次事件'), event_times: 1 },
+        { ...row('高频事件'), id: 2, event_times: 7 },
+      ],
+      total: 200,
+    }),
+  );
+  await flushPromises();
+  const filter = wrapper!
+    .findAll('.ant-select')
+    .find((item) => item.text().includes('触发次数'))!;
+  await filter.get('.ant-select-selector').trigger('mousedown');
+  await flushPromises();
+  const option = [
+    ...document.querySelectorAll<HTMLElement>('.ant-select-item-option'),
+  ].find((item) => item.textContent?.includes('5次以上'))!;
+  expect(option).toBeDefined();
+  option.click();
+  await flushPromises();
+  expect(wrapper!.text()).not.toContain('单次事件');
+  expect(wrapper!.text()).toContain('高频事件');
+  expect(wrapper!.text()).toContain('本页');
 });

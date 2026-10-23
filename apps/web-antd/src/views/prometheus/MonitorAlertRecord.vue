@@ -1,15 +1,16 @@
 <template>
-  <div class="scrape-pool-container">
+  <OpsPage title="记录规则" description="维护记录表达式、实例池与启用状态">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button type="primary" @click="showAddModal" class="btn-create">
+    <template #actions>
+      <a-button type="primary" @click="showAddModal" class="btn-create">
           <template #icon>
             <PlusOutlined />
           </template>
           <span class="btn-text">新增记录</span>
         </a-button>
-        <div class="search-filters">
+    </template>
+    <template #filters>
+      <div class="search-filters">
           <a-input-search 
             v-model:value="searchText" 
             placeholder="搜索记录名称..." 
@@ -33,17 +34,17 @@
             重置
           </a-button>
         </div>
-      </div>
-    </div>
+    </template>
 
     <!-- 统计卡片 -->
-    <div class="stats-row">
+    <template #summary>
+      <div class="stats-row">
       <a-row :gutter="[16, 16]">
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic 
               title="总记录" 
-              :value="stats.total" 
+              :value="loadError ? '未知' : stats.total"
               :value-style="{ color: '#3f8600' }"
             >
               <template #prefix>
@@ -55,8 +56,8 @@
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic 
-              title="已启用" 
-              :value="stats.enabled" 
+              title="本页已启用"
+              :value="loadError ? '未知' : stats.enabled"
               :value-style="{ color: '#52c41a' }"
             >
               <template #prefix>
@@ -68,8 +69,8 @@
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic 
-              title="已禁用" 
-              :value="stats.disabled" 
+              title="本页已禁用"
+              :value="loadError ? '未知' : stats.disabled"
               :value-style="{ color: '#faad14' }"
             >
               <template #prefix>
@@ -81,8 +82,8 @@
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic 
-              title="实例池" 
-              :value="stats.pools" 
+              title="本页实例池"
+              :value="loadError ? '未知' : stats.pools"
               :value-style="{ color: '#cf1322' }"
             >
               <template #prefix>
@@ -93,6 +94,11 @@
         </a-col>
       </a-row>
     </div>
+    </template>
+
+    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
+      <template #action><a-button size="small" :loading="loading" @click="fetchRecordRules">重试</a-button></template>
+    </a-alert>
 
     <!-- 表格容器 -->
     <div class="table-container">
@@ -497,11 +503,13 @@
         </div>
       </div>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useListRequest } from './useListRequest';
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { PlusOutlined, DownOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
@@ -558,6 +566,7 @@ const columns = [
 
 // 状态数据
 const loading = ref(false);
+const { loadError, beginRequest } = useListRequest(loading);
 const submitLoading = ref(false);
 const validatingExpr = ref(false);
 const searchText = ref('');
@@ -567,7 +576,11 @@ const poolOptions = ref<Pool[]>([]);
 const showPoolPagination = ref(false);
 
 // 防抖处理
-let searchTimeout: any = null;
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+onBeforeUnmount(() => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+  if (poolSearchTimeout) clearTimeout(poolSearchTimeout);
+});
 let poolSearchTimeout: any = null;
 
 // 分页配置
@@ -718,7 +731,7 @@ const updateStats = () => {
 
 // 数据加载
 const fetchRecordRules = async (): Promise<void> => {
-  loading.value = true;
+  const request = beginRequest();
   try {
     const response = await getMonitorRecordRuleListApi({
       page: paginationConfig.current,
@@ -726,14 +739,19 @@ const fetchRecordRules = async (): Promise<void> => {
       search: searchText.value || undefined,
       enable: enabledFilter.value,
     });
+    if (!request.isCurrent()) return;
     data.value = response.items || [];
     paginationConfig.total = response.total || 0;
     updateStats();
   } catch (error: any) {
 
-    message.error(error.message || '加载记录规则列表失败');
+    if (!request.fail(error, '加载记录规则列表失败')) return;
+    data.value = [];
+    paginationConfig.total = 0;
+    updateStats();
+    message.error(loadError.value);
   } finally {
-    loading.value = false;
+    request.finish();
   }
 };
 
@@ -1044,35 +1062,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.scrape-pool-container {
-  padding: 12px;
-  min-height: 100vh;
-}
 
-.page-header {
-  margin-bottom: 20px;
-}
 
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
 
-.btn-create {
-  background: var(--ops-accent);
-  border: none;
-  flex-shrink: 0;
-}
 
-.search-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
 
 .search-input {
   width: 250px;
@@ -1298,18 +1291,8 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .scrape-pool-container {
-    padding: 8px;
-  }
 
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
 
-  .search-filters {
-    width: 100%;
-  }
 
   .search-input {
     width: 100%;
@@ -1321,14 +1304,7 @@ onMounted(() => {
     min-width: auto;
   }
 
-  .btn-text {
-    display: none;
-  }
 
-  .btn-create {
-    padding: 4px 8px;
-    min-width: auto;
-  }
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
@@ -1380,9 +1356,6 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-  .header-actions {
-    gap: 8px;
-  }
 
   .stats-card {
     text-align: center;

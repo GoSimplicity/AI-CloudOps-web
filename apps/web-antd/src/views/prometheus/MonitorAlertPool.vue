@@ -1,15 +1,16 @@
 <template>
-  <div class="alert-pool-container">
+  <OpsPage title="告警实例池" description="维护 AlertManager 实例、分组与通知策略">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button type="primary" @click="showAddModal" class="btn-create">
+    <template #actions>
+      <a-button type="primary" @click="showAddModal" class="btn-create">
           <template #icon>
             <PlusOutlined />
           </template>
           <span class="btn-text">新增AlertManager实例池</span>
         </a-button>
-        <div class="search-filters">
+    </template>
+    <template #filters>
+      <div class="search-filters">
           <a-input-search
             v-model:value="searchText"
             placeholder="搜索实例池名称..."
@@ -20,15 +21,15 @@
           />
           <a-button @click="handleReset" class="reset-btn"> 重置 </a-button>
         </div>
-      </div>
-    </div>
+    </template>
 
     <!-- 统计卡片 -->
-    <div class="stats-row">
+    <template #summary>
+      <div class="stats-row">
       <a-row :gutter="[16, 16]">
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="总实例池" :value="stats.total" :value-style="{ color: '#3f8600' }">
+            <a-statistic title="总实例池" :value="loadError ? '未知' : stats.total" :value-style="{ color: '#3f8600' }">
               <template #prefix>
                 <Icon icon="carbon:container-registry" />
               </template>
@@ -37,7 +38,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="告警实例" :value="stats.alertInstances" :value-style="{ color: '#52c41a' }">
+            <a-statistic title="本页告警实例" :value="loadError ? '未知' : stats.alertInstances" :value-style="{ color: '#52c41a' }">
               <template #prefix>
                 <Icon icon="carbon:warning-alt" />
               </template>
@@ -46,7 +47,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="活跃实例池" :value="stats.active" :value-style="{ color: '#faad14' }">
+            <a-statistic title="本页活跃实例池" :value="loadError ? '未知' : stats.active" :value-style="{ color: '#faad14' }">
               <template #prefix>
                 <Icon icon="carbon:data-table" />
               </template>
@@ -55,7 +56,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="分组标签" :value="stats.groupLabels" :value-style="{ color: '#cf1322' }">
+            <a-statistic title="本页分组标签" :value="loadError ? '未知' : stats.groupLabels" :value-style="{ color: '#cf1322' }">
               <template #prefix>
                 <Icon icon="carbon:server" />
               </template>
@@ -64,6 +65,11 @@
         </a-col>
       </a-row>
     </div>
+    </template>
+
+    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
+      <template #action><a-button size="small" :loading="loading" @click="fetchAlertManagerPools">重试</a-button></template>
+    </a-alert>
 
     <!-- 表格容器 -->
     <div class="table-container">
@@ -426,11 +432,13 @@
         </a-table>
       </div>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useListRequest } from './useListRequest';
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
   PlusOutlined,
@@ -499,11 +507,13 @@ const columns = [
 
 // 状态数据
 const loading = ref(false);
+const { loadError, beginRequest } = useListRequest(loading);
 const searchText = ref('');
 const data = ref<MonitorAlertManagerPool[]>([]);
 
 // 防抖处理
-let searchTimeout: any = null;
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+onBeforeUnmount(() => { if (searchTimeout) clearTimeout(searchTimeout); });
 
 // 分页配置
 const paginationConfig = reactive({
@@ -629,7 +639,7 @@ const updateStats = () => {
 
 // 数据加载
 const fetchAlertManagerPools = async (): Promise<void> => {
-  loading.value = true;
+  const request = beginRequest();
   try {
     const params: GetAlertManagerPoolListParams = {
       page: paginationConfig.current,
@@ -638,6 +648,7 @@ const fetchAlertManagerPools = async (): Promise<void> => {
     };
 
     const response = await getMonitorAlertManagerPoolListApi(params);
+    if (!request.isCurrent()) return;
     if (response) {
       data.value = response.items || [];
       paginationConfig.total = response.total || 0;
@@ -645,9 +656,13 @@ const fetchAlertManagerPools = async (): Promise<void> => {
     }
   } catch (error: any) {
 
-    message.error(error.message || '加载实例池列表失败');
+    if (!request.fail(error, '加载实例池列表失败')) return;
+    data.value = [];
+    paginationConfig.total = 0;
+    updateStats();
+    message.error(loadError.value);
   } finally {
-    loading.value = false;
+    request.finish();
   }
 };
 
@@ -961,35 +976,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.alert-pool-container {
-  padding: 12px;
-  min-height: 100vh;
-}
 
-.page-header {
-  margin-bottom: 20px;
-}
 
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
 
-.btn-create {
-  background: var(--ops-accent);
-  border: none;
-  flex-shrink: 0;
-}
 
-.search-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
 
 .search-input {
   width: 250px;
@@ -1104,7 +1094,7 @@ onMounted(() => {
 }
 
 .label-value {
-  color: #555;
+  color: var(--ops-muted);
 }
 
 .config-info {
@@ -1283,18 +1273,8 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .alert-pool-container {
-    padding: 8px;
-  }
 
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
 
-  .search-filters {
-    width: 100%;
-  }
 
   .search-input {
     width: 100%;
@@ -1306,14 +1286,7 @@ onMounted(() => {
     min-width: auto;
   }
 
-  .btn-text {
-    display: none;
-  }
 
-  .btn-create {
-    padding: 4px 8px;
-    min-width: auto;
-  }
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
@@ -1343,9 +1316,6 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-  .header-actions {
-    gap: 8px;
-  }
 
   .stats-card {
     text-align: center;
