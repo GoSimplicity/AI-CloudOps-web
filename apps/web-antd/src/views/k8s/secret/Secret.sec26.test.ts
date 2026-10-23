@@ -638,6 +638,87 @@ describe('规则 2：更新 Secret 的 data', () => {
     expect(sent).toContain(`  alpha: ${FAKE_B64}`);
   });
 
+  it('incr6 P3-4：A 提交未返回时关掉 A 打开 B，A 成功后不关闭 B、不清 B 的状态', async () => {
+    const page = await openEdit();
+    page.setEditDataValue(page.editDataRows.value[0]!, FAKE);
+    const pendingUpdate = deferred<unknown>();
+    api.update.mockReturnValueOnce(pendingUpdate.promise);
+    page.isEditModalVisible.value = true;
+    const submitting = page.submitEditForm();
+    await flush();
+    expect(api.update).toHaveBeenCalledTimes(1);
+
+    page.closeEditModal();
+    api.detail.mockResolvedValueOnce({ ...RECORD, name: 'secret-b' });
+    await page.openEditModal({ ...RECORD, name: 'secret-b' });
+    expect(page.isEditModalVisible.value).toBe(true);
+    page.setEditDataValue(page.editDataRows.value[1]!, 'fake-b-value');
+
+    pendingUpdate.resolve({});
+    await submitting;
+    await flush();
+    // A 的成功照常提示并刷新列表，但 B 的弹窗、当前对象与已输入的值都还在
+    expect(message.success).toHaveBeenCalledTimes(1);
+    expect(page.isEditModalVisible.value).toBe(true);
+    expect(page.currentOperationSecret.value?.name).toBe('secret-b');
+    expect(keysOf(page)).toEqual(['alpha', 'beta']);
+    expect(page.editDataRows.value[1]!.value).toBe('fake-b-value');
+  });
+
+  it('incr6 P3-4 对照：没有切换时，提交成功照常关闭弹窗', async () => {
+    const page = await openEdit();
+    page.setEditDataValue(page.editDataRows.value[0]!, FAKE);
+    page.isEditModalVisible.value = true;
+    await page.submitEditForm();
+    expect(message.success).toHaveBeenCalledTimes(1);
+    expect(page.isEditModalVisible.value).toBe(false);
+    expect(page.currentOperationSecret.value).toBeNull();
+  });
+
+  it.each([
+    [
+      '500（请求层已弹 http-error）',
+      () => {
+        const error = Object.assign(new Error('fake 500'), {
+          response: { status: 500 },
+        });
+        markHttpErrorNotified(error, 'http-error:服务器错误');
+        return error;
+      },
+    ],
+    [
+      '网络错误（请求层已弹 http-error）',
+      () => {
+        const error = new Error('fake network failure');
+        markHttpErrorNotified(error, 'http-error:网络异常');
+        return error;
+      },
+    ],
+  ])(
+    'incr6 P3-5：提交失败且请求层已提示（%s）：页面不再弹第二条，弹窗保留',
+    async (_, makeError) => {
+      const page = await openEdit();
+      page.setEditDataValue(page.editDataRows.value[0]!, FAKE);
+      api.update.mockRejectedValueOnce(makeError());
+      page.isEditModalVisible.value = true;
+      await page.submitEditForm();
+      expect(message.error).not.toHaveBeenCalled();
+      expect(message.success).not.toHaveBeenCalled();
+      expect(page.isEditModalVisible.value).toBe(true);
+    },
+  );
+
+  it('incr6 P3-5：请求层没提示过的业务错误：页面照常弹「Secret 更新失败」', async () => {
+    const page = await openEdit();
+    page.setEditDataValue(page.editDataRows.value[0]!, FAKE);
+    api.update.mockRejectedValueOnce(createBusinessError(200, '假的业务错误'));
+    page.isEditModalVisible.value = true;
+    await page.submitEditForm();
+    expect(message.error).toHaveBeenCalledTimes(1);
+    expect(message.error).toHaveBeenCalledWith('Secret 更新失败');
+    expect(page.isEditModalVisible.value).toBe(true);
+  });
+
   it('冲突（HTTP 200 + code=1）按业务错误处理：只有请求层一条提示，弹窗保留，不提示成功', async () => {
     const page = await openEdit();
     page.setEditDataValue(page.editDataRows.value[0]!, FAKE);

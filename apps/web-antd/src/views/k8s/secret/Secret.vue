@@ -1287,6 +1287,8 @@ onBeforeUnmount(clearRevealedValues);
 
 const newEditDataKey = ref('');
 const addNewEditData = () => {
+  // incr6 遗留第 18 条：详情加载中按钮已禁用，回车（@press-enter）也不能添加
+  if (editDataLoading.value) return;
   if (newEditDataKey.value.trim()) {
     addEditDataRow(newEditDataKey.value);
     newEditDataKey.value = '';
@@ -1334,6 +1336,8 @@ const addNewAnnotation = () => {
 };
 
 const addNewEditStringData = () => {
+  // incr6 遗留第 18 条：详情加载中按钮已禁用，回车（@press-enter）也不能添加
+  if (editDataLoading.value) return;
   if (newEditStringDataKey.value && newEditStringDataKey.value.trim()) {
     editFormModel.value.string_data[newEditStringDataKey.value.trim()] = '';
     newEditStringDataKey.value = '';
@@ -1341,6 +1345,8 @@ const addNewEditStringData = () => {
 };
 
 const addNewEditLabel = () => {
+  // incr6 遗留第 18 条：详情加载中按钮已禁用，回车（@press-enter）也不能添加
+  if (editDataLoading.value) return;
   if (newEditLabelKey.value && newEditLabelKey.value.trim()) {
     editFormModel.value.labels[newEditLabelKey.value.trim()] = '';
     newEditLabelKey.value = '';
@@ -1348,6 +1354,8 @@ const addNewEditLabel = () => {
 };
 
 const addNewEditAnnotation = () => {
+  // incr6 遗留第 18 条：详情加载中按钮已禁用，回车（@press-enter）也不能添加
+  if (editDataLoading.value) return;
   if (newEditAnnotationKey.value && newEditAnnotationKey.value.trim()) {
     editFormModel.value.annotations[newEditAnnotationKey.value.trim()] = '';
     newEditAnnotationKey.value = '';

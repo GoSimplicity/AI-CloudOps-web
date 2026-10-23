@@ -238,6 +238,53 @@ describe('Secret 编辑：详情加载中「添加」按钮禁用（incr5）', (
   });
 });
 
+describe('Secret 编辑：详情加载中回车也不能添加（incr6 遗留第 18 条）', () => {
+  const pressEnter = (input: HTMLElement) =>
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        bubbles: true,
+        key: 'Enter',
+        keyCode: 13,
+      }),
+    );
+
+  it('加载中在 data / string_data / 标签 / 注解的键名框里回车：什么都不加；加载完回车照常添加', async () => {
+    let resolve!: (value: unknown) => void;
+    api.detail.mockReturnValueOnce(new Promise((done) => (resolve = done)));
+    const vm = await mountSecret();
+    const opening = vm.openEditModal({ ...DETAIL });
+    await settle();
+    const inputs = () => all('.secret-edit-form .add-input-row input');
+    expect(inputs()).toHaveLength(4);
+    for (const [index, input] of inputs().entries()) {
+      (input as HTMLInputElement).value = `fake-key-${index}`;
+      input.dispatchEvent(new Event('input'));
+    }
+    await settle();
+    for (const input of inputs()) pressEnter(input);
+    await settle();
+    expect(vm.editDataLoading).toBe(true);
+    expect(vm.editDataRows).toEqual([]);
+    expect(vm.editFormModel.string_data).toEqual({});
+    expect(vm.editFormModel.labels).toEqual({});
+    expect(vm.editFormModel.annotations).toEqual({});
+
+    resolve({ ...DETAIL, data_keys: [], data: {} });
+    await opening;
+    await settle();
+    for (const input of inputs()) {
+      pressEnter(input);
+      await settle();
+    }
+    expect(vm.editDataRows.map((row: { key: string }) => row.key)).toEqual([
+      'fake-key-0',
+    ]);
+    expect(Object.keys(vm.editFormModel.string_data)).toEqual(['fake-key-1']);
+    expect(Object.keys(vm.editFormModel.labels)).toEqual(['fake-key-2']);
+    expect(Object.keys(vm.editFormModel.annotations)).toEqual(['fake-key-3']);
+  });
+});
+
 describe('Secret YAML 编辑：脱敏说明（P2-1）', () => {
   it('说明裸 <redacted> 保留原值、带引号会被拦截；不再提示「删除不改的键」', async () => {
     const vm = await mountSecret();

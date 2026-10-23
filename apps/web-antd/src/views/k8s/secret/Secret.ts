@@ -1003,6 +1003,8 @@ export function useSecretPage() {
     if (!formRef.value || !currentOperationSecret.value) return;
     // 键列表还没拿到最新的，不能按旧键组 payload
     if (editDataLoading.value) return;
+    // incr6 P3-4：记下提交时是哪一次打开的编辑；返回前若已关闭 / 换成别的 Secret，成功后不去关别人的弹窗
+    const seq = editOpenSeq;
     
     try {
       await formRef.value.validate();
@@ -1031,7 +1033,7 @@ export function useSecretPage() {
       submitLoading.value = true;
       
       // 冲突时后端返回 HTTP 200 + code=1（该接口没有 409）：由请求层按业务错误弹后端原文，
-      // 下面 catch 里 isPermissionDeniedError 跳过页面自身提示，弹窗保留供用户刷新后重试
+      // 下面 catch 里 isNotifiedByRequestLayer 跳过页面自身提示，弹窗保留供用户刷新后重试
       const params: UpdateSecretReq = {
         cluster_id: currentOperationSecret.value.cluster_id,
         namespace: currentOperationSecret.value.namespace,
@@ -1044,14 +1046,15 @@ export function useSecretPage() {
       
       await updateSecretApi(params);
       message.success('Secret 更新成功');
-      closeEditModal();
+      if (seq === editOpenSeq) closeEditModal();
       await fetchSecrets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('Secret 更新失败');
+      // incr6 P3-5：403 / 已弹后端原文的业务错误 / 请求层已弹的 http-error（5xx、网络错误）都不再弹第二条
+      if (!isNotifiedByRequestLayer(err)) message.error('Secret 更新失败');
 
     } finally {
       submitLoading.value = false;
