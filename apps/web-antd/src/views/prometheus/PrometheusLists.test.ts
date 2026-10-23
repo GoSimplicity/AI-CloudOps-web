@@ -13,6 +13,12 @@ import MonitorConfig from './MonitorConfig.vue';
 import MonitorOnDutyGroup from './MonitorOnDutyGroup.vue';
 import MonitorAlertRule from './MonitorAlertRule.vue';
 
+// FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
+vi.mock('#/utils/permission', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#/utils/permission')>()),
+  usePermission: () => ({ can: () => true, hasPerm: () => true }),
+}));
+
 const client = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),

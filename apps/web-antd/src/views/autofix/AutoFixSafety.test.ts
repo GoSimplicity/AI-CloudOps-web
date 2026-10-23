@@ -5,6 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AutoFixWorkflow from './AutoFixWorkflow.vue';
 
+// FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
+vi.mock('#/utils/permission', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#/utils/permission')>()),
+  usePermission: () => ({ can: () => true, hasPerm: () => true }),
+}));
+
 const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const api = vi.hoisted(() => ({
   getAutoFixInfo: vi.fn(),
