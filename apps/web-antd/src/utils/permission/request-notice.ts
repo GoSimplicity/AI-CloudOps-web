@@ -8,7 +8,10 @@
  * - 发出了请求但没有响应的 axios 错误（网络错误 / 超时，含 ECONNABORTED、ETIMEDOUT）：同上。
  * 取消类（axios 取消、账户切换取消旧请求 RequestOwnerChangedError）请求层不提示，页面也静默。
  *
- * 页面 catch 写法：`if (shouldNotifyPageError(error)) message.error('xxx失败')`
+ * 页面 catch 写法：
+ * - 错误状态：`if (shouldRecordPageError(error)) loadError.value = 'xxx失败'`（取消类不写，FE-02b 拍板 3）；
+ * - 提示：`if (shouldNotifyPageError(error)) message.error('xxx失败')`。
+ * loading 等收尾照常在 finally / catch 里清，取消类只跳过错误状态的写入。
  */
 import { RequestOwnerChangedError } from '@vben/request';
 
@@ -32,3 +35,10 @@ export const isNotifiedByRequestLayer = (error: any): boolean =>
 /** 页面 catch 是否还要自己弹提示：取消类静默，请求层已提示的不再叠加 */
 export const shouldNotifyPageError = (error: any): boolean =>
   !isCanceledRequest(error) && !isNotifiedByRequestLayer(error);
+
+/**
+ * 页面 catch 是否写错误状态（loadError / xxxError 等）：取消类不写，与 cron 列表 handleListFailure 一致。
+ * 取消通常是用户已离开页面或被更新的请求取代，写入会留下过期的错误提示（FE-02b 拍板 3）
+ */
+export const shouldRecordPageError = (error: any): boolean =>
+  !isCanceledRequest(error);

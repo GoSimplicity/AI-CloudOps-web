@@ -30,7 +30,10 @@ import {
   getClustersListApi,
   Env,
 } from '#/api/core/k8s/k8s_cluster';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // PV YAML 模板
 const PV_YAML_TEMPLATE = `apiVersion: v1
@@ -306,7 +309,7 @@ export function usePVPage() {
         filterClusterId.value = undefined;
         clearPVs();
       }
-      clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -345,7 +348,7 @@ export function usePVPage() {
     } catch (error) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
       clearPVs();
-      loadError.value = '获取 PV 列表失败，请重试';
+      if (shouldRecordPageError(error)) loadError.value = '获取 PV 列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;

@@ -143,7 +143,10 @@ import {
   type ServiceInfoResponse,
   type ServiceConfigResponse
 } from '#/api/core/aiops/assistant';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // 响应式数据
 const loading = ref(false);
@@ -227,7 +230,7 @@ const fetchServiceInfo = async () => {
   } catch (error: any) {
     if (disposed || request !== infoRequest) return;
     serviceInfo.value = {};
-    infoError.value = error instanceof Error ? error.message : '获取服务信息失败';
+    if (shouldRecordPageError(error)) infoError.value = error instanceof Error ? error.message : '获取服务信息失败';
   } finally {
     if (!disposed && request === infoRequest) loading.value = false;
   }
@@ -249,7 +252,7 @@ const fetchConfigInfo = async () => {
     if (disposed || request !== configRequest) return;
     configInfo.value = {};
     activeConfigKeys.value = [];
-    configError.value = error instanceof Error ? error.message : '获取配置信息失败';
+    if (shouldRecordPageError(error)) configError.value = error instanceof Error ? error.message : '获取配置信息失败';
   } finally {
     if (!disposed && request === configRequest) configLoading.value = false;
   }

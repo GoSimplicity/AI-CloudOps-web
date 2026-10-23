@@ -2,8 +2,8 @@ import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
 import { reactive, nextTick } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AiAssistant from './ai.vue';
-import { AxiosError } from 'axios';
-import { RequestClient } from '@vben/request';
+import axios, { AxiosError } from 'axios';
+import { RequestClient, RequestOwnerChangedError } from '@vben/request';
 import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
 
 const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
@@ -151,4 +151,23 @@ describe('悬浮助手真实状态隔离', () => {
       expect(setup().sessionId).toBe('fresh');
     },
   );
+
+  it.each([
+    ['CanceledError（停止生成）', () => new axios.CanceledError()],
+    ['RequestOwnerChangedError', () => new RequestOwnerChangedError()],
+  ])('FE-02b 拍板 3：提问被取消（%s）不写错误横幅；真实网络错误照常写', async (_label, make) => {
+    api.assistantQuery
+      .mockRejectedValueOnce(make())
+      .mockRejectedValueOnce(
+        new AxiosError('Network Error', AxiosError.ERR_NETWORK, {} as any, {}),
+      );
+    wrapper = mount(AiAssistant);
+    await setup().sendMessage('question');
+    await flushPromises();
+    expect(setup().errorMessage).toBe('');
+    expect(setup().sending).toBe(false);
+    await setup().sendMessage('question again');
+    await flushPromises();
+    expect(setup().errorMessage).toBe('网络连接错误，请检查网络状态');
+  });
 });

@@ -20,7 +20,10 @@ import {
   getClustersListApi,
   Env,
 } from '#/api/core/k8s/k8s_cluster';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // 命名空间状态枚举
 export enum NamespaceStatus {
@@ -315,7 +318,7 @@ export function useNamespacePage() {
         filterClusterId.value = undefined;
         clearNamespaces();
       }
-      clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -369,7 +372,7 @@ export function useNamespacePage() {
       )
         return;
       clearNamespaces();
-      loadError.value = '获取命名空间列表失败，请重试';
+      if (shouldRecordPageError(err)) loadError.value = '获取命名空间列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(loadError.value);
     } finally {
       if (requestId === namespaceRequestId) loading.value = false;

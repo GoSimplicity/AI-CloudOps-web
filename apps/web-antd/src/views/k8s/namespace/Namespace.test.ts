@@ -92,7 +92,7 @@ describe('命名空间查询作用域', () => {
     expect(message.error).toHaveBeenCalledWith('获取命名空间列表失败，请重试');
   });
 
-  it('FE-02b：HTTP 错误、网络错误已由请求层提示，取消类静默；页面只保留错误状态', async () => {
+  it('FE-02b：HTTP 错误、网络错误已由请求层提示，页面只保留错误状态；取消类静默且不写错误状态', async () => {
     const axios = (await import('axios')).default;
     const { AxiosError } = await import('axios');
     const { message } = await import('ant-design-vue');
@@ -105,11 +105,13 @@ describe('命名空间查询作用域', () => {
       new AxiosError('Network Error', AxiosError.ERR_NETWORK, {} as any, {}),
     );
     await page.fetchNamespaces();
+    expect(page.loadError.value).toContain('获取命名空间列表失败');
+    // 拍板 3：取消不写 loadError（重新请求时已清空，保持空）
     client.get.mockRejectedValueOnce(
       new axios.CanceledError(undefined, {} as any, {}),
     );
     await page.fetchNamespaces();
-    expect(page.loadError.value).toContain('获取命名空间列表失败');
+    expect(page.loadError.value).toBe('');
     expect(message.error).not.toHaveBeenCalled();
   });
 });

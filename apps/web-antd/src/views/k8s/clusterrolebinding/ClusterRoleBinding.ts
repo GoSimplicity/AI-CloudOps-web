@@ -29,7 +29,10 @@ import {
   getClustersListApi,
   Env,
 } from '#/api/core/k8s/k8s_cluster';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // ClusterRoleBinding YAML 模板
 const CLUSTERROLEBINDING_YAML_TEMPLATE = `apiVersion: rbac.authorization.k8s.io/v1
@@ -285,7 +288,7 @@ export function useClusterRoleBindingPage() {
         filterClusterId.value = undefined;
         clearClusterRoleBindings();
       }
-      clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -323,7 +326,7 @@ export function useClusterRoleBindingPage() {
     } catch (error) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
       clearClusterRoleBindings();
-      loadError.value = '获取 ClusterRoleBinding 列表失败，请重试';
+      if (shouldRecordPageError(error)) loadError.value = '获取 ClusterRoleBinding 列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;

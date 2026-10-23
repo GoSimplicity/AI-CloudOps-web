@@ -526,7 +526,10 @@ import {
   listWorkorderFormDesign,
   FormDesignStatus,
 } from '#/api/core/workorder/workorder_form_design';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 interface UserInfo {
   id: number;
@@ -764,9 +767,9 @@ const fetchUserList = async (loadMore = false) => {
       : items;
     userPagination.value.page = currentPage;
     userPagination.value.total = res.total || 0;
-  } catch {
+  } catch (error) {
     if (ticket === userRequest && selectedStep.value?.id === owner)
-      userLoadError.value = '读取用户失败，请重试';
+      if (shouldRecordPageError(error)) userLoadError.value = '读取用户失败，请重试';
   } finally {
     if (ticket === userRequest) userLoading.value = false;
   }
@@ -1053,10 +1056,10 @@ const loadCategories = async (): Promise<void> => {
     }
 
     if (ticket === categoriesRequest) categories.value = allCategories;
-  } catch {
+  } catch (error) {
     if (ticket === categoriesRequest) {
       categories.value = [];
-      categoryLoadError.value = '读取分类失败，请重试';
+      if (shouldRecordPageError(error)) categoryLoadError.value = '读取分类失败，请重试';
     }
   } finally {
     if (ticket === categoriesRequest) categoriesLoading.value = false;
@@ -1103,10 +1106,10 @@ const loadFormDesigns = async (): Promise<void> => {
     }
 
     if (ticket === formsRequest) formDesigns.value = allForms;
-  } catch {
+  } catch (error) {
     if (ticket === formsRequest) {
       formDesigns.value = [];
-      formLoadError.value = '读取已发布表单失败，请重试';
+      if (shouldRecordPageError(error)) formLoadError.value = '读取已发布表单失败，请重试';
     }
   } finally {
     if (ticket === formsRequest) formsLoading.value = false;
@@ -1194,9 +1197,9 @@ const saveProcess = async (): Promise<void> => {
     processSteps.value = [];
     connections.value = [];
     selectedStepIndex.value = null;
-  } catch {
+  } catch (error) {
     if (ticket === saveRequest)
-      saveError.value = '保存失败，请重试，当前流程设计已保留';
+      if (shouldRecordPageError(error)) saveError.value = '保存失败，请重试，当前流程设计已保留';
   } finally {
     if (ticket === saveRequest) saving.value = false;
   }

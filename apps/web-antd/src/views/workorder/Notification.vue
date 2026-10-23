@@ -1030,7 +1030,10 @@ import { listWorkorderCategory, type WorkorderCategoryItem } from '#/api/core/wo
 import { getUserList, type User } from '#/api/core/system/user';
 
 import { isPermissionDeniedError, usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -1726,12 +1729,12 @@ const loadNotifications = async (): Promise<void> => {
       // 计算统计数据
       calculateStats();
     }
-  } catch {
+  } catch (error) {
     if (request !== listRequest) return;
     notifications.value = [];
     paginationConfig.total = 0;
     calculateStats();
-    loadError.value = '加载通知配置失败，请重试';
+    if (shouldRecordPageError(error)) loadError.value = '加载通知配置失败，请重试';
   } finally {
     if (request === listRequest) loading.value = false;
   }
@@ -1770,9 +1773,9 @@ const loadSendLogs = async (notificationId: number): Promise<void> => {
       sendLogs.value = res.items || [];
       logsPagination.total = res.total || 0;
     }
-  } catch {
+  } catch (error) {
     if (request !== logsRequest) return;
-    logsError.value = '加载发送记录失败，请重试';
+    if (shouldRecordPageError(error)) logsError.value = '加载发送记录失败，请重试';
   } finally {
     if (request === logsRequest) logsLoading.value = false;
   }
@@ -1944,8 +1947,8 @@ const confirmTestSend = async () => {
     message.success('测试通知发送成功');
     testSendDialog.visible = false;
     testSendDialog.recipient = '';
-  } catch {
-    testSendDialog.error = '测试发送失败，请核对渠道配置与接收地址';
+  } catch (error) {
+    if (shouldRecordPageError(error)) testSendDialog.error = '测试发送失败，请核对渠道配置与接收地址';
   } finally {
     testSendDialog.sending = false;
   }

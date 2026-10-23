@@ -521,7 +521,10 @@ import type {
   ListWorkorderCategoryReq,
 } from '#/api/core/workorder/workorder_category';
 import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // 响应式数据
 const showDesigner = ref(true);
@@ -611,11 +614,11 @@ const loadCategories = async (resetPage = false) => {
     if (ticket !== categoryRequest || !showCategoryModal.value) return;
     categories.value = response.items || [];
     categoryPagination.total = response.total || 0;
-  } catch {
+  } catch (error) {
     if (ticket !== categoryRequest || !showCategoryModal.value) return;
     categories.value = [];
     categoryPagination.total = 0;
-    categoryError.value = '读取分类失败，请重试';
+    if (shouldRecordPageError(error)) categoryError.value = '读取分类失败，请重试';
   } finally {
     if (ticket === categoryRequest) categoryLoading.value = false;
   }
@@ -871,9 +874,9 @@ const saveFormDesign = async () => {
 
     await createWorkorderFormDesign(data);
     if (ticket === saveRequest) message.success('表单设计保存成功');
-  } catch {
+  } catch (error) {
     if (ticket === saveRequest)
-      saveError.value = '保存失败，请重试，当前设计已保留';
+      if (shouldRecordPageError(error)) saveError.value = '保存失败，请重试，当前设计已保留';
   } finally {
     if (ticket === saveRequest) saving.value = false;
   }

@@ -33,7 +33,10 @@ import {
   type K8sNamespace,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // RoleBinding YAML 模板
 const ROLEBINDING_YAML_TEMPLATE = `apiVersion: rbac.authorization.k8s.io/v1
@@ -424,7 +427,7 @@ export function useRoleBindingPage() {
         clearNamespaces();
         clearRoleBindings();
       }
-      clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -479,7 +482,7 @@ export function useRoleBindingPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
@@ -529,7 +532,7 @@ export function useRoleBindingPage() {
     } catch (error) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       clearRoleBindings();
-      loadError.value = '获取 RoleBinding 列表失败，请重试';
+      if (shouldRecordPageError(error)) loadError.value = '获取 RoleBinding 列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;

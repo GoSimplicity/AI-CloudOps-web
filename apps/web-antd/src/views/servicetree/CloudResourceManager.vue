@@ -94,7 +94,10 @@ import { getTreeList } from '#/api/core/tree/tree_node';
 import type { TreeNode } from '#/api/core/tree/tree_local';
 
 import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -484,7 +487,7 @@ const fetchCloudAccounts = async (): Promise<void> => {
   } catch (error) {
     if (ticket === accountListRequest) {
       cloudAccounts.value = [];
-      accountLoadError.value = '读取云账户失败，请重试';
+      if (shouldRecordPageError(error)) accountLoadError.value = '读取云账户失败，请重试';
     }
   } finally {
     if (ticket === accountListRequest) accountsLoading.value = false;
@@ -518,7 +521,7 @@ const fetchResources = async (): Promise<void> => {
     pagination.total = data.total || 0;
   } catch (error) {
     if (ticket !== listRequest) return;
-    loadError.value = '获取云资源列表失败，请重试';
+    if (shouldRecordPageError(error)) loadError.value = '获取云资源列表失败，请重试';
     if (shouldNotifyPageError(error)) message.error('获取资源列表失败');
     resources.value = [];
     pagination.total = 0;
@@ -619,8 +622,8 @@ const loadSyncRegions = async (id: number): Promise<void> => {
     }
     syncRegions.value = (account.regions ?? []).filter((region) => region.status === 1);
     if (!syncRegions.value.length) syncRegionError.value = '此账户没有已启用的授权地域，请先在云账户中配置';
-  } catch {
-    if (ticket === syncRegionRequest && syncModalVisible.value) syncRegionError.value = '读取账户地域失败，请重试';
+  } catch (error) {
+    if (ticket === syncRegionRequest && syncModalVisible.value && shouldRecordPageError(error)) syncRegionError.value = '读取账户地域失败，请重试';
   } finally {
     if (ticket === syncRegionRequest) syncRegionsLoading.value = false;
   }

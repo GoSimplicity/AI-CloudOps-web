@@ -1884,7 +1884,10 @@ import {
 } from '#/api/core/workorder/workorder_notification';
 
 import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -2926,12 +2929,12 @@ const loadInstances = async () => {
     instanceList.value = res?.items || [];
     total.value = res?.total || 0;
     updatePageStats();
-  } catch {
+  } catch (error) {
     if (request !== listRequest) return;
     instanceList.value = [];
     total.value = 0;
     updatePageStats();
-    loadError.value = '加载工单数据失败，请重试';
+    if (shouldRecordPageError(error)) loadError.value = '加载工单数据失败，请重试';
   } finally {
     if (request === listRequest) listLoading.value = false;
   }
@@ -3061,10 +3064,10 @@ const loadTemplates = async (search?: string) => {
     )
       return;
     dialogTemplates.value = res?.items || [];
-  } catch {
+  } catch (error) {
     if (request !== templateOptionsRequest || form !== formRequest) return;
     dialogTemplates.value = [];
-    templateListError.value = '加载模板失败，请重试';
+    if (shouldRecordPageError(error)) templateListError.value = '加载模板失败，请重试';
   } finally {
     if (request === templateOptionsRequest)
       templateSelectorLoading.value = false;
@@ -3378,9 +3381,9 @@ const loadNotificationLogs = async (instanceId?: number, resetPage = false) => {
       notificationLogs.value = [];
       notificationLogsPagination.total = 0;
     }
-  } catch {
+  } catch (error) {
     if (request !== logsRequest) return;
-    notificationLogsError.value = '获取通知记录失败，请重试';
+    if (shouldRecordPageError(error)) notificationLogsError.value = '获取通知记录失败，请重试';
     notificationLogs.value = [];
     notificationLogsPagination.total = 0;
   } finally {
@@ -3410,9 +3413,9 @@ const handleViewInstance = async (row: WorkorderInstanceItem) => {
     detailDialog.instance = res;
     loadAvailableActions(row.id);
     loadCurrentStep(row.id, res);
-  } catch {
+  } catch (error) {
     if (request !== detailRequest || !detailDialog.visible) return;
-    detailError.value = '获取工单详情失败，请重试';
+    if (shouldRecordPageError(error)) detailError.value = '获取工单详情失败，请重试';
   } finally {
     if (request === detailRequest) detailLoading.value = false;
   }

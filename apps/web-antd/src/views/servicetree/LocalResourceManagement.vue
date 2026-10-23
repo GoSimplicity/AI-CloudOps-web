@@ -39,7 +39,10 @@ import {
 import { getTreeList } from '#/api/core/tree/tree_node';
 
 import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -303,7 +306,7 @@ const fetchLocalResources = async (): Promise<void> => {
     pagination.total = response.total || 0;
   } catch (error) {
     if (ticket !== listRequest) return;
-    loadError.value = '获取本地资源列表失败，请重试';
+    if (shouldRecordPageError(error)) loadError.value = '获取本地资源列表失败，请重试';
     if (shouldNotifyPageError(error)) message.error('获取本地资源列表失败');
 
     localResources.value = [];

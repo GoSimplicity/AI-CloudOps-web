@@ -33,7 +33,10 @@ import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 import { getTreeLocalList, type GetTreeLocalResourceListReq, type TreeLocalResource, ResourceStatus } from '#/api/core/tree/tree_local';
 
 import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -264,7 +267,7 @@ const loadTreeData = async (): Promise<void> => {
     }
   } catch (error: any) {
     if (ticket !== listRequest) return;
-    loadError.value = '获取服务树失败，请重试';
+    if (shouldRecordPageError(error)) loadError.value = '获取服务树失败，请重试';
 
     treeData.value = [];
     selectedNode.value = null;

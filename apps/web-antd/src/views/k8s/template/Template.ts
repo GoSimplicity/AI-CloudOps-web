@@ -24,7 +24,10 @@ import {
   getClustersListApi,
   Env,
 } from '#/api/core/k8s/k8s_cluster';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // YAML 模板常量
 const DEFAULT_YAML_TEMPLATE = `apiVersion: apps/v1
@@ -240,7 +243,7 @@ export function useTemplatePage() {
         filterClusterId.value = undefined;
         clearTemplates();
       }
-      clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -270,7 +273,7 @@ export function useTemplatePage() {
     } catch (error) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
       clearTemplates();
-      loadError.value = '获取 YAML 模板列表失败，请重试';
+      if (shouldRecordPageError(error)) loadError.value = '获取 YAML 模板列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;

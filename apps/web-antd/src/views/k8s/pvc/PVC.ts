@@ -44,7 +44,10 @@ import {
   K8sPVStatus,
   getK8sPVList,
 } from '#/api/core/k8s/k8s_pv';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // PVC YAML 模板
 const PVC_YAML_TEMPLATE = `apiVersion: v1
@@ -373,7 +376,7 @@ export function usePVCPage() {
         clearNamespaces();
         clearPVCs();
       }
-      clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -420,7 +423,7 @@ export function usePVCPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
@@ -502,7 +505,7 @@ export function usePVCPage() {
     } catch (error) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       clearPVCs();
-      loadError.value = '获取 PVC 列表失败，请重试';
+      if (shouldRecordPageError(error)) loadError.value = '获取 PVC 列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;

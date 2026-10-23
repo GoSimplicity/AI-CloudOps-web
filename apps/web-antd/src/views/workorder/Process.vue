@@ -39,7 +39,10 @@ import {
 import ProcessBasicConfig from './components/ProcessBasicConfig.vue';
 
 import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -243,7 +246,7 @@ const loadProcesses = async (): Promise<void> => {
     processList.value = [];
     total.value = 0;
     Object.assign(stats, { total: 0, published: 0, draft: 0, archived: 0 });
-    loadError.value = '加载流程数据失败';
+    if (shouldRecordPageError(error)) loadError.value = '加载流程数据失败';
     if (shouldNotifyPageError(error)) message.error(loadError.value);
   } finally {
     loading.value = false;

@@ -39,7 +39,10 @@ import {
   PERMISSION_DENIED_MESSAGE,
   PERMISSION_DENIED_MESSAGE_KEY,
 } from '#/utils/permission/forbidden';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 /** 批量禁用调度的最大并发请求数（复审 P2-1：避免一次性打出 N 个请求） */
 export const BATCH_CORDON_CONCURRENCY = 5;
@@ -292,7 +295,7 @@ export function useNodePage() {
         filterClusterId.value = undefined;
         clearNodes();
       }
-      clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -332,7 +335,7 @@ export function useNodePage() {
     } catch (error) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
       clearNodes();
-      loadError.value = '获取 节点列表失败，请重试';
+      if (shouldRecordPageError(error)) loadError.value = '获取 节点列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;

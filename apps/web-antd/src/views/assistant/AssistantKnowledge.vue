@@ -165,7 +165,10 @@ import {
   type AddDocumentResponse
 } from '#/api/core/aiops/assistant';
 import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -236,7 +239,7 @@ const refreshKnowledge = async () => {
     statsKnown.value = false;
     knowledgeStats.documents_count = 0;
     knowledgeStats.vector_count = 0;
-    loadError.value = error instanceof Error ? error.message : '知识库重建失败';
+    if (shouldRecordPageError(error)) loadError.value = error instanceof Error ? error.message : '知识库重建失败';
     knowledgeStats.last_update = '重建失败';
     if (shouldNotifyPageError(error)) message.error(`刷新知识库失败: ${loadError.value}`);
     addLog('error', `刷新知识库失败: ${error.message}`);

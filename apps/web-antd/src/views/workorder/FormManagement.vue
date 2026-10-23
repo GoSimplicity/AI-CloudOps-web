@@ -31,7 +31,10 @@ import type { WorkorderCategoryItem } from '#/api/core/workorder/workorder_categ
 import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
 
 import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -664,7 +667,7 @@ const loadFormDesigns = async (): Promise<void> => {
     formDesigns.value = [];
     paginationConfig.total = 0;
     updateStats([]);
-    loadError.value = '加载表单列表失败';
+    if (shouldRecordPageError(error)) loadError.value = '加载表单列表失败';
     if (shouldNotifyPageError(error)) message.error(loadError.value);
   } finally {
     loading.value = false;

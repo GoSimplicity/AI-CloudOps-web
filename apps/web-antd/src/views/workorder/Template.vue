@@ -42,7 +42,10 @@ import {
 } from '#/api/core/workorder/workorder_form_design';
 
 import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -688,7 +691,7 @@ const loadTemplates = async () => {
     templateList.value = [];
     total.value = 0;
     Object.assign(stats, { total: 0, enabled: 0, disabled: 0, thisMonth: 0 });
-    loadError.value = '加载模板数据失败';
+    if (shouldRecordPageError(error)) loadError.value = '加载模板数据失败';
     if (shouldNotifyPageError(error)) message.error(loadError.value);
   } finally {
     loading.value = false;

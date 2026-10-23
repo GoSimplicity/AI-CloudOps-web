@@ -46,7 +46,10 @@ import {
 import { downloadCsv } from '#/utils/export-csv';
 
 import { usePermission } from '#/utils/permission';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -283,7 +286,7 @@ const fetchCloudAccounts = async (): Promise<void> => {
     pagination.total = response.total || 0;
   } catch (error) {
     if (ticket !== listRequest) return;
-    loadError.value = '获取云账户列表失败，请重试';
+    if (shouldRecordPageError(error)) loadError.value = '获取云账户列表失败，请重试';
     if (shouldNotifyPageError(error)) message.error('获取云账户列表失败');
     cloudAccounts.value = [];
     pagination.total = 0;

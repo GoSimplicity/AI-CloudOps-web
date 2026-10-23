@@ -53,3 +53,95 @@ describe('FE-02b：views 页面 catch 不再使用旧守卫', () => {
     }
   });
 });
+
+/**
+ * FE-02b 拍板 3：取消类不写页面错误状态（与 cron 列表一致）。
+ * 范围：本分支已改过的页面（即引入了 request-notice 的 views 文件，不含 k8s/cluster、测试）。
+ * 规则：catch 里给错误状态（名字含 Error / error 的 ref / 字段）赋非空值的语句，必须由 shouldRecordPageError 守卫。
+ * 例外（逐条说明，不是请求错误，不会是取消）：
+ * - 本地 JSON / YAML 解析校验的 catch：FormManagement.vue、Instance.vue 的 JSON 校验，MonitorScrapeJob.vue 的 YAML 校验；
+ * - cron/management/Management.ts 列表：state.error = handleListFailure(...)，取消时返回 null（同一口径，已由用例覆盖）。
+ */
+const NOTICE_IMPORT = "from '#/utils/permission/request-notice'";
+const LOCAL_MESSAGE_VARS = new Set(['errMsg', 'errorMessage', 'errorMsg', 'msg']);
+const ERROR_STATE_WRITE =
+  /^\s*(?:if\s*\(.*\)\s*)?((?:state\.|\w+\.)?\w*(?:[Ee]rror|Err)\w*(?:\.value)?)\s*=(?!=)\s*(.+)$/;
+const EMPTY_VALUE = /^(?:''|""|null|undefined|false|\[\])\s*;?\s*$/;
+const NOT_REQUEST_CATCH: Record<string, number> = {
+  'prometheus/MonitorScrapeJob.vue|yamlError.value': 1,
+  'workorder/FormManagement.vue|jsonValidationError.value': 2,
+  'workorder/Instance.vue|formDataValidationError.value': 2,
+  'cron/management/Management.ts|state.error': 1,
+};
+
+/** 从 open（指向 '{'）开始找配对的 '}'，跳过字符串、模板字符串与注释 */
+function matchBrace(text: string, open: number): number {
+  let depth = 0;
+  let quote = '';
+  for (let i = open; i < text.length; i++) {
+    const c = text[i];
+    if (quote) {
+      if (c === '\\') i++;
+      else if (c === quote) quote = '';
+      continue;
+    }
+    if (c === '/' && text[i + 1] === '/') {
+      i = text.indexOf('\n', i);
+      if (i < 0) return -1;
+      continue;
+    }
+    if (c === '/' && text[i + 1] === '*') {
+      i = text.indexOf('*/', i) + 1;
+      continue;
+    }
+    if (c === "'" || c === '"' || c === '`') quote = c;
+    else if (c === '{') depth++;
+    else if (c === '}' && --depth === 0) return i;
+  }
+  return -1;
+}
+
+function catchErrorStateWrites() {
+  const writes: { file: string; guarded: boolean; lhs: string; line: number }[] = [];
+  for (const file of walk(VIEWS_DIR)) {
+    const text = readFileSync(file, 'utf8');
+    if (!text.includes(NOTICE_IMPORT)) continue;
+    const rel = relative(VIEWS_DIR, file);
+    for (const m of text.matchAll(/\bcatch\s*(?:\((\w+)[^)]*\))?\s*\{/g)) {
+      const open = m.index! + m[0].length - 1;
+      const close = matchBrace(text, open);
+      expect(close, `${rel}: catch 块配对失败`).toBeGreaterThan(open);
+      const startLine = text.slice(0, open).split('\n').length;
+      text
+        .slice(open + 1, close)
+        .split('\n')
+        .forEach((source, index) => {
+          const hit = ERROR_STATE_WRITE.exec(source);
+          if (!hit) return;
+          const [, lhs, value] = hit as unknown as [string, string, string];
+          if (lhs === m[1] || LOCAL_MESSAGE_VARS.has(lhs) || EMPTY_VALUE.test(value)) return;
+          writes.push({
+            file: rel,
+            guarded: source.includes('shouldRecordPageError('),
+            lhs,
+            line: startLine + index,
+          });
+        });
+    }
+  }
+  return writes;
+}
+
+describe('FE-02b 拍板 3：取消类不写页面错误状态', () => {
+  it('已改页面里 catch 写错误状态都经过 shouldRecordPageError（例外逐条列出）', () => {
+    const writes = catchErrorStateWrites();
+    const unguarded: Record<string, number> = {};
+    for (const write of writes.filter((w) => !w.guarded)) {
+      const key = `${write.file}|${write.lhs}`;
+      unguarded[key] = (unguarded[key] ?? 0) + 1;
+    }
+    expect(unguarded).toEqual(NOT_REQUEST_CATCH);
+    // 防止扫描器失效变成空跑：已守卫的写入数量与本次改动一致
+    expect(writes.filter((w) => w.guarded)).toHaveLength(71);
+  });
+});

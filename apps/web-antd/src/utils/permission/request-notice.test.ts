@@ -11,6 +11,7 @@ import {
   isCanceledRequest,
   isNotifiedByRequestLayer,
   shouldNotifyPageError,
+  shouldRecordPageError,
 } from './request-notice';
 
 /**
@@ -77,5 +78,45 @@ describe('request-notice：页面 catch 是否还需要自己提示', () => {
   ])('%s：页面自己弹一条', (_label, error) => {
     expect(isNotifiedByRequestLayer(error)).toBe(false);
     expect(shouldNotifyPageError(error)).toBe(true);
+  });
+});
+
+describe('request-notice：页面 catch 是否写错误状态（FE-02b 拍板 3）', () => {
+  it.each([
+    ['CanceledError', () => new axios.CanceledError()],
+    ['RequestOwnerChangedError', () => new RequestOwnerChangedError()],
+    ['axios.Cancel 风格对象（__CANCEL__）', () => ({ __CANCEL__: true })],
+  ])('%s：取消类不写错误状态（与 cron 列表 handleListFailure 返回 null 一致）', (_label, make) => {
+    expect(shouldRecordPageError(make())).toBe(false);
+  });
+
+  it.each([
+    ['HTTP 500', () => httpError(500)],
+    ['HTTP 403', () => httpError(403)],
+    ['包装后的 { response }', () => ({ response: { status: 502 } })],
+    [
+      '网络错误',
+      () => new AxiosError('Network Error', AxiosError.ERR_NETWORK, {} as any, {}),
+    ],
+    [
+      'ETIMEDOUT',
+      () => new AxiosError('timeout', AxiosError.ETIMEDOUT, {} as any, {}),
+    ],
+    ['已提示的业务错误', () => {
+      const error = createBusinessError(200, '后端原文');
+      notifyBusinessError(error, () => {}, 'fallback');
+      return error;
+    }],
+    ['普通 Error', () => new Error('boom')],
+    ['undefined', () => undefined],
+  ])('%s：真实失败照常写错误状态', (_label, make) => {
+    expect(shouldRecordPageError(make())).toBe(true);
+  });
+
+  it('与 shouldNotifyPageError 的关系：不写状态的一定不提示', () => {
+    for (const error of [new axios.CanceledError(), new RequestOwnerChangedError()]) {
+      expect(shouldRecordPageError(error)).toBe(false);
+      expect(shouldNotifyPageError(error)).toBe(false);
+    }
   });
 });
