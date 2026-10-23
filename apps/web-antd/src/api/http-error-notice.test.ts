@@ -114,4 +114,17 @@ describe('NOTICE_STALE_MS 兜底过期（incr6 P3-3）', () => {
     markHttpErrorNotified(error, key);
     expect(claimHttpErrorNotice(error)).toBe(key);
   });
+  it('incr7 m25：过期即删除记录——之后系统时钟回拨，旧记录也不会「复活」被认领', () => {
+    vi.useFakeTimers();
+    const start = new Date('2026-01-01T00:00:00Z');
+    vi.setSystemTime(start);
+    const key = 'http-error:假的服务器错误';
+    const error = new Error('fake server failure');
+    markHttpErrorNotified(error, key);
+    vi.advanceTimersByTime(10_001);
+    expect(claimHttpErrorNotice(error)).toBeUndefined();
+    // 时钟回拨（NTP 校时等）：记录若只是被跳过而没删除，这里会重新变成「未过期」
+    vi.setSystemTime(start);
+    expect(claimHttpErrorNotice(error)).toBeUndefined();
+  });
 });
