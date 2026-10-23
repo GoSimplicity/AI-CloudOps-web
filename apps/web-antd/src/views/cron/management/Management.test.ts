@@ -195,17 +195,19 @@ describe('SEC-03A 本地执行开关与错误提示', () => {
     expect(notices.error).toHaveBeenLastCalledWith(disabledMsg);
   });
 
-  it('HTTP 错误取响应体 message，无可用文案时回退原提示', async () => {
+  it('带 response 的 HTTP 错误不展示响应体原文、页面不再弹（请求层已弹过一条）；无 response 时回退原提示', async () => {
     const page = useCronJobPage();
     page.triggerJob({ ...job(11), job_type: 3 });
-    const failure = Object.assign({}, { code: 1, message: '绑定数据失败' });
-    Object.defineProperty(failure, 'response', { value: { status: 400, data: { code: 1, message: '绑定数据失败' } } });
+    const failure = Object.assign(new Error('Request failed with status code 400'), {
+      response: { status: 400, data: { code: 1, message: '绑定数据失败' } },
+    });
     client.post.mockRejectedValueOnce(failure);
     await confirm.mock.calls[0]?.[0].onOk();
-    expect(notices.error).toHaveBeenLastCalledWith('绑定数据失败');
+    expect(notices.error).not.toHaveBeenCalled();
     page.triggerJob({ ...job(12), job_type: 3 });
     client.post.mockRejectedValueOnce({});
     await confirm.mock.calls[1]?.[0].onOk();
+    expect(notices.error).toHaveBeenCalledTimes(1);
     expect(notices.error).toHaveBeenLastCalledWith('定时任务触发失败');
   });
 });

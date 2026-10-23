@@ -78,12 +78,18 @@ export const isLocalExecJobType = (jobType?: CronJobType) =>
 export const resolveAllowLocalExec = (data: any): boolean =>
   typeof data?.allow_local_exec === 'boolean' ? data.allow_local_exec : true;
 
-// 取后端返回的原始提示：业务码非 0 时响应解构抛出 `Error <HTTP状态>: <message>`，HTTP 错误时为响应体 message
+// 取后端返回的原始提示：业务码非 0 时响应解构抛出 `Error <HTTP状态>: <message>`。
+// 不读 HTTP 错误的响应体 message：带 response 的 HTTP 错误已由请求层提示过，页面不再展示原文（见 isNotifiedByRequestLayer）
 export const getBackendErrorMessage = (error: any, fallback: string): string => {
-  const raw = error?.response?.data?.message ?? error?.message;
+  const raw = error?.message;
   if (typeof raw !== 'string' || !raw.trim()) return fallback;
   return raw.replace(/^Error \d{3}: /, '') || fallback;
 };
+
+// 请求层已提示过的错误，页面 catch 不再弹：403 / 已提示的业务错误（isPermissionDeniedError），
+// 以及带 response 的 HTTP 错误（4xx/5xx 由通用错误拦截器按固定 key 弹过一条）
+export const isNotifiedByRequestLayer = (error: any): boolean =>
+  isPermissionDeniedError(error) || !!error?.response;
 
 // 创建表单初始数据
 const createInitialFormModel = (): CreateCronJobReq => ({
@@ -610,7 +616,7 @@ export function useCronJobPage() {
       if (error?.errorFields) {
         if (!isPermissionDeniedError(error)) message.error('请检查表单输入');
       } else {
-        if (!isPermissionDeniedError(error)) message.error(getBackendErrorMessage(error, '定时任务创建失败'));
+        if (!isNotifiedByRequestLayer(error)) message.error(getBackendErrorMessage(error, '定时任务创建失败'));
 
       }
     } finally {
@@ -688,7 +694,7 @@ export function useCronJobPage() {
       if (error?.errorFields) {
         if (!isPermissionDeniedError(error)) message.error('请检查表单输入');
       } else {
-        if (!isPermissionDeniedError(error)) message.error(getBackendErrorMessage(error, '定时任务更新失败'));
+        if (!isNotifiedByRequestLayer(error)) message.error(getBackendErrorMessage(error, '定时任务更新失败'));
 
       }
     } finally {
@@ -755,7 +761,7 @@ export function useCronJobPage() {
           message.success(`定时任务 "${job.name}" 触发成功`);
           await fetchCronJobs();
         } catch (error) {
-          if (!isPermissionDeniedError(error)) message.error(getBackendErrorMessage(error, '定时任务触发失败'));
+          if (!isNotifiedByRequestLayer(error)) message.error(getBackendErrorMessage(error, '定时任务触发失败'));
 
         }
       },

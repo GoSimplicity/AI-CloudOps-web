@@ -2,7 +2,7 @@ import type { FormInstance } from 'ant-design-vue';
 
 import { $t } from '@vben/locales';
 
-import axios, { type AxiosAdapter } from 'axios';
+import axios, { AxiosError, type AxiosAdapter } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
@@ -53,11 +53,29 @@ const requests: string[] = [];
 const adapter: AxiosAdapter = async (config) => {
   requests.push(`${config.method?.toUpperCase()} ${config.url}`);
   const { status, data } = route(config);
-  return { config, data, headers: {}, status, statusText: String(status) };
+  const response = {
+    config,
+    data,
+    headers: {},
+    status,
+    statusText: String(status),
+  };
+  // 与真实 adapter 一致：非 2xx 以 AxiosError（带 response）拒绝
+  if (status >= 400) {
+    throw new AxiosError(
+      `Request failed with status code ${status}`,
+      AxiosError.ERR_BAD_RESPONSE,
+      config,
+      null,
+      response,
+    );
+  }
+  return response;
 };
 // requestClient 在 axios.create 时合并 defaults，必须在导入页面（进而导入 request.ts）之前设置
 axios.defaults.adapter = adapter;
 const { useCronJobPage } = await import('./Management');
+const { HTTP_ERROR_MESSAGE_KEY_PREFIX } = await import('#/api/request');
 
 const job = (id: number, job_type: number) =>
   ({
@@ -91,6 +109,15 @@ function rejectWrites(text = DISABLED_MESSAGE) {
     }
     return { status: 200, data: { code: 1, data: null, message: text } };
   };
+}
+
+function failWritesWithHttp(status: number, text: string) {
+  rejectWrites();
+  const base = route;
+  route = (config) =>
+    config.method === 'get'
+      ? base(config)
+      : { status, data: { code: status, data: null, message: text } };
 }
 
 function expectSingleBackendNotice(text = DISABLED_MESSAGE) {
@@ -158,5 +185,58 @@ describe('cron 开关关闭 × 业务错误只提示一次（真实请求链路�
       expect.objectContaining({ content: '定时任务触发失败' }),
     );
     expect(notices.success).not.toHaveBeenCalled();
+  });
+});
+
+describe('HTTP 错误（带 response）只提示一次、不展示响应体原文（真实请求链路）', () => {
+  const BODY_MESSAGE = 'dial tcp 10.0.0.8:3306: connect: connection refused';
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requests.length = 0;
+    failWritesWithHttp(500, BODY_MESSAGE);
+  });
+
+  const expectSingleHttpNotice = () => {
+    const fallback = $t('fallback.http.internalServerError');
+    expect(fallback).not.toBe('');
+    expect(notices.error).toHaveBeenCalledTimes(1);
+    expect(notices.error).toHaveBeenCalledWith({
+      content: fallback,
+      key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${fallback}`,
+    });
+    // 页面不再叠加响应体原文或自己的失败文案
+    expect(notices.error).not.toHaveBeenCalledWith(BODY_MESSAGE);
+    expect(JSON.stringify(notices.error.mock.calls)).not.toContain(
+      BODY_MESSAGE,
+    );
+    expect(notices.success).not.toHaveBeenCalled();
+  };
+
+  it('创建返回 HTTP 500：只弹请求层通用文案一条', async () => {
+    const page = useCronJobPage();
+    page.openCreateModal();
+    page.createFormModel.value.job_type = 3;
+    passValidation(page);
+    await page.submitCreateForm();
+    expect(requests).toContain('POST /cron/job/create');
+    expectSingleHttpNotice();
+    expect(page.isCreateModalVisible.value).toBe(true);
+  });
+
+  it('更新返回 HTTP 500：只弹请求层通用文案一条', async () => {
+    const page = useCronJobPage();
+    await page.openEditModal(job(9, 3));
+    passValidation(page);
+    await page.submitEditForm();
+    expect(requests).toContain('PUT /cron/job/9/update');
+    expectSingleHttpNotice();
+  });
+
+  it('立即执行返回 HTTP 500：只弹请求层通用文案一条', async () => {
+    const page = useCronJobPage();
+    page.triggerJob(job(10, 3));
+    await confirm.mock.calls[0]?.[0].onOk();
+    expect(requests.some((r) => r.startsWith('POST /cron/job/10/'))).toBe(true);
+    expectSingleHttpNotice();
   });
 });
