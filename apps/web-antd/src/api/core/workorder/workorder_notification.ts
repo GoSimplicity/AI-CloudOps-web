@@ -399,3 +399,12 @@ export const getAvailableChannels = () => {
 export const sendNotificationManually = (data: ManualSendNotificationReq) => {
   return requestClient.post('/workorder/notification/send', data);
 };
+
+/** 通知发送记录状态，与服务端 SendStatus 保持一致 */
+export const getNotificationSendStatus = (status: number) => ({
+  [SendStatus.Pending]: { label: '待发送', color: 'default' },
+  [SendStatus.Sending]: { label: '发送中', color: 'processing' },
+  [SendStatus.Success]: { label: '发送成功', color: 'success' },
+  [SendStatus.Failed]: { label: '发送失败', color: 'error' },
+  [SendStatus.Cancelled]: { label: '已取消', color: 'default' },
+}[status] || { label: '未知', color: 'default' });

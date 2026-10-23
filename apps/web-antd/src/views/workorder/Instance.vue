@@ -1,158 +1,179 @@
 <template>
-  <div class="instance-management-container">
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button
-          type="primary"
-          @click="handleCreateInstance"
-          class="btn-create"
+  <OpsPage
+    title="工单实例"
+    description="筛选、创建与处理工单，状态摘要为当前页记录"
+    class="instance-management-container"
+  >
+    <template #actions>
+      <a-button
+        aria-label="刷新工单"
+        :loading="listLoading"
+        @click="loadInstances"
+        >刷新</a-button
+      >
+      <a-button
+        type="primary"
+        aria-label="创建工单"
+        @click="handleCreateInstance"
+        class="btn-create"
+      >
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        创建工单
+      </a-button>
+      <a-button
+        type="default"
+        aria-label="从模板创建工单"
+        @click="handleCreateFromTemplate"
+      >
+        <template #icon>
+          <FileAddOutlined />
+        </template>
+        从模板创建
+      </a-button>
+      <a-button type="default" @click="handleExport">
+        <template #icon>
+          <ExportOutlined />
+        </template>
+        导出
+      </a-button>
+    </template>
+    <template #filters>
+      <div class="search-filters">
+        <a-input-search
+          aria-label="搜索工单"
+          v-model:value="searchQuery"
+          placeholder="搜索工单标题或编号..."
+          class="search-input"
+          @search="handleSearch"
+          allow-clear
+        />
+
+        <a-select
+          v-model:value="statusFilter"
+          placeholder="状态"
+          aria-label="工单状态筛选"
+          class="status-filter"
+          @change="handleStatusChange"
         >
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          创建工单
-        </a-button>
-        <a-button type="default" @click="handleCreateFromTemplate">
-          <template #icon>
-            <FileAddOutlined />
-          </template>
-          从模板创建
-        </a-button>
-        <div class="search-filters">
-          <a-input-search
-            v-model:value="searchQuery"
-            placeholder="搜索工单标题或编号..."
-            class="search-input"
-            @search="handleSearch"
-            allow-clear
-          />
-
-          <a-button type="default" @click="handleExport">
-            <template #icon>
-              <ExportOutlined />
-            </template>
-            导出
-          </a-button>
-          <a-select
-            v-model:value="statusFilter"
-            placeholder="状态"
-            class="status-filter"
-            @change="handleStatusChange"
+          <a-select-option :value="undefined">全部状态</a-select-option>
+          <a-select-option :value="InstanceStatus.Draft">草稿</a-select-option>
+          <a-select-option :value="InstanceStatus.Pending"
+            >待处理</a-select-option
           >
-            <a-select-option :value="undefined">全部状态</a-select-option>
-            <a-select-option :value="InstanceStatus.Draft"
-              >草稿</a-select-option
-            >
-            <a-select-option :value="InstanceStatus.Pending"
-              >待处理</a-select-option
-            >
-            <a-select-option :value="InstanceStatus.Processing"
-              >处理中</a-select-option
-            >
-            <a-select-option :value="InstanceStatus.Completed"
-              >已完成</a-select-option
-            >
-            <a-select-option :value="InstanceStatus.Rejected"
-              >已拒绝</a-select-option
-            >
-            <a-select-option :value="InstanceStatus.Cancelled"
-              >已取消</a-select-option
-            >
-          </a-select>
-          <a-select
-            v-model:value="priorityFilter"
-            placeholder="优先级"
-            class="priority-filter"
-            @change="handlePriorityChange"
+          <a-select-option :value="InstanceStatus.Processing"
+            >处理中</a-select-option
           >
-            <a-select-option :value="undefined">全部优先级</a-select-option>
-            <a-select-option :value="Priority.Low">低</a-select-option>
-            <a-select-option :value="Priority.Normal">普通</a-select-option>
-            <a-select-option :value="Priority.High">高</a-select-option>
-          </a-select>
-          <a-select
-            v-model:value="processFilter"
-            placeholder="流程"
-            class="process-filter"
-            @change="handleProcessChange"
+          <a-select-option :value="InstanceStatus.Completed"
+            >已完成</a-select-option
           >
-            <a-select-option :value="undefined">全部流程</a-select-option>
-            <a-select-option
-              v-for="process in processes"
-              :key="process.id"
-              :value="process.id"
-            >
-              {{ process.name }}
-            </a-select-option>
-          </a-select>
-        </div>
+          <a-select-option :value="InstanceStatus.Rejected"
+            >已拒绝</a-select-option
+          >
+          <a-select-option :value="InstanceStatus.Cancelled"
+            >已取消</a-select-option
+          >
+        </a-select>
+        <a-select
+          v-model:value="priorityFilter"
+          placeholder="优先级"
+          aria-label="工单优先级筛选"
+          class="priority-filter"
+          @change="handlePriorityChange"
+        >
+          <a-select-option :value="undefined">全部优先级</a-select-option>
+          <a-select-option :value="Priority.Low">低</a-select-option>
+          <a-select-option :value="Priority.Normal">普通</a-select-option>
+          <a-select-option :value="Priority.High">高</a-select-option>
+        </a-select>
+        <a-select
+          v-model:value="processFilter"
+          placeholder="流程"
+          aria-label="工单流程筛选"
+          class="process-filter"
+          @change="handleProcessChange"
+        >
+          <a-select-option :value="undefined">全部流程</a-select-option>
+          <a-select-option
+            v-for="process in processes"
+            :key="process.id"
+            :value="process.id"
+          >
+            {{ process.name }}
+          </a-select-option>
+        </a-select>
+        <a-button @click="resetFilters" aria-label="重置工单筛选"
+          >重置</a-button
+        >
       </div>
-    </div>
+    </template>
+    <template #summary>
+      <div class="stats-grid stats-row">
+        <a-card class="stats-card">
+          <a-statistic
+            title="匹配工单数"
+            :value="loadError ? '未知' : stats.total"
+          >
+            <template #prefix>
+              <FileTextOutlined />
+            </template>
+          </a-statistic>
+        </a-card>
 
-    <div class="stats-row">
-      <a-row :gutter="16">
-        <a-col :span="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="总工单数"
-              :value="stats.total"
-              :value-style="{ color: '#3f8600' }"
-            >
-              <template #prefix>
-                <FileTextOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :span="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="待处理"
-              :value="stats.pending"
-              :value-style="{ color: '#faad14' }"
-            >
-              <template #prefix>
-                <ClockCircleOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :span="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="处理中"
-              :value="stats.processing"
-              :value-style="{ color: '#1890ff' }"
-            >
-              <template #prefix>
-                <LoadingOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :span="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="已完成"
-              :value="stats.completed"
-              :value-style="{ color: '#52c41a' }"
-            >
-              <template #prefix>
-                <CheckCircleOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div>
+        <a-card class="stats-card">
+          <a-statistic
+            title="本页待处理"
+            :value="loadError ? '未知' : stats.pending"
+          >
+            <template #prefix>
+              <ClockCircleOutlined />
+            </template>
+          </a-statistic>
+        </a-card>
 
+        <a-card class="stats-card">
+          <a-statistic
+            title="本页处理中"
+            :value="loadError ? '未知' : stats.processing"
+          >
+            <template #prefix>
+              <PlayCircleOutlined />
+            </template>
+          </a-statistic>
+        </a-card>
+
+        <a-card class="stats-card">
+          <a-statistic
+            title="本页完成"
+            :value="loadError ? '未知' : stats.completed"
+          >
+            <template #prefix>
+              <CheckCircleOutlined />
+            </template>
+          </a-statistic>
+        </a-card>
+      </div>
+    </template>
+    <a-alert
+      v-if="loadError"
+      class="list-error"
+      type="error"
+      show-icon
+      :message="loadError"
+      role="alert"
+    >
+      <template #action
+        ><a-button @click="loadInstances" size="small">重试</a-button></template
+      >
+    </a-alert>
     <div class="table-container">
       <a-card>
         <a-table
           :data-source="instanceList"
           :columns="columns"
           :pagination="paginationConfig"
-          :loading="loading"
+          :loading="listLoading"
           row-key="id"
           bordered
           :scroll="{ x: 1400 }"
@@ -214,7 +235,7 @@
                   getAssigneeName(record.assignee_id)
                 }}</span>
               </div>
-              <span v-else style="color: #ff7875">
+              <span v-else style="color: hsl(var(--destructive))">
                 未分配
                 <a-tooltip
                   title="需要先分配处理人才能执行审批、拒绝、完成等操作"
@@ -250,7 +271,7 @@
                 >
                   编辑
                 </a-button>
-                <a-dropdown>
+                <a-dropdown :trigger="['click']">
                   <template #overlay>
                     <a-menu @click="(e: any) => handleCommand(e.key, record)">
                       <a-menu-item key="comment">
@@ -286,7 +307,7 @@
                           [
                             InstanceStatus.Pending,
                             InstanceStatus.Processing,
-                          ].includes(record.status) && record.assignee_id
+                          ].includes(record.status)
                         "
                       >
                         审批通过
@@ -297,7 +318,7 @@
                           [
                             InstanceStatus.Pending,
                             InstanceStatus.Processing,
-                          ].includes(record.status) && record.assignee_id
+                          ].includes(record.status)
                         "
                       >
                         拒绝工单
@@ -308,7 +329,7 @@
                           [
                             InstanceStatus.Pending,
                             InstanceStatus.Processing,
-                          ].includes(record.status) && record.assignee_id
+                          ].includes(record.status)
                         "
                       >
                         完成工单
@@ -319,11 +340,14 @@
                           [
                             InstanceStatus.Pending,
                             InstanceStatus.Processing,
-                          ].includes(record.status) && record.assignee_id
+                          ].includes(record.status)
                         "
                       >
                         退回工单
                       </a-menu-item>
+                      <a-menu-item key="notification_logs"
+                        >通知发送记录</a-menu-item
+                      >
                       <a-menu-divider />
 
                       <a-menu-item
@@ -335,7 +359,7 @@
                       </a-menu-item>
                     </a-menu>
                   </template>
-                  <a-button size="small">
+                  <a-button size="small" aria-label="工单更多操作">
                     更多
                     <DownOutlined />
                   </a-button>
@@ -353,11 +377,7 @@
       :title="instanceDialog.isEdit ? '编辑工单' : '创建工单'"
       :width="formDialogWidth"
       @ok="saveInstance"
-      @cancel="
-        () => {
-          instanceDialog.visible = false;
-        }
-      "
+      @cancel="closeInstanceForm"
       :destroy-on-close="true"
       class="responsive-modal instance-form-modal"
       :confirm-loading="loading"
@@ -470,6 +490,7 @@
             <a-form-item label="指定处理人" name="assignee_id">
               <a-select
                 v-model:value="instanceDialog.form.assignee_id"
+                :disabled="instanceDialog.isEdit"
                 placeholder="请选择处理人"
                 style="width: 100%"
                 show-search
@@ -877,13 +898,27 @@
       title="工单详情"
       :width="previewDialogWidth"
       :footer="null"
-      @cancel="
-        () => {
-          detailDialog.visible = false;
-        }
-      "
+      @cancel="closeInstanceDetail"
       class="detail-dialog responsive-modal"
     >
+      <a-skeleton v-if="detailLoading" active />
+      <a-alert v-if="detailError" :message="detailError" type="error" show-icon>
+        <template #action
+          ><a-button @click="retryInstanceDetail">重试</a-button></template
+        >
+      </a-alert>
+      <a-alert
+        v-if="Object.values(detailMetadataErrors).some(Boolean)"
+        type="warning"
+        :message="
+          Object.values(detailMetadataErrors).filter(Boolean).join('；')
+        "
+        show-icon
+      >
+        <template #action
+          ><a-button @click="retryInstanceDetail">刷新详情</a-button></template
+        >
+      </a-alert>
       <div v-if="detailDialog.instance" class="instance-details">
         <div class="detail-header">
           <div class="title-section">
@@ -1155,7 +1190,7 @@
             <span v-if="detailDialog.instance.assignee_id">
               {{ getAssigneeName(detailDialog.instance.assignee_id) }}
             </span>
-            <span v-else style="color: #ff7875">
+            <span v-else style="color: hsl(var(--destructive))">
               未分配
               <a-tooltip title="需要先分配处理人才能执行审批、拒绝、完成等操作">
                 <InfoCircleOutlined style="margin-left: 4px" />
@@ -1249,10 +1284,7 @@
               <a-button
                 type="primary"
                 @click="handleActionApprove(detailDialog.instance)"
-                v-if="
-                  detailDialog.availableActions.includes('approve') &&
-                  detailDialog.instance.assignee_id
-                "
+                v-if="detailDialog.availableActions.includes('approve')"
               >
                 审批通过
               </a-button>
@@ -1261,10 +1293,7 @@
               <a-button
                 danger
                 @click="handleActionReject(detailDialog.instance)"
-                v-if="
-                  detailDialog.availableActions.includes('reject') &&
-                  detailDialog.instance.assignee_id
-                "
+                v-if="detailDialog.availableActions.includes('reject')"
               >
                 拒绝
               </a-button>
@@ -1291,10 +1320,7 @@
               <a-button
                 type="primary"
                 @click="handleActionComplete(detailDialog.instance)"
-                v-if="
-                  detailDialog.availableActions.includes('complete') &&
-                  detailDialog.instance.assignee_id
-                "
+                v-if="detailDialog.availableActions.includes('complete')"
               >
                 完成工单
               </a-button>
@@ -1303,10 +1329,7 @@
               <a-button
                 type="default"
                 @click="handleActionReturn(detailDialog.instance)"
-                v-if="
-                  detailDialog.availableActions.includes('return') &&
-                  detailDialog.instance.assignee_id
-                "
+                v-if="detailDialog.availableActions.includes('return')"
               >
                 退回工单
               </a-button>
@@ -1316,9 +1339,12 @@
 
         <div class="detail-footer">
           <div class="footer-left">
-            <a-button @click="detailDialog.visible = false">关闭</a-button>
+            <a-button @click="closeInstanceDetail">关闭</a-button>
           </div>
           <div class="footer-right">
+            <a-button @click="handleViewNotificationLogs(detailDialog.instance)"
+              >通知发送记录</a-button
+            >
             <a-button
               type="default"
               @click="handleViewComments(detailDialog.instance)"
@@ -1366,6 +1392,16 @@
       @cancel="handleCloseNotificationLogsDialog"
       class="notification-logs-dialog"
     >
+      <a-alert
+        v-if="notificationLogsError"
+        :message="notificationLogsError"
+        type="error"
+        show-icon
+      >
+        <template #action
+          ><a-button @click="loadNotificationLogs()">重试</a-button></template
+        >
+      </a-alert>
       <a-spin :spinning="notificationLogsLoading">
         <div
           v-if="notificationLogs.length > 0"
@@ -1379,10 +1415,10 @@
                     <div class="notification-title">
                       <span class="event-type">{{ item.event_type }}</span>
                       <a-tag
-                        :color="item.status === 1 ? 'green' : 'red'"
+                        :color="getSendStatus(item.status).color"
                         class="status-tag"
                       >
-                        {{ item.status === 1 ? '发送成功' : '发送失败' }}
+                        {{ getSendStatus(item.status).label }}
                       </a-tag>
                     </div>
                   </template>
@@ -1535,6 +1571,16 @@
       class="responsive-modal"
       :confirm-loading="loading"
     >
+      <a-alert
+        v-if="templateListError"
+        :message="templateListError"
+        type="error"
+        show-icon
+      >
+        <template #action
+          ><a-button @click="loadTemplates()">重试</a-button></template
+        >
+      </a-alert>
       <a-form :model="templateDialog.form" layout="vertical">
         <a-form-item
           label="选择模板"
@@ -1656,6 +1702,8 @@
       :open="approvalDialog.visible"
       :title="getApprovalDialogTitle()"
       :width="dialogWidth"
+      :confirm-loading="loading"
+      :mask-closable="!loading"
       @ok="saveApproval"
       @cancel="
         () => {
@@ -1729,18 +1777,19 @@
         </a-form-item>
       </a-form>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { downloadCsv } from "#/utils/export-csv";
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
+import { downloadCsv } from '#/utils/export-csv';
+import { ref, reactive, onMounted, onBeforeUnmount, computed, h } from 'vue';
+import { useWindowSize } from '@vueuse/core';
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { message, Modal } from 'ant-design-vue';
 import {
   PlusOutlined,
   FileTextOutlined,
   ClockCircleOutlined,
-  LoadingOutlined,
   CheckCircleOutlined,
   DownOutlined,
   MessageOutlined,
@@ -1822,7 +1871,6 @@ import {
 
 import {
   type WorkorderTemplateItem,
-  type ListWorkorderTemplateReq,
   listWorkorderTemplate,
   detailWorkorderTemplate,
 } from '#/api/core/workorder/workorder_template';
@@ -1832,6 +1880,7 @@ import {
   type NotificationLog,
   type ListSendLogReq,
   getSendLogs,
+  getNotificationSendStatus as getSendStatus,
 } from '#/api/core/workorder/workorder_notification';
 
 // 列定义
@@ -1886,6 +1935,27 @@ const columns = [
 
 // 状态数据
 const loading = ref(false);
+const listLoading = ref(false);
+const detailLoading = ref(false);
+const detailError = ref('');
+const detailMetadataErrors = reactive({
+  actions: '',
+  step: '',
+  navigation: '',
+});
+const detailTarget = ref<WorkorderInstanceItem | null>(null);
+const loadError = ref('');
+let listRequest = 0;
+let detailRequest = 0;
+let formRequest = 0;
+let designRequest = 0;
+let processOptionsRequest = 0;
+let userOptionsRequest = 0;
+let templateOptionsRequest = 0;
+const templateListError = ref('');
+const formLoading = ref(false);
+let logsRequest = 0;
+const { width: viewportWidth } = useWindowSize();
 const searchQuery = ref('');
 const statusFilter = ref<number | undefined>(undefined);
 const priorityFilter = ref<number | undefined>(undefined);
@@ -1922,6 +1992,7 @@ const usersSearchKeyword = ref('');
 // 通知发送记录相关
 const notificationLogs = ref<NotificationLog[]>([]);
 const notificationLogsLoading = ref(false);
+const notificationLogsError = ref('');
 const notificationLogsDialog = reactive({
   visible: false,
   instanceId: 0,
@@ -1979,12 +2050,22 @@ const instanceDialog = reactive({
 const formRules = {
   title: [
     { required: true, message: '请输入工单标题', trigger: 'blur' },
-    { min: 3, max: 100, message: '长度应为3到100个字符', trigger: 'blur' },
+    { min: 1, max: 200, message: '长度应为1到200个字符', trigger: 'blur' },
   ],
   priority: [{ required: true, message: '请选择优先级', trigger: 'change' }],
   process_id: [
     { required: true, message: '请选择关联流程', trigger: 'change' },
   ],
+};
+
+const closeInstanceForm = () => {
+  ++formRequest;
+  ++designRequest;
+  ++processOptionsRequest;
+  ++userOptionsRequest;
+  instanceDialog.visible = false;
+  formLoading.value = false;
+  formDesignLoading.value = false;
 };
 
 // 从模板创建对话框
@@ -2013,6 +2094,21 @@ const detailDialog = reactive({
   allSteps: [] as ProcessStep[],
   processDefinition: null as ProcessDefinition | null,
 });
+
+const isDetailCurrent = (id: number, request: number) =>
+  request === detailRequest &&
+  detailDialog.visible &&
+  detailDialog.instance?.id === id;
+const closeInstanceDetail = () => {
+  ++detailRequest;
+  detailDialog.visible = false;
+  detailDialog.instance = null;
+  detailDialog.availableActions = [];
+  detailLoading.value = false;
+};
+const retryInstanceDetail = () => {
+  if (detailTarget.value) handleViewInstance(detailTarget.value);
+};
 
 // 分配处理人对话框
 const assignDialog = reactive({
@@ -2084,6 +2180,14 @@ const userPagination = reactive({
 
 // 清理定时器
 onBeforeUnmount(() => {
+  ++listRequest;
+  ++detailRequest;
+  ++logsRequest;
+  ++formRequest;
+  ++designRequest;
+  ++processOptionsRequest;
+  ++userOptionsRequest;
+  ++templateOptionsRequest;
   if (processSearchTimeout) clearTimeout(processSearchTimeout);
   if (userSearchTimeout) clearTimeout(userSearchTimeout);
 });
@@ -2091,7 +2195,7 @@ onBeforeUnmount(() => {
 // 响应式对话框宽度
 const dialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
+    const width = viewportWidth.value;
     if (width < 768) return '95%';
     if (width < 1024) return '80%';
     return '600px';
@@ -2101,7 +2205,7 @@ const dialogWidth = computed(() => {
 
 const formDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
+    const width = viewportWidth.value;
     if (width < 768) return '95%';
     if (width < 1024) return '90%';
     return '900px';
@@ -2111,7 +2215,7 @@ const formDialogWidth = computed(() => {
 
 const previewDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
+    const width = viewportWidth.value;
     if (width < 768) return '95%';
     if (width < 1024) return '90%';
     return '80%';
@@ -2298,6 +2402,13 @@ const getAvatarColor = (name: string | undefined) => {
 
 // 获取表单设计详情
 const loadFormDesign = async (processId: number): Promise<void> => {
+  const request = ++designRequest;
+  const form = formRequest;
+  const isCurrent = () =>
+    request === designRequest &&
+    form === formRequest &&
+    instanceDialog.visible &&
+    instanceDialog.form.process_id === processId;
   if (!processId) {
     currentFormDesign.value = null;
     return;
@@ -2319,15 +2430,17 @@ const loadFormDesign = async (processId: number): Promise<void> => {
     const res = await detailWorkorderFormDesign({
       id: selectedProcess.form_design_id,
     } as DetailWorkorderFormDesignReq);
+    if (!isCurrent()) return;
     if (res) {
       currentFormDesign.value = res;
       // 初始化可视化表单数据
       initializeVisualFormData();
     }
-  } catch (error: any) {
+  } catch {
+    if (!isCurrent()) return;
     currentFormDesign.value = null;
   } finally {
-    formDesignLoading.value = false;
+    if (request === designRequest) formDesignLoading.value = false;
   }
 };
 
@@ -2481,7 +2594,7 @@ const loadUsers = async (
 
   try {
     const params: GetUserListReq = {
-      page: reset ? 1 : usersPagination.current,
+      page: reset ? 1 : usersPagination.current + 1,
       size: usersPagination.pageSize,
       search: search || usersSearchKeyword.value || '',
     };
@@ -2491,11 +2604,11 @@ const loadUsers = async (
     if (res && res.items) {
       if (reset) {
         users.value = res.items;
-        usersPagination.current = 1;
+        usersPagination.current = params.page || 1;
       } else {
         // 追加模式，用于加载更多
         users.value = [...users.value, ...res.items];
-        usersPagination.current += 1;
+        usersPagination.current = params.page || 1;
       }
 
       usersPagination.total = res.total || 0;
@@ -2535,25 +2648,31 @@ const loadDialogProcesses = async (
     return;
   }
 
+  const request = ++processOptionsRequest;
+  const form = formRequest;
+  const isCurrent = () =>
+    request === processOptionsRequest && form === formRequest;
   processSelectorLoading.value = true;
 
   try {
     const params: ListWorkorderProcessReq = {
-      page: reset ? 1 : processPagination.current,
+      page: reset ? 1 : processPagination.current + 1,
       size: processPagination.pageSize,
       search: search || processSearchKeyword.value || '',
+      status: 2,
     };
 
     const res = await listWorkorderProcess(params);
+    if (!isCurrent()) return;
 
     if (res && res.items) {
       if (reset) {
         dialogProcesses.value = res.items;
-        processPagination.current = 1;
+        processPagination.current = params.page || 1;
       } else {
         // 追加模式，用于加载更多
         dialogProcesses.value = [...dialogProcesses.value, ...res.items];
-        processPagination.current += 1;
+        processPagination.current = params.page || 1;
       }
 
       processPagination.total = res.total || 0;
@@ -2569,6 +2688,7 @@ const loadDialogProcesses = async (
       }
     }
   } catch (error: any) {
+    if (!isCurrent()) return;
     if (reset) {
       message.error(error.message || '加载流程列表失败');
       dialogProcesses.value = [];
@@ -2577,7 +2697,7 @@ const loadDialogProcesses = async (
       processPagination.hasMore = false;
     }
   } finally {
-    processSelectorLoading.value = false;
+    if (isCurrent()) processSelectorLoading.value = false;
   }
 };
 
@@ -2657,6 +2777,7 @@ const loadMoreProcesses = () => loadDialogProcesses(false);
 
 // 处理流程选择变化
 const handleProcessSelectChange = (processId: number | undefined): void => {
+  ++designRequest;
   if (processId) {
     // 加载对应的表单设计
     loadFormDesign(processId);
@@ -2677,25 +2798,30 @@ const loadDialogUsers = async (
     return;
   }
 
+  const request = ++userOptionsRequest;
+  const form = formRequest;
+  const isCurrent = () =>
+    request === userOptionsRequest && form === formRequest;
   userSelectorLoading.value = true;
 
   try {
     const params: GetUserListReq = {
-      page: reset ? 1 : userPagination.current,
+      page: reset ? 1 : userPagination.current + 1,
       size: userPagination.pageSize,
       search: search || userSearchKeyword.value || '',
     };
 
     const res = await getUserList(params);
+    if (!isCurrent()) return;
 
     if (res && res.items) {
       if (reset) {
         dialogUsers.value = res.items;
-        userPagination.current = 1;
+        userPagination.current = params.page || 1;
       } else {
         // 追加模式，用于加载更多
         dialogUsers.value = [...dialogUsers.value, ...res.items];
-        userPagination.current += 1;
+        userPagination.current = params.page || 1;
       }
 
       userPagination.total = res.total || 0;
@@ -2710,6 +2836,7 @@ const loadDialogUsers = async (
       }
     }
   } catch (error: any) {
+    if (!isCurrent()) return;
     if (reset) {
       message.error(error.message || '加载用户列表失败');
       dialogUsers.value = [];
@@ -2718,7 +2845,7 @@ const loadDialogUsers = async (
       userPagination.hasMore = false;
     }
   } finally {
-    userSelectorLoading.value = false;
+    if (isCurrent()) userSelectorLoading.value = false;
   }
 };
 
@@ -2777,69 +2904,37 @@ const handleTableChange = (pagination: any): void => {
 
 // 数据加载
 const loadInstances = async () => {
-  loading.value = true;
+  const request = ++listRequest;
+  listLoading.value = true;
+  loadError.value = '';
   try {
     const params: ListWorkorderInstanceReq = {
       page: currentPage.value,
-      size: Math.max(10, pageSize.value), // 确保size不小于10
+      size: Math.max(10, pageSize.value),
       search: searchQuery.value || undefined,
       status: statusFilter.value || undefined,
       priority: priorityFilter.value || undefined,
       process_id: processFilter.value || undefined,
     };
-
     const res = await listWorkorderInstance(params);
-    if (res && res.items) {
-      instanceList.value = res.items || [];
-      total.value = res.total || 0;
-
-      // 更新统计数据
-      await loadStats();
-    }
-  } catch (error) {
-    message.error('加载工单数据失败');
+    if (request !== listRequest) return;
+    instanceList.value = res?.items || [];
+    total.value = res?.total || 0;
+    updatePageStats();
+  } catch {
+    if (request !== listRequest) return;
+    instanceList.value = [];
+    total.value = 0;
+    updatePageStats();
+    loadError.value = '加载工单数据失败，请重试';
   } finally {
-    loading.value = false;
+    if (request === listRequest) listLoading.value = false;
   }
 };
 
-// 加载真实统计数据
-const loadStats = async () => {
-  try {
-    // 获取所有状态的统计数据，使用最小size=10来满足验证要求
-    const [totalRes, pendingRes, processingRes, completedRes] =
-      await Promise.all([
-        listWorkorderInstance({ page: 1, size: 10 }),
-        listWorkorderInstance({
-          page: 1,
-          size: 10,
-          status: InstanceStatus.Pending,
-        }),
-        listWorkorderInstance({
-          page: 1,
-          size: 10,
-          status: InstanceStatus.Processing,
-        }),
-        listWorkorderInstance({
-          page: 1,
-          size: 10,
-          status: InstanceStatus.Completed,
-        }),
-      ]);
-
-    stats.total = totalRes?.total || 0;
-    stats.pending = pendingRes?.total || 0;
-    stats.processing = processingRes?.total || 0;
-    stats.completed = completedRes?.total || 0;
-  } catch (error) {
-    // 如果统计API失败，回退到基于当前页的计算
-    updateStatsFromCurrentPage();
-  }
-};
-
-const updateStatsFromCurrentPage = () => {
-  // 这只是一个回退方案，显示当前页的数据（不准确但比没有好）
-  stats.total = total.value; // 使用分页的总数
+// 匹配总数来自服务端，状态只计算本页，不再额外读取四次全局列表
+const updatePageStats = () => {
+  stats.total = total.value;
   stats.pending = instanceList.value.filter(
     (item) => item.status === InstanceStatus.Pending,
   ).length;
@@ -2849,6 +2944,15 @@ const updateStatsFromCurrentPage = () => {
   stats.completed = instanceList.value.filter(
     (item) => item.status === InstanceStatus.Completed,
   ).length;
+};
+
+const resetFilters = () => {
+  searchQuery.value = '';
+  statusFilter.value = undefined;
+  priorityFilter.value = undefined;
+  processFilter.value = undefined;
+  currentPage.value = 1;
+  loadInstances();
 };
 
 // 事件处理 - 统一的筛选处理
@@ -2864,12 +2968,30 @@ const handleProcessChange = handleFilterChange;
 
 // 导出功能
 const handleExport = () => {
-  if (!instanceList.value.length) { message.info('当前页没有可导出的记录'); return; }
-  downloadCsv('cloudops-instanceList.csv', [['ID', '编号', '标题', '状态', '优先级', '操作人', '更新时间'], ...instanceList.value.map(row => [row.id, row.serial_number, row.title, row.status, row.priority, row.operator_name, row.updated_at])]);
+  if (!instanceList.value.length) {
+    message.info('当前页没有可导出的记录');
+    return;
+  }
+  downloadCsv('cloudops-instanceList.csv', [
+    ['ID', '编号', '标题', '状态', '优先级', '操作人', '更新时间'],
+    ...instanceList.value.map((row) => [
+      row.id,
+      row.serial_number,
+      row.title,
+      row.status,
+      row.priority,
+      row.operator_name,
+      row.updated_at,
+    ]),
+  ]);
   message.success('已导出当前页记录');
 };
 
 const handleCreateInstance = () => {
+  ++formRequest;
+  ++designRequest;
+  formLoading.value = false;
+  formDesignLoading.value = false;
   instanceDialog.isEdit = false;
   instanceDialog.form = {
     title: '',
@@ -2895,6 +3017,13 @@ const handleCreateInstance = () => {
 
 // 从模板创建工单
 const handleCreateFromTemplate = () => {
+  ++formRequest;
+  ++designRequest;
+  formLoading.value = false;
+  formDesignLoading.value = false;
+  ++templateOptionsRequest;
+  templateSearchKeyword.value = '';
+  dialogTemplates.value = [];
   templateDialog.form = {
     template_id: undefined,
     title: '',
@@ -2909,25 +3038,31 @@ const handleCreateFromTemplate = () => {
 
 // 加载模板列表
 const loadTemplates = async (search?: string) => {
+  const request = ++templateOptionsRequest;
+  const form = formRequest;
+  templateSelectorLoading.value = true;
+  templateListError.value = '';
   try {
-    templateSelectorLoading.value = true;
-    const params: ListWorkorderTemplateReq = {
+    const res = await listWorkorderTemplate({
       page: 1,
       size: 50,
-    };
-
-    if (search) {
-      params.search = search;
-    }
-
-    const res = await listWorkorderTemplate(params);
-    if (res) {
-      dialogTemplates.value = res.results || [];
-    }
-  } catch (error: any) {
-    message.error(error.message || '加载模板失败');
+      status: 1,
+      search: search || templateSearchKeyword.value || '',
+    });
+    if (
+      request !== templateOptionsRequest ||
+      form !== formRequest ||
+      !templateDialog.visible
+    )
+      return;
+    dialogTemplates.value = res?.items || [];
+  } catch {
+    if (request !== templateOptionsRequest || form !== formRequest) return;
+    dialogTemplates.value = [];
+    templateListError.value = '加载模板失败，请重试';
   } finally {
-    templateSelectorLoading.value = false;
+    if (request === templateOptionsRequest)
+      templateSelectorLoading.value = false;
   }
 };
 
@@ -2944,12 +3079,20 @@ const handleTemplateSubmit = async () => {
     return;
   }
 
+  const request = ++formRequest;
+  const selectedTemplate = templateDialog.form.template_id;
   try {
     // 获取模板详情
     const templateDetail = await detailWorkorderTemplate({
       id: templateDialog.form.template_id,
     });
 
+    if (
+      request !== formRequest ||
+      !templateDialog.visible ||
+      selectedTemplate !== templateDialog.form.template_id
+    )
+      return;
     if (!templateDetail) {
       message.error('获取模板详情失败');
       return;
@@ -2994,18 +3137,22 @@ const handleTemplateSubmit = async () => {
 
     message.success('已从模板创建工单，请完善信息后提交');
   } catch (error: any) {
+    if (request !== formRequest || !templateDialog.visible) return;
     message.error(error.message || '从模板创建工单失败');
   }
 };
 
 const handleEditInstance = async (row: WorkorderInstanceItem) => {
+  const request = ++formRequest;
+  ++designRequest;
   instanceDialog.isEdit = true;
-  loading.value = true;
+  formLoading.value = true;
 
   try {
     const res = await detailWorkorderInstance({
       id: row.id,
     } as DetailWorkorderInstanceReq);
+    if (request !== formRequest) return;
     if (res) {
       instanceDialog.form = {
         id: res.id,
@@ -3027,48 +3174,49 @@ const handleEditInstance = async (row: WorkorderInstanceItem) => {
 
       instanceDialog.visible = true;
       await loadSelectorsForEdit();
+      if (request !== formRequest || !instanceDialog.visible) return;
 
       // 加载表单设计并初始化可视化数据
       if (res.process_id) {
         await loadFormDesign(res.process_id);
       }
     }
-  } catch (error) {
+  } catch {
+    if (request !== formRequest) return;
     message.error('获取工单详情失败');
   } finally {
-    loading.value = false;
+    if (request === formRequest) formLoading.value = false;
   }
 };
 
 // 获取可用动作
-const loadAvailableActions = async (
-  instanceId: number,
-  retryCount: number = 0,
-) => {
+const loadAvailableActions = async (instanceId: number) => {
+  const request = detailRequest;
+  if (!isDetailCurrent(instanceId, request)) return;
   detailDialog.actionsLoading = true;
+  detailMetadataErrors.actions = '';
+  detailDialog.availableActions = [];
   try {
     const actions = await getAvailableActions(instanceId);
-    detailDialog.availableActions = actions
-      ? actions.map((action: string) => action.toLowerCase())
-      : [];
-  } catch (error) {
-    // 如果是第一次失败且重试次数小于2次，则进行重试
-    if (retryCount < 2) {
-      setTimeout(() => {
-        loadAvailableActions(instanceId, retryCount + 1);
-      }, 1000);
-    } else {
-      detailDialog.availableActions = [];
-    }
+    if (!isDetailCurrent(instanceId, request)) return;
+    if (!Array.isArray(actions)) throw new Error('无效动作目录');
+    detailDialog.availableActions = actions.map((action) =>
+      String(action).toLowerCase(),
+    );
+  } catch {
+    if (isDetailCurrent(instanceId, request))
+      detailMetadataErrors.actions = '获取可用操作失败';
   } finally {
-    if (retryCount === 0) {
+    if (isDetailCurrent(instanceId, request))
       detailDialog.actionsLoading = false;
-    }
   }
 };
 
 // 加载流程定义和步骤导航
 const loadProcessStepsNavigation = async (instance: WorkorderInstanceItem) => {
+  const request = detailRequest;
+  if (!isDetailCurrent(instance.id, request)) return;
+  detailMetadataErrors.navigation = '';
   if (!instance.process_id || !instance.current_step_id) {
     detailDialog.previousStep = null;
     detailDialog.nextStep = null;
@@ -3082,6 +3230,7 @@ const loadProcessStepsNavigation = async (instance: WorkorderInstanceItem) => {
     const processDetail = await detailWorkorderProcess({
       id: instance.process_id,
     } as DetailWorkorderProcessReq);
+    if (!isDetailCurrent(instance.id, request)) return;
     if (processDetail && processDetail.definition) {
       detailDialog.processDefinition = processDetail.definition;
       const steps = processDetail.definition.steps || [];
@@ -3116,7 +3265,9 @@ const loadProcessStepsNavigation = async (instance: WorkorderInstanceItem) => {
         detailDialog.nextStep = null;
       }
     }
-  } catch (error) {
+  } catch {
+    if (!isDetailCurrent(instance.id, request)) return;
+    detailMetadataErrors.navigation = '获取步骤导航失败';
     detailDialog.previousStep = null;
     detailDialog.nextStep = null;
     detailDialog.allSteps = [];
@@ -3128,60 +3279,42 @@ const loadProcessStepsNavigation = async (instance: WorkorderInstanceItem) => {
 const loadCurrentStep = async (
   instanceId: number,
   instance?: WorkorderInstanceItem,
-  retryCount: number = 0,
 ) => {
-  // 如果实例没有 current_step_id，说明工单可能未开始或已完成
-  if (instance && !instance.current_step_id) {
-    detailDialog.currentStep = null;
+  const request = detailRequest;
+  if (!isDetailCurrent(instanceId, request)) return;
+  detailMetadataErrors.step = '';
+  detailDialog.currentStep = null;
+  if (!instance?.current_step_id) {
     detailDialog.stepLoading = false;
     return;
   }
-
   detailDialog.stepLoading = true;
   try {
     const step = await getCurrentStep(instanceId);
-
-    // 验证返回的步骤信息与 current_step_id 是否一致
-    if (
-      instance?.current_step_id &&
-      step?.id &&
-      step.id !== instance.current_step_id
-    ) {
-      // 刷新实例数据以获取最新状态
-      setTimeout(() => refreshInstanceData(instanceId), 500);
+    if (!isDetailCurrent(instanceId, request)) return;
+    if (step?.id && step.id !== instance.current_step_id) {
+      detailMetadataErrors.step = '工单状态已变化，请刷新详情';
+      return;
     }
-
     detailDialog.currentStep = step;
-
-    // 同时加载步骤导航信息
-    if (instance) {
-      await loadProcessStepsNavigation(instance);
-    }
-  } catch (error) {
-    // 智能重试逻辑
-    if (retryCount < 3) {
-      const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // 指数退避，最大5秒
-
-      setTimeout(() => {
-        loadCurrentStep(instanceId, instance, retryCount + 1);
-      }, retryDelay);
-    } else {
-      detailDialog.currentStep = null;
-      message.warning('获取当前步骤信息失败，请刷新页面重试');
-    }
+    await loadProcessStepsNavigation(instance);
+  } catch {
+    if (isDetailCurrent(instanceId, request))
+      detailMetadataErrors.step = '获取当前步骤失败';
   } finally {
-    if (retryCount === 0) {
-      detailDialog.stepLoading = false;
-    }
+    if (isDetailCurrent(instanceId, request)) detailDialog.stepLoading = false;
   }
 };
 
 // 刷新实例数据的辅助函数
 const refreshInstanceData = async (instanceId: number) => {
+  const request = detailRequest;
+  if (!isDetailCurrent(instanceId, request)) return;
   try {
     const res = await detailWorkorderInstance({
       id: instanceId,
     } as DetailWorkorderInstanceReq);
+    if (!isDetailCurrent(instanceId, request)) return;
     if (res) {
       detailDialog.instance = res;
       // 重新加载当前步骤
@@ -3194,9 +3327,6 @@ const refreshInstanceData = async (instanceId: number) => {
 const syncStepStatus = async (instanceId: number, _operationType: string) => {
   // Operation type parameter reserved for future use
   try {
-    // 短暂延迟确保后端操作完成
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
     // 刷新实例和步骤数据
     await refreshInstanceData(instanceId);
 
@@ -3219,6 +3349,10 @@ const loadNotificationLogs = async (instanceId?: number, resetPage = false) => {
     notificationLogsPagination.current = 1;
   }
 
+  const request = ++logsRequest;
+  notificationLogs.value = [];
+  notificationLogsPagination.total = 0;
+  notificationLogsError.value = '';
   notificationLogsLoading.value = true;
   try {
     const res = await getSendLogs({
@@ -3226,6 +3360,11 @@ const loadNotificationLogs = async (instanceId?: number, resetPage = false) => {
       page: notificationLogsPagination.current,
       page_size: notificationLogsPagination.pageSize,
     } as ListSendLogReq);
+    if (
+      request !== logsRequest ||
+      targetInstanceId !== notificationLogsDialog.instanceId
+    )
+      return;
 
     if (res?.items) {
       notificationLogs.value = res.items;
@@ -3234,42 +3373,51 @@ const loadNotificationLogs = async (instanceId?: number, resetPage = false) => {
       notificationLogs.value = [];
       notificationLogsPagination.total = 0;
     }
-  } catch (error) {
-    message.error('获取通知记录失败');
+  } catch {
+    if (request !== logsRequest) return;
+    notificationLogsError.value = '获取通知记录失败，请重试';
     notificationLogs.value = [];
     notificationLogsPagination.total = 0;
   } finally {
-    notificationLogsLoading.value = false;
+    if (request === logsRequest) notificationLogsLoading.value = false;
   }
 };
 
 const handleViewInstance = async (row: WorkorderInstanceItem) => {
-  loading.value = true;
-
+  const request = ++detailRequest;
+  detailTarget.value = row;
+  detailDialog.visible = true;
+  detailDialog.instance = null;
+  detailDialog.availableActions = [];
+  detailDialog.currentStep = null;
+  detailDialog.allSteps = [];
+  detailDialog.previousStep = null;
+  detailDialog.nextStep = null;
+  detailMetadataErrors.actions = '';
+  detailMetadataErrors.step = '';
+  detailMetadataErrors.navigation = '';
+  detailError.value = '';
+  detailLoading.value = true;
   try {
-    const res = await detailWorkorderInstance({
-      id: row.id,
-    } as DetailWorkorderInstanceReq);
-    if (res) {
-      detailDialog.instance = res;
-      detailDialog.visible = true;
-
-      // 同时获取可用动作、当前步骤和通知发送记录，传入实例数据用于验证
-      await Promise.all([
-        loadAvailableActions(row.id),
-        loadCurrentStep(row.id, res),
-        loadNotificationLogs(row.id),
-      ]);
-    }
-  } catch (error) {
-    message.error('获取工单详情失败');
+    const res = await detailWorkorderInstance({ id: row.id });
+    if (request !== detailRequest || !detailDialog.visible) return;
+    if (!res) throw new Error('空详情');
+    detailDialog.instance = res;
+    loadAvailableActions(row.id);
+    loadCurrentStep(row.id, res);
+  } catch {
+    if (request !== detailRequest || !detailDialog.visible) return;
+    detailError.value = '获取工单详情失败，请重试';
   } finally {
-    loading.value = false;
+    if (request === detailRequest) detailLoading.value = false;
   }
 };
 
 const handleCommand = async (command: string, row: WorkorderInstanceItem) => {
   switch (command) {
+    case 'notification_logs':
+      handleViewNotificationLogs(row);
+      break;
     case 'comment':
       showCommentDialog(row);
       break;
@@ -3335,6 +3483,8 @@ const handleNotificationLogsPageChange = () => {
 
 // 关闭通知记录对话框
 const handleCloseNotificationLogsDialog = () => {
+  ++logsRequest;
+  notificationLogsLoading.value = false;
   notificationLogsDialog.visible = false;
   notificationLogsDialog.instanceId = 0;
   notificationLogs.value = [];
@@ -3344,36 +3494,35 @@ const handleCloseNotificationLogsDialog = () => {
 
 // 查看通知详情
 const viewNotificationDetail = (log: NotificationLog) => {
-  // 根据API定义，status是number类型，1表示成功
-  const isSuccess = log.status === 1;
-
+  const entries = [
+    ['事件类型', log.event_type],
+    ['发送渠道', log.channel],
+    ['发送状态', getSendStatus(log.status).label],
+    ['发送时间', formatDateTime(log.send_at)],
+    ['收件地址', log.recipient_addr],
+    ['收件人姓名', log.recipient_name],
+    ['主题', log.subject],
+    ['错误信息', log.error_message],
+  ];
   Modal.info({
     title: '通知详情',
     width: 600,
-    content: `
-      <div style="margin-top: 16px;">
-        <div style="margin-bottom: 12px;">
-          <strong>事件类型：</strong> ${log.event_type}
-        </div>
-        <div style="margin-bottom: 12px;">
-          <strong>发送渠道：</strong> ${log.channel}
-        </div>
-        <div style="margin-bottom: 12px;">
-          <strong>发送状态：</strong> 
-          <span style="color: ${isSuccess ? '#52c41a' : '#ff4d4f'};">
-            ${isSuccess ? '发送成功' : '发送失败'}
-          </span>
-        </div>
-        <div style="margin-bottom: 12px;">
-          <strong>发送时间：</strong> ${formatDateTime(log.send_at)}
-        </div>
-        ${log.recipient_addr ? `<div style="margin-bottom: 12px;"><strong>收件人地址：</strong> ${log.recipient_addr}</div>` : ''}
-        ${log.recipient_name ? `<div style="margin-bottom: 12px;"><strong>收件人姓名：</strong> ${log.recipient_name}</div>` : ''}
-        ${log.subject ? `<div style="margin-bottom: 12px;"><strong>主题：</strong> ${log.subject}</div>` : ''}
-        ${log.error_message ? `<div style="margin-bottom: 12px;"><strong>错误信息：</strong> <span style="color: #ff4d4f;">${log.error_message}</span></div>` : ''}
-      </div>
-    `,
-    onOk() {},
+    content: h(
+      'div',
+      {
+        style: {
+          display: 'grid',
+          gap: '12px',
+          overflowWrap: 'anywhere',
+          whiteSpace: 'pre-wrap',
+        },
+      },
+      entries
+        .filter(([, value]) => value)
+        .map(([label, value]) =>
+          h('p', [h('strong', `${label}：`), h('span', String(value))]),
+        ),
+    ),
   });
 };
 
@@ -3399,18 +3548,6 @@ const handleActionWithPermission = async (
         return: '退回',
       };
       message.error(`您没有${actionMap[action] || action}此工单的权限`);
-      return;
-    }
-
-    // 检查需要处理人的操作
-    const actionsRequiringAssignee = [
-      'approve',
-      'reject',
-      'complete',
-      'return',
-    ];
-    if (actionsRequiringAssignee.includes(action) && !instance.assignee_id) {
-      message.error('请先分配处理人后再执行此操作');
       return;
     }
 
@@ -3492,6 +3629,7 @@ const showAssignDialog = (instance: WorkorderInstanceItem) => {
 };
 
 const saveAssign = async () => {
+  if (loading.value) return;
   try {
     if (!assignDialog.form.assignee_id) {
       message.error('请选择处理人');
@@ -3647,6 +3785,7 @@ const getStepMessage = (): string => {
 
 // 保存操作备注（取消、完成、退回）
 const saveActionComment = async () => {
+  if (loading.value) return;
   try {
     if (!actionDialog.form.comment.trim()) {
       message.error(`请输入${getActionCommentLabel()}`);
@@ -3707,6 +3846,7 @@ const showApprovalDialog = (
 };
 
 const saveApproval = async () => {
+  if (loading.value) return;
   try {
     if (
       approvalDialog.type === 'reject' &&
@@ -3812,6 +3952,7 @@ const confirmDelete = (instance: WorkorderInstanceItem) => {
 };
 
 const saveInstance = async () => {
+  if (loading.value) return;
   try {
     if (!instanceDialog.form.title.trim()) {
       message.error('工单标题不能为空');
@@ -3819,20 +3960,9 @@ const saveInstance = async () => {
     }
 
     // 验证工单标题长度和格式
-    if (instanceDialog.form.title.trim().length < 3) {
-      message.error('工单标题至少需要3个字符');
-      return;
-    }
-
     if (instanceDialog.form.title.trim().length > 200) {
       message.error('工单标题不能超过200个字符');
       return;
-    }
-
-    // 检查标题是否包含特殊字符或只有数字
-    const titleTrimmed = instanceDialog.form.title.trim();
-    if (/^[\d]+$/.test(titleTrimmed)) {
-      message.warning('建议工单标题包含描述性内容，而不是只有数字');
     }
 
     if (!instanceDialog.form.process_id) {
@@ -3865,9 +3995,6 @@ const saveInstance = async () => {
         title: instanceDialog.form.title,
         description: instanceDialog.form.description || '',
         priority: instanceDialog.form.priority,
-        ...(instanceDialog.form.assignee_id != null
-          ? { assignee_id: Number(instanceDialog.form.assignee_id) }
-          : {}),
         form_data: formData,
         tags: instanceDialog.form.tags,
         due_date: instanceDialog.form.due_date
@@ -3912,6 +4039,8 @@ const saveInstance = async () => {
 
 // 重置选择器状态
 const resetSelectors = (): void => {
+  ++processOptionsRequest;
+  ++userOptionsRequest;
   // 重置流程选择器
   Object.assign(processPagination, { current: 1, total: 0, hasMore: false });
   dialogProcesses.value = [];
@@ -3979,82 +4108,29 @@ const ensureCurrentAssigneeInList = async (): Promise<void> => {
   }
 };
 
-// 初始化加载
-onMounted(async () => {
-  loading.value = true;
-  try {
-    await Promise.all([
-      loadInstances(),
-      loadUsers(true), // 初始化加载用户数据（第一页）
-      loadProcesses(), // 初始化加载流程数据
-    ]);
-  } catch (error: any) {
-    message.error(
-      `初始化数据加载失败: ${error.message || '未知错误'}, 请刷新页面重试`,
-    );
-  } finally {
-    loading.value = false;
-  }
+// 目录初始化不控制列表或写入操作的 loading
+onMounted(() => {
+  loadInstances();
+  loadUsers(true);
+  loadProcesses();
 });
 </script>
 
 <style scoped>
-.instance-management-container {
-  padding: 12px;
-  min-height: 100vh;
-}
-
-.page-header {
-  margin-bottom: 20px;
-}
-
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.btn-create {
-  background: var(--ops-accent);
-  border: none;
-  flex-shrink: 0;
-}
-
-.search-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
-
 .search-input {
   width: 300px;
   min-width: 200px;
 }
-
 .status-filter,
 .priority-filter,
 .process-filter {
-  width: 120px;
+  width: 150px;
   min-width: 100px;
 }
-
-.stats-row {
-  margin-bottom: 20px;
+.table-container :deep(.ant-table-wrapper) {
+  min-width: 0;
+  overflow: auto;
 }
-
-.stats-card {
-  border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  height: 100%;
-}
-
-.table-container {
-  margin-bottom: 24px;
-}
-
 .instance-title-cell {
   display: flex;
   align-items: center;
@@ -4069,15 +4145,15 @@ onMounted(async () => {
 }
 
 .priority-low {
-  background-color: #52c41a;
+  background-color: hsl(var(--success));
 }
 
 .priority-normal {
-  background-color: #1890ff;
+  background-color: var(--ops-accent);
 }
 
 .priority-high {
-  background-color: #ff4d4f;
+  background-color: hsl(var(--destructive));
 }
 
 .title-content {
@@ -4098,7 +4174,7 @@ onMounted(async () => {
 }
 
 .text-gray {
-  color: #999;
+  color: var(--ops-muted);
   font-style: italic;
 }
 
@@ -4196,14 +4272,14 @@ onMounted(async () => {
 }
 
 .load-more-content:hover {
-  background-color: #e6f7ff;
-  border-radius: 4px;
+  background-color: var(--ops-ground);
+  border-radius: var(--ops-radius);
 }
 
 /* 表单数据编辑样式 */
 .form-data-section {
   border: 1px solid var(--ops-border);
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   padding: 16px;
   background: var(--ops-ground);
 }
@@ -4212,7 +4288,7 @@ onMounted(async () => {
 .visual-form-editor {
   margin-top: 16px;
   background: var(--ops-surface);
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   padding: 16px;
   border: 1px solid var(--ops-border);
 }
@@ -4235,7 +4311,7 @@ onMounted(async () => {
   padding: 40px 20px;
   text-align: center;
   background: var(--ops-surface);
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   border: 1px solid var(--ops-border);
 }
 
@@ -4269,26 +4345,26 @@ onMounted(async () => {
   font-size: 13px;
   line-height: 1.5;
   border: 1px solid var(--ops-border);
-  border-radius: 4px;
+  border-radius: var(--ops-radius);
   background: var(--ops-surface);
   transition: all 0.3s;
 }
 
 .json-editor:hover {
-  border-color: #40a9ff;
+  border-color: var(--ops-accent);
 }
 
 .json-editor:focus {
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  border-color: var(--ops-accent);
+  box-shadow: none;
 }
 
 .json-error {
-  border-color: #ff4d4f !important;
+  border-color: hsl(var(--destructive)) !important;
 }
 
 .json-error:focus {
-  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2) !important;
+  box-shadow: none;
 }
 
 .json-error-message {
@@ -4327,7 +4403,7 @@ onMounted(async () => {
   color: var(--ops-muted);
   background: var(--ops-ground);
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--ops-radius);
 }
 
 .form-data-preview {
@@ -4346,7 +4422,7 @@ onMounted(async () => {
 .form-data-content {
   background: var(--ops-surface);
   border: 1px solid var(--ops-border);
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   padding: 16px;
 }
 
@@ -4354,7 +4430,7 @@ onMounted(async () => {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.5;
-  color: #495057;
+  color: var(--ops-ink);
   margin: 0;
   white-space: pre-wrap;
   word-break: break-all;
@@ -4381,10 +4457,6 @@ onMounted(async () => {
 
 /* 移动端适配 */
 @media (max-width: 768px) {
-  .instance-management-container {
-    padding: 8px;
-  }
-
   .header-actions {
     flex-direction: column;
     align-items: stretch;
@@ -4494,10 +4566,6 @@ onMounted(async () => {
 
 /* 平板端适配 */
 @media (max-width: 1024px) and (min-width: 769px) {
-  .instance-management-container {
-    padding: 16px;
-  }
-
   .search-input {
     width: 250px;
   }
@@ -4509,9 +4577,6 @@ onMounted(async () => {
     gap: 8px;
   }
 
-  .stats-card {
-    text-align: center;
-  }
 
   .operator-info,
   .assignee-info {
@@ -4578,7 +4643,7 @@ onMounted(async () => {
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   border: 1px solid var(--ops-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -4603,8 +4668,8 @@ onMounted(async () => {
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: #1890ff;
-  border-radius: 6px;
+  background: var(--ops-accent);
+  border-radius: var(--ops-radius);
   border: none;
 }
 
@@ -4635,7 +4700,7 @@ onMounted(async () => {
   color: var(--ops-muted) !important;
   font-weight: 500 !important;
   padding: 4px 10px !important;
-  border-radius: 4px !important;
+  border-radius: var(--ops-radius) !important;
   font-size: 12px !important;
 }
 
@@ -4683,7 +4748,7 @@ onMounted(async () => {
   gap: 12px;
   padding: 16px;
   background: var(--ops-ground);
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   border: 1px solid var(--ops-border);
   transition: background-color 0.2s ease;
 }
@@ -4700,14 +4765,14 @@ onMounted(async () => {
   justify-content: center;
   background: var(--ops-border);
   color: var(--ops-muted);
-  border-radius: 4px;
+  border-radius: var(--ops-radius);
   font-size: 13px;
   flex-shrink: 0;
 }
 
 .detail-icon.urgent {
-  background: #fff2f0;
-  color: #ff4d4f;
+  background: var(--ops-ground);
+  color: hsl(var(--destructive));
 }
 
 .detail-content {
@@ -4725,13 +4790,13 @@ onMounted(async () => {
 
 .detail-value {
   font-size: 14px;
-  color: #374151;
+  color: var(--ops-ink);
   font-weight: 500;
   line-height: 1.4;
 }
 
 .detail-value.urgent-text {
-  color: #dc2626;
+  color: hsl(var(--destructive));
   font-weight: 600;
 }
 
@@ -4743,7 +4808,7 @@ onMounted(async () => {
 
 .no-step-icon {
   font-size: 48px;
-  color: #bfbfbf;
+  color: var(--ops-muted);
   margin-bottom: 16px;
 }
 
@@ -4764,7 +4829,7 @@ onMounted(async () => {
   margin-top: 20px;
   background: var(--ops-surface);
   border: 1px solid var(--ops-border);
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   overflow: hidden;
 }
 
@@ -4803,23 +4868,23 @@ onMounted(async () => {
   padding: 16px;
   background: var(--ops-ground);
   border: 1px solid var(--ops-border);
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   position: relative;
 }
 
 .nav-step.current-step-nav {
-  background: #e6f7ff;
-  border-color: #1890ff;
+  background: var(--ops-ground);
+  border-color: var(--ops-accent);
 }
 
 .nav-step.prev-step {
-  background: #f6ffed;
-  border-color: #52c41a;
+  background: var(--ops-ground);
+  border-color: hsl(var(--success));
 }
 
 .nav-step.next-step {
-  background: #fff7e6;
-  border-color: #fa8c16;
+  background: var(--ops-ground);
+  border-color: hsl(var(--warning));
 }
 
 .nav-step-header {
@@ -4835,7 +4900,7 @@ onMounted(async () => {
 }
 
 .nav-step-icon.current {
-  color: #1890ff;
+  color: var(--ops-accent);
 }
 
 .nav-step-label {
@@ -4895,14 +4960,14 @@ onMounted(async () => {
 }
 
 .progress-item.completed .progress-dot {
-  background: #52c41a;
-  border-color: #52c41a;
+  background: hsl(var(--success));
+  border-color: hsl(var(--success));
 }
 
 .progress-item.current .progress-dot {
-  background: #1890ff;
-  border-color: #1890ff;
-  box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.2);
+  background: var(--ops-accent);
+  border-color: var(--ops-accent);
+  box-shadow: none;
 }
 
 .progress-item.pending .progress-dot {
@@ -4919,12 +4984,12 @@ onMounted(async () => {
 }
 
 .progress-item.current .progress-label {
-  color: #1890ff;
+  color: var(--ops-accent);
   font-weight: 500;
 }
 
 .progress-item.completed .progress-label {
-  color: #52c41a;
+  color: hsl(var(--success));
 }
 
 /* 响应式设计 */
@@ -4960,7 +5025,7 @@ onMounted(async () => {
   padding: 20px;
   background: var(--ops-ground);
   border: 1px solid var(--ops-border);
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
 }
 
 .available-actions-section h3 {
@@ -4977,7 +5042,7 @@ onMounted(async () => {
 }
 
 .actions-buttons .ant-btn {
-  border-radius: 4px;
+  border-radius: var(--ops-radius);
   font-weight: 500;
   height: 36px;
 }
@@ -5006,7 +5071,7 @@ onMounted(async () => {
 }
 
 .footer-right .ant-btn {
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
 }
 
 /* 步骤加载状态 */
@@ -5025,20 +5090,20 @@ onMounted(async () => {
 }
 
 .approval-step-info .ant-alert {
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   border: 1px solid;
   font-size: 14px;
   line-height: 1.5;
 }
 
 .approval-step-info .ant-alert-info {
-  background-color: #e6f7ff;
-  border-color: #91d5ff;
+  background-color: var(--ops-ground);
+  border-color: var(--ops-border);
 }
 
 .approval-step-info .ant-alert-warning {
-  background-color: #fff7e6;
-  border-color: #ffc53d;
+  background-color: var(--ops-ground);
+  border-color: var(--ops-border);
 }
 
 .approval-step-info .ant-alert-message {
@@ -5153,7 +5218,7 @@ onMounted(async () => {
 
 .notification-logs-dialog .event-type {
   font-weight: 500;
-  color: #1890ff;
+  color: var(--ops-accent);
 }
 
 .notification-logs-dialog .notification-meta {

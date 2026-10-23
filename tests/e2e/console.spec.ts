@@ -1271,3 +1271,123 @@ test('assistant and autofix pages preserve responsive read-only interactions wit
   await page.screenshot({ path: '.cache/ui-verification/autofix-mobile-dark.png', fullPage: true });
   expect(forbidden).toEqual([]); expect(errors).toEqual([]);
 });
+
+test('workorder instance completes a real template draft submit and approval lifecycle', async ({ page }) => {
+  test.setTimeout(180_000);
+  page.setDefaultTimeout(15_000);
+  test.skip(process.env.CLOUDOPS_TEST_WORKORDER_FLOW_READY !== 'true', 'Requires an isolated database with notifications disabled.');
+  const login = page.waitForResponse(response => new URL(response.url()).pathname === '/api/user/login' && response.request().method() === 'POST');
+  await acceptanceLogin(page);
+  const account = (await (await login).json()).data;
+  const token = account.accessToken;
+  const uid = Number(account.id);
+  expect(typeof token === 'string' && Number.isSafeInteger(uid) && uid > 0).toBe(true);
+  const nonce = `cloudops-ui-flow-${Date.now()}`;
+  const owned: Array<{ kind: string; id: number }> = [];
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const api = async (path: string, method = 'GET', data?: unknown) => {
+    const response = await page.request.fetch(`/api/workorder/${path}`, { method, data, headers: { Authorization: `Bearer ${token}` } });
+    const result = await response.json(); expect(response.status(), path.split('?')[0]).toBe(200); expect(result.code, path.split('?')[0]).toBe(0); return result.data;
+  };
+  const find = async (kind: string) => {
+    const data = await api(`${kind}/list?page=1&size=100&search=${nonce}`);
+    return data.items.find((item: { name?: string; title?: string }) => (kind === 'instance' ? item.title : item.name) === nonce);
+  };
+  const create = async (kind: string, fields: object) => {
+    await api(`${kind}/create`, 'POST', { name: nonce, ...fields });
+    const item = await find(kind); expect(!!item?.id).toBe(true); owned.push({ kind, id: item.id }); return item.id as number;
+  };
+  try {
+    // 工作流会产生业务事件；隔离库必须没有启用中的通知配置
+    const active = await api('notification/list?page=1&page_size=100&status=1'); expect(active.total).toBe(0);
+    const category = await create('category', { status: 1 });
+    const form = await create('form-design', { status: 2, category_id: category, is_template: 1, schema: { fields: [{ id: 'reason', name: 'reason', label: '变更说明', type: 'text', required: 1 }] } });
+    const process = await create('process', { status: 2, category_id: category, form_design_id: form, is_default: 2, definition: {
+      steps: [{ id: 'start', type: 'start', name: '开始', sort_order: 1, actions: ['start'] }, { id: 'approval', type: 'approval', name: '审批', sort_order: 2, assignee_type: 'user', assignee_ids: [uid], actions: ['approve', 'reject'] }, { id: 'end', type: 'end', name: '完成', sort_order: 3 }],
+      connections: [{ from: 'start', to: 'approval' }, { from: 'approval', to: 'end' }],
+    } });
+    await create('template', { status: 1, process_id: process, category_id: category, form_design_id: form, default_values: { reason: '仅本机浏览器验收' } });
+    await page.goto(routePath('/instance'));
+    await expect(page.locator('.ops-page h1')).toHaveText('工单实例');
+    await page.getByRole('button', { name: '从模板创建工单', exact: true }).click();
+    let dialog = page.getByRole('dialog');
+    await dialog.locator('.ant-select').first().click();
+    await page.locator('.ant-select-dropdown:visible .ant-select-item-option').filter({ hasText: nonce }).click();
+    await dialog.getByPlaceholder('请输入工单标题', { exact: true }).fill(nonce);
+    await dialog.locator('.ant-modal-footer .ant-btn-primary').click();
+    dialog = page.getByRole('dialog', { name: '创建工单', exact: true });
+    await expect(dialog.locator('.visual-form-fields input').first()).toHaveValue('仅本机浏览器验收');
+    const [created] = await Promise.all([page.waitForResponse(response => new URL(response.url()).pathname === '/api/workorder/instance/create' && response.request().method() === 'POST'), dialog.locator('.ant-modal-footer .ant-btn-primary').click()]); expect(created.status()).toBe(200);
+    await expect(dialog).not.toBeVisible();
+    const instance = await find('instance'); expect(instance.status).toBe(1); owned.push({ kind: 'instance', id: instance.id });
+    await page.getByLabel('搜索工单', { exact: true }).fill(nonce); await page.getByLabel('搜索工单', { exact: true }).press('Enter');
+    const row = page.locator(`.ant-table-tbody tr[data-row-key="${instance.id}"]`);
+    await expect(row).toContainText('草稿');
+    await row.getByRole('button', { name: '工单更多操作', exact: true }).click();
+    await page.getByRole('menuitem').filter({ hasText: '提交工单' }).click();
+    dialog = page.getByRole('dialog').filter({ hasText: '提交确认' });
+    const [submitted] = await Promise.all([page.waitForResponse(response => new URL(response.url()).pathname === `/api/workorder/instance/submit/${instance.id}`), dialog.getByRole('button', { name: /^提\s*交$/ }).click()]); expect(submitted.status()).toBe(200);
+    await expect(row).toContainText('待处理');
+    await row.getByRole('button', { name: /^查\s*看$/ }).click();
+    dialog = page.getByRole('dialog').filter({ hasText: '工单详情' });
+    await expect(dialog.locator('h2')).toHaveText(nonce);
+    await expect(dialog).toContainText('审批');
+    await dialog.getByRole('button', { name: /^审批通过$/ }).click();
+    const approval = page.getByRole('dialog').filter({ hasText: '审批意见' }).last();
+    await approval.getByRole('textbox').fill('仅本机验收通过');
+    const [approved] = await Promise.all([page.waitForResponse(response => new URL(response.url()).pathname === `/api/workorder/instance/approve/${instance.id}`), approval.locator('.ant-modal-footer .ant-btn-primary').click()]); expect(approved.status()).toBe(200);
+    await expect(row).toContainText('已完成');
+    expect((await api(`instance/detail/${instance.id}`)).status).toBe(4);
+    await page.getByRole('dialog').filter({ hasText: '工单详情' }).getByRole('button', { name: /^关\s*闭$/ }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectUncovered(page.getByRole('button', { name: '创建工单', exact: true }));
+    await expectUncovered(page.getByRole('button', { name: '重置工单筛选', exact: true }));
+    expect(await page.locator('.stats-grid').evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length)).toBe(2);
+    await page.getByLabel('深色', { exact: true }).click(); await expect(page.locator('html')).toHaveClass(/dark/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.waitForTimeout(300); await page.locator('.ops-page h1').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: '.cache/ui-verification/instance-mobile-dark.png', fullPage: true });
+    expect(errors).toEqual([]);
+  } finally {
+    // 创建响应后页面失败也按唯一名称发现本轮草稿；只删除本轮记录
+    const discovered = await find('instance');
+    if (discovered && !owned.some(item => item.kind === 'instance' && item.id === discovered.id)) owned.push({ kind: 'instance', id: discovered.id });
+    for (const item of [...owned].reverse()) {
+      if (item.kind === 'instance') {
+        const current = await api(`instance/detail/${item.id}`);
+        if ([2, 3].includes(current.status)) await api(`instance/reject/${item.id}`, 'POST', { comment: `${nonce} cleanup` });
+      }
+      if (item.kind === 'process') await api(`process/update/${item.id}`, 'PUT', { status: 3 });
+      await api(`${item.kind}/delete/${item.id}`, 'DELETE', { id: item.id });
+    }
+  }
+});
+
+test('RCA and prediction pages keep initial controls local and cache cancellation read-only', async ({ page }) => {
+  test.setTimeout(90_000);
+  const unsafe: string[] = []; const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('request', request => { const path = new URL(request.url()).pathname; if (path.startsWith('/api/v1/') && (request.method() !== 'GET' || /\/ready$|\/analy[sz]e|\/diagnos|\/predict\//.test(path))) unsafe.push(`${request.method()} ${path}`); });
+  await acceptanceLogin(page);
+  const routes = [['/rca/analysis', '根因分析'], ['/rca/diagnosis', '快速诊断'], ['/rca/cache', 'RCA 缓存管理'], ['/predict/dashboard', '预测看板'], ['/predict/analysis', '预测分析']];
+  for (const [path, title] of routes) {
+    await page.setViewportSize({ width: 390, height: 844 }); await page.goto(routePath(path!));
+    await expect(page.locator('.ops-page h1')).toHaveText(title!);
+    if (path === '/rca/diagnosis') await expect(page.getByRole('switch')).not.toBeChecked();
+    if (path === '/rca/cache') {
+      await page.getByRole('button').filter({ hasText: '清除所有缓存' }).click();
+      const dialog = page.getByRole('dialog', { name: '确认清除所有缓存', exact: true });
+      await expect(dialog).toBeVisible(); await dialog.getByRole('button', { name: /^取\s*消$/ }).click(); await expect(dialog).not.toBeVisible();
+    }
+    if (path?.startsWith('/predict/')) {
+      const input = page.locator('.ant-input-number input').first(); await input.fill('120'); await input.press('Tab');
+      if (path === '/predict/dashboard') await page.getByRole('switch').first().click();
+      await page.locator('.ops-page__actions').getByRole('button', { name: /^重\s*置$/ }).click();
+    }
+    if (await page.locator('html').evaluate(element => element.classList.contains('dark'))) await page.getByLabel('浅色', { exact: true }).click();
+    await page.getByLabel('深色', { exact: true }).click(); await expect(page.locator('html')).toHaveClass(/dark/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), path).toBe(true);
+  }
+  expect(unsafe).toEqual([]); expect(errors).toEqual([]);
+});

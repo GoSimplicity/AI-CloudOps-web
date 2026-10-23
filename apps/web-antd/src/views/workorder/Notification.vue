@@ -922,7 +922,7 @@ import {
 } from '@ant-design/icons-vue';
 import {
   NotificationStatus,
-  SendStatus,
+  getNotificationSendStatus as getSendStatus,
   NotificationChannel,
   NotificationTrigger,
   NotificationPriority,
@@ -1268,13 +1268,6 @@ const disabledDate = (current: any) => {
 };
 
 // 工具函数
-const getSendStatus = (status: number) => ({
-  [SendStatus.Pending]: { label: '待发送', color: 'default' },
-  [SendStatus.Sending]: { label: '发送中', color: 'processing' },
-  [SendStatus.Success]: { label: '成功', color: 'success' },
-  [SendStatus.Failed]: { label: '失败', color: 'error' },
-  [SendStatus.Cancelled]: { label: '已取消', color: 'default' },
-}[status] || { label: '未知', color: 'default' });
 
 const getEventTypesDisplay = (eventTypes: string[]): string => {
   if (eventTypes.length <= 2) {

@@ -1,6 +1,6 @@
 {
   "routes": 58,
-  "migratedShells": 49,
+  "migratedShells": 57,
   "entries": [
     {
       "route": "/assistant/info",
@@ -68,7 +68,7 @@
     {
       "route": "/form_design",
       "view": "workorder/FormDesign.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 1,
       "scopedStyle": true
     },
@@ -82,7 +82,7 @@
     {
       "route": "/instance",
       "view": "workorder/Instance.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 27,
       "scopedStyle": true
     },
@@ -299,14 +299,14 @@
     {
       "route": "/predict/analysis",
       "view": "predict/PredictAnalysis.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 6,
       "scopedStyle": true
     },
     {
       "route": "/predict/dashboard",
       "view": "predict/PredictDashboard.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 7,
       "scopedStyle": true
     },
@@ -320,28 +320,28 @@
     {
       "route": "/process_design",
       "view": "workorder/ProcessDesign.vue",
-      "sharedPage": false,
-      "inlineStyles": 7,
+      "sharedPage": true,
+      "inlineStyles": 5,
       "scopedStyle": true
     },
     {
       "route": "/rca/analysis",
       "view": "rca/RCAAnalysis.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 4,
       "scopedStyle": true
     },
     {
       "route": "/rca/cache",
       "view": "rca/RCACache.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 3,
       "scopedStyle": true
     },
     {
       "route": "/rca/diagnosis",
       "view": "rca/RCADiagnosis.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 2,
       "scopedStyle": true
     },
