@@ -21,6 +21,7 @@ import {
   getAccountPermissionCodes,
   PERMISSION_CODES,
   type PermissionKey,
+  U3_ALWAYS_ENFORCED_KEYS,
   U3_PERMISSION_CODES,
   U3_SCOPE_APPROVED,
 } from '#/constants/permission-codes';
@@ -40,6 +41,10 @@ import {
 
 const ALL_KEYS = Object.keys(PERMISSION_CODES) as PermissionKey[];
 const U3_KEYS = Object.keys(U3_PERMISSION_CODES) as PermissionKey[];
+/** U3 表里受开关控制的 key（去掉始终判断的 Node 调度三个） */
+const U3_GATED_KEYS = U3_KEYS.filter(
+  (key) => !(U3_ALWAYS_ENFORCED_KEYS as readonly string[]).includes(key),
+);
 const POD_DELETE = '/api/k8s/pod/:cluster_id/:namespace/:name/delete';
 const distinct = (group: Record<string, string>) =>
   new Set(Object.values(group));
@@ -116,19 +121,51 @@ describe('权限码常量（permission-codes.md v3 第 6 / 6.1 节）', () => {
     expect(PERMISSION_CODES).not.toHaveProperty('k8s.node.batchCordon');
   });
 
-  it('U3 开关默认关闭；测试账号 A 码集：U3 获批前 59，获批后 75', () => {
+  it('Node 调度三个按钮始终按码判断（P2-A），其余 19 个 U3 key 受开关控制', () => {
+    expect([...U3_ALWAYS_ENFORCED_KEYS].sort()).toEqual([
+      'k8s.node.batchCordon',
+      'k8s.node.cordon',
+      'k8s.node.uncordon',
+    ]);
+    expect(U3_GATED_KEYS).toHaveLength(19);
+  });
+
+  it('U3 开关默认关闭；测试账号 A 码集：U3 获批前 61（59 + cordon / uncordon），获批后 75', () => {
     expect(U3_SCOPE_APPROVED).toBe(false);
-    expect(getAccountPermissionCodes()).toHaveLength(59);
-    expect(getAccountPermissionCodes(false)).toHaveLength(59);
+    expect(getAccountPermissionCodes()).toHaveLength(61);
+    expect(getAccountPermissionCodes(false)).toHaveLength(61);
     expect(getAccountPermissionCodes(true)).toHaveLength(75);
+    // 获批前 = S1 ∪ S2（59 个码）再加 Node 调度的 2 个码
+    const s1s2 = new Set<string>([
+      ...Object.values(PERMISSION_CODES),
+      ...Object.values(FE02_SUPPLEMENT_PERMISSION_CODES),
+    ]);
+    expect(s1s2.size).toBe(59);
+    expect(
+      getAccountPermissionCodes(false).filter((code) => !s1s2.has(code)),
+    ).toEqual([
+      '/api/k8s/node/:cluster_id/:node_name/cordon',
+      '/api/k8s/node/:cluster_id/:node_name/uncordon',
+    ]);
+    // 按码判断的按钮数：获批前 77 + 4 + 3 = 84，获批后 103
+    const allKeys = Object.keys(ALL_PERMISSION_CODES) as PermissionKey[];
+    expect(
+      allKeys.filter((key) => isPermissionEnforced(key, false)),
+    ).toHaveLength(84);
+    expect(
+      allKeys.filter((key) => isPermissionEnforced(key, true)),
+    ).toHaveLength(103);
     // 获批后 = 本清单全部码
     expect(new Set(getAccountPermissionCodes(true))).toEqual(
       new Set(Object.values(ALL_PERMISSION_CODES)),
     );
   });
 
-  it('U3 开关关闭时 U3 key 不按码判断，打开后与其它 key 一样判断', () => {
-    expect(U3_KEYS.some((key) => isPermissionEnforced(key))).toBe(false);
+  it('U3 开关关闭时其余 U3 key 不按码判断，Node 调度三个仍判断；打开后全部判断', () => {
+    expect(U3_GATED_KEYS.some((key) => isPermissionEnforced(key))).toBe(false);
+    expect(
+      U3_ALWAYS_ENFORCED_KEYS.every((key) => isPermissionEnforced(key)),
+    ).toBe(true);
     expect(ALL_KEYS.every((key) => isPermissionEnforced(key))).toBe(true);
     expect(U3_KEYS.every((key) => isPermissionEnforced(key, true))).toBe(true);
     u3.override = true;
@@ -252,12 +289,19 @@ describe('usePermission 读取 store', () => {
     expect(can('k8s.pod.exec')).toBe(true);
   });
 
-  it('U3 未获批：普通账号无码时 U3 按钮保持现状可见，主范围按钮仍隐藏', () => {
-    useAccessStore().setAccessCodes([]);
+  it('U3 未获批：普通账号无码时其余 U3 按钮保持现状可见，主范围按钮和 Node 调度按钮隐藏', () => {
+    const accessStore = useAccessStore();
+    accessStore.setAccessCodes([]);
     useUserStore().setUserInfo({ roles: ['ops'], username: 'ops' } as any);
     const { can } = usePermission();
-    expect(U3_KEYS.every((key) => can(key))).toBe(true);
+    expect(U3_GATED_KEYS.every((key) => can(key))).toBe(true);
     expect(can('k8s.node.taintDelete')).toBe(false);
+    expect(U3_ALWAYS_ENFORCED_KEYS.filter((key) => can(key))).toEqual([]);
+    // 有 cordon 码：禁用调度、批量禁用调度可见，启用调度仍隐藏
+    accessStore.setAccessCodes([getPermissionCode('k8s.node.cordon')]);
+    expect(can('k8s.node.cordon')).toBe(true);
+    expect(can('k8s.node.batchCordon')).toBe(true);
+    expect(can('k8s.node.uncordon')).toBe(false);
   });
 
   it('U3 获批：无码隐藏、有码显示、admin 放行', () => {

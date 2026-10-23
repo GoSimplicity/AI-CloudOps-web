@@ -18,6 +18,10 @@ import { useAccessStore } from '@vben/stores';
 import { useAppConfig } from '@vben/hooks';
 import { websocketProtocols, websocketUrl } from '#/utils/websocket-url';
 import {
+  notifyStreamLoginExpired,
+  refreshAccessTokenForStream,
+} from '#/api/request';
+import {
   type K8sPod,
   type PodContainer,
   type GetPodListReq,
@@ -95,6 +99,14 @@ spec:
         cpu: 500m
         memory: 512Mi
 `;
+
+/** 日志 SSE / 终端 WS 连续重连上限（连上后清零） */
+export const STREAM_MAX_RECONNECT_ATTEMPTS = 5;
+
+/** 指数退避：1s、2s、4s…，最长 30s */
+export function streamReconnectDelay(attempt: number) {
+  return Math.min(1000 * 2 ** Math.max(attempt - 1, 0), 30_000);
+}
 
 export function usePodPage() {
   // state
@@ -1305,9 +1317,8 @@ export function usePodPage() {
     onOpen?: () => void,
     onClose?: () => void,
   ) => {
-    // 获取当前用户的访问令牌
+    // 每次连接前读最新的访问令牌（令牌可能已被刷新）
     const accessStore = useAccessStore();
-    const currentToken = accessStore.accessToken;
 
     // 获取应用配置中的API URL
     const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
@@ -1347,19 +1358,56 @@ export function usePodPage() {
     let isManualClose = false;
     let reconnectAttempts = 0;
     let reconnectTimeoutId: NodeJS.Timeout | null = null;
+    // 本轮断线（直到下次连上）是否已刷新过令牌：只刷新一次
+    let tokenRefreshed = false;
 
-    const scheduleReconnect = () => {
+    const clearReconnectTimer = () => {
       if (reconnectTimeoutId) {
         clearTimeout(reconnectTimeoutId);
         reconnectTimeoutId = null;
       }
+    };
+
+    // 停止重连并结束连接
+    const stopStream = () => {
+      isManualClose = true;
+      clearReconnectTimer();
+      onClose?.();
+    };
+
+    const scheduleReconnect = () => {
+      clearReconnectTimer();
+      if (isManualClose) return;
+      if (reconnectAttempts >= STREAM_MAX_RECONNECT_ATTEMPTS) {
+        stopStream();
+        return;
+      }
       reconnectAttempts++;
-      reconnectTimeoutId = setTimeout(
-        () => {
-          createFetchSSE();
-        },
-        Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 30000),
-      );
+      reconnectTimeoutId = setTimeout(() => {
+        createFetchSSE();
+      }, streamReconnectDelay(reconnectAttempts));
+    };
+
+    // 401：先走统一刷新（单飞），成功后用新令牌重连；失败或刷新后仍 401 则停止并提示重新登录
+    const recoverFromUnauthorized = async () => {
+      if (tokenRefreshed) {
+        stopStream();
+        await notifyStreamLoginExpired();
+        return;
+      }
+      tokenRefreshed = true;
+      const token = await refreshAccessTokenForStream();
+      if (isManualClose) return;
+      if (!token) {
+        stopStream();
+        return;
+      }
+      if (reconnectAttempts >= STREAM_MAX_RECONNECT_ATTEMPTS) {
+        stopStream();
+        return;
+      }
+      reconnectAttempts++;
+      createFetchSSE();
     };
 
     // 使用fetch API替换EventSource以支持自定义headers
@@ -1372,6 +1420,7 @@ export function usePodPage() {
           'Cache-Control': 'no-cache',
         };
 
+        const currentToken = accessStore.accessToken;
         if (currentToken) {
           headers['Authorization'] = `Bearer ${currentToken}`;
         }
@@ -1381,6 +1430,12 @@ export function usePodPage() {
           headers,
           signal: abortController.signal,
         });
+
+        if (response.status === 401) {
+          await response.body?.cancel().catch(() => {});
+          await recoverFromUnauthorized();
+          return;
+        }
 
         if (!response.ok) {
           const errorText = await response.text().catch(() => 'Unknown error');
@@ -1394,6 +1449,7 @@ export function usePodPage() {
           throw new Error('Response body is null');
         }
         reconnectAttempts = 0;
+        tokenRefreshed = false;
         onOpen?.();
 
         reader = response.body.getReader();
@@ -1833,12 +1889,21 @@ export function usePodPage() {
     let isManualClose = false;
     let reconnectAttempts = 0;
     let reconnectTimeoutId: NodeJS.Timeout | null = null;
-    const maxReconnectAttempts = 5;
-    const reconnectInterval = 3000; // 3秒重连间隔
+    // 本轮断线（直到下次连上）是否已刷新过令牌：只刷新一次
+    let tokenRefreshed = false;
+
+    const stopReconnect = () => {
+      isManualClose = true;
+      if (reconnectTimeoutId) {
+        clearTimeout(reconnectTimeoutId);
+        reconnectTimeoutId = null;
+      }
+      onClose?.();
+    };
 
     const scheduleReconnect = () => {
-      if (isManualClose || reconnectAttempts >= maxReconnectAttempts) {
-        onClose?.();
+      if (isManualClose || reconnectAttempts >= STREAM_MAX_RECONNECT_ATTEMPTS) {
+        stopReconnect();
         return;
       }
       onReconnect?.();
@@ -1846,7 +1911,35 @@ export function usePodPage() {
       reconnectAttempts++;
       reconnectTimeoutId = setTimeout(() => {
         connect();
-      }, reconnectInterval);
+      }, streamReconnectDelay(reconnectAttempts));
+    };
+
+    // 握手失败（浏览器拿不到 HTTP 状态）或 4401：先走统一刷新（单飞）再重连；
+    // 刷新失败则停止重连并提示重新登录；本轮已刷新过则按退避重连，4401 直接停止
+    const recoverFromHandshakeFailure = async (code: number) => {
+      if (tokenRefreshed) {
+        if (code === 4401) {
+          stopReconnect();
+          await notifyStreamLoginExpired();
+          return;
+        }
+        scheduleReconnect();
+        return;
+      }
+      tokenRefreshed = true;
+      const token = await refreshAccessTokenForStream();
+      if (isManualClose) return;
+      if (!token) {
+        stopReconnect();
+        return;
+      }
+      if (reconnectAttempts >= STREAM_MAX_RECONNECT_ATTEMPTS) {
+        stopReconnect();
+        return;
+      }
+      onReconnect?.();
+      reconnectAttempts++;
+      connect();
     };
 
     const connect = () => {
@@ -1857,16 +1950,24 @@ export function usePodPage() {
           socket = null;
         }
 
-        // 创建WebSocket连接
+        // 创建WebSocket连接（每次重连都读最新的令牌）
+        const currentToken = accessStore.accessToken;
+        if (!currentToken) {
+          stopReconnect();
+          return;
+        }
         socket = new WebSocket(
           url.toString(),
-          websocketProtocols(accessStore.accessToken || ''),
+          websocketProtocols(currentToken),
         );
 
         const ownedSocket = socket;
+        let opened = false;
         socket.onopen = () => {
           if (socket !== ownedSocket) return;
+          opened = true;
           reconnectAttempts = 0; // 重置重连计数
+          tokenRefreshed = false;
 
           const sendResize = (cols: number, rows: number) => {
             if (
@@ -1932,7 +2033,12 @@ export function usePodPage() {
           } else if (event.code === 4401) {
           }
 
-          if (!isManualClose && !event.wasClean) {
+          if (isManualClose) {
+            onClose?.();
+          } else if (!opened || event.code === 4401) {
+            // 握手失败或令牌失效：先刷新令牌再重连
+            void recoverFromHandshakeFailure(event.code);
+          } else if (!event.wasClean) {
             // 非正常关闭且不是手动关闭，尝试重连
             scheduleReconnect();
           } else {
@@ -2632,6 +2738,9 @@ export function usePodPage() {
   }
 
   return {
+    // 日志 SSE / 终端 WS 连接（供令牌刷新重连测试使用）
+    execK8sPodWebSocket,
+    streamK8sPodLogs,
     // state
     loadError,
     clustersError,

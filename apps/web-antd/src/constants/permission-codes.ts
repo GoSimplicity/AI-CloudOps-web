@@ -12,7 +12,9 @@
  *   - S2 = FE02_SUPPLEMENT_PERMISSION_CODES：补表 #1–#4（views/k8s/cluster/**，2 个码，W3 接入，本分支不接）；
  *   - S3 = U3_PERMISSION_CODES：主表 #78–#99（16 个码），v2 产品推荐纳入，属范围变更 U3，用户确认前不生效。
  * - U3_SCOPE_APPROVED 是 U3 的唯一开关（默认 false）：
- *   - false：S3 按钮不做权限码判断（保持现状显示，按钮背后的接口仍由后端鉴权），测试账号 A 码集 = S1 ∪ S2 = 59；
+ *   - false：S3 按钮不做权限码判断（保持现状显示，按钮背后的接口仍由后端鉴权），
+ *     但 U3_ALWAYS_ENFORCED_KEYS（Node 禁用/启用/批量禁用调度）始终按码判断；
+ *     测试账号 A 码集 = S1 ∪ S2 ∪ {cordon, uncordon} = 61；
  *   - true：S3 按钮按码判断，A 码集 = S1 ∪ S2 ∪ S3 = 75。
  */
 
@@ -345,7 +347,25 @@ export function isU3PermissionKey(key: string): key is U3PermissionKey {
 }
 
 /**
- * 测试账号 A 的 /user/codes 码集（清单 6.1）：U3 获批前 S1 ∪ S2（59），获批后 S1 ∪ S2 ∪ S3（75）。
+ * U3 表里始终按码判断、不受 U3 开关豁免的 key（FE-02 v3 一审 P2-A）。
+ * Node 调度三个按钮在 a21af97 已按 cordon 码门禁，U3 未获批时也不能比那时宽松；
+ * 仍留在 U3 表里，保持与清单 v3 JSON 的编号（#84 / #85 / #87）和 S3 码集一致。
+ * U3 获批只放开其余新码的门禁。
+ */
+export const U3_ALWAYS_ENFORCED_KEYS: readonly U3PermissionKey[] = [
+  'k8s.node.cordon',
+  'k8s.node.uncordon',
+  'k8s.node.batchCordon',
+];
+
+export function isU3AlwaysEnforcedKey(key: string) {
+  return (U3_ALWAYS_ENFORCED_KEYS as readonly string[]).includes(key);
+}
+
+/**
+ * 测试账号 A 的 /user/codes 码集（清单 6.1，按 P2-A 新口径）：
+ * U3 获批前 S1 ∪ S2 ∪ 始终判断的 Node 调度码（cordon、uncordon）= 61，
+ * 获批后 S1 ∪ S2 ∪ S3 = 75。
  */
 export function getAccountPermissionCodes(
   u3Approved: boolean = U3_SCOPE_APPROVED,
@@ -354,6 +374,14 @@ export function getAccountPermissionCodes(
     PERMISSION_CODES,
     FE02_SUPPLEMENT_PERMISSION_CODES,
   ];
-  if (u3Approved) groups.push(U3_PERMISSION_CODES);
+  if (u3Approved) {
+    groups.push(U3_PERMISSION_CODES);
+  } else {
+    groups.push(
+      Object.fromEntries(
+        U3_ALWAYS_ENFORCED_KEYS.map((key) => [key, U3_PERMISSION_CODES[key]]),
+      ),
+    );
+  }
   return [...new Set(groups.flatMap((group) => Object.values(group)))];
 }
