@@ -1152,3 +1152,122 @@ test('expired login preserves its dialog and rebuilds current route permissions'
   await expect(page.locator('.ops-page h1')).toHaveText('用户管理');
   expect(errors).toEqual([]);
 });
+
+test('notification configuration uses real pagination, logs and safe responsive forms', async ({ page }) => {
+  test.setTimeout(90_000);
+  page.setDefaultTimeout(15_000);
+  const login = page.waitForResponse(response => new URL(response.url()).pathname === '/api/user/login' && response.request().method() === 'POST');
+  await acceptanceLogin(page);
+  const token = (await (await login).json()).data.accessToken;
+  expect(typeof token === 'string' && token.length > 0).toBe(true);
+  const nonce = `cloudops-ui-notification-${Date.now()}`;
+  const names = [`${nonce}-email`, `${nonce}-feishu`];
+  const ids: number[] = [];
+  const api = async (path: string, method = 'GET', data?: unknown) => {
+    const response = await page.request.fetch(`/api/workorder/notification${path}`, { method, data, headers: { Authorization: `Bearer ${token}` } });
+    const result = await response.json(); expect(response.status()).toBe(200); expect(result.code).toBe(0); return result.data;
+  };
+  const uiWrites: string[] = [];
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('request', request => { if (request.url().includes('/api/workorder/notification/') && request.method() !== 'GET') uiWrites.push(new URL(request.url()).pathname); });
+  try {
+    for (const [index, channel] of ['email', 'feishu'].entries()) {
+      await api('/create', 'POST', { name: names[index], description: 'isolated UI acceptance, never send', channels: [channel], event_types: ['instance_created'], trigger_type: 'immediate', recipient_types: ['creator'], message_template: 'Acceptance {title}', status: 2, priority: 2, max_retries: 1, retry_interval: 1, is_default: 2 });
+    }
+    const fixture = await api(`/list?page=1&page_size=100&name=${nonce}`);
+    ids.push(...fixture.items.filter((item: { name: string }) => names.includes(item.name)).map((item: { id: number }) => item.id));
+    expect(ids).toHaveLength(2);
+    const paged = await api(`/list?page=2&page_size=1&name=${nonce}`);
+    expect(paged.items).toHaveLength(1); expect(paged.total).toBe(2);
+    await page.goto(routePath('/notification'));
+    await expect(page.locator('.ops-page h1')).toHaveText('通知配置');
+    const search = page.getByLabel('搜索通知配置', { exact: true });
+    const searched = page.waitForResponse(response => new URL(response.url()).pathname === '/api/workorder/notification/list' && new URL(response.url()).searchParams.get('name') === nonce);
+    await search.fill(nonce); await search.press('Enter');
+    const requestURL = new URL((await searched).url()); expect(requestURL.searchParams.get('page_size')).toBe('10'); expect(requestURL.searchParams.has('size')).toBe(false);
+    await expect(page.locator('.name-text')).toHaveCount(2);
+    await expect(page.locator('.ops-page__summary')).toContainText('本页禁用');
+    await expect(page.locator('.ops-page__summary')).not.toContainText('今日发送');
+    if (process.env.CLOUDOPS_TEST_NOTIFICATION_CHANNEL_READY === 'true') {
+      await page.getByLabel('通知渠道筛选', { exact: true }).click();
+      const filtered = page.waitForResponse(response => new URL(response.url()).pathname === '/api/workorder/notification/list' && new URL(response.url()).searchParams.get('channel') === 'email');
+      await page.locator('.ant-select-dropdown:visible').getByText('邮件', { exact: true }).click(); expect((await filtered).status()).toBe(200);
+      await expect(page.locator('.name-text')).toHaveCount(1); await expect(page.locator('.name-text')).toHaveText(names[0]!);
+    }
+    const row = page.locator('.ant-table-tbody tr[data-row-key]').filter({ hasText: names[0] }).first();
+    await row.getByRole('button', { name: '通知更多操作', exact: true }).click();
+    const logsRead: string[] = [];
+    page.on('response', response => { if (new URL(response.url()).pathname === '/api/workorder/notification/logs') logsRead.push(response.url()); });
+    await page.getByRole('menuitem').filter({ hasText: '发送记录' }).click({ timeout: 5000 });
+    expect(errors).toEqual([]);
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect.poll(() => logsRead.length).toBe(1);
+    const logsURL = new URL(logsRead[0]!); expect(logsURL.searchParams.get('notification_id')).toBe(String(fixture.items.find((item: { name: string }) => item.name === names[0]).id)); expect(logsURL.searchParams.get('page_size')).toBe('10'); expect(logsURL.searchParams.has('notificationId')).toBe(false);
+    await expect(page.getByRole('dialog').locator('.ant-empty')).toBeVisible();
+    await page.getByRole('dialog').locator('button.ant-modal-close').click();
+    await page.getByRole('button', { name: '创建通知配置', exact: true }).click();
+    await expect(page.getByRole('dialog')).toContainText('创建通知配置');
+    await page.getByRole('dialog').getByRole('button', { name: /^取\s*消$/ }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectUncovered(page.getByRole('button', { name: '创建通知配置', exact: true }));
+    await expectUncovered(page.getByRole('button', { name: '重置通知筛选', exact: true }));
+    const summary = page.locator('.stats-grid');
+    expect(await summary.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length)).toBe(2);
+    await page.getByLabel('深色', { exact: true }).click(); await expect(page.locator('html')).toHaveClass(/dark/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: '.cache/ui-verification/notification-mobile-dark.png', fullPage: true });
+    expect(uiWrites).toEqual([]); expect(errors).toEqual([]);
+  } finally {
+    const remaining = await api(`/list?page=1&page_size=100&name=${nonce}`);
+    for (const item of remaining.items.filter((item: { name: string }) => names.includes(item.name))) await api(`/delete/${item.id}`, 'DELETE');
+  }
+});
+
+test('assistant and autofix pages preserve responsive read-only interactions without model calls', async ({ page }) => {
+  test.setTimeout(90_000);
+  const forbidden: string[] = [];
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('request', request => {
+    const path = new URL(request.url()).pathname;
+    if (path.startsWith('/api/v1/') && (request.method() !== 'GET' || /\/ready$|\/assistant\/query$/.test(path))) forbidden.push(`${request.method()} ${path}`);
+  });
+  await acceptanceLogin(page);
+  const routes = [
+    ['/assistant/info', '服务信息'], ['/assistant/knowledge', '知识库管理'],
+    ['/assistant/query', '智能问答'], ['/assistant/session', '会话管理'],
+    ['/autofix/workflow', '自动修复工作流'],
+  ];
+  for (const [path, title] of routes) {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(routePath(path!));
+    await expect(page.locator('.ops-page h1')).toHaveText(title!);
+    if (path === '/assistant/query') {
+      await expect(page.getByText('助手模式', { exact: true })).toBeVisible();
+      await expect(page.locator('.quick-question-btn').first()).toBeVisible();
+      await expect(page.getByPlaceholder('请输入您的问题...')).toHaveValue('');
+    }
+    if (path === '/autofix/workflow') {
+      const run = page.getByRole('button', { name: /^执行工作流$/ });
+      await expect(run).toBeDisabled();
+      await expect(page.getByRole('button', { name: /^原始结果$/ })).toBeDisabled();
+      const originalNamespace = await page.getByPlaceholder('default', { exact: true }).inputValue();
+      await page.getByPlaceholder('default', { exact: true }).fill('owned-acceptance-no-execution');
+      await page.getByPlaceholder('描述当前故障现象、涉及资源和期望处理方式').fill('只读验收，不提交执行');
+      await expect(run).toBeEnabled();
+      await page.getByRole('button', { name: /^重\s*置$/ }).click();
+      await expect(run).toBeDisabled();
+      await expect(page.getByPlaceholder('default', { exact: true })).toHaveValue(originalNamespace);
+    }
+    if (await page.locator('html').evaluate(element => element.classList.contains('dark'))) await page.getByLabel('浅色', { exact: true }).click();
+    await page.getByLabel('深色', { exact: true }).click();
+    await expect(page.locator('html')).toHaveClass(/dark/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), path).toBe(true);
+  }
+  await page.waitForTimeout(300);
+  await page.locator('.ops-page h1').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: '.cache/ui-verification/autofix-mobile-dark.png', fullPage: true });
+  expect(forbidden).toEqual([]); expect(errors).toEqual([]);
+});

@@ -1,17 +1,20 @@
 <template>
-  <div class="notification-management-container">
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button type="primary" @click="handleCreateNotification" class="btn-create">
+  <OpsPage title="通知配置" description="管理工单触发渠道、接收范围与发送记录" class="notification-management-container">
+    <template #actions>
+      <a-button aria-label="刷新通知配置" :loading="loading" @click="loadNotifications">刷新</a-button>
+        <a-button type="primary" aria-label="创建通知配置" @click="handleCreateNotification" class="btn-create">
           <template #icon>
             <PlusOutlined />
           </template>
           <span class="btn-text">创建通知配置</span>
         </a-button>
+    </template>
+    <template #filters>
         <div class="search-filters">
           <a-input-search
             v-model:value="searchQuery"
             placeholder="搜索通知配置..."
+            aria-label="搜索通知配置"
             class="search-input"
             @search="handleSearch"
             @change="handleSearchChange"
@@ -20,6 +23,7 @@
           <a-select
             v-model:value="channelFilter"
             placeholder="选择通知渠道"
+            aria-label="通知渠道筛选"
             class="channel-filter"
             @change="handleChannelChange"
             allow-clear
@@ -36,6 +40,7 @@
           <a-select
             v-model:value="statusFilter"
             placeholder="状态"
+            aria-label="配置状态筛选"
             class="status-filter"
             @change="handleStatusChange"
             allow-clear
@@ -44,20 +49,18 @@
             <a-select-option :value="NotificationStatus.Enabled">启用</a-select-option>
             <a-select-option :value="NotificationStatus.Disabled">禁用</a-select-option>
           </a-select>
-          <a-button @click="handleResetFilters" class="reset-btn">
+          <a-button @click="handleResetFilters" class="reset-btn" aria-label="重置通知筛选">
             重置
           </a-button>
         </div>
-      </div>
-    </div>
-
+    </template>
+    <template #summary>
     <!-- 统计卡片 -->
     <div class="stats-grid">
       <a-card class="stats-card">
         <a-statistic
           title="总配置数"
-          :value="stats.total"
-          :value-style="{ color: '#1890ff' }"
+          :value="loadError ? '未知' : stats.total"
         >
           <template #prefix>
             <BellOutlined />
@@ -67,9 +70,8 @@
 
       <a-card class="stats-card">
         <a-statistic
-          title="启用中"
-          :value="stats.enabled"
-          :value-style="{ color: '#52c41a' }"
+          title="本页启用"
+          :value="loadError ? '未知' : stats.enabled"
         >
           <template #prefix>
             <CheckCircleOutlined />
@@ -79,9 +81,8 @@
 
       <a-card class="stats-card">
         <a-statistic
-          title="禁用"
-          :value="stats.disabled"
-          :value-style="{ color: '#ff4d4f' }"
+          title="本页禁用"
+          :value="loadError ? '未知' : stats.disabled"
         >
           <template #prefix>
             <StopOutlined />
@@ -89,19 +90,13 @@
         </a-statistic>
       </a-card>
 
-      <a-card class="stats-card">
-        <a-statistic
-          title="今日发送"
-          :value="stats.todaySent"
-          :value-style="{ color: '#fa8c16' }"
-        >
-          <template #prefix>
-            <SendOutlined />
-          </template>
-        </a-statistic>
-      </a-card>
+
     </div>
 
+    </template>
+    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
+      <template #action><a-button size="small" @click="loadNotifications">重试</a-button></template>
+    </a-alert>
     <div class="table-container">
       <a-card>
         <a-table
@@ -117,7 +112,7 @@
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="name-cell">
-                <BellOutlined style="color: #1890ff; margin-right: 8px;" />
+                <BellOutlined style="color: var(--ops-muted); margin-right: 8px;" />
                 <span class="name-text">{{ record.name }}</span>
               </div>
             </template>
@@ -199,7 +194,7 @@
                 <a-button type="default" size="small" @click="handleEditNotification(record)">
                   编辑
                 </a-button>
-                <a-dropdown>
+                <a-dropdown :trigger="['click']">
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
                       <a-menu-item key="test">
@@ -219,7 +214,7 @@
                       <a-menu-item key="delete" danger>删除</a-menu-item>
                     </a-menu>
                   </template>
-                  <a-button size="small">
+                  <a-button size="small" aria-label="通知更多操作">
                     更多
                     <DownOutlined />
                   </a-button>
@@ -242,6 +237,7 @@
       :confirm-loading="notificationDialog.saving"
       class="responsive-modal notification-config-modal"
     >
+      <a-alert v-if="Object.values(optionErrors).some(Boolean)" type="warning" message="部分关联选项加载失败，重新打开相应选择器可重试" :description="Object.values(optionErrors).filter(Boolean).join('；')" show-icon />
       <a-form ref="formRef" :model="notificationDialog.form" :rules="notificationRules" layout="vertical">
         <a-form-item label="配置名称" name="name">
           <a-input
@@ -411,12 +407,16 @@
           />
         </a-form-item>
 
+        <a-alert v-if="notificationDialog.form.channels.some(channel => !['email', 'feishu'].includes(channel))"
+          type="warning" message="此配置含当前服务未支持的渠道，保存前请确认移除" show-icon>
+          <template #action><a-button @click="notificationDialog.form.channels = notificationDialog.form.channels.filter(channel => ['email', 'feishu'].includes(channel))">移除不支持渠道</a-button></template>
+        </a-alert>
         <a-form-item label="通知渠道" name="channels">
           <a-checkbox-group v-model:value="notificationDialog.form.channels" style="width: 100%;">
             <a-row :gutter="[16, 16]">
               <a-col
                 :span="12"
-                v-for="channel in getAllNotificationChannels()"
+                v-for="channel in getAllNotificationChannels().filter(channel => ['email', 'feishu'].includes(channel))"
                 :key="channel"
               >
                 <a-checkbox :value="channel">
@@ -760,7 +760,7 @@
         </a-descriptions>
 
         <div class="message-template-preview">
-          <h3>消息模板预览</h3>
+          <h3>消息模板（工单发送时替换变量）</h3>
           <div class="template-content">
             {{ getPreviewMessage(detailDialog.notification) }}
           </div>
@@ -784,6 +784,9 @@
       class="logs-dialog"
     >
       <div class="send-logs">
+        <a-alert v-if="logsError" :message="logsError" type="error" show-icon>
+          <template #action><a-button v-if="activeLogsNotificationId" @click="loadSendLogs(activeLogsNotificationId)">重试</a-button></template>
+        </a-alert>
         <a-table
           :data-source="sendLogs"
           :columns="logsColumns"
@@ -801,16 +804,34 @@
               </a-tag>
             </template>
             <template v-if="column.key === 'status'">
-              <a-tag :color="record.status === 'success' ? 'green' : 'red'">
-                {{ record.status === 'success' ? '成功' : '失败' }}
+              <a-tag :color="getSendStatus(record.status).color">
+                {{ getSendStatus(record.status).label }}
               </a-tag>
             </template>
-            <template v-if="column.key === 'createdAt'">
-              {{ formatFullDateTime(record.createdAt) }}
+            <template v-if="column.key === 'sendAt'">
+              {{ formatFullDateTime(record.send_at) }}
             </template>
           </template>
         </a-table>
       </div>
+    </a-modal>
+
+    <a-modal :open="testSendDialog.visible" title="测试发送" ok-text="发送" cancel-text="取消"
+      :confirm-loading="testSendDialog.sending" :closable="!testSendDialog.sending" :mask-closable="false"
+      :ok-button-props="{ disabled: !testSendDialog.channel || !testSendDialog.recipient.trim() }"
+      @ok="confirmTestSend" @cancel="closeTestSend">
+      <a-alert message="测试将实际发送到下面指定的地址" type="info" show-icon />
+      <a-alert v-if="testSendDialog.error" :message="testSendDialog.error" type="error" show-icon />
+      <a-form layout="vertical" style="margin-top: 16px">
+        <a-form-item label="发送渠道" required>
+          <a-select v-model:value="testSendDialog.channel" aria-label="测试发送渠道">
+            <a-select-option v-for="channel in testSendDialog.channels" :key="channel" :value="channel">{{ getNotificationChannelName(channel) }}</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="接收地址" required>
+          <a-input v-model:value="testSendDialog.recipient" placeholder="请输入接收地址" :disabled="testSendDialog.sending" />
+        </a-form-item>
+      </a-form>
     </a-modal>
 
     <!-- 手动发送对话框 -->
@@ -824,13 +845,14 @@
       :confirm-loading="manualSendDialog.saving"
       class="responsive-modal manual-send-modal"
     >
+      <a-alert message="直接发送编辑后的内容，模板变量不会自动替换" type="info" show-icon />
       <a-form :model="manualSendDialog.form" :rules="manualSendRules" layout="vertical">
         <a-form-item label="通知渠道" name="channels">
           <a-checkbox-group v-model:value="manualSendDialog.form.channels" style="width: 100%;">
             <a-row :gutter="[16, 16]">
               <a-col
                 :span="12"
-                v-for="channel in getAllNotificationChannels()"
+                v-for="channel in getAllNotificationChannels().filter(channel => ['email', 'feishu'].includes(channel))"
                 :key="channel"
               >
                 <a-checkbox :value="channel">
@@ -847,11 +869,11 @@
         <a-form-item label="接收人" name="recipient">
           <a-input
             v-model:value="manualSendDialog.form.recipient"
-            placeholder="请输入接收人地址（邮箱、手机号、用户ID等）"
+            placeholder="请输入邮箱或飞书接收地址"
           />
           <div class="form-help" style="margin-top: 4px;">
             <small class="text-gray">
-              支持邮箱、手机号、飞书用户ID、钉钉用户ID等格式
+              邮箱渠道填写邮箱；飞书渠道填写有效的 open_id 或 user_id
             </small>
           </div>
         </a-form-item>
@@ -874,11 +896,13 @@
         </a-form-item>
       </a-form>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useWindowSize } from '@vueuse/core';
 import { message, Modal } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
 import dayjs from 'dayjs';
@@ -898,6 +922,7 @@ import {
 } from '@ant-design/icons-vue';
 import {
   NotificationStatus,
+  SendStatus,
   NotificationChannel,
   NotificationTrigger,
   NotificationPriority,
@@ -917,7 +942,6 @@ import {
   updateNotificationStatus,
   getSendLogs,
   testSendNotification,
-  duplicateNotification,
   sendNotificationManually,
   getEventTypeName,
   getNotificationChannelName,
@@ -934,10 +958,12 @@ import { getUserList, type User } from '#/api/core/system/user';
 // 表单ref
 const formRef = ref<FormInstance>();
 
+const { width: viewportWidth } = useWindowSize();
+
 // 响应式对话框宽度
 const notificationDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
+    const width = viewportWidth.value;
     if (width < 768) return '95%';
     if (width < 1024) return '90%';
     return '800px';
@@ -947,7 +973,7 @@ const notificationDialogWidth = computed(() => {
 
 const detailDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
+    const width = viewportWidth.value;
     if (width < 768) return '95%';
     if (width < 1024) return '90%';
     return '900px';
@@ -957,7 +983,7 @@ const detailDialogWidth = computed(() => {
 
 const logsDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
+    const width = viewportWidth.value;
     if (width < 768) return '95%';
     if (width < 1024) return '85%';
     return '1000px';
@@ -980,14 +1006,20 @@ const columns = [
 
 const logsColumns = [
   { title: '渠道', dataIndex: 'channel', key: 'channel', width: 100 },
-  { title: '接收人', dataIndex: 'recipient', key: 'recipient', width: 150 },
+  { title: '接收地址', dataIndex: 'recipient_addr', key: 'recipient', width: 180 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 80 },
-  { title: '发送时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
-  { title: '错误信息', dataIndex: 'error', key: 'error', ellipsis: true }
+  { title: '发送时间', dataIndex: 'send_at', key: 'sendAt', width: 180 },
+  { title: '错误信息', dataIndex: 'error_message', key: 'error', ellipsis: true }
 ];
 
 // 状态数据
 const loading = ref(false);
+const loadError = ref('');
+const logsError = ref('');
+let listRequest = 0;
+let logsRequest = 0;
+let detailRequest = 0;
+const activeLogsNotificationId = ref<number>();
 const logsLoading = ref(false);
 const searchQuery = ref('');
 const channelFilter = ref<string | undefined>(undefined);
@@ -1006,6 +1038,7 @@ const processLoading = ref(false);
 const templateLoading = ref(false);
 const categoryLoading = ref(false);
 const userLoading = ref(false);
+const optionErrors = reactive({ process: '', template: '', category: '', user: '' });
 
 // 分页参数
 const processPagination = reactive({
@@ -1040,8 +1073,7 @@ const userPagination = reactive({
 const stats = reactive({
   total: 0,
   enabled: 0,
-  disabled: 0,
-  todaySent: 0
+  disabled: 0
 });
 
 // 分页配置
@@ -1236,6 +1268,14 @@ const disabledDate = (current: any) => {
 };
 
 // 工具函数
+const getSendStatus = (status: number) => ({
+  [SendStatus.Pending]: { label: '待发送', color: 'default' },
+  [SendStatus.Sending]: { label: '发送中', color: 'processing' },
+  [SendStatus.Success]: { label: '成功', color: 'success' },
+  [SendStatus.Failed]: { label: '失败', color: 'error' },
+  [SendStatus.Cancelled]: { label: '已取消', color: 'default' },
+}[status] || { label: '未知', color: 'default' });
+
 const getEventTypesDisplay = (eventTypes: string[]): string => {
   if (eventTypes.length <= 2) {
     return eventTypes.map(type => getEventTypeName(type)).join(', ');
@@ -1323,34 +1363,7 @@ const formatFullDateTime = (dateStr?: string): string => {
   return dayjs(dateStr).format('YYYY-MM-DD HH:mm:ss');
 };
 
-const getPreviewMessage = (notification: Notification): string => {
-  return (notification.message_template || '')
-    .replace('{title}', '示例工单标题')
-    .replace('{serial_number}', 'WO-202401001')
-    .replace('{workorder_id}', '123456')
-    .replace('{recipient_name}', '张三')
-    .replace('{recipient_addr}', 'zhangsan@example.com')
-    .replace('{priority_text}', '高')
-    .replace('{priority_level}', '1')
-    .replace('{status}', '待处理')
-    .replace('{description}', '这是一个示例工单描述')
-    .replace('{operator_name}', '系统管理员')
-    .replace('{assignee_name}', '李四')
-    .replace('{event_type}', '工单创建')
-    .replace('{event_type_text}', '工单创建')
-    .replace('{notification_time}', dayjs().format('YYYY-MM-DD HH:mm:ss'))
-    .replace('{notification_date}', dayjs().format('YYYY-MM-DD'))
-    .replace('{notification_year}', dayjs().format('YYYY'))
-    .replace('{notification_month}', dayjs().format('MM'))
-    .replace('{notification_day}', dayjs().format('DD'))
-    .replace('{company_name}', 'AI-CloudOps')
-    .replace('{platform_name}', '智能运维管理平台')
-    .replace('{department}', '技术运维部')
-    .replace('{service_hotline}', '400-000-0000')
-    .replace('{custom_content}', '自定义内容示例')
-    .replace('{created_time}', dayjs().subtract(1, 'hour').format('YYYY-MM-DD HH:mm:ss'))
-    .replace('{updated_time}', dayjs().format('YYYY-MM-DD HH:mm:ss'));
-};
+const getPreviewMessage = (notification: Notification): string => notification.message_template || '';
 
 // 添加缺失的函数
 const getFormName = (templateId?: number): string => {
@@ -1375,6 +1388,7 @@ const loadProcesses = async (reset = false): Promise<void> => {
   }
 
   processLoading.value = true;
+  optionErrors.process = '';
 
   try {
     const res = await listWorkorderProcess({
@@ -1396,8 +1410,8 @@ const loadProcesses = async (reset = false): Promise<void> => {
       processPagination.current++;
       processPagination.hasMore = newItems.length >= processPagination.pageSize;
     }
-  } catch (error) {
-
+  } catch {
+    optionErrors.process = '加载流程选项失败';
   } finally {
     processLoading.value = false;
   }
@@ -1413,6 +1427,7 @@ const loadTemplates = async (reset = false): Promise<void> => {
   }
 
   templateLoading.value = true;
+  optionErrors.template = '';
 
   try {
     const res = await listWorkorderTemplate({
@@ -1434,8 +1449,8 @@ const loadTemplates = async (reset = false): Promise<void> => {
       templatePagination.current++;
       templatePagination.hasMore = newItems.length >= templatePagination.pageSize;
     }
-  } catch (error) {
-
+  } catch {
+    optionErrors.template = '加载模板选项失败';
   } finally {
     templateLoading.value = false;
   }
@@ -1451,6 +1466,7 @@ const loadCategories = async (reset = false): Promise<void> => {
   }
 
   categoryLoading.value = true;
+  optionErrors.category = '';
 
   try {
     const res = await listWorkorderCategory({
@@ -1472,8 +1488,8 @@ const loadCategories = async (reset = false): Promise<void> => {
       categoryPagination.current++;
       categoryPagination.hasMore = newItems.length >= categoryPagination.pageSize;
     }
-  } catch (error) {
-
+  } catch {
+    optionErrors.category = '加载分类选项失败';
   } finally {
     categoryLoading.value = false;
   }
@@ -1489,6 +1505,7 @@ const loadUsers = async (reset = false): Promise<void> => {
   }
 
   userLoading.value = true;
+  optionErrors.user = '';
 
   try {
     const res = await getUserList({
@@ -1510,8 +1527,8 @@ const loadUsers = async (reset = false): Promise<void> => {
       userPagination.current++;
       userPagination.hasMore = newItems.length >= userPagination.pageSize;
     }
-  } catch (error) {
-
+  } catch {
+    optionErrors.user = '加载用户选项失败';
   } finally {
     userLoading.value = false;
   }
@@ -1553,6 +1570,7 @@ const handleCategoryScroll = (e: Event): void => {
 
 // 搜索和过滤
 const handleSearch = (): void => {
+  debouncedSearch.cancel();
   paginationConfig.current = 1;
   loadNotifications();
 };
@@ -1572,12 +1590,13 @@ const handleStatusChange = (): void => {
 };
 
 const handleResetFilters = (): void => {
+  debouncedSearch.cancel();
   searchQuery.value = '';
   channelFilter.value = undefined;
   statusFilter.value = undefined;
   paginationConfig.current = 1;
   loadNotifications();
-  message.success('过滤条件已重置');
+
 };
 
 const handleTableChange = (pagination: any, _filters: any, _sorter: any): void => {
@@ -1594,24 +1613,26 @@ const calculateStats = (): void => {
   stats.total = paginationConfig.total;
   stats.enabled = notifications.value.filter(item => item.status === NotificationStatus.Enabled).length;
   stats.disabled = notifications.value.filter(item => item.status === NotificationStatus.Disabled).length;
-  // 由于没有API接口，今日发送数据设为静态值
-  stats.todaySent = 0;
+
 };
 
 // 数据加载
 const loadNotifications = async (): Promise<void> => {
+  const request = ++listRequest;
   loading.value = true;
+  loadError.value = '';
 
   try {
     const params: ListNotificationReq = {
       page: paginationConfig.current,
-      size: paginationConfig.pageSize,
+      page_size: paginationConfig.pageSize,
       name: searchQuery.value,
       channel: channelFilter.value,
       status: statusFilter.value
     };
 
     const res = await getNotificationList(params);
+    if (request !== listRequest) return;
     if (res) {
       notifications.value = (res.items || []).map((item: any) => ({
         ...item,
@@ -1622,11 +1643,14 @@ const loadNotifications = async (): Promise<void> => {
       // 计算统计数据
       calculateStats();
     }
-  } catch (error) {
-    message.error('加载通知配置失败');
-
+  } catch {
+    if (request !== listRequest) return;
+    notifications.value = [];
+    paginationConfig.total = 0;
+    calculateStats();
+    loadError.value = '加载通知配置失败，请重试';
   } finally {
-    loading.value = false;
+    if (request === listRequest) loading.value = false;
   }
 };
 
@@ -1637,31 +1661,37 @@ const handleLogsTableChange = (pagination: any): void => {
     logsPagination.pageSize = pagination.pageSize;
     logsPagination.current = 1; // 当改变页面大小时重置到第一页
   }
-  if (detailDialog.notification?.id) {
-    loadSendLogs(detailDialog.notification.id);
+  if (activeLogsNotificationId.value) {
+    loadSendLogs(activeLogsNotificationId.value);
   }
 };
 
 // 加载发送记录
 const loadSendLogs = async (notificationId: number): Promise<void> => {
+  const request = ++logsRequest;
+  activeLogsNotificationId.value = notificationId;
+  sendLogs.value = [];
+  logsPagination.total = 0;
   logsLoading.value = true;
+  logsError.value = '';
 
   try {
     const params: ListSendLogReq = {
       page: logsPagination.current,
-      size: logsPagination.pageSize,
-      notificationId: notificationId
+      page_size: logsPagination.pageSize,
+      notification_id: notificationId
     };
     const res = await getSendLogs(params);
+    if (request !== logsRequest) return;
     if (res) {
       sendLogs.value = res.items || [];
       logsPagination.total = res.total || 0;
     }
-  } catch (error) {
-    message.error('加载发送记录失败');
-
+  } catch {
+    if (request !== logsRequest) return;
+    logsError.value = '加载发送记录失败，请重试';
   } finally {
-    logsLoading.value = false;
+    if (request === logsRequest) logsLoading.value = false;
   }
 };
 
@@ -1711,7 +1741,7 @@ const handleEditNotification = (record: Notification): void => {
     eventTypes: record.event_types || [],
     triggerType: record.trigger_type,
     triggerCondition: record.trigger_condition ? JSON.stringify(record.trigger_condition) : '',
-    channels: record.channels || [],
+    channels: (record.channels || []).filter(channel => ['email', 'feishu'].includes(channel)),
     recipientTypes: record.recipient_types || [],
     recipientUsers: record.recipient_users || [],
     recipientRoles: record.recipient_roles || [],
@@ -1733,15 +1763,18 @@ const handleEditNotification = (record: Notification): void => {
 };
 
 const handleViewNotification = async (record: Notification): Promise<void> => {
+  const request = ++detailRequest;
   try {
     if (record.id) {
       const res = await getNotificationDetail(record.id);
+      if (request !== detailRequest) return;
       if (res) {
         detailDialog.notification = res;
         detailDialogVisible.value = true;
       }
     }
-  } catch (error) {
+  } catch {
+    if (request !== detailRequest) return;
     message.error('获取通知配置详情失败');
 
   }
@@ -1759,6 +1792,7 @@ const handleStatusToggle = async (record: Notification & { statusLoading?: boole
   try {
     await updateNotificationStatus(record.id, newStatus);
     record.status = newStatus;
+    await loadNotifications();
     const statusText = newStatus === NotificationStatus.Enabled ? '启用' : '禁用';
     message.success(`通知配置已${statusText}`);
   } catch (error) {
@@ -1789,77 +1823,51 @@ const handleMenuClick = (command: string, record: Notification): void => {
   }
 };
 
+const testSendDialog = reactive({
+  visible: false, sending: false, notificationId: 0,
+  channels: [] as string[], channel: '', recipient: '', error: '',
+});
 const handleTestSend = (record: Notification): void => {
-  if (!record.id) {
-    message.error('通知配置ID不存在');
-    return;
+  testSendDialog.notificationId = record.id;
+  testSendDialog.channels = record.channels.filter(channel => ['email', 'feishu'].includes(channel));
+  testSendDialog.channel = testSendDialog.channels[0] || '';
+  testSendDialog.recipient = '';
+  testSendDialog.error = '';
+  testSendDialog.visible = true;
+};
+const closeTestSend = () => {
+  if (testSendDialog.sending) return;
+  testSendDialog.visible = false;
+  testSendDialog.recipient = '';
+};
+const confirmTestSend = async () => {
+  if (testSendDialog.sending || !testSendDialog.channel || !testSendDialog.recipient.trim()) return;
+  testSendDialog.sending = true;
+  testSendDialog.error = '';
+  try {
+    await testSendNotification({
+      notification_id: testSendDialog.notificationId,
+      channel: testSendDialog.channel,
+      recipient: testSendDialog.recipient.trim(),
+    });
+    message.success('测试通知发送成功');
+    testSendDialog.visible = false;
+    testSendDialog.recipient = '';
+  } catch {
+    testSendDialog.error = '测试发送失败，请核对渠道配置与接收地址';
+  } finally {
+    testSendDialog.sending = false;
   }
-
-  Modal.confirm({
-    title: '测试发送',
-    content: `确定要向配置的接收人发送测试通知吗？`,
-    okText: '发送',
-    cancelText: '取消',
-    onOk: async () => {
-      let loadingMessage: any = null;
-      try {
-        loadingMessage = message.loading('正在发送测试通知...', 0);
-
-        // 添加超时处理
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('请求超时')), 30000); // 30秒超时
-        });
-
-        const sendPromise = testSendNotification({ notification_id: record.id! });
-
-        await Promise.race([sendPromise, timeoutPromise]);
-
-        // 确保关闭loading
-        if (loadingMessage) {
-          loadingMessage();
-          loadingMessage = null;
-        }
-
-        message.success('测试通知发送成功');
-      } catch (error: any) {
-        // 确保关闭loading
-        if (loadingMessage) {
-          loadingMessage();
-          loadingMessage = null;
-        }
-
-        let errorMessage = '测试通知发送失败';
-        if (error.message) {
-          if (error.message.includes('timeout') || error.message.includes('超时')) {
-            errorMessage = '测试发送超时，请检查网络连接或稍后重试';
-          } else if (error.message.includes('network') || error.message.includes('网络')) {
-            errorMessage = '网络连接异常，请检查网络后重试';
-          } else if (error.message.includes('404')) {
-            errorMessage = '通知配置不存在或已被删除';
-          } else if (error.message.includes('403')) {
-            errorMessage = '没有权限执行此操作';
-          } else if (error.message.includes('500')) {
-            errorMessage = '服务器内部错误，请联系管理员';
-          } else {
-            errorMessage = `发送失败: ${error.message}`;
-          }
-        }
-
-        message.error(errorMessage);
-
-      }
-    }
-  });
 };
 
 const handleManualSend = (record: Notification): void => {
   // 重置表单数据
   manualSendDialog.saving = false;
   manualSendDialog.form = {
-    channels: record.channels || [],
+    channels: (record.channels || []).filter(channel => ['email', 'feishu'].includes(channel)),
     recipient: '',
-    subject: `AI-CloudOps 工单通知 - {title}`,
-    content: getPreviewMessage(record)
+    subject: record.subject_template || 'AI-CloudOps 工单通知',
+    content: record.message_template || ''
   };
 
   // 显示对话框
@@ -1878,53 +1886,12 @@ const handleViewLogs = (record: Notification): void => {
   }
 };
 
-const handleDuplicateNotification = async (record: Notification): Promise<void> => {
-  if (!record.id) {
-    message.error('通知配置ID不存在');
-    return;
-  }
-
-  const loadingMessage = message.loading('正在复制通知配置...', 0);
-
-  try {
-    // 添加超时处理
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('请求超时')), 30000); // 30秒超时
-    });
-
-    const duplicatePromise = duplicateNotification(record.id!);
-
-    const res = await Promise.race([duplicatePromise, timeoutPromise]);
-
-    loadingMessage();
-
-    if (res && res.id) {
-      message.success('复制通知配置成功');
-      loadNotifications();
-    } else {
-      message.error('复制失败：服务器返回异常数据');
-    }
-  } catch (error: any) {
-    loadingMessage();
-
-    let errorMessage = '复制配置失败';
-    if (error.message) {
-      if (error.message.includes('timeout') || error.message.includes('超时')) {
-        errorMessage = '复制超时，请稍后重试';
-      } else if (error.message.includes('404')) {
-        errorMessage = '通知配置不存在或已被删除';
-      } else if (error.message.includes('403')) {
-        errorMessage = '没有权限执行此操作';
-      } else if (error.message.includes('500')) {
-        errorMessage = '服务器内部错误，请联系管理员';
-      } else {
-        errorMessage = `复制失败: ${error.message}`;
-      }
-    }
-
-    message.error(errorMessage);
-
-  }
+const handleDuplicateNotification = (record: Notification): void => {
+  // 服务端没有复制端点，复用已有创建流程让用户审阅后保存
+  handleEditNotification(record);
+  notificationDialog.isEdit = false;
+  notificationDialog.form.id = undefined;
+  notificationDialog.form.name = `${record.name}（副本）`;
 };
 
 const handleDeleteNotification = (record: Notification): void => {
@@ -1943,15 +1910,7 @@ const handleDeleteNotification = (record: Notification): void => {
       let loadingMessage: any = null;
       try {
         loadingMessage = message.loading('正在删除通知配置...', 0);
-
-        // 添加超时处理
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('请求超时')), 30000); // 30秒超时
-        });
-
-        const deletePromise = deleteNotification(record.id!);
-
-        await Promise.race([deletePromise, timeoutPromise]);
+        await deleteNotification(record.id!);
 
         if (loadingMessage) {
           loadingMessage();
@@ -2150,11 +2109,15 @@ const closeNotificationDialog = (): void => {
 };
 
 const closeDetailDialog = (): void => {
+  ++detailRequest;
   detailDialogVisible.value = false;
   detailDialog.notification = null;
 };
 
 const closeLogsDialog = (): void => {
+  ++logsRequest;
+  activeLogsNotificationId.value = undefined;
+  logsLoading.value = false;
   logsDialogVisible.value = false;
   sendLogs.value = [];
 };
@@ -2170,6 +2133,7 @@ const closeManualSendDialog = (): void => {
 };
 
 const saveManualSend = async (): Promise<void> => {
+  if (manualSendDialog.saving) return;
   if (manualSendDialog.form.channels.length === 0) {
     message.error('请选择至少一个通知渠道');
     return;
@@ -2199,15 +2163,7 @@ const saveManualSend = async (): Promise<void> => {
       subject: manualSendDialog.form.subject.trim(),
       content: manualSendDialog.form.content.trim()
     };
-
-    // 添加超时处理
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('请求超时')), 30000); // 30秒超时
-    });
-
-    const sendPromise = sendNotificationManually(sendData);
-
-    await Promise.race([sendPromise, timeoutPromise]);
+    await sendNotificationManually(sendData);
 
     message.success('通知发送成功');
     manualSendDialogVisible.value = false;
@@ -2246,6 +2202,10 @@ const saveManualSend = async (): Promise<void> => {
 };
 
 // 生命周期
+onBeforeUnmount(() => {
+  ++listRequest; ++logsRequest; ++detailRequest;
+  debouncedSearch.cancel();
+});
 onMounted(() => {
   loadNotifications();
   loadProcesses(true);
@@ -2256,569 +2216,223 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.notification-management-container {
-  padding: 12px;
-  min-height: 100vh;
-  background: var(--ops-ground);
-}
-
-.page-header {
-  margin-bottom: 20px;
-}
-
-.stats-grid {
-  margin-bottom: 20px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-.stats-card {
-  border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  height: 100%;
-}
-
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.btn-create {
-  background: var(--ops-accent);
-  border: none;
-  flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
-}
-
-.btn-create:hover {
-  background: var(--ops-accent);
-  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.4);
-}
-
-.search-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
-
 .search-input {
-  width: 250px;
+  width: 260px;
   min-width: 200px;
 }
-
-.channel-filter,
+.channel-filter {
+  width: 160px;
+}
 .status-filter {
   width: 120px;
-  min-width: 100px;
 }
-
-.reset-btn {
-  flex-shrink: 0;
-}
-
-.table-container {
-  margin-bottom: 24px;
-}
-
-.table-container :deep(.ant-card) {
-  border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.form-name-cell {
-  display: flex;
-  align-items: center;
-}
-
-.form-name-text {
-  font-weight: 500;
-  word-break: break-all;
-}
-
-.channels-cell {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.channel-tag {
-  margin: 2px 0;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-}
-
-.recipients-cell {
-  word-break: break-all;
-}
-
-.form-url-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.url-input {
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-}
-
-.sent-count-cell {
-  text-align: center;
-}
-
-.date-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.date {
-  font-weight: 500;
-  font-size: 14px;
-  color: var(--ops-ink);
-}
-
-.time {
-  font-size: 12px;
-  color: var(--ops-muted);
-}
-
-.text-gray {
-  color: #999;
-  font-style: italic;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 4px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-/* 对话框样式 */
-.form-option {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.form-name {
-  font-weight: 500;
-  color: var(--ops-ink);
-}
-
-.form-category {
-  font-size: 12px;
-  color: #999;
-  background: var(--ops-border);
-  padding: 2px 6px;
-  border-radius: 3px;
-}
-
-.channel-option {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
+.name-cell,
+.form-option,
+.form-url-cell,
+.form-url-display,
+.channel-option,
 .user-option {
   display: flex;
   align-items: center;
+  gap: var(--ops-space-sm);
+  min-width: 0;
 }
-
-.recipients-help,
-.template-help {
-  margin-top: 8px;
-}
-
-.notification-config-modal :deep(.ant-modal-body) {
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-/* 详情对话框样式 */
-.notification-details {
-  margin-bottom: 20px;
-}
-
-.detail-header {
-  display: flex;
+.form-option {
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 16px;
-  background: var(--ops-accent);
-  border-radius: var(--ops-radius);
-  border: 1px solid #e8f4f8;
 }
-
-.detail-header h2 {
-  margin: 0;
-  font-size: 20px;
+.name-text,
+.form-name,
+.date {
   color: var(--ops-ink);
-  word-break: break-all;
-  font-weight: 600;
+  font-weight: 500;
 }
-
-.form-url-display {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
+.name-text,
+.recipients-cell {
+  overflow-wrap: anywhere;
 }
-
-.form-url-display .ant-input {
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-}
-
+.channels-cell,
 .channels-display,
 .recipients-display {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
-
-.message-template-preview {
-  margin-top: 24px;
-  border-top: 1px solid var(--ops-border);
-  padding-top: 20px;
+.channel-tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--ops-radius);
 }
-
-.message-template-preview h3 {
-  margin-bottom: 12px;
-  color: var(--ops-ink);
-  font-weight: 600;
+.date-info {
+  display: flex;
+  flex-direction: column;
 }
-
-.template-content {
-  background: var(--ops-accent);
+.time,
+.text-gray {
+  color: var(--ops-muted);
+  font-size: 12px;
+}
+.form-category {
+  padding: 2px 6px;
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
-  padding: 16px;
-  white-space: pre-line;
-  font-family: system-ui, -apple-system, sans-serif;
-  line-height: 1.6;
-  color: var(--ops-ink);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  color: var(--ops-muted);
+  background: var(--ops-ground);
+  font-size: 12px;
 }
-
-.detail-footer {
-  margin-top: 24px;
+.action-buttons {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+  align-items: center;
+  justify-content: center;
   flex-wrap: wrap;
-  border-top: 1px solid var(--ops-border);
-  padding-top: 16px;
+  gap: 4px;
 }
-
-/* 发送记录对话框样式 */
+.action-buttons :deep(.ant-btn) {
+  color: var(--ops-muted);
+  background: var(--ops-surface);
+  border-color: var(--ops-border);
+  box-shadow: none;
+}
+.action-buttons :deep(.ant-btn:hover) {
+  color: var(--ops-accent);
+  border-color: var(--ops-accent);
+}
+.table-container :deep(.ant-table-wrapper) {
+  min-width: 0;
+  overflow: auto;
+}
+.table-container :deep(.ant-table-thead th) {
+  white-space: nowrap;
+}
+.table-container :deep(.ant-table-tbody td) {
+  overflow-wrap: anywhere;
+}
+.notification-config-modal :deep(.ant-modal-body),
 .send-logs {
-  max-height: 500px;
+  max-height: 70vh;
   overflow-y: auto;
 }
-
-.logs-dialog :deep(.ant-table-tbody > tr:hover > td) {
+.send-logs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ops-space-md);
+}
+.notification-details {
+  margin-bottom: var(--ops-space-lg);
+}
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ops-space-md);
+  margin-bottom: var(--ops-space-lg);
+  padding: var(--ops-space-lg);
+  color: var(--ops-ink);
   background: var(--ops-ground);
-}
-
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .notification-management-container {
-    padding: 8px;
-  }
-
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-filters {
-    width: 100%;
-  }
-
-  .search-input,
-  .channel-filter,
-  .status-filter {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .btn-text {
-    display: none;
-  }
-
-  .btn-create {
-    padding: 8px 12px;
-    min-width: auto;
-    justify-content: center;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .stats-card :deep(.ant-statistic-title) {
-    font-size: 12px;
-  }
-
-  .stats-card :deep(.ant-statistic-content) {
-    font-size: 16px;
-  }
-
-  .action-buttons {
-    gap: 2px;
-    flex-direction: column;
-  }
-
-  .action-buttons .ant-btn {
-    padding: 4px 8px;
-    font-size: 12px;
-    min-width: 60px;
-  }
-
-  .form-url-cell {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
-  }
-
-  .channels-cell {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .detail-header {
-    flex-direction: column;
-    align-items: stretch;
-    text-align: center;
-  }
-
-  .form-url-display {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .detail-footer {
-    justify-content: center;
-  }
-
-  .detail-footer .ant-btn {
-    flex: 1;
-    max-width: 120px;
-  }
-}
-
-/* 平板端适配 */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .notification-management-container {
-    padding: 16px;
-  }
-
-  .search-input {
-    width: 200px;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* 大屏幕优化 */
-@media (min-width: 1200px) {
-  .stats-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-@media (max-width: 480px) {
-  .stats-card {
-    text-align: center;
-  }
-
-  .channels-display,
-  .recipients-display {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .template-content {
-    font-size: 12px;
-    padding: 12px;
-  }
-
-  .action-buttons .ant-btn {
-    width: 100%;
-  }
-}
-
-/* 响应式表格优化 */
-.table-container :deep(.ant-table-wrapper) {
-  overflow: auto;
+  border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
 }
-
-.table-container :deep(.ant-table-thead > tr > th) {
-  white-space: nowrap;
+.detail-header h2 {
+  margin: 0;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+.form-url-display {
+  flex-wrap: wrap;
+}
+.form-url-display :deep(.ant-input),
+.url-input {
+  font-family: var(--ops-font-mono, monospace);
+}
+.recipients-help,
+.template-help {
+  margin-top: var(--ops-space-sm);
+}
+.message-template-preview {
+  margin-top: var(--ops-space-lg);
+}
+.message-template-preview h3 {
+  margin-bottom: var(--ops-space-sm);
+  font-size: 15px;
+  color: var(--ops-ink);
+}
+.template-content {
+  padding: var(--ops-space-lg);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ops-ink);
   background: var(--ops-ground);
-  font-weight: 600;
-}
-
-.table-container :deep(.ant-table-tbody > tr > td) {
-  word-break: break-word;
-}
-
-.table-container :deep(.ant-table-tbody > tr:hover > td) {
-  background: #f8f9fa;
-}
-
-/* 对话框响应式优化 */
-.responsive-modal :deep(.ant-modal) {
-  max-width: calc(100vw - 16px);
-  margin: 8px;
-}
-
-.responsive-modal :deep(.ant-modal-content) {
+  border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
-  overflow: hidden;
+  line-height: 1.6;
 }
-
-@media (max-width: 768px) {
-  .responsive-modal :deep(.ant-modal-body) {
-    padding: 12px;
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-  }
-
-  .responsive-modal :deep(.ant-modal-header) {
-    padding: 12px 16px;
-  }
-
-  .responsive-modal :deep(.ant-modal-footer) {
-    padding: 8px 16px;
-  }
+.detail-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--ops-space-sm);
+  margin-top: var(--ops-space-lg);
+  padding-top: var(--ops-space-lg);
+  border-top: 1px solid var(--ops-border);
 }
-
-/* 加载状态优化 */
-.table-container :deep(.ant-spin-nested-loading) {
-  min-height: 200px;
-}
-
-/* 表单项样式优化 */
-.notification-config-modal :deep(.ant-form-item-label) {
-  font-weight: 600;
-}
-
-.notification-config-modal :deep(.ant-checkbox-wrapper) {
-  margin-bottom: 8px;
-}
-
-/* 模板变量帮助信息样式 */
 .template-variables-help {
   max-height: 300px;
   overflow-y: auto;
   font-size: 12px;
   line-height: 1.5;
 }
-
 .variable-group {
-  margin-bottom: 12px;
+  margin-bottom: var(--ops-space-md);
 }
-
 .variable-group strong {
   display: block;
   margin-bottom: 6px;
   color: var(--ops-ink);
   font-size: 13px;
 }
-
 .variable-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 4px 8px;
-  margin-left: 12px;
 }
-
 .variable-item {
   display: block;
-  padding: 2px 8px;
-  background: #f8f9fa;
-  border-radius: 4px;
-  font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+  padding: 4px 8px;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
+  color: var(--ops-muted);
+  background: var(--ops-ground);
+  font-family: monospace;
   font-size: 11px;
-  color: #495057;
-  border-left: 3px solid #e9ecef;
-  transition: all 0.2s ease;
+  overflow-wrap: anywhere;
 }
-
-.variable-item:hover {
-  background: #e9ecef;
-  border-left-color: #1890ff;
-  color: #1890ff;
-}
-
 .variable-deprecated {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: var(--ops-space-sm);
+  padding-top: var(--ops-space-sm);
   border-top: 1px solid var(--ops-border);
 }
-
 .variable-list.deprecated .variable-item {
-  background: #fff2f0;
-  border-left-color: #ff4d4f;
-  color: #ff4d4f;
+  color: hsl(var(--destructive));
   text-decoration: line-through;
 }
-
-.variable-list.deprecated .variable-item:hover {
-  background: #ffebe6;
-}
-
-/* 响应式优化 */
-@media (max-width: 768px) {
+@media (max-width: 640px) {
+  .search-input,
+  .channel-filter,
+  .status-filter {
+    width: 100%;
+    min-width: 0;
+  }
+  .form-url-cell,
+  .form-url-display,
+  .detail-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
   .variable-list {
     grid-template-columns: 1fr;
-    gap: 2px 4px;
   }
-
   .template-variables-help {
     max-height: 200px;
-    font-size: 11px;
   }
-
-  .variable-item {
-    font-size: 10px;
-    padding: 1px 6px;
-  }
-}
-
-/* 统计卡片动画 */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 表格加载优化 */
-.table-container :deep(.ant-table-placeholder) {
-  padding: 40px 20px;
-}
-
-.table-container :deep(.ant-empty-description) {
-  color: #999;
 }
 </style>

@@ -3224,11 +3224,11 @@ const loadNotificationLogs = async (instanceId?: number, resetPage = false) => {
     const res = await getSendLogs({
       instance_id: targetInstanceId,
       page: notificationLogsPagination.current,
-      size: notificationLogsPagination.pageSize,
+      page_size: notificationLogsPagination.pageSize,
     } as ListSendLogReq);
 
-    if (res?.data) {
-      notificationLogs.value = res.data;
+    if (res?.items) {
+      notificationLogs.value = res.items;
       notificationLogsPagination.total = res.total || 0;
     } else {
       notificationLogs.value = [];

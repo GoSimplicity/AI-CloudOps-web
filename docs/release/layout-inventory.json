@@ -1,6 +1,6 @@
 {
   "routes": 58,
-  "migratedShells": 45,
+  "migratedShells": 49,
   "entries": [
     {
       "route": "/assistant/info",
@@ -19,21 +19,21 @@
     {
       "route": "/assistant/query",
       "view": "assistant/AssistantQuery.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 5,
       "scopedStyle": true
     },
     {
       "route": "/assistant/session",
       "view": "assistant/AssistantSession.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 2,
       "scopedStyle": true
     },
     {
       "route": "/autofix/workflow",
       "view": "autofix/AutoFixWorkflow.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 0,
       "scopedStyle": true
     },
@@ -48,7 +48,7 @@
       "route": "/cloud_account_management",
       "view": "servicetree/CloudAccountManagement.vue",
       "sharedPage": true,
-      "inlineStyles": 6,
+      "inlineStyles": 7,
       "scopedStyle": true
     },
     {
@@ -292,8 +292,8 @@
     {
       "route": "/notification",
       "view": "workorder/Notification.vue",
-      "sharedPage": false,
-      "inlineStyles": 25,
+      "sharedPage": true,
+      "inlineStyles": 26,
       "scopedStyle": true
     },
     {

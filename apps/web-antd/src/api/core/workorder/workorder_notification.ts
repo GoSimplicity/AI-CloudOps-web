@@ -201,7 +201,7 @@ export interface DeleteNotificationReq {
 // 工单通知配置列表请求
 export interface ListNotificationReq {
   page?: number; // 页码
-  size?: number; // 每页数量
+  page_size?: number; // 每页数量
   name?: string; // 通知配置名称
   process_id?: number; // 关联流程ID
   template_id?: number; // 关联模板ID
@@ -247,8 +247,8 @@ export interface WorkorderNotificationLogItem {
 // 工单通知发送记录列表请求
 export interface ListSendLogReq {
   page?: number; // 页码
-  size?: number; // 每页数量
-  notificationId?: number; // 通知配置ID
+  page_size?: number; // 每页数量
+  notification_id?: number; // 通知配置ID
   instance_id?: number; // 工单实例ID
   event_type?: string; // 触发事件类型
   channel?: string; // 发送渠道
@@ -284,13 +284,14 @@ export interface WorkorderNotificationQueueItem {
 // 测试发送工单通知请求
 export interface TestSendNotificationReq {
   notification_id: number; // 通知配置ID
-  recipient?: string; // 接收人地址（可选，使用默认接收人）
+  channel: string; // 明确选择配置中的渠道
+  recipient: string; // 明确填写外部接收地址
 }
 
 // 工单通知队列列表请求
 export interface ListNotificationQueueReq {
   page?: number; // 页码
-  size?: number; // 每页数量
+  page_size?: number; // 每页数量
   notification_id?: number; // 通知配置ID
   instance_id?: number; // 工单实例ID
   event_type?: string; // 触发事件类型
@@ -376,7 +377,7 @@ export const updateNotification = (data: UpdateNotificationReq) => {
 };
 
 export const deleteNotification = (id: number) => {
-  return requestClient.delete(`/workorder/notification/delete/${id}`);
+  return requestClient.delete(`/workorder/notification/delete/${id}`, { data: { id } });
 };
 
 export const updateNotificationStatus = (id: number, status: number) => {
@@ -389,10 +390,6 @@ export const getSendLogs = (params: ListSendLogReq) => {
 
 export const testSendNotification = (data: TestSendNotificationReq) => {
   return requestClient.post('/workorder/notification/test/send', data);
-};
-
-export const duplicateNotification = (id: number) => {
-  return requestClient.post(`/workorder/notification/${id}/duplicate`);
 };
 
 export const getAvailableChannels = () => {
