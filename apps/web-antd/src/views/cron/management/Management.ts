@@ -3,6 +3,7 @@ import { message, Modal } from 'ant-design-vue';
 // import { useRouter } from 'vue-router'; // 暂时未使用
 import type { FormInstance } from 'ant-design-vue';
 import axios from 'axios';
+import { RequestOwnerChangedError } from '@vben/request';
 import {
   getCronJobList,
   getCronJobDetail,
@@ -96,6 +97,71 @@ export const isNotifiedByRequestLayer = (error: any): boolean =>
   isPermissionDeniedError(error) ||
   !!error?.response ||
   (axios.isAxiosError(error) && !!error.request && !axios.isCancel(error));
+
+// 取消的请求：axios 取消（CanceledError / isCancel）与账户切换取消旧请求（RequestOwnerChangedError，
+// 继承 CanceledError）。请求层对它们不提示（preset-interceptors errorMessageResponseInterceptor），页面也静默
+const isCanceledRequest = (error: any): boolean =>
+  axios.isCancel(error) || error instanceof RequestOwnerChangedError;
+
+// 列表类请求（任务列表 / SSH 资源列表）各类失败对应的页面文案
+interface ListFailureTexts {
+  unauthorized: string;
+  forbidden: string;
+  badRequest: string;
+  server: string;
+  network: string;
+  fallback: string;
+}
+
+// 按错误类型取页面文案；网络错误 / 超时含 ECONNABORTED、ETIMEDOUT 以及发出请求但没有响应的 axios 错误
+const resolveListFailureText = (error: any, texts: ListFailureTexts): string => {
+  const status = error?.response?.status;
+  if (status === 401) return texts.unauthorized;
+  if (status === 403) return texts.forbidden;
+  if (status === 400) return texts.badRequest;
+  if (status >= 500) return texts.server;
+  if (
+    !error?.response &&
+    (error?.code === 'ECONNABORTED' ||
+      error?.code === 'ETIMEDOUT' ||
+      error?.message?.includes?.('Network Error') ||
+      (axios.isAxiosError(error) && !!error.request))
+  ) {
+    return texts.network;
+  }
+  return texts.fallback;
+};
+
+// 列表类请求失败的统一处理：取消类静默（返回 null，不写错误状态）；
+// 请求层已提示（HTTP 错误、网络错误 / 超时、已弹后端原文的业务错误，见 isNotifiedByRequestLayer）页面不再弹；
+// 其余由页面弹一条（401 用 warning），返回页面错误文案
+const handleListFailure = (error: any, texts: ListFailureTexts): string | null => {
+  if (isCanceledRequest(error)) return null;
+  const text = resolveListFailureText(error, texts);
+  if (!isNotifiedByRequestLayer(error)) {
+    if (error?.response?.status === 401) message.warning(text);
+    else message.error(text);
+  }
+  return text;
+};
+
+const CRON_LIST_FAILURE_TEXTS: ListFailureTexts = {
+  unauthorized: '登录已过期，请重新登录',
+  forbidden: '没有权限访问定时任务功能',
+  badRequest: '请求参数错误，请检查筛选条件',
+  server: '服务器内部错误，请稍后重试',
+  network: '网络连接失败，请检查网络后重试',
+  fallback: '获取定时任务列表失败，请刷新重试',
+};
+
+const SSH_LIST_FAILURE_TEXTS: ListFailureTexts = {
+  unauthorized: '获取SSH资源失败：登录已过期',
+  forbidden: '没有权限获取SSH资源',
+  badRequest: '获取SSH资源列表失败，请稍后重试',
+  server: '获取SSH资源列表失败，请稍后重试',
+  network: '获取SSH资源列表失败，请稍后重试',
+  fallback: '获取SSH资源列表失败，请稍后重试',
+};
 
 // 创建表单初始数据
 const createInitialFormModel = (): CreateCronJobReq => ({
@@ -486,33 +552,9 @@ export function useCronJobPage() {
       state.allowLocalExec = resolveAllowLocalExec(response.data ?? response);
     } catch (error: any) {
       if (ticket !== listRequest) return;
-
-
-      // 根据错误类型提供不同的处理
-      // 列表加载双提示修复：HTTP 错误（带 response）、网络错误 / 超时由请求层按固定 key 弹过一条，
-      // 页面只保留错误状态，用 isNotifiedByRequestLayer 判定（与创建 / 更新 / 立即执行同一口径）；
-      // 业务错误（HTTP 200 + code≠0）走最后的 else，处理不变
-      if (error?.response?.status === 401) {
-        state.error = '登录已过期，请重新登录';
-        if (!isNotifiedByRequestLayer(error)) message.warning('登录已过期，请重新登录');
-      } else if (error?.response?.status === 403) {
-        state.error = '没有权限访问定时任务功能';
-        // 403 已由请求拦截器统一提示，这里只保留页面错误状态
-        if (!isNotifiedByRequestLayer(error)) message.error('没有权限访问定时任务功能');
-      } else if (error?.response?.status === 400) {
-        state.error = '请求参数错误，请检查筛选条件';
-        if (!isNotifiedByRequestLayer(error)) message.error('请求参数错误，请检查筛选条件');
-      } else if (error?.response?.status >= 500) {
-        state.error = '服务器内部错误，请稍后重试';
-        if (!isNotifiedByRequestLayer(error)) message.error('服务器内部错误，请稍后重试');
-      } else if (error?.message?.includes('Network Error') || error?.code === 'ECONNABORTED') {
-        state.error = '网络连接失败，请检查网络后重试';
-        if (!isNotifiedByRequestLayer(error)) message.error('网络连接失败，请检查网络后重试');
-      } else {
-        state.error = '获取定时任务列表失败，请刷新重试';
-        if (!isPermissionDeniedError(error)) message.error('获取定时任务列表失败，请刷新重试');
-      }
-
+      // 列表加载双提示修复：取消类静默；请求层已提示（任意 HTTP 4xx/5xx、网络错误 / 超时含 ETIMEDOUT）
+      // 页面只保留错误状态；业务错误（HTTP 200 + code≠0）由请求层弹后端原文一条，处理不变
+      state.error = handleListFailure(error, CRON_LIST_FAILURE_TEXTS);
       state.cronJobs = [];
       state.total = 0;
     } finally {
@@ -536,14 +578,8 @@ export function useCronJobPage() {
       state.filteredSshResources = items;
     } catch (error: any) {
       if (ticket !== sshRequest) return;
-
-      if (error?.response?.status === 401) {
-        if (!isPermissionDeniedError(error)) message.warning('获取SSH资源失败：登录已过期');
-      } else if (error?.response?.status === 403) {
-        if (!isPermissionDeniedError(error)) message.error('没有权限获取SSH资源');
-      } else {
-        if (!isPermissionDeniedError(error)) message.error('获取SSH资源列表失败，请稍后重试');
-      }
+      // 与任务列表同一口径：取消类静默，请求层已提示的不再叠加
+      handleListFailure(error, SSH_LIST_FAILURE_TEXTS);
       state.sshResources = [];
       state.filteredSshResources = [];
     } finally {
