@@ -332,6 +332,8 @@ import {
 import { message } from 'ant-design-vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { useAccessStore, useUserStore } from '@vben/stores';
+import { assistantOwner, createAssistantAccountScope } from '#/utils/assistant-account-scope';
 import {
   assistantQuery,
   clearAssistantCache,
@@ -370,8 +372,9 @@ const lastCompositionEndAt = ref(0);
 
 // 本地持久化
 const UI_STATE_KEY = 'aiAssistantUIState';
-const CHAT_STATE_KEY = 'aiAssistantChatState';
-const SESSIONS_KEY = 'aiAssistantSessions';
+const accessStore = useAccessStore();
+const userStore = useUserStore();
+const accountScope = createAssistantAccountScope(localStorage);
 
 const persistState = () => {
   try {
@@ -399,8 +402,8 @@ const persistState = () => {
         }
       })()
     };
-    localStorage.setItem(CHAT_STATE_KEY, JSON.stringify(chatState));
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify({ sessions: sessions.value, currentLocalSessionId: currentLocalSessionId.value }));
+    accountScope.write('chat', chatState);
+    accountScope.write('sessions', { sessions: sessions.value, currentLocalSessionId: currentLocalSessionId.value });
   } catch (e) {
 
   }
@@ -425,9 +428,8 @@ const loadState = () => {
       showAdvancedOptions.value = !!ui?.showAdvancedOptions;
     }
 
-    const chatRaw = localStorage.getItem(CHAT_STATE_KEY);
-    if (chatRaw) {
-      const chat = JSON.parse(chatRaw);
+    const chat = accountScope.read('chat');
+    if (chat) {
       sessionId.value = chat?.sessionId || '';
       isConnected.value = !!chat?.isConnected;
       chatHistory.value = Array.isArray(chat?.chatHistory) ? chat.chatHistory : [];
@@ -442,9 +444,8 @@ const loadState = () => {
       initChatMessages();
     }
 
-    const sesRaw = localStorage.getItem(SESSIONS_KEY);
-    if (sesRaw) {
-      const ses = JSON.parse(sesRaw);
+    const ses = accountScope.read('sessions');
+    if (ses) {
       sessions.value = Array.isArray(ses.sessions) ? ses.sessions : [];
       currentLocalSessionId.value = ses.currentLocalSessionId || '';
     }
@@ -494,7 +495,9 @@ const showSuccess = (msg) => {
 
 const showError = (msg, duration = 5000) => {
   errorMessage.value = msg;
+  const identity = accountScope.identity();
   setTimeout(() => {
+    if (!accountScope.sameOwner(identity) || errorMessage.value !== msg) return;
     errorMessage.value = '';
   }, duration);
 };
@@ -526,16 +529,27 @@ const handleApiError = (error, context = '') => {
   if (status === 429) {
     showError('请求频率过高，请稍后再试', 3000);
     return 'rate_limit';
-  } else if (status === 401 || status === 403) {
+  } else if (status === 403 || status === 404) {
+    accountScope.invalidate();
+    abortController.value?.abort();
+    abortController.value = null;
+    sending.value = false;
+    sessionId.value = '';
+    lastFailedQuestion.value = '';
+    chatHistory.value = [];
+    isConnected.value = false;
+    initChatMessages();
+    persistState();
+    showError(status === 403 ? '无权访问该会话，已清除本地内容，请新建会话' : '会话已失效，请重新提问以新建会话');
+    return 'invalid_session';
+  } else if (status === 401) {
     showError('认证失败，正在重新建立连接...');
     // 清除会话状态
     sessionId.value = '';
     chatHistory.value = [];
     isConnected.value = false;
     return 'auth_error';
-  } else if (status === 404) {
-    showError('服务不可用，请检查服务器状态');
-    return 'service_unavailable';
+
   } else if (status >= 500) {
     showError(`服务器错误: ${errorMsg}`);
     return 'server_error';
@@ -726,14 +740,14 @@ const initChatMessages = () => {
 // 模拟流式渲染工具
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-const simulateStreamResponse = async (messageObj, fullText) => {
+const simulateStreamResponse = async (messageObj, fullText, ticket) => {
   if (!fullText) return;
   const total = fullText.length;
   const step = total > 2000 ? 60 : total > 1000 ? 40 : total > 300 ? 20 : 8;
   const delay = total > 2000 ? 8 : total > 1000 ? 12 : total > 300 ? 16 : 22;
   let index = 0;
   while (index < total) {
-    if (!sending.value) break;
+    if (!sending.value || !accountScope.current(ticket)) break;
     const next = Math.min(total, index + step);
     messageObj.content += fullText.slice(index, next);
     index = next;
@@ -745,6 +759,8 @@ const simulateStreamResponse = async (messageObj, fullText) => {
 
 // 发送消息
 const sendMessage = async (value) => {
+  if (!assistantOwner(userStore.userInfo, accessStore.accessToken) || sending.value) return;
+  const ticket = accountScope.ticket();
   const trimmedValue = value.trim();
   if (!trimmedValue) {
     showError('请输入消息内容');
@@ -779,6 +795,7 @@ const sendMessage = async (value) => {
 
   sending.value = true;
   await nextTick();
+  if (!accountScope.current(ticket)) return;
   scrollToBottom();
 
   try {
@@ -802,6 +819,7 @@ const sendMessage = async (value) => {
     abortController.value = new AbortController();
     const signal = abortController.value.signal;
     const response = await assistantQuery(queryParams, { signal });
+    if (!accountScope.current(ticket)) return;
 
     if (response?.answer) {
 
@@ -820,7 +838,8 @@ const sendMessage = async (value) => {
           lastMessage.recallRate = response.recall_rate;
         }
 
-        await simulateStreamResponse(lastMessage, response.answer);
+        await simulateStreamResponse(lastMessage, response.answer, ticket);
+        if (!accountScope.current(ticket)) return;
       }
 
       // 保存/更新会话ID
@@ -844,6 +863,7 @@ const sendMessage = async (value) => {
       throw new Error('AI响应格式不正确');
     }
   } catch (error) {
+    if (!accountScope.current(ticket)) return;
     lastFailedQuestion.value = trimmedValue;
 
     if (chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.type === 'ai' && !chatMessages[chatMessages.length - 1]?.content) {
@@ -858,26 +878,33 @@ const sendMessage = async (value) => {
     // 使用新的错误处理机制
     handleApiError(error, 'AI查询');
   } finally {
-    sending.value = false;
-    abortController.value = null;
-    await nextTick();
-    scrollToBottom();
-    persistState();
+    if (accountScope.current(ticket)) {
+      sending.value = false;
+      abortController.value = null;
+      await nextTick();
+      if (accountScope.current(ticket)) {
+        scrollToBottom();
+        persistState();
+      }
+    }
   }
 };
 
 // 刷新知识库
 const refreshKnowledge = async () => {
-  if (isRefreshing.value) return;
+  if (isRefreshing.value || !assistantOwner(userStore.userInfo, accessStore.accessToken)) return;
+  const identity = accountScope.identity();
 
   try {
     isRefreshing.value = true;
 
     // 使用重试机制
     const response = await retryWithBackoff(async () => {
+      if (!accountScope.sameOwner(identity)) throw new Error('账户已变化');
       return await refreshKnowledgeBase();
     });
 
+    if (!accountScope.sameOwner(identity)) return;
     if (response?.refreshed !== false) {
       const docsCount = response?.documents_count;
       const vectorCount = response?.vector_count;
@@ -895,9 +922,9 @@ const refreshKnowledge = async () => {
       throw new Error(response?.message || '刷新知识库失败');
     }
   } catch (error) {
-    handleApiError(error, '刷新知识库');
+    if (accountScope.sameOwner(identity)) handleApiError(error, '刷新知识库');
   } finally {
-    isRefreshing.value = false;
+    if (accountScope.sameOwner(identity)) isRefreshing.value = false;
   }
 };
 
@@ -912,12 +939,15 @@ const clearChat = async () => {
     return;
   }
 
+  cancelGeneration();
+  const identity = accountScope.identity();
   try {
     // 清除服务器缓存（如果有会话）
     if (sessionId.value) {
       try {
         const response = await clearAssistantCache();
 
+        if (!accountScope.sameOwner(identity)) return;
         showSuccess('服务器缓存已清除');
       } catch (error) {
 
@@ -925,6 +955,7 @@ const clearChat = async () => {
       }
     }
 
+    if (!accountScope.sameOwner(identity)) return;
     // 清空本地状态
     sessionId.value = '';
     chatHistory.value = [];
@@ -935,6 +966,7 @@ const clearChat = async () => {
     persistState();
   } catch (error) {
 
+    if (!accountScope.sameOwner(identity)) return;
     // 即使出错也要清空本地记录
     sessionId.value = '';
     chatHistory.value = [];
@@ -1108,6 +1140,7 @@ const resendMessage = async (index) => {
 
 // 停止生成
 const cancelGeneration = () => {
+  accountScope.invalidate();
   if (abortController.value) {
     try { abortController.value.abort(); } catch {}
     abortController.value = null;
@@ -1118,6 +1151,7 @@ const cancelGeneration = () => {
 
 // 会话管理
 const createNewSession = (silent = false) => {
+  cancelGeneration();
   const newSession = {
     localId: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: `会话 ${sessions.value.length + 1}`,
@@ -1137,7 +1171,9 @@ const createNewSession = (silent = false) => {
 const switchToSession = (localId) => {
   if (currentLocalSessionId.value === localId) return;
   currentLocalSessionId.value = localId;
-  // 简化：不同会话共用一份显示数据，此处只清会话ID并保留历史（可按需扩展为多会话独立历史存储）
+  cancelGeneration();
+  chatHistory.value = [];
+  initChatMessages();
   sessionId.value = '';
   isConnected.value = false;
   message.success('已切换会话');
@@ -1385,10 +1421,28 @@ window.copyCode = function(button) {
   }
 };
 
+watch(() => assistantOwner(userStore.userInfo, accessStore.accessToken), (owner) => {
+  accountScope.setOwner(owner);
+  abortController.value?.abort();
+  abortController.value = null;
+  sending.value = false;
+  isRefreshing.value = false;
+  globalInputMessage.value = '';
+  lastFailedQuestion.value = '';
+  errorMessage.value = '';
+  sessionId.value = '';
+  chatHistory.value = [];
+  sessions.value = [];
+  currentLocalSessionId.value = '';
+  isConnected.value = false;
+  isFloatWindowVisible.value = false;
+  initChatMessages();
+  if (owner) loadState();
+}, { immediate: true, flush: 'sync' });
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
 
-  loadState();
 
   // 如果未持久化过，则设置初始位置到右下角附近
   if (!localStorage.getItem(UI_STATE_KEY)) {
@@ -1402,6 +1456,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  accountScope.invalidate();
+  abortController.value?.abort();
   window.removeEventListener('keydown', handleKeydown);
   document.removeEventListener('mousemove', onDrag);
   document.removeEventListener('mouseup', stopDrag);

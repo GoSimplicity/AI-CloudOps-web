@@ -241,9 +241,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, watch, onBeforeUnmount } from 'vue';
 import { message } from 'ant-design-vue';
 import { useRouter } from 'vue-router';
+import { useAccessStore, useUserStore } from '@vben/stores';
+import { assistantOwner, createAssistantAccountScope } from '#/utils/assistant-account-scope';
 import {
   SearchOutlined,
   DeleteOutlined,
@@ -268,6 +270,9 @@ import {
 
 // 响应式数据
 const router = useRouter();
+const accessStore = useAccessStore();
+const userStore = useUserStore();
+const accountScope = createAssistantAccountScope(localStorage);
 const searching = ref(false);
 const searchSessionId = ref('');
 const showStats = ref(false);
@@ -284,6 +289,9 @@ const currentSession = reactive<Partial<SessionInfoResponse>>({
 
 // 会话历史记录 (本地存储)
 const sessionHistory = ref<SessionInfoResponse[]>([]);
+const resetCurrentSession = () => {
+  for (const key of Object.keys(currentSession)) delete currentSession[key as keyof SessionInfoResponse];
+};
 
 // 会话统计
 const sessionStats = computed(() => {
@@ -345,9 +353,14 @@ const searchSession = async () => {
     return;
   }
 
+  if (!assistantOwner(userStore.userInfo, accessStore.accessToken)) return;
+  const ticket = accountScope.ticket();
+  const requestedSession = searchSessionId.value.trim();
+  resetCurrentSession();
   try {
     searching.value = true;
-    const response = await getSessionInfo(searchSessionId.value.trim());
+    const response = await getSessionInfo(requestedSession);
+    if (!accountScope.current(ticket)) return;
     const data = response as SessionInfoResponse;
 
     // 更新当前会话信息
@@ -355,10 +368,16 @@ const searchSession = async () => {
 
     message.success('会话信息获取成功');
   } catch (error: any) {
+    if (!accountScope.current(ticket)) return;
+    resetCurrentSession();
+    if ([403, 404].includes(error?.response?.status)) {
+      sessionHistory.value = sessionHistory.value.filter(session => session.session_id !== requestedSession);
+      saveHistoryToStorage();
+    }
     message.error(`获取会话信息失败: ${error.message}`);
 
   } finally {
-    searching.value = false;
+    if (accountScope.current(ticket)) searching.value = false;
   }
 };
 
@@ -409,9 +428,8 @@ const clearAllHistory = () => {
 
 // 加载历史会话
 const loadHistorySession = (session: SessionInfoResponse) => {
-  Object.assign(currentSession, session);
   searchSessionId.value = session.session_id;
-  message.success('历史会话已加载');
+  void searchSession();
 };
 
 // 导出当前会话
@@ -472,25 +490,29 @@ const showStatistics = () => {
 
 // 保存历史记录到本地存储
 const saveHistoryToStorage = () => {
-  localStorage.setItem('assistant-session-history', JSON.stringify(sessionHistory.value));
+  accountScope.write('history', sessionHistory.value);
 };
 
 // 从本地存储加载历史记录
 const loadHistoryFromStorage = () => {
   try {
-    const stored = localStorage.getItem('assistant-session-history');
-    if (stored) {
-      sessionHistory.value = JSON.parse(stored);
-    }
+    const stored = accountScope.read<SessionInfoResponse[]>('history');
+    sessionHistory.value = Array.isArray(stored) ? stored : [];
   } catch (error) {
 
   }
 };
 
-// 页面初始化
-onMounted(() => {
-  loadHistoryFromStorage();
-});
+watch(() => assistantOwner(userStore.userInfo, accessStore.accessToken), (owner) => {
+  accountScope.setOwner(owner);
+  searching.value = false;
+  searchSessionId.value = '';
+  showStats.value = false;
+  resetCurrentSession();
+  sessionHistory.value = [];
+  if (owner) loadHistoryFromStorage();
+}, { immediate: true, flush: 'sync' });
+onBeforeUnmount(() => accountScope.invalidate());
 </script>
 
 <style scoped>

@@ -755,3 +755,74 @@ test('pod terminal negotiates credential subprotocol and returns real output', a
   await page.getByRole('dialog').locator('button.ant-modal-close').click();
   await expect(page.getByRole('dialog')).not.toBeVisible();
 });
+
+test('assistant rejects unowned legacy cache and uses the profile UID', async ({ page }) => {
+  page.setDefaultTimeout(15_000);
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(routePath('/auth/login'));
+  await page.evaluate(() => {
+    localStorage.setItem('aiAssistantChatState', JSON.stringify({ sessionId: 'legacy-private-session', chatMessages: [{ content: 'LEGACY_PRIVATE_CACHE_SENTINEL', type: 'user' }] }));
+    localStorage.setItem('aiAssistantSessions', JSON.stringify({ sessions: [{ localId: 'legacy', name: 'LEGACY_PRIVATE_CACHE_SENTINEL' }] }));
+    localStorage.setItem('assistant-session-history', JSON.stringify([{ session_id: 'LEGACY_PRIVATE_CACHE_SENTINEL' }]));
+  });
+  const profileResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/user/profile');
+  await acceptanceLogin(page);
+  const profile = (await (await profileResponse).json()).data;
+  expect(Number.isSafeInteger(profile.id) && profile.id > 0).toBe(true);
+  await page.locator('.assistant-float-button').click();
+  await expect(page.locator('.ai-float-window')).not.toContainText('LEGACY_PRIVATE_CACHE_SENTINEL');
+  expect(await page.evaluate(() => ['aiAssistantChatState', 'aiAssistantSessions', 'assistant-session-history'].every(key => localStorage.getItem(key) === null))).toBe(true);
+  await page.locator('.ai-float-window button[title="关闭"]').click();
+  await page.goto(routePath('/assistant/session'));
+  await expect(page.locator('.session-container')).not.toContainText('LEGACY_PRIVATE_CACHE_SENTINEL');
+  expect(await page.evaluate(owner => {
+    const chat = JSON.parse(localStorage.getItem(`cloudops-assistant:v1:${owner}:chat`) || '{}');
+    return chat.owner === owner;
+  }, String(profile.id))).toBe(true);
+  await page.getByRole('button', { name: '账户菜单', exact: true }).click();
+  await page.getByRole('menuitem', { name: /^退出登录/ }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();
+  await expect(page).toHaveURL(/auth\/login/);
+  await expect(page.locator('.ai-float-window')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('assistant clears an invalid owned session and permits a fresh question', async ({ page }) => {
+  page.setDefaultTimeout(15_000);
+  test.skip(process.env.CLOUDOPS_TEST_ASSISTANT_OWNER_READY !== 'true', 'Requires isolated assistant owner validation.');
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const profileResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/user/profile');
+  await acceptanceLogin(page);
+  const profile = (await (await profileResponse).json()).data;
+  const invalidSid = 'cloudops-ui-unknown-owner-session';
+  await page.evaluate(({ owner, invalidSid }) => {
+    const write = (name: string, value: unknown) => localStorage.setItem(`cloudops-assistant:v1:${encodeURIComponent(owner)}:${name}`, JSON.stringify({ owner, value }));
+    write('chat', { sessionId: invalidSid, chatHistory: [], chatMessages: [{ content: 'INVALID_OWNED_CACHE_SENTINEL', type: 'user' }] });
+    write('sessions', { sessions: [{ localId: 'local-validation', name: 'Validation' }], currentLocalSessionId: 'local-validation' });
+  }, { owner: String(profile.id), invalidSid });
+  await page.reload();
+  await page.locator('.assistant-float-button').click();
+  await expect(page.locator('.ai-float-window')).toContainText('INVALID_OWNED_CACHE_SENTINEL');
+  const invalidResponse = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/assistant/query'), { timeout: 15_000 });
+  await page.locator('.ai-float-window textarea').fill('检查失效会话');
+  await page.locator('.ai-float-window .send-button').click();
+  expect((await invalidResponse).status()).toBe(404);
+  await expect(page.locator('.ai-float-window')).toContainText('会话已失效');
+  await expect(page.locator('.ai-float-window')).not.toContainText('INVALID_OWNED_CACHE_SENTINEL');
+  await expect(page.locator('.ai-float-window textarea')).toBeEnabled();
+  expect(await page.evaluate(owner => {
+    const chat = JSON.parse(localStorage.getItem(`cloudops-assistant:v1:${owner}:chat`) || '{}');
+    return chat.owner === owner && chat.value?.sessionId === '' && chat.value?.chatHistory?.length === 0;
+  }, String(profile.id))).toBe(true);
+  await page.locator('.ai-float-window button[title="关闭"]').click();
+  await page.getByRole('button', { name: '账户菜单', exact: true }).click();
+  const menu = page.locator('[role="menu"][data-state="open"]');
+  await menu.getByRole('menuitem', { name: /^退出登录/ }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();
+  await expect(page).toHaveURL(/auth\/login/);
+  await expect(page.locator('.ai-float-window')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

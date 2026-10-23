@@ -19,6 +19,7 @@ export const useAuthStore = defineStore('auth', () => {
   const router = useRouter();
 
   const loginLoading = ref(false);
+  let authGeneration = 0;
 
   /**
    * 异步处理登录操作
@@ -32,9 +33,12 @@ export const useAuthStore = defineStore('auth', () => {
   ) {
     // 异步处理用户登录操作并获取 accessToken
     let userInfo: null | UserInfo = null;
+    const generation = ++authGeneration;
+    userStore.setUserInfo(null);
     try {
       loginLoading.value = true;
       const { accessToken, refreshToken } = await loginApi(params);
+      if (generation !== authGeneration) throw new Error('登录已取消');
       // 如果成功获取到 accessToken
       if (accessToken) {
         accessStore.setAccessToken(accessToken);
@@ -47,11 +51,12 @@ export const useAuthStore = defineStore('auth', () => {
           getAccessCodesApi(),
         ]);
 
+        if (generation !== authGeneration) throw new Error('登录已取消');
         userInfo = fetchUserInfoResult;
         const basicUserInfo = {
           ...userInfo,
           realName: userInfo.real_name || '',
-          userId: userInfo.user_id || '',
+          userId: String(userInfo.id || ''),
         };
         userStore.setUserInfo(basicUserInfo);
         accessStore.setAccessCodes(accessCodes);
@@ -73,7 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
     } finally {
-      loginLoading.value = false;
+      if (generation === authGeneration) loginLoading.value = false;
     }
 
     return {
@@ -82,16 +87,22 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout(redirect: boolean = true, callApi: boolean = true) {
+    const generation = ++authGeneration;
+    userStore.setUserInfo(null);
     // 只有在非令牌过期的情况下才调用 logout API
     if (callApi) {
       try {
         await logoutApi();
       } catch (error) {
         // 如果 logout API 失败，记录错误但继续执行本地清理
-        console.warn('Logout API failed, proceeding with local cleanup:', error);
+        console.warn(
+          'Logout API failed, proceeding with local cleanup:',
+          error,
+        );
       }
     }
-    
+
+    if (generation !== authGeneration) return;
     resetAllStores();
     accessStore.setLoginExpired(false);
 
@@ -108,17 +119,27 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchUserInfo() {
     let userInfo: null | UserInfo = null;
+    const generation = authGeneration;
+    const token = accessStore.accessToken;
     userInfo = await getUserInfoApi();
+    if (
+      generation !== authGeneration ||
+      token !== accessStore.accessToken ||
+      !token
+    ) {
+      throw new Error('账户已变化，忽略过期资料');
+    }
     const basicUserInfo = {
       ...userInfo,
       realName: userInfo.real_name || '',
-      userId: userInfo.user_id || '',
+      userId: String(userInfo.id || ''),
     };
     userStore.setUserInfo(basicUserInfo);
     return userInfo;
   }
 
   function $reset() {
+    authGeneration++;
     loginLoading.value = false;
   }
 

@@ -25,7 +25,7 @@ interface BasicUserInfo {
   /**
    * 用户id
    */
-  user_id: string;
+  id: number;
   /**
    * 用户名
    */

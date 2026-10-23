@@ -215,17 +215,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue';
+import { ref, nextTick, watch, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { useAccessStore, useUserStore } from '@vben/stores';
+import { assistantOwner, createAssistantAccountScope } from '#/utils/assistant-account-scope';
 import { assistantQuery } from '#/api/core/aiops/assistant';
 import type { AssistantRequest, AssistantResponse } from '#/api/core/aiops/assistant';
 
 // 路由
 const router = useRouter();
+const accessStore = useAccessStore();
+const userStore = useUserStore();
+const accountScope = createAssistantAccountScope(localStorage);
+let abortController: AbortController | undefined;
 
 // 响应式数据
 const questionInput = ref('');
@@ -266,6 +272,11 @@ const sendMessage = async () => {
     return;
   }
 
+  if (!assistantOwner(userStore.userInfo, accessStore.accessToken)) return;
+  const ticket = accountScope.ticket();
+  isLoading.value = true;
+  abortController = new AbortController();
+  const signal = abortController.signal;
   const question = questionInput.value.trim();
   questionInput.value = '';
 
@@ -279,6 +290,7 @@ const sendMessage = async () => {
 
   // 滚动到底部
   await nextTick();
+  if (!accountScope.current(ticket)) return;
   scrollToBottom();
 
   try {
@@ -291,12 +303,13 @@ const sendMessage = async () => {
       use_web_search: useWebSearch.value,
       session_id: currentSessionId.value || undefined,
       chat_history: chatHistory.value.slice(0, -1).map(msg => ({
-        [msg.role]: msg.content
+        role: msg.role, content: msg.content
       }))
     };
 
     // 发送请求
-    const response = await assistantQuery(request);
+    const response = await assistantQuery(request, { signal });
+    if (!accountScope.current(ticket)) return;
     const data = response as AssistantResponse;
 
     // 更新会话ID
@@ -319,10 +332,17 @@ const sendMessage = async () => {
     scrollToBottom();
 
   } catch (error: any) {
+    if (!accountScope.current(ticket)) return;
+    if ([403, 404].includes(error?.response?.status)) {
+      chatHistory.value = [];
+      currentSessionId.value = '';
+      selectedDocument.value = null;
+      documentModalVisible.value = false;
+    }
     message.error(`发送失败: ${error.message}`);
 
   } finally {
-    isLoading.value = false;
+    if (accountScope.current(ticket)) { isLoading.value = false; abortController = undefined; }
   }
 };
 
@@ -346,6 +366,10 @@ const onModeChange = () => {
 
 // 清空会话
 const clearSession = () => {
+  accountScope.invalidate();
+  abortController?.abort();
+  abortController = undefined;
+  isLoading.value = false;
   chatHistory.value = [];
   currentSessionId.value = '';
   message.success('会话已清空');
@@ -412,10 +436,18 @@ const scrollToBottom = () => {
   }
 };
 
-// 页面初始化
-onMounted(() => {
-  // 可以在这里加载历史会话或初始化操作
-});
+watch(() => assistantOwner(userStore.userInfo, accessStore.accessToken), (owner) => {
+  accountScope.setOwner(owner);
+  abortController?.abort();
+  abortController = undefined;
+  isLoading.value = false;
+  questionInput.value = '';
+  currentSessionId.value = '';
+  chatHistory.value = [];
+  selectedDocument.value = null;
+  documentModalVisible.value = false;
+}, { immediate: true, flush: 'sync' });
+onBeforeUnmount(() => { accountScope.invalidate(); abortController?.abort(); });
 </script>
 
 <style scoped>

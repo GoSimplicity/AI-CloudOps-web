@@ -1,0 +1,120 @@
+import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
+import { reactive, nextTick } from 'vue';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import AiAssistant from './ai.vue';
+import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
+
+const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const api = vi.hoisted(() => ({
+  assistantQuery: vi.fn(),
+  clearAssistantCache: vi.fn(),
+  refreshKnowledgeBase: vi.fn(),
+}));
+vi.mock('@vben/stores', () => ({
+  useUserStore: () => state.user,
+  useAccessStore: () => state.access,
+}));
+vi.mock('#/api/core/aiops/assistant', () => api);
+let wrapper: VueWrapper;
+const setup = () => (wrapper.vm as any).$?.setupState;
+const deferred = () => {
+  let resolve!: (value: any) => void;
+  let reject!: (value: any) => void;
+  const promise = new Promise((yes, no) => {
+    resolve = yes;
+    reject = no;
+  });
+  return { promise, resolve, reject };
+};
+beforeEach(() => {
+  localStorage.clear();
+  vi.clearAllMocks();
+  state.user = reactive({ userInfo: { userId: '1' } });
+  state.access = reactive({ accessToken: 'credential' });
+});
+afterEach(() => {
+  wrapper?.unmount();
+  vi.restoreAllMocks();
+});
+
+describe('悬浮助手真实状态隔离', () => {
+  it('换账号与退出立即清空显示/输入/SID，拒绝旧无归属键', async () => {
+    localStorage.setItem(
+      'aiAssistantChatState',
+      JSON.stringify({
+        sessionId: 'legacy',
+        chatMessages: [{ content: 'legacy private' }],
+      }),
+    );
+    const cache = createAssistantAccountScope(localStorage);
+    cache.setOwner('1');
+    cache.write('sessions', {
+      sessions: [{ localId: 'local-one', name: 'first' }],
+      currentLocalSessionId: 'local-one',
+    });
+    cache.write('chat', {
+      sessionId: 'owner-one',
+      chatMessages: [{ content: 'owner one private', type: 'user' }],
+    });
+    wrapper = mount(AiAssistant);
+    expect(setup().sessionId).toBe('owner-one');
+    expect(JSON.stringify(setup().chatMessages)).toContain('owner one private');
+    setup().globalInputMessage = 'unsent secret';
+    state.user.userInfo = { userId: '2' };
+    expect(setup().sessionId).toBe('');
+    expect(setup().globalInputMessage).toBe('');
+    expect(JSON.stringify(setup().chatMessages)).not.toContain(
+      'owner one private',
+    );
+    state.user.userInfo = null;
+    expect(setup().sessions).toEqual([]);
+    expect(setup().sessionId).toBe('');
+    expect(JSON.stringify(setup().chatMessages)).not.toContain(
+      'legacy private',
+    );
+  });
+  it('旧请求即使无视 abort 后完成，也不能写入新账号或解锁新请求', async () => {
+    const old = deferred();
+    const fresh = deferred();
+    api.assistantQuery
+      .mockReturnValueOnce(old.promise)
+      .mockReturnValueOnce(fresh.promise);
+    wrapper = mount(AiAssistant);
+    const oldTask = setup().sendMessage('first private question');
+    await nextTick();
+    const oldSignal = api.assistantQuery.mock.calls[0]![1].signal;
+    state.user.userInfo = { userId: '2' };
+    expect(oldSignal.aborted).toBe(true);
+    const freshTask = setup().sendMessage('second question');
+    await nextTick();
+    old.resolve({ answer: 'old private answer', session_id: 'old-sid' });
+    await oldTask;
+    expect(setup().sending).toBe(true);
+    expect(setup().sessionId).toBe('');
+    expect(JSON.stringify(setup().chatMessages)).not.toContain('old private');
+    fresh.resolve({ answer: 'ok', session_id: 'new-sid' });
+    await freshTask;
+    expect(setup().sessionId).toBe('new-sid');
+    expect(JSON.stringify(localStorage)).not.toContain('old private answer');
+  });
+  it.each([403, 404])(
+    '会话 %s 清空旧内容/SID，下一次提问新建',
+    async (status) => {
+      api.assistantQuery
+        .mockRejectedValueOnce({ response: { status } })
+        .mockResolvedValueOnce({ answer: 'ok', session_id: 'fresh' });
+      wrapper = mount(AiAssistant);
+      setup().sessionId = 'invalid-sid';
+      await setup().sendMessage('question');
+      await flushPromises();
+      expect(setup().sessionId).toBe('');
+      expect(setup().sending).toBe(false);
+      expect(setup().chatHistory).toEqual([]);
+      await setup().sendMessage('new question');
+      expect(api.assistantQuery.mock.calls[1]![0]).not.toHaveProperty(
+        'session_id',
+      );
+      expect(setup().sessionId).toBe('fresh');
+    },
+  );
+});
