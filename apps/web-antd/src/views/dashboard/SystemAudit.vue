@@ -24,6 +24,7 @@ import {
 } from '#/api/core/system/audit';
 
 import { getUserDetailApi } from '#/api/core/system/user';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 // 扩展审计日志类型，包含用户信息
 interface AuditLogWithUser extends AuditLog {
@@ -245,7 +246,8 @@ const fetchAuditLogs = async () => {
     auditLogList.value = logsWithUserInfo;
     paginationConfig.total = response.total || 0;
   } catch (error: any) {
-    message.error(error.message || '获取审计日志失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取审计日志失败');
     auditLogList.value = [];
     paginationConfig.total = 0;
   } finally {
@@ -258,7 +260,8 @@ const fetchAuditStatistics = async () => {
     const response = await getAuditStatisticsApi();
     auditStatistics.value = response;
   } catch (error: any) {
-    message.error(error.message || '获取统计数据失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取统计数据失败');
   }
 };
 
@@ -284,7 +287,8 @@ const fetchLogDetail = async (id: number) => {
     viewLogData.value = logWithUserInfo;
     viewModalVisible.value = true;
   } catch (error: any) {
-    message.error(error.message || '获取日志详情失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取日志详情失败');
   }
 };
 
@@ -336,7 +340,8 @@ const performAdvancedSearch = async () => {
     auditLogList.value = logsWithUserInfo;
     paginationConfig.total = response.total || 0;
   } catch (error: any) {
-    message.error(error.message || '高级搜索失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '高级搜索失败');
     auditLogList.value = [];
     paginationConfig.total = 0;
   } finally {
@@ -424,7 +429,8 @@ const handleDelete = async (log: AuditLogWithUser) => {
     fetchAuditLogs();
     fetchAuditStatistics();
   } catch (error: any) {
-    message.error(error.message || '删除失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '删除失败');
   }
 };
 
@@ -441,7 +447,8 @@ const handleBatchDelete = async () => {
     fetchAuditLogs();
     fetchAuditStatistics();
   } catch (error: any) {
-    message.error(error.message || '批量删除失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '批量删除失败');
   }
 };
 

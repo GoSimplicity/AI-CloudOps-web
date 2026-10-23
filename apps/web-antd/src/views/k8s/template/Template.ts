@@ -24,6 +24,7 @@ import {
   getClustersListApi,
   Env,
 } from '#/api/core/k8s/k8s_cluster';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 // YAML 模板常量
 const DEFAULT_YAML_TEMPLATE = `apiVersion: apps/v1
@@ -240,7 +241,7 @@ export function useTemplatePage() {
         clearTemplates();
       }
       clustersError.value = '获取集群列表失败，请重试';
-      message.error(clustersError.value);
+      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -266,11 +267,11 @@ export function useTemplatePage() {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
       templates.value = res?.items || [];
       total.value = res?.total || 0;
-    } catch {
+    } catch (error) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
       clearTemplates();
       loadError.value = '获取 YAML 模板列表失败，请重试';
-      message.error(loadError.value);
+      if (!isPermissionDeniedError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -290,7 +291,7 @@ export function useTemplatePage() {
       });
       currentTemplateDetail.value = res || record;
     } catch (err: any) {
-      message.error('获取模板详情失败：' + (err.message || '未知错误'));
+      if (!isPermissionDeniedError(err)) message.error('获取模板详情失败：' + (err.message || '未知错误'));
       currentTemplateDetail.value = record;
     } finally {
       detailLoading.value = false;
@@ -350,7 +351,7 @@ export function useTemplatePage() {
       await fetchTemplates();
     } catch (err: any) {
       if (err.errorFields) return;
-      message.error('创建模板失败：' + (err.message || '未知错误'));
+      if (!isPermissionDeniedError(err)) message.error('创建模板失败：' + (err.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -394,7 +395,7 @@ export function useTemplatePage() {
       await fetchTemplates();
     } catch (err: any) {
       if (err.errorFields) return;
-      message.error('更新模板失败：' + (err.message || '未知错误'));
+      if (!isPermissionDeniedError(err)) message.error('更新模板失败：' + (err.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -422,7 +423,7 @@ export function useTemplatePage() {
       message.success('YAML 格式检查通过');
       return true;
     } catch (err: any) {
-      message.error('YAML 格式检查失败：' + (err.message || '未知错误'));
+      if (!isPermissionDeniedError(err)) message.error('YAML 格式检查失败：' + (err.message || '未知错误'));
       return false;
     } finally {
       checkLoading.value = false;
@@ -451,7 +452,7 @@ export function useTemplatePage() {
           message.success('模板删除成功');
           await fetchTemplates();
         } catch (err: any) {
-          message.error('删除模板失败：' + (err.message || '未知错误'));
+          if (!isPermissionDeniedError(err)) message.error('删除模板失败：' + (err.message || '未知错误'));
         }
       },
     });
@@ -487,7 +488,7 @@ export function useTemplatePage() {
           selectedRows.value = [];
           await fetchTemplates();
         } catch (err: any) {
-          message.error(`批量${operation}失败：` + (err.message || '未知错误'));
+          if (!isPermissionDeniedError(err)) message.error(`批量${operation}失败：` + (err.message || '未知错误'));
         }
       },
     });

@@ -350,6 +350,7 @@ import {
 } from '#/api/core/workorder/workorder_instance_flow'
 
 import { InstanceStatus } from '#/api/core/workorder/workorder_instance'
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 // 图标组件
 const IconComponent = ({ icon }: { icon: string }) => {
@@ -641,7 +642,7 @@ const loadFlow = async (instanceId: number) => {
     }
   } catch (error: any) {
 
-    message.error(`加载流转记录失败: ${error.message || '未知错误'}`)
+    if (!isPermissionDeniedError(error)) message.error(`加载流转记录失败: ${error.message || '未知错误'}`)
     flowList.value = []
   } finally {
     loading.value = false

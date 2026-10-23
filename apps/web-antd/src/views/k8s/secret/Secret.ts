@@ -34,6 +34,7 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 // YAML 模板常量
 const SECRET_YAML_TEMPLATE = `apiVersion: v1
@@ -323,7 +324,7 @@ export function useSecretPage() {
         clearSecrets();
       }
       clustersError.value = '获取集群列表失败，请重试';
-      message.error(clustersError.value);
+      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -370,7 +371,7 @@ export function useSecretPage() {
       namespaces.value = [];
       namespacesTotal.value = 0;
       namespacesError.value = '获取命名空间列表失败，请重试';
-      message.error(namespacesError.value);
+      if (!isPermissionDeniedError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -413,11 +414,11 @@ export function useSecretPage() {
       
       secrets.value = secretsWithClusterId;
       total.value = res?.total || 0;
-    } catch {
+    } catch (error) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       clearSecrets();
       loadError.value = '获取 Secret 列表失败，请重试';
-      message.error(loadError.value);
+      if (!isPermissionDeniedError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -457,7 +458,7 @@ export function useSecretPage() {
       
       currentSecretDetail.value = processedDetail;
     } catch (err) {
-      message.error('获取 Secret 详情失败');
+      if (!isPermissionDeniedError(err)) message.error('获取 Secret 详情失败');
 
       // 错误时也要处理格式转换
       try {

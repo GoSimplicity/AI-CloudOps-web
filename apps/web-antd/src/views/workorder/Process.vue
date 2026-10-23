@@ -39,6 +39,7 @@ import {
 import ProcessBasicConfig from './components/ProcessBasicConfig.vue';
 
 import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 const { can } = usePermission();
 
@@ -243,7 +244,7 @@ const loadProcesses = async (): Promise<void> => {
     total.value = 0;
     Object.assign(stats, { total: 0, published: 0, draft: 0, archived: 0 });
     loadError.value = '加载流程数据失败';
-    message.error(loadError.value);
+    if (!isPermissionDeniedError(error)) message.error(loadError.value);
   } finally {
     loading.value = false;
   }
@@ -390,7 +391,7 @@ const handleEditProcess = async (row: WorkorderProcessItem): Promise<void> => {
       detailDialog.visible = false;
     }
   } catch (error: any) {
-    message.error('获取流程详情失败');
+    if (!isPermissionDeniedError(error)) message.error('获取流程详情失败');
   } finally {
     loading.value = false;
   }
@@ -408,7 +409,7 @@ const handleViewProcess = async (row: WorkorderProcessItem): Promise<void> => {
       detailDialog.visible = true;
     }
   } catch (error: any) {
-    message.error('获取流程详情失败');
+    if (!isPermissionDeniedError(error)) message.error('获取流程详情失败');
   } finally {
     loading.value = false;
   }
@@ -456,7 +457,8 @@ const publishProcess = async (process: WorkorderProcessItem): Promise<void> => {
     message.success(`流程 "${process.name}" 已发布`);
     loadProcesses();
   } catch (error: any) {
-    message.error(`发布流程失败: ${error.message || '未知错误'}`);
+    if (!isPermissionDeniedError(error))
+      message.error(`发布流程失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }
@@ -481,7 +483,8 @@ const archiveProcess = async (process: WorkorderProcessItem): Promise<void> => {
     message.success(`流程 "${process.name}" 已归档`);
     loadProcesses();
   } catch (error: any) {
-    message.error(`归档流程失败: ${error.message || '未知错误'}`);
+    if (!isPermissionDeniedError(error))
+      message.error(`归档流程失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }
@@ -508,7 +511,8 @@ const activateProcess = async (
     message.success(`流程 "${process.name}" 已激活`);
     loadProcesses();
   } catch (error: any) {
-    message.error(`激活流程失败: ${error.message || '未知错误'}`);
+    if (!isPermissionDeniedError(error))
+      message.error(`激活流程失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }
@@ -535,7 +539,8 @@ const setDefaultProcess = async (
     message.success(`流程 "${process.name}" 已设为默认`);
     loadProcesses();
   } catch (error: any) {
-    message.error(`设置默认流程失败: ${error.message || '未知错误'}`);
+    if (!isPermissionDeniedError(error))
+      message.error(`设置默认流程失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }
@@ -561,7 +566,8 @@ const confirmDelete = (process: WorkorderProcessItem): void => {
 
         loadProcesses();
       } catch (error: any) {
-        message.error(`删除流程失败: ${error.message || '未知错误'}`);
+        if (!isPermissionDeniedError(error))
+          message.error(`删除流程失败: ${error.message || '未知错误'}`);
       } finally {
         loading.value = false;
       }
@@ -626,11 +632,12 @@ const saveProcess = async (): Promise<void> => {
     processDialog.visible = false;
     loadProcesses();
   } catch (error: any) {
-    message.error(
-      processDialog.isEdit
-        ? `更新流程失败: ${error.message || '未知错误'}`
-        : `创建流程失败: ${error.message || '未知错误'}`,
-    );
+    if (!isPermissionDeniedError(error))
+      message.error(
+        processDialog.isEdit
+          ? `更新流程失败: ${error.message || '未知错误'}`
+          : `创建流程失败: ${error.message || '未知错误'}`,
+      );
   } finally {
     loading.value = false;
   }
@@ -771,7 +778,8 @@ onMounted(async (): Promise<void> => {
   try {
     await Promise.all([loadProcesses(), loadCategories(), loadFormDesigns()]);
   } catch (error: any) {
-    message.error(`初始化数据加载失败: ${error.message || '未知错误'}`);
+    if (!isPermissionDeniedError(error))
+      message.error(`初始化数据加载失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }

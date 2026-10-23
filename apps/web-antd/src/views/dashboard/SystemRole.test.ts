@@ -7,6 +7,10 @@ import {
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  createForbiddenResponseInterceptor,
+  createPermissionDeniedError,
+} from '#/utils/permission/forbidden';
 import SystemRole from './SystemRole.vue';
 
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
@@ -150,4 +154,20 @@ describe('角色列表真实控件交互', () => {
     expect(wrapper.find('.ant-empty-description').exists()).toBe(true);
     expect(wrapper.find('.role-name').exists()).toBe(false);
   });
+
+  it('列表 403 已由统一提示，页面不再重复弹错但仍清空旧结果', async () => {
+    await flushPromises();
+    vi.mocked(message.error).mockClear();
+    api.listRolesApi.mockRejectedValueOnce(await notifiedForbiddenError());
+    await button('刷新').trigger('click');
+    await flushPromises();
+    expect(message.error).not.toHaveBeenCalled();
+    expect(wrapper.find('.role-name').exists()).toBe(false);
+  });
 });
+
+/** 模拟请求拦截器链：业务 403 经统一提示拦截器后抛给页面的错误（已提示标记） */
+async function notifiedForbiddenError() {
+  const { rejected } = createForbiddenResponseInterceptor(() => {});
+  return rejected(createPermissionDeniedError()).catch((error) => error);
+}

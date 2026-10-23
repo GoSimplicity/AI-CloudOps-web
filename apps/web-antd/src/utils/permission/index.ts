@@ -38,9 +38,8 @@ export function isSuperAdmin(
   subject: Pick<PermissionSubject, 'roles' | 'username'> | null | undefined,
 ) {
   if (!subject) return false;
-  if ((subject.roles ?? []).some((role) => SUPER_ADMIN_ROLES.includes(role))) {
-    return true;
-  }
+  const roles = Array.isArray(subject.roles) ? subject.roles : [];
+  if (roles.some((role) => SUPER_ADMIN_ROLES.includes(role))) return true;
   return subject.username === SUPER_ADMIN_USERNAME;
 }
 

@@ -526,6 +526,7 @@ import {
   listWorkorderFormDesign,
   FormDesignStatus,
 } from '#/api/core/workorder/workorder_form_design';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 interface UserInfo {
   id: number;
@@ -1231,7 +1232,8 @@ const copyProcessJson = async (): Promise<void> => {
     const copied = document.execCommand('copy');
     document.body.removeChild(textArea);
     if (copied) message.success('流程JSON已复制到剪贴板');
-    else message.error('复制失败，请手动复制JSON');
+    else if (!isPermissionDeniedError(error))
+      message.error('复制失败，请手动复制JSON');
   }
 };
 

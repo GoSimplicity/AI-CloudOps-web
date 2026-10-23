@@ -17,6 +17,7 @@ import {
 } from '#/api/core/system/api';
 
 import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 const { can } = usePermission();
 
@@ -157,7 +158,8 @@ const fetchApiList = async () => {
     apiList.value = response.items || [];
     paginationConfig.total = response.total || 0;
   } catch (error: any) {
-    message.error(error.message || '获取API列表失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取API列表失败');
     apiList.value = [];
     paginationConfig.total = 0;
   } finally {
@@ -220,7 +222,8 @@ const handleEdit = async (api: ApiInfo) => {
     });
     modalVisible.value = true;
   } catch (error: any) {
-    message.error(error.message || '获取API详情失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取API详情失败');
   }
 };
 
@@ -230,7 +233,8 @@ const handleView = async (api: ApiInfo) => {
     viewApiData.value = response;
     viewModalVisible.value = true;
   } catch (error: any) {
-    message.error(error.message || '获取API详情失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取API详情失败');
   }
 };
 
@@ -243,7 +247,8 @@ const handleDelete = async (api: ApiInfo) => {
     }
     await Promise.all([fetchApiList(), fetchApiStatistics()]);
   } catch (error: any) {
-    message.error(error.message || '删除失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '删除失败');
   }
 };
 
@@ -273,7 +278,8 @@ const handleAccessChange = async (api: ApiInfo, newAccess: number) => {
   } catch (error: any) {
     // 发生错误时，恢复原来的状态
     api.is_public = originalAccess;
-    message.error(error.message || '访问权限更新失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '访问权限更新失败');
   }
 };
 
@@ -314,7 +320,8 @@ const handleSubmit = async () => {
     await Promise.all([fetchApiList(), fetchApiStatistics()]);
   } catch (error: any) {
     if (!error.errorFields) {
-      message.error(error.message || '操作失败');
+      if (!isPermissionDeniedError(error))
+        message.error(error.message || '操作失败');
     }
   } finally {
     submitLoading.value = false;

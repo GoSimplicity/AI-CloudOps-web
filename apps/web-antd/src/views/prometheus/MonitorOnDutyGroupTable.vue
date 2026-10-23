@@ -1180,7 +1180,7 @@ const saveChange = async (): Promise<void> => {
     }
   } catch (error: any) {
 
-    message.error(error.message || '保存换班记录失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '保存换班记录失败');
   } finally {
     submitting.value = false;
   }
