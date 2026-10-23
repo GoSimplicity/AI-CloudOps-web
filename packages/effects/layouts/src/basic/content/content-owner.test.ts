@@ -49,7 +49,7 @@ let wrapper: VueWrapper;
 beforeEach(() => {
   state.keepAlive = true;
   state.user = reactive({ userInfo: { userId: '1' } });
-  state.access = reactive({ accessToken: 'credential-one' });
+  state.access = reactive({ accessToken: 'credential-one', isAccessChecked: true });
   state.tabs = reactive({
     getCachedTabs: ['OwnerPageA', 'OwnerPageB'],
     getExcludeCachedTabs: [],
@@ -99,6 +99,18 @@ describe('页面与KeepAlive账户边界', () => {
       expect(wrapper.find('.private-content').text()).toBe('private-2');
     },
   );
+  it('权限尚未重建时即使新UID已到达也不显示旧路由组件', async () => {
+    await render();
+    state.access.isAccessChecked = false;
+    state.user.userInfo = { userId: '2' };
+    await nextTick(); await flushPromises();
+    expect(wrapper.find('.private-content').exists()).toBe(false);
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(true);
+    state.access.isAccessChecked = true;
+    await nextTick(); await flushPromises();
+    expect(wrapper.find('.private-content').text()).toBe('private-2');
+    expect(state.unmounts).toContain('OwnerPageA:1');
+  });
   it('UID缺失时清空缓存和iframe，登录弹窗不被隐藏', async () => {
     await render();
     state.user.userInfo = null;

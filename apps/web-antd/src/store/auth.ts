@@ -5,7 +5,15 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { DEFAULT_HOME_PATH, LOGIN_PATH } from '@vben/constants';
-import { resetAllStores, useAccessStore, useUserStore } from '@vben/stores';
+import {
+  resetAllStores,
+  useAccessStore,
+  useTabbarStore,
+  useUserStore,
+} from '@vben/stores';
+
+import { resetStaticRoutes } from '@vben/utils';
+import { routes } from '#/router/routes';
 
 import { notification } from 'ant-design-vue';
 import { defineStore } from 'pinia';
@@ -21,6 +29,15 @@ export const useAuthStore = defineStore('auth', () => {
   const loginLoading = ref(false);
   let authGeneration = 0;
 
+  function clearAccountAccess() {
+    accessStore.setIsAccessChecked(false);
+    accessStore.setAccessCodes([]);
+    accessStore.setAccessMenus([]);
+    accessStore.setAccessRoutes([]);
+    useTabbarStore().$reset();
+    resetStaticRoutes(router, routes);
+  }
+
   /**
    * 异步处理登录操作
    * Asynchronously handle the login process
@@ -35,6 +52,7 @@ export const useAuthStore = defineStore('auth', () => {
     let userInfo: null | UserInfo = null;
     const generation = ++authGeneration;
     userStore.setUserInfo(null);
+    clearAccountAccess();
     accessStore.setAccessToken(null);
     accessStore.setRefreshToken(null);
     try {
@@ -65,6 +83,7 @@ export const useAuthStore = defineStore('auth', () => {
 
         if (accessStore.loginExpired) {
           accessStore.setLoginExpired(false);
+          await router.replace(router.currentRoute.value.fullPath);
         } else {
           onSuccess
             ? await onSuccess?.()
@@ -91,6 +110,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout(redirect: boolean = true, callApi: boolean = true) {
     const generation = ++authGeneration;
     userStore.setUserInfo(null);
+    clearAccountAccess();
     // 只有在非令牌过期的情况下才调用 logout API
     if (callApi) {
       try {

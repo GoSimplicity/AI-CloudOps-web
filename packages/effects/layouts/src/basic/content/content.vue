@@ -23,7 +23,9 @@ const tabbarStore = useTabbarStore();
 const userStore = useUserStore();
 const accessStore = useAccessStore();
 const contentOwner = computed(() =>
-  accessStore.accessToken ? userStore.userInfo?.userId || '' : '',
+  accessStore.accessToken && accessStore.isAccessChecked
+    ? userStore.userInfo?.userId || ''
+    : '',
 );
 const ownerEpoch = ref(0);
 // 同一tick退出再登录也销毁旧缓存，普通令牌刷新保持同UID页面

@@ -95,29 +95,37 @@ function setupAccessGuard(router: Router) {
       return true;
     }
 
-    // 生成路由表
-    // 当前登录用户拥有的角色标识列表
-    const userInfo = userStore.userInfo || (await authStore.fetchUserInfo());
-    const userRoles = userInfo.roles ?? [];
-
-    // 生成菜单和路由
-    const { accessibleMenus, accessibleRoutes } = await generateAccess({
-      roles: userRoles,
-      router,
-      // 则会在菜单中显示，但是访问会被重定向到403
-      routes: dynamicRoutes,
-    });
-
-    // 保存菜单信息和路由信息
-    accessStore.setAccessMenus(accessibleMenus);
-    accessStore.setAccessRoutes(accessibleRoutes);
-    accessStore.setIsAccessChecked(true);
-    const redirectPath = (from.query.redirect ?? to.fullPath) as string;
-
-    return {
-      ...router.resolve(decodeURIComponent(redirectPath)),
-      replace: true,
+    const generation = authStore.getAuthGeneration();
+    const owner = userStore.userInfo?.userId;
+    const isCurrent = () =>
+      generation === authStore.getAuthGeneration() &&
+      !!accessStore.accessToken &&
+      (!owner || owner === userStore.userInfo?.userId);
+    const assertCurrent = () => {
+      if (!isCurrent()) throw new Error('账户已变化，忽略过期权限路由');
     };
+    try {
+      const userInfo = userStore.userInfo || (await authStore.fetchUserInfo());
+      assertCurrent();
+      const { accessibleMenus, accessibleRoutes } = await generateAccess({
+        roles: userInfo.roles ?? [],
+        router,
+        routes: dynamicRoutes,
+        assertCurrent,
+      });
+      assertCurrent();
+      accessStore.setAccessMenus(accessibleMenus);
+      accessStore.setAccessRoutes(accessibleRoutes);
+      accessStore.setIsAccessChecked(true);
+      const redirectPath = (from.query.redirect ?? to.fullPath) as string;
+      return {
+        ...router.resolve(decodeURIComponent(redirectPath)),
+        replace: true,
+      };
+    } catch (error) {
+      if (!isCurrent()) return false;
+      throw error;
+    }
   });
 }
 

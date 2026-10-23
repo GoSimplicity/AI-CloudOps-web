@@ -4,6 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from './auth';
 import { resetAllStores } from '@vben/stores';
 const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
+const navigation = vi.hoisted(() => ({
+  replace: vi.fn(),
+  push: vi.fn(),
+  tabReset: vi.fn(),
+  removeRoute: vi.fn(),
+  currentRoute: { value: { fullPath: '/private' } },
+}));
+vi.mock('#/router/routes', () => ({ routes: [] }));
 const api = vi.hoisted(() => ({
   getUserInfoApi: vi.fn(),
   loginApi: vi.fn(),
@@ -14,14 +22,16 @@ vi.mock('#/api', () => api);
 vi.mock('#/locales', () => ({ $t: (key: string) => key }));
 vi.mock('vue-router', () => ({
   useRouter: () => ({
-    replace: vi.fn(),
-    push: vi.fn(),
-    currentRoute: { value: { fullPath: '/' } },
+    ...navigation,
+    getRoutes: () => [{ name: 'PreviousPrivate' }],
+    hasRoute: () => true,
+    removeRoute: navigation.removeRoute,
   }),
 }));
 vi.mock('@vben/stores', () => ({
   useUserStore: () => state.user,
   useAccessStore: () => state.access,
+  useTabbarStore: () => ({ $reset: navigation.tabReset }),
   resetAllStores: vi.fn(),
 }));
 const deferred = () => {
@@ -49,11 +59,46 @@ beforeEach(() => {
     setRefreshToken: vi.fn((value: string) => {
       state.access.refreshToken = value;
     }),
-    setAccessCodes: vi.fn(),
+    isAccessChecked: true,
+    accessMenus: [{ name: 'previous-menu' }],
+    accessRoutes: [{ name: 'previous-route' }],
+    accessCodes: ['previous-code'],
+    setIsAccessChecked: vi.fn(
+      (value) => (state.access.isAccessChecked = value),
+    ),
+    setAccessMenus: vi.fn((value) => (state.access.accessMenus = value)),
+    setAccessRoutes: vi.fn((value) => (state.access.accessRoutes = value)),
+    setAccessCodes: vi.fn((value) => (state.access.accessCodes = value)),
     setLoginExpired: vi.fn(),
   });
 });
 describe('认证资料作用域', () => {
+  it('新登录开始即清除旧权限码和菜单检查状态', async () => {
+    api.loginApi.mockRejectedValue(new Error('invalid login'));
+    await expect(
+      useAuthStore().authLogin({ username: 'next', password: 'test fixture' }),
+    ).rejects.toThrow();
+    expect(state.access.accessCodes).toEqual([]);
+    expect(state.access.accessMenus).toEqual([]);
+    expect(state.access.accessRoutes).toEqual([]);
+    expect(state.access.isAccessChecked).toBe(false);
+    expect(navigation.removeRoute).toHaveBeenCalledWith('PreviousPrivate');
+    expect(navigation.tabReset).toHaveBeenCalled();
+  });
+  it('过期弹窗重新登录也重新经过当前路由权限守卫', async () => {
+    state.access.loginExpired = true;
+    api.loginApi.mockResolvedValue({ accessToken: 'next credential' });
+    api.getUserInfoApi.mockResolvedValue({ id: 2 });
+    api.getAccessCodesApi.mockResolvedValue(['new-code']);
+    await useAuthStore().authLogin({
+      username: 'next',
+      password: 'test fixture',
+    });
+    expect(navigation.replace).toHaveBeenCalledWith('/private');
+    expect(state.access.isAccessChecked).toBe(false);
+    expect(state.access.accessCodes).toEqual(['new-code']);
+  });
+
   it('迟到的退出响应不能清空重新登录的账号', async () => {
     const pending = deferred();
     api.logoutApi.mockReturnValue(pending.promise);

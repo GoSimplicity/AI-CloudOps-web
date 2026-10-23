@@ -117,6 +117,8 @@ type RouteRecordStringComponent<T = string> = {
 type ComponentRecordType = Record<string, () => Promise<Component>>;
 
 interface GenerateMenuAndRoutesOptions {
+  /** 异步权限生成前后验证当前账户 */
+  assertCurrent?: () => void;
   fetchMenuListAsync?: () => Promise<RouteRecordStringComponent[]>;
   forbiddenComponent?: RouteRecordRaw['component'];
   layoutMap?: ComponentRecordType;

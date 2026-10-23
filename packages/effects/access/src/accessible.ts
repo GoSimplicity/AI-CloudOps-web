@@ -22,6 +22,8 @@ async function generateAccessible(
   // 生成路由
   const accessibleRoutes = await generateRoutes(mode, options);
 
+  options.assertCurrent?.();
+
   // 动态添加到router实例内
   accessibleRoutes.forEach((route) => {
     router.addRoute(route);
@@ -30,6 +32,7 @@ async function generateAccessible(
   // 生成菜单
   const accessibleMenus = await generateMenus(accessibleRoutes, options.router);
 
+  options.assertCurrent?.();
   return { accessibleMenus, accessibleRoutes };
 }
 

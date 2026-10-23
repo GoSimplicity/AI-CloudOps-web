@@ -1113,3 +1113,42 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
     if (objects.ok()) for (const item of (await objects.json()).data.items) if (item.name === resourceName && item.namespace === namespace) expect((await page.request.delete(`/api/k8s/configmap/1/${namespace}/${resourceName}/delete`, { headers })).status()).toBe(200);
   }
 });
+
+test('expired login preserves its dialog and rebuilds current route permissions', async ({ page }) => {
+  page.setDefaultTimeout(15_000);
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await acceptanceLogin(page);
+  await expect.poll(() => page.evaluate(() => Object.keys(localStorage).some(key => key.endsWith('preferences')))).toBe(true);
+  await page.evaluate(() => {
+    const key = Object.keys(localStorage).find(key => key.endsWith('preferences'))!;
+    const cached = JSON.parse(localStorage.getItem(key)!);
+    cached.value.app.loginExpiredMode = 'modal';
+    localStorage.setItem(key, JSON.stringify(cached));
+  });
+  await page.goto(routePath('/system_user'));
+  await expect(page.locator('.ops-page h1')).toHaveText('用户管理');
+  // 仅注入一次过期响应，重新登录与资料、权限及列表均使用真实本地服务
+  await page.route('**/api/user/list?*', route => route.fulfill({
+    status: 401, contentType: 'application/json', body: JSON.stringify({ code: 401, message: 'acceptance-expired' }),
+  }), { times: 1 });
+  await page.route('**/api/user/refresh_token', route => route.fulfill({
+    status: 401, contentType: 'application/json', body: JSON.stringify({ code: 401, message: 'acceptance-expired' }),
+  }), { times: 1 });
+  await page.locator('.ops-page__filters').getByRole('button', { name: /^搜\s*索$/ }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(page.locator('.ops-page')).toHaveCount(0);
+  await dialog.getByLabel('账号', { exact: true }).fill(process.env.CLOUDOPS_TEST_USER || 'admin');
+  await dialog.getByLabel('密码', { exact: true }).fill(adminPassword()!);
+  const profile = page.waitForResponse(response => new URL(response.url()).pathname === '/api/user/profile');
+  const list = page.waitForResponse(response => new URL(response.url()).pathname === '/api/user/list' && response.status() === 200);
+  await dialog.getByRole('button', { name: '登录', exact: true }).click();
+  await page.evaluate(() => { for (const input of document.querySelectorAll<HTMLInputElement>('input[type="password"]')) input.value = ''; });
+  expect((await profile).status()).toBe(200);
+  expect((await list).status()).toBe(200);
+  await expect(dialog).not.toBeVisible();
+  await expect(page).toHaveURL(/system_user/);
+  await expect(page.locator('.ops-page h1')).toHaveText('用户管理');
+  expect(errors).toEqual([]);
+});
