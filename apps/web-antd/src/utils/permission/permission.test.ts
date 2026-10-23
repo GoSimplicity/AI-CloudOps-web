@@ -53,7 +53,8 @@ describe('权限码常量', () => {
       expect(PERMISSION_CODES).not.toHaveProperty(key);
     }
     // 主范围 70 个 + 污点弹窗补充的 k8s.node.taintAdd（fe02-scope-decisions (c)）
-    expect(ALL_KEYS).toHaveLength(71);
+    // + Node 批量禁用调度 k8s.node.batchCordon（逐个调用单节点 cordon）
+    expect(ALL_KEYS).toHaveLength(72);
   });
 });
 

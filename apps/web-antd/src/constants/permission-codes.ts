@@ -7,7 +7,9 @@
  * - key 为清单里的按钮 key，value 为权限码 = 后端路由模板路径（含 /api 或 /api/v1 前缀），
  *   即 GET /user/codes 原样返回的字符串。/user/codes 不带 HTTP 方法，前端只按字符串精确匹配，不拼方法。
  * - 只收录清单中状态为「已对上（matched）」的 FE-02 主范围按钮；另按 fe02-scope-decisions.md (c)
- *   补收污点弹窗的 k8s.node.taintAdd（清单 v2 #77，已对上）。
+ *   补收污点弹窗的 k8s.node.taintAdd（清单 v2 #77，已对上）；
+ *   以及 Node 批量禁用调度 k8s.node.batchCordon：清单 v2 标「待前端确认（假按钮）」，
+ *   后端没有批量接口，前端逐个调用单节点 cordon，权限码按清单取单节点 cordon 模板。
  * - 未收录（本单不处理）：
  *   1. 第 4.2 节 8 个待定按钮：k8s.secret.viewPlain / copyPlain / viewYaml、system.audit.delete /
  *      batchDelete、k8s.namespace.forceDelete、k8s.cluster.kubeconfigCopy / kubeconfigDownload；
@@ -74,6 +76,7 @@ export const PERMISSION_CODES = {
     '/api/k8s/clusters/:cluster_id/namespace/:name/delete',
   'k8s.node.taintDelete': '/api/k8s/node/:cluster_id/:node_name/taints/delete',
   'k8s.node.taintAdd': '/api/k8s/node/:cluster_id/:node_name/taints/add',
+  'k8s.node.batchCordon': '/api/k8s/node/:cluster_id/:node_name/cordon',
   'k8s.task.apply': '/api/k8s/yaml_task/:cluster_id/:id/apply',
   'k8s.task.batchApply': '/api/k8s/yaml_task/:cluster_id/:id/apply',
   'k8s.pod.exec':

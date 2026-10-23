@@ -93,7 +93,7 @@
             danger 
             @click="() => batchOperation('禁用调度')" 
             :disabled="!selectedRows.length" 
-            v-if="selectedRows.length > 0"
+            v-if="selectedRows.length > 0 && can('k8s.node.batchCordon')"
             class="k8s-toolbar-btn"
             title="批量禁用调度"
           >

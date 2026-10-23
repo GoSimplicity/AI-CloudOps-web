@@ -662,16 +662,52 @@ export function useNodePage() {
       cancelText: '取消',
       centered: true,
       onOk: async () => {
-        try {
-          // 根据不同操作类型执行相应的批量操作
-          // 这里可以扩展更多批量操作
-          message.success(`批量${operation}操作已启动`);
+        // 后端只有单节点 cordon（POST /api/k8s/node/:cluster_id/:node_name/cordon），没有批量接口，
+        // 这里逐个节点调用单节点接口，再汇总成功/失败
+        if (operation !== '禁用调度') {
+          message.error(`暂不支持批量${operation}`);
+          return;
+        }
+        const targets = [...selectedRows.value];
+        const results = await Promise.allSettled(
+          targets.map((record) => {
+            const clusterId = record.cluster_id || filterClusterId.value;
+            if (!clusterId) return Promise.reject(new Error('无效的集群ID'));
+            const params: K8sNodeCordonReq = {
+              cluster_id: clusterId,
+              node_name: record.name,
+            };
+            return cordonK8sNode(params);
+          }),
+        );
+        const failed = targets.filter((_, index) => results[index]?.status === 'rejected');
+        const failedNames = failed.map((record) => record.name).join('、');
+        const successCount = targets.length - failed.length;
+
+        if (failed.length === 0) {
+          message.success(`批量${operation}完成：${successCount} 个节点已${operation}`);
+        } else if (successCount > 0) {
+          message.warning(
+            `批量${operation}部分成功：成功 ${successCount} 个，失败 ${failed.length} 个（${failedNames}）`,
+          );
+        } else {
+          // 全部失败且每个失败都已有统一提示（403 / 业务错误原文）时不再叠加
+          const allNotified = results.every(
+            (result) => result.status === 'rejected' && isPermissionDeniedError(result.reason),
+          );
+          if (!allNotified) {
+            message.error(`批量${operation}失败：${failed.length} 个节点均未成功（${failedNames}）`);
+          }
+        }
+
+        if (successCount > 0) {
           selectedRowKeys.value = [];
           selectedRows.value = [];
-          await fetchNodes();
-        } catch (err) {
-          if (!isPermissionDeniedError(err)) message.error(`批量${operation}失败`);
-
+          try {
+            await fetchNodes();
+          } catch {
+            // fetchNodes 自己处理加载失败状态
+          }
         }
       },
     });
