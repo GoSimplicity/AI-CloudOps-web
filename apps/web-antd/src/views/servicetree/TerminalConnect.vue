@@ -96,7 +96,7 @@
 
 <script lang="ts" setup>
 import { useAppConfig } from "@vben/hooks";
-import { websocketUrl } from "#/utils/websocket-url";
+import { websocketProtocols, websocketUrl } from "#/utils/websocket-url";
 import { onMounted, ref, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Terminal } from 'xterm';
@@ -318,11 +318,11 @@ const connectWebSocket = (id: string) => {
   }
 
   const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
-  const wsUrl = websocketUrl(apiURL, `tree/cloud/${encodeURIComponent(id)}/terminal`, token, window.location.origin);
+  const wsUrl = websocketUrl(apiURL, `tree/cloud/${encodeURIComponent(id)}/terminal`, window.location.origin);
 
   try {
     connectionStatus.value = 'connecting';
-    ws.value = new WebSocket(wsUrl);
+    ws.value = new WebSocket(wsUrl, websocketProtocols(token));
 
     // 设置连接超时
     connectionTimer.value = setTimeout(() => {

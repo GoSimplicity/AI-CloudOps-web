@@ -8,6 +8,7 @@ import { WebLinksAddon } from 'xterm-addon-web-links';
 import 'xterm/css/xterm.css';
 import { useAccessStore } from '@vben/stores';
 import { useAppConfig } from '@vben/hooks';
+import { websocketProtocols, websocketUrl } from '#/utils/websocket-url';
 import {
   type K8sPod,
   type PodContainer,
@@ -1642,11 +1643,13 @@ export function usePodPage() {
       };
     }
 
-    // 构建WebSocket URL - 使用相对路径利用Vite代理
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const url = `${protocol}//${host}/api/k8s/pod/${params.cluster_id}/${params.namespace}/${params.pod_name}/containers/${params.container}/exec?token=${encodeURIComponent(token)}`;
-    
+    const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
+    const url = websocketUrl(
+      apiURL,
+      `k8s/pod/${params.cluster_id}/${encodeURIComponent(params.namespace)}/${encodeURIComponent(params.pod_name)}/containers/${encodeURIComponent(params.container)}/exec`,
+      window.location.origin,
+    );
+
     let socket: WebSocket | null = null;
     let isManualClose = false;
     let reconnectAttempts = 0;
@@ -1674,7 +1677,7 @@ export function usePodPage() {
         }
         
         // 创建WebSocket连接
-        socket = new WebSocket(url);
+        socket = new WebSocket(url, websocketProtocols(accessStore.accessToken || ''));
 
         socket.onopen = () => {
           reconnectAttempts = 0; // 重置重连计数

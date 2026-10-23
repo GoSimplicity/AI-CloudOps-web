@@ -134,10 +134,6 @@ export async function deleteTreeLocal(id: number) {
   return requestClient.delete(`/tree/local/delete/${id}`);
 }
 
-export async function connectTerminal(id: number, token: string) {
-  return requestClient.get(`/tree/local/terminal/${id}?token=${token}`);
-}
-
 export async function bindTreeLocal(id: number, data: BindTreeLocalResourceReq) {
   return requestClient.post(`/tree/local/bind/${id}`, data);
 }
