@@ -8,6 +8,8 @@ type SelectOption = BasicOption;
 type TabOption = BasicOption;
 
 interface BasicUserInfo {
+  /** 用户邮箱 */
+  email?: string;
   /**
    * 头像
    */

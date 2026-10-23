@@ -10,13 +10,15 @@ import {
   VbenScrollbar,
 } from '@vben-core/shadcn-ui';
 
-import { useToggle } from '@vueuse/core';
+import { ref } from 'vue';
 
 interface Props {
   /**
    * 显示圆点
    */
   dot?: boolean;
+  /** 未接入通知源时的说明 */
+  emptyText?: string;
   /**
    * 消息列表
    */
@@ -27,6 +29,7 @@ defineOptions({ name: 'NotificationPopup' });
 
 withDefaults(defineProps<Props>(), {
   dot: false,
+  emptyText: '',
   notifications: () => [],
 });
 
@@ -37,7 +40,7 @@ const emit = defineEmits<{
   viewAll: [];
 }>();
 
-const [open, toggle] = useToggle();
+const open = ref(false);
 
 function close() {
   open.value = false;
@@ -66,21 +69,23 @@ function handleClick(item: NotificationItem) {
     content-class="relative right-2 w-[360px] p-0"
   >
     <template #trigger>
-      <div class="flex-center mr-2 h-full" @click.stop="toggle()">
-        <VbenIconButton class="bell-button relative">
-          <span
-            v-if="dot"
-            class="bg-primary absolute right-0.5 top-0.5 h-2 w-2 rounded"
-          ></span>
-          <Bell class="size-4" />
-        </VbenIconButton>
-      </div>
+      <VbenIconButton
+        :aria-label="$t('widgets.notifications')"
+        class="bell-button relative mr-2"
+      >
+        <span
+          v-if="dot"
+          class="bg-primary absolute right-0.5 top-0.5 h-2 w-2 rounded"
+        ></span>
+        <Bell class="size-4" />
+      </VbenIconButton>
     </template>
 
     <div class="relative">
       <div class="flex items-center justify-between p-4 py-3">
         <div class="text-foreground">{{ $t('widgets.notifications') }}</div>
         <VbenIconButton
+          v-if="notifications.length > 0"
           :tooltip="$t('widgets.markAllAsRead')"
           @click="handleMakeAll"
         >
@@ -124,11 +129,12 @@ function handleClick(item: NotificationItem) {
 
       <template v-else>
         <div class="flex-center text-muted-foreground min-h-[150px] w-full">
-          {{ $t('common.noData') }}
+          {{ emptyText || $t('common.noData') }}
         </div>
       </template>
 
       <div
+        v-if="notifications.length > 0"
         class="border-border flex items-center justify-between border-t px-4 py-3"
       >
         <VbenButton size="sm" variant="ghost" @click="handleClear">

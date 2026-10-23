@@ -4,7 +4,6 @@ import type { NotificationItem } from '@vben/layouts';
 import { computed, ref } from 'vue';
 
 import { AuthenticationLoginExpiredModal } from '@vben/common-ui';
-import { VBEN_DOC_URL, VBEN_GITHUB_URL } from '@vben/constants';
 import { BookOpenText, CircleHelp, MdiGithub } from '@vben/icons';
 import {
   BasicLayout,
@@ -12,45 +11,17 @@ import {
   Notification,
   UserDropdown,
 } from '@vben/layouts';
-import { preferences } from '@vben/preferences';
 import { storeToRefs, useAccessStore, useUserStore } from '@vben/stores';
 import { openWindow } from '@vben/utils';
 
 import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
 
-import AI from '#/views/ai/ai.vue'; 
+import AI from '#/views/ai/ai.vue';
 
-const notifications = ref<NotificationItem[]>([
-  {
-    avatar: 'https://avatar.vercel.sh/vercel.svg?text=VB',
-    date: '3小时前',
-    isRead: true,
-    message: '描述信息描述信息描述信息',
-    title: '收到了 14 份新周报',
-  },
-  {
-    avatar: 'https://avatar.vercel.sh/1',
-    date: '刚刚',
-    isRead: false,
-    message: '描述信息描述信息描述信息',
-    title: '朱偏右 回复了你',
-  },
-  {
-    avatar: 'https://avatar.vercel.sh/1',
-    date: '2024-01-01',
-    isRead: false,
-    message: '描述信息描述信息描述信息',
-    title: '曲丽丽 评论了你',
-  },
-  {
-    avatar: 'https://avatar.vercel.sh/satori',
-    date: '1天前',
-    isRead: false,
-    message: '描述信息描述信息描述信息',
-    title: '代办提醒',
-  },
-]);
+// 通知源接入前保持真实空态，不生成演示消息
+const notifications = ref<NotificationItem[]>([]);
+const projectURL = 'https://github.com/GoSimplicity/AI-CloudOps';
 
 const userStore = useUserStore();
 const authStore = useAuthStore();
@@ -62,7 +33,7 @@ const showDot = computed(() =>
 const menus = computed(() => [
   {
     handler: () => {
-      openWindow(VBEN_DOC_URL, {
+      openWindow(`${projectURL}#readme`, {
         target: '_blank',
       });
     },
@@ -71,7 +42,7 @@ const menus = computed(() => [
   },
   {
     handler: () => {
-      openWindow(VBEN_GITHUB_URL, {
+      openWindow(projectURL, {
         target: '_blank',
       });
     },
@@ -80,7 +51,7 @@ const menus = computed(() => [
   },
   {
     handler: () => {
-      openWindow(`${VBEN_GITHUB_URL}/issues`, {
+      openWindow(`${projectURL}/issues`, {
         target: '_blank',
       });
     },
@@ -92,7 +63,7 @@ const menus = computed(() => [
 const { loginLoading } = storeToRefs(authStore);
 
 const avatar = computed(() => {
-  return userStore.userInfo?.avatar ?? preferences.app.defaultAvatar;
+  return userStore.userInfo?.avatar || '';
 });
 
 async function handleLogout() {
@@ -111,16 +82,32 @@ function handleMakeAll() {
 <template>
   <BasicLayout @clear-preferences-and-logout="handleLogout">
     <template #user-dropdown>
-      <UserDropdown :avatar :menus :text="userStore.userInfo?.realName" description="ann.vben@gmail.com" tag-text="Pro"
-        @logout="handleLogout" />
+      <UserDropdown
+        :avatar
+        :menus
+        :text="userStore.userInfo?.realName || userStore.userInfo?.username"
+        :description="userStore.userInfo?.email || userStore.userInfo?.username"
+        @logout="handleLogout"
+      />
     </template>
     <template #notification>
-      <Notification :dot="showDot" :notifications="notifications" @clear="handleNoticeClear"
-        @make-all="handleMakeAll" />
+      <Notification
+        :dot="showDot"
+        :notifications="notifications"
+        empty-text="通知源尚未接入"
+        @clear="handleNoticeClear"
+        @make-all="handleMakeAll"
+      />
     </template>
     <template #extra>
-      <AuthenticationLoginExpiredModal v-model:open="accessStore.loginExpired" :avatar :loading="loginLoading"
-        password-placeholder="123456" username-placeholder="vben" @submit="authStore.authLogin" />
+      <AuthenticationLoginExpiredModal
+        v-model:open="accessStore.loginExpired"
+        :avatar
+        :loading="loginLoading"
+        password-placeholder="请输入密码"
+        :username-placeholder="userStore.userInfo?.username || '请输入账号'"
+        @submit="authStore.authLogin"
+      />
     </template>
     <template #lock-screen>
       <LockScreen :avatar @to-login="handleLogout" />

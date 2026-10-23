@@ -394,3 +394,56 @@ test('workorder list layouts preserve mobile actions and cancellation', async ({
   expect(errors).toEqual([]);
   expect(apiFailures).toEqual([]);
 });
+
+test('account menu reflects profile API and notifications have an honest empty state', async ({
+  page,
+}) => {
+  const password = adminPassword();
+  test.skip(
+    !password,
+    'Set an isolated administrator password for account acceptance.',
+  );
+  const profileResponse = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === '/api/user/profile',
+  );
+  await page.goto(routePath('/auth/login'));
+  await page
+    .getByLabel('账号', { exact: true })
+    .fill(process.env.CLOUDOPS_TEST_USER || 'admin');
+  await page.getByLabel('密码', { exact: true }).fill(password!);
+  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>('#password');
+    if (input) input.value = '';
+  });
+  await expect(page).not.toHaveURL(/auth\/login/, { timeout: 30_000 });
+  const profile = (await (await profileResponse).json()).data;
+  await page.getByRole('button', { name: '账户菜单', exact: true }).click();
+  const menu = page.locator('[role="menu"][data-state="open"]');
+  await expect(menu).toBeVisible();
+  const content = await menu.textContent();
+  expect(
+    content?.includes(profile.real_name || profile.username),
+    'account name matches profile',
+  ).toBe(true);
+  expect(
+    content?.includes(profile.email || profile.username),
+    'account description matches profile',
+  ).toBe(true);
+  await expect(menu.getByText('Pro', { exact: true })).toHaveCount(0);
+  await expect(
+    menu.getByText('ann.vben@gmail.com', { exact: true }),
+  ).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: '通知', exact: true }).click();
+  await expect(page.getByText('通知源尚未接入', { exact: true })).toBeVisible();
+  await expect(page.locator('.bell-button .bg-primary')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: '查看所有', exact: true }),
+  ).toHaveCount(0);
+  await page.screenshot({
+    path: '.cache/ui-verification/notification-empty.png',
+    fullPage: true,
+    animations: 'disabled',
+  });
+});

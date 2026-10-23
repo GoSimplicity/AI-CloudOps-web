@@ -160,7 +160,7 @@ if (enableShortcutKey.value) {
   </LogoutModal>
 
   <DropdownMenu>
-    <DropdownMenuTrigger>
+    <DropdownMenuTrigger :aria-label="$t('widgets.accountMenu')">
       <div class="hover:bg-accent ml-1 mr-2 cursor-pointer rounded-full p-1.5">
         <div class="hover:text-accent-foreground flex-center">
           <VbenAvatar :alt="text" :src="avatar" class="size-8" dot />
@@ -181,11 +181,14 @@ if (enableShortcutKey.value) {
             class="text-foreground mb-1 flex items-center text-sm font-medium"
           >
             {{ text }}
-            <Badge class="ml-2 text-green-400">
+            <Badge v-if="tagText" class="ml-2 text-green-400">
               {{ tagText }}
             </Badge>
           </div>
-          <div class="text-muted-foreground text-xs font-normal">
+          <div
+            v-if="description"
+            class="text-muted-foreground text-xs font-normal"
+          >
             {{ description }}
           </div>
         </div>

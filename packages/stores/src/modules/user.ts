@@ -1,6 +1,8 @@
 import { acceptHMRUpdate, defineStore } from 'pinia';
 
 interface BasicUserInfo {
+  /** 用户邮箱 */
+  email?: string;
   /**
    * 头像
    */

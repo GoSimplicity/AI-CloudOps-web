@@ -55,6 +55,7 @@
     }
   },
   "widgets": {
+    "accountMenu": "Account menu",
     "document": "Document",
     "qa": "Q&A",
     "setting": "Settings",
