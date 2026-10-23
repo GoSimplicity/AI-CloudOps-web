@@ -152,6 +152,35 @@ for (const testCase of cases) {
       await page.fetch();
       expect(page.state.loadError.value).not.toBe('');
     });
+
+    it.each([
+      ['CanceledError', () => new axios.CanceledError(undefined, {} as any, {})],
+      ['RequestOwnerChangedError', () => new RequestOwnerChangedError()],
+      ['AbortError', () => new DOMException('aborted', 'AbortError')],
+    ])('incr3 P3-8：已有数据后列表请求被取消（%s）：清空旧列表与分页、loading 复位、不写错误、不提示', async (_label, make) => {
+      const page = testCase.create();
+      page.state.filterClusterId.value = 1;
+      client.get.mockResolvedValueOnce({
+        items: [{ name: 'old', namespace: 'alpha', cluster_id: 1 }],
+        total: 1,
+      });
+      await page.fetch();
+      expect(page.items.value).toHaveLength(1);
+      page.state.selectedRowKeys.value = ['old'];
+
+      const pending = Promise.withResolvers<Result>();
+      client.get.mockReturnValueOnce(pending.promise);
+      const request = page.fetch();
+      expect(page.state.loading.value).toBe(true);
+      pending.reject(make());
+      await request;
+      expect(page.items.value).toEqual([]);
+      expect(page.state.total.value).toBe(0);
+      expect(page.state.selectedRowKeys.value).toEqual([]);
+      expect(page.state.loading.value).toBe(false);
+      expect(page.state.loadError.value).toBe('');
+      expect(message.error).not.toHaveBeenCalled();
+    });
   });
 }
 
