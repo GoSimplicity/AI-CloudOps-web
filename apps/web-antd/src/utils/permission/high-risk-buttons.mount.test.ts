@@ -13,7 +13,7 @@ import {
 } from '#/constants/permission-codes';
 
 /**
- * FE-02 v3 一审 P3-1：高危按钮挂载级断言。
+ * FE-02 v3 一审 P3-1：高危按钮挂载级断言（码集口径见清单 v4 6.1）。
  * permission-coverage.test 只按源码字符串找 can('key')，写在注释里或写成 `can(x) || true` 也能通过；
  * 这里挂载真实页面组件、走真实 usePermission，给一个非 admin、没有对应码的账号断言按钮不渲染，
  * 给上该码后断言按钮渲染。Node 禁用 / 启用 / 批量禁用调度的挂载断言在 views/k8s/node/Node.batchCordon.test.ts。
@@ -186,7 +186,7 @@ const CASES: Case[] = [
     name: 'Secret 复制明文（详情弹窗内）',
     page: 'Secret',
     key: 'k8s.secret.copyPlain',
-    // copyPlain 与 viewPlain 是同一个码（清单 v3 4.2 节 .../detail），不能靠「只给 viewPlain 码」
+    // copyPlain 与 viewPlain 是同一个码（清单 v4 4.2 节 .../detail），不能靠「只给 viewPlain 码」
     // 打开详情；这里直接把详情弹窗置为打开并填入明文，只验证复制按钮本身的门禁。
     prepare: async () => {
       const vm = wrapper!.vm as any;

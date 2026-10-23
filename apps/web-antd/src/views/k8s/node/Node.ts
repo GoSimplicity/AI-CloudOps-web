@@ -589,12 +589,24 @@ export function useNodePage() {
     }
   };
 
+  // S1b（清单 v4 #84 / #85 / #87）始终按码判断：除了按钮不渲染，函数入口也拦截，
+  // 没有码时不弹确认、不发 cordon / uncordon 请求（验收标准 v3 FE-02「包括直接调用对应函数」）
+  const denyWithoutCode = (key: 'k8s.node.batchCordon' | 'k8s.node.cordon' | 'k8s.node.uncordon') => {
+    if (usePermission().can(key)) return false;
+    message.error({
+      content: PERMISSION_DENIED_MESSAGE,
+      key: PERMISSION_DENIED_MESSAGE_KEY,
+    });
+    return true;
+  };
+
   // 节点调度操作（使用 cordon/uncordon 接口）
   const toggleNodeSchedule = async (record: K8sNode) => {
     // schedulable === 1 表示可调度，需要禁用调度（cordon）
     // schedulable === 2 表示不可调度，需要启用调度（uncordon）
     const needCordon = record.schedulable === 1;
     const action = needCordon ? '禁用' : '启用';
+    if (denyWithoutCode(needCordon ? 'k8s.node.cordon' : 'k8s.node.uncordon')) return;
     
     Modal.confirm({
       title: `${action}节点调度`,
@@ -690,6 +702,7 @@ export function useNodePage() {
   // 批量操作
   const batchOperation = (operation: string) => {
     if (!selectedRows.value.length) return;
+    if (operation === '禁用调度' && denyWithoutCode('k8s.node.batchCordon')) return;
     
     Modal.confirm({
       title: `批量${operation}`,

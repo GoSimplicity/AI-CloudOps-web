@@ -153,7 +153,7 @@ afterEach(() => {
 });
 
 describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
-  it('c-1 常量文件中 k8s.node.taintAdd 与清单 v2 第 6 节一致', () => {
+  it('c-1 常量文件中 k8s.node.taintAdd 与清单 v4 第 6 节一致（v2 引入）', () => {
     expect(PERMISSION_CODES['k8s.node.taintAdd']).toBe(
       '/api/k8s/node/:cluster_id/:node_name/taints/add',
     );
