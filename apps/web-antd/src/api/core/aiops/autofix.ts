@@ -62,8 +62,21 @@ export interface AutoFixWorkflowConfirmRequest {
   plan_id: string;
 }
 
+/**
+ * 审批元数据（aiops bb8c2ff autofix_service.py:419-439）。
+ * pending = status 'needs_human_confirmation' + state 'pending'（+ confirmation_required 不为 false）。
+ */
+export interface AutoFixApproval {
+  confirm_endpoint?: string;
+  confirmation_required?: boolean;
+  expires_at: string;
+  pending_action_ids?: string[];
+  retry_safe: boolean;
+  state: string;
+}
+
 export interface AutoFixWorkflowResponse {
-  approval?: { expires_at: string; state: string; retry_safe: boolean };
+  approval?: AutoFixApproval;
   agents_used: string[];
   blocked_actions: AutoFixAction[];
   candidate_actions: AutoFixAction[];

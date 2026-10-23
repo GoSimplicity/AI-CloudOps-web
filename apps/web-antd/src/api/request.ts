@@ -28,6 +28,7 @@ import {
 } from '#/utils/permission/forbidden';
 
 import { refreshTokenApi } from './core';
+import { markHttpErrorNotified } from './http-error-notice';
 
 /** 通用错误提示的 message key 前缀，key 按文案区分 */
 export const HTTP_ERROR_MESSAGE_KEY_PREFIX = 'http-error:';
@@ -273,10 +274,10 @@ function createRequestClient(baseURL: string) {
       }
       if (isPermissionDeniedError(error)) return;
       // 固定 key：同一文案的并发错误（如批量操作碰上 500 / 网络错误）合并为一条
-      message.error({
-        content: msg,
-        key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${msg}`,
-      });
+      const key = `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${msg}`;
+      message.error({ content: msg, key });
+      // 记下 key，页面需要更具体的文案时用同一个 key 替换，避免一个错误两条提示
+      markHttpErrorNotified(error, key);
     }),
   );
 
