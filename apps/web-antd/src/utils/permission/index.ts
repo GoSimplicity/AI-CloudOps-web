@@ -13,13 +13,18 @@
  *    不放行会导致 admin 看不到任何危险按钮；
  * 3. 权限码含 '*' 或 '/*'（后端全局通配，auth.go:78）时放行；
  * 4. 其余按权限码字符串精确匹配（不拼 HTTP 方法），传多个码时满足任一即可。
+ *
+ * U3（清单 #78–#99，范围变更待用户确认）：开关 U3_SCOPE_APPROVED 关闭时 can() 对这些 key
+ * 不做权限码判断、直接放行（保持现状显示，后端仍鉴权）；打开后与其它 key 一样按码判断。
  */
 import { useAccess } from '@vben/access';
 import { useUserStore } from '@vben/stores';
 
 import {
-  PERMISSION_CODES,
+  ALL_PERMISSION_CODES,
+  isU3PermissionKey,
   type PermissionKey,
+  U3_SCOPE_APPROVED,
 } from '#/constants/permission-codes';
 
 /** 视为超级管理员的角色值（Vben 约定 super，及 admin） */
@@ -53,7 +58,15 @@ function normalizeRequired(required: readonly string[] | string) {
 
 /** 按钮 key → 权限码 */
 export function getPermissionCode(key: PermissionKey): string {
-  return PERMISSION_CODES[key];
+  return ALL_PERMISSION_CODES[key];
+}
+
+/** 该 key 当前是否按权限码判断：U3 key 只在 U3 获批后判断，其余 key 始终判断 */
+export function isPermissionEnforced(
+  key: PermissionKey,
+  u3Approved: boolean = U3_SCOPE_APPROVED,
+) {
+  return u3Approved || !isU3PermissionKey(key);
 }
 
 /** 纯函数版本，便于在非组件环境与单测中使用 */
@@ -89,6 +102,7 @@ export function usePermission() {
   }
 
   function can(key: PermissionKey) {
+    if (!isPermissionEnforced(key)) return true;
     return hasPerm(getPermissionCode(key));
   }
 

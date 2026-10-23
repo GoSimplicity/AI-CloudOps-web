@@ -671,7 +671,10 @@ onMounted(async () => {
             </a-tooltip>
             <a-tooltip
               title="强制删除"
-              v-if="record.status === NamespaceStatus.Terminating"
+              v-if="
+                can('k8s.namespace.forceDelete') &&
+                record.status === NamespaceStatus.Terminating
+              "
             >
               <a-button
                 title="强制删除"
