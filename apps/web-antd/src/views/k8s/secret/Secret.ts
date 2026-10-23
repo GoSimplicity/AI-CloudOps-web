@@ -724,8 +724,10 @@ export function useSecretPage() {
     
     try {
       // 处理多行字符串（| 格式）
+      // incr6 P3-1：缩进与 `key:` 后只认同一行的空格 / 制表符（[ \t]*），不跨行：
+      // 原来的 \s* 会把空行并进缩进、把下一行的内容当成本键的值
       let processedYaml = yamlContent.replace(
-        /^(\s*)([\w\-\.]+):\s*\|\s*\n((?:\s{2,}.*\n?)*)/gm,
+        /^([ \t]*)([\w\-\.]+):[ \t]*\|\s*\n((?:\s{2,}.*\n?)*)/gm,
         (match, indent, key, content) => {
           // 检查是否在 data 字段下
           const beforeMatch = yamlContent.substring(0, yamlContent.indexOf(match));
@@ -748,8 +750,10 @@ export function useSecretPage() {
       );
       
       // 处理带引号的字符串
+      // incr6 P3-1：只处理同一行的 `key: "..."`。原来 `:\s*"` 跨行，`token:` 换行后的 `"<redacted>"`
+      // 会被编码成 PHJlZGFjdGVkPg== 发出去（原值被覆盖），后续带引号的键（如 annotations 里的 "a/b": x）也会被误编码
       processedYaml = processedYaml.replace(
-        /^(\s*)([\w\-\.]+):\s*"([^"]*(?:\\.[^"]*)*)"/gm,
+        /^([ \t]*)([\w\-\.]+):[ \t]*"([^"]*(?:\\.[^"]*)*)"/gm,
         (match, indent, key, value) => {
           // 检查是否在 data 字段下
           const beforeMatch = processedYaml.substring(0, processedYaml.indexOf(match));

@@ -190,22 +190,63 @@ export function findRedactedPlaceholder(payload: {
 const QUOTED_REDACTED_VALUE_PATTERN =
   /^[ \t]*[^\s#:][^:\n]*:[ \t]*(["'])<redacted>\1[ \t]*(?:#.*)?$/m;
 
-/** YAML 文本里是否有带引号的占位符（裸 `<redacted>` 合法，不算） */
+function leadingWidth(line: string) {
+  return line.length - line.trimStart().length;
+}
+
+/**
+ * 值写在下一行时的键行：只有 `key:`（可在列表项里、可带引号的键），后面只允许标签 / 锚点和行尾注释。
+ * 键分支不能以 `- ` 开头（`- ` 只归列表项前缀），避免与列表项前缀重叠回溯（同 BLOCK_SCALAR_HEADER_PATTERN）。
+ */
+const VALUE_ON_NEXT_LINE_KEY_PATTERN =
+  /^([ \t]*)(?:-[ \t]+)*(?:"[^"\n]*"|'[^'\n]*'|(?:[^\s#'"-]|-(?=\S))[^:\n]*):(?:[ \t]+[!&]\S*)*[ \t]*(?:#.*)?$/;
+
+/** 下一行整行是带引号的占位符（可带标签 / 锚点与行尾注释） */
+const NEXT_LINE_QUOTED_REDACTED_PATTERN =
+  /^[ \t]*(?:[!&]\S*[ \t]+)*(["'])<redacted>\1[ \t]*(?:#.*)?$/;
+
+/**
+ * incr6 P3-1：`key:` 换行后（跳过空行与整行注释）更深缩进的一行恰好是 `"<redacted>"` / `'<redacted>'`，
+ * YAML 解析后与同行写法 `key: "<redacted>"` 相同，同样拦截。逐行扫描，线性时间。
+ */
+function yamlHasNextLineQuotedRedacted(yamlText: string) {
+  const lines = yamlText.split(/\r?\n/);
+  let keyIndent: null | number = null;
+  for (const line of lines) {
+    if (keyIndent !== null) {
+      const trimmed = line.trim();
+      if (trimmed === '' || trimmed.startsWith('#')) continue;
+      if (
+        leadingWidth(line) > keyIndent &&
+        NEXT_LINE_QUOTED_REDACTED_PATTERN.test(line)
+      ) {
+        return true;
+      }
+      keyIndent = null;
+    }
+    const key = VALUE_ON_NEXT_LINE_KEY_PATTERN.exec(line);
+    if (key) keyIndent = key[1]!.length;
+  }
+  return false;
+}
+
+/** YAML 文本里是否有带引号的占位符（同行或值在下一行；裸 `<redacted>` 合法，不算） */
 export function yamlHasQuotedRedacted(yamlText: string) {
-  return QUOTED_REDACTED_VALUE_PATTERN.test(yamlText);
+  return (
+    QUOTED_REDACTED_VALUE_PATTERN.test(yamlText) ||
+    yamlHasNextLineQuotedRedacted(yamlText)
+  );
 }
 
 /**
  * 块标量头：行首缩进，可选若干 `- `（列表项），可选 `key:`（含带引号的键），可选标签 / 锚点，然后是 `|` 或 `>`，
  * 后接可选的块尾指示符（`-` / `+`）与缩进指示符（1-9，两者顺序任意），再可选行尾注释。
  * 值里普通出现的 `|` / `>`（如 `"x |"`、`x>`）不匹配。
+ * incr6 P3-2：键分支不能以 `- `（`-` 后跟空白）开头，`- ` 只归列表项前缀；否则两者重叠，
+ * 60KB 的 `- - - …` 单行要回溯约 1.5s（平方级），改后约 1ms。以 `-` 开头的键（如 `-k:`）仍可匹配。
  */
 const BLOCK_SCALAR_HEADER_PATTERN =
-  /^([ \t]*)(?:-[ \t]+)*(?:(?:"[^"\n]*"|'[^'\n]*'|[^\s#'"][^:\n]*):[ \t]+)?(?:[!&]\S*[ \t]+)*[|>](?:[1-9][+-]?|[+-][1-9]?)?[ \t]*(?:#.*)?$/;
-
-function leadingWidth(line: string) {
-  return line.length - line.trimStart().length;
-}
+  /^([ \t]*)(?:-[ \t]+)*(?:(?:"[^"\n]*"|'[^'\n]*'|(?:[^\s#'"-]|-(?=\S))[^:\n]*):[ \t]+)?(?:[!&]\S*[ \t]+)*[|>](?:[1-9][+-]?|[+-][1-9]?)?[ \t]*(?:#.*)?$/;
 
 /**
  * YAML 文本里是否有块标量里单独一行的占位符：块内任一行去掉首尾空白后**恰好等于** `<redacted>` 即算；

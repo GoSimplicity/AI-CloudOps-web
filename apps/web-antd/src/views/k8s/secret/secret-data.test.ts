@@ -287,6 +287,82 @@ describe('第四轮：块标量（| / >）里的 <redacted> 拦截', () => {
   });
 });
 
+describe('incr6 P3-1：值换行写在下一行的带引号占位符', () => {
+  // 键行只有 `key:`（可带标签 / 锚点 / 行尾注释），下一非空非注释行更深缩进且整行是带引号的占位符：
+  // YAML 解析后就是 `key: "<redacted>"`，与同行写法一样拦截
+  it.each([
+    ['双引号', 'data:\n  token:\n    "<redacted>"\n'],
+    ['单引号', "data:\n  token:\n    '<redacted>'\n"],
+    ['更深缩进', 'data:\n  token:\n          "<redacted>"\n'],
+    ['中间夹注释行', 'data:\n  token:\n    # 保留原值\n    "<redacted>"\n'],
+    ['中间夹空行', 'data:\n  token:\n\n    "<redacted>"\n'],
+    ['键行带行尾注释', 'data:\n  token: # 保留原值\n    "<redacted>"\n'],
+    ['值行带行尾注释', 'data:\n  token:\n    "<redacted>"  # 保留原值\n'],
+    ['键行带标签', 'data:\n  token: !!str\n    "<redacted>"\n'],
+    ['值行带标签', 'data:\n  token:\n    !!str "<redacted>"\n'],
+    ['stringData', "stringData:\n  s:\n    '<redacted>'\n"],
+    ['列表项里的键', 'items:\n  - token:\n      "<redacted>"\n'],
+    ['CRLF 换行', 'data:\r\n  token:\r\n    "<redacted>"\r\n'],
+  ])('%s：拦截', (_, text) => {
+    expect(yamlHasQuotedRedacted(text)).toBe(true);
+    expect(getYamlRedactedError(text)).toBe(YAML_QUOTED_REDACTED_MESSAGE);
+  });
+
+  it.each([
+    [
+      '下一行是裸 <redacted>（后端还原原值）',
+      'data:\n  token:\n    <redacted>\n',
+    ],
+    ['下一行引号里不止占位符', 'data:\n  token:\n    "<redacted> x"\n'],
+    ['占位符当键名', 'data:\n  token:\n    "<redacted>": x\n'],
+    [
+      '下一行是带引号的键（metadata.annotations）',
+      `data:\n  a: ${FAKE_B64}\nmetadata:\n  annotations:\n    "fake.io/k": fake-v\n`,
+    ],
+    ['缩进没有更深（不是这个键的值）', 'data:\n  token:\n  "<redacted>"\n'],
+    ['键行本身有值', 'data:\n  token: x\n    "<redacted>"\n'],
+    ['隔了一个普通键', 'data:\n  token:\n    other: 1\n    "<redacted>"\n'],
+    ['整行注释里的占位符', 'data:\n  token:\n    # "<redacted>"\n    fake-v\n'],
+  ])('反例：%s，不拦截', (_, text) => {
+    expect(yamlHasQuotedRedacted(text)).toBe(false);
+  });
+});
+
+describe('incr6 P3-2：块标量头匹配不再随行长平方增长', () => {
+  // 旧正则 `(?:-[ \t]+)*` 与键分支 `[^\s#'"][^:\n]*` 都能吃 `- `，60KB 的 `- - - …` 单行要回溯约 1.5s。
+  // 阈值放宽到 500ms 给 CI 留余量（本机修复后约 1ms）
+  const PERF_BUDGET_MS = 500;
+  it.each([
+    ['`- ` × 30000 + x', `${'- '.repeat(30_000)}x`],
+    ['`- ` × 30000', '- '.repeat(30_000)],
+    ['`- -k ` × 12000', '- -k '.repeat(12_000)],
+    ['`-\\t` × 30000 + x', `${'-\t'.repeat(30_000)}x`],
+    ['`key:` + ` !a` × 20000', `k:${' !a'.repeat(20_000)} x`],
+  ])('60KB 单行 %s', (_, line) => {
+    expect(line.length).toBeGreaterThanOrEqual(60_000);
+    const start = performance.now();
+    expect(yamlHasBlockScalarRedacted(`data:\n${line}\n`)).toBe(false);
+    expect(getYamlRedactedError(`data:\n${line}\n`)).toBeNull();
+    expect(performance.now() - start).toBeLessThan(PERF_BUDGET_MS);
+  });
+
+  it('改写后仍识别列表项 / 以 - 开头的键 / 带引号的键', () => {
+    expect(yamlHasBlockScalarRedacted('- - |\n    <redacted>\n')).toBe(true);
+    expect(yamlHasBlockScalarRedacted('data:\n  -k: |\n    <redacted>\n')).toBe(
+      true,
+    );
+    expect(yamlHasBlockScalarRedacted('data:\n  -: |\n    <redacted>\n')).toBe(
+      true,
+    );
+    expect(
+      yamlHasBlockScalarRedacted('data:\n  "a: b": |\n    <redacted>\n'),
+    ).toBe(true);
+    expect(
+      yamlHasBlockScalarRedacted('data:\n  - - k: >-\n      <redacted>\n'),
+    ).toBe(true);
+  });
+});
+
 describe('readRevealedValue', () => {
   const res = {
     data: { a: FAKE_B64, bin: btoa(String.fromCharCode(0xff, 0xfe)) },

@@ -584,6 +584,60 @@ describe('规则 2：更新 Secret 的 data', () => {
     expect(sent).not.toContain(btoa(REDACTED_PLACEHOLDER));
   });
 
+  it.each([
+    ['双引号', `data:\n  token:\n    "${REDACTED_PLACEHOLDER}"\n`],
+    ['单引号', `data:\n  token:\n    '${REDACTED_PLACEHOLDER}'\n`],
+    ['更深缩进', `data:\n  token:\n          "${REDACTED_PLACEHOLDER}"\n`],
+    [
+      '中间夹注释',
+      `data:\n  token:\n    # 保留\n    "${REDACTED_PLACEHOLDER}"\n`,
+    ],
+  ])(
+    'incr6 P3-1：`token:` 换行后 %s 的占位符：拦截，不会被编码成 base64 发出去',
+    async (_, body) => {
+      api.updateByYaml.mockResolvedValueOnce({});
+      const page = yamlPage(`apiVersion: v1\nkind: Secret\n${body}`);
+      await page.submitYamlForm();
+      expect(api.updateByYaml).not.toHaveBeenCalled();
+      expect(message.warning).toHaveBeenCalledTimes(1);
+      expect(message.warning).toHaveBeenCalledWith(
+        YAML_QUOTED_REDACTED_MESSAGE,
+      );
+    },
+  );
+
+  it('incr6 P3-1 反例：data 之后的 metadata.annotations 带引号键原样提交，不被跨行当成 data 值编码', async () => {
+    api.updateByYaml.mockResolvedValueOnce({});
+    const page = yamlPage(
+      `apiVersion: v1\nkind: Secret\ndata:\n  alpha: ${FAKE_B64}\nmetadata:\n  annotations:\n    "fake.io/k": fake-v\n`,
+    );
+    await page.submitYamlForm();
+    expect(message.warning).not.toHaveBeenCalled();
+    const sent = api.updateByYaml.mock.calls[0]![0].yaml as string;
+    expect(sent).toContain(`  annotations:\n    "fake.io/k": fake-v\n`);
+    expect(sent).not.toContain(btoa('fake.io/k'));
+  });
+
+  it('incr6 P3-1 反例：data 下块标量前有空行，缩进仍按本行算，编码内容不带多余缩进', async () => {
+    api.updateByYaml.mockResolvedValueOnce({});
+    const page = yamlPage(
+      `apiVersion: v1\nkind: Secret\ndata:\n  alpha: ${FAKE_B64}\n\n  conf: |\n    fake-line\n`,
+    );
+    await page.submitYamlForm();
+    const sent = api.updateByYaml.mock.calls[0]![0].yaml as string;
+    expect(sent).toContain(`  conf: ${btoa('fake-line')}`);
+  });
+
+  it('incr6 P3-1 反例：同行带引号的真实值照旧编码（未改变）', async () => {
+    api.updateByYaml.mockResolvedValueOnce({});
+    const page = yamlPage(
+      `apiVersion: v1\nkind: Secret\ndata:\n  alpha: "${FAKE}"\n`,
+    );
+    await page.submitYamlForm();
+    const sent = api.updateByYaml.mock.calls[0]![0].yaml as string;
+    expect(sent).toContain(`  alpha: ${FAKE_B64}`);
+  });
+
   it('冲突（HTTP 200 + code=1）按业务错误处理：只有请求层一条提示，弹窗保留，不提示成功', async () => {
     const page = await openEdit();
     page.setEditDataValue(page.editDataRows.value[0]!, FAKE);
