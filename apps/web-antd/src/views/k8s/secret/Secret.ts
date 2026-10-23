@@ -46,6 +46,8 @@ import {
   findRedactedPlaceholder,
   getDataRowError,
   getSecretDataKeys,
+  getYamlDataFormatError,
+  getYamlDataPayloadError,
   getYamlRedactedError,
   isDataEdited,
   processSecretYaml,
@@ -656,10 +658,23 @@ export function useSecretPage() {
         message.warning(yamlRedactedError);
         return;
       }
-      submitLoading.value = true;
+      // incr7 P2-A / P3-C：data 下编码器不处理的写法（`token:|` 无空格、值写在下一行、单引号等）
+      // 明文会原样发出，先拦下并提示改写
+      const yamlFormatError = getYamlDataFormatError(yamlFormModel.value.yaml);
+      if (yamlFormatError) {
+        message.warning(yamlFormatError);
+        return;
+      }
       
       // 处理 YAML 中的明文数据，重新编码为 base64
       const encodedYaml = encodeSecretYamlForSubmission(yamlFormModel.value.yaml);
+      // incr7 P2-A 兜底：编码后、发请求前，data 里任何值（含空白 / 换行变体）解码为占位符、或不是 base64 都不发
+      const payloadError = getYamlDataPayloadError(encodedYaml);
+      if (payloadError) {
+        message.warning(payloadError);
+        return;
+      }
+      submitLoading.value = true;
       
       const params: UpdateSecretByYamlReq = {
         cluster_id: currentOperationSecret.value.cluster_id,
@@ -719,6 +734,16 @@ export function useSecretPage() {
     
     try {
       await formRef.value.validate();
+      // incr7 兜底：新建表单同样不发脱敏占位符（原文或其 base64）
+      if (
+        findRedactedPlaceholder({
+          data: createFormModel.value.data,
+          string_data: createFormModel.value.string_data,
+        })
+      ) {
+        message.warning(REDACTED_VALUE_MESSAGE);
+        return;
+      }
       submitLoading.value = true;
       
       const params: CreateSecretReq = {
@@ -754,6 +779,14 @@ export function useSecretPage() {
     
     try {
       await createYamlFormRef.value.validate();
+      // incr7 兜底：新建 YAML 不做编码、原文发出；data 里的值解码为占位符或不是 base64 时不发
+      const payloadError = getYamlDataPayloadError(
+        createYamlFormModel.value.yaml,
+      );
+      if (payloadError) {
+        message.warning(payloadError);
+        return;
+      }
       submitLoading.value = true;
       
       const params: CreateSecretByYamlReq = {

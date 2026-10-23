@@ -15,6 +15,8 @@
  */
 import type { K8sSecretRevealRes } from '#/api/core/k8s/k8s_secret';
 
+import yaml from 'js-yaml';
+
 export const REDACTED_PLACEHOLDER = '<redacted>';
 export const EMPTY_VALUE_MESSAGE = '不支持设为空值，请删除该键';
 export const REDACTED_VALUE_MESSAGE = `不能提交脱敏占位符 ${REDACTED_PLACEHOLDER}，请填写真实值或删除该键`;
@@ -167,12 +169,22 @@ function decodeBase64Text(value: string): string | undefined {
   }
 }
 
-/** 最终防线：payload 里出现 `<redacted>`（原文或其 base64）时返回字段路径，否则 null */
+/**
+ * 最终防线：payload 里出现 `<redacted>`（原文或其 base64）时返回字段路径，否则 null。
+ * incr7：参数放宽为 unknown 值（新建表单的 data 类型声明为 Uint8Array）；Uint8Array 按字节检查。
+ */
 export function findRedactedPlaceholder(payload: {
-  data?: null | Record<string, string>;
-  string_data?: null | Record<string, string>;
+  data?: null | Record<string, unknown>;
+  string_data?: null | Record<string, unknown>;
 }): null | string {
   for (const [key, value] of Object.entries(payload.data ?? {})) {
+    if (value instanceof Uint8Array) {
+      const bytes = Array.from(value, (byte) => String.fromCharCode(byte)).join(
+        '',
+      );
+      if (isRedactedText(bytes)) return `data.${key}`;
+      continue;
+    }
     if (typeof value !== 'string' || value === '') continue;
     if (isRedactedText(value)) return `data.${key}`;
     const decoded = decodeBase64Text(value);
@@ -241,12 +253,15 @@ export function yamlHasQuotedRedacted(yamlText: string) {
 /**
  * 块标量头：行首缩进，可选若干 `- `（列表项），可选 `key:`（含带引号的键），可选标签 / 锚点，然后是 `|` 或 `>`，
  * 后接可选的块尾指示符（`-` / `+`）与缩进指示符（1-9，两者顺序任意），再可选行尾注释。
+ * incr7 P2-A：`key:` 后的空白改为可选（`[ \t]*`）。按 YAML，`token:|`（无空格）不是块标量而是普通标量，
+ * 编码器也不把它当块处理（原样不动）；检查器这里宽一档、照样当块头扫描，保证编码器认作块头的行一定是检查器块头的子集，
+ * 无空格写法下一行的 `<redacted>` 也拦截。
  * 值里普通出现的 `|` / `>`（如 `"x |"`、`x>`）不匹配。
  * incr6 P3-2：键分支不能以 `- `（`-` 后跟空白）开头，`- ` 只归列表项前缀；否则两者重叠，
  * 60KB 的 `- - - …` 单行要回溯约 1.5s（平方级），改后约 1ms。以 `-` 开头的键（如 `-k:`）仍可匹配。
  */
 const BLOCK_SCALAR_HEADER_PATTERN =
-  /^([ \t]*)(?:-[ \t]+)*(?:(?:"[^"\n]*"|'[^'\n]*'|(?:[^\s#'"-]|-(?=\S))[^:\n]*):[ \t]+)?(?:[!&]\S*[ \t]+)*[|>](?:[1-9][+-]?|[+-][1-9]?)?[ \t]*(?:#.*)?$/;
+  /^([ \t]*)(?:-[ \t]+)*(?:(?:"[^"\n]*"|'[^'\n]*'|(?:[^\s#'"-]|-(?=\S))[^:\n]*):[ \t]*)?(?:[!&]\S*[ \t]+)*[|>](?:[1-9][+-]?|[+-][1-9]?)?[ \t]*(?:#.*)?$/;
 
 /**
  * YAML 文本里是否有块标量里单独一行的占位符：块内任一行去掉首尾空白后**恰好等于** `<redacted>` 即算；
@@ -302,119 +317,417 @@ export function readRevealedValue(
   return typeof plain === 'string' ? plain : undefined;
 }
 
-// ---- YAML 编辑：展示时把 data 的 base64 解成明文、提交时再编码（incr7 从 Secret.ts 原样移入，便于与上面的拦截器对照测试） ----
+// ---- YAML 编辑：展示时把 data 的 base64 解成明文、提交时再编码（incr7 从 Secret.ts 移入并重写，便于与上面的拦截器对照测试） ----
 
-// Base64 解码辅助函数
-const decodeBase64ToUtf8 = (base64Str: string): string => {
-  try {
-    // 使用 atob 解码 base64，然后转换为 UTF-8
-    const binaryStr = atob(base64Str);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
+/** data 段头：顶格 `data:`，后面只允许空白与行尾注释 */
+const DATA_SECTION_HEADER_PATTERN = /^data:[ \t]*(?:#.*)?$/;
+
+/** 顶格的非空、非注释行（结束当前段） */
+function isTopLevelLine(line: string) {
+  return line !== '' && !/^[ \t#]/.test(line);
+}
+
+/**
+ * incr7：「某个位置是否在顶层 data 段里」的统一口径（展示 / 编码共用，格式检查按同一规则逐行扫描）。
+ * 段从顶格 `data:` 头的下一行开始，到下一个顶格的非空、非注释行（如 `stringData:`、`kind:`、`---`）之前结束。
+ * 原来用 `indexOf(match)` 找「第一处相同文本」再往前找 `\ndata:\n`：同一行文本出现两次（data 与 stringData 里各一处）
+ * 会判错，每条都 substring 是平方级，data 在第一行或头带注释时也认不出。
+ * 返回的函数按 replace 回调的 offset 判断，二分查找，整体线性。
+ */
+export function createDataSectionLocator(
+  text: string,
+): (offset: number) => boolean {
+  const ranges: Array<[number, number]> = [];
+  let start = -1;
+  let lineStart = 0;
+  while (lineStart <= text.length) {
+    let lineEnd = text.indexOf('\n', lineStart);
+    if (lineEnd === -1) lineEnd = text.length;
+    const line = text.slice(lineStart, lineEnd).replace(/\r$/, '');
+    if (isTopLevelLine(line)) {
+      if (start !== -1) {
+        ranges.push([start, lineStart]);
+        start = -1;
+      }
+      if (DATA_SECTION_HEADER_PATTERN.test(line)) {
+        start = Math.min(lineEnd + 1, text.length);
+      }
     }
-    // 使用 TextDecoder 正确处理 UTF-8 编码
-    const decoder = new TextDecoder('utf-8');
-    return decoder.decode(bytes);
-  } catch (error) {
-    return base64Str; // 如果解码失败，返回原始字符串
+    lineStart = lineEnd + 1;
+  }
+  if (start !== -1) ranges.push([start, text.length]);
+  return (offset: number) => {
+    let lo = 0;
+    let hi = ranges.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      const [from, to] = ranges[mid]!;
+      if (offset < from) hi = mid - 1;
+      else if (offset >= to) lo = mid + 1;
+      else return true;
+    }
+    return false;
+  };
+}
+
+/** base64 解成 UTF-8；不是合法 UTF-8（二进制）时返回 undefined（fatal 解码，不产生 U+FFFD） */
+const decodeBase64ToUtf8 = (base64Str: string): string | undefined => {
+  const binary = decodeBase64Text(base64Str);
+  if (binary === undefined) return undefined;
+  try {
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return undefined;
   }
 };
 
-// 处理 Secret YAML 中的 base64 编码数据
+/** 不能原样放进单行双引号 / | 块的字符（YAML 会改写或报错）：除 \t、\n 外的控制字符、NEL、行 / 段分隔符、BOM */
+// eslint-disable-next-line no-control-regex
+const UNSAFE_DISPLAY_CHAR_PATTERN =
+  /[\u0000-\u0008\u000B-\u001F\u007F\u0085\u2028\u2029\uFEFF]/;
+
+/** 展示用双引号转义：先 `\` 再 `"`；编码器只还原这两种（`\\` → `\`，`\"` → `"`），两边对称 */
+const escapeDisplayQuoted = (value: string) =>
+  value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+// 处理 Secret YAML 中的 base64 编码数据（展示用：data 下的值解成明文）
 export const processSecretYaml = (yamlContent: string): string => {
   if (!yamlContent) return yamlContent;
-  
+
   try {
-    // 使用正则表达式匹配 data 字段下的 base64 编码值
-    const processedYaml = yamlContent.replace(
-      /^(\s*)([\w\-\.]+):\s*([A-Za-z0-9+/]+=*)$/gm,
-      (match, indent, key, value) => {
-        // 检查是否在 data 字段下且值看起来像 base64
-        if (value && value.length > 0 && /^[A-Za-z0-9+/]+=*$/.test(value)) {
-          // 检查前面的内容中是否有 data: 字段
-          const beforeMatch = yamlContent.substring(0, yamlContent.indexOf(match));
-          const dataFieldPattern = /\ndata:\s*\n/;
-          const stringDataFieldPattern = /\nstringData:\s*\n/;
-          
-          if (dataFieldPattern.test(beforeMatch) && !stringDataFieldPattern.test(beforeMatch.substring(beforeMatch.lastIndexOf('\ndata:')))) {
-            const decodedValue = decodeBase64ToUtf8(value);
-            // 如果解码后的内容包含换行符，使用多行 YAML 格式
-            if (decodedValue.includes('\n')) {
-              const indentedContent = decodedValue
-                .split('\n')
-                .map((line, index) => index === 0 ? line : `${indent}  ${line}`)
-                .join('\n');
-              return `${indent}${key}: |\n${indent}  ${indentedContent}`;
-            } else {
-              return `${indent}${key}: "${decodedValue.replace(/"/g, '\\"')}"`;
-            }
-          }
+    const inData = createDataSectionLocator(yamlContent);
+    // incr7：缩进只认 [ \t]*（原来 ^(\s*) 跨行吞空行，60k 空行约 3.4s，平方级）；冒号后至少一个空格（与编码器同口径）
+    return yamlContent.replace(
+      /^([ \t]*)([\w\-.]+):[ \t]+([A-Za-z0-9+/]+=*)[ \t]*$/gm,
+      (match, indent: string, key: string, value: string, offset: number) => {
+        if (!inData(offset)) return match;
+        const decodedValue = decodeBase64ToUtf8(value);
+        // 二进制 / 含不可见控制字符：保留 base64 不解码（原来非 fatal 解码会换成 U+FFFD，保存即改坏原值）
+        if (
+          decodedValue === undefined ||
+          UNSAFE_DISPLAY_CHAR_PATTERN.test(decodedValue)
+        ) {
+          return match;
         }
-        return match;
-      }
+        const shown = decodedValue.includes('\n')
+          ? `${indent}${key}: |\n${decodedValue
+              .split('\n')
+              .map((line) => `${indent}  ${line}`)
+              .join('\n')}`
+          : `${indent}${key}: "${escapeDisplayQuoted(decodedValue)}"`;
+        // incr7：展示结果必须能被编码器原样还原成同一个 base64；还原不了（如末尾换行、首行以空白开头、
+        // 非规范 base64）就保留 base64 不解码——「打开 YAML、不改直接保存」不会改动任何值
+        const roundTrip = encodeSecretYamlForSubmission(`data:\n${shown}\n`);
+        return roundTrip === `data:\n${indent}${key}: ${value}\n`
+          ? shown
+          : match;
+      },
     );
-    
-    return processedYaml;
-  } catch (error) {
+  } catch {
     return yamlContent; // 如果处理失败，返回原始内容
   }
 };
 
-// 处理提交时的 YAML，将明文数据重新编码为 base64
+/**
+ * 块标量头：`key: |`（冒号后至少一个空格，按 YAML `key:|` 不是块标量，原样不动交给格式检查）。
+ * 内容只收更深缩进的行（`\1[ \t]+\S`）与空行；原来的 `(?:\s{2,}.*\n?)*` 会把块后同级的键（`  other: …`）
+ * 并进块内容一起编码掉。
+ */
+const ENCODER_BLOCK_PATTERN =
+  /^([ \t]*)([\w\-.]+):[ \t]+\|[ \t]*\n((?:[ \t]*\n|\1[ \t]+\S.*\n?)*)/gm;
+
+/**
+ * 同一行的双引号值：内容为「非引号、非反斜杠、非换行的字符」或「反斜杠 + 任一字符」，两支首字符互斥，线性时间
+ * （原 `"([^"]*(?:\\.[^"]*)*)"` 两支都能吃反斜杠，未闭合引号 + k 组 `\a` 回溯 2^k）。
+ * 引号后只允许空白与行尾注释（保留原样）。
+ */
+const ENCODER_QUOTED_PATTERN =
+  /^([ \t]*)([\w\-.]+):[ \t]+"((?:[^"\\\n]|\\.)*)"([ \t]+#.*|[ \t]*)$/gm;
+
+/** | 块内容 → 原值：缩进按第一个非空行算（YAML 语义），中间空行保留，末尾空行不计入值（与展示一致） */
+function decodeLiteralBlock(content: string) {
+  const endsWithNewline = content.endsWith('\n');
+  const lines = content.split('\n');
+  if (endsWithNewline) lines.pop();
+  let last = lines.length;
+  while (last > 0 && lines[last - 1]!.trim() === '') last -= 1;
+  const body = lines.slice(0, last);
+  const first = body.find((line) => line.trim() !== '');
+  const width = first ? leadingWidth(first) : 0;
+  for (const line of body) {
+    // 非空行缩进比首行浅：YAML 本身就不合法，不编码，原样交给格式检查 / 兜底
+    if (line.trim() !== '' && leadingWidth(line) < width) return undefined;
+  }
+  return {
+    trailingBlankLines: lines.length - last,
+    endsWithNewline,
+    value: body.map((line) => line.slice(width)).join('\n'),
+  };
+}
+
+// 处理提交时的 YAML，将 data 下的明文重新编码为 base64
 export const encodeSecretYamlForSubmission = (yamlContent: string): string => {
   if (!yamlContent) return yamlContent;
-  
+
   try {
-    // 处理多行字符串（| 格式）
-    // incr6 P3-1：缩进与 `key:` 后只认同一行的空格 / 制表符（[ \t]*），不跨行：
-    // 原来的 \s* 会把空行并进缩进、把下一行的内容当成本键的值
+    const blockInData = createDataSectionLocator(yamlContent);
     let processedYaml = yamlContent.replace(
-      /^([ \t]*)([\w\-\.]+):[ \t]*\|\s*\n((?:\s{2,}.*\n?)*)/gm,
-      (match, indent, key, content) => {
-        // 检查是否在 data 字段下
-        const beforeMatch = yamlContent.substring(0, yamlContent.indexOf(match));
-        const dataFieldPattern = /\ndata:\s*\n/;
-        const stringDataFieldPattern = /\nstringData:\s*\n/;
-        
-        if (dataFieldPattern.test(beforeMatch) && !stringDataFieldPattern.test(beforeMatch.substring(beforeMatch.lastIndexOf('\ndata:')))) {
-          // 移除缩进并合并内容
-          const cleanContent = content
-            .split('\n')
-            .map((line: string) => line.replace(new RegExp(`^${indent}  `), ''))
-            .filter((line: string) => line.length > 0)
-            .join('\n');
-          
-          const encodedValue = encodeUtf8ToBase64(cleanContent);
-          return `${indent}${key}: ${encodedValue}`;
-        }
-        return match;
-      }
+      ENCODER_BLOCK_PATTERN,
+      (match, indent: string, key: string, content: string, offset: number) => {
+        if (!blockInData(offset)) return match;
+        const block = decodeLiteralBlock(content);
+        if (!block) return match;
+        // 末尾空行与换行原样保留，块后的键不会粘到同一行
+        const tail =
+          content === ''
+            ? '\n'
+            : '\n'.repeat(block.trailingBlankLines) +
+              (block.endsWithNewline ? '\n' : '');
+        return `${indent}${key}: ${encodeUtf8ToBase64(block.value)}${tail}`;
+      },
     );
-    
-    // 处理带引号的字符串
-    // incr6 P3-1：只处理同一行的 `key: "..."`。原来 `:\s*"` 跨行，`token:` 换行后的 `"<redacted>"`
-    // 会被编码成 PHJlZGFjdGVkPg== 发出去（原值被覆盖），后续带引号的键（如 annotations 里的 "a/b": x）也会被误编码
+
+    const quotedInData = createDataSectionLocator(processedYaml);
     processedYaml = processedYaml.replace(
-      /^([ \t]*)([\w\-\.]+):[ \t]*"([^"]*(?:\\.[^"]*)*)"/gm,
-      (match, indent, key, value) => {
-        // 检查是否在 data 字段下
-        const beforeMatch = processedYaml.substring(0, processedYaml.indexOf(match));
-        const dataFieldPattern = /\ndata:\s*\n/;
-        const stringDataFieldPattern = /\nstringData:\s*\n/;
-        
-        if (dataFieldPattern.test(beforeMatch) && !stringDataFieldPattern.test(beforeMatch.substring(beforeMatch.lastIndexOf('\ndata:')))) {
-          // 处理转义字符
-          const unescapedValue = value.replace(/\\"/g, '"');
-          const encodedValue = encodeUtf8ToBase64(unescapedValue);
-          return `${indent}${key}: ${encodedValue}`;
-        }
-        return match;
-      }
+      ENCODER_QUOTED_PATTERN,
+      (
+        match,
+        indent: string,
+        key: string,
+        value: string,
+        rest: string,
+        offset: number,
+      ) => {
+        if (!quotedInData(offset)) return match;
+        // 只还原 \\ 与 \"（单次扫描），与展示时的转义对称；其他转义原样保留并由格式检查拦截
+        const unescapedValue = value.replace(/\\(["\\])/g, '$1');
+        return `${indent}${key}: ${encodeUtf8ToBase64(unescapedValue)}${rest}`;
+      },
     );
-    
+
     return processedYaml;
-  } catch (error) {
+  } catch {
     return yamlContent; // 如果处理失败，返回原始内容
   }
 };
+
+// ---- incr7：YAML 更新前的 data 格式检查（P2-A / P3-C）与编码后、发请求前的兜底（P2-A backstop） ----
+
+function dataLocationLabel(where: string) {
+  if (where === 'data') return 'data';
+  return where.startsWith('第 ') ? `data 下${where}` : `data.${where}`;
+}
+
+export const yamlDataMissingSpaceMessage = (key: string) =>
+  `YAML 中 data.${key} 的冒号后缺少空格（如 ${key}:| 或 ${key}:"…"），按 YAML 这不是键值写法，保存结果与预期不符。请在冒号后加一个空格`;
+
+export const yamlDataNextLineMessage = (key: string) =>
+  `YAML 中 data.${key} 的值写在了下一行，保存时不会被编码为 base64。请写在同一行：${key}: "明文"，多行内容写成 ${key}: | 并换行缩进`;
+
+export const yamlDataUnsupportedMessage = (where: string) =>
+  `YAML 中 ${dataLocationLabel(where)} 用了编辑器不支持的写法。data 下每个键请写成同一行的 base64、${REDACTED_PLACEHOLDER}、"明文"（只支持 \\" 与 \\\\ 转义），或 key: | 加换行缩进的多行明文`;
+
+export const yamlDataNotBase64Message = (key: string) =>
+  `YAML 中 data.${key} 的值不是合法的 base64。data 里的值必须是 base64；编辑已有 Secret 时也可以写成 ${key}: "明文"（加双引号，保存时自动编码），新建时明文请放到 stringData`;
+
+export const yamlDataEncodedRedactedMessage = (key: string) =>
+  `YAML 中 data.${key} 的值解码后是脱敏占位符 ${REDACTED_PLACEHOLDER}，提交会把占位符当作真实内容写入 Secret、覆盖原值。要保留原值请写成 ${key}: ${REDACTED_PLACEHOLDER}，要修改请填写真实值`;
+
+/** 严格 base64（标准字母表、长度为 4 的倍数、末尾最多两个 =） */
+const STRICT_BASE64_PATTERN =
+  /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
+/** 双引号值：只允许 \" 与 \\ 转义，引号后只允许行尾注释（value 已去掉首尾空白） */
+const SUPPORTED_QUOTED_VALUE_PATTERN =
+  /^"(?:[^"\\\n]|\\["\\])*"(?:[ \t]+#.*)?$/;
+
+/** 顶格 `data:` 头后允许的同行内容：空、行尾注释、空映射 / null */
+const DATA_HEADER_INLINE_OK_PATTERN =
+  /^(?:[ \t]*(?:#.*)?|[ \t]+(?:\{\}|~|null|Null|NULL)[ \t]*(?:#.*)?)$/;
+
+/**
+ * incr7 P2-A / P3-C：YAML **更新**提交前，按编码器能处理的写法检查 data 段（只看 data，stringData 等不管）。
+ * 编码器只编码同一行的 `key: "明文"` 与 `key: |` 块；其他写法（值写在下一行、冒号后无空格、单引号、
+ * 其他块标量、标签 / 锚点、流式值等）不会被编码，明文会原样发给后端，这里提前拦下。
+ * 返回拦截文案（只含键名或行号，不含值），没有问题返回 null。逐行扫描，线性时间。
+ */
+export function getYamlDataFormatError(yamlText: string): null | string {
+  const lines = yamlText.split('\n');
+  let inData = false;
+  let entryIndent: null | number = null;
+  /** none：无当前条目；value：同行已有值；pending：值为空（下一行更深即为「值写在下一行」）；block：`|` 块内容 */
+  let state: 'block' | 'none' | 'pending' | 'value' = 'none';
+  let currentKey = '';
+  let blockWidth: null | number = null;
+
+  for (const [index, rawLine] of lines.entries()) {
+    const line = rawLine.replace(/\r$/, '');
+    if (isTopLevelLine(line)) {
+      inData = false;
+      state = 'none';
+      entryIndent = null;
+      if (line.startsWith('data:')) {
+        if (!DATA_HEADER_INLINE_OK_PATTERN.test(line.slice('data:'.length))) {
+          return yamlDataUnsupportedMessage('data');
+        }
+        inData = true;
+      } else if (/^(["'])data\1[ \t]*:/.test(line)) {
+        return yamlDataUnsupportedMessage('data');
+      }
+      continue;
+    }
+    if (!inData) continue;
+    const trimmed = line.trim();
+    if (trimmed === '') continue;
+    const width = leadingWidth(line);
+
+    if (state === 'block') {
+      if (entryIndent !== null && width > entryIndent) {
+        if (blockWidth === null) blockWidth = width;
+        else if (width < blockWidth)
+          return yamlDataUnsupportedMessage(currentKey);
+        continue;
+      }
+      state = 'none';
+    }
+    if (trimmed.startsWith('#')) continue;
+    if (entryIndent === null) entryIndent = width;
+    if (width > entryIndent) {
+      if (state === 'pending') return yamlDataNextLineMessage(currentKey);
+      if (state === 'value') return yamlDataUnsupportedMessage(currentKey);
+      return yamlDataUnsupportedMessage(`第 ${index + 1} 行`);
+    }
+    if (width < entryIndent)
+      return yamlDataUnsupportedMessage(`第 ${index + 1} 行`);
+
+    const content = line.slice(width);
+    const keyMatch = /^([\w.-]+):/.exec(content);
+    if (!keyMatch) return yamlDataUnsupportedMessage(`第 ${index + 1} 行`);
+    currentKey = keyMatch[1]!;
+    const after = content.slice(keyMatch[0].length);
+    if (after !== '' && !/^[ \t]/.test(after)) {
+      return yamlDataMissingSpaceMessage(currentKey);
+    }
+    const value = after.trim();
+    if (value === '' || value.startsWith('#')) {
+      state = 'pending';
+      continue;
+    }
+    if (value === '|') {
+      state = 'block';
+      blockWidth = null;
+      continue;
+    }
+    state = 'value';
+    const first = value[0]!;
+    if (first === '"') {
+      if (!SUPPORTED_QUOTED_VALUE_PATTERN.test(value)) {
+        return yamlDataUnsupportedMessage(currentKey);
+      }
+      continue;
+    }
+    if ("|>'!&*[{%@`?,".includes(first)) {
+      return yamlDataUnsupportedMessage(currentKey);
+    }
+    const commentAt = value.search(/[ \t]#/);
+    const plain =
+      commentAt === -1 ? value : value.slice(0, commentAt).trimEnd();
+    if (plain !== REDACTED_PLACEHOLDER && !STRICT_BASE64_PATTERN.test(plain)) {
+      return yamlDataNotBase64Message(currentKey);
+    }
+  }
+  return null;
+}
+
+/** 规范化后（Go 的 base64 解码忽略 \r \n）判断一个 base64 串是否解码为占位符；不是严格 base64 返回 undefined */
+function decodesToRedacted(encoded: string): boolean | undefined {
+  const compact = encoded.replace(/[\r\n]/g, '');
+  if (!STRICT_BASE64_PATTERN.test(compact)) return undefined;
+  const decoded = decodeBase64Text(compact);
+  return decoded !== undefined && decoded.trim() === REDACTED_PLACEHOLDER;
+}
+
+/** 文本里某个位置所在行的键名（找不到时用行号），用于 token 扫描的提示 */
+function keyOfLineAt(text: string, offset: number) {
+  const lineStart = text.lastIndexOf('\n', offset - 1) + 1;
+  const lineEnd = text.indexOf('\n', offset);
+  const line = text.slice(lineStart, lineEnd === -1 ? text.length : lineEnd);
+  const key = /^[ \t]*(?:-[ \t]+)*["']?([\w.-]+)["']?[ \t]*:/.exec(line);
+  if (key) return key[1]!;
+  let lineNumber = 1;
+  for (
+    let i = text.indexOf('\n');
+    i !== -1 && i < lineStart;
+    i = text.indexOf('\n', i + 1)
+  ) {
+    lineNumber += 1;
+  }
+  return `第 ${lineNumber} 行`;
+}
+
+/** 可能是 base64 的片段（主体 ≥8 个字符；`<redacted>` 的 base64 为 14 个字符 + `==`） */
+const BASE64_TOKEN_PATTERN = /[A-Za-z0-9+/]{8,}={0,2}/g;
+
+/**
+ * incr7 P2-A 兜底：YAML 编码之后、发请求之前（更新）或直接对原文（新建），检查最终要发出的内容：
+ * 1. 按 js-yaml 解析，data 下每个值：null 跳过；裸 `<redacted>` 放行（后端保留原值）；字符串去掉 \r \n 后
+ *    必须是严格 base64，且解码（去首尾空白）后不能是占位符；`!!binary`（Uint8Array）同样检查解码内容；
+ *    数字 / 布尔等其他类型一律视为「不是 base64」。
+ * 2. 不论解析成败，再对全文做 token 扫描：任何 ≥16 字符的 base64 片段解码后是占位符就拦截
+ *    （解析失败、或写法绕过了上面的结构检查时仍然有效）。
+ * 返回拦截文案（只含键名或行号，不含值），没有问题返回 null。
+ */
+export function getYamlDataPayloadError(yamlText: string): null | string {
+  let doc: unknown;
+  let parsed = true;
+  try {
+    doc = yaml.load(yamlText);
+  } catch {
+    parsed = false;
+  }
+  if (
+    parsed &&
+    doc !== null &&
+    typeof doc === 'object' &&
+    !Array.isArray(doc)
+  ) {
+    const data = (doc as Record<string, unknown>).data;
+    if (data !== undefined && data !== null) {
+      if (typeof data !== 'object' || Array.isArray(data)) {
+        return yamlDataUnsupportedMessage('data');
+      }
+      for (const [key, value] of Object.entries(
+        data as Record<string, unknown>,
+      )) {
+        if (value === null || value === undefined) continue;
+        if (value === REDACTED_PLACEHOLDER) continue;
+        let encoded: string;
+        if (typeof value === 'string') {
+          encoded = value;
+        } else if (value instanceof Uint8Array) {
+          const latin1 = Array.from(value, (byte) =>
+            String.fromCharCode(byte),
+          ).join('');
+          if (latin1.trim() === REDACTED_PLACEHOLDER) {
+            return yamlDataEncodedRedactedMessage(key);
+          }
+          continue;
+        } else {
+          return yamlDataNotBase64Message(key);
+        }
+        const redacted = decodesToRedacted(encoded);
+        if (redacted === undefined) return yamlDataNotBase64Message(key);
+        if (redacted) return yamlDataEncodedRedactedMessage(key);
+      }
+    }
+  }
+  for (const token of yamlText.matchAll(BASE64_TOKEN_PATTERN)) {
+    if (decodesToRedacted(token[0])) {
+      return yamlDataEncodedRedactedMessage(
+        keyOfLineAt(yamlText, token.index!),
+      );
+    }
+  }
+  return null;
+}
