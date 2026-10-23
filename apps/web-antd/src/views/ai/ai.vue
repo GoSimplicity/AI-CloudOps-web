@@ -874,7 +874,8 @@ const sendMessage = async (value) => {
     }
   } catch (error) {
     if (!accountScope.current(ticket)) return;
-    lastFailedQuestion.value = trimmedValue;
+    // 取消类（停止生成、账户切换）不留「重试」入口，并清掉上一次失败留下的问题（incr3 P3-6）
+    lastFailedQuestion.value = shouldRecordPageError(error) ? trimmedValue : '';
 
     if (chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.type === 'ai' && !chatMessages[chatMessages.length - 1]?.content) {
       chatMessages.pop();

@@ -1029,7 +1029,7 @@ import { listWorkorderTemplate, type WorkorderTemplateItem } from '#/api/core/wo
 import { listWorkorderCategory, type WorkorderCategoryItem } from '#/api/core/workorder/workorder_category';
 import { getUserList, type User } from '#/api/core/system/user';
 
-import { isPermissionDeniedError, usePermission } from '#/utils/permission';
+import { usePermission } from '#/utils/permission';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
@@ -2036,8 +2036,8 @@ const handleDeleteNotification = (record: Notification): void => {
           }
         }
 
-        // 403 与已弹原文的业务错误（isPermissionDeniedError）已由请求层提示，这里跳过；其余错误按基线仍弹具体原因（未改为 shouldNotifyPageError）
-        if (!isPermissionDeniedError(error)) message.error(errorMessage);
+        // 请求层已提示（403、已弹原文的业务错误、HTTP / 网络错误）与取消类不再弹；其余错误弹上面拼出的具体原因（incr3：基线写法收口到 shouldNotifyPageError）
+        if (shouldNotifyPageError(error)) message.error(errorMessage);
 
       }
     }
@@ -2355,8 +2355,8 @@ const saveManualSend = async (): Promise<void> => {
       }
     }
 
-    // 403 与已弹原文的业务错误（isPermissionDeniedError）已由请求层提示，这里跳过；其余错误按基线仍弹具体原因（未改为 shouldNotifyPageError）
-    if (!isPermissionDeniedError(error)) message.error(errorMessage);
+    // 请求层已提示（403、已弹原文的业务错误、HTTP / 网络错误）与取消类不再弹；其余错误弹上面拼出的具体原因（incr3：基线写法收口到 shouldNotifyPageError）
+    if (shouldNotifyPageError(error)) message.error(errorMessage);
 
   } finally {
     manualSendDialog.saving = false;

@@ -170,4 +170,30 @@ describe('悬浮助手真实状态隔离', () => {
     await flushPromises();
     expect(setup().errorMessage).toBe('网络连接错误，请检查网络状态');
   });
+
+  it.each([
+    ['CanceledError（停止生成）', () => new axios.CanceledError()],
+    ['RequestOwnerChangedError', () => new RequestOwnerChangedError()],
+  ])('incr3 P3-6：提问被取消（%s）清空 lastFailedQuestion（重试按钮 v-if 依赖它），不留上一次失败的重试入口', async (_label, make) => {
+    api.assistantQuery
+      .mockRejectedValueOnce(
+        new AxiosError('Network Error', AxiosError.ERR_NETWORK, {} as any, {}),
+      )
+      .mockRejectedValueOnce(make())
+      .mockRejectedValueOnce(make());
+    wrapper = mount(AiAssistant);
+    await setup().sendMessage('first');
+    await flushPromises();
+    expect(setup().lastFailedQuestion).toBe('first');
+
+    await setup().sendMessage('second');
+    await flushPromises();
+    expect(setup().lastFailedQuestion).toBe('');
+    expect(setup().sending).toBe(false);
+
+    // 首次即被取消：同样不记录
+    await setup().sendMessage('third');
+    await flushPromises();
+    expect(setup().lastFailedQuestion).toBe('');
+  });
 });

@@ -95,6 +95,7 @@ import type { TreeNode } from '#/api/core/tree/tree_local';
 
 import { usePermission } from '#/utils/permission';
 import {
+  getRequestLayerNoticeKey,
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
@@ -107,6 +108,8 @@ let detailRequest = 0;
 let syncRegionRequest = 0;
 let accountListRequest = 0;
 let syncOperationRequest = 0;
+/** 同步失败提示（带「检查同步历史」引导，incr3 P3-4） */
+const SYNC_FAILURE_MESSAGE = '同步失败，请检查同步历史后重试';
 const syncRegions = ref<CloudAccountRegion[]>([]);
 const syncRegionsLoading = ref(false);
 const syncRegionError = ref<string | null>(null);
@@ -806,7 +809,13 @@ const handleSync = async (): Promise<void> => {
     syncRegionRequest++;
     await fetchResources();
   } catch (error) {
-    if (ticket === syncOperationRequest && shouldNotifyPageError(error)) message.error('同步失败，请检查同步历史后重试');
+    if (ticket === syncOperationRequest) {
+      // incr3 P3-4：保留「检查同步历史」的引导——请求层已弹过通用错误（http-error），用同一个 key 换成带引导的文案，
+      // 仍只有一条；403 / 已提示的业务错误不覆盖；其余（非请求错误等）照常弹
+      const noticeKey = getRequestLayerNoticeKey(error);
+      if (noticeKey) message.error({ content: SYNC_FAILURE_MESSAGE, key: noticeKey });
+      else if (shouldNotifyPageError(error)) message.error(SYNC_FAILURE_MESSAGE);
+    }
   } finally {
     if (ticket === syncOperationRequest) syncLoading.value = false;
   }

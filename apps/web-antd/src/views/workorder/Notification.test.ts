@@ -1,5 +1,6 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-import Antd, { Modal } from 'ant-design-vue';
+import Antd, { message, Modal } from 'ant-design-vue';
+import { markRequestLayerNotice } from '#/utils/permission/request-notice';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Notification from './Notification.vue';
 
@@ -214,6 +215,26 @@ describe('通知配置真实控件', () => {
       '/workorder/notification/delete/7',
       { data: { id: 7 } },
     );
+  });
+  it.each([
+    ['请求层已提示的 HTTP 500（有 http-error 标记）', () => {
+      const error = Object.assign(new Error('Request failed with status code 500'), { response: { status: 500 } });
+      markRequestLayerNotice(error, 'http-error:内部服务器错误');
+      return error;
+    }, 0],
+    ['403（已统一提示）', () => Object.assign(new Error('Error 403'), { [Symbol.for('ai-cloudops.permissionDenied')]: true }), 0],
+    ['取消', () => Object.assign(new Error('canceled'), { code: 'ERR_CANCELED' }), 0],
+    ['非请求错误', () => new Error('配置被占用 409'), 1],
+  ] as const)('incr3：删除失败（%s）按 shouldNotifyPageError 决定是否弹页面文案', async (_label, make, times) => {
+    await flushPromises();
+    client.delete.mockRejectedValueOnce(make());
+    const spy = vi.spyOn(message, 'error');
+    await menu('删除');
+    await vi.waitFor(() => expect(document.querySelector('.ant-modal-confirm')).not.toBeNull());
+    [...document.querySelectorAll<HTMLButtonElement>('.ant-modal-confirm button')].find(button => button.textContent?.replace(/\s/g, '') === '删除')!.click();
+    await flushPromises();
+    expect(spy).toHaveBeenCalledTimes(times);
+    if (times) expect(spy).toHaveBeenCalledWith('配置正在使用中，无法删除');
   });
   it('复制配置进入可审核创建表单，取消不调用不存在的复制接口或写API', async () => {
     await flushPromises();
