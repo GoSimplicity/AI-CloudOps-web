@@ -1,6 +1,6 @@
 {
   "routes": 58,
-  "migratedShells": 11,
+  "migratedShells": 13,
   "entries": [
     {
       "route": "/assistant/info",
@@ -117,7 +117,7 @@
     {
       "route": "/k8s_deployment",
       "view": "k8s/deployment/Deployment.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 44,
       "scopedStyle": true
     },
@@ -145,7 +145,7 @@
     {
       "route": "/k8s_pod",
       "view": "k8s/pod/Pod.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 72,
       "scopedStyle": true
     },

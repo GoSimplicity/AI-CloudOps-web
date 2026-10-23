@@ -168,6 +168,17 @@ defineProps<{ title: string; description?: string }>();
   gap: var(--ops-space-lg);
 }
 @media (max-width: 640px) {
+  .ops-page .ops-page__content :deep(.k8s-action-column) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-width: 0;
+  }
+  .ops-page .ops-page__content :deep(.k8s-action-column .ant-btn) {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+  }
   .ops-page {
     padding: 16px 12px;
   }

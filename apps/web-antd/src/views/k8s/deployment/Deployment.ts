@@ -74,6 +74,11 @@ export function useDeploymentPage() {
   const clusters = ref<K8sCluster[]>([]);
   const namespaces = ref<K8sNamespace[]>([]);
   const loading = ref(false);
+  const loadError = ref('');
+  const clustersError = ref('');
+  const namespacesError = ref('');
+  let resourceRequestId = 0;
+  let namespaceRequestId = 0;
   const clustersLoading = ref(false);
   const namespacesLoading = ref(false);
   const searchText = ref('');
@@ -174,44 +179,71 @@ export function useDeploymentPage() {
   const createFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入 Deployment 名称', trigger: 'blur' },
-      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'Deployment 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
-      { max: 63, message: 'Deployment 名称长度不能超过63个字符', trigger: 'blur' }
+      {
+        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        message:
+          'Deployment 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        trigger: 'blur',
+      },
+      {
+        max: 63,
+        message: 'Deployment 名称长度不能超过63个字符',
+        trigger: 'blur',
+      },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' }
+      { required: true, message: '请选择命名空间', trigger: 'change' },
     ],
     replicas: [
       { required: true, message: '请输入副本数量', trigger: 'blur' },
-      { type: 'number', min: 0, max: 100, message: '副本数量必须在0-100之间', trigger: 'blur' }
-    ]
+      {
+        type: 'number',
+        min: 0,
+        max: 100,
+        message: '副本数量必须在0-100之间',
+        trigger: 'blur',
+      },
+    ],
   };
 
   const scaleFormRules: Record<string, Rule[]> = {
     replicas: [
       { required: true, message: '请输入副本数量', trigger: 'blur' },
-      { type: 'number', min: 0, max: 100, message: '副本数量必须在0-100之间', trigger: 'blur' }
-    ]
+      {
+        type: 'number',
+        min: 0,
+        max: 100,
+        message: '副本数量必须在0-100之间',
+        trigger: 'blur',
+      },
+    ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   const editFormRules: Record<string, Rule[]> = {
     replicas: [
       { required: true, message: '请输入副本数量', trigger: 'blur' },
-      { type: 'number', min: 0, max: 100, message: '副本数量必须在0-100之间', trigger: 'blur' }
-    ]
+      {
+        type: 'number',
+        min: 0,
+        max: 100,
+        message: '副本数量必须在0-100之间',
+        trigger: 'blur',
+      },
+    ],
   };
 
   // computed
@@ -271,38 +303,55 @@ export function useDeploymentPage() {
   };
 
   // 转换函数：Record<string, string> -> KeyValueList
-  const recordToKeyValueList = (record: Record<string, string>): KeyValueList => {
-    return Object.entries(record).map(([key, value]: [string, string]) => ({ key, value }));
+  const recordToKeyValueList = (
+    record: Record<string, string>,
+  ): KeyValueList => {
+    return Object.entries(record).map(([key, value]: [string, string]) => ({
+      key,
+      value,
+    }));
   };
 
   // 转换函数：KeyValueList 或对象 -> Record<string, string>
-  const keyValueListToRecord = (data?: KeyValueList | Record<string, string>): Record<string, string> => {
+  const keyValueListToRecord = (
+    data?: KeyValueList | Record<string, string>,
+  ): Record<string, string> => {
     if (!data) return {};
-    
+
     // 如果已经是对象格式，直接返回
     if (typeof data === 'object' && !Array.isArray(data)) {
       return data as Record<string, string>;
     }
-    
+
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce((acc, { key, value }) => {
-        acc[key] = value;
-        return acc;
-      }, {} as Record<string, string>);
+      return data.reduce(
+        (acc, { key, value }) => {
+          acc[key] = value;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
     }
-    
+
     return {};
   };
 
   // cluster operations
   const clearDeployments = () => {
+    resourceRequestId++;
+    loading.value = false;
+    total.value = 0;
+    loadError.value = '';
     deployments.value = [];
     selectedRowKeys.value = [];
     selectedRows.value = [];
   };
 
   const clearNamespaces = () => {
+    namespaceRequestId++;
+    namespacesLoading.value = false;
+    namespacesError.value = '';
     resetNamespaces();
     filterNamespace.value = undefined;
   };
@@ -313,6 +362,7 @@ export function useDeploymentPage() {
     }
     try {
       clustersLoading.value = true;
+      clustersError.value = '';
       const params: ListClustersReq = {
         page: clustersPage.value,
         size: clustersSize.value,
@@ -324,41 +374,58 @@ export function useDeploymentPage() {
         clusters.value = [...clusters.value, ...(res?.items || [])];
       }
       clustersTotal.value = res?.total || 0;
-      
+
       // 如果当前没有选择集群且有可用集群，自动选择第一个
       if (!filterClusterId.value && clusters.value.length > 0) {
         const firstCluster = clusters.value[0];
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
-          message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
           // 自动加载该集群的命名空间和Deployment数据
           await fetchNamespaces();
           await fetchDeployments();
         }
       }
     } catch (err) {
-      message.error('获取集群列表失败');
-
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearNamespaces();
+        clearDeployments();
+      }
+      clustersError.value = '获取集群列表失败，请重试';
+      message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
   };
 
   const fetchNamespaces = async (reset = false) => {
-    if (!filterClusterId.value) return;
-    
+    const clusterId = filterClusterId.value;
+    if (!clusterId) {
+      clearNamespaces();
+      return;
+    }
+    const requestId = ++namespaceRequestId;
+
     if (reset) {
       resetNamespaces();
     }
-    
+
     try {
       namespacesLoading.value = true;
+      namespacesError.value = '';
       const params: K8sNamespaceListReq = {
-        cluster_id: filterClusterId.value,
+        cluster_id: clusterId,
         page: namespacesPage.value,
         size: namespacesSize.value,
       };
-      const res = await getNamespacesListApi(filterClusterId.value, params);
+      const res = await getNamespacesListApi(clusterId, params);
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       if (namespacesPage.value === 1) {
         namespaces.value = res?.items || [];
       } else {
@@ -366,46 +433,75 @@ export function useDeploymentPage() {
       }
       namespacesTotal.value = res?.total || 0;
     } catch (err) {
-      message.error('获取命名空间列表失败');
-
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      namespaces.value = [];
+      namespacesTotal.value = 0;
+      namespacesError.value = '获取命名空间列表失败，请重试';
+      message.error(namespacesError.value);
     } finally {
-      namespacesLoading.value = false;
+      if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
   };
 
   // crud operations
   const fetchDeployments = async () => {
-    if (!filterClusterId.value || filterClusterId.value === 0) {
-      message.warning('请先选择有效的集群');
-      deployments.value = [];
-      total.value = 0;
+    const clusterId = filterClusterId.value;
+    const namespace = filterNamespace.value;
+    if (!clusterId) {
+      clearDeployments();
       return;
     }
+    const requestId = ++resourceRequestId;
 
     try {
       loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
       const params: GetDeploymentListReq = {
         page: currentPage.value,
         size: pageSize.value,
         search: searchText.value || undefined,
-        cluster_id: filterClusterId.value,
-        namespace: filterNamespace.value || undefined,
+        cluster_id: clusterId,
+        namespace: namespace || undefined,
         status: filterStatus.value || undefined,
-        labels: Object.keys(filterLabels.value).length > 0 ? filterLabels.value : undefined,
+        labels:
+          Object.keys(filterLabels.value).length > 0
+            ? filterLabels.value
+            : undefined,
       };
-      const res = await getDeploymentListApi(filterClusterId.value, params);
+      const res = await getDeploymentListApi(clusterId, params);
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
       // 确保每个deployment对象都有正确的cluster_id
-      const deploymentsWithClusterId = (res?.items || []).map((deployment: K8sDeployment) => ({
-        ...deployment,
-        cluster_id: deployment.cluster_id || filterClusterId.value || 0
-      }));
+      const deploymentsWithClusterId = (res?.items || []).map(
+        (deployment: K8sDeployment) => ({
+          ...deployment,
+          cluster_id: deployment.cluster_id || clusterId,
+        }),
+      );
       deployments.value = deploymentsWithClusterId;
       total.value = res?.total || 0;
     } catch (err) {
-      message.error('获取 Deployment 列表失败');
-
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
+      clearDeployments();
+      loadError.value = '获取 Deployment 列表失败，请重试';
+      message.error(loadError.value);
     } finally {
-      loading.value = false;
+      if (requestId === resourceRequestId) loading.value = false;
     }
   };
 
@@ -413,35 +509,47 @@ export function useDeploymentPage() {
   const showDeploymentDetail = async (record: K8sDeployment) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
-      const res = await getDeploymentDetailsApi(clusterId, record.namespace, record.name);
-      
+      const res = await getDeploymentDetailsApi(
+        clusterId,
+        record.namespace,
+        record.name,
+      );
+
       // 转换标签和注解格式：从对象转为数组
-      const processedDetail = res ? {
-        ...res,
-        cluster_id: clusterId,
-        labels: res.labels ? recordToKeyValueList(res.labels) : [],
-        annotations: res.annotations ? recordToKeyValueList(res.annotations) : []
-      } : { 
-        ...record, 
-        cluster_id: clusterId,
-        labels: record.labels ? recordToKeyValueList(record.labels) : [],
-        annotations: record.annotations ? recordToKeyValueList(record.annotations) : []
-      };
-      
+      const processedDetail = res
+        ? {
+            ...res,
+            cluster_id: clusterId,
+            labels: res.labels ? recordToKeyValueList(res.labels) : [],
+            annotations: res.annotations
+              ? recordToKeyValueList(res.annotations)
+              : [],
+          }
+        : {
+            ...record,
+            cluster_id: clusterId,
+            labels: record.labels ? recordToKeyValueList(record.labels) : [],
+            annotations: record.annotations
+              ? recordToKeyValueList(record.annotations)
+              : [],
+          };
+
       currentDeploymentDetail.value = processedDetail;
     } catch (err) {
       message.error('获取 Deployment 详情失败');
 
       // 错误时也要处理格式转换
-      const fallbackDetail = { 
-        ...record, 
+      const fallbackDetail = {
+        ...record,
         cluster_id: clusterId,
         labels: record.labels ? recordToKeyValueList(record.labels) : [],
-        annotations: record.annotations ? recordToKeyValueList(record.annotations) : []
+        annotations: record.annotations
+          ? recordToKeyValueList(record.annotations)
+          : [],
       };
       currentDeploymentDetail.value = fallbackDetail;
     } finally {
@@ -458,17 +566,20 @@ export function useDeploymentPage() {
   const showYamlModal = async (record: K8sDeployment) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       submitLoading.value = true;
       currentOperationDeployment.value = { ...record, cluster_id: clusterId };
-      const res = await getDeploymentYamlApi(clusterId, record.namespace, record.name);
+      const res = await getDeploymentYamlApi(
+        clusterId,
+        record.namespace,
+        record.name,
+      );
       currentYamlContent.value = res?.yaml || '';
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (err) {
       message.error('获取 Deployment YAML 失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -483,20 +594,23 @@ export function useDeploymentPage() {
 
   const submitYamlForm = async () => {
     if (!yamlFormRef.value || !currentOperationDeployment.value) return;
-    
+
     try {
       await yamlFormRef.value.validate();
       submitLoading.value = true;
-      
-      const params: Omit<UpdateDeploymentByYamlReq, 'cluster_id' | 'namespace' | 'name'> = {
+
+      const params: Omit<
+        UpdateDeploymentByYamlReq,
+        'cluster_id' | 'namespace' | 'name'
+      > = {
         yaml: yamlFormModel.value.yaml,
       };
-      
+
       await updateDeploymentByYamlApi(
         currentOperationDeployment.value.cluster_id,
         currentOperationDeployment.value.namespace,
         currentOperationDeployment.value.name,
-        params
+        params,
       );
       message.success('Deployment YAML 更新成功');
       isYamlModalVisible.value = false;
@@ -507,7 +621,6 @@ export function useDeploymentPage() {
         return;
       }
       message.error('Deployment YAML 更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -543,23 +656,29 @@ export function useDeploymentPage() {
 
   const submitCreateForm = async () => {
     if (!formRef.value || !filterClusterId.value) return;
-    
+
     try {
       await formRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: Omit<CreateDeploymentReq, 'cluster_id'> = {
         name: createFormModel.value.name,
         namespace: createFormModel.value.namespace,
         replicas: createFormModel.value.replicas,
-        images: createFormModel.value.images.filter(img => img.trim()),
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
+        images: createFormModel.value.images.filter((img) => img.trim()),
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(createFormModel.value.annotations).length > 0
+            ? createFormModel.value.annotations
+            : undefined,
         spec: {
           replicas: createFormModel.value.replicas,
         },
       };
-      
+
       await createDeploymentApi(filterClusterId.value, params);
       message.success('Deployment 创建成功');
       isCreateModalVisible.value = false;
@@ -570,7 +689,6 @@ export function useDeploymentPage() {
         return;
       }
       message.error('Deployment 创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -578,15 +696,15 @@ export function useDeploymentPage() {
 
   const submitCreateYamlForm = async () => {
     if (!createYamlFormRef.value || !filterClusterId.value) return;
-    
+
     try {
       await createYamlFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: Omit<CreateDeploymentByYamlReq, 'cluster_id'> = {
         yaml: createYamlFormModel.value.yaml,
       };
-      
+
       await createDeploymentByYamlApi(filterClusterId.value, params);
       message.success('Deployment YAML 创建成功');
       isCreateYamlModalVisible.value = false;
@@ -597,7 +715,6 @@ export function useDeploymentPage() {
         return;
       }
       message.error('Deployment YAML 创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -607,13 +724,14 @@ export function useDeploymentPage() {
   const openEditModal = (record: K8sDeployment) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     currentOperationDeployment.value = { ...record, cluster_id: clusterId };
     editFormModel.value = {
       name: record.name,
       namespace: record.namespace,
       replicas: record.replicas,
-      images: (record.images && record.images.length > 0) ? [...record.images] : [''],
+      images:
+        record.images && record.images.length > 0 ? [...record.images] : [''],
       labels: keyValueListToRecord(record.labels),
       annotations: keyValueListToRecord(record.annotations),
     };
@@ -627,26 +745,35 @@ export function useDeploymentPage() {
 
   const submitEditForm = async () => {
     if (!editFormRef.value || !currentOperationDeployment.value) return;
-    
+
     try {
       await editFormRef.value.validate();
       submitLoading.value = true;
-      
-      const params: Omit<UpdateDeploymentReq, 'cluster_id' | 'namespace' | 'name'> = {
+
+      const params: Omit<
+        UpdateDeploymentReq,
+        'cluster_id' | 'namespace' | 'name'
+      > = {
         replicas: editFormModel.value.replicas,
-        images: editFormModel.value.images.filter(img => img.trim()),
-        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
-        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
+        images: editFormModel.value.images.filter((img) => img.trim()),
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(editFormModel.value.annotations).length > 0
+            ? editFormModel.value.annotations
+            : undefined,
         spec: {
           replicas: editFormModel.value.replicas,
         },
       };
-      
+
       await updateDeploymentApi(
         currentOperationDeployment.value.cluster_id,
         currentOperationDeployment.value.namespace,
         currentOperationDeployment.value.name,
-        params
+        params,
       );
       message.success('Deployment 更新成功');
       isEditModalVisible.value = false;
@@ -657,7 +784,6 @@ export function useDeploymentPage() {
         return;
       }
       message.error('Deployment 更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -667,7 +793,7 @@ export function useDeploymentPage() {
   const deleteDeployment = (record: K8sDeployment) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     Modal.confirm({
       title: '删除 Deployment',
       content: `确定要删除 Deployment "${record.name}" 吗？此操作不可逆！`,
@@ -682,7 +808,6 @@ export function useDeploymentPage() {
           await fetchDeployments();
         } catch (err) {
           message.error('Deployment 删除失败');
-
         }
       },
     });
@@ -692,7 +817,7 @@ export function useDeploymentPage() {
   const restartDeployment = (record: K8sDeployment) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     Modal.confirm({
       title: '重启 Deployment',
       content: `确定要重启 Deployment "${record.name}" 吗？这将重启所有 Pod。`,
@@ -707,7 +832,6 @@ export function useDeploymentPage() {
           await fetchDeployments();
         } catch (err) {
           message.error('Deployment 重启失败');
-
         }
       },
     });
@@ -717,7 +841,7 @@ export function useDeploymentPage() {
   const openScaleModal = (record: K8sDeployment) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     currentOperationDeployment.value = { ...record, cluster_id: clusterId };
     scaleFormModel.value.replicas = record.replicas;
     isScaleModalVisible.value = true;
@@ -730,20 +854,20 @@ export function useDeploymentPage() {
 
   const submitScaleForm = async () => {
     if (!scaleFormRef.value || !currentOperationDeployment.value) return;
-    
+
     try {
       await scaleFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params = {
         replicas: scaleFormModel.value.replicas,
       };
-      
+
       await scaleDeploymentApi(
         currentOperationDeployment.value.cluster_id,
         currentOperationDeployment.value.namespace,
         currentOperationDeployment.value.name,
-        params
+        params,
       );
       message.success('Deployment 伸缩成功');
       isScaleModalVisible.value = false;
@@ -754,7 +878,6 @@ export function useDeploymentPage() {
         return;
       }
       message.error('Deployment 伸缩失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -764,7 +887,7 @@ export function useDeploymentPage() {
   const pauseDeployment = (record: K8sDeployment) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     Modal.confirm({
       title: '暂停 Deployment',
       content: `确定要暂停 Deployment "${record.name}" 吗？`,
@@ -779,7 +902,6 @@ export function useDeploymentPage() {
           await fetchDeployments();
         } catch (err) {
           message.error('Deployment 暂停失败');
-
         }
       },
     });
@@ -788,7 +910,7 @@ export function useDeploymentPage() {
   const resumeDeployment = (record: K8sDeployment) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     Modal.confirm({
       title: '恢复 Deployment',
       content: `确定要恢复 Deployment "${record.name}" 吗？`,
@@ -803,7 +925,6 @@ export function useDeploymentPage() {
           await fetchDeployments();
         } catch (err) {
           message.error('Deployment 恢复失败');
-
         }
       },
     });
@@ -813,16 +934,19 @@ export function useDeploymentPage() {
   const showPodModal = async (record: K8sDeployment) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       submitLoading.value = true;
       currentOperationDeployment.value = { ...record, cluster_id: clusterId };
-      const res = await getDeploymentPodsApi(clusterId, record.namespace, record.name);
+      const res = await getDeploymentPodsApi(
+        clusterId,
+        record.namespace,
+        record.name,
+      );
       deploymentPods.value = res?.items || [];
       isPodModalVisible.value = true;
     } catch (err) {
       message.error('获取 Pod 列表失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -838,16 +962,19 @@ export function useDeploymentPage() {
   const showHistoryModal = async (record: K8sDeployment) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       submitLoading.value = true;
       currentOperationDeployment.value = { ...record, cluster_id: clusterId };
-      const res = await getDeploymentHistoryApi(clusterId, record.namespace, record.name);
+      const res = await getDeploymentHistoryApi(
+        clusterId,
+        record.namespace,
+        record.name,
+      );
       deploymentHistory.value = res?.items || [];
       isHistoryModalVisible.value = true;
     } catch (err) {
       message.error('获取版本历史失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -883,7 +1010,7 @@ export function useDeploymentPage() {
   // 批量操作
   const batchOperation = (operation: string) => {
     if (!selectedRows.value.length) return;
-    
+
     Modal.confirm({
       title: `批量${operation}`,
       content: `确定要对选中的 ${selectedRows.value.length} 个 Deployment 执行${operation}操作吗？`,
@@ -896,14 +1023,24 @@ export function useDeploymentPage() {
           for (const deployment of selectedRows.value) {
             const clusterId = deployment.cluster_id || filterClusterId.value;
             if (!clusterId) {
-              message.error(`Deployment "${deployment.name}" 缺少有效的集群ID，跳过操作`);
+              message.error(
+                `Deployment "${deployment.name}" 缺少有效的集群ID，跳过操作`,
+              );
               continue;
             }
-            
+
             if (operation === '删除') {
-              await deleteDeploymentApi(clusterId, deployment.namespace, deployment.name);
+              await deleteDeploymentApi(
+                clusterId,
+                deployment.namespace,
+                deployment.name,
+              );
             } else if (operation === '重启') {
-              await restartDeploymentApi(clusterId, deployment.namespace, deployment.name);
+              await restartDeploymentApi(
+                clusterId,
+                deployment.namespace,
+                deployment.name,
+              );
             }
           }
           message.success(`批量${operation}操作已完成`);
@@ -912,7 +1049,6 @@ export function useDeploymentPage() {
           await fetchDeployments();
         } catch (err) {
           message.error(`批量${operation}失败`);
-
         }
       },
     });
@@ -985,7 +1121,10 @@ export function useDeploymentPage() {
 
   // YAML 操作辅助函数
   const insertYamlTemplate = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认操作',
         content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
@@ -1017,14 +1156,13 @@ export function useDeploymentPage() {
       const formatted = yaml.dump(parsed, {
         indent: 2,
         lineWidth: -1, // 不限制行宽
-        noRefs: true,  // 不使用引用
+        noRefs: true, // 不使用引用
         sortKeys: false, // 保持原有顺序
       });
       createYamlFormModel.value.yaml = formatted;
       message.success('YAML 格式化成功');
     } catch (error: any) {
       message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
-
     }
   };
 
@@ -1038,7 +1176,7 @@ export function useDeploymentPage() {
     try {
       // 尝试解析 YAML
       const parsed = yaml.load(yamlContent);
-      
+
       // 检查是否是有效的对象
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
@@ -1077,12 +1215,15 @@ export function useDeploymentPage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -1092,21 +1233,35 @@ export function useDeploymentPage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
-
     }
   };
 
   const clearYaml = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认清空',
         content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
@@ -1144,7 +1299,6 @@ export function useDeploymentPage() {
       message.success('YAML 格式化成功');
     } catch (error: any) {
       message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
-
     }
   };
 
@@ -1157,7 +1311,7 @@ export function useDeploymentPage() {
 
     try {
       const parsed = yaml.load(yamlContent);
-      
+
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
         return;
@@ -1194,12 +1348,15 @@ export function useDeploymentPage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -1209,21 +1366,35 @@ export function useDeploymentPage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
-
     }
   };
 
   return {
     // state
+    loadError,
+    clustersError,
+    namespacesError,
     deployments,
     clusters,
     namespaces,
@@ -1246,14 +1417,14 @@ export function useDeploymentPage() {
     namespacesTotal,
     namespacesPage,
     namespacesSize,
-    
+
     // form refs
     formRef,
     editFormRef,
     scaleFormRef,
     yamlFormRef,
     createYamlFormRef,
-    
+
     // modal state
     isCreateModalVisible,
     isCreateYamlModalVisible,
@@ -1265,32 +1436,32 @@ export function useDeploymentPage() {
     isHistoryModalVisible,
     submitLoading,
     detailLoading,
-    
+
     // operation targets
     currentOperationDeployment,
     currentDeploymentDetail,
     currentYamlContent,
     deploymentPods,
     deploymentHistory,
-    
+
     // form models
     createFormModel,
     editFormModel,
     scaleFormModel,
     yamlFormModel,
     createYamlFormModel,
-    
+
     // form rules
     createFormRules,
     editFormRules,
     scaleFormRules,
     yamlFormRules,
     createYamlFormRules,
-    
+
     // computed
     filteredDeployments,
     rowSelection,
-    
+
     // helpers
     validateClusterId,
     getEnvText,
@@ -1298,7 +1469,7 @@ export function useDeploymentPage() {
     getStatusColor,
     recordToKeyValueList,
     keyValueListToRecord,
-    
+
     // operations
     fetchClusters,
     fetchNamespaces,
@@ -1307,16 +1478,16 @@ export function useDeploymentPage() {
     clearNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
-    
+
     // detail operations
     showDeploymentDetail,
     closeDetailModal,
-    
+
     // YAML operations
     showYamlModal,
     closeYamlModal,
     submitYamlForm,
-    
+
     // create operations
     openCreateModal,
     closeCreateModal,
@@ -1324,43 +1495,43 @@ export function useDeploymentPage() {
     openCreateYamlModal,
     closeCreateYamlModal,
     submitCreateYamlForm,
-    
+
     // edit operations
     openEditModal,
     closeEditModal,
     submitEditForm,
-    
+
     // deployment operations
     deleteDeployment,
     restartDeployment,
     pauseDeployment,
     resumeDeployment,
-    
+
     // scale operations
     openScaleModal,
     closeScaleModal,
     submitScaleForm,
-    
+
     // pod operations
     showPodModal,
     closePodModal,
-    
+
     // history operations
     showHistoryModal,
     closeHistoryModal,
-    
+
     // filter operations
     addFilterLabel,
     removeFilterLabel,
     clearFilterLabels,
-    
+
     // batch operations
     batchOperation,
-    
-    // pagination operations  
+
+    // pagination operations
     resetClusters,
     handlePageChange,
-    
+
     // form field operations
     addImageField,
     removeImageField,
@@ -1368,7 +1539,7 @@ export function useDeploymentPage() {
     removeLabelField,
     addAnnotationField,
     removeAnnotationField,
-    
+
     // yaml operations
     insertYamlTemplate,
     formatYaml,
@@ -1376,7 +1547,7 @@ export function useDeploymentPage() {
     clearYaml,
     formatEditYaml,
     validateEditYaml,
-    
+
     // constants
     K8sDeploymentStatus,
   };

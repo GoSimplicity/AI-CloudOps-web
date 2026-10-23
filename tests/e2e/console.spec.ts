@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ts from 'typescript';
@@ -35,6 +35,33 @@ async function expectUncovered(control: Locator) {
       }),
     )
     .toBe('uncovered');
+}
+
+async function acceptanceLogin(page: Page) {
+  const password = adminPassword();
+  test.skip(
+    !password,
+    'Set an isolated administrator password for acceptance.',
+  );
+  await page.goto(routePath('/auth/login'));
+  await page
+    .getByLabel('账号', { exact: true })
+    .fill(process.env.CLOUDOPS_TEST_USER || 'admin');
+  await page.getByLabel('密码', { exact: true }).fill(password!);
+  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>('#password');
+    if (input) input.value = '';
+  });
+  await expect(page).not.toHaveURL(/auth\/login/, { timeout: 30_000 });
+}
+
+async function selectAcceptanceNamespace(page: Page, namespace: string) {
+  await page.locator('.k8s-namespace-selector').click();
+  await page
+    .locator('.ant-select-dropdown:visible .ant-select-item-option')
+    .filter({ hasText: namespace })
+    .click();
 }
 
 test('login is usable on mobile and supports both themes', async ({ page }) => {
@@ -564,4 +591,167 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
   });
   expect(errors).toEqual([]);
   expect(apiFailures).toEqual([]);
+});
+
+test('kubernetes workloads display real Deployment and Pod resources', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  page.setDefaultTimeout(15_000);
+  const namespace = process.env.CLOUDOPS_TEST_NAMESPACE;
+  const clusterName = process.env.CLOUDOPS_TEST_CLUSTER_NAME;
+  test.skip(
+    !namespace || !clusterName,
+    'Set isolated Kubernetes acceptance resource names.',
+  );
+  const errors: string[] = [];
+  const failures: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('response', (response) => {
+    if (
+      new URL(response.url()).pathname.startsWith('/api/') &&
+      response.status() >= 400
+    )
+      failures.push(`${response.status()} ${new URL(response.url()).pathname}`);
+  });
+  await acceptanceLogin(page);
+  for (const [route, title] of [
+    ['/k8s_deployment', 'Deployment 管理'],
+    ['/k8s_pod', 'Pod 管理'],
+  ]) {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(routePath(route!));
+    await expect(page.locator('.ops-page h1')).toHaveText(title!);
+    await expect(page.locator('.k8s-cluster-selector')).toContainText(
+      clusterName!,
+    );
+    await selectAcceptanceNamespace(page, namespace!);
+    const rows =
+      route === '/k8s_deployment'
+        ? page.locator('.ant-table-tbody tr[data-row-key="web"]')
+        : page.locator('.ant-table-tbody tr[data-row-key^="web-"]');
+    await expect(rows).toHaveCount(route === '/k8s_deployment' ? 1 : 2);
+    await page.locator('.ops-page__actions button').first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: /^取\s*消$/ })
+      .click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    await page.getByLabel('深色', { exact: true }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(() =>
+        page
+          .locator('aside')
+          .first()
+          .evaluate((element) => element.getBoundingClientRect().right),
+      )
+      .toBeLessThanOrEqual(1);
+    await expectUncovered(
+      page
+        .locator('.ops-page__actions')
+        .getByRole('button', { name: '刷新数据', exact: true }),
+    );
+    await expectUncovered(page.locator('.k8s-search-input'));
+    await expectUncovered(page.locator('.ant-table-thead th:visible').first());
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    if (route === '/k8s_pod')
+      await page.screenshot({
+        path: '.cache/ui-verification/k8s-pod-mobile.png',
+        fullPage: true,
+        animations: 'disabled',
+      });
+  }
+  expect(errors).toEqual([]);
+  expect(failures).toEqual([]);
+});
+
+test('pod terminal negotiates credential subprotocol and returns real output', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const namespace = process.env.CLOUDOPS_TEST_NAMESPACE;
+  test.skip(
+    !namespace || process.env.CLOUDOPS_TEST_WS_READY !== 'true',
+    'Set a ready isolated Pod terminal environment.',
+  );
+  await page.addInitScript(() => {
+    const check = {
+      tokenInUrl: false,
+      offeredAuth: false,
+      offeredApp: false,
+      negotiatedApp: false,
+      echoedCredential: false,
+    };
+    Reflect.set(window, '__cloudopsWsCheck', check);
+    const NativeSocket = window.WebSocket;
+    window.WebSocket = class extends NativeSocket {
+      constructor(url: string | URL, protocols?: string | string[]) {
+        super(url, protocols);
+        const address = new URL(String(url), location.origin);
+        if (address.pathname.endsWith('/exec')) {
+          const offered = Array.isArray(protocols) ? protocols : [protocols];
+          check.tokenInUrl = address.searchParams.has('token');
+          check.offeredAuth = offered.some(
+            (protocol) =>
+              typeof protocol === 'string' &&
+              protocol.startsWith('cloudops-auth.'),
+          );
+          check.offeredApp = offered.includes('cloudops-v1');
+          this.addEventListener('open', () => {
+            check.negotiatedApp = this.protocol === 'cloudops-v1';
+            check.echoedCredential = this.protocol.startsWith('cloudops-auth.');
+          });
+        }
+      }
+    };
+  });
+  const output: string[] = [];
+  page.on('websocket', (socket) => {
+    if (new URL(socket.url()).pathname.endsWith('/exec'))
+      socket.on('framereceived', (event) => {
+        if (typeof event.payload === 'string') {
+          try {
+            output.push(JSON.parse(event.payload).data || '');
+          } catch {
+            output.push(event.payload);
+          }
+        }
+      });
+  });
+  await acceptanceLogin(page);
+  await page.goto(routePath('/k8s_pod'));
+  await selectAcceptanceNamespace(page, namespace!);
+  const pod = page.locator('.ant-table-tbody tr[data-row-key^="web-"]').first();
+  await pod.getByRole('button', { name: '执行命令', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('button', { name: '连接终端', exact: true }).click();
+  await expect(page.getByText('已连接', { exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
+  await page
+    .locator('#terminal-container textarea.xterm-helper-textarea')
+    .focus();
+  await page.keyboard.type("printf 'ui-%s-end\\n' ws");
+  await page.keyboard.press('Enter');
+  await expect
+    .poll(() => output.join('').includes('ui-ws-end'), { timeout: 30_000 })
+    .toBe(true);
+  expect(
+    await page.evaluate(() => Reflect.get(window, '__cloudopsWsCheck')),
+  ).toEqual({
+    tokenInUrl: false,
+    offeredAuth: true,
+    offeredApp: true,
+    negotiatedApp: true,
+    echoedCredential: false,
+  });
+  await page.getByRole('button', { name: '断开连接', exact: true }).click();
+  await page.getByRole('dialog').locator('button.ant-modal-close').click();
+  await expect(page.getByRole('dialog')).not.toBeVisible();
 });

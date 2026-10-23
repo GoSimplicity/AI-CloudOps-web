@@ -1,6 +1,7 @@
 import type { FormInstance } from 'ant-design-vue';
 
 import { mount, type VueWrapper } from '@vue/test-utils';
+import { effectScope } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { usePodPage } from '#/views/k8s/pod/Pod';
@@ -27,7 +28,8 @@ vi.mock('xterm', () => ({
     open = vi.fn();
     focus = vi.fn();
     loadAddon = vi.fn();
-    onData = vi.fn();
+    onData = vi.fn(() => ({ dispose: vi.fn() }));
+    onResize = vi.fn(() => ({ dispose: vi.fn() }));
     dispose = vi.fn();
   },
 }));
@@ -46,7 +48,7 @@ class TestSocket {
   send = vi.fn();
   close = vi.fn();
   constructor(url: string, protocols: string[]) {
-    connections(url, protocols);
+    connections(url, protocols, this);
   }
 }
 let wrapper: VueWrapper | undefined;
@@ -73,11 +75,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function expectHandshake(path: string) {
+function expectHandshake(path: string, search = '') {
   expect(connections).toHaveBeenCalledTimes(1);
   const [url, protocols] = connections.mock.calls[0]!;
   expect(new URL(url).pathname).toBe(path);
-  expect(new URL(url).search).toBe('');
+  expect(new URL(url).search).toBe(search);
   expect(url.includes(access.accessToken)).toBe(false);
   expect(protocols).toEqual([
     'cloudops-v1',
@@ -135,8 +137,60 @@ describe('三个终端客户端的握手契约', () => {
     page.execFormModel.value.container = 'main';
     page.execFormModel.value.shell = '/bin/sh';
     await page.connectToTerminal();
-    expectHandshake('/api/k8s/pod/1/example/web-pod/containers/main/exec');
+    expectHandshake(
+      '/api/k8s/pod/1/example/web-pod/containers/main/exec',
+      '?shell=sh',
+    );
+    const socket = connections.mock.calls[0]![2];
+    socket.readyState = WebSocket.OPEN;
+    socket.onopen();
+    expect(JSON.parse(socket.send.mock.calls[0][0])).toEqual({
+      op: 'resize',
+      col_size: 120,
+      row_size: 30,
+    });
+    page.terminalConnection.value?.sendCommand('echo safe');
+    expect(JSON.parse(socket.send.mock.calls.at(-1)[0])).toEqual({
+      op: 'stdin',
+      data: 'echo safe',
+    });
+    const firstInput = vi.mocked(page.terminal.value!.onData).mock.results[0]!
+      .value;
+    socket.onclose({ code: 1006, wasClean: false });
+    expect(page.isTerminalConnected.value).toBe(false);
+    expect(page.terminalLoading.value).toBe(true);
+    access.accessToken = 'fresh.jwt.signature';
+    vi.advanceTimersByTime(3000);
+    const latest = connections.mock.calls.at(-1)!;
+    expect(latest[1]).toEqual([
+      'cloudops-v1',
+      'cloudops-auth.fresh.jwt.signature',
+    ]);
+    const reconnected = latest[2];
+    reconnected.readyState = WebSocket.OPEN;
+    reconnected.onopen();
+    expect(firstInput.dispose).toHaveBeenCalledTimes(1);
+    socket.onclose({ code: 1000, wasClean: true });
+    expect(page.isTerminalConnected.value).toBe(true);
     page.disconnectTerminal();
+  });
+
+  it('Pod 页面作用域销毁时关闭终端与日志流', () => {
+    const scope = effectScope();
+    const page = scope.run(() => usePodPage())!;
+    const closeTerminal = vi.fn();
+    const closeLogs = vi.fn();
+    page.terminalConnection.value = {
+      close: closeTerminal,
+      sendCommand: vi.fn(),
+    };
+    page.logsStreamConnection.value = { close: closeLogs };
+    page.isTerminalConnected.value = true;
+    scope.stop();
+    expect(closeTerminal).toHaveBeenCalledTimes(1);
+    expect(closeLogs).toHaveBeenCalledTimes(1);
+    expect(page.isTerminalConnected.value).toBe(false);
+    expect(page.logsStreamConnection.value).toBeNull();
   });
 
   it('没有登录凭证时不创建连接', () => {

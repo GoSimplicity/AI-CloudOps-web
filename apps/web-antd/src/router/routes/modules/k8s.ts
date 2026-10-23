@@ -50,7 +50,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 6,
           icon: 'lucide:rocket',
-          title: 'deployment管理',
+          title: 'Deployment 管理',
         },
       },
       {
@@ -100,7 +100,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 11,
           icon: 'lucide:separator-vertical',
-          title: 'pod管理',
+          title: 'Pod 管理',
         },
       },
       {

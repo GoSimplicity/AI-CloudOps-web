@@ -1,4 +1,11 @@
-import { ref, computed, nextTick, h } from 'vue';
+import {
+  ref,
+  computed,
+  nextTick,
+  h,
+  getCurrentScope,
+  onScopeDispose,
+} from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 import yaml from 'js-yaml';
@@ -94,6 +101,11 @@ export function usePodPage() {
   const namespaces = ref<K8sNamespace[]>([]);
   const nodes = ref<string[]>([]);
   const loading = ref(false);
+  const loadError = ref('');
+  const clustersError = ref('');
+  const namespacesError = ref('');
+  let resourceRequestId = 0;
+  let namespaceRequestId = 0;
   const clustersLoading = ref(false);
   const namespacesLoading = ref(false);
   const searchText = ref('');
@@ -137,12 +149,17 @@ export function usePodPage() {
   const logsLoading = ref(false);
   const isLogsStreaming = ref(false);
   const logsStreamConnection = ref<{ close: () => void } | null>(null);
-  
+
   // 终端相关状态
   const isTerminalConnected = ref(false);
   const terminalLoading = ref(false);
   const terminal = ref<Terminal | null>(null);
-  const terminalConnection = ref<{ sendCommand: (cmd: string) => void; close: () => void } | null>(null);
+  let terminalInputSubscription: { dispose: () => void } | undefined;
+  let terminalResizeObserver: ResizeObserver | undefined;
+  const terminalConnection = ref<{
+    sendCommand: (cmd: string) => void;
+    close: () => void;
+  } | null>(null);
   const fitAddon = ref<FitAddon | null>(null);
 
   // current operation target
@@ -175,20 +192,22 @@ export function usePodPage() {
     namespace: '',
     labels: {},
     annotations: {},
-    containers: [{
-      name: '',
-      image: '',
-      command: [],
-      args: [],
-      envs: [],
-      ports: [],
-      resources: {
-        requests: { cpu: '', memory: '' },
-        limits: { cpu: '', memory: '' }
+    containers: [
+      {
+        name: '',
+        image: '',
+        command: [],
+        args: [],
+        envs: [],
+        ports: [],
+        resources: {
+          requests: { cpu: '', memory: '' },
+          limits: { cpu: '', memory: '' },
+        },
+        volume_mounts: [],
+        image_pull_policy: 'IfNotPresent',
       },
-      volume_mounts: [],
-      image_pull_policy: 'IfNotPresent'
-    }],
+    ],
     init_containers: [],
     restart_policy: 'Always',
     node_selector: {},
@@ -198,7 +217,7 @@ export function usePodPage() {
     host_network: false,
     host_pid: false,
     dns_policy: 'ClusterFirst',
-    service_account: ''
+    service_account: '',
   });
 
   const editFormModel = ref<{
@@ -210,19 +229,19 @@ export function usePodPage() {
     name: '',
     namespace: '',
     labels: {},
-    annotations: {}
+    annotations: {},
   });
 
   const yamlFormModel = ref<{
     yaml: string;
   }>({
-    yaml: ''
+    yaml: '',
   });
 
   const createYamlFormModel = ref<{
     yaml: string;
   }>({
-    yaml: ''
+    yaml: '',
   });
 
   const logsFormModel = ref<{
@@ -242,7 +261,7 @@ export function usePodPage() {
     since_time: '',
     timestamps: true,
     tail_lines: 100,
-    limit_bytes: 0
+    limit_bytes: 0,
   });
 
   const execFormModel = ref<{
@@ -250,45 +269,48 @@ export function usePodPage() {
     shell: string;
   }>({
     container: '',
-    shell: '/bin/bash'
+    shell: '/bin/sh',
   });
 
   const portForwardFormModel = ref<{
     ports: PodPortForwardPort[];
   }>({
-    ports: [{ local_port: 0, remote_port: 0 }]
+    ports: [{ local_port: 0, remote_port: 0 }],
   });
 
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入 Pod 名称', trigger: 'blur' },
-      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'Pod 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
-      { max: 63, message: 'Pod 名称长度不能超过63个字符', trigger: 'blur' }
+      {
+        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        message:
+          'Pod 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        trigger: 'blur',
+      },
+      { max: 63, message: 'Pod 名称长度不能超过63个字符', trigger: 'blur' },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' }
-    ]
+      { required: true, message: '请选择命名空间', trigger: 'change' },
+    ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   const execFormRules: Record<string, Rule[]> = {
-    container: [
-      { required: true, message: '请选择容器', trigger: 'change' }
-    ]
+    container: [{ required: true, message: '请选择容器', trigger: 'change' }],
   };
 
   // computed
@@ -361,30 +383,40 @@ export function usePodPage() {
   };
 
   // 转换函数：Record<string, string> -> KeyValueList
-  const recordToKeyValueList = (record: Record<string, string> | null | undefined): KeyValueList => {
+  const recordToKeyValueList = (
+    record: Record<string, string> | null | undefined,
+  ): KeyValueList => {
     if (!record || typeof record !== 'object') {
       return [];
     }
-    return Object.entries(record).map(([key, value]: [string, string]) => ({ key, value }));
+    return Object.entries(record).map(([key, value]: [string, string]) => ({
+      key,
+      value,
+    }));
   };
 
   // 转换函数：KeyValueList 或对象 -> Record<string, string>
-  const keyValueListToRecord = (data?: KeyValueList | Record<string, string>): Record<string, string> => {
+  const keyValueListToRecord = (
+    data?: KeyValueList | Record<string, string>,
+  ): Record<string, string> => {
     if (!data) return {};
-    
+
     // 如果已经是对象格式，直接返回
     if (typeof data === 'object' && !Array.isArray(data)) {
       return data as Record<string, string>;
     }
-    
+
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce((acc, { key, value }) => {
-        acc[key] = value;
-        return acc;
-      }, {} as Record<string, string>);
+      return data.reduce(
+        (acc, { key, value }) => {
+          acc[key] = value;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
     }
-    
+
     return {};
   };
 
@@ -400,12 +432,19 @@ export function usePodPage() {
 
   // cluster operations
   const clearPods = () => {
+    resourceRequestId++;
+    loading.value = false;
+    total.value = 0;
+    loadError.value = '';
     pods.value = [];
     selectedRowKeys.value = [];
     selectedRows.value = [];
   };
 
   const clearNamespaces = () => {
+    namespaceRequestId++;
+    namespacesLoading.value = false;
+    namespacesError.value = '';
     resetNamespaces();
     filterNamespace.value = undefined;
   };
@@ -416,6 +455,7 @@ export function usePodPage() {
     }
     try {
       clustersLoading.value = true;
+      clustersError.value = '';
       const params: ListClustersReq = {
         page: clustersPage.value,
         size: clustersSize.value,
@@ -427,41 +467,58 @@ export function usePodPage() {
         clusters.value = [...clusters.value, ...(res?.items || [])];
       }
       clustersTotal.value = res?.total || 0;
-      
+
       // 如果当前没有选择集群且有可用集群，自动选择第一个
       if (!filterClusterId.value && clusters.value.length > 0) {
         const firstCluster = clusters.value[0];
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
-          message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
           // 自动加载该集群的命名空间和Pod数据
           await fetchNamespaces();
           await fetchPods();
         }
       }
     } catch (err) {
-      message.error('获取集群列表失败');
-
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearNamespaces();
+        clearPods();
+      }
+      clustersError.value = '获取集群列表失败，请重试';
+      message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
   };
 
   const fetchNamespaces = async (reset = false) => {
-    if (!filterClusterId.value) return;
-    
+    const clusterId = filterClusterId.value;
+    if (!clusterId) {
+      clearNamespaces();
+      return;
+    }
+    const requestId = ++namespaceRequestId;
+
     if (reset) {
       resetNamespaces();
     }
-    
+
     try {
       namespacesLoading.value = true;
+      namespacesError.value = '';
       const params: K8sNamespaceListReq = {
-        cluster_id: filterClusterId.value,
+        cluster_id: clusterId,
         page: namespacesPage.value,
         size: namespacesSize.value,
       };
-      const res = await getNamespacesListApi(filterClusterId.value, params);
+      const res = await getNamespacesListApi(clusterId, params);
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       if (namespacesPage.value === 1) {
         namespaces.value = res?.items || [];
       } else {
@@ -469,38 +526,58 @@ export function usePodPage() {
       }
       namespacesTotal.value = res?.total || 0;
     } catch (err) {
-      message.error('获取命名空间列表失败');
-
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      namespaces.value = [];
+      namespacesTotal.value = 0;
+      namespacesError.value = '获取命名空间列表失败，请重试';
+      message.error(namespacesError.value);
     } finally {
-      namespacesLoading.value = false;
+      if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
   };
 
   // crud operations
   const fetchPods = async () => {
-    if (!filterClusterId.value || filterClusterId.value === 0) {
-      message.warning('请先选择有效的集群');
-      pods.value = [];
-      total.value = 0;
+    const clusterId = filterClusterId.value;
+    const namespace = filterNamespace.value;
+    if (!clusterId) {
+      clearPods();
       return;
     }
+    const requestId = ++resourceRequestId;
 
     try {
       loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
       const params: GetPodListReq = {
-        cluster_id: filterClusterId.value,
+        cluster_id: clusterId,
         page: currentPage.value,
         page_size: pageSize.value,
         search: searchText.value || undefined,
-        namespace: filterNamespace.value || undefined,
+        namespace: namespace || undefined,
         status: filterStatus.value || undefined,
-        labels: Object.keys(filterLabels.value).length > 0 ? filterLabels.value : undefined,
+        labels:
+          Object.keys(filterLabels.value).length > 0
+            ? filterLabels.value
+            : undefined,
       };
       const res = await getK8sPodList(params);
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
       // 确保每个pod对象都有正确的cluster_id
       const podsWithClusterId = (res?.items || []).map((pod: K8sPod) => ({
         ...pod,
-        cluster_id: pod.cluster_id || filterClusterId.value || 0,
+        cluster_id: pod.cluster_id || clusterId,
         // 解析JSON字段
         labels: parseJsonField(pod.labels, {}),
         annotations: parseJsonField(pod.annotations, {}),
@@ -509,15 +586,22 @@ export function usePodPage() {
         init_containers: parseJsonField(pod.init_containers, []),
         volumes: parseJsonField(pod.volumes, []),
         owner_references: parseJsonField(pod.owner_references, []),
-        spec: parseJsonField(pod.spec, {})
+        spec: parseJsonField(pod.spec, {}),
       }));
       pods.value = podsWithClusterId;
       total.value = res?.total || 0;
     } catch (err) {
-      message.error('获取 Pod 列表失败');
-
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
+      clearPods();
+      loadError.value = '获取 Pod 列表失败，请重试';
+      message.error(loadError.value);
     } finally {
-      loading.value = false;
+      if (requestId === resourceRequestId) loading.value = false;
     }
   };
 
@@ -525,36 +609,42 @@ export function usePodPage() {
   const showPodDetail = async (record: K8sPod) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
       const params: GetPodDetailsReq = {
         cluster_id: clusterId,
         namespace: record.namespace,
-        name: record.name
+        name: record.name,
       };
       const res = await getK8sPodDetails(params);
-      
+
       // 转换标签和注解格式：从对象转为数组
-      const processedDetail = res ? {
-        ...res,
-        cluster_id: clusterId,
-        labels: recordToKeyValueList(parseJsonField(res.labels, {})),
-        annotations: recordToKeyValueList(parseJsonField(res.annotations, {})),
-        conditions: parseJsonField(res.conditions, []),
-        containers: parseJsonField(res.containers, []),
-        init_containers: parseJsonField(res.init_containers, []),
-        volumes: parseJsonField(res.volumes, []),
-        owner_references: parseJsonField(res.owner_references, []),
-        spec: parseJsonField(res.spec, {})
-      } : { 
-        ...record, 
-        cluster_id: clusterId,
-        labels: recordToKeyValueList(parseJsonField(record.labels, {})),
-        annotations: recordToKeyValueList(parseJsonField(record.annotations, {}))
-      };
-      
+      const processedDetail = res
+        ? {
+            ...res,
+            cluster_id: clusterId,
+            labels: recordToKeyValueList(parseJsonField(res.labels, {})),
+            annotations: recordToKeyValueList(
+              parseJsonField(res.annotations, {}),
+            ),
+            conditions: parseJsonField(res.conditions, []),
+            containers: parseJsonField(res.containers, []),
+            init_containers: parseJsonField(res.init_containers, []),
+            volumes: parseJsonField(res.volumes, []),
+            owner_references: parseJsonField(res.owner_references, []),
+            spec: parseJsonField(res.spec, {}),
+          }
+        : {
+            ...record,
+            cluster_id: clusterId,
+            labels: recordToKeyValueList(parseJsonField(record.labels, {})),
+            annotations: recordToKeyValueList(
+              parseJsonField(record.annotations, {}),
+            ),
+          };
+
       currentPodDetail.value = processedDetail;
     } catch (err) {
       message.error('获取 Pod 详情失败');
@@ -563,12 +653,12 @@ export function usePodPage() {
       try {
         const parsedLabels = parseJsonField(record.labels, {});
         const parsedAnnotations = parseJsonField(record.annotations, {});
-        
-        const fallbackDetail = { 
-          ...record, 
+
+        const fallbackDetail = {
+          ...record,
           cluster_id: clusterId,
           labels: recordToKeyValueList(parsedLabels),
-          annotations: recordToKeyValueList(parsedAnnotations)
+          annotations: recordToKeyValueList(parsedAnnotations),
         };
         currentPodDetail.value = fallbackDetail;
       } catch (fallbackError) {
@@ -577,7 +667,7 @@ export function usePodPage() {
           ...record,
           cluster_id: clusterId,
           labels: [],
-          annotations: []
+          annotations: [],
         };
       }
     } finally {
@@ -594,14 +684,14 @@ export function usePodPage() {
   const showYamlModal = async (record: K8sPod) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       submitLoading.value = true;
       currentOperationPod.value = { ...record, cluster_id: clusterId };
       const params: GetPodYamlReq = {
         cluster_id: clusterId,
         namespace: record.namespace,
-        name: record.name
+        name: record.name,
       };
       const res = await getK8sPodYaml(params);
       currentYamlContent.value = res?.yaml || '';
@@ -609,7 +699,6 @@ export function usePodPage() {
       isYamlModalVisible.value = true;
     } catch (err) {
       message.error('获取 Pod YAML 失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -624,18 +713,18 @@ export function usePodPage() {
 
   const submitYamlForm = async () => {
     if (!yamlFormRef.value || !currentOperationPod.value) return;
-    
+
     try {
       await yamlFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: UpdatePodByYamlReq = {
         cluster_id: currentOperationPod.value.cluster_id,
         namespace: currentOperationPod.value.namespace,
         name: currentOperationPod.value.name,
         yaml: yamlFormModel.value.yaml,
       };
-      
+
       await updateK8sPodByYaml(params);
       message.success('Pod YAML 更新成功');
       isYamlModalVisible.value = false;
@@ -646,7 +735,6 @@ export function usePodPage() {
         return;
       }
       message.error('Pod YAML 更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -659,20 +747,22 @@ export function usePodPage() {
       namespace: '',
       labels: {},
       annotations: {},
-      containers: [{
-        name: '',
-        image: '',
-        command: [],
-        args: [],
-        envs: [],
-        ports: [],
-        resources: {
-          requests: { cpu: '', memory: '' },
-          limits: { cpu: '', memory: '' }
+      containers: [
+        {
+          name: '',
+          image: '',
+          command: [],
+          args: [],
+          envs: [],
+          ports: [],
+          resources: {
+            requests: { cpu: '', memory: '' },
+            limits: { cpu: '', memory: '' },
+          },
+          volume_mounts: [],
+          image_pull_policy: 'IfNotPresent',
         },
-        volume_mounts: [],
-        image_pull_policy: 'IfNotPresent'
-      }],
+      ],
       init_containers: [],
       restart_policy: 'Always',
       node_selector: {},
@@ -682,7 +772,7 @@ export function usePodPage() {
       host_network: false,
       host_pid: false,
       dns_policy: 'ClusterFirst',
-      service_account: ''
+      service_account: '',
     };
     isCreateModalVisible.value = true;
   };
@@ -704,30 +794,48 @@ export function usePodPage() {
 
   const submitCreateForm = async () => {
     if (!formRef.value || !filterClusterId.value) return;
-    
+
     try {
       await formRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: CreatePodReq = {
         cluster_id: filterClusterId.value,
         name: createFormModel.value.name,
         namespace: createFormModel.value.namespace,
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(createFormModel.value.annotations).length > 0
+            ? createFormModel.value.annotations
+            : undefined,
         containers: createFormModel.value.containers,
-        init_containers: createFormModel.value.init_containers.length > 0 ? createFormModel.value.init_containers : undefined,
+        init_containers:
+          createFormModel.value.init_containers.length > 0
+            ? createFormModel.value.init_containers
+            : undefined,
         restart_policy: createFormModel.value.restart_policy,
-        node_selector: Object.keys(createFormModel.value.node_selector).length > 0 ? createFormModel.value.node_selector : undefined,
-        tolerations: createFormModel.value.tolerations.length > 0 ? createFormModel.value.tolerations : undefined,
+        node_selector:
+          Object.keys(createFormModel.value.node_selector).length > 0
+            ? createFormModel.value.node_selector
+            : undefined,
+        tolerations:
+          createFormModel.value.tolerations.length > 0
+            ? createFormModel.value.tolerations
+            : undefined,
         affinity: createFormModel.value.affinity,
-        volumes: createFormModel.value.volumes.length > 0 ? createFormModel.value.volumes : undefined,
+        volumes:
+          createFormModel.value.volumes.length > 0
+            ? createFormModel.value.volumes
+            : undefined,
         host_network: createFormModel.value.host_network,
         host_pid: createFormModel.value.host_pid,
         dns_policy: createFormModel.value.dns_policy,
-        service_account: createFormModel.value.service_account
+        service_account: createFormModel.value.service_account,
       };
-      
+
       await createK8sPod(params);
       message.success('Pod 创建成功');
       isCreateModalVisible.value = false;
@@ -738,7 +846,6 @@ export function usePodPage() {
         return;
       }
       message.error('Pod 创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -746,16 +853,16 @@ export function usePodPage() {
 
   const submitCreateYamlForm = async () => {
     if (!createYamlFormRef.value || !filterClusterId.value) return;
-    
+
     try {
       await createYamlFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: CreatePodByYamlReq = {
         cluster_id: filterClusterId.value,
         yaml: createYamlFormModel.value.yaml,
       };
-      
+
       await createK8sPodByYaml(params);
       message.success('Pod YAML 创建成功');
       isCreateYamlModalVisible.value = false;
@@ -766,7 +873,6 @@ export function usePodPage() {
         return;
       }
       message.error('Pod YAML 创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -774,10 +880,14 @@ export function usePodPage() {
 
   // YAML 工具函数
   const insertYamlTemplate = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认覆盖',
-        content: '当前 YAML 编辑器中已有内容，插入模板将覆盖现有内容。是否继续？',
+        content:
+          '当前 YAML 编辑器中已有内容，插入模板将覆盖现有内容。是否继续？',
         okText: '继续插入',
         okType: 'primary',
         cancelText: '取消',
@@ -807,14 +917,13 @@ export function usePodPage() {
       const formatted = yaml.dump(parsed, {
         indent: 2,
         lineWidth: -1, // 不限制行宽
-        noRefs: true,  // 不使用引用
+        noRefs: true, // 不使用引用
         sortKeys: false, // 保持原有顺序
       });
       createYamlFormModel.value.yaml = formatted;
       message.success('YAML 格式化成功');
     } catch (error: any) {
       message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
-
     }
   };
 
@@ -828,7 +937,7 @@ export function usePodPage() {
     try {
       // 尝试解析 YAML
       const parsed = yaml.load(yamlContent);
-      
+
       // 检查是否是有效的对象
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
@@ -853,7 +962,11 @@ export function usePodPage() {
       if (!pod.spec) {
         issues.push('缺少 spec 字段');
       } else {
-        if (!pod.spec.containers || !Array.isArray(pod.spec.containers) || pod.spec.containers.length === 0) {
+        if (
+          !pod.spec.containers ||
+          !Array.isArray(pod.spec.containers) ||
+          pod.spec.containers.length === 0
+        ) {
           issues.push('缺少 spec.containers 字段或容器列表为空');
         }
         if (!pod.spec.restartPolicy) {
@@ -864,12 +977,15 @@ export function usePodPage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -879,21 +995,35 @@ export function usePodPage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
-
     }
   };
 
   const clearYaml = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认清空',
         content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
@@ -931,7 +1061,6 @@ export function usePodPage() {
       message.success('YAML 格式化成功');
     } catch (error: any) {
       message.error(`YAML 格式化失败: ${error.message || '未知错误'}`);
-
     }
   };
 
@@ -944,7 +1073,7 @@ export function usePodPage() {
 
     try {
       const parsed = yaml.load(yamlContent);
-      
+
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
         return;
@@ -967,7 +1096,11 @@ export function usePodPage() {
       if (!pod.spec) {
         issues.push('缺少 spec 字段');
       } else {
-        if (!pod.spec.containers || !Array.isArray(pod.spec.containers) || pod.spec.containers.length === 0) {
+        if (
+          !pod.spec.containers ||
+          !Array.isArray(pod.spec.containers) ||
+          pod.spec.containers.length === 0
+        ) {
           issues.push('缺少 spec.containers 字段或容器列表为空');
         }
         if (!pod.spec.restartPolicy) {
@@ -978,12 +1111,15 @@ export function usePodPage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -993,16 +1129,27 @@ export function usePodPage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
-
     }
   };
 
@@ -1025,19 +1172,25 @@ export function usePodPage() {
 
   const submitEditForm = async () => {
     if (!formRef.value || !currentOperationPod.value) return;
-    
+
     try {
       await formRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: UpdatePodReq = {
         cluster_id: currentOperationPod.value.cluster_id,
         name: currentOperationPod.value.name,
         namespace: currentOperationPod.value.namespace,
-        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
-        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(editFormModel.value.annotations).length > 0
+            ? editFormModel.value.annotations
+            : undefined,
       };
-      
+
       await updateK8sPod(params);
       message.success('Pod 更新成功');
       isEditModalVisible.value = false;
@@ -1048,7 +1201,6 @@ export function usePodPage() {
         return;
       }
       message.error('Pod 更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -1058,7 +1210,7 @@ export function usePodPage() {
   const deletePod = (record: K8sPod) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     Modal.confirm({
       title: '删除 Pod',
       content: `确定要删除 Pod "${record.name}" 吗？此操作不可逆！`,
@@ -1078,7 +1230,6 @@ export function usePodPage() {
           await fetchPods();
         } catch (err) {
           message.error('Pod 删除失败');
-
         }
       },
     });
@@ -1088,28 +1239,27 @@ export function usePodPage() {
   const showLogsModal = async (record: K8sPod) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       currentOperationPod.value = { ...record, cluster_id: clusterId };
       // 先获取容器列表
       const containersParams: GetPodContainersReq = {
         cluster_id: clusterId,
         namespace: record.namespace,
-        pod_name: record.name
+        pod_name: record.name,
       };
       const containersRes = await getK8sPodContainers(containersParams);
       podContainers.value = containersRes?.items || [];
-      
+
       // 如果有容器，默认选择第一个
       if (podContainers.value.length > 0 && podContainers.value[0]) {
         selectedContainer.value = podContainers.value[0].name;
         logsFormModel.value.container = podContainers.value[0].name;
       }
-      
+
       isLogsModalVisible.value = true;
     } catch (err) {
       message.error('获取 Pod 容器列表失败');
-
     }
   };
 
@@ -1130,13 +1280,13 @@ export function usePodPage() {
       since_time: '',
       timestamps: true,
       tail_lines: 100,
-      limit_bytes: 0
+      limit_bytes: 0,
     };
   };
 
   const fetchPodLogs = () => {
     if (!currentOperationPod.value || !logsFormModel.value.container) return;
-    
+
     // 直接启动实时流模式
     startLogsStream();
   };
@@ -1147,40 +1297,45 @@ export function usePodPage() {
     onMessage: (data: string) => void,
     onError?: (error: Event) => void,
     onOpen?: () => void,
-    onClose?: () => void
+    onClose?: () => void,
   ) => {
     // 获取当前用户的访问令牌
     const accessStore = useAccessStore();
     const currentToken = accessStore.accessToken;
-    
+
     // 获取应用配置中的API URL
     const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
     const baseURL = apiURL || `${window.location.origin}/api`;
     const queryParams = new URLSearchParams();
-    
+
     // 添加查询参数
-    if (params.follow !== undefined) queryParams.append('follow', params.follow.toString());
-    if (params.previous !== undefined) queryParams.append('previous', params.previous.toString());
-    if (params.since_seconds !== undefined) queryParams.append('since_seconds', params.since_seconds.toString());
+    if (params.follow !== undefined)
+      queryParams.append('follow', params.follow.toString());
+    if (params.previous !== undefined)
+      queryParams.append('previous', params.previous.toString());
+    if (params.since_seconds !== undefined)
+      queryParams.append('since_seconds', params.since_seconds.toString());
     if (params.since_time) queryParams.append('since_time', params.since_time);
-    if (params.timestamps !== undefined) queryParams.append('timestamps', params.timestamps.toString());
-    if (params.tail_lines !== undefined) queryParams.append('tail_lines', params.tail_lines.toString());
-    if (params.limit_bytes !== undefined) queryParams.append('limit_bytes', params.limit_bytes.toString());
+    if (params.timestamps !== undefined)
+      queryParams.append('timestamps', params.timestamps.toString());
+    if (params.tail_lines !== undefined)
+      queryParams.append('tail_lines', params.tail_lines.toString());
+    if (params.limit_bytes !== undefined)
+      queryParams.append('limit_bytes', params.limit_bytes.toString());
 
     const url = `${baseURL}/k8s/pod/${params.cluster_id}/${params.namespace}/${params.pod_name}/containers/${params.container}/logs?${queryParams.toString()}`;
-    
+
     // 验证URL格式
     try {
       new URL(url, window.location.origin);
     } catch (urlError) {
-
       onError?.(new Event('error'));
       return {
         eventSource: null as any,
-        close: () => {}
+        close: () => {},
       };
     }
-    
+
     let abortController: AbortController;
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
     let isManualClose = false;
@@ -1193,94 +1348,102 @@ export function usePodPage() {
         reconnectTimeoutId = null;
       }
       reconnectAttempts++;
-      reconnectTimeoutId = setTimeout(() => {
-        createFetchSSE();
-      }, Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 30000));
+      reconnectTimeoutId = setTimeout(
+        () => {
+          createFetchSSE();
+        },
+        Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 30000),
+      );
     };
 
     // 使用fetch API替换EventSource以支持自定义headers
     const createFetchSSE = async () => {
       try {
         abortController = new AbortController();
-        
+
         const headers: Record<string, string> = {
-          'Accept': 'text/event-stream',
+          Accept: 'text/event-stream',
           'Cache-Control': 'no-cache',
         };
-        
+
         if (currentToken) {
           headers['Authorization'] = `Bearer ${currentToken}`;
         }
-        
-        
+
         const response = await fetch(url, {
           method: 'GET',
           headers,
           signal: abortController.signal,
         });
-        
+
         if (!response.ok) {
           const errorText = await response.text().catch(() => 'Unknown error');
 
-          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+          throw new Error(
+            `HTTP error! status: ${response.status}, message: ${errorText}`,
+          );
         }
-        
+
         if (!response.body) {
           throw new Error('Response body is null');
-        }        reconnectAttempts = 0;
+        }
+        reconnectAttempts = 0;
         onOpen?.();
-        
+
         reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-        
+
         while (true) {
           if (isManualClose) {
             break;
           }
-          
+
           let readResult;
           try {
             readResult = await reader.read();
           } catch (readError: any) {
-            if (readError?.name === 'AbortError') {              break;
+            if (readError?.name === 'AbortError') {
+              break;
             }
             throw readError;
           }
-          
+
           const { done, value } = readResult;
-          
-          if (done) {            scheduleReconnect();
+
+          if (done) {
+            scheduleReconnect();
             break;
           }
-          
+
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
-          
+
           let currentEvent = '';
           for (const line of lines) {
             const trimmedLine = line.trim();
-            
+
             if (trimmedLine.startsWith('event:')) {
               currentEvent = trimmedLine.substring(6).trim();
               continue;
             }
-            
+
             if (trimmedLine.startsWith('data:')) {
               const data = trimmedLine.substring(5).trim();
-              
-              if (data === '[DONE]') {                onClose?.();
+
+              if (data === '[DONE]') {
+                onClose?.();
                 return;
               }
-              
+
               if (currentEvent === 'message' || currentEvent === '') {
                 if (data && data.length > 0) {
                   onMessage(data);
                 }
               }
             }
-            
+
             if (trimmedLine === '') {
               currentEvent = '';
             }
@@ -1288,10 +1451,10 @@ export function usePodPage() {
         }
       } catch (error: any) {
         if (!isManualClose) {
-
         }
-        
-        if (error?.name === 'AbortError') {          isManualClose = true;
+
+        if (error?.name === 'AbortError') {
+          isManualClose = true;
           onClose?.();
         } else if (!isManualClose) {
           // SSE连接错误，准备重连
@@ -1309,65 +1472,61 @@ export function usePodPage() {
         }
       }
     };
-    
+
     // 启动连接
     createFetchSSE();
-    
+
     // 创建兼容EventSource接口的对象
     const eventSource = {
       readyState: 1, // OPEN
-      close: async () => {        isManualClose = true;
-        
+      close: async () => {
+        isManualClose = true;
+
         if (reconnectTimeoutId) {
           clearTimeout(reconnectTimeoutId);
           reconnectTimeoutId = null;
         }
-        
+
         if (abortController) {
           try {
             abortController.abort();
-          } catch (error) {
-
-          }
+          } catch (error) {}
         }
-        
+
         if (reader) {
           try {
             await reader.cancel().catch(() => {});
             reader = null;
-          } catch (error) {
-
-          }
+          } catch (error) {}
         }
-        
+
         try {
           onClose?.();
-        } catch (error) {
-
-        }
-      }
+        } catch (error) {}
+      },
     } as unknown as EventSource;
-    
+
     return {
       eventSource: eventSource as unknown as EventSource,
       close: () => {
         Promise.resolve(eventSource.close()).catch((_error) => {
           // Ignore close errors
-        });      }
+        });
+      },
     };
   };
 
   // 开始SSE实时日志流
   const startLogsStream = () => {
     if (!currentOperationPod.value || !logsFormModel.value.container) return;
-    
+
     // 先停止之前的连接
     stopLogsStream();
-    
+
     try {
       isLogsStreaming.value = true;
       logsLoading.value = true;
-      
+
       const params: GetPodLogsReq = {
         cluster_id: currentOperationPod.value.cluster_id,
         namespace: currentOperationPod.value.namespace,
@@ -1381,7 +1540,7 @@ export function usePodPage() {
         tail_lines: logsFormModel.value.tail_lines || undefined,
         limit_bytes: logsFormModel.value.limit_bytes || undefined,
       };
-      
+
       logsStreamConnection.value = streamK8sPodLogs(
         params,
         // onMessage - 接收到新的日志数据
@@ -1390,7 +1549,7 @@ export function usePodPage() {
             // 确保每行日志都有换行符
             const logLine = data.endsWith('\n') ? data : data + '\n';
             podLogs.value += logLine;
-            
+
             // 自动滚动到底部
             setTimeout(() => {
               const logsContainer = document.querySelector('.logs-content');
@@ -1398,7 +1557,7 @@ export function usePodPage() {
                 logsContainer.scrollTop = logsContainer.scrollHeight;
               }
             }, 10);
-            
+
             // 输出到控制台用于调试
           }
         },
@@ -1407,13 +1566,12 @@ export function usePodPage() {
         (_error: Event) => {
           // 现在有自动重连机制，不需要复杂的错误处理
           // 只在控制台记录，避免频繁打扰用户
-
         },
         // onOpen - 连接建立
         () => {
           message.success('实时日志连接已建立，支持自动重连');
           logsLoading.value = false;
-          
+
           // 确保状态正确设置
           isLogsStreaming.value = true;
         },
@@ -1422,17 +1580,16 @@ export function usePodPage() {
           isLogsStreaming.value = false;
           logsLoading.value = false;
           logsStreamConnection.value = null;
-          
+
           // 只有在模态框还开着时才提示最终关闭
           if (isLogsModalVisible.value) {
             message.info('📡 实时日志连接已停止');
           }
-        }
+        },
       );
     } catch (err) {
-
       let errorMessage = '启动实时日志失败';
-      
+
       if (err instanceof Error) {
         if (err.message.includes('400')) {
           errorMessage = '请求参数错误，请检查Pod名称和容器名称是否正确';
@@ -1442,11 +1599,14 @@ export function usePodPage() {
           errorMessage = '权限不足，请检查访问权限';
         } else if (err.message.includes('500')) {
           errorMessage = '服务器内部错误，请稍后重试或联系管理员';
-        } else if (err.message.includes('network') || err.message.includes('fetch')) {
+        } else if (
+          err.message.includes('network') ||
+          err.message.includes('fetch')
+        ) {
           errorMessage = '网络连接失败，请检查网络连接和服务器地址';
         }
       }
-      
+
       message.error(errorMessage);
       isLogsStreaming.value = false;
       logsLoading.value = false;
@@ -1461,12 +1621,11 @@ export function usePodPage() {
         logsStreamConnection.value = null;
       }
     } catch (error) {
-
     } finally {
       // 确保状态被正确重置
       isLogsStreaming.value = false;
       logsLoading.value = false;
-      message.info('⏹️ 实时日志流已停止');
+      message.info('实时日志流已停止');
     }
   };
 
@@ -1474,41 +1633,43 @@ export function usePodPage() {
   const showExecModal = async (record: K8sPod) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       currentOperationPod.value = { ...record, cluster_id: clusterId };
       // 先获取容器列表
       const containersParams: GetPodContainersReq = {
         cluster_id: clusterId,
         namespace: record.namespace,
-        pod_name: record.name
+        pod_name: record.name,
       };
       const containersRes = await getK8sPodContainers(containersParams);
       podContainers.value = containersRes?.items || [];
-      
+
       execFormModel.value = {
-        container: podContainers.value.length > 0 ? podContainers.value[0]?.name || '' : '',
-        shell: '/bin/bash'
+        container:
+          podContainers.value.length > 0
+            ? podContainers.value[0]?.name || ''
+            : '',
+        shell: '/bin/sh',
       };
       isExecModalVisible.value = true;
     } catch (err) {
       message.error('获取 Pod 容器列表失败');
-
     }
   };
 
   const closeExecModal = () => {
     // 断开终端连接
     disconnectTerminal();
-    
+
     isExecModalVisible.value = false;
     currentOperationPod.value = null;
     podContainers.value = [];
-    
+
     // 重置表单
     execFormModel.value = {
       container: '',
-      shell: '/bin/bash'
+      shell: '/bin/sh',
     };
   };
 
@@ -1517,7 +1678,7 @@ export function usePodPage() {
     try {
       // 等待DOM更新
       await nextTick();
-      
+
       const terminalElement = document.getElementById('terminal-container');
       if (!terminalElement) {
         throw new Error('终端容器元素未找到');
@@ -1531,16 +1692,19 @@ export function usePodPage() {
             // FitAddon没有dispose方法，直接设置为null
             fitAddon.value = null;
           }
-          
+
           // 安全地dispose terminal
           terminal.value.dispose();
           terminal.value = null;
         } catch (error) {
           // 捕获特定的addon dispose错误
-          if (error instanceof Error && error.message.includes('Could not dispose an addon that has not been loaded')) {
-
+          if (
+            error instanceof Error &&
+            error.message.includes(
+              'Could not dispose an addon that has not been loaded',
+            )
+          ) {
           } else {
-
           }
           // 强制重置状态
           terminal.value = null;
@@ -1572,44 +1736,45 @@ export function usePodPage() {
           brightBlue: '#3b8eea',
           brightMagenta: '#d670d6',
           brightCyan: '#29b8db',
-          brightWhite: '#e5e5e5'
+          brightWhite: '#e5e5e5',
         },
         cols: 120,
         rows: 30,
         scrollback: 1000,
-        convertEol: true
+        convertEol: true,
       });
 
       // 添加插件
       try {
         fitAddon.value = new FitAddon();
         terminal.value.loadAddon(fitAddon.value);
-        
+
         // 安全加载WebLinksAddon
         const webLinksAddon = new WebLinksAddon();
         terminal.value.loadAddon(webLinksAddon);
-      } catch (error) {        // 如果插件加载失败，继续初始化终端
+      } catch (error) {
+        // 如果插件加载失败，继续初始化终端
       }
 
       // 将终端挂载到DOM
       terminal.value.open(terminalElement);
-      
+
       // 自适应大小
       if (fitAddon.value) {
         fitAddon.value.fit();
       }
-      
+
       // 监听窗口大小变化
-      const resizeObserver = new ResizeObserver(() => {
+      terminalResizeObserver?.disconnect();
+      terminalResizeObserver = new ResizeObserver(() => {
         if (fitAddon.value && terminal.value) {
           fitAddon.value.fit();
         }
       });
-      resizeObserver.observe(terminalElement);
+      terminalResizeObserver.observe(terminalElement);
 
       return true;
     } catch (error) {
-
       message.error('初始化终端失败');
       return false;
     }
@@ -1621,16 +1786,16 @@ export function usePodPage() {
     onMessage: (data: string) => void,
     onError?: (error: Event) => void,
     onOpen?: () => void,
-    onClose?: () => void
+    onClose?: () => void,
+    onReconnect?: () => void,
   ) => {
     // 获取认证token
     const accessStore = useAccessStore();
     const token = accessStore.accessToken;
-    
-    if (!token) {
 
+    if (!token) {
       onError?.(new Event('auth_error'));
-      return { 
+      return {
         sendCommand: () => {
           // WebSocket未连接，无法发送命令
         },
@@ -1639,18 +1804,26 @@ export function usePodPage() {
         },
         get readyState() {
           return WebSocket.CLOSED;
-        }
+        },
       };
     }
 
     const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
-    const url = websocketUrl(
-      apiURL,
-      `k8s/pod/${params.cluster_id}/${encodeURIComponent(params.namespace)}/${encodeURIComponent(params.pod_name)}/containers/${encodeURIComponent(params.container)}/exec`,
-      window.location.origin,
+    const url = new URL(
+      websocketUrl(
+        apiURL,
+        `k8s/pod/${params.cluster_id}/${encodeURIComponent(params.namespace)}/${encodeURIComponent(params.pod_name)}/containers/${encodeURIComponent(params.container)}/exec`,
+        window.location.origin,
+      ),
+    );
+
+    url.searchParams.set(
+      'shell',
+      (params.shell || 'sh').replace(/^\/bin\//, ''),
     );
 
     let socket: WebSocket | null = null;
+    let resizeSubscription: { dispose: () => void } | undefined;
     let isManualClose = false;
     let reconnectAttempts = 0;
     let reconnectTimeoutId: NodeJS.Timeout | null = null;
@@ -1659,9 +1832,11 @@ export function usePodPage() {
 
     const scheduleReconnect = () => {
       if (isManualClose || reconnectAttempts >= maxReconnectAttempts) {
+        onClose?.();
         return;
       }
-      
+      onReconnect?.();
+
       reconnectAttempts++;
       reconnectTimeoutId = setTimeout(() => {
         connect();
@@ -1675,24 +1850,43 @@ export function usePodPage() {
           socket.close();
           socket = null;
         }
-        
-        // 创建WebSocket连接
-        socket = new WebSocket(url, websocketProtocols(accessStore.accessToken || ''));
 
+        // 创建WebSocket连接
+        socket = new WebSocket(
+          url.toString(),
+          websocketProtocols(accessStore.accessToken || ''),
+        );
+
+        const ownedSocket = socket;
         socket.onopen = () => {
+          if (socket !== ownedSocket) return;
           reconnectAttempts = 0; // 重置重连计数
-          
-          // 发送初始化参数
-          const initMessage = {
-            shell: params.shell || '/bin/bash',
-            container: params.container
+
+          const sendResize = (cols: number, rows: number) => {
+            if (
+              socket === ownedSocket &&
+              ownedSocket.readyState === WebSocket.OPEN
+            ) {
+              ownedSocket.send(
+                JSON.stringify({
+                  op: 'resize',
+                  col_size: cols,
+                  row_size: rows,
+                }),
+              );
+            }
           };
-          socket?.send(JSON.stringify(initMessage));
-          
+          resizeSubscription?.dispose();
+          sendResize(terminal.value?.cols || 120, terminal.value?.rows || 30);
+          resizeSubscription = terminal.value?.onResize(({ cols, rows }) =>
+            sendResize(cols, rows),
+          );
+
           onOpen?.();
         };
 
         socket.onmessage = (event) => {
+          if (socket !== ownedSocket) return;
           try {
             const data = event.data;
             if (typeof data === 'string') {
@@ -1711,30 +1905,27 @@ export function usePodPage() {
                 onMessage(data);
               }
             }
-          } catch (error) {
-
-          }
+          } catch (error) {}
         };
 
         socket.onerror = (error) => {
-
+          if (socket !== ownedSocket) return;
           onError?.(error);
         };
 
         socket.onclose = (event) => {
+          if (socket !== ownedSocket) return;
+          resizeSubscription?.dispose();
+          resizeSubscription = undefined;
           socket = null;
-          
+
           // 根据关闭代码提供更详细的错误信息
           if (event.code === 1006) {
-
           } else if (event.code === 1000) {
-
           } else if (event.code === 1003) {
-
           } else if (event.code === 4401) {
-
           }
-          
+
           if (!isManualClose && !event.wasClean) {
             // 非正常关闭且不是手动关闭，尝试重连
             scheduleReconnect();
@@ -1742,9 +1933,7 @@ export function usePodPage() {
             onClose?.();
           }
         };
-
       } catch (error) {
-
         onError?.(new Event('connection_failed'));
       }
     };
@@ -1752,23 +1941,23 @@ export function usePodPage() {
     // 发送命令到容器
     const sendCommand = (command: string) => {
       if (socket && socket.readyState === WebSocket.OPEN) {
-        // 直接发送字符串命令
-        socket.send(command);
+        socket.send(JSON.stringify({ op: 'stdin', data: command }));
       } else {
-
       }
     };
 
     // 手动关闭连接
     const close = () => {
       isManualClose = true;
-      
+      resizeSubscription?.dispose();
+      resizeSubscription = undefined;
+
       // 清理重连定时器
       if (reconnectTimeoutId) {
         clearTimeout(reconnectTimeoutId);
         reconnectTimeoutId = null;
       }
-      
+
       // 关闭WebSocket连接
       if (socket) {
         socket.close();
@@ -1784,21 +1973,22 @@ export function usePodPage() {
       close,
       get readyState() {
         return socket?.readyState;
-      }
+      },
     };
   };
 
   // 连接到Pod终端
   const connectToTerminal = async () => {
     if (!execFormRef.value || !currentOperationPod.value) return;
-    
+
     try {
       await execFormRef.value.validate();
       terminalLoading.value = true;
-      
+
       // 初始化终端
       const terminalInitialized = await initializeTerminal();
       if (!terminalInitialized) {
+        terminalLoading.value = false;
         return;
       }
 
@@ -1824,40 +2014,47 @@ export function usePodPage() {
           // Error occurred in terminal connection
           message.error('终端连接出现问题');
           isTerminalConnected.value = false;
+          terminalLoading.value = false;
         },
         // onOpen - 连接建立
         () => {
           message.success('终端连接已建立');
           isTerminalConnected.value = true;
           terminalLoading.value = false;
-          
+
           // 监听终端输入
           if (terminal.value && terminalConnection.value) {
-            terminal.value.onData((data) => {
+            terminalInputSubscription?.dispose();
+            terminalInputSubscription = terminal.value.onData((data) => {
               terminalConnection.value?.sendCommand(data);
             });
           }
-          
+
           // 发送初始化信息
           if (terminal.value) {
-            terminal.value.writeln(`\r\n连接到 Pod: ${currentOperationPod.value?.name}`);
+            terminal.value.writeln(
+              `\r\n连接到 Pod: ${currentOperationPod.value?.name}`,
+            );
             terminal.value.writeln(`容器: ${execFormModel.value.container}`);
             terminal.value.writeln(`Shell: ${execFormModel.value.shell}`);
-            terminal.value.writeln('=' .repeat(50));
+            terminal.value.writeln('='.repeat(50));
           }
         },
         // onClose - 连接关闭
         () => {
           isTerminalConnected.value = false;
           terminalLoading.value = false;
-          
+
           if (terminal.value && isExecModalVisible.value) {
-            terminal.value.writeln('\r\n\r\n📡 连接已断开');
+            terminal.value.writeln('\r\n\r\n连接已断开');
             message.info('终端连接已断开');
           }
-        }
+        },
+        () => {
+          isTerminalConnected.value = false;
+          terminalLoading.value = true;
+        },
       );
-
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查表单填写是否正确');
@@ -1873,13 +2070,17 @@ export function usePodPage() {
 
   // 断开终端连接
   const disconnectTerminal = () => {
+    terminalResizeObserver?.disconnect();
+    terminalResizeObserver = undefined;
+    terminalInputSubscription?.dispose();
+    terminalInputSubscription = undefined;
     try {
       // 关闭WebSocket连接
       if (terminalConnection.value) {
         terminalConnection.value.close();
         terminalConnection.value = null;
       }
-      
+
       // 清理终端实例
       if (terminal.value) {
         try {
@@ -1888,30 +2089,31 @@ export function usePodPage() {
             // FitAddon没有dispose方法，直接设置为null
             fitAddon.value = null;
           }
-          
+
           // 安全地dispose terminal，捕获addon相关错误
           terminal.value.dispose();
           terminal.value = null;
         } catch (error) {
           // 捕获特定的addon dispose错误
-          if (error instanceof Error && error.message.includes('Could not dispose an addon that has not been loaded')) {
-
+          if (
+            error instanceof Error &&
+            error.message.includes(
+              'Could not dispose an addon that has not been loaded',
+            )
+          ) {
           } else {
-
           }
           // 强制重置状态，无论是否有错误
           terminal.value = null;
           fitAddon.value = null;
         }
       }
-      
+
       // 确保fitAddon也被清理
       if (fitAddon.value) {
         fitAddon.value = null;
       }
-      
     } catch (error) {
-
     } finally {
       // 确保状态被正确重置
       isTerminalConnected.value = false;
@@ -1922,11 +2124,11 @@ export function usePodPage() {
   // 保留原有的简单执行命令函数作为备用
   const executePodCommand = async () => {
     if (!execFormRef.value || !currentOperationPod.value) return;
-    
+
     try {
       await execFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: PodExecReq = {
         cluster_id: currentOperationPod.value.cluster_id,
         namespace: currentOperationPod.value.namespace,
@@ -1943,7 +2145,6 @@ export function usePodPage() {
         return;
       }
       message.error('命令执行失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -1953,10 +2154,10 @@ export function usePodPage() {
   const showPortForwardModal = (record: K8sPod) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     currentOperationPod.value = { ...record, cluster_id: clusterId };
     portForwardFormModel.value = {
-      ports: [{ local_port: 0, remote_port: 0 }]
+      ports: [{ local_port: 0, remote_port: 0 }],
     };
     isPortForwardModalVisible.value = true;
   };
@@ -1968,21 +2169,22 @@ export function usePodPage() {
 
   const submitPortForward = async () => {
     if (!currentOperationPod.value) return;
-    
+
     try {
       submitLoading.value = true;
       const params: PodPortForwardReq = {
         cluster_id: currentOperationPod.value.cluster_id,
         namespace: currentOperationPod.value.namespace,
         pod_name: currentOperationPod.value.name,
-        ports: portForwardFormModel.value.ports.filter(p => p.local_port > 0 && p.remote_port > 0)
+        ports: portForwardFormModel.value.ports.filter(
+          (p) => p.local_port > 0 && p.remote_port > 0,
+        ),
       };
       await forwardK8sPodPort(params);
       message.success('端口转发设置成功');
       isPortForwardModalVisible.value = false;
     } catch (err) {
       message.error('端口转发设置失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -1992,23 +2194,22 @@ export function usePodPage() {
   const showFileManagerModal = async (record: K8sPod) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     currentOperationPod.value = { ...record, cluster_id: clusterId };
-    
+
     try {
       // 获取Pod容器信息
       const containersParams: GetPodContainersReq = {
         cluster_id: clusterId,
         namespace: record.namespace,
-        pod_name: record.name
+        pod_name: record.name,
       };
       const containersRes = await getK8sPodContainers(containersParams);
       podContainers.value = containersRes?.items || [];
-      
+
       isFileManagerModalVisible.value = true;
     } catch (err) {
       message.error('获取容器信息失败');
-
     }
   };
 
@@ -2018,22 +2219,25 @@ export function usePodPage() {
   };
 
   // 文件上传
-  const uploadFile = async (file: File, filePath: string, container: string) => {
+  const uploadFile = async (
+    file: File,
+    filePath: string,
+    container: string,
+  ) => {
     if (!currentOperationPod.value) return;
-    
+
     try {
       const params: PodFileUploadReq = {
         cluster_id: currentOperationPod.value.cluster_id,
         namespace: currentOperationPod.value.namespace,
         pod_name: currentOperationPod.value.name,
         container: container,
-        file_path: filePath
+        file_path: filePath,
       };
       await uploadK8sPodFile(params, file);
       message.success('文件上传成功');
     } catch (err) {
       message.error('文件上传失败');
-
     }
   };
 
@@ -2043,24 +2247,24 @@ export function usePodPage() {
       message.error('未选择Pod');
       return;
     }
-    
+
     try {
       const params: PodFileDownloadReq = {
         cluster_id: currentOperationPod.value.cluster_id,
         namespace: currentOperationPod.value.namespace,
         pod_name: currentOperationPod.value.name,
         container: container,
-        file_path: filePath
+        file_path: filePath,
       };
-      
+
       // 调用API下载文件
       const res = await downloadK8sPodFile(params);
-      
+
       // 检查响应类型
       if (!res) {
         throw new Error('服务器返回空响应');
       }
-      
+
       // 检查响应数据
       let blob: Blob;
       if (res instanceof Blob) {
@@ -2074,33 +2278,32 @@ export function usePodPage() {
         // 其他情况，直接创建Blob
         blob = new Blob([res], { type: 'application/octet-stream' });
       }
-      
+
       // 检查Blob大小
       if (blob.size === 0) {
         throw new Error('下载的文件为空或文件不存在');
       }
-      
+
       // 处理文件下载
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      
+
       // 获取文件名
       const fileName = filePath.split('/').pop() || 'download';
       link.setAttribute('download', fileName);
-      
+
       // 添加到DOM并触发下载
       document.body.appendChild(link);
       link.click();
-      
+
       // 清理
       setTimeout(() => {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
       }, 100);
-      
+
       message.success(`文件 "${fileName}" 下载成功`);
-      
     } catch (err: any) {
       console.error('文件下载错误详情:', {
         message: err?.message,
@@ -2109,9 +2312,9 @@ export function usePodPage() {
         statusText: err?.response?.statusText,
         data: err?.response?.data,
         config: err?.config,
-        stack: err?.stack
+        stack: err?.stack,
       });
-      
+
       // 更详细的错误处理
       let errorMessage = '文件下载失败';
       if (err?.response?.status) {
@@ -2131,7 +2334,7 @@ export function usePodPage() {
       } else if (typeof err === 'string') {
         errorMessage = `下载失败: ${err}`;
       }
-      
+
       message.error(errorMessage);
     }
   };
@@ -2139,19 +2342,18 @@ export function usePodPage() {
   // 根据节点获取Pod
   const fetchPodsByNode = async (nodeName: string) => {
     if (!filterClusterId.value) return;
-    
+
     try {
       loading.value = true;
       const params: GetPodsByNodeReq = {
         cluster_id: filterClusterId.value,
-        node_name: nodeName
+        node_name: nodeName,
       };
       const res = await getK8sPodsByNode(params);
       pods.value = res?.items || [];
       total.value = res?.total || 0;
     } catch (err) {
       message.error('获取节点Pod失败');
-
     } finally {
       loading.value = false;
     }
@@ -2181,7 +2383,7 @@ export function usePodPage() {
   // 批量操作
   const batchOperation = (operation: string) => {
     if (!selectedRows.value.length) return;
-    
+
     Modal.confirm({
       title: `批量${operation}`,
       content: `确定要对选中的 ${selectedRows.value.length} 个 Pod 执行${operation}操作吗？`,
@@ -2198,24 +2400,22 @@ export function usePodPage() {
                 message.error(`Pod "${pod.name}" 缺少有效的集群ID，跳过操作`);
                 continue;
               }
-              
+
               const params: DeletePodReq = {
                 cluster_id: clusterId,
                 namespace: pod.namespace,
-                name: pod.name
+                name: pod.name,
               };
               await deleteK8sPod(params);
             }
-            
           }
-          
+
           message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchPods();
         } catch (err) {
           message.error(`批量${operation}失败`);
-
         }
       },
     });
@@ -2270,10 +2470,10 @@ export function usePodPage() {
       ports: [],
       resources: {
         requests: { cpu: '', memory: '' },
-        limits: { cpu: '', memory: '' }
+        limits: { cpu: '', memory: '' },
       },
       volume_mounts: [],
-      image_pull_policy: 'IfNotPresent'
+      image_pull_policy: 'IfNotPresent',
     });
   };
 
@@ -2293,10 +2493,10 @@ export function usePodPage() {
       ports: [],
       resources: {
         requests: { cpu: '', memory: '' },
-        limits: { cpu: '', memory: '' }
+        limits: { cpu: '', memory: '' },
       },
       volume_mounts: [],
-      image_pull_policy: 'IfNotPresent'
+      image_pull_policy: 'IfNotPresent',
     });
   };
 
@@ -2305,46 +2505,75 @@ export function usePodPage() {
   };
 
   const addEnvField = (containerIndex: number, isInit = false) => {
-    const containers = isInit ? createFormModel.value.init_containers : createFormModel.value.containers;
+    const containers = isInit
+      ? createFormModel.value.init_containers
+      : createFormModel.value.containers;
     if (containers[containerIndex]) {
       containers[containerIndex].envs = containers[containerIndex].envs || [];
       containers[containerIndex].envs?.push({ name: '', value: '' });
     }
   };
 
-  const removeEnvField = (containerIndex: number, envIndex: number, isInit = false) => {
-    const containers = isInit ? createFormModel.value.init_containers : createFormModel.value.containers;
+  const removeEnvField = (
+    containerIndex: number,
+    envIndex: number,
+    isInit = false,
+  ) => {
+    const containers = isInit
+      ? createFormModel.value.init_containers
+      : createFormModel.value.containers;
     containers[containerIndex]?.envs?.splice(envIndex, 1);
   };
 
   const addPortField = (containerIndex: number, isInit = false) => {
-    const containers = isInit ? createFormModel.value.init_containers : createFormModel.value.containers;
+    const containers = isInit
+      ? createFormModel.value.init_containers
+      : createFormModel.value.containers;
     if (containers[containerIndex]) {
       containers[containerIndex].ports = containers[containerIndex].ports || [];
-      containers[containerIndex].ports?.push({ name: '', container_port: 0, protocol: 'TCP' });
-    }
-  };
-
-  const removePortField = (containerIndex: number, portIndex: number, isInit = false) => {
-    const containers = isInit ? createFormModel.value.init_containers : createFormModel.value.containers;
-    containers[containerIndex]?.ports?.splice(portIndex, 1);
-  };
-
-  const addVolumeMountField = (containerIndex: number, isInit = false) => {
-    const containers = isInit ? createFormModel.value.init_containers : createFormModel.value.containers;
-    if (containers[containerIndex]) {
-      containers[containerIndex].volume_mounts = containers[containerIndex].volume_mounts || [];
-      containers[containerIndex].volume_mounts?.push({ 
-        name: '', 
-        mount_path: '', 
-        read_only: false, 
-        sub_path: '' 
+      containers[containerIndex].ports?.push({
+        name: '',
+        container_port: 0,
+        protocol: 'TCP',
       });
     }
   };
 
-  const removeVolumeMountField = (containerIndex: number, mountIndex: number, isInit = false) => {
-    const containers = isInit ? createFormModel.value.init_containers : createFormModel.value.containers;
+  const removePortField = (
+    containerIndex: number,
+    portIndex: number,
+    isInit = false,
+  ) => {
+    const containers = isInit
+      ? createFormModel.value.init_containers
+      : createFormModel.value.containers;
+    containers[containerIndex]?.ports?.splice(portIndex, 1);
+  };
+
+  const addVolumeMountField = (containerIndex: number, isInit = false) => {
+    const containers = isInit
+      ? createFormModel.value.init_containers
+      : createFormModel.value.containers;
+    if (containers[containerIndex]) {
+      containers[containerIndex].volume_mounts =
+        containers[containerIndex].volume_mounts || [];
+      containers[containerIndex].volume_mounts?.push({
+        name: '',
+        mount_path: '',
+        read_only: false,
+        sub_path: '',
+      });
+    }
+  };
+
+  const removeVolumeMountField = (
+    containerIndex: number,
+    mountIndex: number,
+    isInit = false,
+  ) => {
+    const containers = isInit
+      ? createFormModel.value.init_containers
+      : createFormModel.value.containers;
     containers[containerIndex]?.volume_mounts?.splice(mountIndex, 1);
   };
 
@@ -2382,8 +2611,20 @@ export function usePodPage() {
     delete createFormModel.value.node_selector[key];
   };
 
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      disconnectTerminal();
+      logsStreamConnection.value?.close();
+      logsStreamConnection.value = null;
+      isLogsStreaming.value = false;
+    });
+  }
+
   return {
     // state
+    loadError,
+    clustersError,
+    namespacesError,
     pods,
     clusters,
     namespaces,
@@ -2409,13 +2650,13 @@ export function usePodPage() {
     namespacesTotal,
     namespacesPage,
     namespacesSize,
-    
+
     // form refs
     formRef,
     yamlFormRef,
     createYamlFormRef,
     execFormRef,
-    
+
     // modal state
     isCreateModalVisible,
     isCreateYamlModalVisible,
@@ -2432,14 +2673,14 @@ export function usePodPage() {
     logsLoading,
     isLogsStreaming,
     logsStreamConnection,
-    
+
     // 终端状态
     isTerminalConnected,
     terminalLoading,
     terminal,
     terminalConnection,
     fitAddon,
-    
+
     // operation targets
     currentOperationPod,
     currentPodDetail,
@@ -2447,7 +2688,7 @@ export function usePodPage() {
     podLogs,
     podContainers,
     selectedContainer,
-    
+
     // form models
     createFormModel,
     editFormModel,
@@ -2456,17 +2697,17 @@ export function usePodPage() {
     logsFormModel,
     execFormModel,
     portForwardFormModel,
-    
+
     // form rules
     createFormRules,
     yamlFormRules,
     createYamlFormRules,
     execFormRules,
-    
+
     // computed
     filteredPods,
     rowSelection,
-    
+
     // helpers
     validateClusterId,
     getEnvText,
@@ -2476,7 +2717,7 @@ export function usePodPage() {
     recordToKeyValueList,
     keyValueListToRecord,
     parseJsonField,
-    
+
     // operations
     fetchClusters,
     fetchNamespaces,
@@ -2486,16 +2727,16 @@ export function usePodPage() {
     loadMoreClusters,
     loadMoreNamespaces,
     fetchPodsByNode,
-    
+
     // detail operations
     showPodDetail,
     closeDetailModal,
-    
+
     // YAML operations
     showYamlModal,
     closeYamlModal,
     submitYamlForm,
-    
+
     // YAML toolbar operations
     insertYamlTemplate,
     formatYaml,
@@ -2503,7 +2744,7 @@ export function usePodPage() {
     clearYaml,
     formatEditYaml,
     validateEditYaml,
-    
+
     // create operations
     openCreateModal,
     closeCreateModal,
@@ -2511,22 +2752,22 @@ export function usePodPage() {
     openCreateYamlModal,
     closeCreateYamlModal,
     submitCreateYamlForm,
-    
+
     // edit operations
     openEditModal,
     closeEditModal,
     submitEditForm,
-    
+
     // pod operations
     deletePod,
-    
+
     // logs operations
     showLogsModal,
     closeLogsModal,
     fetchPodLogs,
     startLogsStream,
     stopLogsStream,
-    
+
     // exec operations
     showExecModal,
     closeExecModal,
@@ -2534,30 +2775,30 @@ export function usePodPage() {
     connectToTerminal,
     disconnectTerminal,
     initializeTerminal,
-    
+
     // port forward operations
     showPortForwardModal,
     closePortForwardModal,
     submitPortForward,
-    
+
     // file operations
     showFileManagerModal,
     closeFileManagerModal,
     uploadFile,
     downloadFile,
-    
+
     // filter operations
     addFilterLabel,
     removeFilterLabel,
     clearFilterLabels,
-    
+
     // batch operations
     batchOperation,
-    
-    // pagination operations  
+
+    // pagination operations
     resetClusters,
     handlePageChange,
-    
+
     // form field operations
     addContainerField,
     removeContainerField,
@@ -2577,7 +2818,7 @@ export function usePodPage() {
     removeAnnotationField,
     addNodeSelectorField,
     removeNodeSelectorField,
-    
+
     // constants
     K8sPodStatus,
     K8sPodPhase,
