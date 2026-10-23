@@ -534,6 +534,54 @@ export const yamlDataNotBase64Message = (key: string) =>
 export const yamlDataEncodedRedactedMessage = (key: string) =>
   `YAML 中 data.${key} 的值解码后是脱敏占位符 ${REDACTED_PLACEHOLDER}，提交会把占位符当作真实内容写入 Secret、覆盖原值。要保留原值请写成 ${key}: ${REDACTED_PLACEHOLDER}，要修改请填写真实值`;
 
+// ---- incr8（review-incr7 P2-1 / P3-1 ~ P3-3 / 取舍 5）的提示文案：只含键名或行号，不含值 ----
+
+export const yamlNonCanonicalFieldMessage = (key: string) =>
+  `YAML 顶层键 ${key} 不是规范写法：后端会把它当作 data / stringData 写入 Secret，但脱敏占位符 ${REDACTED_PLACEHOLDER} 的还原与检查只认 data / stringData（区分大小写），占位符会被当作真实内容写入。请改成 data 或 stringData`;
+
+export const YAML_MULTI_DOCUMENT_MESSAGE =
+  'YAML 只支持单个文档：请删除 --- 分隔的其他文档（包括末尾单独的 ---）后再保存';
+
+export const yamlInvalidMessage = (line?: number) =>
+  `YAML 格式不正确${line === undefined ? '' : `（第 ${line} 行附近）`}，无法确认 data / stringData 的内容，请修正后再保存`;
+
+export const YAML_LINE_BREAK_CHAR_MESSAGE =
+  'YAML 中含有 U+2028 / U+2029 / U+0085（Unicode 行分隔符），或文件开头以外的 U+FEFF。不同解析器对它们的处理不一致，保存结果可能与编辑器里看到的不同，请删除后再保存';
+
+export const yamlStringDataRedactedMessage = (key: string) =>
+  `YAML 中 stringData.${key} 的值去掉首尾空白后是脱敏占位符 ${REDACTED_PLACEHOLDER}，但不完全等于它，后端不会还原，会被当作真实内容写入 Secret。要保留原值请写成 ${key}: ${REDACTED_PLACEHOLDER}（前后不带空格或换行），要修改请填写真实值`;
+
+/** 取舍 5：data 值为 null / ~；口径与表单的 EMPTY_VALUE_MESSAGE 一致 */
+export const yamlDataEmptyValueMessage = (key: string) =>
+  `YAML 中 data.${key} 的值为空（null / ~）。不支持设为空值，空值请删除该键`;
+
+/**
+ * incr8 P2-1：Go 的 encoding/json 按字段名不区分大小写匹配（含 Unicode 简单折叠：ſ → s、K → k），
+ * `StringData` / `stringdata` / `ſtringData` / `Data` 都会写进 Secret 的 stringData / data；
+ * 后端的占位符还原 / 检查只认规范的 `data` / `stringData`。这类非规范键一律拦截。
+ */
+function isNonCanonicalSecretFieldKey(key: string) {
+  if (key === 'data' || key === 'stringData') return false;
+  const folded = key
+    .replaceAll('\u017F', 's')
+    .replaceAll('\u212A', 'k')
+    .toLowerCase();
+  return folded === 'data' || folded === 'stringdata';
+}
+
+/** 顶格行的键名（裸键或单 / 双引号键，不处理转义）；不是 `键:` 写法返回 null */
+const TOP_LEVEL_KEY_PATTERN =
+  /^(?:"([^"\\]*)"|'([^']*)'|([^\s"'#?:[{\-][^:]*?))[ \t]*:(?:[ \t]|$)/;
+
+/** incr8 P3-2：js-yaml 当作普通字符、Go（YAML 1.1）当作换行的字符；U+FEFF 只允许出现在开头（BOM） */
+const YAML_LINE_BREAK_CHAR_PATTERN = /[\u0085\u2028\u2029]/;
+
+function hasYamlLineBreakChar(text: string) {
+  return (
+    YAML_LINE_BREAK_CHAR_PATTERN.test(text) || text.indexOf('\uFEFF', 1) !== -1
+  );
+}
+
 /** 严格 base64（标准字母表、长度为 4 的倍数、末尾最多两个 =） */
 const STRICT_BASE64_PATTERN =
   /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
@@ -560,10 +608,17 @@ export function getYamlDataFormatError(yamlText: string): null | string {
   let state: 'block' | 'none' | 'pending' | 'value' = 'none';
   let currentKey = '';
   let blockWidth: null | number = null;
+  let seenTopLevelContent = false;
 
   for (const [index, rawLine] of lines.entries()) {
     const line = rawLine.replace(/\r$/, '');
     if (isTopLevelLine(line)) {
+      // incr8 P3-1：已有内容之后的 `---` = 第二个文档（与兜底的 loadAll 同口径，提示也一致）
+      if (/^---(?:[ \t]|$)/.test(line)) {
+        if (seenTopLevelContent) return YAML_MULTI_DOCUMENT_MESSAGE;
+        continue;
+      }
+      seenTopLevelContent = true;
       inData = false;
       state = 'none';
       entryIndent = null;
@@ -574,6 +629,18 @@ export function getYamlDataFormatError(yamlText: string): null | string {
         inData = true;
       } else if (/^(["'])data\1[ \t]*:/.test(line)) {
         return yamlDataUnsupportedMessage('data');
+      } else {
+        // incr8 P2-1：`Data:` / `StringData:` / `"Data":` 等非规范键名
+        const keyMatch = TOP_LEVEL_KEY_PATTERN.exec(line);
+        const key = keyMatch
+          ? (keyMatch[1] ?? keyMatch[2] ?? keyMatch[3]!)
+          : '';
+        if (isNonCanonicalSecretFieldKey(key)) {
+          return yamlNonCanonicalFieldMessage(key);
+        }
+        // `data :`（冒号前有空格）：编码器不认，值不会被编码
+        if (/^data[ \t]+:/.test(line))
+          return yamlDataUnsupportedMessage('data');
       }
       continue;
     }
@@ -633,6 +700,10 @@ export function getYamlDataFormatError(yamlText: string): null | string {
     const commentAt = value.search(/[ \t]#/);
     const plain =
       commentAt === -1 ? value : value.slice(0, commentAt).trimEnd();
+    // incr8 取舍 5：null / ~ 是空值，提示删除该键（与表单 EMPTY_VALUE_MESSAGE 同口径）
+    if (/^(?:null|Null|NULL|~)$/.test(plain)) {
+      return yamlDataEmptyValueMessage(currentKey);
+    }
     if (plain !== REDACTED_PLACEHOLDER && !STRICT_BASE64_PATTERN.test(plain)) {
       return yamlDataNotBase64Message(currentKey);
     }
@@ -671,27 +742,53 @@ const BASE64_TOKEN_PATTERN = /[A-Za-z0-9+/]{8,}={0,2}/g;
 
 /**
  * incr7 P2-A 兜底：YAML 编码之后、发请求之前（更新）或直接对原文（新建），检查最终要发出的内容：
+ * 0. incr8：全文含 U+2028 / U+2029 / U+0085、或开头以外的 U+FEFF → 拦截（P3-2）；
+ *    `yaml.loadAll(…, { json: true })` 解析：多于一个文档 → 拦截；其他解析失败 → 先 token 扫描，
+ *    没命中也拦截（P3-1，取舍 8「解析失败只做 token 扫描」作废）；顶层非规范 data / stringData 键 → 拦截（P2-1）；
+ *    stringData 的值去掉首尾空白后等于占位符但不完全相等 → 拦截（P3-3）。
  * 1. 按 js-yaml 解析，data 下每个值：null 跳过；裸 `<redacted>` 放行（后端保留原值）；字符串去掉 \r \n 后
  *    必须是严格 base64，且解码（去首尾空白）后不能是占位符；`!!binary`（Uint8Array）同样检查解码内容；
  *    数字 / 布尔等其他类型一律视为「不是 base64」。
- * 2. 不论解析成败，再对全文做 token 扫描：任何 ≥16 字符的 base64 片段解码后是占位符就拦截
- *    （解析失败、或写法绕过了上面的结构检查时仍然有效）。
+ * 2. 再对全文做 token 扫描：任何 ≥16 字符的 base64 片段解码后是占位符就拦截
+ *    （写法绕过了上面的结构检查时仍然有效；解析失败时也先做这一步，以便给出更具体的提示）。
  * 返回拦截文案（只含键名或行号，不含值），没有问题返回 null。
  */
 export function getYamlDataPayloadError(yamlText: string): null | string {
-  let doc: unknown;
-  let parsed = true;
+  // incr8 P3-2：先看全文里有没有 js-yaml 与 Go 理解不一致的换行类字符
+  if (hasYamlLineBreakChar(yamlText)) return YAML_LINE_BREAK_CHAR_MESSAGE;
+  // incr8 P3-1：json:true 与 Go（yaml v2 非严格）一致，重复键取后一个；多文档 / 其他解析失败一律拦截
+  let docs: unknown[];
   try {
-    doc = yaml.load(yamlText);
-  } catch {
-    parsed = false;
+    docs = yaml.loadAll(yamlText, undefined, { json: true });
+  } catch (error) {
+    // 解析失败：先按 token 扫描给出更具体的提示，否则提示 YAML 不合法（只给行号，不带解析器原文——里面有值）
+    const tokenError = findEncodedRedactedToken(yamlText);
+    if (tokenError) return tokenError;
+    const line = (error as { mark?: { line?: unknown } })?.mark?.line;
+    return yamlInvalidMessage(typeof line === 'number' ? line + 1 : undefined);
   }
-  if (
-    parsed &&
-    doc !== null &&
-    typeof doc === 'object' &&
-    !Array.isArray(doc)
-  ) {
+  if (docs.length > 1) return YAML_MULTI_DOCUMENT_MESSAGE;
+  const doc = docs[0];
+  if (doc !== null && typeof doc === 'object' && !Array.isArray(doc)) {
+    // incr8 P2-1：顶层非规范的 data / stringData 键
+    for (const key of Object.keys(doc)) {
+      if (isNonCanonicalSecretFieldKey(key)) {
+        return yamlNonCanonicalFieldMessage(key);
+      }
+    }
+    // incr8 P3-3：stringData 的值去掉首尾空白后是占位符、但不完全相等 → 后端不还原
+    const stringData = (doc as Record<string, unknown>).stringData;
+    if (stringData !== null && typeof stringData === 'object') {
+      for (const [key, value] of Object.entries(stringData)) {
+        if (
+          typeof value === 'string' &&
+          value !== REDACTED_PLACEHOLDER &&
+          value.trim() === REDACTED_PLACEHOLDER
+        ) {
+          return yamlStringDataRedactedMessage(key);
+        }
+      }
+    }
     const data = (doc as Record<string, unknown>).data;
     if (data !== undefined && data !== null) {
       if (typeof data !== 'object' || Array.isArray(data)) {
@@ -722,6 +819,11 @@ export function getYamlDataPayloadError(yamlText: string): null | string {
       }
     }
   }
+  return findEncodedRedactedToken(yamlText);
+}
+
+/** token 扫描：全文任何 ≥16 字符的 base64 片段解码后是占位符 → 拦截文案（只含键名 / 行号） */
+function findEncodedRedactedToken(yamlText: string): null | string {
   for (const token of yamlText.matchAll(BASE64_TOKEN_PATTERN)) {
     if (decodesToRedacted(token[0])) {
       return yamlDataEncodedRedactedMessage(
