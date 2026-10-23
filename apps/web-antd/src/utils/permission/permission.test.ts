@@ -105,10 +105,11 @@ describe('权限码常量（permission-codes.md v4 第 6 / 6.1 节）', () => {
       'system.audit.batchDelete': '/api/audit/batch-delete',
       'k8s.namespace.forceDelete':
         '/api/k8s/clusters/:cluster_id/namespace/:name/delete',
+      // SEC-25/26：明文两个按钮已改为 reveal 正式码
       'k8s.secret.viewPlain':
-        '/api/k8s/secret/:cluster_id/:namespace/:name/detail',
+        '/api/k8s/secret/:cluster_id/:namespace/:name/reveal',
       'k8s.secret.copyPlain':
-        '/api/k8s/secret/:cluster_id/:namespace/:name/detail',
+        '/api/k8s/secret/:cluster_id/:namespace/:name/reveal',
       'k8s.secret.viewYaml':
         '/api/k8s/secret/:cluster_id/:namespace/:name/detail/yaml',
     });
@@ -313,10 +314,23 @@ describe('usePermission 读取 store', () => {
   it.each([
     ['admin 角色', { roles: ['admin'], username: 'zhangsan' }],
     ['super 角色', { roles: ['super'], username: 'lisi' }],
-    ['admin 用户名（/user/profile 不返回 roles）', { username: 'admin' }],
-  ])('%s + codes 为空时全部按钮放行', (_, userInfo) => {
+  ])(
+    '%s + codes 为空时除 Secret 明文（显式授权）外全部按钮放行',
+    (_, userInfo) => {
+      useAccessStore().setAccessCodes([]);
+      useUserStore().setUserInfo(userInfo as any);
+      const { can } = usePermission();
+      // SEC-25/26：reveal 只认精确码，角色不放行（auth.go:49-54 / :199-206）
+      expect(ALL_KEYS.filter((key) => !can(key)).sort()).toEqual([
+        'k8s.secret.copyPlain',
+        'k8s.secret.viewPlain',
+      ]);
+    },
+  );
+
+  it('admin 用户名（/user/profile 不返回 roles）+ codes 为空时全部按钮放行（含 reveal，auth.go:170）', () => {
     useAccessStore().setAccessCodes([]);
-    useUserStore().setUserInfo(userInfo as any);
+    useUserStore().setUserInfo({ username: 'admin' } as any);
     const { can } = usePermission();
     expect(ALL_KEYS.every((key) => can(key))).toBe(true);
   });

@@ -160,10 +160,11 @@ export const PERMISSION_CODES = {
   'k8s.pod.exec':
     '/api/k8s/pod/:cluster_id/:namespace/:name/containers/:container/exec',
   // K8s/Secret
-  // #46（待后端补齐（SEC-19 独立明文权限），临时码）
-  'k8s.secret.viewPlain': '/api/k8s/secret/:cluster_id/:namespace/:name/detail',
-  // #47（待后端补齐（SEC-19 独立明文权限），临时码）
-  'k8s.secret.copyPlain': '/api/k8s/secret/:cluster_id/:namespace/:name/detail',
+  // #46 SEC-25/26：明文改走 reveal 接口，码为 reveal 路由模板（AI-CloudOps@ed683ef
+  // internal/model/k8s_secret.go:107 K8sSecretRevealRoute）。显式授权码，只认精确匹配，见 utils/permission
+  'k8s.secret.viewPlain': '/api/k8s/secret/:cluster_id/:namespace/:name/reveal',
+  // #47 同 #46（复制明文同样先调 reveal）
+  'k8s.secret.copyPlain': '/api/k8s/secret/:cluster_id/:namespace/:name/reveal',
   // #48（待后端补齐（SEC-19 独立明文权限），临时码）
   'k8s.secret.viewYaml':
     '/api/k8s/secret/:cluster_id/:namespace/:name/detail/yaml',
@@ -336,6 +337,10 @@ export const U3_PERMISSION_CODES = {
 } as const;
 
 /** 全部按钮 key → 权限码（S1 ∪ S1b ∪ S2 ∪ S3） */
+/** Secret 明文 reveal 路由码（SEC-25/26，显式授权码，只认精确匹配） */
+export const SECRET_REVEAL_PERMISSION_CODE =
+  PERMISSION_CODES['k8s.secret.viewPlain'];
+
 export const ALL_PERMISSION_CODES = {
   ...PERMISSION_CODES,
   ...S1B_PERMISSION_CODES,

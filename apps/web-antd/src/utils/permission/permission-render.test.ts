@@ -86,12 +86,24 @@ describe('危险按钮按权限渲染', () => {
     expect(keys).toEqual(['k8s.pod.delete', 'k8s.pod.batchDelete']);
   });
 
-  it.each([
-    ['admin 角色', { roles: ['admin'], username: 'zhangsan' }],
-    ['admin 用户名', { username: 'admin' }],
-  ])('%s + codes 为空时按钮全部显示', (_, userInfo) => {
+  it('admin 角色 + codes 为空时除 Secret 明文（显式授权，SEC-25/26）外按钮全部显示', () => {
     useAccessStore().setAccessCodes([]);
-    useUserStore().setUserInfo(userInfo as any);
+    useUserStore().setUserInfo({
+      roles: ['admin'],
+      username: 'zhangsan',
+    } as any);
+    expect(confirmButton(mountPanel())).toBeDefined();
+    const keys = mountAll()
+      .findAll('button')
+      .map((item) => item.attributes('data-key'));
+    expect(keys).toHaveLength(ALL_KEYS.length - 2);
+    expect(keys).not.toContain('k8s.secret.viewPlain');
+    expect(keys).not.toContain('k8s.secret.copyPlain');
+  });
+
+  it('admin 用户名 + codes 为空时按钮全部显示', () => {
+    useAccessStore().setAccessCodes([]);
+    useUserStore().setUserInfo({ username: 'admin' } as any);
     expect(confirmButton(mountPanel())).toBeDefined();
     expect(mountAll().findAll('button')).toHaveLength(ALL_KEYS.length);
   });
