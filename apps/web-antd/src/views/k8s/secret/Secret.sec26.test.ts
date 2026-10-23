@@ -379,6 +379,50 @@ describe('规则 2：更新 Secret 的 data', () => {
     expect(lastPayload().annotations).toEqual({ note: 'fake-fresh' });
   });
 
+  it('incr5：string_data 取自重新拉取的详情，覆盖列表行；提交的是详情里的值', async () => {
+    const pending = deferred<unknown>();
+    api.detail.mockReturnValueOnce(pending.promise);
+    const page = useSecretPage();
+    page.formRef.value = { validate: vi.fn(async () => ({})) } as any;
+    const opening = page.openEditModal({
+      ...RECORD,
+      string_data: { stale: 'fake-stale', shared: 'fake-stale' },
+    });
+    // 加载中不展示列表行里可能过期的 string_data
+    expect(page.editFormModel.value.string_data).toEqual({});
+    pending.resolve({
+      ...RECORD,
+      // 详情接口可能返回 JSON 字符串
+      string_data: JSON.stringify({
+        shared: 'fake-fresh',
+        added: 'fake-fresh',
+      }),
+    });
+    await opening;
+    expect(page.editFormModel.value.string_data).toEqual({
+      shared: 'fake-fresh',
+      added: 'fake-fresh',
+    });
+    await page.submitEditForm();
+    expect(api.update).toHaveBeenCalledTimes(1);
+    expect(lastPayload().string_data).toEqual({
+      shared: 'fake-fresh',
+      added: 'fake-fresh',
+    });
+  });
+
+  it('incr5：详情里没有 string_data：不沿用列表行的旧值', async () => {
+    api.detail.mockResolvedValueOnce({ ...RECORD, string_data: undefined });
+    const page = useSecretPage();
+    page.formRef.value = { validate: vi.fn(async () => ({})) } as any;
+    await page.openEditModal({
+      ...RECORD,
+      string_data: { stale: 'fake-stale' },
+    });
+    await page.submitEditForm();
+    expect(lastPayload().string_data).toBeUndefined();
+  });
+
   it('第四轮：详情里没有 labels / annotations：不沿用列表行的旧值', async () => {
     api.detail.mockResolvedValueOnce({
       ...RECORD,

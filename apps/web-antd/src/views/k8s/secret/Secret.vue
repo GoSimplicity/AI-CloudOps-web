@@ -726,7 +726,7 @@
                 style="flex: 1; margin-right: 8px;"
                 @press-enter="addNewEditStringData"
               />
-              <a-button type="primary" @click="addNewEditStringData" :disabled="!newEditStringDataKey.trim()">
+              <a-button type="primary" @click="addNewEditStringData" :disabled="editDataLoading || !newEditStringDataKey.trim()">
                 <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
@@ -764,7 +764,7 @@
                 style="flex: 1; margin-right: 8px;"
                 @press-enter="addNewEditLabel"
               />
-              <a-button type="primary" @click="addNewEditLabel" :disabled="!newEditLabelKey.trim()">
+              <a-button type="primary" @click="addNewEditLabel" :disabled="editDataLoading || !newEditLabelKey.trim()">
                 <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
@@ -802,7 +802,7 @@
                 style="flex: 1; margin-right: 8px;"
                 @press-enter="addNewEditAnnotation"
               />
-              <a-button type="primary" @click="addNewEditAnnotation" :disabled="!newEditAnnotationKey.trim()">
+              <a-button type="primary" @click="addNewEditAnnotation" :disabled="editDataLoading || !newEditAnnotationKey.trim()">
                 <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
