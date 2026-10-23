@@ -1,5 +1,7 @@
 import type { FormInstance } from 'ant-design-vue';
 
+import { $t } from '@vben/locales';
+
 import axios, { type AxiosAdapter } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -144,6 +146,17 @@ describe('cron 开关关闭 × 业务错误只提示一次（真实请求链路�
     page.triggerJob(job(11, 3));
     await confirm.mock.calls[0]?.[0].onOk();
     expect(notices.error).toHaveBeenCalledTimes(1);
+    // 回退文案来自请求层通用错误拦截器（packages/effects/request 的 HTTP 500 默认文案），
+    // 不是空串，也不是页面自己的「定时任务触发失败」
+    const fallback = $t('fallback.http.internalServerError');
+    expect(fallback).not.toBe('');
+    expect(notices.error).toHaveBeenCalledWith({
+      content: fallback,
+      key: `${BUSINESS_ERROR_MESSAGE_KEY_PREFIX}${fallback}`,
+    });
+    expect(notices.error).not.toHaveBeenCalledWith(
+      expect.objectContaining({ content: '定时任务触发失败' }),
+    );
     expect(notices.success).not.toHaveBeenCalled();
   });
 });
