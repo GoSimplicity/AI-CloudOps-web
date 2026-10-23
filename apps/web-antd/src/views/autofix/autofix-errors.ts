@@ -5,6 +5,7 @@ import {
   getHttpErrorNoticeKey,
   markHttpErrorNoticeReplaced,
 } from '#/api/http-error-notice';
+import { HTTP_CONFLICT_MESSAGE } from '#/constants/http-error-messages';
 import { isBusinessError } from '#/utils/permission/business-error';
 import {
   isPermissionDeniedError,
@@ -19,7 +20,8 @@ import {
  *   403（permission-denied）与业务错误（business-error:）已提示过的不再弹；500 只保留请求层的通用错误。
  */
 export const AUTOFIX_ERROR_TEXT = {
-  conflict: '状态已变，请刷新',
+  // 与请求层 409 通用文案同一常量（FE-02b incr3 P2-1；终稿由面包定）
+  conflict: HTTP_CONFLICT_MESSAGE,
   expired: '计划已失效，请重新生成',
   generic: '自动修复请求失败，请人工核对实际状态',
   invalid: '请求参数错误，请检查后重试',

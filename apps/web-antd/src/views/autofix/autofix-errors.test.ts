@@ -9,6 +9,7 @@ import {
   createBusinessError,
   notifyBusinessError,
 } from '#/utils/permission/business-error';
+import { HTTP_CONFLICT_MESSAGE } from '#/constants/http-error-messages';
 import { PERMISSION_DENIED_MESSAGE } from '#/utils/permission/forbidden';
 
 import {
@@ -45,8 +46,9 @@ describe('describeAutoFixError：状态码 → 文案', () => {
     expect(describeAutoFixError(httpError(status)).text).toBe(text);
   });
 
-  it('文案固定：409「状态已变，请刷新」、404「计划已失效，请重新生成」、5xx 网关类含「稍后重试」', () => {
-    expect(AUTOFIX_ERROR_TEXT.conflict).toBe('状态已变，请刷新');
+  it('文案固定：409 与请求层同一常量 HTTP_CONFLICT_MESSAGE、404「计划已失效，请重新生成」、5xx 网关类含「稍后重试」', () => {
+    expect(AUTOFIX_ERROR_TEXT.conflict).toBe(HTTP_CONFLICT_MESSAGE);
+    expect(HTTP_CONFLICT_MESSAGE).toBe('数据已变化，请刷新后重试');
     expect(AUTOFIX_ERROR_TEXT.expired).toBe('计划已失效，请重新生成');
     expect(AUTOFIX_ERROR_TEXT.unavailable).toContain('稍后重试');
     expect(AUTOFIX_ERROR_TEXT.invalid).toContain('参数');

@@ -3,6 +3,7 @@ import Antd, { message } from 'ant-design-vue';
 import { nextTick, reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { HTTP_CONFLICT_MESSAGE } from '#/constants/http-error-messages';
 import { PERMISSION_DENIED_MESSAGE } from '#/utils/permission/forbidden';
 
 import AutoFixWorkflow from './AutoFixWorkflow.vue';
@@ -185,7 +186,7 @@ describe('自动修复页面的显式调用和审批状态', () => {
   it.each([
     [403, PERMISSION_DENIED_MESSAGE],
     [404, '计划已失效，请重新生成'],
-    [409, '状态已变，请刷新'],
+    [409, HTTP_CONFLICT_MESSAGE],
     [502, '服务暂时不可用，请稍后重试'],
     [400, '请求参数错误，请检查后重试'],
     [500, '自动修复请求失败，请人工核对实际状态'],
@@ -208,14 +209,14 @@ describe('自动修复页面的显式调用和审批状态', () => {
       expect(message.success).not.toHaveBeenCalled();
     },
   );
-  it('执行工作流 409：显示「状态已变，请刷新」', async () => {
+  it('执行工作流 409：显示 409 通用文案（HTTP_CONFLICT_MESSAGE）', async () => {
     api.executeAutoFixWorkflow.mockRejectedValueOnce(
       Object.assign(new Error('后端原文'), { response: { status: 409 } }),
     );
     await start();
     await fillAndRun();
     expect(wrapper!.find('[role="alert"]').text()).toContain(
-      '状态已变，请刷新',
+      HTTP_CONFLICT_MESSAGE,
     );
   });
   it('硬权限失败的动作不提供可选审批框', async () => {
