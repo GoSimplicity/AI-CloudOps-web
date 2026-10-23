@@ -3,7 +3,13 @@ import type {
   PredictionResponse,
 } from '#/api/core/aiops/predict';
 
+function explicitTimezone(value: string) {
+  return /T.*(?:Z|[+-]\d{2}:\d{2})$/i.test(value);
+}
+
 export function formatPredictionTime(timestamp: string | Date, chart = false) {
+  if (typeof timestamp === 'string' && !explicitTimezone(timestamp))
+    return '未知';
   const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
   if (!Number.isFinite(date.getTime())) return '未知';
   return date.toLocaleString('zh-CN', {
@@ -25,6 +31,11 @@ export function forecastPoints(response: PredictionResponse) {
   const seen = new Set<number>();
   return response.predicted_data
     .map((point) => {
+      if (
+        typeof point.timestamp !== 'string' ||
+        !explicitTimezone(point.timestamp)
+      )
+        throw new Error('预测时间戳缺少明确时区，未展示有歧义的结果');
       const time = Date.parse(point.timestamp);
       if (
         !Number.isFinite(time) ||

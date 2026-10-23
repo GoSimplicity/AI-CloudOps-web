@@ -61,4 +61,15 @@ describe('预测数据展示契约', () => {
   it('无效日期显示未知，不产生Invalid Date', () => {
     expect(formatPredictionTime('invalid')).toBe('未知');
   });
+  it('拒绝缺少时区的预测点，不按浏览器本地时区猜测', () => {
+    expect(() =>
+      forecastPoints(response([point('2026-10-23T00:00:00')])),
+    ).toThrow('时区');
+  });
+  it('缺少时区的文本时间显示未知，明确offset仍可展示', () => {
+    expect(formatPredictionTime('2026-10-23T00:00:00')).toBe('未知');
+    expect(formatPredictionTime('2026-10-23T08:00:00+08:00')).toBe(
+      formatPredictionTime('2026-10-23T00:00:00Z'),
+    );
+  });
 });
