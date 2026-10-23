@@ -18,6 +18,7 @@ const api = vi.hoisted(() => ({
   clusters: vi.fn(),
   namespaces: vi.fn(),
   secrets: vi.fn(),
+  detail: vi.fn(),
   reveal: vi.fn(),
   update: vi.fn(),
 }));
@@ -31,6 +32,7 @@ vi.mock('#/api/core/k8s/k8s_namespace', async (importOriginal) => ({
 }));
 vi.mock('#/api/core/k8s/k8s_secret', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/api/core/k8s/k8s_secret')>()),
+  getSecretDetailsApi: api.detail,
   getSecretListApi: api.secrets,
   revealSecretApi: api.reveal,
   updateSecretApi: api.update,
@@ -89,6 +91,7 @@ beforeEach(() => {
   api.clusters.mockResolvedValue({ items: [], total: 0 });
   api.namespaces.mockResolvedValue({ items: [], total: 0 });
   api.secrets.mockResolvedValue({ items: [], total: 0 });
+  api.detail.mockResolvedValue({ ...DETAIL });
   api.reveal.mockResolvedValue({
     data: { token: btoa(FAKE) },
     string_data: {},
@@ -138,7 +141,7 @@ describe('Secret 详情：脱敏展示 + 按键 reveal', () => {
 describe('Secret 编辑：data 行', () => {
   it('原有键输入框为空；改成空值时表单内提示「不支持设为空值，请删除该键」', async () => {
     const vm = await mountSecret();
-    vm.openEditModal({ ...DETAIL });
+    await vm.openEditModal({ ...DETAIL });
     await settle();
     const input = document.body.querySelector<HTMLInputElement>(
       '.secret-edit-data-row input[type="password"]',
@@ -156,6 +159,38 @@ describe('Secret 编辑：data 行', () => {
     await settle();
     expect(document.body.textContent).toContain(EMPTY_VALUE_MESSAGE);
     expect(document.body.textContent).toContain('撤销修改');
+  });
+});
+
+describe('Secret 编辑：打开时重新拉详情（P2/P3-2）', () => {
+  it('详情返回前：加密数据区加载中、不显示「暂无加密数据」、保存按钮禁用；返回后按最新键渲染', async () => {
+    let resolve!: (value: unknown) => void;
+    api.detail.mockReturnValueOnce(new Promise((done) => (resolve = done)));
+    const vm = await mountSecret();
+    const opening = vm.openEditModal({
+      ...DETAIL,
+      data_keys: [{ key: 'stale-key', size: 1 }],
+    });
+    await settle();
+    const okButton = () =>
+      all('.ant-modal-footer button.ant-btn-primary').at(-1)!;
+    expect(
+      document.body.querySelector('.secret-edit-data .ant-spin-spinning'),
+    ).not.toBeNull();
+    expect(document.body.textContent).not.toContain('暂无加密数据');
+    expect(document.body.textContent).not.toContain('stale-key');
+    expect(okButton().hasAttribute('disabled')).toBe(true);
+
+    resolve({ ...DETAIL });
+    await opening;
+    await settle();
+    expect(
+      document.body.querySelector('.secret-edit-data .ant-spin-spinning'),
+    ).toBeNull();
+    expect(all('.secret-edit-data-row').map((row) => row.dataset.key)).toEqual([
+      'token',
+    ]);
+    expect(okButton().hasAttribute('disabled')).toBe(false);
   });
 });
 

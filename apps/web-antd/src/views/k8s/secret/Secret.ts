@@ -126,6 +126,9 @@ export function useSecretPage() {
   // SEC-25/26 规则 2：编辑弹窗的 data 行（原有键不回填值，输入框为空 = 保留原值）
   const editDataRows = ref<SecretDataRow[]>([]);
   const editDataOriginalKeys = ref<string[]>([]);
+  // 复审 P2/P3-2：打开编辑时重新拉详情取最新键列表；editOpenSeq 防止关闭 / 切换行后迟到的响应写回
+  const editDataLoading = ref(false);
+  let editOpenSeq = 0;
 
   // form models
   const createFormModel = ref<{
@@ -902,8 +905,17 @@ export function useSecretPage() {
     }
   };
 
+  const resetEditData = () => {
+    editDataOriginalKeys.value = [];
+    editDataRows.value = [];
+    editDataLoading.value = false;
+  };
+
   // 编辑 Secret
-  const openEditModal = (record: K8sSecret) => {
+  const openEditModal = async (record: K8sSecret) => {
+    const clusterId = validateClusterId(record);
+    if (!clusterId) return;
+    const seq = ++editOpenSeq;
     currentOperationSecret.value = record;
     editFormModel.value = {
       name: record.name,
@@ -914,9 +926,25 @@ export function useSecretPage() {
       labels: parseJsonField(record.labels, {}),
       annotations: parseJsonField(record.annotations, {}),
     };
-    editDataOriginalKeys.value = getSecretDataKeys(record);
-    editDataRows.value = createDataRows(editDataOriginalKeys.value);
+    // 列表行里的 data_keys 可能已过期，先清空，等详情返回后再填
+    resetEditData();
+    editDataLoading.value = true;
     isEditModalVisible.value = true;
+    try {
+      const detail = await getSecretDetailsApi({
+        cluster_id: clusterId,
+        namespace: record.namespace,
+        name: record.name,
+      });
+      if (seq !== editOpenSeq) return;
+      editDataOriginalKeys.value = getSecretDataKeys(detail);
+      editDataRows.value = createDataRows(editDataOriginalKeys.value);
+      editDataLoading.value = false;
+    } catch (err) {
+      if (seq !== editOpenSeq) return;
+      closeEditModal();
+      if (!isNotifiedByRequestLayer(err)) message.error('获取 Secret 详情失败');
+    }
   };
 
   const findEditDataRow = (row: SecretDataRow) =>
@@ -948,13 +976,18 @@ export function useSecretPage() {
 
   const getEditDataRowError = (row: SecretDataRow) => getDataRowError(row);
 
-  const closeEditModal = () => {
+  function closeEditModal() {
+    editOpenSeq += 1;
     isEditModalVisible.value = false;
     currentOperationSecret.value = null;
-  };
+    // 复审 P3-2：关闭时清掉 data 行（含用户已输入的值）
+    resetEditData();
+  }
 
   const submitEditForm = async () => {
     if (!formRef.value || !currentOperationSecret.value) return;
+    // 键列表还没拿到最新的，不能按旧键组 payload
+    if (editDataLoading.value) return;
     
     try {
       await formRef.value.validate();
@@ -996,7 +1029,7 @@ export function useSecretPage() {
       
       await updateSecretApi(params);
       message.success('Secret 更新成功');
-      isEditModalVisible.value = false;
+      closeEditModal();
       await fetchSecrets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
@@ -1409,6 +1442,7 @@ export function useSecretPage() {
     getPlainValueForCopy,
     clearRevealedValues,
     editDataRows,
+    editDataLoading,
     setEditDataValue,
     resetEditDataRow,
     removeEditDataRow,

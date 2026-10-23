@@ -182,9 +182,161 @@ describe('规则 2：更新 Secret 的 data', () => {
   async function openEdit() {
     const page = useSecretPage();
     page.formRef.value = { validate: vi.fn(async () => ({})) } as any;
-    page.openEditModal(RECORD);
+    await page.openEditModal(RECORD);
     return page;
   }
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (reason?: unknown) => void;
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, reject, resolve };
+  }
+  const keysOf = (page: ReturnType<typeof useSecretPage>) =>
+    page.editDataRows.value.map((row) => row.key);
+
+  it('P2/P3-2：打开编辑时重新拉详情，用最新键列表，不用列表行里可能过期的 data_keys', async () => {
+    api.detail.mockResolvedValueOnce({
+      ...RECORD,
+      data: { alpha: '', gamma: '' },
+      data_keys: [
+        { key: 'alpha', size: 11 },
+        { key: 'gamma', size: 13 },
+      ],
+    });
+    const page = await openEdit();
+    expect(api.detail).toHaveBeenCalledTimes(1);
+    expect(api.detail).toHaveBeenCalledWith({
+      cluster_id: 1,
+      namespace: 'ns-a',
+      name: 'secret-a',
+    });
+    expect(keysOf(page)).toEqual(['alpha', 'gamma']);
+    page.setEditDataValue(page.editDataRows.value[1]!, FAKE);
+    await page.submitEditForm();
+    // 列表里过期的 beta 不会被当作原有键发出；集群里新出现的 gamma 不会被误删
+    expect(lastPayload().data).toEqual({ alpha: '', gamma: FAKE_B64 });
+  });
+
+  it('P2/P3-2：详情返回前弹窗处于加载中，不显示旧键、不能提交', async () => {
+    const pending = deferred<unknown>();
+    api.detail.mockReturnValueOnce(pending.promise);
+    const page = useSecretPage();
+    page.formRef.value = { validate: vi.fn(async () => ({})) } as any;
+    const opening = page.openEditModal(RECORD);
+    expect(page.isEditModalVisible.value).toBe(true);
+    expect(page.editDataLoading.value).toBe(true);
+    expect(page.editDataRows.value).toEqual([]);
+    await page.submitEditForm();
+    expect(api.update).not.toHaveBeenCalled();
+    pending.resolve({ ...RECORD });
+    await opening;
+    expect(page.editDataLoading.value).toBe(false);
+    expect(keysOf(page)).toEqual(['alpha', 'beta']);
+  });
+
+  it('P2/P3-2：拉详情失败（请求层没提示过）：关闭弹窗，只弹一条「获取 Secret 详情失败」', async () => {
+    api.detail.mockRejectedValueOnce(new Error('local failure'));
+    const page = await openEdit();
+    expect(message.error).toHaveBeenCalledTimes(1);
+    expect(message.error).toHaveBeenCalledWith('获取 Secret 详情失败');
+    expect(page.isEditModalVisible.value).toBe(false);
+    expect(page.editDataLoading.value).toBe(false);
+    expect(page.editDataRows.value).toEqual([]);
+    expect(page.currentOperationSecret.value).toBeNull();
+  });
+
+  it.each([
+    [
+      '通用 http-error（如网络错误）',
+      () => {
+        const error = new Error('fake network failure');
+        markHttpErrorNotified(error, 'http-error:网络异常');
+        return error;
+      },
+    ],
+    [
+      '业务错误（已弹后端原文）',
+      () => {
+        const error = createBusinessError(200, '假的业务错误');
+        notifyBusinessError(error, () => {}, '');
+        return error;
+      },
+    ],
+    ['403', () => ({ response: { status: 403 } })],
+  ])(
+    'P2/P3-2：拉详情失败且请求层已提示（%s）：页面不再弹第二条',
+    async (_, makeError) => {
+      api.detail.mockRejectedValueOnce(makeError());
+      const page = await openEdit();
+      expect(message.error).not.toHaveBeenCalled();
+      expect(page.isEditModalVisible.value).toBe(false);
+      expect(page.editDataRows.value).toEqual([]);
+    },
+  );
+
+  it('P2/P3-2：加载中关闭弹窗，之后返回的详情被丢弃', async () => {
+    const pending = deferred<unknown>();
+    api.detail.mockReturnValueOnce(pending.promise);
+    const page = useSecretPage();
+    const opening = page.openEditModal(RECORD);
+    page.closeEditModal();
+    pending.resolve({ ...RECORD });
+    await opening;
+    expect(page.isEditModalVisible.value).toBe(false);
+    expect(page.editDataRows.value).toEqual([]);
+    expect(page.editDataLoading.value).toBe(false);
+    expect(page.currentOperationSecret.value).toBeNull();
+  });
+
+  it('P2/P3-2：加载中关闭弹窗，之后才失败：不弹提示', async () => {
+    const pending = deferred<unknown>();
+    api.detail.mockReturnValueOnce(pending.promise);
+    const page = useSecretPage();
+    const opening = page.openEditModal(RECORD);
+    page.closeEditModal();
+    pending.reject(new Error('late failure'));
+    await opening;
+    expect(message.error).not.toHaveBeenCalled();
+    expect(page.isEditModalVisible.value).toBe(false);
+  });
+
+  it('P2/P3-2：加载中切到另一行：只用最后一行的详情，先发的请求晚返回也不串', async () => {
+    const first = deferred<unknown>();
+    const second = deferred<unknown>();
+    api.detail
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    const page = useSecretPage();
+    const openA = page.openEditModal(RECORD);
+    const recordB = {
+      ...RECORD,
+      name: 'secret-b',
+      data: { delta: '' },
+      data_keys: [{ key: 'delta', size: 5 }],
+    };
+    const openB = page.openEditModal(recordB);
+    second.resolve({ ...recordB });
+    await openB;
+    first.resolve({ ...RECORD });
+    await openA;
+    expect(page.currentOperationSecret.value?.name).toBe('secret-b');
+    expect(page.editFormModel.value.name).toBe('secret-b');
+    expect(keysOf(page)).toEqual(['delta']);
+    expect(page.isEditModalVisible.value).toBe(true);
+    expect(page.editDataLoading.value).toBe(false);
+  });
+
+  it('P3-2：关闭编辑弹窗时清空 editDataRows（含已输入的值）', async () => {
+    const page = await openEdit();
+    page.setEditDataValue(page.editDataRows.value[0]!, FAKE);
+    page.addEditDataRow('extra');
+    page.closeEditModal();
+    expect(page.editDataRows.value).toEqual([]);
+    expect(page.isEditModalVisible.value).toBe(false);
+  });
   function lastPayload() {
     return api.update.mock.calls.at(-1)![0];
   }

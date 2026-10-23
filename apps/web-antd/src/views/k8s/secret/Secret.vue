@@ -594,6 +594,7 @@
       @ok="submitEditForm"
       @cancel="closeEditModal"
       :confirmLoading="submitLoading"
+      :okButtonProps="{ disabled: editDataLoading }"
       width="900px"
       :maskClosable="false"
       destroyOnClose
@@ -640,7 +641,9 @@
         <!-- 加密数据（SEC-25/26：原有值已脱敏，输入框留空 = 保留原值；不支持设为空值） -->
         <a-form-item label="加密数据">
           <div class="k8s-key-value-inputs secret-edit-data">
-            <div v-if="editDataRows.length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
+            <!-- 复审 P2/P3-2：键列表来自打开时重新拉取的详情，返回前显示加载中 -->
+            <a-spin v-if="editDataLoading" style="display: block; padding: 16px;" />
+            <div v-else-if="editDataRows.length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
               暂无加密数据，点击下方按钮添加
             </div>
             <div v-for="row in editDataRows" :key="row.id" class="secret-edit-data-row" :data-key="row.key">
@@ -685,7 +688,7 @@
                 style="flex: 1; margin-right: 8px;"
                 @press-enter="addNewEditData"
               />
-              <a-button type="primary" @click="addNewEditData" :disabled="!newEditDataKey.trim()">
+              <a-button type="primary" @click="addNewEditData" :disabled="editDataLoading || !newEditDataKey.trim()">
                 <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
@@ -1267,6 +1270,7 @@ const {
   getPlainValueForCopy,
   clearRevealedValues,
   editDataRows,
+  editDataLoading,
   setEditDataValue,
   resetEditDataRow,
   removeEditDataRow,
