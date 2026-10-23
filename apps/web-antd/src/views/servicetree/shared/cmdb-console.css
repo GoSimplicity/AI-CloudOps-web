@@ -1,0 +1,56 @@
+/* 共享外壳与旧业务细节样式之间的统一边界 */
+.cmdb-console.ops-page {
+  min-height: 0;
+  padding: var(--ops-space-lg) var(--ops-space-xl);
+  background: var(--ops-ground);
+}
+.cmdb-console .stats-row,
+.cmdb-console .filter-section { margin: 0; }
+.cmdb-console .stats-card {
+  height: 100%;
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
+  box-shadow: none;
+  background: var(--ops-surface);
+  transform: none;
+}
+.cmdb-console .stats-card:hover { box-shadow: none; transform: none; }
+.cmdb-console .stats-card :deep(.ant-card-body) { padding: var(--ops-space-lg); }
+.cmdb-console .stats-card :deep(.ant-statistic-content) {
+  color: var(--ops-ink);
+  font-variant-numeric: tabular-nums;
+}
+.cmdb-console .stats-card :deep(.ant-statistic-title) { color: var(--ops-muted); }
+.cmdb-console .filter-form,
+.cmdb-console .search-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ops-space-md);
+  width: 100%;
+}
+.cmdb-console .filter-form :deep(.ant-form-item) { margin: 0; }
+.cmdb-console .table-section,
+.cmdb-console .table-container { min-width: 0; overflow: hidden; }
+.cmdb-console .table-card,
+.cmdb-console .tree-card,
+.cmdb-console .detail-card { border-radius: var(--ops-radius); box-shadow: none; }
+.cmdb-console .table-card :deep(.ant-card-body),
+.cmdb-console .table-container > :deep(.ant-card > .ant-card-body) { padding: 0; }
+.cmdb-console .btn-create,
+.cmdb-console .btn-action,
+.cmdb-console .reset-btn { border-radius: var(--ops-radius); box-shadow: none; }
+.cmdb-console .btn-create:hover,
+.cmdb-console .btn-action:hover,
+.cmdb-console .reset-btn:hover { transform: none; box-shadow: none; }
+.cmdb-console .detail-header { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .cmdb-console.ops-page { padding: var(--ops-space-md); }
+  .cmdb-console .filter-form > :deep(.ant-form-item),
+  .cmdb-console .search-filters > * { width: 100%; min-width: 0; }
+  .cmdb-console .filter-form :deep(.ant-input-affix-wrapper),
+  .cmdb-console .filter-form :deep(.ant-select),
+  .cmdb-console .filter-form :deep(.ant-input-search) { width: 100% !important; }
+  .cmdb-console .stats-card :deep(.ant-card-body) { padding: var(--ops-space-md); }
+  .cmdb-console .stats-card :deep(.ant-statistic-content) { font-size: 22px; }
+}

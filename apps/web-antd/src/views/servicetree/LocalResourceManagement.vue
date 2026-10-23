@@ -1,589 +1,12 @@
-<template>
-  <div class="local-resource-management">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button type="primary" @click="showCreateModal" class="btn-create">
-          <template #icon>
-            <plus-outlined />
-          </template>
-          <span class="btn-text">添加服务器</span>
-        </a-button>
-        <div class="search-filters">
-          <a-select
-            v-model:value="filterForm.status"
-            placeholder="连接状态"
-            allow-clear
-            class="filter-select"
-            @change="handleSearch"
-          >
-            <a-select-option :value="ResourceStatus.RUNNING">运行中</a-select-option>
-            <a-select-option :value="ResourceStatus.STOPPED">已停止</a-select-option>
-            <a-select-option :value="ResourceStatus.STARTING">启动中</a-select-option>
-            <a-select-option :value="ResourceStatus.STOPPING">停止中</a-select-option>
-            <a-select-option :value="ResourceStatus.RESTARTING">重启中</a-select-option>
-            <a-select-option :value="ResourceStatus.ERROR">错误</a-select-option>
-          </a-select>
-          <a-button @click="resetFilter" class="reset-btn">
-            重置
-          </a-button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 统计卡片 -->
-    <div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="总服务器" 
-              :value="localResources.length" 
-              :value-style="{ color: '#3f8600' }"
-            >
-              <template #prefix>
-                <desktop-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="运行中" 
-              :value="localResources.filter(item => item.status === ResourceStatus.RUNNING).length" 
-              :value-style="{ color: '#52c41a' }"
-            >
-              <template #prefix>
-                <api-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="Linux系统" 
-              :value="localResources.filter(item => item.os_type === 'linux').length" 
-              :value-style="{ color: '#faad14' }"
-            >
-              <template #prefix>
-                <desktop-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="已绑定节点" 
-              :value="localResources.filter(item => item.tree_nodes && item.tree_nodes.length > 0).length" 
-              :value-style="{ color: '#cf1322' }"
-            >
-              <template #prefix>
-                <deployment-unit-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div>
-
-    <!-- 表格容器 -->
-    <div class="table-container">
-      <a-card>
-        <a-table
-          :columns="columns"
-          :data-source="localResources"
-          :loading="loading"
-          :pagination="paginationConfig"
-          @change="handleTableChange"
-          row-key="id"
-          :scroll="{ x: 1400 }"
-          class="resource-table"
-          bordered
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'name'">
-              <div class="server-name-cell">
-                <div class="server-badge" :class="getServerStatusClass(record)"></div>
-                <span class="server-name-text">{{ record.name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'status'">
-              <a-badge
-                :status="getStatusBadge(record.status)"
-                :text="getStatusText(record.status)"
-              />
-            </template>
-
-            <template v-if="column.key === 'os_type'">
-              <a-tag :color="record.os_type === 'linux' ? 'blue' : 'green'" class="tech-tag">
-                <windows-outlined v-if="record.os_type === 'windows'" />
-                <desktop-outlined v-else />
-                {{ record.os_type === 'linux' ? 'Linux' : 'Windows' }}
-              </a-tag>
-            </template>
-
-            <template v-if="column.key === 'auth_mode'">
-              <a-tag :color="record.auth_mode === AuthMode.PASSWORD ? 'orange' : 'purple'" class="tech-tag">
-                {{ getAuthModeText(record.auth_mode) }}
-              </a-tag>
-            </template>
-
-            <template v-if="column.key === 'tree_nodes'">
-              <div class="tag-container">
-                <template v-if="record.tree_nodes && record.tree_nodes.length > 0">
-                  <a-tag 
-                    v-for="node in record.tree_nodes.slice(0, 2)" 
-                    :key="node.id" 
-                    class="tech-tag node-tag"
-                  >
-                    {{ node.name }}
-                  </a-tag>
-                  <a-tag v-if="record.tree_nodes.length > 2" color="default">
-                    +{{ record.tree_nodes.length - 2 }}
-                  </a-tag>
-                </template>
-                <span v-else class="empty-text">未绑定</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'tags'">
-              <div class="tag-container">
-                <template v-if="record.tags && record.tags.length > 0">
-                  <a-tag 
-                    v-for="tag in record.tags.slice(0, 3)" 
-                    :key="tag" 
-                    class="tech-tag tag-item"
-                  >
-                    {{ tag }}
-                  </a-tag>
-                  <a-tag v-if="record.tags.length > 3" color="default">
-                    +{{ record.tags.length - 3 }}
-                  </a-tag>
-                </template>
-                <span v-else class="empty-text">无标签</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'connection_info'">
-              <div class="connection-info">
-                <div class="connection-item">
-                  <span class="connection-label">IP:</span>
-                  <span class="connection-value">{{ record.ip_addr }}</span>
-                </div>
-                <div class="connection-item">
-                  <span class="connection-label">端口:</span>
-                  <span class="connection-value">{{ record.port }}</span>
-                </div>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'creator'">
-              <div class="creator-info">
-                <a-avatar 
-                  size="small" 
-                  :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
-                >
-                  {{ getInitials(record.create_user_name || 'Admin') }}
-                </a-avatar>
-                <span class="creator-name">{{ record.create_user_name || 'Admin' }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'createdAt'">
-              <div class="date-info">
-                <span class="date">{{ formatDate(record.created_at) }}</span>
-                <span class="time">{{ formatTime(record.created_at) }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'action'">
-              <div class="action-buttons">
-                <a-button type="primary" size="small" @click="handleViewDetail(record)">
-                  查看
-                </a-button>
-                <a-button type="default" size="small" @click="handleEdit(record)">
-                  编辑
-                </a-button>
-                <a-dropdown>
-                  <template #overlay>
-                    <a-menu>
-                      <a-menu-item key="bind" @click="showBindModal(record)">
-                        <deployment-unit-outlined /> 绑定服务树
-                      </a-menu-item>
-                      <a-menu-item 
-                        key="unbind" 
-                        @click="showUnbindModal(record)"
-                        :disabled="!record.tree_nodes || record.tree_nodes.length === 0"
-                      >
-                        <deployment-unit-outlined /> 解绑服务树
-                      </a-menu-item>
-                      <a-menu-item key="terminal" @click="handleConnectTerminal(record)">
-                        <code-outlined /> 连接终端
-                      </a-menu-item>
-                      <a-menu-divider />
-                      <a-menu-item key="delete" @click="handleDelete(record)" danger>
-                        <delete-outlined /> 删除
-                      </a-menu-item>
-                    </a-menu>
-                  </template>
-                  <a-button size="small">
-                    更多
-                    <down-outlined />
-                  </a-button>
-                </a-dropdown>
-              </div>
-            </template>
-          </template>
-        </a-table>
-      </a-card>
-    </div>
-
-    <!-- 创建/编辑服务器对话框 -->
-    <a-modal
-      v-model:open="modalVisible"
-      :title="isEdit ? '编辑服务器' : '添加服务器'"
-      :width="modalWidth"
-      :footer="null"
-      :destroy-on-close="true"
-      class="responsive-modal server-modal"
-    >
-      <a-form
-        :model="formData"
-        :rules="formRules"
-        layout="vertical"
-        ref="formRef"
-        class="server-form"
-      >
-        <div class="form-section">
-          <div class="section-title">基本信息</div>
-          <div class="form-grid">
-            <a-form-item label="服务器名称" name="name" class="form-item">
-              <a-input
-                v-model:value="formData.name"
-                placeholder="请输入服务器名称"
-              />
-            </a-form-item>
-            <a-form-item label="环境" name="environment" class="form-item">
-              <a-select v-model:value="formData.environment" placeholder="选择环境">
-                <a-select-option value="local">本地</a-select-option>
-                <a-select-option value="dev">开发</a-select-option>
-                <a-select-option value="test">测试</a-select-option>
-                <a-select-option value="prod">生产</a-select-option>
-              </a-select>
-            </a-form-item>
-            <a-form-item label="IP地址" name="ip_addr" class="form-item">
-              <a-input
-                v-model:value="formData.ip_addr"
-                placeholder="192.168.1.100"
-              />
-            </a-form-item>
-            <a-form-item label="SSH端口" name="port" class="form-item">
-              <a-input-number
-                v-model:value="formData.port"
-                :min="1"
-                :max="65535"
-                style="width: 100%"
-                placeholder="22"
-              />
-            </a-form-item>
-            <a-form-item label="用户名" name="username" class="form-item">
-              <a-input
-                v-model:value="formData.username"
-                placeholder="root"
-              />
-            </a-form-item>
-            <a-form-item label="操作系统类型" name="os_type" class="form-item">
-              <a-select v-model:value="formData.os_type" placeholder="选择操作系统">
-                <a-select-option value="linux">
-                  <desktop-outlined /> Linux
-                </a-select-option>
-                <a-select-option value="windows">
-                  <windows-outlined /> Windows
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-            <a-form-item label="操作系统名称" name="os_name" class="form-item">
-              <a-input
-                v-model:value="formData.os_name"
-                placeholder="如: CentOS 7.9"
-              />
-            </a-form-item>
-            <a-form-item label="镜像名称" name="image_name" class="form-item">
-              <a-input
-                v-model:value="formData.image_name"
-                placeholder="如: centos-7.9-x86_64"
-              />
-            </a-form-item>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">认证配置</div>
-          <a-form-item label="认证方式" name="auth_mode">
-            <a-radio-group v-model:value="formData.auth_mode" @change="handleAuthModeChange">
-              <a-radio :value="AuthMode.PASSWORD">密码认证</a-radio>
-              <a-radio :value="AuthMode.KEY">密钥认证</a-radio>
-            </a-radio-group>
-          </a-form-item>
-
-          <a-form-item 
-            v-if="formData.auth_mode === AuthMode.PASSWORD" 
-            label="登录密码" 
-            name="password"
-          >
-            <a-input-password
-              v-model:value="formData.password"
-              placeholder="请输入登录密码"
-              autocomplete="new-password"
-            />
-          </a-form-item>
-
-          <a-form-item 
-            v-if="formData.auth_mode === AuthMode.KEY" 
-            label="私钥内容" 
-            name="key"
-          >
-            <a-textarea
-              v-model:value="formData.key"
-              placeholder="请粘贴SSH私钥内容"
-              :rows="6"
-              style="font-family: 'Courier New', monospace;"
-            />
-          </a-form-item>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">其他信息</div>
-          <a-form-item label="描述信息">
-            <a-textarea
-              v-model:value="formData.description"
-              placeholder="服务器用途描述"
-              :rows="3"
-            />
-          </a-form-item>
-
-          <a-form-item label="资源标签">
-            <div class="tags-input">
-              <div class="current-tags" v-if="formData.tags && formData.tags.length > 0">
-                <a-tag
-                  v-for="(tag, index) in formData.tags"
-                  :key="`tag-${index}-${tag}`"
-                  closable
-                  @close="removeTag(index)"
-                  class="tech-tag tag-item"
-                >
-                  {{ tag }}
-                </a-tag>
-              </div>
-              <div class="add-tag">
-                <a-input
-                  ref="tagInputRef"
-                  v-model:value="newTag"
-                  placeholder="输入标签，按回车添加"
-                  style="width: 200px; margin-right: 8px;"
-                  @pressEnter="addTag"
-                  @keyup.enter="addTag"
-                />
-                <a-button type="dashed" @click="addTag" class="add-tag-btn">
-                  <plus-outlined /> 添加标签
-                </a-button>
-              </div>
-            </div>
-          </a-form-item>
-        </div>
-
-        <div class="form-actions">
-          <a-button @click="modalVisible = false">取消</a-button>
-          <a-button 
-            type="primary" 
-            @click="handleSubmit" 
-            :loading="submitLoading"
-            style="margin-left: 8px;"
-          >
-            {{ isEdit ? '更新' : '添加' }}
-          </a-button>
-        </div>
-      </a-form>
-    </a-modal>
-
-    <!-- 绑定服务树节点对话框 -->
-    <a-modal
-      v-model:open="bindModalVisible"
-      title="绑定服务树节点"
-      @ok="handleBind"
-      :confirm-loading="bindLoading"
-      :destroy-on-close="true"
-      class="responsive-modal"
-    >
-      <a-form layout="vertical">
-        <a-form-item label="选择要绑定的服务树节点" required>
-          <a-tree-select
-            v-model:value="selectedTreeNodeIds"
-            style="width: 100%"
-            placeholder="请选择服务树节点"
-            allow-clear
-            multiple
-            :tree-data="treeData"
-            :field-names="{ children: 'children', label: 'name', value: 'id' }"
-          />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <!-- 管理绑定对话框 -->
-    <a-modal
-      v-model:open="unbindModalVisible"
-      title="管理服务树绑定"
-      @ok="handleUnbind"
-      :confirm-loading="unbindLoading"
-      :destroy-on-close="true"
-      class="responsive-modal"
-    >
-      <a-form layout="vertical">
-        <a-form-item label="当前绑定的节点">
-          <div v-if="currentResource?.tree_nodes && currentResource.tree_nodes.length > 0">
-            <a-checkbox-group v-model:value="selectedUnbindNodeIds">
-              <div v-for="node in currentResource.tree_nodes" :key="node.id" style="margin-bottom: 8px;">
-                <a-checkbox :value="node.id">{{ node.name }}</a-checkbox>
-              </div>
-            </a-checkbox-group>
-          </div>
-          <a-empty v-else description="暂无绑定的节点" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <!-- 服务器详情抽屉 -->
-    <a-drawer
-      v-model:open="detailVisible"
-      title="服务器详情"
-      width="600"
-      :destroy-on-close="true"
-      class="detail-drawer"
-    >
-      <a-skeleton :loading="detailLoading" active>
-        <template v-if="currentDetail">
-          <div class="detail-content">
-            <div class="detail-header">
-              <h2>{{ currentDetail.name }}</h2>
-              <div class="detail-badges">
-                <a-badge
-                  :status="getStatusBadge(currentDetail.status)"
-                  :text="getStatusText(currentDetail.status)"
-                />
-                <a-tag :color="currentDetail.os_type === 'linux' ? 'blue' : 'green'" class="tech-tag">
-                  <windows-outlined v-if="currentDetail.os_type === 'windows'" />
-                  <desktop-outlined v-else />
-                  {{ currentDetail.os_type === 'linux' ? 'Linux' : 'Windows' }}
-                </a-tag>
-              </div>
-            </div>
-
-            <a-descriptions bordered :column="1">
-              <a-descriptions-item label="ID">
-                {{ currentDetail.id }}
-              </a-descriptions-item>
-              <a-descriptions-item label="环境">
-                {{ currentDetail.environment || '-' }}
-              </a-descriptions-item>
-              <a-descriptions-item label="IP地址">
-                {{ currentDetail.ip_addr }}
-              </a-descriptions-item>
-              <a-descriptions-item label="SSH端口">
-                {{ currentDetail.port }}
-              </a-descriptions-item>
-              <a-descriptions-item label="用户名">
-                {{ currentDetail.username || '-' }}
-              </a-descriptions-item>
-              <a-descriptions-item label="系统名称">
-                {{ currentDetail.os_name || '-' }}
-              </a-descriptions-item>
-              <a-descriptions-item label="镜像名称">
-                {{ currentDetail.image_name || '-' }}
-              </a-descriptions-item>
-              <a-descriptions-item label="认证方式">
-                <a-tag :color="currentDetail.auth_mode === AuthMode.PASSWORD ? 'orange' : 'purple'" class="tech-tag">
-                  {{ getAuthModeText(currentDetail.auth_mode) }}
-                </a-tag>
-              </a-descriptions-item>
-              <a-descriptions-item label="CPU">
-                {{ currentDetail.cpu || '-' }}
-              </a-descriptions-item>
-              <a-descriptions-item label="内存">
-                {{ currentDetail.memory || '-' }}
-              </a-descriptions-item>
-              <a-descriptions-item label="磁盘">
-                {{ currentDetail.disk || '-' }}
-              </a-descriptions-item>
-              <a-descriptions-item label="描述">
-                {{ currentDetail.description || '-' }}
-              </a-descriptions-item>
-              <a-descriptions-item label="创建时间">
-                {{ formatDateTime(currentDetail.created_at) }}
-              </a-descriptions-item>
-              <a-descriptions-item label="更新时间">
-                {{ formatDateTime(currentDetail.updated_at) }}
-              </a-descriptions-item>
-            </a-descriptions>
-
-            <div class="detail-section">
-              <div class="section-title">资源标签</div>
-              <div class="tag-list">
-                <template v-if="currentDetail.tags && currentDetail.tags.length > 0">
-                  <a-tag 
-                    v-for="(tag, index) in currentDetail.tags" 
-                    :key="index" 
-                    class="tech-tag tag-item"
-                  >
-                    {{ tag }}
-                  </a-tag>
-                </template>
-                <a-empty v-else :image="Empty.PRESENTED_IMAGE_SIMPLE" description="暂无标签" />
-              </div>
-            </div>
-
-            <div class="detail-section">
-              <div class="section-title">绑定的服务树节点</div>
-              <div class="tree-node-list">
-                <template v-if="currentDetail.tree_nodes && currentDetail.tree_nodes.length > 0">
-                  <a-tag 
-                    v-for="node in currentDetail.tree_nodes" 
-                    :key="node.id" 
-                    class="tech-tag node-tag"
-                  >
-                    {{ node.name }}
-                  </a-tag>
-                </template>
-                <a-empty v-else :image="Empty.PRESENTED_IMAGE_SIMPLE" description="暂无绑定节点" />
-              </div>
-            </div>
-
-            <div class="drawer-actions">
-              <a-button-group>
-                <a-button @click="handleEdit(currentDetail)">
-                  <edit-outlined /> 编辑
-                </a-button>
-              </a-button-group>
-              <a-button danger @click="handleDelete(currentDetail)">
-                <delete-outlined /> 删除
-              </a-button>
-            </div>
-          </div>
-        </template>
-      </a-skeleton>
-    </a-drawer>
-  </div>
-</template>
-
 <script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { onBeforeUnmount } from 'vue';
+
 import { ref, reactive, onMounted, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { message, Modal, Empty } from 'ant-design-vue';
 import {
+  ApiOutlined,
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
@@ -614,6 +37,11 @@ import {
   type TreeNode,
 } from '#/api/core/tree/tree_local';
 import { getTreeList } from '#/api/core/tree/tree_node';
+
+const loadError = ref<string | null>(null);
+let listRequest = 0;
+let detailRequest = 0;
+
 
 const loading = ref(false);
 const detailLoading = ref(false);
@@ -731,7 +159,7 @@ const showUnbindModal = (record: TreeLocalResource): void => {
 
 // 表格列定义
 const columns = [
-  { title: '服务器名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' as const },
+  { title: '服务器名称', dataIndex: 'name', key: 'name', width: 200 },
   { title: '连接信息', dataIndex: 'connection_info', key: 'connection_info', width: 150 },
   { title: '用户名', dataIndex: 'username', key: 'username', width: 100 },
   { title: '操作系统', dataIndex: 'os_type', key: 'os_type', width: 120 },
@@ -742,7 +170,7 @@ const columns = [
   { title: '标签', dataIndex: 'tags', key: 'tags', width: 200, ellipsis: true },
   { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
   { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'action', fixed: 'right' as const, width: 200, align: 'center' as const },
+  { title: '操作', key: 'action', width: 200, align: 'center' as const },
 ];
 
 const getServerStatusClass = (record: TreeLocalResource): string => {
@@ -843,6 +271,8 @@ const fetchTreeData = async (): Promise<void> => {
 };
 
 const fetchLocalResources = async (): Promise<void> => {
+  const ticket = ++listRequest;
+  loadError.value = null;
   loading.value = true;
   try {
     const params: GetTreeLocalResourceListReq = {
@@ -855,6 +285,7 @@ const fetchLocalResources = async (): Promise<void> => {
     }
 
     const response = await getTreeLocalList(params);
+    if (ticket !== listRequest) return;
 
     // 确保返回的数据包含 tree_nodes 字段
     const items = response.items || [];
@@ -864,12 +295,14 @@ const fetchLocalResources = async (): Promise<void> => {
     }));
     pagination.total = response.total || 0;
   } catch (error) {
+    if (ticket !== listRequest) return;
+    loadError.value = '获取本地资源列表失败，请重试';
     message.error('获取本地资源列表失败');
 
     localResources.value = [];
     pagination.total = 0;
   } finally {
-    loading.value = false;
+    if (ticket === listRequest) loading.value = false;
   }
 };
 
@@ -958,22 +391,26 @@ const handleEdit = (record: TreeLocalResource): void => {
 };
 
 const handleViewDetail = async (record: TreeLocalResource): Promise<void> => {
+  const ticket = ++detailRequest;
+  currentDetail.value = null;
   detailVisible.value = true;
   detailLoading.value = true;
-  currentDetail.value = record;
+
 
   try {
     const response = await getTreeLocalDetail(record.id);
+    if (ticket !== detailRequest || !detailVisible.value) return;
     // 确保详情数据包含 tree_nodes 字段
     currentDetail.value = {
       ...response,
       tree_nodes: response.tree_nodes || []
     };
   } catch (error) {
+    if (ticket !== detailRequest) return;
 
     message.error('获取资源详情失败');
   } finally {
-    detailLoading.value = false;
+    if (ticket === detailRequest) detailLoading.value = false;
   }
 };
 
@@ -1181,7 +618,593 @@ onMounted(async () => {
     message.error('页面数据加载失败，请刷新页面重试');
   }
 });
+onBeforeUnmount(() => { listRequest++; detailRequest++; });
+const closeDetails = () => {
+  detailRequest++;
+  detailVisible.value = false;
+  detailLoading.value = false;
+  currentDetail.value = null;
+};
 </script>
+
+<template>
+  <OpsPage title="本地资源" description="维护服务器连接配置与服务树绑定" class="cmdb-console local-resource-management">
+    <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
+      <template #action><a-button @click="fetchLocalResources()">重试</a-button></template>
+    </a-alert>
+    <!-- 页面标题 -->
+    <template #actions><a-button type="primary" @click="showCreateModal" class="btn-create">
+          <template #icon>
+            <plus-outlined />
+          </template>
+          <span class="btn-text">添加服务器</span>
+        </a-button><a-button @click="fetchLocalResources()" :loading="loading">刷新</a-button></template><template #filters><div class="search-filters">
+          <a-select
+            v-model:value="filterForm.status"
+            placeholder="连接状态"
+            allow-clear
+            class="filter-select"
+            @change="handleSearch"
+          >
+            <a-select-option :value="ResourceStatus.RUNNING">运行中</a-select-option>
+            <a-select-option :value="ResourceStatus.STOPPED">已停止</a-select-option>
+            <a-select-option :value="ResourceStatus.STARTING">启动中</a-select-option>
+            <a-select-option :value="ResourceStatus.STOPPING">停止中</a-select-option>
+            <a-select-option :value="ResourceStatus.RESTARTING">重启中</a-select-option>
+            <a-select-option :value="ResourceStatus.ERROR">错误</a-select-option>
+          </a-select>
+          <a-button @click="resetFilter" class="reset-btn">
+            重置
+          </a-button>
+        </div></template>
+
+    <!-- 统计卡片 -->
+    <template #summary><div class="stats-row">
+      <a-row :gutter="[16, 16]">
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic
+              title="匹配服务器"
+              :value="pagination.total"
+            >
+              <template #prefix>
+                <desktop-outlined />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic
+              title="本页运行中"
+              :value="localResources.filter(item => item.status === ResourceStatus.RUNNING).length"
+            >
+              <template #prefix>
+                <api-outlined />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic
+              title="本页Linux系统"
+              :value="localResources.filter(item => item.os_type === 'linux').length"
+            >
+              <template #prefix>
+                <desktop-outlined />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic
+              title="本页已绑定节点"
+              :value="localResources.filter(item => item.tree_nodes && item.tree_nodes.length > 0).length"
+            >
+              <template #prefix>
+                <deployment-unit-outlined />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+      </a-row>
+    </div></template>
+
+    <!-- 表格容器 -->
+    <div class="table-container">
+      <a-card>
+        <a-table
+          :columns="columns"
+          :data-source="localResources"
+          :loading="loading"
+          :pagination="paginationConfig"
+          @change="handleTableChange"
+          row-key="id"
+          :scroll="{ x: 1400 }"
+          class="resource-table"
+          bordered
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'name'">
+              <div class="server-name-cell">
+                <div class="server-badge" :class="getServerStatusClass(record)"></div>
+                <span class="server-name-text">{{ record.name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'status'">
+              <a-badge
+                :status="getStatusBadge(record.status)"
+                :text="getStatusText(record.status)"
+              />
+            </template>
+
+            <template v-if="column.key === 'os_type'">
+              <a-tag :color="record.os_type === 'linux' ? 'blue' : 'green'" class="tech-tag">
+                <windows-outlined v-if="record.os_type === 'windows'" />
+                <desktop-outlined v-else />
+                {{ record.os_type === 'linux' ? 'Linux' : 'Windows' }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'auth_mode'">
+              <a-tag :color="record.auth_mode === AuthMode.PASSWORD ? 'orange' : 'purple'" class="tech-tag">
+                {{ getAuthModeText(record.auth_mode) }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'tree_nodes'">
+              <div class="tag-container">
+                <template v-if="record.tree_nodes && record.tree_nodes.length > 0">
+                  <a-tag
+                    v-for="node in record.tree_nodes.slice(0, 2)"
+                    :key="node.id"
+                    class="tech-tag node-tag"
+                  >
+                    {{ node.name }}
+                  </a-tag>
+                  <a-tag v-if="record.tree_nodes.length > 2" color="default">
+                    +{{ record.tree_nodes.length - 2 }}
+                  </a-tag>
+                </template>
+                <span v-else class="empty-text">未绑定</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'tags'">
+              <div class="tag-container">
+                <template v-if="record.tags && record.tags.length > 0">
+                  <a-tag
+                    v-for="tag in record.tags.slice(0, 3)"
+                    :key="tag"
+                    class="tech-tag tag-item"
+                  >
+                    {{ tag }}
+                  </a-tag>
+                  <a-tag v-if="record.tags.length > 3" color="default">
+                    +{{ record.tags.length - 3 }}
+                  </a-tag>
+                </template>
+                <span v-else class="empty-text">无标签</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'connection_info'">
+              <div class="connection-info">
+                <div class="connection-item">
+                  <span class="connection-label">IP:</span>
+                  <span class="connection-value">{{ record.ip_addr }}</span>
+                </div>
+                <div class="connection-item">
+                  <span class="connection-label">端口:</span>
+                  <span class="connection-value">{{ record.port }}</span>
+                </div>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'creator'">
+              <div class="creator-info">
+                <a-avatar
+                  size="small"
+                  :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
+                >
+                  {{ getInitials(record.create_user_name || 'Admin') }}
+                </a-avatar>
+                <span class="creator-name">{{ record.create_user_name || 'Admin' }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'createdAt'">
+              <div class="date-info">
+                <span class="date">{{ formatDate(record.created_at) }}</span>
+                <span class="time">{{ formatTime(record.created_at) }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'action'">
+              <div class="action-buttons">
+                <a-button type="primary" size="small" @click="handleViewDetail(record)">
+                  查看
+                </a-button>
+                <a-button type="default" size="small" @click="handleEdit(record)">
+                  编辑
+                </a-button>
+                <a-dropdown>
+                  <template #overlay>
+                    <a-menu>
+                      <a-menu-item key="bind" @click="showBindModal(record)">
+                        <deployment-unit-outlined /> 绑定服务树
+                      </a-menu-item>
+                      <a-menu-item
+                        key="unbind"
+                        @click="showUnbindModal(record)"
+                        :disabled="!record.tree_nodes || record.tree_nodes.length === 0"
+                      >
+                        <deployment-unit-outlined /> 解绑服务树
+                      </a-menu-item>
+                      <a-menu-item key="terminal" @click="handleConnectTerminal(record)">
+                        <code-outlined /> 连接终端
+                      </a-menu-item>
+                      <a-menu-divider />
+                      <a-menu-item key="delete" @click="handleDelete(record)" danger>
+                        <delete-outlined /> 删除
+                      </a-menu-item>
+                    </a-menu>
+                  </template>
+                  <a-button size="small">
+                    更多
+                    <down-outlined />
+                  </a-button>
+                </a-dropdown>
+              </div>
+            </template>
+          </template>
+        </a-table>
+      </a-card>
+    </div>
+
+    <!-- 创建/编辑服务器对话框 -->
+    <a-modal
+      v-model:open="modalVisible"
+      :title="isEdit ? '编辑服务器' : '添加服务器'"
+      :width="modalWidth"
+      :footer="null"
+      :destroy-on-close="true"
+      class="responsive-modal server-modal"
+    >
+      <a-form
+        :model="formData"
+        :rules="formRules"
+        layout="vertical"
+        ref="formRef"
+        class="server-form"
+      >
+        <div class="form-section">
+          <div class="section-title">基本信息</div>
+          <div class="form-grid">
+            <a-form-item label="服务器名称" name="name" class="form-item">
+              <a-input
+                v-model:value="formData.name"
+                placeholder="请输入服务器名称"
+              />
+            </a-form-item>
+            <a-form-item label="环境" name="environment" class="form-item">
+              <a-select v-model:value="formData.environment" placeholder="选择环境">
+                <a-select-option value="local">本地</a-select-option>
+                <a-select-option value="dev">开发</a-select-option>
+                <a-select-option value="test">测试</a-select-option>
+                <a-select-option value="prod">生产</a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="IP地址" name="ip_addr" class="form-item">
+              <a-input
+                v-model:value="formData.ip_addr"
+                placeholder="192.168.1.100"
+              />
+            </a-form-item>
+            <a-form-item label="SSH端口" name="port" class="form-item">
+              <a-input-number
+                v-model:value="formData.port"
+                :min="1"
+                :max="65535"
+                style="width: 100%"
+                placeholder="22"
+              />
+            </a-form-item>
+            <a-form-item label="用户名" name="username" class="form-item">
+              <a-input
+                v-model:value="formData.username"
+                placeholder="root"
+              />
+            </a-form-item>
+            <a-form-item label="操作系统类型" name="os_type" class="form-item">
+              <a-select v-model:value="formData.os_type" placeholder="选择操作系统">
+                <a-select-option value="linux">
+                  <desktop-outlined /> Linux
+                </a-select-option>
+                <a-select-option value="windows">
+                  <windows-outlined /> Windows
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item label="操作系统名称" name="os_name" class="form-item">
+              <a-input
+                v-model:value="formData.os_name"
+                placeholder="如: CentOS 7.9"
+              />
+            </a-form-item>
+            <a-form-item label="镜像名称" name="image_name" class="form-item">
+              <a-input
+                v-model:value="formData.image_name"
+                placeholder="如: centos-7.9-x86_64"
+              />
+            </a-form-item>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">认证配置</div>
+          <a-form-item label="认证方式" name="auth_mode">
+            <a-radio-group v-model:value="formData.auth_mode" @change="handleAuthModeChange">
+              <a-radio :value="AuthMode.PASSWORD">密码认证</a-radio>
+              <a-radio :value="AuthMode.KEY">密钥认证</a-radio>
+            </a-radio-group>
+          </a-form-item>
+
+          <a-form-item
+            v-if="formData.auth_mode === AuthMode.PASSWORD"
+            label="登录密码"
+            name="password"
+          >
+            <a-input-password
+              v-model:value="formData.password"
+              placeholder="请输入登录密码"
+              autocomplete="new-password"
+            />
+          </a-form-item>
+
+          <a-form-item
+            v-if="formData.auth_mode === AuthMode.KEY"
+            label="私钥内容"
+            name="key"
+          >
+            <a-textarea
+              v-model:value="formData.key"
+              placeholder="请粘贴SSH私钥内容"
+              :rows="6"
+              style="font-family: 'Courier New', monospace;"
+            />
+          </a-form-item>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">其他信息</div>
+          <a-form-item label="描述信息">
+            <a-textarea
+              v-model:value="formData.description"
+              placeholder="服务器用途描述"
+              :rows="3"
+            />
+          </a-form-item>
+
+          <a-form-item label="资源标签">
+            <div class="tags-input">
+              <div class="current-tags" v-if="formData.tags && formData.tags.length > 0">
+                <a-tag
+                  v-for="(tag, index) in formData.tags"
+                  :key="`tag-${index}-${tag}`"
+                  closable
+                  @close="removeTag(index)"
+                  class="tech-tag tag-item"
+                >
+                  {{ tag }}
+                </a-tag>
+              </div>
+              <div class="add-tag">
+                <a-input
+                  ref="tagInputRef"
+                  v-model:value="newTag"
+                  placeholder="输入标签，按回车添加"
+                  style="width: 200px; margin-right: 8px;"
+                  @pressEnter="addTag"
+                  @keyup.enter="addTag"
+                />
+                <a-button type="dashed" @click="addTag" class="add-tag-btn">
+                  <plus-outlined /> 添加标签
+                </a-button>
+              </div>
+            </div>
+          </a-form-item>
+        </div>
+
+        <div class="form-actions">
+          <a-button @click="modalVisible = false">取消</a-button>
+          <a-button
+            type="primary"
+            @click="handleSubmit"
+            :loading="submitLoading"
+            style="margin-left: 8px;"
+          >
+            {{ isEdit ? '更新' : '添加' }}
+          </a-button>
+        </div>
+      </a-form>
+    </a-modal>
+
+    <!-- 绑定服务树节点对话框 -->
+    <a-modal
+      v-model:open="bindModalVisible"
+      title="绑定服务树节点"
+      @ok="handleBind"
+      :confirm-loading="bindLoading"
+      :destroy-on-close="true"
+      class="responsive-modal"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="选择要绑定的服务树节点" required>
+          <a-tree-select
+            v-model:value="selectedTreeNodeIds"
+            style="width: 100%"
+            placeholder="请选择服务树节点"
+            allow-clear
+            multiple
+            :tree-data="treeData"
+            :field-names="{ children: 'children', label: 'name', value: 'id' }"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 管理绑定对话框 -->
+    <a-modal
+      v-model:open="unbindModalVisible"
+      title="管理服务树绑定"
+      @ok="handleUnbind"
+      :confirm-loading="unbindLoading"
+      :destroy-on-close="true"
+      class="responsive-modal"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="当前绑定的节点">
+          <div v-if="currentResource?.tree_nodes && currentResource.tree_nodes.length > 0">
+            <a-checkbox-group v-model:value="selectedUnbindNodeIds">
+              <div v-for="node in currentResource.tree_nodes" :key="node.id" style="margin-bottom: 8px;">
+                <a-checkbox :value="node.id">{{ node.name }}</a-checkbox>
+              </div>
+            </a-checkbox-group>
+          </div>
+          <a-empty v-else description="暂无绑定的节点" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 服务器详情抽屉 -->
+    <a-drawer
+      v-model:open="detailVisible"
+      @close="closeDetails"
+      title="服务器详情"
+      width="min(600px, 100vw)"
+      :destroy-on-close="true"
+      class="detail-drawer"
+    >
+      <a-skeleton :loading="detailLoading" active>
+        <a-empty v-if="!detailLoading && !currentDetail" description="详情加载失败，请关闭后重试" />
+        <template v-if="currentDetail">
+          <div class="detail-content">
+            <div class="detail-header">
+              <h2>{{ currentDetail.name }}</h2>
+              <div class="detail-badges">
+                <a-badge
+                  :status="getStatusBadge(currentDetail.status)"
+                  :text="getStatusText(currentDetail.status)"
+                />
+                <a-tag :color="currentDetail.os_type === 'linux' ? 'blue' : 'green'" class="tech-tag">
+                  <windows-outlined v-if="currentDetail.os_type === 'windows'" />
+                  <desktop-outlined v-else />
+                  {{ currentDetail.os_type === 'linux' ? 'Linux' : 'Windows' }}
+                </a-tag>
+              </div>
+            </div>
+
+            <a-descriptions bordered :column="1">
+              <a-descriptions-item label="ID">
+                {{ currentDetail.id }}
+              </a-descriptions-item>
+              <a-descriptions-item label="环境">
+                {{ currentDetail.environment || '-' }}
+              </a-descriptions-item>
+              <a-descriptions-item label="IP地址">
+                {{ currentDetail.ip_addr }}
+              </a-descriptions-item>
+              <a-descriptions-item label="SSH端口">
+                {{ currentDetail.port }}
+              </a-descriptions-item>
+              <a-descriptions-item label="用户名">
+                {{ currentDetail.username || '-' }}
+              </a-descriptions-item>
+              <a-descriptions-item label="系统名称">
+                {{ currentDetail.os_name || '-' }}
+              </a-descriptions-item>
+              <a-descriptions-item label="镜像名称">
+                {{ currentDetail.image_name || '-' }}
+              </a-descriptions-item>
+              <a-descriptions-item label="认证方式">
+                <a-tag :color="currentDetail.auth_mode === AuthMode.PASSWORD ? 'orange' : 'purple'" class="tech-tag">
+                  {{ getAuthModeText(currentDetail.auth_mode) }}
+                </a-tag>
+              </a-descriptions-item>
+              <a-descriptions-item label="CPU">
+                {{ currentDetail.cpu || '-' }}
+              </a-descriptions-item>
+              <a-descriptions-item label="内存">
+                {{ currentDetail.memory || '-' }}
+              </a-descriptions-item>
+              <a-descriptions-item label="磁盘">
+                {{ currentDetail.disk || '-' }}
+              </a-descriptions-item>
+              <a-descriptions-item label="描述">
+                {{ currentDetail.description || '-' }}
+              </a-descriptions-item>
+              <a-descriptions-item label="创建时间">
+                {{ formatDateTime(currentDetail.created_at) }}
+              </a-descriptions-item>
+              <a-descriptions-item label="更新时间">
+                {{ formatDateTime(currentDetail.updated_at) }}
+              </a-descriptions-item>
+            </a-descriptions>
+
+            <div class="detail-section">
+              <div class="section-title">资源标签</div>
+              <div class="tag-list">
+                <template v-if="currentDetail.tags && currentDetail.tags.length > 0">
+                  <a-tag
+                    v-for="(tag, index) in currentDetail.tags"
+                    :key="index"
+                    class="tech-tag tag-item"
+                  >
+                    {{ tag }}
+                  </a-tag>
+                </template>
+                <a-empty v-else :image="Empty.PRESENTED_IMAGE_SIMPLE" description="暂无标签" />
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <div class="section-title">绑定的服务树节点</div>
+              <div class="tree-node-list">
+                <template v-if="currentDetail.tree_nodes && currentDetail.tree_nodes.length > 0">
+                  <a-tag
+                    v-for="node in currentDetail.tree_nodes"
+                    :key="node.id"
+                    class="tech-tag node-tag"
+                  >
+                    {{ node.name }}
+                  </a-tag>
+                </template>
+                <a-empty v-else :image="Empty.PRESENTED_IMAGE_SIMPLE" description="暂无绑定节点" />
+              </div>
+            </div>
+
+            <div class="drawer-actions">
+              <a-button-group>
+                <a-button @click="handleEdit(currentDetail)">
+                  <edit-outlined /> 编辑
+                </a-button>
+              </a-button-group>
+              <a-button danger @click="handleDelete(currentDetail)">
+                <delete-outlined /> 删除
+              </a-button>
+            </div>
+          </div>
+        </template>
+      </a-skeleton>
+    </a-drawer>
+  </OpsPage>
+</template>
+
+
 
 <style scoped>
 .local-resource-management {
@@ -1400,7 +1423,7 @@ onMounted(async () => {
   color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
-  border-left: 4px solid #1890ff;
+  border-left: 1px solid var(--ops-border);
 }
 
 .form-grid {
@@ -1678,3 +1701,5 @@ onMounted(async () => {
   }
 }
 </style>
+
+<style scoped src="./shared/cmdb-console.css"></style>

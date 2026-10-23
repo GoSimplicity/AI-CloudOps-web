@@ -1,18 +1,18 @@
 {
   "routes": 58,
-  "migratedShells": 37,
+  "migratedShells": 43,
   "entries": [
     {
       "route": "/assistant/info",
       "view": "assistant/AssistantInfo.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 0,
       "scopedStyle": true
     },
     {
       "route": "/assistant/knowledge",
       "view": "assistant/AssistantKnowledge.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 1,
       "scopedStyle": true
     },
@@ -47,14 +47,14 @@
     {
       "route": "/cloud_account_management",
       "view": "servicetree/CloudAccountManagement.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 6,
       "scopedStyle": true
     },
     {
       "route": "/cloud_resource_management",
       "view": "servicetree/CloudResourceManager.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 23,
       "scopedStyle": true
     },
@@ -215,7 +215,7 @@
     {
       "route": "/local_resource_management",
       "view": "servicetree/LocalResourceManagement.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 7,
       "scopedStyle": true
     },
@@ -397,7 +397,7 @@
     {
       "route": "/tree_node_manager",
       "view": "servicetree/TreeNodeManager.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 2,
       "scopedStyle": true
     },

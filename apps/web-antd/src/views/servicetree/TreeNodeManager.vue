@@ -1,552 +1,8 @@
-<template>
-  <div class="tree-node-container">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button type="primary" @click="handleCreateNode" class="btn-create">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          <span class="btn-text">创建节点</span>
-        </a-button>
-        <div class="search-filters">
-          <a-input-search 
-            v-model:value="searchQuery" 
-            placeholder="搜索节点名称..." 
-            class="search-input" 
-            @search="handleSearch"
-            @change="handleSearchChange" 
-            allow-clear 
-          />
-          <a-select 
-            v-model:value="levelFilter" 
-            placeholder="节点层级" 
-            class="filter-select"
-            @change="handleLevelChange" 
-            allow-clear
-          >
-            <a-select-option :value="undefined">全部层级</a-select-option>
-            <a-select-option :value="1">第1层</a-select-option>
-            <a-select-option :value="2">第2层</a-select-option>
-            <a-select-option :value="3">第3层</a-select-option>
-            <a-select-option :value="4">第4层</a-select-option>
-          </a-select>
-          <a-select 
-            v-model:value="statusFilter" 
-            placeholder="节点状态" 
-            class="filter-select"
-            @change="handleStatusChange" 
-            allow-clear
-          >
-            <a-select-option :value="undefined">全部状态</a-select-option>
-            <a-select-option :value="1">活跃</a-select-option>
-            <a-select-option :value="2">非活跃</a-select-option>
-          </a-select>
-          <a-button @click="handleResetFilters" class="reset-btn">
-            重置
-          </a-button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 统计卡片 -->
-    <div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="总节点" 
-              :value="stats.total_nodes" 
-              :value-style="{ color: '#3f8600' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:tree-view" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="活跃节点" 
-              :value="stats.active_nodes" 
-              :value-style="{ color: '#52c41a' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:checkmark-outline" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="绑定资源" 
-              :value="stats.total_resources" 
-              :value-style="{ color: '#faad14' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:data-table" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="管理员" 
-              :value="stats.total_admins" 
-              :value-style="{ color: '#cf1322' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:user-admin" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div>
-
-    <!-- 树状结构和详情展示 -->
-    <div class="content-layout">
-      <a-row :gutter="16">
-        <!-- 左侧树状结构 -->
-        <a-col :xs="24" :sm="24" :md="8" :lg="6">
-          <a-card class="tree-card" :loading="treeLoading">
-            <template #title>
-              <div class="tree-header">
-                <Icon icon="carbon:tree-view" />
-                <span>节点树</span>
-                <a-button 
-                  type="text" 
-                  size="small" 
-                  @click="refreshTree"
-                  :loading="treeLoading"
-                >
-                  <Icon icon="carbon:refresh" />
-                </a-button>
-              </div>
-            </template>
-            <a-tree
-              v-model:selectedKeys="selectedKeys"
-              v-model:expandedKeys="expandedKeys"
-              :tree-data="treeData"
-              :field-names="{ children: 'children', title: 'name', key: 'id' }"
-              show-icon
-              @select="handleTreeSelect"
-              @expand="handleTreeExpand"
-              class="node-tree"
-            >
-              <template #icon="{ dataRef }">
-                <Icon 
-                  :icon="dataRef.is_leaf === 1 ? 'carbon:document' : 'carbon:folder'" 
-                  :class="getNodeIconClass(dataRef)"
-                />
-              </template>
-              <template #title="{ dataRef }">
-                <div class="tree-node-title">
-                  <span>{{ dataRef.name }}</span>
-                  <div class="tree-node-badges">
-                    <a-tag 
-                      v-if="dataRef.status === 1" 
-                      color="success" 
-                      size="small"
-                    >
-                      活跃
-                    </a-tag>
-                    <a-tag 
-                      v-if="dataRef.is_leaf === 1" 
-                      color="blue" 
-                      size="small"
-                    >
-                      叶子
-                    </a-tag>
-                  </div>
-                </div>
-              </template>
-            </a-tree>
-          </a-card>
-        </a-col>
-
-        <!-- 右侧详情展示 -->
-        <a-col :xs="24" :sm="24" :md="16" :lg="18">
-          <a-card v-if="selectedNode" class="detail-card" :loading="detailLoading">
-            <template #title>
-              <div class="detail-header">
-                <Icon icon="carbon:information" />
-                <span>{{ selectedNode.name }}</span>
-                <div class="detail-actions">
-                  <a-button 
-                    type="primary" 
-                    size="small" 
-                    @click="handleEditNode(selectedNode)"
-                  >
-                    编辑
-                  </a-button>
-                  <a-dropdown>
-                    <template #overlay>
-                      <a-menu @click="(e: any) => handleMenuClick(e.key, selectedNode!)">
-                        <a-menu-item key="move">移动节点</a-menu-item>
-                        <a-menu-item key="children">添加子节点</a-menu-item>
-                        <a-menu-item key="delete" danger>删除</a-menu-item>
-                      </a-menu>
-                    </template>
-                    <a-button size="small">
-                      更多
-                      <DownOutlined />
-                    </a-button>
-                  </a-dropdown>
-                </div>
-              </div>
-            </template>
-
-            <a-tabs>
-              <!-- 基本信息 -->
-              <a-tab-pane key="info" tab="基本信息">
-                <a-descriptions bordered :column="2" :labelStyle="{ width: '120px' }">
-                  <a-descriptions-item label="节点ID">{{ selectedNode.id }}</a-descriptions-item>
-                  <a-descriptions-item label="父节点ID">{{ selectedNode.parent_id || '无' }}</a-descriptions-item>
-                  <a-descriptions-item label="节点层级">第{{ selectedNode.level }}层</a-descriptions-item>
-                  <a-descriptions-item label="节点状态">
-                    <a-tag :color="selectedNode.status === 1 ? 'success' : 'default'">
-                      {{ selectedNode.status === 1 ? '活跃' : '非活跃' }}
-                    </a-tag>
-                  </a-descriptions-item>
-                  <a-descriptions-item label="节点类型">
-                    <a-tag :color="selectedNode.is_leaf === 1 ? 'blue' : 'green'">
-                      {{ selectedNode.is_leaf === 1 ? '叶子节点' : '分支节点' }}
-                    </a-tag>
-                  </a-descriptions-item>
-                  <a-descriptions-item label="创建人">{{ selectedNode.create_user_name }}</a-descriptions-item>
-                  <a-descriptions-item label="创建时间" :span="2">
-                    {{ formatFullDateTime(selectedNode.created_at) }}
-                  </a-descriptions-item>
-                  <a-descriptions-item label="更新时间" :span="2">
-                    {{ formatFullDateTime(selectedNode.updated_at) }}
-                  </a-descriptions-item>
-                  <a-descriptions-item label="描述" :span="2">
-                    {{ selectedNode.description || '无描述' }}
-                  </a-descriptions-item>
-                </a-descriptions>
-              </a-tab-pane>
-
-              <!-- 成员管理 -->
-              <a-tab-pane key="members" tab="成员管理">
-                <div class="members-section">
-                  <div class="section-header">
-                    <h4>管理员 ({{ selectedNode.admins?.length || 0 }})</h4>
-                    <a-button 
-                      type="primary" 
-                      size="small" 
-                      @click="handleAddMember(1)"
-                    >
-                      添加管理员
-                    </a-button>
-                  </div>
-                  <div class="member-list">
-                    <div 
-                      v-for="admin in selectedNode.admins" 
-                      :key="admin.id" 
-                      class="member-item"
-                    >
-                      <a-avatar 
-                        :style="{ backgroundColor: getAvatarColor(admin.real_name) }"
-                      >
-                        {{ getInitials(admin.real_name) }}
-                      </a-avatar>
-                      <div class="member-info">
-                        <div class="member-name">{{ admin.real_name }}</div>
-                        <div class="member-email">{{ admin.email }}</div>
-                      </div>
-                      <a-button 
-                        type="text" 
-                        danger 
-                        size="small"
-                        @click="removeMember(admin.id, 1)"
-                      >
-                        移除
-                      </a-button>
-                    </div>
-                  </div>
-
-                  <div class="section-header">
-                    <h4>普通成员 ({{ selectedNode.members?.length || 0 }})</h4>
-                    <a-button 
-                      type="primary" 
-                      size="small" 
-                      @click="handleAddMember(2)"
-                    >
-                      添加成员
-                    </a-button>
-                  </div>
-                  <div class="member-list">
-                    <div 
-                      v-for="member in selectedNode.members" 
-                      :key="member.id" 
-                      class="member-item"
-                    >
-                      <a-avatar 
-                        :style="{ backgroundColor: getAvatarColor(member.real_name) }"
-                      >
-                        {{ getInitials(member.real_name) }}
-                      </a-avatar>
-                      <div class="member-info">
-                        <div class="member-name">{{ member.real_name }}</div>
-                        <div class="member-email">{{ member.email }}</div>
-                      </div>
-                      <a-button 
-                        type="text" 
-                        danger 
-                        size="small"
-                        @click="removeMember(member.id, 2)"
-                      >
-                        移除
-                      </a-button>
-                    </div>
-                  </div>
-                </div>
-              </a-tab-pane>
-
-              <!-- 绑定资源 -->
-              <a-tab-pane key="resources" tab="绑定资源">
-                <div class="resources-section">
-                  <div class="section-header">
-                    <h4>绑定资源 ({{ selectedNode.tree_local_resources?.length || 0 }})</h4>
-                    <a-button 
-                      type="primary" 
-                      size="small" 
-                      @click="handleBindResource"
-                    >
-                      绑定资源
-                    </a-button>
-                  </div>
-                  <div class="resource-list">
-                    <div 
-                      v-for="resource in selectedNode.tree_local_resources" 
-                      :key="resource.id" 
-                      class="resource-item"
-                    >
-                      <div class="resource-icon">
-                        <Icon icon="carbon:server" />
-                      </div>
-                      <div class="resource-info">
-                        <div class="resource-name">{{ resource.name }}</div>
-                        <div class="resource-address">{{ resource.ip_addr }}:{{ resource.port }}</div>
-                        <a-tag 
-                          :color="getResourceStatusColor(resource.status)" 
-                          size="small"
-                        >
-                          {{ getResourceStatusText(resource.status) }}
-                        </a-tag>
-                      </div>
-                      <a-button 
-                        type="text" 
-                        danger 
-                        size="small"
-                        @click="handleUnbindResource(resource.id)"
-                      >
-                        解绑
-                      </a-button>
-                    </div>
-                  </div>
-                </div>
-              </a-tab-pane>
-            </a-tabs>
-          </a-card>
-
-          <!-- 空状态 -->
-          <a-card v-else class="empty-card">
-            <a-empty description="请选择一个节点查看详情" />
-          </a-card>
-        </a-col>
-      </a-row>
-    </div>
-
-    <!-- 创建/编辑节点对话框 -->
-    <a-modal 
-      :open="formDialogVisible" 
-      :title="formDialog.isEdit ? '编辑节点' : '创建节点'" 
-      :width="formDialogWidth"
-      @ok="saveNode" 
-      @cancel="closeFormDialog" 
-      :destroy-on-close="true" 
-      class="responsive-modal node-modal"
-    >
-      <a-form 
-        ref="formRef" 
-        :model="formDialog.form" 
-        :rules="formRules" 
-        layout="vertical"
-      >
-        <div class="form-section">
-          <div class="section-title">基本信息</div>
-          <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="节点名称" 
-                name="name" 
-                :rules="[{ required: true, message: '请输入节点名称' }]"
-              >
-                <a-input 
-                  v-model:value="formDialog.form.name" 
-                  placeholder="请输入节点名称" 
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="父节点" name="parent_id">
-                <a-tree-select
-                  v-model:value="formDialog.form.parent_id"
-                  :tree-data="treeData"
-                  :field-names="{ children: 'children', label: 'name', value: 'id' }"
-                  placeholder="请选择父节点"
-                  allow-clear
-                  tree-default-expand-all
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="节点描述" name="description">
-                <a-textarea 
-                  v-model:value="formDialog.form.description" 
-                  placeholder="请输入节点描述" 
-                  :rows="3"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-          <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="节点状态" name="status">
-                <a-select v-model:value="formDialog.form.status" placeholder="请选择状态">
-                  <a-select-option :value="1">活跃</a-select-option>
-                  <a-select-option :value="2">非活跃</a-select-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="是否叶子节点" name="is_leaf">
-                <a-switch 
-                  :checked="formDialog.form.is_leaf === 1"
-                  @change="(checked: boolean) => formDialog.form.is_leaf = checked ? 1 : 2"
-                  class="tech-switch" 
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-      </a-form>
-    </a-modal>
-
-    <!-- 移动节点对话框 -->
-    <a-modal 
-      :open="moveDialogVisible" 
-      title="移动节点" 
-      @ok="handleMoveNode" 
-      @cancel="closeMoveDialog"
-    >
-      <a-form layout="vertical">
-        <a-form-item label="选择新的父节点">
-          <a-tree-select
-            v-model:value="moveDialog.newParentId"
-            :tree-data="treeData"
-            :field-names="{ children: 'children', label: 'name', value: 'id' }"
-            placeholder="请选择新的父节点"
-            allow-clear
-            tree-default-expand-all
-          />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <!-- 添加成员对话框 -->
-    <a-modal 
-      :open="addMemberDialogVisible" 
-      title="添加成员" 
-      @ok="handleAddMemberConfirm" 
-      @cancel="closeAddMemberDialog"
-      :width="600"
-    >
-      <a-form layout="vertical">
-        <a-form-item label="搜索用户">
-          <a-input-search
-            v-model:value="userSearchQuery"
-            placeholder="搜索用户名或邮箱"
-            @search="handleUserSearch"
-            enter-button
-          />
-        </a-form-item>
-        <a-form-item label="选择用户">
-          <a-select
-            v-model:value="addMemberDialog.selectedUsers"
-            mode="multiple"
-            placeholder="请选择用户"
-            :options="userOptions"
-            :field-names="{ label: 'real_name', value: 'id' }"
-            show-search
-            :filter-option="filterUserOption"
-          />
-          <div class="user-option-extra" v-if="userOptions.length > 0">
-            <div class="user-option-list">
-              <div v-for="user in userOptions" :key="user.id" class="user-option-item">
-                <div class="user-option-info">
-                  <div class="user-name">{{ user.real_name }}</div>
-                  <div class="user-email">{{ user.email }}</div>
-                </div>
-              </div>
-            </div>
-            <a-pagination
-              v-model:current="userPagination.current"
-              v-model:pageSize="userPagination.pageSize"
-              :total="userPagination.total"
-              @change="handleUserPaginationChange"
-              size="small"
-              :show-size-changer="true"
-              :show-total="userPagination.showTotal"
-            />
-          </div>
-          <a-empty v-else description="没有找到用户" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <!-- 绑定资源对话框 -->
-    <a-modal 
-      :open="bindResourceDialogVisible" 
-      title="绑定资源" 
-      @ok="handleBindResourceConfirm" 
-      @cancel="closeBindResourceDialog"
-      :width="800"
-    >
-      <div class="bind-resource-content">
-        <a-table
-          :data-source="availableResources"
-          :columns="resourceColumns"
-          :row-selection="resourceRowSelection"
-          :pagination="resourcePagination"
-          :loading="resourceLoading"
-          row-key="id"
-          size="small"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'status'">
-              <a-tag :color="getResourceStatusColor(record.status)">
-                {{ getResourceStatusText(record.status) }}
-              </a-tag>
-            </template>
-            <template v-if="column.key === 'address'">
-              {{ record.ip_addr }}:{{ record.port }}
-            </template>
-          </template>
-        </a-table>
-      </div>
-    </a-modal>
-  </div>
-</template>
-
 <script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { filterNodeTree, flattenNodeTree } from './shared/node-tree';
+import { onBeforeUnmount } from 'vue';
+
 import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
@@ -575,6 +31,11 @@ import {
 
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 import { getTreeLocalList, type GetTreeLocalResourceListReq, type TreeLocalResource, ResourceStatus } from '#/api/core/tree/tree_local';
+
+const loadError = ref<string | null>(null);
+let listRequest = 0;
+let detailRequest = 0;
+
 
 // 为了兼容后端返回的节点详情结构，定义本地扩展类型
 type NodeUser = { id: number; real_name: string; email?: string };
@@ -761,16 +222,23 @@ const filterUserOption = (input: string, option: any) => {
 
 // 更新统计数据
 const updateStats = (nodes: TreeNodeWithRelations[]): void => {
-  stats.total_nodes = nodes.length;
-  stats.active_nodes = nodes.filter(node => node.status === TreeNodeStatus.ACTIVE).length;
-  stats.inactive_nodes = nodes.filter(node => node.status === TreeNodeStatus.INACTIVE).length;
-  stats.total_resources = nodes.reduce((total, node) => total + (node.tree_local_resources?.length || 0), 0);
-  stats.total_admins = nodes.reduce((total, node) => total + (node.admins?.length || 0), 0);
-  stats.total_members = nodes.reduce((total, node) => total + (node.members?.length || 0), 0);
+  const visible = flattenNodeTree(nodes);
+  stats.total_nodes = visible.length;
+  stats.active_nodes = visible.filter(node => node.status === TreeNodeStatus.ACTIVE).length;
+  stats.inactive_nodes = visible.filter(node => node.status === TreeNodeStatus.INACTIVE).length;
+  stats.total_resources = visible.reduce((total, node) => total + (node.tree_local_resources?.length || 0), 0);
+  stats.total_admins = visible.reduce((total, node) => total + (node.admins?.length || 0), 0);
+  stats.total_members = visible.reduce((total, node) => total + (node.members?.length || 0), 0);
 };
 
 // 数据加载
 const loadTreeData = async (): Promise<void> => {
+  detailRequest++;
+  selectedNode.value = null;
+  selectedKeys.value = [];
+  detailLoading.value = false;
+  const ticket = ++listRequest;
+  loadError.value = null;
   treeLoading.value = true;
   try {
     const params: GetTreeNodeListReq = {
@@ -779,25 +247,26 @@ const loadTreeData = async (): Promise<void> => {
     };
 
     const response = await getTreeList(params);
+    if (ticket !== listRequest) return;
     if (response && response.items) {
       let nodes = response.items as TreeNodeWithRelations[];
 
-      // 应用搜索过滤
-      if (searchQuery.value) {
-        nodes = nodes.filter((node: TreeNodeWithRelations) => 
-          node.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-        );
-      }
+      nodes = filterNodeTree(nodes, searchQuery.value);
 
       // 由于接口返回的已经是树状结构，直接使用
       treeData.value = nodes;
       updateStats(nodes);
     }
   } catch (error: any) {
+    if (ticket !== listRequest) return;
+    loadError.value = '获取服务树失败，请重试';
 
+    treeData.value = [];
+    selectedNode.value = null;
+    updateStats([]);
     message.error(error.message || '加载树状数据失败');
   } finally {
-    treeLoading.value = false;
+    if (ticket === listRequest) treeLoading.value = false;
   }
 };
 
@@ -860,17 +329,20 @@ const loadAvailableResources = async (): Promise<void> => {
 
 // 树状结构事件处理
 const handleTreeSelect = async (selectedKeys: number[]): Promise<void> => {
+  const ticket = ++detailRequest;
+  selectedNode.value = null;
   if (selectedKeys.length > 0) {
     const nodeId = selectedKeys[0];
     detailLoading.value = true;
     try {
       const response = await getNodeDetail(nodeId!);
-      selectedNode.value = response as TreeNodeWithRelations;
+      if (ticket === detailRequest) selectedNode.value = response as TreeNodeWithRelations;
     } catch (error: any) {
+      if (ticket !== detailRequest) return;
 
       message.error(error.message || '获取节点详情失败');
     } finally {
-      detailLoading.value = false;
+      if (ticket === detailRequest) detailLoading.value = false;
     }
   } else {
     selectedNode.value = null;
@@ -1213,7 +685,552 @@ onMounted(() => {
   loadTreeData();
   loadUserList();
 });
+onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clearTimeout(searchTimeout); });
 </script>
+
+<template>
+  <OpsPage title="服务树" description="维护节点、成员与资源关联" class="cmdb-console tree-node-container">
+    <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
+      <template #action><a-button @click="loadTreeData()">重试</a-button></template>
+    </a-alert>
+    <!-- 页面标题 -->
+    <template #actions><a-button type="primary" @click="handleCreateNode" class="btn-create">
+          <template #icon>
+            <PlusOutlined />
+          </template>
+          <span class="btn-text">创建节点</span>
+        </a-button><a-button @click="loadTreeData()" :loading="treeLoading">刷新</a-button></template><template #filters><div class="search-filters">
+          <a-input-search
+            v-model:value="searchQuery"
+            placeholder="搜索节点名称..."
+            class="search-input"
+            @search="handleSearch"
+            @change="handleSearchChange"
+            allow-clear
+          />
+          <a-select
+            v-model:value="levelFilter"
+            placeholder="节点层级"
+            class="filter-select"
+            @change="handleLevelChange"
+            allow-clear
+          >
+            <a-select-option :value="undefined">全部层级</a-select-option>
+            <a-select-option :value="1">第1层</a-select-option>
+            <a-select-option :value="2">第2层</a-select-option>
+            <a-select-option :value="3">第3层</a-select-option>
+            <a-select-option :value="4">第4层</a-select-option>
+          </a-select>
+          <a-select
+            v-model:value="statusFilter"
+            placeholder="节点状态"
+            class="filter-select"
+            @change="handleStatusChange"
+            allow-clear
+          >
+            <a-select-option :value="undefined">全部状态</a-select-option>
+            <a-select-option :value="1">活跃</a-select-option>
+            <a-select-option :value="2">非活跃</a-select-option>
+          </a-select>
+          <a-button @click="handleResetFilters" class="reset-btn">
+            重置
+          </a-button>
+        </div></template>
+
+    <!-- 统计卡片 -->
+    <template #summary><div class="stats-row">
+      <a-row :gutter="[16, 16]">
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic
+              title="当前节点"
+              :value="stats.total_nodes"
+            >
+              <template #prefix>
+                <Icon icon="carbon:tree-view" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic
+              title="当前活跃节点"
+              :value="stats.active_nodes"
+            >
+              <template #prefix>
+                <Icon icon="carbon:checkmark-outline" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic
+              title="当前资源关联"
+              :value="stats.total_resources"
+            >
+              <template #prefix>
+                <Icon icon="carbon:data-table" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic
+              title="当前管理员关联"
+              :value="stats.total_admins"
+            >
+              <template #prefix>
+                <Icon icon="carbon:user-admin" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+      </a-row>
+    </div></template>
+
+    <!-- 树状结构和详情展示 -->
+    <div class="content-layout">
+      <a-row :gutter="16">
+        <!-- 左侧树状结构 -->
+        <a-col :xs="24" :sm="24" :md="8" :lg="6">
+          <a-card class="tree-card" :loading="treeLoading">
+            <template #title>
+              <div class="tree-header">
+                <Icon icon="carbon:tree-view" />
+                <span>节点树</span>
+                <a-button
+                  type="text"
+                  size="small"
+                  @click="refreshTree"
+                  :loading="treeLoading"
+                >
+                  <Icon icon="carbon:refresh" />
+                </a-button>
+              </div>
+            </template>
+            <a-tree
+              v-model:selectedKeys="selectedKeys"
+              v-model:expandedKeys="expandedKeys"
+              :tree-data="treeData"
+              :field-names="{ children: 'children', title: 'name', key: 'id' }"
+              show-icon
+              @select="handleTreeSelect"
+              @expand="handleTreeExpand"
+              class="node-tree"
+            >
+              <template #icon="{ dataRef }">
+                <Icon
+                  :icon="dataRef.is_leaf === 1 ? 'carbon:document' : 'carbon:folder'"
+                  :class="getNodeIconClass(dataRef)"
+                />
+              </template>
+              <template #title="{ dataRef }">
+                <div class="tree-node-title">
+                  <span>{{ dataRef.name }}</span>
+                  <div class="tree-node-badges">
+                    <a-tag
+                      v-if="dataRef.status === 1"
+                      color="success"
+                      size="small"
+                    >
+                      活跃
+                    </a-tag>
+                    <a-tag
+                      v-if="dataRef.is_leaf === 1"
+                      color="blue"
+                      size="small"
+                    >
+                      叶子
+                    </a-tag>
+                  </div>
+                </div>
+              </template>
+            </a-tree>
+          </a-card>
+        </a-col>
+
+        <!-- 右侧详情展示 -->
+        <a-col :xs="24" :sm="24" :md="16" :lg="18">
+          <a-card v-if="selectedNode" class="detail-card" :loading="detailLoading">
+            <template #title>
+              <div class="detail-header">
+                <Icon icon="carbon:information" />
+                <span>{{ selectedNode.name }}</span>
+                <div class="detail-actions">
+                  <a-button
+                    type="primary"
+                    size="small"
+                    @click="handleEditNode(selectedNode)"
+                  >
+                    编辑
+                  </a-button>
+                  <a-dropdown>
+                    <template #overlay>
+                      <a-menu @click="(e: any) => handleMenuClick(e.key, selectedNode!)">
+                        <a-menu-item key="move">移动节点</a-menu-item>
+                        <a-menu-item key="children">添加子节点</a-menu-item>
+                        <a-menu-item key="delete" danger>删除</a-menu-item>
+                      </a-menu>
+                    </template>
+                    <a-button size="small">
+                      更多
+                      <DownOutlined />
+                    </a-button>
+                  </a-dropdown>
+                </div>
+              </div>
+            </template>
+
+            <a-tabs>
+              <!-- 基本信息 -->
+              <a-tab-pane key="info" tab="基本信息">
+                <a-descriptions bordered :column="2" :labelStyle="{ width: '120px' }">
+                  <a-descriptions-item label="节点ID">{{ selectedNode.id }}</a-descriptions-item>
+                  <a-descriptions-item label="父节点ID">{{ selectedNode.parent_id || '无' }}</a-descriptions-item>
+                  <a-descriptions-item label="节点层级">第{{ selectedNode.level }}层</a-descriptions-item>
+                  <a-descriptions-item label="节点状态">
+                    <a-tag :color="selectedNode.status === 1 ? 'success' : 'default'">
+                      {{ selectedNode.status === 1 ? '活跃' : '非活跃' }}
+                    </a-tag>
+                  </a-descriptions-item>
+                  <a-descriptions-item label="节点类型">
+                    <a-tag :color="selectedNode.is_leaf === 1 ? 'blue' : 'green'">
+                      {{ selectedNode.is_leaf === 1 ? '叶子节点' : '分支节点' }}
+                    </a-tag>
+                  </a-descriptions-item>
+                  <a-descriptions-item label="创建人">{{ selectedNode.create_user_name }}</a-descriptions-item>
+                  <a-descriptions-item label="创建时间" :span="2">
+                    {{ formatFullDateTime(selectedNode.created_at) }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="更新时间" :span="2">
+                    {{ formatFullDateTime(selectedNode.updated_at) }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="描述" :span="2">
+                    {{ selectedNode.description || '无描述' }}
+                  </a-descriptions-item>
+                </a-descriptions>
+              </a-tab-pane>
+
+              <!-- 成员管理 -->
+              <a-tab-pane key="members" tab="成员管理">
+                <div class="members-section">
+                  <div class="section-header">
+                    <h4>管理员 ({{ selectedNode.admins?.length || 0 }})</h4>
+                    <a-button
+                      type="primary"
+                      size="small"
+                      @click="handleAddMember(1)"
+                    >
+                      添加管理员
+                    </a-button>
+                  </div>
+                  <div class="member-list">
+                    <div
+                      v-for="admin in selectedNode.admins"
+                      :key="admin.id"
+                      class="member-item"
+                    >
+                      <a-avatar
+                        :style="{ backgroundColor: getAvatarColor(admin.real_name) }"
+                      >
+                        {{ getInitials(admin.real_name) }}
+                      </a-avatar>
+                      <div class="member-info">
+                        <div class="member-name">{{ admin.real_name }}</div>
+                        <div class="member-email">{{ admin.email }}</div>
+                      </div>
+                      <a-button
+                        type="text"
+                        danger
+                        size="small"
+                        @click="removeMember(admin.id, 1)"
+                      >
+                        移除
+                      </a-button>
+                    </div>
+                  </div>
+
+                  <div class="section-header">
+                    <h4>普通成员 ({{ selectedNode.members?.length || 0 }})</h4>
+                    <a-button
+                      type="primary"
+                      size="small"
+                      @click="handleAddMember(2)"
+                    >
+                      添加成员
+                    </a-button>
+                  </div>
+                  <div class="member-list">
+                    <div
+                      v-for="member in selectedNode.members"
+                      :key="member.id"
+                      class="member-item"
+                    >
+                      <a-avatar
+                        :style="{ backgroundColor: getAvatarColor(member.real_name) }"
+                      >
+                        {{ getInitials(member.real_name) }}
+                      </a-avatar>
+                      <div class="member-info">
+                        <div class="member-name">{{ member.real_name }}</div>
+                        <div class="member-email">{{ member.email }}</div>
+                      </div>
+                      <a-button
+                        type="text"
+                        danger
+                        size="small"
+                        @click="removeMember(member.id, 2)"
+                      >
+                        移除
+                      </a-button>
+                    </div>
+                  </div>
+                </div>
+              </a-tab-pane>
+
+              <!-- 绑定资源 -->
+              <a-tab-pane key="resources" tab="绑定资源">
+                <div class="resources-section">
+                  <div class="section-header">
+                    <h4>绑定资源 ({{ selectedNode.tree_local_resources?.length || 0 }})</h4>
+                    <a-button
+                      type="primary"
+                      size="small"
+                      @click="handleBindResource"
+                    >
+                      绑定资源
+                    </a-button>
+                  </div>
+                  <div class="resource-list">
+                    <div
+                      v-for="resource in selectedNode.tree_local_resources"
+                      :key="resource.id"
+                      class="resource-item"
+                    >
+                      <div class="resource-icon">
+                        <Icon icon="carbon:server" />
+                      </div>
+                      <div class="resource-info">
+                        <div class="resource-name">{{ resource.name }}</div>
+                        <div class="resource-address">{{ resource.ip_addr }}:{{ resource.port }}</div>
+                        <a-tag
+                          :color="getResourceStatusColor(resource.status)"
+                          size="small"
+                        >
+                          {{ getResourceStatusText(resource.status) }}
+                        </a-tag>
+                      </div>
+                      <a-button
+                        type="text"
+                        danger
+                        size="small"
+                        @click="handleUnbindResource(resource.id)"
+                      >
+                        解绑
+                      </a-button>
+                    </div>
+                  </div>
+                </div>
+              </a-tab-pane>
+            </a-tabs>
+          </a-card>
+
+          <!-- 空状态 -->
+          <a-card v-else class="empty-card">
+            <a-empty description="请选择一个节点查看详情" />
+          </a-card>
+        </a-col>
+      </a-row>
+    </div>
+
+    <!-- 创建/编辑节点对话框 -->
+    <a-modal
+      :open="formDialogVisible"
+      :title="formDialog.isEdit ? '编辑节点' : '创建节点'"
+      :width="formDialogWidth"
+      @ok="saveNode"
+      @cancel="closeFormDialog"
+      :destroy-on-close="true"
+      class="responsive-modal node-modal"
+    >
+      <a-form
+        ref="formRef"
+        :model="formDialog.form"
+        :rules="formRules"
+        layout="vertical"
+      >
+        <div class="form-section">
+          <div class="section-title">基本信息</div>
+          <a-row :gutter="16">
+            <a-col :xs="24" :sm="12">
+              <a-form-item
+                label="节点名称"
+                name="name"
+                :rules="[{ required: true, message: '请输入节点名称' }]"
+              >
+                <a-input
+                  v-model:value="formDialog.form.name"
+                  placeholder="请输入节点名称"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="父节点" name="parent_id">
+                <a-tree-select
+                  v-model:value="formDialog.form.parent_id"
+                  :tree-data="treeData"
+                  :field-names="{ children: 'children', label: 'name', value: 'id' }"
+                  placeholder="请选择父节点"
+                  allow-clear
+                  tree-default-expand-all
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item label="节点描述" name="description">
+                <a-textarea
+                  v-model:value="formDialog.form.description"
+                  placeholder="请输入节点描述"
+                  :rows="3"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="16">
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="节点状态" name="status">
+                <a-select v-model:value="formDialog.form.status" placeholder="请选择状态">
+                  <a-select-option :value="1">活跃</a-select-option>
+                  <a-select-option :value="2">非活跃</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="是否叶子节点" name="is_leaf">
+                <a-switch
+                  :checked="formDialog.form.is_leaf === 1"
+                  @change="(checked: boolean) => formDialog.form.is_leaf = checked ? 1 : 2"
+                  class="tech-switch"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+      </a-form>
+    </a-modal>
+
+    <!-- 移动节点对话框 -->
+    <a-modal
+      :open="moveDialogVisible"
+      title="移动节点"
+      @ok="handleMoveNode"
+      @cancel="closeMoveDialog"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="选择新的父节点">
+          <a-tree-select
+            v-model:value="moveDialog.newParentId"
+            :tree-data="treeData"
+            :field-names="{ children: 'children', label: 'name', value: 'id' }"
+            placeholder="请选择新的父节点"
+            allow-clear
+            tree-default-expand-all
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 添加成员对话框 -->
+    <a-modal
+      :open="addMemberDialogVisible"
+      title="添加成员"
+      @ok="handleAddMemberConfirm"
+      @cancel="closeAddMemberDialog"
+      :width="600"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="搜索用户">
+          <a-input-search
+            v-model:value="userSearchQuery"
+            placeholder="搜索用户名或邮箱"
+            @search="handleUserSearch"
+            enter-button
+          />
+        </a-form-item>
+        <a-form-item label="选择用户">
+          <a-select
+            v-model:value="addMemberDialog.selectedUsers"
+            mode="multiple"
+            placeholder="请选择用户"
+            :options="userOptions"
+            :field-names="{ label: 'real_name', value: 'id' }"
+            show-search
+            :filter-option="filterUserOption"
+          />
+          <div class="user-option-extra" v-if="userOptions.length > 0">
+            <div class="user-option-list">
+              <div v-for="user in userOptions" :key="user.id" class="user-option-item">
+                <div class="user-option-info">
+                  <div class="user-name">{{ user.real_name }}</div>
+                  <div class="user-email">{{ user.email }}</div>
+                </div>
+              </div>
+            </div>
+            <a-pagination
+              v-model:current="userPagination.current"
+              v-model:pageSize="userPagination.pageSize"
+              :total="userPagination.total"
+              @change="handleUserPaginationChange"
+              size="small"
+              :show-size-changer="true"
+              :show-total="userPagination.showTotal"
+            />
+          </div>
+          <a-empty v-else description="没有找到用户" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 绑定资源对话框 -->
+    <a-modal
+      :open="bindResourceDialogVisible"
+      title="当前资源关联"
+      @ok="handleBindResourceConfirm"
+      @cancel="closeBindResourceDialog"
+      :width="800"
+    >
+      <div class="bind-resource-content">
+        <a-table
+          :data-source="availableResources"
+          :columns="resourceColumns"
+          :row-selection="resourceRowSelection"
+          :pagination="resourcePagination"
+          :loading="resourceLoading"
+          row-key="id"
+          size="small"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'status'">
+              <a-tag :color="getResourceStatusColor(record.status)">
+                {{ getResourceStatusText(record.status) }}
+              </a-tag>
+            </template>
+            <template v-if="column.key === 'address'">
+              {{ record.ip_addr }}:{{ record.port }}
+            </template>
+          </template>
+        </a-table>
+      </div>
+    </a-modal>
+  </OpsPage>
+</template>
+
+
 
 <style scoped>
 .tree-node-container {
@@ -1418,7 +1435,7 @@ onMounted(() => {
   color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
-  border-left: 3px solid #1677ff;
+  border-left: 1px solid var(--ops-border);
 }
 
 .tech-switch {}
@@ -1904,3 +1921,5 @@ onMounted(() => {
   }
 }
 </style>
+
+<style scoped src="./shared/cmdb-console.css"></style>
