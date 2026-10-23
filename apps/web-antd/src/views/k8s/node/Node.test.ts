@@ -435,3 +435,119 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
       expect((input as HTMLInputElement).disabled).toBe(false);
   });
 });
+
+/**
+ * c-5 边界（v3 收尾）：本次新增的行 key 与已保存污点相同时，撤销这一行
+ * 不能被当成删除已保存的污点。按 UI 实际操作：点「添加污点」，在新行里输入同一个 key。
+ */
+describe('c-5 新增行与已保存污点同 key：撤销新增行', () => {
+  const rows = () => [
+    ...modalRoot()!.querySelectorAll<HTMLElement>('.k8s-key-value-row'),
+  ];
+
+  async function typeInto(row: HTMLElement, index: number, text: string) {
+    const input = row.querySelectorAll<HTMLInputElement>('input')[index]!;
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+    await flushPromises();
+  }
+
+  async function addRowWithSameKey(value: string) {
+    bodyButton('添加污点')!.click();
+    await flushPromises();
+    const added = rows().at(-1)!;
+    await typeInto(added, 0, EXISTING.key);
+    await typeInto(added, 1, value);
+  }
+
+  it.each([
+    ['只有 add 码', 'value/effect 相同', (): string[] => [ADD], EXISTING.value],
+    ['只有 add 码', 'value 不同', (): string[] => [ADD], 'cpu'],
+    [
+      'add + delete 码',
+      'value/effect 相同',
+      (): string[] => [ADD, DELETE],
+      EXISTING.value,
+    ],
+    ['add + delete 码', 'value 不同', (): string[] => [ADD, DELETE], 'cpu'],
+  ])(
+    '%s，新增行 %s：新增行可撤销，撤销后已保存的污点保留，不发任何请求、不提示无权限',
+    async (_codesLabel, _valueLabel, codes, value) => {
+      setSubject(codes());
+      await mountPage();
+      await openTaintModal();
+      await addRowWithSameKey(value);
+      expect(wrapper.vm.taintFormModel.taints).toEqual([
+        EXISTING,
+        { ...EXISTING, value },
+      ]);
+      // 已保存的行：只有 add 码时没有删除按钮；新增行始终可撤销
+      expect(rows()[0]!.querySelector('.k8s-remove-btn') === null).toBe(
+        !codes().includes(DELETE),
+      );
+      const undo =
+        rows()[1]!.querySelector<HTMLButtonElement>('.k8s-remove-btn');
+      expect(undo).not.toBeNull();
+      undo!.click();
+      await flushPromises();
+
+      expect(rows()).toHaveLength(1);
+      expect(wrapper.vm.taintFormModel.taints).toEqual([EXISTING]);
+      expect(wrapper.vm.taintFormModel.taintsToDelete).toEqual([]);
+      expect(saveButton()!.disabled).toBe(true);
+      // 直接调用保存（绕过禁用）也不能发请求或提示无权限
+      await wrapper.vm.submitTaintForm();
+      await flushPromises();
+      expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
+      expect(api.addK8sNodeTaints).not.toHaveBeenCalled();
+      expect(message.error).not.toHaveBeenCalled();
+    },
+  );
+
+  it('只有 add 码，新增行 value 不同且不撤销：保存只发一次 add（按 key 更新），不发删除', async () => {
+    setSubject([ADD]);
+    await mountPage();
+    await openTaintModal();
+    await addRowWithSameKey('cpu');
+    await save();
+    expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
+    expect(api.addK8sNodeTaints).toHaveBeenCalledTimes(1);
+    expect(api.addK8sNodeTaints).toHaveBeenCalledWith(
+      expect.objectContaining({ taints: [{ ...EXISTING, value: 'cpu' }] }),
+    );
+    expect(message.error).not.toHaveBeenCalled();
+  });
+
+  it('add + delete 码：已保存的行改了 key 再删除，按它原来的 key 删除（行身份，不看当前输入）', async () => {
+    setSubject([ADD, DELETE]);
+    await mountPage();
+    await openTaintModal();
+    await typeInto(rows()[0]!, 0, 'renamed');
+    rows()[0]!.querySelector<HTMLButtonElement>('.k8s-remove-btn')!.click();
+    await flushPromises();
+    expect(wrapper.vm.taintFormModel.taintsToDelete).toEqual([EXISTING.key]);
+    await save();
+    expect(api.deleteK8sNodeTaints).toHaveBeenCalledWith(
+      expect.objectContaining({ taint_keys: [EXISTING.key] }),
+    );
+    expect(api.addK8sNodeTaints).not.toHaveBeenCalled();
+  });
+
+  it('add + delete 码：删除已保存的行（不是新增行）仍按 key 删除', async () => {
+    setSubject([ADD, DELETE]);
+    await mountPage();
+    await openTaintModal();
+    await addRowWithSameKey('cpu');
+    rows()[0]!.querySelector<HTMLButtonElement>('.k8s-remove-btn')!.click();
+    await flushPromises();
+    expect(wrapper.vm.taintFormModel.taintsToDelete).toEqual([EXISTING.key]);
+    await save();
+    // 先删后加同一个 key（P3-4）：删除已保存的 dedicated，再加回新值
+    expect(api.deleteK8sNodeTaints).toHaveBeenCalledWith(
+      expect.objectContaining({ taint_keys: [EXISTING.key] }),
+    );
+    expect(api.addK8sNodeTaints).toHaveBeenCalledWith(
+      expect.objectContaining({ taints: [{ ...EXISTING, value: 'cpu' }] }),
+    );
+  });
+});

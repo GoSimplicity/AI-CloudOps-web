@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue';
+import { ref, computed, toRaw } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 import {
@@ -125,6 +125,20 @@ export function useNodePage() {
     originalTaints: [],
     taintsToDelete: [],
   });
+
+  // c-5 行身份：弹窗打开时由已保存污点生成的行 → 它对应的 originalTaints 项。
+  // 本次新增的行不在表里；判断“新增 / 撤销 / 删除已保存”按行身份，不按 key（同 key 的新增行撤销时不能当成删除已保存的污点）
+  let savedTaintOrigins = new WeakMap<CoreTaint, CoreTaint>();
+  const savedOriginOf = (row: CoreTaint) => savedTaintOrigins.get(toRaw(row));
+
+  const resetTaintForm = (taints: CoreTaint[]) => {
+    const rows = taints.map((taint: CoreTaint) => ({ ...taint }));
+    // originalTaints 存副本：行内编辑不能改到原始值，否则检测不到 value/effect 的修改
+    const originalTaints = taints.map((taint: CoreTaint) => ({ ...taint }));
+    savedTaintOrigins = new WeakMap();
+    rows.forEach((row, index) => savedTaintOrigins.set(row, originalTaints[index]!));
+    taintFormModel.value = { taints: rows, originalTaints, taintsToDelete: [] };
+  };
 
   // 驱逐表单模型
   const drainFormModel = ref<{
@@ -415,21 +429,12 @@ export function useNodePage() {
       const res = await getK8sNodeTaints(params);
       const taints = Array.isArray(res?.taints) ? res.taints : (Array.isArray(record.taints) ? record.taints : []);
       
-      // originalTaints 存副本：行内编辑不能改到原始值，否则检测不到 value/effect 的修改
-      taintFormModel.value = {
-        taints: taints.map((taint: CoreTaint) => ({ ...taint })),
-        originalTaints: taints.map((taint: CoreTaint) => ({ ...taint })),
-        taintsToDelete: [],
-      };
+      resetTaintForm(taints);
       isTaintModalVisible.value = true;
     } catch (err) {
       // 如果获取失败，使用记录中的污点数据
       const taints = Array.isArray(record.taints) ? record.taints : [];
-      taintFormModel.value = {
-        taints: taints.map((taint: CoreTaint) => ({ ...taint })),
-        originalTaints: taints.map((taint: CoreTaint) => ({ ...taint })),
-        taintsToDelete: [],
-      };
+      resetTaintForm(taints);
       isTaintModalVisible.value = true;
 
     }
@@ -450,20 +455,17 @@ export function useNodePage() {
 
   const removeTaint = (index: number) => {
     const taint = taintFormModel.value.taints[index];
-    // 如果是原始污点，添加到删除列表
-    if (taint && taint.key) {
-      const isOriginal = taintFormModel.value.originalTaints.some(t => t.key === taint.key);
-      if (isOriginal && !taintFormModel.value.taintsToDelete.includes(taint.key)) {
-        taintFormModel.value.taintsToDelete.push(taint.key);
-      }
+    // 只有由已保存污点生成的行才加入删除列表（按它原始的 key）；本次新增的行只是撤销，即使 key 与已保存污点相同
+    const origin = taint && savedOriginOf(taint);
+    if (origin && origin.key && !taintFormModel.value.taintsToDelete.includes(origin.key)) {
+      taintFormModel.value.taintsToDelete.push(origin.key);
     }
     // 从当前污点列表中删除
     taintFormModel.value.taints.splice(index, 1);
   };
 
   // 是否为本次弹窗里新增、尚未保存的行（不在原始污点里）：删除它只改本地表单，不调删除接口
-  const isNewTaint = (taint: CoreTaint) =>
-    !taintFormModel.value.originalTaints.some((t) => t.key === taint.key);
+  const isNewTaint = (taint: CoreTaint) => !savedOriginOf(taint);
 
   // 要添加或更新的污点（只发送新的或修改过的污点）
   const getTaintsToAdd = (): CoreTaint[] =>
@@ -472,14 +474,15 @@ export function useNodePage() {
       // 先删后加同一个 key（复审 P3-4）：提交时先删除再添加，必须重新添加，否则最终被删掉
       if (taintFormModel.value.taintsToDelete.includes(taint.key)) return true;
 
-      // 检查是否是新污点或者是否发生了变化
-      const originalTaint = taintFormModel.value.originalTaints.find(
-        (t) => t.key === taint.key,
-      );
+      // 已保存的行和自己的原始值比较（行身份）；新增行和同 key 的已保存污点比较，完全相同就不用发
+      const originalTaint =
+        savedOriginOf(taint) ??
+        taintFormModel.value.originalTaints.find((t) => t.key === taint.key);
       if (!originalTaint) return true; // 新污点
 
       // 检查是否有修改
       return (
+        originalTaint.key !== taint.key ||
         originalTaint.value !== taint.value ||
         originalTaint.effect !== taint.effect
       );
