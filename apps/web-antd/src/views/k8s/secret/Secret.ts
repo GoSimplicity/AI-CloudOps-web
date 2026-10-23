@@ -905,9 +905,13 @@ export function useSecretPage() {
     if (editDataLoading.value) return;
     // incr6 P3-4：记下提交时是哪一次打开的编辑；返回前若已关闭 / 换成别的 Secret，成功后不去关别人的弹窗
     const seq = editOpenSeq;
+    // incr7 P3-B：提交开始时的快照，请求参数只取它（提交期间 currentOperationSecret 被关闭 / 换成别的也不串）
+    const target = currentOperationSecret.value;
     
     try {
       await formRef.value.validate();
+      // incr7 P3-B：validate 期间弹窗已关闭或换成了别的 Secret：静默放弃，不发请求、不提示
+      if (seq !== editOpenSeq) return;
 
       // SEC-25/26 规则 2：data 没动发 null；改了发全部键（未改 ""，删除的不发）；空值 / <redacted> 在表单拦截
       if (isDataEdited(editDataOriginalKeys.value, editDataRows.value)) {
@@ -935,9 +939,9 @@ export function useSecretPage() {
       // 冲突时后端返回 HTTP 200 + code=1（该接口没有 409）：由请求层按业务错误弹后端原文，
       // 下面 catch 里 isNotifiedByRequestLayer 跳过页面自身提示，弹窗保留供用户刷新后重试
       const params: UpdateSecretReq = {
-        cluster_id: currentOperationSecret.value.cluster_id,
-        namespace: currentOperationSecret.value.namespace,
-        name: currentOperationSecret.value.name,
+        cluster_id: target.cluster_id,
+        namespace: target.namespace,
+        name: target.name,
         data,
         string_data: stringData,
         labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
