@@ -55,7 +55,7 @@
 
       <a-col :xs="24" :lg="17">
         <a-row :gutter="[16, 16]" class="summary-grid">
-          <a-col :xs="24" :sm="12" :xl="6">
+          <a-col :xs="12" :xl="6">
             <div class="summary-card status">
               <div class="summary-icon"><Icon icon="lucide:activity" width="22" /></div>
               <div>
@@ -68,7 +68,7 @@
               </div>
             </div>
           </a-col>
-          <a-col :xs="24" :sm="12" :xl="6">
+          <a-col :xs="12" :xl="6">
             <div class="summary-card fault">
               <div class="summary-icon"><Icon icon="lucide:alert-triangle" width="22" /></div>
               <div>
@@ -77,7 +77,7 @@
               </div>
             </div>
           </a-col>
-          <a-col :xs="24" :sm="12" :xl="6">
+          <a-col :xs="12" :xl="6">
             <div class="summary-card action">
               <div class="summary-icon"><Icon icon="lucide:list-checks" width="22" /></div>
               <div>
@@ -86,7 +86,7 @@
               </div>
             </div>
           </a-col>
-          <a-col :xs="24" :sm="12" :xl="6">
+          <a-col :xs="12" :xl="6">
             <div class="summary-card blocked">
               <div class="summary-icon"><Icon icon="lucide:shield-alert" width="22" /></div>
               <div>
@@ -163,6 +163,7 @@
           </template>
           <a-table
             :columns="actionColumns"
+            :scroll="{ x: 840 }"
             :data-source="candidateActions"
             :locale="{ emptyText: '暂无候选动作' }"
             :pagination="false"
@@ -312,7 +313,7 @@ const actionColumns = [
   { dataIndex: 'action_type', key: 'action', title: '动作', width: 260 },
   { dataIndex: ['risk_assessment', 'risk_level'], key: 'risk', title: '风险', width: 100 },
   { dataIndex: ['risk_assessment', 'allowed'], key: 'allowed', title: '执行门禁', width: 130 },
-  { key: 'riskDetails', title: '风险评估明细' },
+  { key: 'riskDetails', title: '风险评估明细', width: 350 },
 ];
 
 </script>
@@ -428,41 +429,20 @@ const actionColumns = [
 
 .summary-card {
   display: flex;
-  align-items: center;
-  min-height: 92px;
-  padding: 18px;
-  gap: 14px;
+  align-items: flex-start;
+  min-height: 80px;
+  min-width: 0;
+  padding: var(--ops-space-md);
+  gap: var(--ops-space-sm);
   background: var(--ops-surface);
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
-  box-shadow: none;
 }
-
-.summary-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  color: #1890ff;
-  background: #e6f4ff;
-  border-radius: var(--ops-radius);
-}
-
-.summary-card.fault .summary-icon {
-  color: #faad14;
-  background: #fff7e6;
-}
-
-.summary-card.action .summary-icon {
-  color: #52c41a;
-  background: #f6ffed;
-}
-
-.summary-card.blocked .summary-icon {
-  color: #ff4d4f;
-  background: #fff1f0;
-}
+.summary-card > div:last-child { min-width: 0; }
+.summary-icon { flex-shrink: 0; color: var(--ops-muted); }
+.summary-card.status .summary-icon { color: var(--ops-accent); }
+.summary-value { overflow-wrap: anywhere; }
+.summary-value :deep(.ant-tag) { margin: 0; white-space: normal; }
 
 .summary-label {
   margin-bottom: 6px;
@@ -499,8 +479,8 @@ const actionColumns = [
   justify-content: center;
   width: 28px;
   height: 28px;
-  color: #1890ff;
-  background: #e6f4ff;
+  color: var(--ops-accent);
+  background: var(--ops-ground);
   border-radius: 6px;
 }
 
