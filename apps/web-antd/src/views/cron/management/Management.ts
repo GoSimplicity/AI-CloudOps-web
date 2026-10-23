@@ -23,7 +23,7 @@ import {
 import { getTreeLocalList } from '#/api/core/tree/tree_local';
 import {
   isCanceledRequest,
-  isNotifiedByRequestLayer,
+  looksNotifiedByRequestLayer,
   shouldNotifyPageError,
 } from '#/utils/permission/request-notice';
 
@@ -84,7 +84,7 @@ export const resolveAllowLocalExec = (data: any): boolean =>
   typeof data?.allow_local_exec === 'boolean' ? data.allow_local_exec : true;
 
 // 取后端返回的原始提示：业务码非 0 时响应解构抛出 `Error <HTTP状态>: <message>`。
-// 不读 HTTP 错误的响应体 message：带 response 的 HTTP 错误已由请求层提示过，页面不再展示原文（见 isNotifiedByRequestLayer）
+// 不读 HTTP 错误的响应体 message：带 response 的 HTTP 错误已由请求层提示过，页面不再展示原文（见 shouldNotifyPageError）
 export const getBackendErrorMessage = (error: any, fallback: string): string => {
   const raw = error?.message;
   if (typeof raw !== 'string' || !raw.trim()) return fallback;
@@ -92,8 +92,8 @@ export const getBackendErrorMessage = (error: any, fallback: string): string => 
 };
 
 // 请求层已提示 / 取消类的判断移到 utils/permission/request-notice.ts（FE-02b 全页面共用），
-// isNotifiedByRequestLayer 在这里转导出，保持原有导入路径可用
-export { isNotifiedByRequestLayer };
+// 形状判断 looksNotifiedByRequestLayer（incr3 由 isNotifiedByRequestLayer 改名）在这里转导出，供本页用例使用
+export { looksNotifiedByRequestLayer };
 
 // 列表类请求（任务列表 / SSH 资源列表）各类失败对应的页面文案
 interface ListFailureTexts {
@@ -125,12 +125,12 @@ const resolveListFailureText = (error: any, texts: ListFailureTexts): string => 
 };
 
 // 列表类请求失败的统一处理：取消类静默（返回 null，不写错误状态）；
-// 请求层已提示（HTTP 错误、网络错误 / 超时、已弹后端原文的业务错误，见 isNotifiedByRequestLayer）页面不再弹；
+// 请求层已提示（HTTP 错误、网络错误 / 超时、已弹后端原文的业务错误，见 shouldNotifyPageError）页面不再弹；
 // 其余由页面弹一条（401 用 warning），返回页面错误文案
 const handleListFailure = (error: any, texts: ListFailureTexts): string | null => {
   if (isCanceledRequest(error)) return null;
   const text = resolveListFailureText(error, texts);
-  if (!isNotifiedByRequestLayer(error)) {
+  if (shouldNotifyPageError(error)) {
     if (error?.response?.status === 401) message.warning(text);
     else message.error(text);
   }

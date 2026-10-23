@@ -16,6 +16,10 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { message } from 'ant-design-vue';
 
+import {
+  HTTP_CONFLICT_MESSAGE,
+  HTTP_TOO_MANY_REQUESTS_MESSAGE,
+} from '#/constants/http-error-messages';
 import { useAuthStore } from '#/store';
 import {
   createBusinessError,
@@ -27,31 +31,52 @@ import {
   FORBIDDEN_STATUS,
   isPermissionDeniedError,
 } from '#/utils/permission/forbidden';
+import {
+  markRequestLayerNotice,
+  markRequestLayerTrace,
+} from '#/utils/permission/request-notice';
 
 import { refreshTokenApi } from './core';
 
 /** 通用错误提示的 message key 前缀，key 按文案区分 */
 export const HTTP_ERROR_MESSAGE_KEY_PREFIX = 'http-error:';
 
-/** HTTP 409 / 429 的通用提示（FE-02b）：packages 的通用错误拦截器把它们归到「内部服务器错误」，这里在应用层改写 */
-export const HTTP_CONFLICT_MESSAGE = '数据已变化，请刷新后重试';
-export const HTTP_TOO_MANY_REQUESTS_MESSAGE = '请求过于频繁，请稍后重试';
+/** HTTP 409 / 429 的通用提示（FE-02b）：常量收口在 constants/http-error-messages.ts，这里转出保持原导入路径可用 */
+export { HTTP_CONFLICT_MESSAGE, HTTP_TOO_MANY_REQUESTS_MESSAGE };
+
+/** HTTP 400 显示后端原文时的最大长度（FE-02b incr3 P2-2） */
+export const HTTP_BAD_REQUEST_DETAIL_MAX_LENGTH = 200;
+
+/** 后端 400 原文：取 data.message（兼容 data.error.message），去换行、截断；没有可用原文返回空串 */
+function readBadRequestDetail(data: any): string {
+  const raw =
+    typeof data?.message === 'string'
+      ? data.message
+      : typeof data?.error?.message === 'string'
+        ? data.error.message
+        : '';
+  const text = raw.replace(/\s*[\r\n]+\s*/g, ' ').trim();
+  return [...text].slice(0, HTTP_BAD_REQUEST_DETAIL_MAX_LENGTH).join('');
+}
 
 /**
  * 按错误改写通用错误拦截器给出的文案（只用于 HTTP / 传输层错误，业务错误不经过这里）：
+ * - 400：显示后端原文（去换行、截断到 200 字），原文为空时用通用文案（FE-02b incr3 P2-2）；
  * - 409 / 429：专门文案（不带错误码）；
- * - P3-C：浏览器中止请求（xhr onabort → AxiosError 'Request aborted'，code ECONNABORTED，没有 response）
- *   packages 里既不算网络错误也不算超时，落到「内部服务器错误」；这里按网络异常提示；
- * - 其余保持原文案。
+ * - 浏览器中止请求（xhr onabort / onloadend status 0 → AxiosError code ECONNABORTED，没有 response）：
+ *   packages 里既不算网络错误也不算超时，落到「内部服务器错误」；这里按网络异常提示。
+ *   只看 code 与「不是超时」，不依赖 'Request aborted' 原文（incr3 P3-2，axios 1.20 行为由用例锁定）；
+ * - 其余（401/403/5xx 等）保持原文案。
  */
 export function resolveHttpErrorMessage(msg: string, error: any): string {
   const status = error?.response?.status;
+  if (status === 400) return readBadRequestDetail(error.response.data) || msg;
   if (status === 409) return HTTP_CONFLICT_MESSAGE;
   if (status === 429) return HTTP_TOO_MANY_REQUESTS_MESSAGE;
   if (
     !error?.response &&
     error?.code === 'ECONNABORTED' &&
-    error?.message === 'Request aborted'
+    !/timeout/i.test(String(error?.message ?? ''))
   ) {
     return $t('fallback.http.networkError');
   }
@@ -288,6 +313,8 @@ function createRequestClient(baseURL: string) {
   // 已由 403 拦截器提示过的错误不再重复提示
   client.addResponseInterceptor(
     errorMessageResponseInterceptor((msg: string, error: any) => {
+      // 标记经过了请求层（页面 looksNotifiedByRequestLayer 只认经过这里的错误，incr3 P3-3）
+      markRequestLayerTrace(error);
       if (
         notifyBusinessError(
           error,
@@ -298,13 +325,13 @@ function createRequestClient(baseURL: string) {
         return;
       }
       if (isPermissionDeniedError(error)) return;
-      // 409 / 429 / 浏览器中止请求改写文案（FE-02b，见 resolveHttpErrorMessage）
+      // 400 / 409 / 429 / 浏览器中止请求改写文案（FE-02b，见 resolveHttpErrorMessage）
       const content = resolveHttpErrorMessage(msg, error);
       // 固定 key：同一文案的并发错误（如批量操作碰上 500 / 网络错误）合并为一条
-      message.error({
-        content,
-        key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${content}`,
-      });
+      const key = `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${content}`;
+      message.error({ content, key });
+      // 记下 key：页面据此判断已提示，或用同一 key 换成带引导的文案（与 SEC-26 同一标记）
+      markRequestLayerNotice(error, key);
     }),
   );
 

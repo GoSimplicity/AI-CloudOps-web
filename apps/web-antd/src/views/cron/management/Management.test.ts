@@ -1,6 +1,7 @@
 import type { FormInstance } from 'ant-design-vue';
 import type { CronJob } from '#/api/core/cron/cron';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { markRequestLayerTrace } from '#/utils/permission/request-notice';
 import { useCronJobPage } from './Management';
 
 const client = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() }));
@@ -198,9 +199,12 @@ describe('SEC-03A 本地执行开关与错误提示', () => {
   it('带 response 的 HTTP 错误不展示响应体原文、页面不再弹（请求层已弹过一条）；无 response 时回退原提示', async () => {
     const page = useCronJobPage();
     page.triggerJob({ ...job(11), job_type: 3 });
-    const failure = Object.assign(new Error('Request failed with status code 400'), {
-      response: { status: 400, data: { code: 1, message: '绑定数据失败' } },
-    });
+    // incr3 P3-3：只有经过 requestClient 拦截器（带请求层痕迹）的 HTTP 错误才算请求层已提示
+    const failure = markRequestLayerTrace(
+      Object.assign(new Error('Request failed with status code 400'), {
+        response: { status: 400, data: { code: 1, message: '绑定数据失败' } },
+      }),
+    );
     client.post.mockRejectedValueOnce(failure);
     await confirm.mock.calls[0]?.[0].onOk();
     expect(notices.error).not.toHaveBeenCalled();

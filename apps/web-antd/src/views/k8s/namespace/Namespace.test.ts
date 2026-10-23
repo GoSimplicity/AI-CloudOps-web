@@ -4,6 +4,7 @@ import {
   createForbiddenResponseInterceptor,
   createPermissionDeniedError,
 } from '#/utils/permission/forbidden';
+import { markRequestLayerTrace } from '#/utils/permission/request-notice';
 import { useNamespacePage } from './Namespace';
 
 const client = vi.hoisted(() => ({ get: vi.fn() }));
@@ -98,11 +99,14 @@ describe('命名空间查询作用域', () => {
     const { message } = await import('ant-design-vue');
     const page = useNamespacePage();
     page.filterClusterId.value = 1;
-    // RequestClient 把 HTTP 错误包成带 response 的普通对象再抛给页面
-    client.get.mockRejectedValueOnce({ response: { status: 500 } });
+    // RequestClient 把 HTTP 错误包成带 response 的普通对象再抛给页面；
+    // incr3 P3-3：带请求层痕迹（经过 requestClient 拦截器）才算请求层已提示
+    client.get.mockRejectedValueOnce(markRequestLayerTrace({ response: { status: 500 } }));
     await page.fetchNamespaces();
     client.get.mockRejectedValueOnce(
-      new AxiosError('Network Error', AxiosError.ERR_NETWORK, {} as any, {}),
+      markRequestLayerTrace(
+        new AxiosError('Network Error', AxiosError.ERR_NETWORK, {} as any, {}),
+      ),
     );
     await page.fetchNamespaces();
     expect(page.loadError.value).toContain('获取命名空间列表失败');

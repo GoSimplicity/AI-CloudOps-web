@@ -94,9 +94,11 @@ const adapter: AxiosAdapter = async (config) => {
 };
 // requestClient 在 axios.create 时合并 defaults，必须在导入页面（进而导入 request.ts）之前设置
 axios.defaults.adapter = adapter;
-const { isNotifiedByRequestLayer, useCronJobPage } =
+const { looksNotifiedByRequestLayer, useCronJobPage } =
   await import('./Management');
-const { HTTP_ERROR_MESSAGE_KEY_PREFIX } = await import('#/api/request');
+const { HTTP_ERROR_MESSAGE_KEY_PREFIX, requestClient } = await import(
+  '#/api/request'
+);
 
 const job = (id: number, job_type: number) =>
   ({
@@ -338,29 +340,39 @@ describe('网络错误 / 超时（有 request 无 response）只提示一次（�
     });
   });
 
-  it('判定边界：取消的请求、没有发出请求的错误不算已提示', () => {
+  it('判定边界：取消的请求、没有发出请求的错误、没经过 requestClient 的错误不算已提示', async () => {
+    // 经过 requestClient 通用错误拦截器的网络错误：已提示
+    const viaClient = await requestClient
+      .get('/boundary', {
+        adapter: async (config) => {
+          throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, {});
+        },
+      })
+      .catch((error: unknown) => error);
+    expect(looksNotifiedByRequestLayer(viaClient)).toBe(true);
+    // incr3 P3-3：同样形状但没经过 requestClient（baseRequestClient / 直接 axios）不算
     expect(
-      isNotifiedByRequestLayer(
+      looksNotifiedByRequestLayer(
         new AxiosError('Network Error', AxiosError.ERR_NETWORK, {} as any, {}),
       ),
-    ).toBe(true);
+    ).toBe(false);
     expect(
-      isNotifiedByRequestLayer(
+      looksNotifiedByRequestLayer(
         new axios.CanceledError(undefined, {} as any, {}),
       ),
     ).toBe(false);
     expect(
-      isNotifiedByRequestLayer(
+      looksNotifiedByRequestLayer(
         new AxiosError('bad option', AxiosError.ERR_BAD_OPTION),
       ),
     ).toBe(false);
-    expect(isNotifiedByRequestLayer(new Error('Network Error'))).toBe(false);
+    expect(looksNotifiedByRequestLayer(new Error('Network Error'))).toBe(false);
   });
 });
 
 /**
  * 列表加载双提示：网络错误 / 超时、HTTP 4xx/5xx 由请求层按固定 key 弹过一条，
- * fetchCronJobs 只保留页面错误状态（isNotifiedByRequestLayer），不再叠加「网络连接失败」等提示；
+ * fetchCronJobs 只保留页面错误状态（shouldNotifyPageError），不再叠加「网络连接失败」等提示；
  * 业务错误（HTTP 200 + code≠0）处理不变
  */
 describe('列表加载失败只提示一次（真实请求链路）', () => {
@@ -415,15 +427,16 @@ describe('列表加载失败只提示一次（真实请求链路）', () => {
     },
   );
 
+  // incr3 P2-2：400 有后端 message 时请求层弹该 message（见下一条用例），这里 400 用空 message 走通用文案
   it.each([
-    [500, 'fallback.http.internalServerError', '服务器内部错误，请稍后重试'],
-    [400, 'fallback.http.badRequest', '请求参数错误，请检查筛选条件'],
+    [500, 'x', 'fallback.http.internalServerError', '服务器内部错误，请稍后重试'],
+    [400, '', 'fallback.http.badRequest', '请求参数错误，请检查筛选条件'],
   ])(
     '列表加载返回 HTTP %s：只弹请求层一条，页面保留错误状态',
-    async (status, key, pageError) => {
+    async (status, backendMessage, key, pageError) => {
       route = () => ({
         status,
-        data: { code: status, data: null, message: 'x' },
+        data: { code: status, data: null, message: backendMessage },
       });
       const page = useCronJobPage();
       await page.fetchCronJobs();
@@ -431,6 +444,23 @@ describe('列表加载失败只提示一次（真实请求链路）', () => {
       expect(page.error.value).toBe(pageError);
     },
   );
+
+  it('incr3 P2-2：列表加载返回 HTTP 400 且带后端 message：请求层只弹该 message 一条，页面保留错误状态', async () => {
+    const text = 'page_size 不能超过 100';
+    route = () => ({
+      status: 400,
+      data: { code: 400, data: null, message: text },
+    });
+    const page = useCronJobPage();
+    await page.fetchCronJobs();
+    expect(notices.error).toHaveBeenCalledTimes(1);
+    expect(notices.error).toHaveBeenCalledWith({
+      content: text,
+      key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${text}`,
+    });
+    expect(notices.warning).not.toHaveBeenCalled();
+    expect(page.error.value).toBe('请求参数错误，请检查筛选条件');
+  });
 
   it('列表加载返回 HTTP 401：页面不再叠加「登录已过期」警告', async () => {
     route = () => ({
