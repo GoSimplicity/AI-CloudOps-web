@@ -305,7 +305,7 @@ import {
 } from '#/api/core/workorder/workorder_category';
 
 import { usePermission } from '#/utils/permission';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -468,7 +468,7 @@ const loadCategoryList = async (): Promise<void> => {
       total.value = 0;
     }
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('加载分类列表失败');
+    if (shouldNotifyPageError(error)) message.error('加载分类列表失败');
     categoryList.value = [];
     total.value = 0;
   } finally {
@@ -553,7 +553,7 @@ const handleEdit = async (record: WorkorderCategoryItem): Promise<void> => {
       detailDialog.visible = false; // 如果是从详情对话框打开的，关闭详情对话框
     }
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('加载分类详情失败');
+    if (shouldNotifyPageError(error)) message.error('加载分类详情失败');
   }
 };
 
@@ -571,7 +571,7 @@ const handleView = async (record: WorkorderCategoryItem): Promise<void> => {
       detailDialog.visible = true;
     }
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('加载分类详情失败');
+    if (shouldNotifyPageError(error)) message.error('加载分类详情失败');
   }
 };
 
@@ -613,7 +613,7 @@ const handleToggleStatus = async (
     // 重新加载当前页数据
     await loadCategoryList();
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('更新分类状态失败');
+    if (shouldNotifyPageError(error)) message.error('更新分类状态失败');
   }
 };
 
@@ -641,7 +641,7 @@ const handleDelete = (record: WorkorderCategoryItem): void => {
 
         await loadCategoryList();
       } catch (error) {
-        if (!isPermissionDeniedError(error)) message.error('删除分类失败');
+        if (shouldNotifyPageError(error)) message.error('删除分类失败');
       }
     },
   });
@@ -690,7 +690,7 @@ const handleSubmit = async (): Promise<void> => {
     closeFormDialog();
     await loadCategoryList();
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('保存分类失败');
+    if (shouldNotifyPageError(error)) message.error('保存分类失败');
   } finally {
     submitLoading.value = false;
   }

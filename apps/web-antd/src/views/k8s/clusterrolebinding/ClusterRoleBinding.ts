@@ -29,7 +29,7 @@ import {
   getClustersListApi,
   Env,
 } from '#/api/core/k8s/k8s_cluster';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // ClusterRoleBinding YAML 模板
 const CLUSTERROLEBINDING_YAML_TEMPLATE = `apiVersion: rbac.authorization.k8s.io/v1
@@ -286,7 +286,7 @@ export function useClusterRoleBindingPage() {
         clearClusterRoleBindings();
       }
       clustersError.value = '获取集群列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -324,7 +324,7 @@ export function useClusterRoleBindingPage() {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
       clearClusterRoleBindings();
       loadError.value = '获取 ClusterRoleBinding 列表失败，请重试';
-      if (!isPermissionDeniedError(error)) message.error(loadError.value);
+      if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -349,7 +349,7 @@ export function useClusterRoleBindingPage() {
       currentClusterRoleBindingDetail.value = response || clusterRoleBinding;
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error('获取 ClusterRoleBinding 详情失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('获取 ClusterRoleBinding 详情失败：' + (error.message || '未知错误'));
       currentClusterRoleBindingDetail.value = clusterRoleBinding;
     } finally {
       detailLoading.value = false;
@@ -382,7 +382,7 @@ export function useClusterRoleBindingPage() {
       isYamlModalVisible.value = true;
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error('获取 ClusterRoleBinding YAML 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('获取 ClusterRoleBinding YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -418,7 +418,7 @@ export function useClusterRoleBindingPage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (!isPermissionDeniedError(error)) message.error('更新 ClusterRoleBinding YAML 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('更新 ClusterRoleBinding YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -482,7 +482,7 @@ export function useClusterRoleBindingPage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (!isPermissionDeniedError(error)) message.error('创建 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('创建 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -557,7 +557,7 @@ export function useClusterRoleBindingPage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (!isPermissionDeniedError(error)) message.error('更新 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('更新 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -597,7 +597,7 @@ export function useClusterRoleBindingPage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (!isPermissionDeniedError(error)) message.error('通过 YAML 创建 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('通过 YAML 创建 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -627,7 +627,7 @@ export function useClusterRoleBindingPage() {
           await fetchClusterRoleBindings();
         } catch (error: any) {
 
-          if (!isPermissionDeniedError(error)) message.error('删除 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
+          if (shouldNotifyPageError(error)) message.error('删除 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
         }
       },
     });
@@ -689,7 +689,7 @@ export function useClusterRoleBindingPage() {
             await fetchClusterRoleBindings();
           } catch (error: any) {
 
-            if (!isPermissionDeniedError(error)) message.error('批量删除部分 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
+            if (shouldNotifyPageError(error)) message.error('批量删除部分 ClusterRoleBinding 失败：' + (error.message || '未知错误'));
             await fetchClusterRoleBindings();
           }
         },

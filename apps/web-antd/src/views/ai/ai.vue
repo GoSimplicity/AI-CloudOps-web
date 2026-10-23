@@ -340,7 +340,7 @@ import {
   refreshKnowledgeBase
 } from '#/api/core/aiops/assistant';
 import { usePermission } from '#/utils/permission';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -977,7 +977,7 @@ const clearChat = async () => {
     chatHistory.value = [];
     isConnected.value = false;
     initChatMessages();
-    if (!isPermissionDeniedError(error)) message.warning('清空完成，但可能存在部分错误');
+    if (shouldNotifyPageError(error)) message.warning('清空完成，但可能存在部分错误');
     persistState();
   }
 };
@@ -1117,7 +1117,7 @@ const copyMessage = async (content) => {
     await navigator.clipboard.writeText(content);
     message.success('已复制到剪贴板');
   } catch (err) {
-    if (!isPermissionDeniedError(err)) message.error('复制失败');
+    if (shouldNotifyPageError(err)) message.error('复制失败');
   }
 };
 // 重新生成 AI 回答（基于上一条用户消息）

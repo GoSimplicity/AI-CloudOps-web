@@ -94,7 +94,7 @@ import { getTreeList } from '#/api/core/tree/tree_node';
 import type { TreeNode } from '#/api/core/tree/tree_local';
 
 import { usePermission } from '#/utils/permission';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -519,7 +519,7 @@ const fetchResources = async (): Promise<void> => {
   } catch (error) {
     if (ticket !== listRequest) return;
     loadError.value = '获取云资源列表失败，请重试';
-    if (!isPermissionDeniedError(error)) message.error('获取资源列表失败');
+    if (shouldNotifyPageError(error)) message.error('获取资源列表失败');
     resources.value = [];
     pagination.total = 0;
   } finally {
@@ -539,7 +539,7 @@ const fetchSyncHistory = async (): Promise<void> => {
     syncHistoryList.value = data.items || [];
     syncHistoryPagination.total = data.total || 0;
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('获取同步历史失败');
+    if (shouldNotifyPageError(error)) message.error('获取同步历史失败');
   } finally {
     syncHistoryLoading.value = false;
   }
@@ -557,7 +557,7 @@ const fetchChangeLog = async (): Promise<void> => {
     changeLogList.value = data.items || [];
     changeLogPagination.total = data.total || 0;
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('获取变更日志失败');
+    if (shouldNotifyPageError(error)) message.error('获取变更日志失败');
   } finally {
     changeLogLoading.value = false;
   }
@@ -702,7 +702,7 @@ const handleViewDetail = async (record: TreeCloudResource): Promise<void> => {
     };
   } catch (error) {
     if (ticket !== detailRequest) return;
-    if (!isPermissionDeniedError(error)) message.error('获取资源详情失败');
+    if (shouldNotifyPageError(error)) message.error('获取资源详情失败');
   } finally {
     if (ticket === detailRequest) detailLoading.value = false;
   }
@@ -756,7 +756,7 @@ const handleUpdate = async (): Promise<void> => {
       currentDetail.value = (response as any).data || response;
     }
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('更新失败');
+    if (shouldNotifyPageError(error)) message.error('更新失败');
   } finally {
     submitLoading.value = false;
   }
@@ -803,7 +803,7 @@ const handleSync = async (): Promise<void> => {
     syncRegionRequest++;
     await fetchResources();
   } catch (error) {
-    if (ticket === syncOperationRequest && !isPermissionDeniedError(error)) message.error('同步失败，请检查同步历史后重试');
+    if (ticket === syncOperationRequest && shouldNotifyPageError(error)) message.error('同步失败，请检查同步历史后重试');
   } finally {
     if (ticket === syncOperationRequest) syncLoading.value = false;
   }
@@ -854,7 +854,7 @@ const handleBind = async (): Promise<void> => {
       currentDetail.value = (response as any).data || response;
     }
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('绑定失败');
+    if (shouldNotifyPageError(error)) message.error('绑定失败');
   } finally {
     bindLoading.value = false;
   }
@@ -894,7 +894,7 @@ const handleUnbind = async (): Promise<void> => {
       currentDetail.value = (response as any).data || response;
     }
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('解绑失败');
+    if (shouldNotifyPageError(error)) message.error('解绑失败');
   } finally {
     unbindLoading.value = false;
   }
@@ -916,7 +916,7 @@ const handleUpdateStatus = async (
       currentDetail.value = (response as any).data || response;
     }
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('状态更新失败');
+    if (shouldNotifyPageError(error)) message.error('状态更新失败');
   }
 };
 
@@ -960,7 +960,7 @@ const handleDelete = async (record: TreeCloudResource): Promise<void> => {
 
         await fetchResources();
       } catch (error) {
-        if (!isPermissionDeniedError(error)) message.error('删除失败');
+        if (shouldNotifyPageError(error)) message.error('删除失败');
       }
     },
   });
@@ -1023,7 +1023,7 @@ onMounted(async () => {
       fetchResources(),
     ]);
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('页面加载失败');
+    if (shouldNotifyPageError(error)) message.error('页面加载失败');
   }
 });
 onBeforeUnmount(() => { listRequest++; detailRequest++; syncRegionRequest++; accountListRequest++; syncOperationRequest++; });

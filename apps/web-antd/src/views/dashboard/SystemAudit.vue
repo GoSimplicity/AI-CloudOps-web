@@ -25,7 +25,7 @@ import {
 
 import { getUserDetailApi } from '#/api/core/system/user';
 import { usePermission } from '#/utils/permission';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // 清单 #4 / #5：待确认（SEC-13/D4 计划下线），FE-02 期间按临时码隐藏
 const { can } = usePermission();
@@ -250,7 +250,7 @@ const fetchAuditLogs = async () => {
     auditLogList.value = logsWithUserInfo;
     paginationConfig.total = response.total || 0;
   } catch (error: any) {
-    if (!isPermissionDeniedError(error))
+    if (shouldNotifyPageError(error))
       message.error(error.message || '获取审计日志失败');
     auditLogList.value = [];
     paginationConfig.total = 0;
@@ -264,7 +264,7 @@ const fetchAuditStatistics = async () => {
     const response = await getAuditStatisticsApi();
     auditStatistics.value = response;
   } catch (error: any) {
-    if (!isPermissionDeniedError(error))
+    if (shouldNotifyPageError(error))
       message.error(error.message || '获取统计数据失败');
   }
 };
@@ -291,7 +291,7 @@ const fetchLogDetail = async (id: number) => {
     viewLogData.value = logWithUserInfo;
     viewModalVisible.value = true;
   } catch (error: any) {
-    if (!isPermissionDeniedError(error))
+    if (shouldNotifyPageError(error))
       message.error(error.message || '获取日志详情失败');
   }
 };
@@ -344,7 +344,7 @@ const performAdvancedSearch = async () => {
     auditLogList.value = logsWithUserInfo;
     paginationConfig.total = response.total || 0;
   } catch (error: any) {
-    if (!isPermissionDeniedError(error))
+    if (shouldNotifyPageError(error))
       message.error(error.message || '高级搜索失败');
     auditLogList.value = [];
     paginationConfig.total = 0;
@@ -433,7 +433,7 @@ const handleDelete = async (log: AuditLogWithUser) => {
     fetchAuditLogs();
     fetchAuditStatistics();
   } catch (error: any) {
-    if (!isPermissionDeniedError(error))
+    if (shouldNotifyPageError(error))
       message.error(error.message || '删除失败');
   }
 };
@@ -451,7 +451,7 @@ const handleBatchDelete = async () => {
     fetchAuditLogs();
     fetchAuditStatistics();
   } catch (error: any) {
-    if (!isPermissionDeniedError(error))
+    if (shouldNotifyPageError(error))
       message.error(error.message || '批量删除失败');
   }
 };

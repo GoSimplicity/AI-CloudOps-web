@@ -1884,7 +1884,7 @@ import {
 } from '#/api/core/workorder/workorder_notification';
 
 import { usePermission } from '#/utils/permission';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -2630,7 +2630,7 @@ const loadUsers = async (
     }
   } catch (error: any) {
     if (reset) {
-      if (!isPermissionDeniedError(error)) message.error(error.message || '加载用户数据失败');
+      if (shouldNotifyPageError(error)) message.error(error.message || '加载用户数据失败');
       users.value = [];
       usersPagination.current = 1;
       usersPagination.total = 0;
@@ -2695,7 +2695,7 @@ const loadDialogProcesses = async (
   } catch (error: any) {
     if (!isCurrent()) return;
     if (reset) {
-      if (!isPermissionDeniedError(error)) message.error(error.message || '加载流程列表失败');
+      if (shouldNotifyPageError(error)) message.error(error.message || '加载流程列表失败');
       dialogProcesses.value = [];
       processPagination.current = 1;
       processPagination.total = 0;
@@ -2843,7 +2843,7 @@ const loadDialogUsers = async (
   } catch (error: any) {
     if (!isCurrent()) return;
     if (reset) {
-      if (!isPermissionDeniedError(error)) message.error(error.message || '加载用户列表失败');
+      if (shouldNotifyPageError(error)) message.error(error.message || '加载用户列表失败');
       dialogUsers.value = [];
       userPagination.current = 1;
       userPagination.total = 0;
@@ -3143,7 +3143,7 @@ const handleTemplateSubmit = async () => {
     message.success('已从模板创建工单，请完善信息后提交');
   } catch (error: any) {
     if (request !== formRequest || !templateDialog.visible) return;
-    if (!isPermissionDeniedError(error)) message.error(error.message || '从模板创建工单失败');
+    if (shouldNotifyPageError(error)) message.error(error.message || '从模板创建工单失败');
   }
 };
 
@@ -3188,7 +3188,7 @@ const handleEditInstance = async (row: WorkorderInstanceItem) => {
     }
   } catch (error) {
     if (request !== formRequest) return;
-    if (!isPermissionDeniedError(error)) message.error('获取工单详情失败');
+    if (shouldNotifyPageError(error)) message.error('获取工单详情失败');
   } finally {
     if (request === formRequest) formLoading.value = false;
   }
@@ -3341,7 +3341,7 @@ const syncStepStatus = async (instanceId: number, _operationType: string) => {
     // 刷新列表数据
     await loadInstances();
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.warning('操作成功，但状态同步失败，请手动刷新页面查看最新状态');
+    if (shouldNotifyPageError(error)) message.warning('操作成功，但状态同步失败，请手动刷新页面查看最新状态');
   }
 };
 
@@ -3618,7 +3618,7 @@ const handleSubmitInstance = async (instance: WorkorderInstanceItem) => {
 
         await syncStepStatus(instance.id, 'submit');
       } catch (error: any) {
-        if (!isPermissionDeniedError(error)) message.error(`提交工单失败: ${error.message || '未知错误'}`);
+        if (shouldNotifyPageError(error)) message.error(`提交工单失败: ${error.message || '未知错误'}`);
       } finally {
         loading.value = false;
       }
@@ -3664,7 +3664,7 @@ const saveAssign = async () => {
     // 使用新的同步机制
     await syncStepStatus(assignDialog.instanceId, 'assign');
   } catch (error: any) {
-    if (!isPermissionDeniedError(error)) message.error(`分配处理人失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error)) message.error(`分配处理人失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }
@@ -3834,7 +3834,7 @@ const saveActionComment = async () => {
     await syncStepStatus(actionDialog.instanceId, actionDialog.type);
   } catch (error: any) {
     const actionName = getActionDialogTitle();
-    if (!isPermissionDeniedError(error)) message.error(`${actionName}失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error)) message.error(`${actionName}失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }
@@ -3887,7 +3887,7 @@ const saveApproval = async () => {
               // 使用新的同步机制
               await syncStepStatus(approvalDialog.instanceId, 'approve');
             } catch (error: any) {
-              if (!isPermissionDeniedError(error)) message.error(`审批失败: ${error.message || '未知错误'}`);
+              if (shouldNotifyPageError(error)) message.error(`审批失败: ${error.message || '未知错误'}`);
             }
           },
         });
@@ -3917,7 +3917,7 @@ const saveApproval = async () => {
       approvalDialog.type === 'approve' ? 'approve' : 'reject';
     await syncStepStatus(approvalDialog.instanceId, operationType);
   } catch (error: any) {
-    if (!isPermissionDeniedError(error)) message.error(
+    if (shouldNotifyPageError(error)) message.error(
       `${approvalDialog.type === 'approve' ? '审批' : '拒绝'}失败: ${error.message || '未知错误'}`,
     );
   } finally {
@@ -3948,7 +3948,7 @@ const confirmDelete = (instance: WorkorderInstanceItem) => {
 
         loadInstances();
       } catch (error: any) {
-        if (!isPermissionDeniedError(error)) message.error(`删除工单失败: ${error.message || '未知错误'}`);
+        if (shouldNotifyPageError(error)) message.error(`删除工单失败: ${error.message || '未知错误'}`);
       } finally {
         loading.value = false;
       }
@@ -4036,7 +4036,7 @@ const saveInstance = async () => {
     loadInstances();
   } catch (error: any) {
     const action = instanceDialog.isEdit ? '更新' : '创建';
-    if (!isPermissionDeniedError(error)) message.error(`${action}工单失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error)) message.error(`${action}工单失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }

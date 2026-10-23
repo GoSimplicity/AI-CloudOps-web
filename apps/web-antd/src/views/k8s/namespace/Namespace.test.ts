@@ -91,6 +91,27 @@ describe('命名空间查询作用域', () => {
     await page.fetchNamespaces();
     expect(message.error).toHaveBeenCalledWith('获取命名空间列表失败，请重试');
   });
+
+  it('FE-02b：HTTP 错误、网络错误已由请求层提示，取消类静默；页面只保留错误状态', async () => {
+    const axios = (await import('axios')).default;
+    const { AxiosError } = await import('axios');
+    const { message } = await import('ant-design-vue');
+    const page = useNamespacePage();
+    page.filterClusterId.value = 1;
+    // RequestClient 把 HTTP 错误包成带 response 的普通对象再抛给页面
+    client.get.mockRejectedValueOnce({ response: { status: 500 } });
+    await page.fetchNamespaces();
+    client.get.mockRejectedValueOnce(
+      new AxiosError('Network Error', AxiosError.ERR_NETWORK, {} as any, {}),
+    );
+    await page.fetchNamespaces();
+    client.get.mockRejectedValueOnce(
+      new axios.CanceledError(undefined, {} as any, {}),
+    );
+    await page.fetchNamespaces();
+    expect(page.loadError.value).toContain('获取命名空间列表失败');
+    expect(message.error).not.toHaveBeenCalled();
+  });
 });
 
 /** 模拟请求拦截器链：业务 403 经统一提示拦截器后抛给页面的错误（已提示标记） */

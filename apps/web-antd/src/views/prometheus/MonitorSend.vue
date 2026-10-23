@@ -568,7 +568,7 @@ import { getMonitorScrapePoolListApi, type MonitorScrapePool } from '#/api/core/
 import { getMonitorOnDutyGroupListApi, type MonitorOnDutyGroup } from '#/api/core/prometheus/prometheus_onduty';
 
 import { usePermission } from '#/utils/permission';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -906,7 +906,7 @@ const loadSendGroupList = async (): Promise<void> => {
     sendGroupList.value = [];
     paginationConfig.total = 0;
     updateStats();
-    if (!isPermissionDeniedError(error)) message.error(loadError.value);
+    if (shouldNotifyPageError(error)) message.error(loadError.value);
   } finally {
     request.finish();
   }
@@ -998,7 +998,7 @@ const loadOptionsData = async (): Promise<void> => {
     }));
   } catch (error: any) {
 
-    if (!isPermissionDeniedError(error)) message.error('加载选项数据失败');
+    if (shouldNotifyPageError(error)) message.error('加载选项数据失败');
   }
 };
 
@@ -1033,7 +1033,7 @@ const loadDialogPools = async (isNewSearch = false) => {
       dialogPoolHasMore.value = false;
     }
   } catch (error: any) {
-    if (!isPermissionDeniedError(error)) message.error(error.message || '获取采集池数据失败');
+    if (shouldNotifyPageError(error)) message.error(error.message || '获取采集池数据失败');
   } finally {
     dialogPoolLoading.value = false;
   }
@@ -1069,7 +1069,7 @@ const loadDialogOnDutyGroups = async (isNewSearch = false) => {
       dialogOnDutyGroupHasMore.value = false;
     }
   } catch (error: any) {
-    if (!isPermissionDeniedError(error)) message.error(error.message || '获取值班组数据失败');
+    if (shouldNotifyPageError(error)) message.error(error.message || '获取值班组数据失败');
   } finally {
     dialogOnDutyGroupLoading.value = false;
   }
@@ -1113,7 +1113,7 @@ const loadDialogUsers = async (isNewSearch = false) => {
       dialogUserHasMore.value = false;
     }
   } catch (error: any) {
-    if (!isPermissionDeniedError(error)) message.error(error.message || '获取用户数据失败');
+    if (shouldNotifyPageError(error)) message.error(error.message || '获取用户数据失败');
   } finally {
     dialogUserLoading.value = false;
   }
@@ -1341,7 +1341,7 @@ const handleViewSendGroup = async (record: MonitorSendGroup): Promise<void> => {
     detailDialogVisible.value = true;
   } catch (error: any) {
 
-    if (!isPermissionDeniedError(error)) message.error(error.message || '获取发送组详情失败');
+    if (shouldNotifyPageError(error)) message.error(error.message || '获取发送组详情失败');
   }
 };
 
@@ -1359,7 +1359,7 @@ const handleDeleteClick = (record: MonitorSendGroup): void => {
         await loadSendGroupList();
       } catch (error: any) {
 
-        if (!isPermissionDeniedError(error)) message.error(error.message || '删除发送组失败');
+        if (shouldNotifyPageError(error)) message.error(error.message || '删除发送组失败');
       }
     },
   });
@@ -1472,7 +1472,7 @@ const saveSendGroup = async (): Promise<void> => {
     loadSendGroupList();
   } catch (error: any) {
 
-    if (!isPermissionDeniedError(error)) message.error(error.message || '保存发送组失败');
+    if (shouldNotifyPageError(error)) message.error(error.message || '保存发送组失败');
   }
 };
 

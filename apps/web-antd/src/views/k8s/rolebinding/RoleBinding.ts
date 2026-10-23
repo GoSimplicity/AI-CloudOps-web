@@ -33,7 +33,7 @@ import {
   type K8sNamespace,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // RoleBinding YAML 模板
 const ROLEBINDING_YAML_TEMPLATE = `apiVersion: rbac.authorization.k8s.io/v1
@@ -425,7 +425,7 @@ export function useRoleBindingPage() {
         clearRoleBindings();
       }
       clustersError.value = '获取集群列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -480,7 +480,7 @@ export function useRoleBindingPage() {
       namespaces.value = [];
       namespacesTotal.value = 0;
       namespacesError.value = '获取命名空间列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(namespacesError.value);
+      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -530,7 +530,7 @@ export function useRoleBindingPage() {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       clearRoleBindings();
       loadError.value = '获取 RoleBinding 列表失败，请重试';
-      if (!isPermissionDeniedError(error)) message.error(loadError.value);
+      if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -557,7 +557,7 @@ export function useRoleBindingPage() {
       currentRoleBindingDetail.value = response ? parseRoleBindingData(response) : parseRoleBindingData(roleBinding);
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error('获取 RoleBinding 详情失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('获取 RoleBinding 详情失败：' + (error.message || '未知错误'));
       // 即使获取详情失败，也要解析基础数据
       currentRoleBindingDetail.value = parseRoleBindingData(roleBinding);
     } finally {
@@ -592,7 +592,7 @@ export function useRoleBindingPage() {
       isYamlModalVisible.value = true;
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error('获取 RoleBinding YAML 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('获取 RoleBinding YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -629,7 +629,7 @@ export function useRoleBindingPage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (!isPermissionDeniedError(error)) message.error('更新 RoleBinding YAML 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('更新 RoleBinding YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -695,7 +695,7 @@ export function useRoleBindingPage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (!isPermissionDeniedError(error)) message.error('创建 RoleBinding 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('创建 RoleBinding 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -772,7 +772,7 @@ export function useRoleBindingPage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (!isPermissionDeniedError(error)) message.error('更新 RoleBinding 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('更新 RoleBinding 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -812,7 +812,7 @@ export function useRoleBindingPage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (!isPermissionDeniedError(error)) message.error('通过 YAML 创建 RoleBinding 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('通过 YAML 创建 RoleBinding 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -843,7 +843,7 @@ export function useRoleBindingPage() {
           await fetchRoleBindings();
         } catch (error: any) {
 
-          if (!isPermissionDeniedError(error)) message.error('删除 RoleBinding 失败：' + (error.message || '未知错误'));
+          if (shouldNotifyPageError(error)) message.error('删除 RoleBinding 失败：' + (error.message || '未知错误'));
         }
       },
     });
@@ -906,7 +906,7 @@ export function useRoleBindingPage() {
             await fetchRoleBindings();
           } catch (error: any) {
 
-            if (!isPermissionDeniedError(error)) message.error('批量删除部分 RoleBinding 失败：' + (error.message || '未知错误'));
+            if (shouldNotifyPageError(error)) message.error('批量删除部分 RoleBinding 失败：' + (error.message || '未知错误'));
             await fetchRoleBindings();
           }
         },

@@ -884,7 +884,7 @@ import {
 } from '#/api/core/prometheus/prometheus_send_group';
 
 import { usePermission } from '#/utils/permission';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -937,8 +937,8 @@ const createInitialForm = () => ({
 const handleApiError = (error: any, defaultMessage: string) => {
   const errorMessage =
     error?.response?.data?.message || error.message || defaultMessage;
-  // 403 已由请求拦截器统一提示
-  if (isPermissionDeniedError(error)) return;
+  // 请求层已提示（403、业务错误、HTTP / 网络错误）或取消类：页面不再提示（FE-02b）
+  if (!shouldNotifyPageError(error)) return;
   message.error(errorMessage);
 };
 
@@ -1128,7 +1128,7 @@ const fetchAlertRules = async () => {
     if (!request.fail(error, '加载告警规则列表失败')) return;
     data.value = [];
     paginationConfig.total = 0;
-    if (!isPermissionDeniedError(error)) message.error(loadError.value);
+    if (shouldNotifyPageError(error)) message.error(loadError.value);
   } finally {
     request.finish();
   }

@@ -44,7 +44,7 @@ import {
   K8sPVStatus,
   getK8sPVList,
 } from '#/api/core/k8s/k8s_pv';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // PVC YAML 模板
 const PVC_YAML_TEMPLATE = `apiVersion: v1
@@ -374,7 +374,7 @@ export function usePVCPage() {
         clearPVCs();
       }
       clustersError.value = '获取集群列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -421,7 +421,7 @@ export function usePVCPage() {
       namespaces.value = [];
       namespacesTotal.value = 0;
       namespacesError.value = '获取命名空间列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(namespacesError.value);
+      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -453,7 +453,7 @@ export function usePVCPage() {
       }
       pvsTotal.value = res?.total || 0;
     } catch (error: any) {
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '获取可用PV列表失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '获取可用PV列表失败');
       if (pvsPage.value === 1) {
         availablePVs.value = [];
       }
@@ -503,7 +503,7 @@ export function usePVCPage() {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       clearPVCs();
       loadError.value = '获取 PVC 列表失败，请重试';
-      if (!isPermissionDeniedError(error)) message.error(loadError.value);
+      if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -536,7 +536,7 @@ export function usePVCPage() {
       }
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '获取PVC详情失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '获取PVC详情失败');
     } finally {
       detailLoading.value = false;
     }
@@ -560,7 +560,7 @@ export function usePVCPage() {
       }
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '获取PVC YAML失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '获取PVC YAML失败');
     }
   };
 
@@ -581,7 +581,7 @@ export function usePVCPage() {
       currentPVCPods.value = res?.items || [];
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '获取使用PVC的Pod列表失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '获取使用PVC的Pod列表失败');
       currentPVCPods.value = [];
     } finally {
       podsLoading.value = false;
@@ -614,7 +614,7 @@ export function usePVCPage() {
       await fetchPVCs();
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '创建PVC失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '创建PVC失败');
     } finally {
       submitLoading.value = false;
     }
@@ -642,7 +642,7 @@ export function usePVCPage() {
       await fetchPVCs();
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '通过YAML创建PVC失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '通过YAML创建PVC失败');
     } finally {
       submitLoading.value = false;
     }
@@ -674,7 +674,7 @@ export function usePVCPage() {
       await fetchPVCs();
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '更新PVC失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '更新PVC失败');
     } finally {
       submitLoading.value = false;
     }
@@ -704,7 +704,7 @@ export function usePVCPage() {
       await fetchPVCs();
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '通过YAML更新PVC失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '通过YAML更新PVC失败');
     } finally {
       submitLoading.value = false;
     }
@@ -733,7 +733,7 @@ export function usePVCPage() {
           await fetchPVCs();
         } catch (error: any) {
 
-          if (!isPermissionDeniedError(error)) message.error(error?.message || '删除PVC失败');
+          if (shouldNotifyPageError(error)) message.error(error?.message || '删除PVC失败');
         }
       },
     });
@@ -763,7 +763,7 @@ export function usePVCPage() {
       await fetchPVCs();
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '扩容PVC失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '扩容PVC失败');
     } finally {
       submitLoading.value = false;
     }
@@ -803,7 +803,7 @@ export function usePVCPage() {
           await fetchPVCs();
         } catch (error: any) {
 
-          if (!isPermissionDeniedError(error)) message.error(error?.message || '批量删除PVC失败');
+          if (shouldNotifyPageError(error)) message.error(error?.message || '批量删除PVC失败');
         }
       },
     });

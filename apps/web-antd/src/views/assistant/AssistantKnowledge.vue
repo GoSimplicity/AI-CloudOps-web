@@ -165,7 +165,7 @@ import {
   type AddDocumentResponse
 } from '#/api/core/aiops/assistant';
 import { usePermission } from '#/utils/permission';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -238,7 +238,7 @@ const refreshKnowledge = async () => {
     knowledgeStats.vector_count = 0;
     loadError.value = error instanceof Error ? error.message : '知识库重建失败';
     knowledgeStats.last_update = '重建失败';
-    if (!isPermissionDeniedError(error)) message.error(`刷新知识库失败: ${loadError.value}`);
+    if (shouldNotifyPageError(error)) message.error(`刷新知识库失败: ${loadError.value}`);
     addLog('error', `刷新知识库失败: ${error.message}`);
   } finally {
     refreshing.value = false;
@@ -278,7 +278,7 @@ const handleUpload: NonNullable<UploadProps['customRequest']> = async (options) 
   } catch (error) {
     const failure = error instanceof Error ? error : new Error('文件上传失败');
     options.onError?.(failure);
-    if (!isPermissionDeniedError(error)) message.error(`文件上传失败: ${failure.message}`);
+    if (shouldNotifyPageError(error)) message.error(`文件上传失败: ${failure.message}`);
     addLog('error', `文件上传失败: ${failure.message}`);
   }
 };
@@ -323,7 +323,7 @@ const addDocument = async () => {
       addLog('error', `文档添加失败: ${data.message}`);
     }
   } catch (error: any) {
-    if (!isPermissionDeniedError(error)) message.error(`添加文档失败: ${error.message}`);
+    if (shouldNotifyPageError(error)) message.error(`添加文档失败: ${error.message}`);
     addLog('error', `添加文档失败: ${error.message}`);
   } finally {
     adding.value = false;

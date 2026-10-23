@@ -39,7 +39,7 @@ import {
 import { getTreeList } from '#/api/core/tree/tree_node';
 
 import { usePermission } from '#/utils/permission';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -273,7 +273,7 @@ const fetchTreeData = async (): Promise<void> => {
     treeData.value = response.items || [];
   } catch (error) {
 
-    if (!isPermissionDeniedError(error)) message.error('获取服务树数据失败');
+    if (shouldNotifyPageError(error)) message.error('获取服务树数据失败');
   }
 };
 
@@ -304,7 +304,7 @@ const fetchLocalResources = async (): Promise<void> => {
   } catch (error) {
     if (ticket !== listRequest) return;
     loadError.value = '获取本地资源列表失败，请重试';
-    if (!isPermissionDeniedError(error)) message.error('获取本地资源列表失败');
+    if (shouldNotifyPageError(error)) message.error('获取本地资源列表失败');
 
     localResources.value = [];
     pagination.total = 0;
@@ -421,7 +421,7 @@ const handleViewDetail = async (record: TreeLocalResource): Promise<void> => {
   } catch (error) {
     if (ticket !== detailRequest) return;
 
-    if (!isPermissionDeniedError(error)) message.error('获取资源详情失败');
+    if (shouldNotifyPageError(error)) message.error('获取资源详情失败');
   } finally {
     if (ticket === detailRequest) detailLoading.value = false;
   }
@@ -518,7 +518,7 @@ const handleBind = async (): Promise<void> => {
       };
     }
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('绑定失败');
+    if (shouldNotifyPageError(error)) message.error('绑定失败');
 
   } finally {
     bindLoading.value = false;
@@ -554,7 +554,7 @@ const handleUnbind = async (): Promise<void> => {
       };
     }
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('解绑失败');
+    if (shouldNotifyPageError(error)) message.error('解绑失败');
 
   } finally {
     unbindLoading.value = false;
@@ -589,7 +589,7 @@ const handleSubmit = async (): Promise<void> => {
     modalVisible.value = false;
     await fetchLocalResources();
   } catch (error) {
-    if (ticket === formRequest && !isPermissionDeniedError(error)) message.error(editing ? '更新服务器失败' : '添加服务器失败');
+    if (ticket === formRequest && shouldNotifyPageError(error)) message.error(editing ? '更新服务器失败' : '添加服务器失败');
   } finally {
     if (ticket === formRequest) submitLoading.value = false;
   }
@@ -613,7 +613,7 @@ const handleDelete = (record: TreeLocalResource): void => {
 
         await fetchLocalResources();
       } catch (error) {
-        if (!isPermissionDeniedError(error)) message.error('删除服务器失败');
+        if (shouldNotifyPageError(error)) message.error('删除服务器失败');
 
       }
     }
@@ -628,7 +628,7 @@ onMounted(async () => {
     ]);
   } catch (error) {
 
-    if (!isPermissionDeniedError(error)) message.error('页面数据加载失败，请刷新页面重试');
+    if (shouldNotifyPageError(error)) message.error('页面数据加载失败，请刷新页面重试');
   }
 });
 onBeforeUnmount(() => { listRequest++; detailRequest++; formRequest++; });

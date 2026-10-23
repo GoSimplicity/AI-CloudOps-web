@@ -143,7 +143,7 @@ import {
   type ServiceInfoResponse,
   type ServiceConfigResponse
 } from '#/api/core/aiops/assistant';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // 响应式数据
 const loading = ref(false);
@@ -208,7 +208,7 @@ const copyToClipboard = async (text: string) => {
     await navigator.clipboard.writeText(text);
     message.success('复制成功');
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('复制失败');
+    if (shouldNotifyPageError(error)) message.error('复制失败');
   }
 };
 

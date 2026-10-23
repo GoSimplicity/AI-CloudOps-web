@@ -18,7 +18,7 @@ import {
 } from '@ant-design/icons-vue';
 
 import { usePermission } from '#/utils/permission';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -327,7 +327,7 @@ const copyToClipboard = async (text: string) => {
     await navigator.clipboard.writeText(text);
     message.success('已复制到剪贴板');
   } catch (err) {
-    if (!isPermissionDeniedError(err)) message.error('复制失败');
+    if (shouldNotifyPageError(err)) message.error('复制失败');
   }
 };
 

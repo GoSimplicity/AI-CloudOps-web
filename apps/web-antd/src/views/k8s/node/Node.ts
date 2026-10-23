@@ -39,6 +39,7 @@ import {
   PERMISSION_DENIED_MESSAGE,
   PERMISSION_DENIED_MESSAGE_KEY,
 } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 /** 批量禁用调度的最大并发请求数（复审 P2-1：避免一次性打出 N 个请求） */
 export const BATCH_CORDON_CONCURRENCY = 5;
@@ -292,7 +293,7 @@ export function useNodePage() {
         clearNodes();
       }
       clustersError.value = '获取集群列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -332,7 +333,7 @@ export function useNodePage() {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
       clearNodes();
       loadError.value = '获取 节点列表失败，请重试';
-      if (!isPermissionDeniedError(error)) message.error(loadError.value);
+      if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -361,7 +362,7 @@ export function useNodePage() {
       };
       currentNodeDetail.value = nodeDetailWithDefaults;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取节点详情失败');
+      if (shouldNotifyPageError(err)) message.error('获取节点详情失败');
 
       currentNodeDetail.value = {
         ...record,
@@ -413,7 +414,7 @@ export function useNodePage() {
       isLabelModalVisible.value = false;
       await fetchNodes();
     } catch (err: unknown) {
-      if (!isPermissionDeniedError(err)) message.error('标签保存失败');
+      if (shouldNotifyPageError(err)) message.error('标签保存失败');
 
     } finally {
       submitLoading.value = false;
@@ -605,7 +606,7 @@ export function useNodePage() {
         );
         isTaintModalVisible.value = false;
         await fetchNodes();
-      } else if (!isPermissionDeniedError(err)) {
+      } else if (shouldNotifyPageError(err)) {
         // c-8：403 已由请求层统一提示，不再弹通用失败
         message.error('污点更新失败');
       }
@@ -634,7 +635,7 @@ export function useNodePage() {
       message.success('YAML配置验证通过');
       return true;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('YAML配置验证失败');
+      if (shouldNotifyPageError(err)) message.error('YAML配置验证失败');
 
       return false;
     }
@@ -694,7 +695,7 @@ export function useNodePage() {
           message.success(`节点调度已${action}`);
           await fetchNodes();
         } catch (err) {
-          if (!isPermissionDeniedError(err)) message.error(`${action}节点调度失败`);
+          if (shouldNotifyPageError(err)) message.error(`${action}节点调度失败`);
 
         }
       },
@@ -737,10 +738,10 @@ export function useNodePage() {
       await fetchNodes();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('节点驱逐失败');
+      if (shouldNotifyPageError(err)) message.error('节点驱逐失败');
 
     } finally {
       submitLoading.value = false;
