@@ -424,6 +424,7 @@
                   class="k8s-form-input"
                   :maxlength="100"
                   :disabled="!can('k8s.node.taintAdd')"
+                  :readonly="!isNewTaint(taint)"
                 />
                 <a-input 
                   v-model:value="taint.value" 

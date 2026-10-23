@@ -100,6 +100,9 @@ spec:
         memory: 512Mi
 `;
 
+/** 流式连接结束原因：login-expired = 令牌刷新失败或刷新后仍未授权（已提示重新登录） */
+export type StreamCloseReason = 'login-expired';
+
 /** 日志 SSE / 终端 WS 连续重连上限（连上后清零） */
 export const STREAM_MAX_RECONNECT_ATTEMPTS = 5;
 
@@ -1315,7 +1318,7 @@ export function usePodPage() {
     onMessage: (data: string) => void,
     onError?: (error: Event) => void,
     onOpen?: () => void,
-    onClose?: () => void,
+    onClose?: (reason?: StreamCloseReason) => void,
   ) => {
     // 每次连接前读最新的访问令牌（令牌可能已被刷新）
     const accessStore = useAccessStore();
@@ -1369,10 +1372,10 @@ export function usePodPage() {
     };
 
     // 停止重连并结束连接
-    const stopStream = () => {
+    const stopStream = (reason?: StreamCloseReason) => {
       isManualClose = true;
       clearReconnectTimer();
-      onClose?.();
+      onClose?.(reason);
     };
 
     const scheduleReconnect = () => {
@@ -1391,7 +1394,7 @@ export function usePodPage() {
     // 401：先走统一刷新（单飞），成功后用新令牌重连；失败或刷新后仍 401 则停止并提示重新登录
     const recoverFromUnauthorized = async () => {
       if (tokenRefreshed) {
-        stopStream();
+        stopStream('login-expired');
         await notifyStreamLoginExpired();
         return;
       }
@@ -1399,7 +1402,8 @@ export function usePodPage() {
       const token = await refreshAccessTokenForStream();
       if (isManualClose) return;
       if (!token) {
-        stopStream();
+        // 刷新失败已由 refreshAccessTokenForStream 提示「登录已过期，请重新登录」
+        stopStream('login-expired');
         return;
       }
       if (reconnectAttempts >= STREAM_MAX_RECONNECT_ATTEMPTS) {
@@ -1638,13 +1642,13 @@ export function usePodPage() {
           isLogsStreaming.value = true;
         },
         // onClose - 连接关闭（只有在真正结束时才调用）
-        () => {
+        (reason?: StreamCloseReason) => {
           isLogsStreaming.value = false;
           logsLoading.value = false;
           logsStreamConnection.value = null;
 
-          // 只有在模态框还开着时才提示最终关闭
-          if (isLogsModalVisible.value) {
+          // 只有在模态框还开着时才提示最终关闭；登录过期只保留「登录已过期，请重新登录」
+          if (isLogsModalVisible.value && reason !== 'login-expired') {
             message.info('📡 实时日志连接已停止');
           }
         },
@@ -1848,7 +1852,7 @@ export function usePodPage() {
     onMessage: (data: string) => void,
     onError?: (error: Event) => void,
     onOpen?: () => void,
-    onClose?: () => void,
+    onClose?: (reason?: StreamCloseReason) => void,
     onReconnect?: () => void,
   ) => {
     // 获取认证token
@@ -1891,14 +1895,26 @@ export function usePodPage() {
     let reconnectTimeoutId: NodeJS.Timeout | null = null;
     // 本轮断线（直到下次连上）是否已刷新过令牌：只刷新一次
     let tokenRefreshed = false;
+    // 复审 v4 P2-C：连上之后收到 4401 是否已刷新过令牌。单独计数，不在 onopen 里清零，
+    // 否则「连上 → 4401 → 刷新 → 连上（清零）→ 4401」会无限刷新重连
+    let unauthorizedAfterOpenRefreshed = false;
+    // 握手阶段的 onerror 先暂存，等刷新结果出来再决定要不要报给调用方（刷新失败只提示登录过期）
+    let pendingHandshakeError: Event | null = null;
 
-    const stopReconnect = () => {
+    const stopReconnect = (reason?: StreamCloseReason) => {
       isManualClose = true;
+      pendingHandshakeError = null;
       if (reconnectTimeoutId) {
         clearTimeout(reconnectTimeoutId);
         reconnectTimeoutId = null;
       }
-      onClose?.();
+      onClose?.(reason);
+    };
+
+    const flushHandshakeError = () => {
+      const error = pendingHandshakeError;
+      pendingHandshakeError = null;
+      if (error) onError?.(error);
     };
 
     const scheduleReconnect = () => {
@@ -1916,13 +1932,17 @@ export function usePodPage() {
 
     // 握手失败（浏览器拿不到 HTTP 状态）或 4401：先走统一刷新（单飞）再重连；
     // 刷新失败则停止重连并提示重新登录；本轮已刷新过则按退避重连，4401 直接停止
+    // 复审 v4 P3-5：握手失败（!opened）不一定是令牌问题——浏览器拿不到握手的 HTTP 状态，
+    // 网络断开、网关/后端不可用、Pod 或容器不存在、403 等都会表现为同样的失败。这里先刷新一次令牌
+    // 只是兜底（刷新成功但仍失败时按退避重连，最多 STREAM_MAX_RECONNECT_ATTEMPTS 次），并不说明原因是令牌
     const recoverFromHandshakeFailure = async (code: number) => {
       if (tokenRefreshed) {
         if (code === 4401) {
-          stopReconnect();
+          stopReconnect('login-expired');
           await notifyStreamLoginExpired();
           return;
         }
+        flushHandshakeError();
         scheduleReconnect();
         return;
       }
@@ -1930,7 +1950,34 @@ export function usePodPage() {
       const token = await refreshAccessTokenForStream();
       if (isManualClose) return;
       if (!token) {
+        // 刷新失败已提示「登录已过期，请重新登录」，不再报连接错误
+        stopReconnect('login-expired');
+        return;
+      }
+      flushHandshakeError();
+      if (reconnectAttempts >= STREAM_MAX_RECONNECT_ATTEMPTS) {
         stopReconnect();
+        return;
+      }
+      onReconnect?.();
+      reconnectAttempts++;
+      connect();
+    };
+
+    // 复审 v4 P2-C：连上之后收到 4401（令牌在会话中失效）：只刷新一次并重连；
+    // 重连后再次收到 4401 就停止重连并提示重新登录（这个标记不随 onopen 清零）
+    const recoverFromUnauthorizedAfterOpen = async () => {
+      if (unauthorizedAfterOpenRefreshed) {
+        stopReconnect('login-expired');
+        await notifyStreamLoginExpired();
+        return;
+      }
+      unauthorizedAfterOpenRefreshed = true;
+      tokenRefreshed = true;
+      const token = await refreshAccessTokenForStream();
+      if (isManualClose) return;
+      if (!token) {
+        stopReconnect('login-expired');
         return;
       }
       if (reconnectAttempts >= STREAM_MAX_RECONNECT_ATTEMPTS) {
@@ -2017,6 +2064,11 @@ export function usePodPage() {
 
         socket.onerror = (error) => {
           if (socket !== ownedSocket) return;
+          if (!opened) {
+            // 握手失败：onclose 里先刷新令牌，再决定是否报错
+            pendingHandshakeError = error;
+            return;
+          }
           onError?.(error);
         };
 
@@ -2034,10 +2086,14 @@ export function usePodPage() {
           }
 
           if (isManualClose) {
+            pendingHandshakeError = null;
             onClose?.();
-          } else if (!opened || event.code === 4401) {
-            // 握手失败或令牌失效：先刷新令牌再重连
+          } else if (!opened) {
+            // 握手失败（含握手阶段的 4401）：先刷新令牌再重连，见 recoverFromHandshakeFailure 的说明（P3-5）
             void recoverFromHandshakeFailure(event.code);
+          } else if (event.code === 4401) {
+            // 连上之后令牌失效（P2-C）
+            void recoverFromUnauthorizedAfterOpen();
           } else if (!event.wasClean) {
             // 非正常关闭且不是手动关闭，尝试重连
             scheduleReconnect();
@@ -2114,6 +2170,9 @@ export function usePodPage() {
         shell: execFormModel.value.shell,
       };
 
+      // 「终端连接出现问题」每次连接流程（本次 connectToTerminal，含自动重连）只提示一次
+      let terminalErrorNotified = false;
+
       // 建立WebSocket连接
       terminalConnection.value = execK8sPodWebSocket(
         params,
@@ -2126,7 +2185,10 @@ export function usePodPage() {
         // onError - 连接错误
         (_error: Event) => {
           // Error occurred in terminal connection
-          message.error('终端连接出现问题');
+          if (!terminalErrorNotified) {
+            terminalErrorNotified = true;
+            message.error('终端连接出现问题');
+          }
           isTerminalConnected.value = false;
           terminalLoading.value = false;
         },
@@ -2155,13 +2217,14 @@ export function usePodPage() {
           }
         },
         // onClose - 连接关闭
-        () => {
+        (reason?: StreamCloseReason) => {
           isTerminalConnected.value = false;
           terminalLoading.value = false;
 
           if (terminal.value && isExecModalVisible.value) {
             terminal.value.writeln('\r\n\r\n连接已断开');
-            message.info('终端连接已断开');
+            // 登录过期只保留「登录已过期，请重新登录」
+            if (reason !== 'login-expired') message.info('终端连接已断开');
           }
         },
         () => {

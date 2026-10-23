@@ -13,6 +13,10 @@ import {
   PERMISSION_DENIED_MESSAGE_KEY,
 } from '#/utils/permission/forbidden';
 
+import {
+  TAINT_DUPLICATE_EFFECT_MESSAGE,
+  TAINT_KEY_EXISTS_MESSAGE,
+} from './Node';
 import Node from './Node.vue';
 
 // 挂载完整 Node.vue（antd Table + Modal）在满载 CI 上单条可能超过默认 5s（复审 P3-7）
@@ -504,18 +508,20 @@ describe('c-5 新增行与已保存污点同 key：撤销新增行', () => {
     },
   );
 
-  it('只有 add 码，新增行 value 不同且不撤销：保存只发一次 add（按 key 更新），不发删除', async () => {
+  it('只有 add 码，新增行 value 不同且不撤销：等于修改已有污点，提示需先删除，不发请求（窝窝头答复 2）', async () => {
     setSubject([ADD]);
     await mountPage();
     await openTaintModal();
     await addRowWithSameKey('cpu');
     await save();
     expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
-    expect(api.addK8sNodeTaints).toHaveBeenCalledTimes(1);
-    expect(api.addK8sNodeTaints).toHaveBeenCalledWith(
-      expect.objectContaining({ taints: [{ ...EXISTING, value: 'cpu' }] }),
-    );
-    expect(message.error).not.toHaveBeenCalled();
+    expect(api.addK8sNodeTaints).not.toHaveBeenCalled();
+    expect(message.error).toHaveBeenCalledTimes(1);
+    expect(message.error).toHaveBeenCalledWith({
+      content: TAINT_KEY_EXISTS_MESSAGE,
+      key: TAINT_KEY_EXISTS_MESSAGE,
+    });
+    expect(modalRoot()).toBeTruthy();
   });
 
   it('add + delete 码：已保存的行改了 key 再删除，按它原来的 key 删除（行身份，不看当前输入）', async () => {
@@ -549,5 +555,169 @@ describe('c-5 新增行与已保存污点同 key：撤销新增行', () => {
     expect(api.addK8sNodeTaints).toHaveBeenCalledWith(
       expect.objectContaining({ taints: [{ ...EXISTING, value: 'cpu' }] }),
     );
+  });
+});
+
+/**
+ * 第一层复审 v4：P3-1（已保存行 key 只读 + 逻辑兜底不留孤儿）、P3-2（后端 mergeTaints 按 key 整体替换，
+ * 某个 key 要发就把这个 key 当前所有行一起发）、窝窝头答复 2（新增行与已保存污点同 key）
+ */
+describe('复审 v4 P3-1 / P3-2：污点按 key 整组提交', () => {
+  const rows = () => [
+    ...modalRoot()!.querySelectorAll<HTMLElement>('.k8s-key-value-row'),
+  ];
+  const keyInput = (row: HTMLElement) => row.querySelector('input')!;
+
+  async function typeInto(row: HTMLElement, index: number, text: string) {
+    const input = row.querySelectorAll<HTMLInputElement>('input')[index]!;
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+    await flushPromises();
+  }
+
+  async function addRow(taint: { effect: string; key: string; value: string }) {
+    bodyButton('添加污点')!.click();
+    await flushPromises();
+    await typeInto(rows().at(-1)!, 0, taint.key);
+    await typeInto(rows().at(-1)!, 1, taint.value);
+    wrapper.vm.taintFormModel.taints.at(-1).effect = taint.effect;
+    await flushPromises();
+  }
+
+  const NO_EXECUTE = { ...EXISTING, effect: 'NoExecute' };
+
+  function savedTaints(taints: (typeof EXISTING)[]) {
+    api.getK8sNodeTaints.mockResolvedValue({ taints });
+  }
+
+  it.each([
+    ['只有 add 码', [ADD]],
+    ['add + delete 码', [ADD, DELETE]],
+  ])('P3-1 %s：已保存行的 key 输入框只读，新增行可编辑', async (_l, codes) => {
+    setSubject(codes);
+    await mountPage();
+    await openTaintModal();
+    bodyButton('添加污点')!.click();
+    await flushPromises();
+    expect(keyInput(rows()[0]!).readOnly).toBe(true);
+    expect(keyInput(rows()[1]!).readOnly).toBe(false);
+    // value 仍可修改（taintAdd 码覆盖「添加/修改污点」）
+    expect(rows()[0]!.querySelectorAll('input')[1]!.readOnly).toBe(false);
+  });
+
+  it('P3-1 兜底，add + delete 码：已保存行的 key 被改（a→b）不删行，保存时先删 a 再加 b，不留孤儿', async () => {
+    setSubject([ADD, DELETE]);
+    await mountPage();
+    await openTaintModal();
+    await typeInto(rows()[0]!, 0, 'renamed');
+    await save();
+    expect(api.deleteK8sNodeTaints).toHaveBeenCalledTimes(1);
+    expect(api.deleteK8sNodeTaints).toHaveBeenCalledWith(
+      expect.objectContaining({ taint_keys: [EXISTING.key] }),
+    );
+    expect(api.addK8sNodeTaints).toHaveBeenCalledTimes(1);
+    expect(api.addK8sNodeTaints).toHaveBeenCalledWith(
+      expect.objectContaining({ taints: [{ ...EXISTING, key: 'renamed' }] }),
+    );
+  });
+
+  it('P3-1 兜底，只有 add 码：已保存行的 key 被改，需要删除原 key → 整单不发、提示无权限', async () => {
+    setSubject([ADD]);
+    await mountPage();
+    await openTaintModal();
+    await typeInto(rows()[0]!, 0, 'renamed');
+    await save();
+    expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
+    expect(api.addK8sNodeTaints).not.toHaveBeenCalled();
+    expect(message.error).toHaveBeenCalledWith({
+      content: PERMISSION_DENIED_MESSAGE,
+      key: PERMISSION_DENIED_MESSAGE_KEY,
+    });
+  });
+
+  it('P3-2 只有 add 码：同 key 两个 effect，只改其中一行的 value，两行一起发', async () => {
+    savedTaints([EXISTING, NO_EXECUTE]);
+    setSubject([ADD]);
+    await mountPage();
+    await openTaintModal();
+    await typeInto(rows()[1]!, 1, 'cpu');
+    await save();
+    expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
+    expect(api.addK8sNodeTaints).toHaveBeenCalledTimes(1);
+    expect(api.addK8sNodeTaints).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taints: [EXISTING, { ...NO_EXECUTE, value: 'cpu' }],
+      }),
+    );
+  });
+
+  it('P3-2 add + delete 码：同 key 两个 effect 删掉一行，先按 key 删除再把剩下的一行加回', async () => {
+    savedTaints([EXISTING, NO_EXECUTE]);
+    setSubject([ADD, DELETE]);
+    await mountPage();
+    await openTaintModal();
+    rows()[0]!.querySelector<HTMLButtonElement>('.k8s-remove-btn')!.click();
+    await flushPromises();
+    await save();
+    expect(api.deleteK8sNodeTaints).toHaveBeenCalledWith(
+      expect.objectContaining({ taint_keys: [EXISTING.key] }),
+    );
+    expect(api.addK8sNodeTaints).toHaveBeenCalledWith(
+      expect.objectContaining({ taints: [NO_EXECUTE] }),
+    );
+  });
+
+  it('P3-2：新增一个无关 key，只发这一行，不带上其他 key', async () => {
+    setSubject([ADD]);
+    await mountPage();
+    await openTaintModal();
+    const zone = { key: 'zone', value: 'a', effect: 'NoSchedule' };
+    await addRow(zone);
+    await save();
+    expect(api.addK8sNodeTaints).toHaveBeenCalledWith(
+      expect.objectContaining({ taints: [zone] }),
+    );
+  });
+
+  it('答复 2，只有 add 码：新增行与已保存污点同 key、不同 effect，也拦下，不发请求', async () => {
+    setSubject([ADD]);
+    await mountPage();
+    await openTaintModal();
+    await addRow(NO_EXECUTE);
+    await save();
+    expect(api.addK8sNodeTaints).not.toHaveBeenCalled();
+    expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
+    expect(message.error).toHaveBeenCalledWith({
+      content: TAINT_KEY_EXISTS_MESSAGE,
+      key: TAINT_KEY_EXISTS_MESSAGE,
+    });
+  });
+
+  it('答复 2，add + delete 码：新增行与已保存污点同 key、不同 effect → 这个 key 的所有行一起发 add，不发删除', async () => {
+    setSubject([ADD, DELETE]);
+    await mountPage();
+    await openTaintModal();
+    await addRow(NO_EXECUTE);
+    await save();
+    expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
+    expect(api.addK8sNodeTaints).toHaveBeenCalledTimes(1);
+    expect(api.addK8sNodeTaints).toHaveBeenCalledWith(
+      expect.objectContaining({ taints: [EXISTING, NO_EXECUTE] }),
+    );
+    expect(message.error).not.toHaveBeenCalled();
+  });
+
+  it('add + delete 码：新增行与已保存污点同 key 同 effect（只是 value 不同）→ 提示重复，不发请求', async () => {
+    setSubject([ADD, DELETE]);
+    await mountPage();
+    await openTaintModal();
+    await addRow({ ...EXISTING, value: 'cpu' });
+    await save();
+    expect(api.addK8sNodeTaints).not.toHaveBeenCalled();
+    expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
+    expect(message.error).toHaveBeenCalledWith({
+      content: TAINT_DUPLICATE_EFFECT_MESSAGE,
+      key: TAINT_DUPLICATE_EFFECT_MESSAGE,
+    });
   });
 });
