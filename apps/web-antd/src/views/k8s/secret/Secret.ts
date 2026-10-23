@@ -132,6 +132,8 @@ export function useSecretPage() {
   // 复审 P2/P3-2：打开编辑时重新拉详情取最新键列表；editOpenSeq 防止关闭 / 切换行后迟到的响应写回
   const editDataLoading = ref(false);
   let editOpenSeq = 0;
+  // incr8 P3-5：YAML 弹窗的打开序号（打开 / 关闭都 +1），提交在 validate 前取快照，与编辑表单一致
+  let yamlOpenSeq = 0;
 
   // form models
   const createFormModel = ref<{
@@ -603,6 +605,7 @@ export function useSecretPage() {
   const showYamlModal = async (record: K8sSecret) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
+    yamlOpenSeq += 1;
     
     try {
       submitLoading.value = true;
@@ -640,6 +643,7 @@ export function useSecretPage() {
   };
 
   const closeYamlModal = () => {
+    yamlOpenSeq += 1;
     isYamlModalVisible.value = false;
     currentOperationSecret.value = null;
     yamlFormModel.value.yaml = '';
@@ -647,9 +651,13 @@ export function useSecretPage() {
 
   const submitYamlForm = async () => {
     if (!yamlFormRef.value || !currentOperationSecret.value) return;
+    // incr8 P3-5：validate 前取快照；validate 期间关闭 / 打开了别的 Secret，就放弃这次提交
+    const seq = yamlOpenSeq;
+    const target = currentOperationSecret.value;
     
     try {
       await yamlFormRef.value.validate();
+      if (seq !== yamlOpenSeq) return;
       // SEC-25/26 P2-1：裸 <redacted> 由后端还原为集群原值，原样放行；
       // 带引号的会被下面的编码逻辑当明文 base64，后端不再识别，拦截；
       // 第四轮：块标量（| / >）里单独一行的 <redacted> 后端按字面保存、不还原，同样拦截
@@ -677,15 +685,16 @@ export function useSecretPage() {
       submitLoading.value = true;
       
       const params: UpdateSecretByYamlReq = {
-        cluster_id: currentOperationSecret.value.cluster_id,
-        namespace: currentOperationSecret.value.namespace,
-        name: currentOperationSecret.value.name,
+        cluster_id: target.cluster_id,
+        namespace: target.namespace,
+        name: target.name,
         yaml: encodedYaml,
       };
       
       await updateSecretByYamlApi(params);
       message.success('Secret YAML 更新成功');
-      isYamlModalVisible.value = false;
+      // 请求期间已关闭 / 换成别的 Secret：不去关后来打开的弹窗
+      if (seq === yamlOpenSeq) isYamlModalVisible.value = false;
       await fetchSecrets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
