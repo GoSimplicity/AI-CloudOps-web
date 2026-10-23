@@ -14,7 +14,7 @@ export PATH="$HOME/.local/bin:$PATH"
 command -v gitleaks >/dev/null || { echo "缺少依赖: gitleaks" >&2; exit 2; }
 command -v node >/dev/null || { echo "缺少依赖: node" >&2; exit 2; }
 HUSKY_BIN="$REPO/node_modules/husky/bin.js"
-[ -f "$HUSKY_BIN" ] || { echo "缺少依赖: $HUSKY_BIN（请先在仓库中 pnpm install）" >&2; exit 2; }
+[ -f "$HUSKY_BIN" ] || { echo "缺少依赖: ${HUSKY_BIN}（请先在仓库中 pnpm install）" >&2; exit 2; }
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export GIT_CONFIG_GLOBAL="$TMP/gitconfig" GIT_CONFIG_NOSYSTEM=1 XDG_CONFIG_HOME="$TMP/xdg"
 git config --global user.name test; git config --global user.email test@example.invalid
