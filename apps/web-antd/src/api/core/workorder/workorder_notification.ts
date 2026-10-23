@@ -107,6 +107,12 @@ export type Notification = WorkorderNotificationItem;
 export type NotificationLog = WorkorderNotificationLogItem;
 export type NotificationQueue = WorkorderNotificationQueueItem;
 
+export interface NotificationRecipientAddress {
+  channel: string;
+  address: string;
+  name?: string;
+}
+
 // 工单通知配置
 export interface WorkorderNotificationItem {
   id: number; // ID
@@ -125,6 +131,7 @@ export interface WorkorderNotificationItem {
   recipient_users?: string[]; // 自定义接收人用户ID
   recipient_roles?: string[]; // 接收人角色ID
   recipient_depts?: string[]; // 接收人部门ID
+  recipient_addresses?: NotificationRecipientAddress[]; // 按渠道明确的外部接收地址
   message_template: string; // 消息模板
   subject_template?: string; // 主题模板
   scheduled_time?: string; // 定时发送时间
@@ -146,17 +153,15 @@ export interface CreateNotificationReq {
   template_id?: number; // 关联模板ID
   category_id?: number; // 关联分类ID
   event_types: string[]; // 触发事件类型
-  trigger_type: string; // 触发类型
-  trigger_condition?: Record<string, any>; // 触发条件
+  trigger_type: typeof NotificationTrigger.IMMEDIATE; // 触发类型
   channels: string[]; // 通知渠道
   recipient_types: string[]; // 接收人类型
   recipient_users?: string[]; // 自定义接收人用户ID
   recipient_roles?: string[]; // 接收人角色ID
   recipient_depts?: string[]; // 接收人部门ID
+  recipient_addresses?: NotificationRecipientAddress[]; // 按渠道明确的外部接收地址
   message_template: string; // 消息模板
   subject_template?: string; // 主题模板
-  scheduled_time?: string; // 定时发送时间
-  repeat_interval?: number; // 重复间隔(分钟)
   max_retries?: number; // 最大重试次数
   retry_interval?: number; // 重试间隔(分钟)
   status?: number; // 状态
@@ -174,17 +179,15 @@ export interface UpdateNotificationReq {
   template_id?: number; // 关联模板ID
   category_id?: number; // 关联分类ID
   event_types?: string[]; // 触发事件类型
-  trigger_type?: string; // 触发类型
-  trigger_condition?: Record<string, any>; // 触发条件
+  trigger_type?: typeof NotificationTrigger.IMMEDIATE; // 触发类型
   channels?: string[]; // 通知渠道
   recipient_types?: string[]; // 接收人类型
   recipient_users?: string[]; // 自定义接收人用户ID
   recipient_roles?: string[]; // 接收人角色ID
   recipient_depts?: string[]; // 接收人部门ID
+  recipient_addresses?: NotificationRecipientAddress[]; // 按渠道明确的外部接收地址
   message_template?: string; // 消息模板
   subject_template?: string; // 主题模板
-  scheduled_time?: string; // 定时发送时间
-  repeat_interval?: number; // 重复间隔(分钟)
   max_retries?: number; // 最大重试次数
   retry_interval?: number; // 重试间隔(分钟)
   status?: number; // 状态
@@ -343,7 +346,7 @@ export const getRecipientTypeName = (recipientType: string): string => {
     [RecipientTypes.USER]: '指定用户',
     [RecipientTypes.ROLE]: '角色用户',
     [RecipientTypes.DEPT]: '部门用户',
-    [RecipientTypes.CUSTOM]: '自定义用户',
+    [RecipientTypes.CUSTOM]: '自定义地址',
   };
   return typeNames[recipientType] || '未知类型';
 };

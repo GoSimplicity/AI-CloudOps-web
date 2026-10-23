@@ -235,10 +235,13 @@
       @cancel="closeNotificationDialog"
       :destroy-on-close="true"
       :confirm-loading="notificationDialog.saving"
+      :closable="!notificationDialog.saving"
+      :mask-closable="!notificationDialog.saving"
+      :cancel-button-props="{ disabled: notificationDialog.saving }"
       class="responsive-modal notification-config-modal"
     >
       <a-alert v-if="Object.values(optionErrors).some(Boolean)" type="warning" message="部分关联选项加载失败，重新打开相应选择器可重试" :description="Object.values(optionErrors).filter(Boolean).join('；')" show-icon />
-      <a-form ref="formRef" :model="notificationDialog.form" :rules="notificationRules" layout="vertical">
+      <a-form :disabled="notificationDialog.saving" ref="formRef" :model="notificationDialog.form" :rules="notificationRules" layout="vertical">
         <a-form-item label="配置名称" name="name">
           <a-input
             v-model:value="notificationDialog.form.name"
@@ -386,12 +389,14 @@
           </div>
         </a-form-item>
 
+        <a-alert v-if="notificationDialog.form.triggerType !== NotificationTrigger.IMMEDIATE || notificationDialog.form.scheduledTime || notificationDialog.form.repeatInterval != null || notificationDialog.form.triggerCondition"
+          type="warning" show-icon message="当前版本仅支持立即触发；历史高级设置仅供查看，不会透传为生效参数。历史高级规则可保留类型并禁用，启用前需明确选择立即触发。" />
         <a-form-item label="触发类型" name="triggerType">
           <a-radio-group v-model:value="notificationDialog.form.triggerType">
             <a-radio :value="NotificationTrigger.IMMEDIATE">立即触发</a-radio>
-            <a-radio :value="NotificationTrigger.DELAYED">延迟触发</a-radio>
-            <a-radio :value="NotificationTrigger.SCHEDULED">定时触发</a-radio>
-            <a-radio :value="NotificationTrigger.CONDITIONAL">条件触发</a-radio>
+            <a-radio :value="NotificationTrigger.DELAYED" disabled>延迟触发（未支持）</a-radio>
+            <a-radio :value="NotificationTrigger.SCHEDULED" disabled>定时触发（未支持）</a-radio>
+            <a-radio :value="NotificationTrigger.CONDITIONAL" disabled>条件触发（未支持）</a-radio>
           </a-radio-group>
         </a-form-item>
 
@@ -402,6 +407,7 @@
         >
           <a-textarea
             v-model:value="notificationDialog.form.triggerCondition"
+            disabled
             placeholder="请输入触发条件（JSON格式）"
             :rows="4"
           />
@@ -449,13 +455,12 @@
           </div>
         </a-form-item>
 
-        <a-alert v-if="notificationDialog.form.recipientTypes.some(type => ['dept', 'custom'].includes(type))" type="warning" message="此历史配置包含未支持的部门或自定义接收人，请改为创建人、处理人、指定用户或角色后保存。" show-icon />
         <a-form-item label="接收人类型" name="recipientTypes">
           <a-checkbox-group v-model:value="notificationDialog.form.recipientTypes" style="width: 100%;">
             <a-row :gutter="[16, 8]">
               <a-col
                 :span="12"
-                v-for="recipientType in getAllRecipientTypes().filter(type => !['dept', 'custom'].includes(type))"
+                v-for="recipientType in getAllRecipientTypes()"
                 :key="recipientType"
               >
                 <a-checkbox :value="recipientType">
@@ -496,6 +501,71 @@
             style="width: 100%"
             :token-separators="[',', ';', ' ']"
           />
+        </a-form-item>
+
+        <a-form-item
+          v-if="notificationDialog.form.recipientTypes.includes('custom')"
+          label="自定义接收地址"
+          required
+        >
+          <a-alert
+            v-if="recipientError"
+            class="recipient-error"
+            :message="recipientError"
+            type="error"
+            show-icon
+          />
+          <p class="text-gray">
+            每个地址明确选择渠道。邮箱填写邮箱地址，飞书填写 ou_/on_/oc_ ID
+          </p>
+          <fieldset
+            v-for="(address, index) in notificationDialog.form.recipientAddresses"
+            :key="index"
+            class="recipient-address-row"
+          >
+            <legend>接收地址 {{ index + 1 }}</legend>
+            <a-select
+              v-model:value="address.channel"
+              :aria-label="'自定义接收渠道' + (index + 1)"
+            >
+              <a-select-option
+                v-for="channel in notificationDialog.form.channels.filter((channel) =>
+                  ['email', 'feishu'].includes(channel),
+                )"
+                :key="channel"
+                :value="channel"
+                >{{ getNotificationChannelName(channel) }}</a-select-option
+              >
+            </a-select>
+            <a-input
+              v-model:value="address.address"
+              :aria-label="'自定义接收地址' + (index + 1)"
+              placeholder="邮箱地址或飞书ID"
+            />
+            <a-input
+              v-model:value="address.name"
+              :aria-label="'自定义接收人名称' + (index + 1)"
+              placeholder="接收人名称（可选）"
+              :maxlength="100"
+            />
+            <a-button
+              danger
+              :aria-label="'移除接收地址' + (index + 1)"
+              @click="notificationDialog.form.recipientAddresses.splice(index, 1)"
+              >移除</a-button
+            >
+          </fieldset>
+          <a-button
+            @click="addRecipientAddress"
+            :disabled="
+              notificationDialog.saving ||
+              notificationDialog.form.recipientAddresses.length >= 100 ||
+              !notificationDialog.form.channels.some((channel) =>
+                ['email', 'feishu'].includes(channel),
+              )
+            "
+            >添加接收地址</a-button
+          >
         </a-form-item>
 
         <a-form-item label="消息模板" name="messageTemplate">
@@ -620,6 +690,7 @@
         >
           <a-date-picker
             v-model:value="notificationDialog.form.scheduledTime"
+            disabled
             show-time
             placeholder="请选择发送时间"
             style="width: 100%"
@@ -627,9 +698,10 @@
           />
         </a-form-item>
 
-        <a-form-item label="重复间隔（分钟）" name="repeatInterval">
+        <a-form-item v-if="notificationDialog.isEdit && notificationDialog.form.repeatInterval != null" label="历史重复间隔（不生效）" name="repeatInterval">
           <a-input-number
             v-model:value="notificationDialog.form.repeatInterval"
+            disabled
             placeholder="重复间隔（分钟）"
             :min="0"
             style="width: 100%"
@@ -663,8 +735,9 @@
           </a-select>
         </a-form-item>
 
-        <a-form-item label="状态" name="status" v-if="notificationDialog.isEdit">
+        <a-form-item label="状态" name="status">
           <a-switch
+            aria-label="通知启用状态"
             :checked="notificationDialog.form.status === NotificationStatus.Enabled"
             @change="(checked: boolean) => notificationDialog.form.status = checked ? NotificationStatus.Enabled : NotificationStatus.Disabled"
             checked-children="启用"
@@ -929,6 +1002,7 @@ import {
   IsDefault,
   type Notification,
   type NotificationLog,
+  type NotificationRecipientAddress,
   type CreateNotificationReq,
   type UpdateNotificationReq,
   type ListNotificationReq,
@@ -1015,6 +1089,9 @@ const logsColumns = [
 // 状态数据
 const loading = ref(false);
 const loadError = ref('');
+const recipientError = ref('');
+const originalTriggerType = ref<string>(NotificationTrigger.IMMEDIATE);
+let formEpoch = 0;
 const logsError = ref('');
 let listRequest = 0;
 let logsRequest = 0;
@@ -1119,13 +1196,14 @@ const notificationDialog = reactive({
     recipientUsers: [] as string[],
     recipientRoles: [] as string[],
     recipientDepts: [] as string[],
+    recipientAddresses: [] as NotificationRecipientAddress[],
     messageTemplate: '您好 {recipient_name}！\n\n工单通知：{title}\n工单编号：{serial_number}\n优先级：{priority_text}\n状态：{status}\n\n详情请查看系统。\n\n通知时间：{notification_time}\n平台：{platform_name}',
     subjectTemplate: '',
     scheduledTime: undefined as any,
     repeatInterval: undefined as number | undefined,
     maxRetries: 3,
     retryInterval: 5,
-    status: NotificationStatus.Enabled as number,
+    status: NotificationStatus.Disabled as number,
     priority: NotificationPriority.Medium as number,
     isDefault: IsDefault.No as number
   }
@@ -1147,6 +1225,37 @@ const manualSendDialog = reactive({
   }
 });
 
+const addRecipientAddress = () => {
+  const channel = notificationDialog.form.channels.find((channel) =>
+    ['email', 'feishu'].includes(channel),
+  );
+  if (channel)
+    notificationDialog.form.recipientAddresses.push({
+      channel,
+      address: '',
+      name: '',
+    });
+};
+const validRecipientIds = (values: string[]) =>
+  values.length > 0 &&
+  values.every(
+    (value) => /^\d+$/.test(value.trim()) && /[1-9]/.test(value.trim()),
+  );
+const addressError = (channel: string, raw: string) => {
+  const value = raw.trim();
+  if (!value || /[\u0000-\u001f\u007f-\u009f]/.test(value))
+    return '接收地址不能为空或包含控制字符';
+  if (channel === 'email' && (value.length > 254 || !value.includes('@')))
+    return '请输入有效邮箱地址';
+  if (
+    channel === 'feishu' &&
+    (value.length > 100 || !/^o[unc]_[a-zA-Z0-9]+$/.test(value))
+  )
+    return '飞书地址必须为ou_/on_/oc_格式ID';
+  if (!['email', 'feishu'].includes(channel)) return '请选择邮件或飞书渠道';
+  return '';
+};
+
 // 表单验证规则
 const notificationRules = {
   name: [
@@ -1164,39 +1273,15 @@ const notificationRules = {
   recipientTypes: [
     { required: true, type: 'array', min: 1, message: '请选择至少一种接收人类型', trigger: 'change' }
   ],
-  recipientUsers: [
-    {
-      validator: (_rule: any, value: string[], callback: Function) => {
-        if (notificationDialog.form.recipientTypes.includes('user') && (!value || value.length === 0 || value.some(v => !v || !v.trim()))) {
-          callback(new Error('选择了用户类型接收人时，请至少输入一个有效的用户ID'));
-        }
-        callback();
-      },
-      trigger: 'change'
-    }
-  ],
-  recipientRoles: [
-    {
-      validator: (_rule: any, value: string[], callback: Function) => {
-        if (notificationDialog.form.recipientTypes.includes('role') && (!value || value.length === 0 || value.some(v => !v || !v.trim()))) {
-          callback(new Error('选择了角色类型接收人时，请至少输入一个有效的角色ID'));
-        }
-        callback();
-      },
-      trigger: 'change'
-    }
-  ],
-  recipientDepts: [
-    {
-      validator: (_rule: any, value: string[], callback: Function) => {
-        if (notificationDialog.form.recipientTypes.includes('dept') && (!value || value.length === 0 || value.some(v => !v || !v.trim()))) {
-          callback(new Error('选择了部门类型接收人时，请至少输入一个有效的部门ID'));
-        }
-        callback();
-      },
-      trigger: 'change'
-    }
-  ],
+  recipientUsers: [{ validator: (_rule: unknown, values: string[] = []) =>
+    !notificationDialog.form.recipientTypes.includes('user') || validRecipientIds(values)
+      ? Promise.resolve() : Promise.reject(new Error('请输入正整数用户ID')), trigger: 'change' }],
+  recipientRoles: [{ validator: (_rule: unknown, values: string[] = []) =>
+    !notificationDialog.form.recipientTypes.includes('role') || validRecipientIds(values)
+      ? Promise.resolve() : Promise.reject(new Error('请输入正整数角色ID')), trigger: 'change' }],
+  recipientDepts: [{ validator: (_rule: unknown, values: string[] = []) =>
+    !notificationDialog.form.recipientTypes.includes('dept') || validRecipientIds(values)
+      ? Promise.resolve() : Promise.reject(new Error('请输入正整数部门ID')), trigger: 'change' }],
   messageTemplate: [
     { required: true, message: '请输入消息模板', trigger: 'blur' }
   ],
@@ -1304,9 +1389,9 @@ const getPriorityColor = (priority: number): string => {
 const getTriggerTypeName = (type: string): string => {
   const typeMap: Record<string, string> = {
     [NotificationTrigger.IMMEDIATE]: '立即触发',
-    [NotificationTrigger.DELAYED]: '延迟触发',
-    [NotificationTrigger.SCHEDULED]: '定时触发',
-    [NotificationTrigger.CONDITIONAL]: '条件触发'
+    [NotificationTrigger.DELAYED]: '延迟触发（未支持）',
+    [NotificationTrigger.SCHEDULED]: '定时触发（未支持）',
+    [NotificationTrigger.CONDITIONAL]: '条件触发（未支持）'
   };
   return typeMap[type] || type;
 };
@@ -1690,6 +1775,9 @@ const loadSendLogs = async (notificationId: number): Promise<void> => {
 
 // 事件处理
 const handleCreateNotification = (): void => {
+  ++formEpoch;
+  recipientError.value = '';
+  originalTriggerType.value = NotificationTrigger.IMMEDIATE;
   notificationDialog.isEdit = false;
   notificationDialog.saving = false;
   notificationDialog.form = {
@@ -1707,13 +1795,14 @@ const handleCreateNotification = (): void => {
     recipientUsers: [],
     recipientRoles: [],
     recipientDepts: [],
+    recipientAddresses: [],
     messageTemplate: '您好 {recipient_name}！\n\n工单通知：{title}\n工单编号：{serial_number}\n优先级：{priority_text}\n状态：{status}\n\n详情请查看系统。\n\n通知时间：{notification_time}\n平台：{platform_name}',
     subjectTemplate: '',
     scheduledTime: undefined,
     repeatInterval: undefined,
     maxRetries: 3,
     retryInterval: 5,
-    status: NotificationStatus.Enabled,
+    status: NotificationStatus.Disabled,
     priority: NotificationPriority.Medium,
     isDefault: IsDefault.No
   };
@@ -1722,6 +1811,9 @@ const handleCreateNotification = (): void => {
 };
 
 const handleEditNotification = (record: Notification): void => {
+  ++formEpoch;
+  recipientError.value = '';
+  originalTriggerType.value = record.trigger_type;
   notificationDialog.isEdit = true;
   notificationDialog.saving = false;
   notificationDialog.form = {
@@ -1734,11 +1826,12 @@ const handleEditNotification = (record: Notification): void => {
     eventTypes: record.event_types || [],
     triggerType: record.trigger_type,
     triggerCondition: record.trigger_condition ? JSON.stringify(record.trigger_condition) : '',
-    channels: (record.channels || []).filter(channel => ['email', 'feishu'].includes(channel)),
+    channels: [...(record.channels || [])],
     recipientTypes: record.recipient_types || [],
     recipientUsers: record.recipient_users || [],
     recipientRoles: record.recipient_roles || [],
-    recipientDepts: record.recipient_depts || [],
+    recipientDepts: [...(record.recipient_depts || [])],
+    recipientAddresses: (record.recipient_addresses || []).map(address => ({ ...address })),
     messageTemplate: record.message_template,
     subjectTemplate: record.subject_template || '',
     scheduledTime: record.scheduled_time ? dayjs(record.scheduled_time) : undefined,
@@ -1943,61 +2036,108 @@ const handleDeleteNotification = (record: Notification): void => {
 };
 
 const saveNotification = async (): Promise<void> => {
+  if (notificationDialog.saving) return;
+  const epoch = formEpoch;
+  recipientError.value = '';
   try {
     await formRef.value?.validate();
   } catch (error) {
     return;
   }
 
+  if (notificationDialog.saving || epoch !== formEpoch) return;
   // 增加额外的业务逻辑验证
   const formData = notificationDialog.form;
 
+  if (
+    formData.channels.some((channel) => !['email', 'feishu'].includes(channel))
+  ) {
+    message.error('请先明确移除当前未支持的通知渠道');
+    return;
+  }
+  const preserveDisabledLegacy =
+    notificationDialog.isEdit &&
+    originalTriggerType.value !== NotificationTrigger.IMMEDIATE &&
+    formData.triggerType === originalTriggerType.value &&
+    formData.status === NotificationStatus.Disabled;
+  if (
+    formData.triggerType !== NotificationTrigger.IMMEDIATE &&
+    !preserveDisabledLegacy
+  ) {
+    message.error('当前仅支持立即触发，请明确调整类型或保留历史规则并禁用');
+    return;
+  }
+
   // 验证接收人配置完整性
-  if (formData.recipientTypes.includes('user') && (!formData.recipientUsers || formData.recipientUsers.length === 0 || formData.recipientUsers.some(u => !u || !u.trim()))) {
+  if (
+    formData.recipientTypes.includes('user') &&
+    (!formData.recipientUsers ||
+      formData.recipientUsers.length === 0 ||
+      formData.recipientUsers.some((u) => !u || !u.trim()))
+  ) {
     message.error('选择了用户类型接收人时，必须配置有效的用户ID');
     return;
   }
 
-  if (formData.recipientTypes.includes('role') && (!formData.recipientRoles || formData.recipientRoles.length === 0 || formData.recipientRoles.some(r => !r || !r.trim()))) {
+  if (
+    formData.recipientTypes.includes('role') &&
+    (!formData.recipientRoles ||
+      formData.recipientRoles.length === 0 ||
+      formData.recipientRoles.some((r) => !r || !r.trim()))
+  ) {
     message.error('选择了角色类型接收人时，必须配置有效的角色ID');
     return;
   }
 
-  if (formData.recipientTypes.includes('dept') && (!formData.recipientDepts || formData.recipientDepts.length === 0 || formData.recipientDepts.some(d => !d || !d.trim()))) {
+  if (
+    formData.recipientTypes.includes('dept') &&
+    (!formData.recipientDepts ||
+      formData.recipientDepts.length === 0 ||
+      formData.recipientDepts.some((d) => !d || !d.trim()))
+  ) {
     message.error('选择了部门类型接收人时，必须配置有效的部门ID');
     return;
   }
 
-  // 验证渠道与接收人类型的兼容性
-  const hasFeishuChannel = formData.channels.includes('feishu');
-  const hasUserRecipient = formData.recipientTypes.includes('user');
-
-  if (hasFeishuChannel && !hasUserRecipient && formData.recipientTypes.length === 1 && formData.recipientTypes.includes('creator')) {
-    message.warning('使用飞书通知时，建议同时配置用户ID接收人，以确保通知能正常发送');
+  const recipientAddresses = formData.recipientTypes.includes('custom')
+    ? formData.recipientAddresses.map((address) => ({
+        channel: address.channel,
+        address: address.address.trim(),
+        name: (address.name || '').trim(),
+      }))
+    : [];
+  if (formData.recipientTypes.includes('custom')) {
+    if (!recipientAddresses.length || recipientAddresses.length > 100) {
+      recipientError.value = '请配置1至100个自定义接收地址';
+      return;
+    }
+    for (const address of recipientAddresses) {
+      const invalid = !formData.channels.includes(address.channel)
+        ? '接收地址渠道必须包含在已选择的通知渠道中'
+        : addressError(address.channel, address.address);
+      if (invalid || Array.from(address.name).length > 100) {
+        recipientError.value = invalid || '接收人名称不能超过100字符';
+        return;
+      }
+    }
   }
 
   notificationDialog.saving = true;
 
   try {
-    const scheduledTime = formData.scheduledTime ?
-      dayjs(formData.scheduledTime).format('YYYY-MM-DD HH:mm:ss') :
-      undefined;
-
-    // 处理触发条件
-    let triggerCondition: Record<string, any> | undefined;
-    if (formData.triggerCondition) {
-      try {
-        triggerCondition = JSON.parse(formData.triggerCondition);
-      } catch {
-        message.error('触发条件格式不正确，请输入有效的JSON');
-        return;
-      }
-    }
-
     // 清理空的接收人数据
-    const cleanRecipientUsers = formData.recipientUsers?.filter(u => u && u.trim()) || [];
-    const cleanRecipientRoles = formData.recipientRoles?.filter(r => r && r.trim()) || [];
-    const cleanRecipientDepts = formData.recipientDepts?.filter(d => d && d.trim()) || [];
+    const cleanRecipientUsers =
+      formData.recipientUsers
+        ?.filter((u) => u && u.trim())
+        .map((u) => u.trim()) || [];
+    const cleanRecipientRoles =
+      formData.recipientRoles
+        ?.filter((r) => r && r.trim())
+        .map((r) => r.trim()) || [];
+    const cleanRecipientDepts =
+      formData.recipientDepts
+        ?.filter((d) => d && d.trim())
+        .map((d) => d.trim()) || [];
 
     if (notificationDialog.isEdit) {
       // 更新通知配置
@@ -2014,25 +2154,26 @@ const saveNotification = async (): Promise<void> => {
         template_id: formData.templateId,
         category_id: formData.categoryId,
         event_types: formData.eventTypes,
-        trigger_type: formData.triggerType,
-        trigger_condition: triggerCondition,
+        ...(formData.triggerType === NotificationTrigger.IMMEDIATE
+          ? { trigger_type: NotificationTrigger.IMMEDIATE }
+          : {}),
         channels: formData.channels,
         recipient_types: formData.recipientTypes,
         recipient_users: cleanRecipientUsers,
         recipient_roles: cleanRecipientRoles,
         recipient_depts: cleanRecipientDepts,
+        recipient_addresses: recipientAddresses,
         message_template: formData.messageTemplate,
         subject_template: formData.subjectTemplate,
-        scheduled_time: scheduledTime,
-        repeat_interval: formData.repeatInterval,
         max_retries: formData.maxRetries,
         retry_interval: formData.retryInterval,
         status: formData.status,
         priority: formData.priority,
-        is_default: formData.isDefault
+        is_default: formData.isDefault,
       };
 
       await updateNotification(updateReq);
+      if (epoch !== formEpoch) return;
       message.success('通知配置已更新');
     } else {
       // 创建通知配置
@@ -2043,43 +2184,59 @@ const saveNotification = async (): Promise<void> => {
         template_id: formData.templateId,
         category_id: formData.categoryId,
         event_types: formData.eventTypes,
-        trigger_type: formData.triggerType,
-        trigger_condition: triggerCondition,
+        trigger_type: NotificationTrigger.IMMEDIATE,
         channels: formData.channels,
         recipient_types: formData.recipientTypes,
         recipient_users: cleanRecipientUsers,
         recipient_roles: cleanRecipientRoles,
         recipient_depts: cleanRecipientDepts,
+        recipient_addresses: recipientAddresses,
         message_template: formData.messageTemplate,
         subject_template: formData.subjectTemplate,
-        scheduled_time: scheduledTime,
-        repeat_interval: formData.repeatInterval,
         max_retries: formData.maxRetries,
         retry_interval: formData.retryInterval,
         priority: formData.priority,
-        is_default: formData.isDefault
+        status: formData.status,
+        is_default: formData.isDefault,
       };
 
       await createNotification(createReq);
+      if (epoch !== formEpoch) return;
       message.success('通知配置已创建');
     }
 
     notificationDialogVisible.value = false;
     loadNotifications();
   } catch (error: any) {
+    if (epoch !== formEpoch) return;
     // 根据错误类型提供更具体的错误信息
     let errorMessage = notificationDialog.isEdit ? '更新失败' : '创建失败';
 
     if (error.message) {
-      if (error.message.includes('datetime') || error.message.includes('NOW()')) {
+      if (
+        error.message.includes('datetime') ||
+        error.message.includes('NOW()')
+      ) {
         errorMessage += ': 服务器时间格式错误，请联系管理员';
-      } else if (error.message.includes('duplicate') || error.message.includes('重复')) {
+      } else if (
+        error.message.includes('duplicate') ||
+        error.message.includes('重复')
+      ) {
         errorMessage += ': 配置名称已存在，请使用其他名称';
-      } else if (error.message.includes('validation') || error.message.includes('验证')) {
+      } else if (
+        error.message.includes('validation') ||
+        error.message.includes('验证')
+      ) {
         errorMessage += ': 数据验证失败，请检查输入内容';
-      } else if (error.message.includes('timeout') || error.message.includes('超时')) {
+      } else if (
+        error.message.includes('timeout') ||
+        error.message.includes('超时')
+      ) {
         errorMessage += ': 请求超时，请稍后重试';
-      } else if (error.message.includes('network') || error.message.includes('网络')) {
+      } else if (
+        error.message.includes('network') ||
+        error.message.includes('网络')
+      ) {
         errorMessage += ': 网络连接异常，请检查网络';
       } else {
         errorMessage += `: ${error.message}`;
@@ -2087,14 +2244,16 @@ const saveNotification = async (): Promise<void> => {
     }
 
     message.error(errorMessage);
-
   } finally {
-    notificationDialog.saving = false;
+    if (epoch === formEpoch) notificationDialog.saving = false;
   }
 };
 
 // 对话框关闭
 const closeNotificationDialog = (): void => {
+  if (notificationDialog.saving) return;
+  ++formEpoch;
+  recipientError.value = '';
   notificationDialogVisible.value = false;
   if (formRef.value) {
     formRef.value.resetFields();
@@ -2196,7 +2355,7 @@ const saveManualSend = async (): Promise<void> => {
 
 // 生命周期
 onBeforeUnmount(() => {
-  ++listRequest; ++logsRequest; ++detailRequest;
+  ++listRequest; ++logsRequest; ++detailRequest; ++formEpoch;
   debouncedSearch.cancel();
 });
 onMounted(() => {
@@ -2209,6 +2368,26 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.recipient-address-row {
+  display: grid;
+  grid-template-columns: 140px minmax(180px, 1fr) minmax(120px, 1fr) auto;
+  gap: var(--ops-space-sm);
+  padding: var(--ops-space-md);
+  margin-bottom: var(--ops-space-md);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
+}
+.recipient-address-row legend {
+  width: auto;
+  padding: 0 4px;
+  color: var(--ops-muted);
+  font-size: 12px;
+}
+@media (max-width: 640px) {
+  .recipient-address-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .search-input {
   width: 260px;
   min-width: 200px;

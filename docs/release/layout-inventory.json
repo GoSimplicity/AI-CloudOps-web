@@ -1,6 +1,6 @@
 {
   "routes": 58,
-  "migratedShells": 57,
+  "migratedShells": 58,
   "entries": [
     {
       "route": "/assistant/info",
@@ -376,7 +376,7 @@
     {
       "route": "/system_welcome",
       "view": "dashboard/SystemWelcome.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 0,
       "scopedStyle": true
     },
