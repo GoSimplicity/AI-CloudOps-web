@@ -334,7 +334,17 @@
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="Bearer Token" name="bearer_token">
-                <a-input v-model:value="formDialog.form.bearer_token" placeholder="请输入Bearer Token" />
+                <a-form-item-rest v-if="formDialog.isEdit">
+                  <p class="credential-status">{{ hasExistingBearerToken ? '已有Token已配置，原文不返回' : '尚未配置Token' }}</p>
+                  <a-radio-group v-model:value="bearerTokenAction" aria-label="Bearer Token更新方式">
+                    <a-radio value="keep">保留现状</a-radio>
+                    <a-radio value="replace">替换Token</a-radio>
+                    <a-radio value="clear">清除已有Token</a-radio>
+                  </a-radio-group>
+                  <p v-if="bearerTokenAction === 'clear'" class="credential-status">保存后清除已有Token，可改用文件认证</p>
+                </a-form-item-rest>
+                <a-input-password v-if="!formDialog.isEdit || bearerTokenAction === 'replace'"
+                  v-model:value="formDialog.form.bearer_token" placeholder="请输入新的Bearer Token" autocomplete="new-password" />
               </a-form-item>
             </a-col>
           </a-row>
@@ -474,8 +484,8 @@
             <a-descriptions-item v-if="detailDialog.form.tls_ca_file_path" label="TLS CA文件">
               {{ detailDialog.form.tls_ca_file_path }}
             </a-descriptions-item>
-            <a-descriptions-item v-if="detailDialog.form.bearer_token" label="Bearer Token">
-              ******
+            <a-descriptions-item label="Bearer Token">
+              {{ detailDialog.form.has_bearer_token ? '已配置' : '未配置' }}
             </a-descriptions-item>
           </a-descriptions>
 
@@ -492,6 +502,7 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
+import { bearerTokenPayload, type BearerTokenAction } from './scrapeJobCredentials';
 import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
@@ -634,6 +645,9 @@ const formDialog = reactive({
     tags: [] as string[],
   }
 });
+
+const bearerTokenAction = ref<BearerTokenAction>('keep');
+const hasExistingBearerToken = ref(false);
 
 // 详情对话框数据
 const detailDialog = reactive({
@@ -943,6 +957,8 @@ const handleCreateScrapeJob = (): void => {
 
 const handleEditScrapeJob = (record: MonitorScrapeJob): void => {
   formDialog.isEdit = true;
+  bearerTokenAction.value = 'keep';
+  hasExistingBearerToken.value = record.has_bearer_token === true;
   formDialog.form = {
     id: record.id,
     name: record.name,
@@ -961,7 +977,7 @@ const handleEditScrapeJob = (record: MonitorScrapeJob): void => {
     kube_config_file_path: record.kube_config_file_path || '',
     tls_ca_file_path: record.tls_ca_file_path || '',
     tls_ca_content: record.tls_ca_content || '',
-    bearer_token: record.bearer_token || '',
+    bearer_token: '',
     bearer_token_file: record.bearer_token_file || '',
     kubernetes_sd_role: record.kubernetes_sd_role || '',
     tree_node_ids: Array.isArray(record.tree_node_ids)
@@ -1031,6 +1047,14 @@ const toggleJobStatus = async (record: MonitorScrapeJob): Promise<void> => {
       refresh_interval: record.refresh_interval,
       port: record.port,
       ip_address: record.ip_address || '',
+      relabel_configs_yaml_string: record.relabel_configs_yaml_string || '',
+      kube_config_file_path: record.kube_config_file_path || '',
+      tls_ca_file_path: record.tls_ca_file_path || '',
+      tls_ca_content: record.tls_ca_content || '',
+      bearer_token_file: record.bearer_token_file || '',
+      kubernetes_sd_role: record.kubernetes_sd_role || '',
+      tree_node_ids: record.tree_node_ids || [],
+      tags: record.tags || [],
     };
 
     await updateMonitorScrapeJobApi(updateData);
@@ -1088,14 +1112,20 @@ const saveScrapeJob = async (): Promise<void> => {
   }
 
   try {
+    const { bearer_token, enableSwitch, ...configuration } = formDialog.form;
+    const credentials = bearerTokenPayload({
+      editing: formDialog.isEdit, action: bearerTokenAction.value,
+      hasExisting: hasExistingBearerToken.value,
+      token: bearer_token, tokenFile: configuration.bearer_token_file,
+    });
     const formData = {
-      ...formDialog.form,
-      enable: formDialog.form.enableSwitch ? 1 : 2,
+      ...configuration,
+      ...credentials,
+      enable: enableSwitch ? 1 : 2,
       tree_node_ids: Array.isArray((formDialog.form as any).tree_node_ids)
         ? (formDialog.form as any).tree_node_ids.map((id: number) => String(id))
         : [],
       tags: Array.isArray((formDialog.form as any).tags) ? (formDialog.form as any).tags : [],
-      user_id: 1, // 这里应该从用户上下文获取
     };
 
     if (formDialog.isEdit && formDialog.form.id) {
@@ -1120,6 +1150,8 @@ const saveScrapeJob = async (): Promise<void> => {
 
 // 重置表单对话框
 const resetFormDialog = (): void => {
+  bearerTokenAction.value = 'keep';
+  hasExistingBearerToken.value = false;
   formDialog.form = {
     id: undefined,
     name: '',
@@ -1334,6 +1366,12 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 </script>
 
 <style scoped>
+.credential-status {
+  color: var(--ops-muted);
+  margin: 0 0 var(--ops-space-sm);
+  line-height: 1.6;
+}
+
 
 
 

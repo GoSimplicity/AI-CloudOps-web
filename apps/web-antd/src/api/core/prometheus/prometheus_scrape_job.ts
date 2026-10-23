@@ -26,7 +26,7 @@ export interface MonitorScrapeJob {
   kube_config_file_path?: string;
   tls_ca_file_path?: string;
   tls_ca_content?: string;
-  bearer_token?: string;
+  has_bearer_token: boolean;
   bearer_token_file?: string;
   kubernetes_sd_role?: string;
   create_user_name?: string;
@@ -87,6 +87,7 @@ export interface UpdateMonitorScrapeJobReq {
   kube_config_file_path?: string;
   tls_ca_file_path?: string;
   tls_ca_content?: string;
+  /** 省略保留，空字符串清除，非空替换 */
   bearer_token?: string;
   bearer_token_file?: string;
   kubernetes_sd_role?: string;
