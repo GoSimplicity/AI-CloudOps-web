@@ -47,10 +47,8 @@ export function useClusterPage() {
   const detailLoading = ref(false);
   const currentClusterDetail = ref<K8sCluster | null>(null);
 
-  // kubeconfig modal state
-  const isKubeConfigModalVisible = ref(false);
-  const kubeConfigLoading = ref(false);
-  const currentKubeConfigCluster = ref<K8sCluster | null>(null);
+  // 编辑时原集群是否已配置 kubeconfig（读接口只返回布尔值，不返回原文）
+  const editHasKubeConfig = ref(false);
   const formModel = ref<
     CreateClusterReq | (UpdateClusterReq & { id?: number })
   >({
@@ -68,8 +66,8 @@ export function useClusterPage() {
     tags: [],
   });
 
-  // 表单验证规则
-  const formRules: Record<string, Rule[]> = {
+  // 表单验证规则：新建时 kubeconfig 必填；编辑时留空表示不修改，填了才校验
+  const formRules = computed<Record<string, Rule[]>>(() => ({
     name: [
       { required: true, message: '请输入集群名称', trigger: 'blur' },
       {
@@ -100,14 +98,18 @@ export function useClusterPage() {
       },
     ],
     kube_config_content: [
-      { required: true, message: '请输入 KubeConfig 内容', trigger: 'blur' },
+      {
+        required: !isEdit.value,
+        message: '请输入 KubeConfig 内容',
+        trigger: 'blur',
+      },
       {
         min: 100,
         message: 'KubeConfig 内容过短，请检查是否完整',
         trigger: 'blur',
       },
     ],
-  };
+  }));
 
   // computed - 不在前端做过滤，因为后端API已经处理了过滤
   const filteredClusters = computed(() => {
@@ -158,6 +160,18 @@ export function useClusterPage() {
     return s !== undefined ? map[s] || '未知' : '未知';
   };
 
+  // 防御：即使旧版后端仍回传 kubeconfig 原文，也不在前端状态里保留
+  const stripKubeConfig = (cluster: K8sCluster): K8sCluster => {
+    if (!cluster || typeof cluster !== 'object') return cluster;
+    const { kube_config_content: content, ...rest } = cluster as K8sCluster & {
+      kube_config_content?: string;
+    };
+    return {
+      ...rest,
+      has_kube_config: rest.has_kube_config ?? Boolean(content),
+    };
+  };
+
   // crud
   const fetchClusters = async () => {
     const requestId = ++listRequestId;
@@ -176,7 +190,7 @@ export function useClusterPage() {
       };
       const res = await getClustersListApi(params);
       if (requestId !== listRequestId) return;
-      clusters.value = res?.items || [];
+      clusters.value = (res?.items || []).map(stripKubeConfig);
       total.value = res?.total || 0;
     } catch (err) {
       if (requestId !== listRequestId) return;
@@ -191,6 +205,7 @@ export function useClusterPage() {
 
   const openCreate = () => {
     isEdit.value = false;
+    editHasKubeConfig.value = false;
     formModel.value = {
       name: '',
       restrict_namespace: [],
@@ -221,7 +236,7 @@ export function useClusterPage() {
         env: record.env,
         version: record.version,
         api_server_addr: record.api_server_addr,
-        kube_config_content: record.kube_config_content || '',
+        kube_config_content: '', // 留空表示不修改
         cpu_request: record.cpu_request,
         cpu_limit: record.cpu_limit,
         memory_request: record.memory_request,
@@ -229,14 +244,17 @@ export function useClusterPage() {
         action_timeout_seconds: record.action_timeout_seconds,
         tags: record.tags || [],
       } as UpdateClusterReq & { id?: number };
+      editHasKubeConfig.value = Boolean(record.has_kube_config);
 
       isModalVisible.value = true;
 
-      // 获取完整的集群详情，包括完整的KubeConfig内容
+      // 获取最新的集群详情（不含 kubeconfig 原文）
       if (record.id) {
         const detailData = await getClusterDetailApi(record.id);
         if (detailData) {
-          // 使用详情数据更新表单，特别是KubeConfig内容
+          editHasKubeConfig.value = Boolean(
+            detailData.has_kube_config ?? record.has_kube_config,
+          );
           formModel.value = {
             id: detailData.id || record.id,
             name: detailData.name || record.name,
@@ -245,7 +263,7 @@ export function useClusterPage() {
             version: detailData.version || record.version,
             api_server_addr:
               detailData.api_server_addr || record.api_server_addr,
-            kube_config_content: detailData.kube_config_content || '', // 使用详情API返回的完整内容
+            kube_config_content: '', // 留空表示不修改，填写则整段替换
             cpu_request: detailData.cpu_request || record.cpu_request,
             cpu_limit: detailData.cpu_limit || record.cpu_limit,
             memory_request: detailData.memory_request || record.memory_request,
@@ -288,7 +306,12 @@ export function useClusterPage() {
         (formModel.value as UpdateClusterReq & { id?: number }).id
       ) {
         const m = formModel.value as UpdateClusterReq & { id?: number };
-        await updateClusterApi(m.id as number, m as UpdateClusterReq);
+        const payload: UpdateClusterReq = { ...(m as UpdateClusterReq) };
+        // 留空 = 保留原 kubeconfig，不把空串发给后端
+        if (!payload.kube_config_content?.trim()) {
+          delete payload.kube_config_content;
+        }
+        await updateClusterApi(m.id as number, payload);
         message.success('集群更新成功');
       } else {
         await createClusterApi(formModel.value as CreateClusterReq);
@@ -450,11 +473,11 @@ export function useClusterPage() {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
       const res = await getClusterDetailApi(record.id as number);
-      currentClusterDetail.value = res || record;
+      currentClusterDetail.value = stripKubeConfig(res || record);
     } catch (err) {
       message.error('获取集群详情失败');
 
-      currentClusterDetail.value = record; // 使用列表中的数据作为fallback
+      currentClusterDetail.value = stripKubeConfig(record); // 使用列表中的数据作为fallback
     } finally {
       detailLoading.value = false;
     }
@@ -463,123 +486,6 @@ export function useClusterPage() {
   const closeDetailModal = () => {
     isDetailModalVisible.value = false;
     currentClusterDetail.value = null;
-  };
-
-  // KubeConfig 模态框相关函数
-  const showKubeConfigModal = async (record: K8sCluster) => {
-    try {
-      // 先显示模态框，使用列表数据作为初始显示
-      currentKubeConfigCluster.value = record;
-      isKubeConfigModalVisible.value = true;
-
-      // 如果有ID且列表数据没有完整的KubeConfig，获取完整的集群详情
-      if (
-        record.id &&
-        (!record.kube_config_content || record.kube_config_content.length < 100)
-      ) {
-        kubeConfigLoading.value = true;
-        const detailData = await getClusterDetailApi(record.id);
-        if (detailData && detailData.kube_config_content) {
-          // 更新为完整的数据
-          currentKubeConfigCluster.value = {
-            ...record,
-            kube_config_content: detailData.kube_config_content,
-          };
-        }
-      }
-    } catch (error) {
-      // 继续显示，使用列表中的数据（可能不完整）
-    } finally {
-      kubeConfigLoading.value = false;
-    }
-  };
-
-  const closeKubeConfigModal = () => {
-    isKubeConfigModalVisible.value = false;
-    currentKubeConfigCluster.value = null;
-  };
-
-  const copyKubeConfig = async () => {
-    try {
-      if (!currentKubeConfigCluster.value?.kube_config_content) {
-        message.warning('暂无配置内容可复制');
-        return;
-      }
-      await navigator.clipboard.writeText(
-        currentKubeConfigCluster.value.kube_config_content,
-      );
-      message.success('KubeConfig 配置已复制到剪贴板');
-    } catch (err) {
-      message.error('复制失败，请手动复制');
-    }
-  };
-
-  const downloadKubeConfig = () => {
-    try {
-      if (!currentKubeConfigCluster.value?.kube_config_content) {
-        message.warning('暂无配置内容可下载');
-        return;
-      }
-
-      const content = currentKubeConfigCluster.value.kube_config_content;
-      const filename = `${currentKubeConfigCluster.value.name || 'cluster'}-kubeconfig.yaml`;
-
-      const blob = new Blob([content], { type: 'text/yaml' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      message.success(`KubeConfig 配置已下载为 ${filename}`);
-    } catch (err) {
-      message.error('下载失败');
-    }
-  };
-
-  // 详情模态框中的 KubeConfig 操作函数
-  const copyDetailKubeConfig = async () => {
-    try {
-      if (!currentClusterDetail.value?.kube_config_content) {
-        message.warning('暂无配置内容可复制');
-        return;
-      }
-      await navigator.clipboard.writeText(
-        currentClusterDetail.value.kube_config_content,
-      );
-      message.success('KubeConfig 配置已复制到剪贴板');
-    } catch (err) {
-      message.error('复制失败，请手动复制');
-    }
-  };
-
-  const downloadDetailKubeConfig = () => {
-    try {
-      if (!currentClusterDetail.value?.kube_config_content) {
-        message.warning('暂无配置内容可下载');
-        return;
-      }
-
-      const content = currentClusterDetail.value.kube_config_content;
-      const filename = `${currentClusterDetail.value.name || 'cluster'}-kubeconfig.yaml`;
-
-      const blob = new Blob([content], { type: 'text/yaml' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      message.success(`KubeConfig 配置已下载为 ${filename}`);
-    } catch (err) {
-      message.error('下载失败');
-    }
   };
 
   // 搜索处理
@@ -602,81 +508,6 @@ export function useClusterPage() {
       pageSize.value = size;
     }
     await fetchClusters();
-  };
-
-  // KubeConfig 预览内容生成
-  const getKubeConfigPreview = (kubeConfigContent?: string): string => {
-    if (!kubeConfigContent) return '暂无配置';
-
-    try {
-      // 尝试提取关键信息
-      const lines = kubeConfigContent.split('\n');
-      const clusterInfo: string[] = [];
-      const userInfo: string[] = [];
-
-      // 查找集群和用户信息
-      for (const line of lines) {
-        const trimmedLine = line.trim();
-
-        // 提取集群名
-        if (
-          trimmedLine.includes('name:') &&
-          (lines[lines.indexOf(line) - 1]?.trim().includes('cluster:') ||
-            trimmedLine.includes('cluster'))
-        ) {
-          const match = trimmedLine.match(/name:\s*(.+)/);
-          if (match && match[1] && !clusterInfo.includes(match[1].trim())) {
-            clusterInfo.push(match[1].trim());
-          }
-        }
-
-        // 提取用户信息
-        if (
-          trimmedLine.includes('name:') &&
-          (lines[lines.indexOf(line) - 1]?.trim().includes('user:') ||
-            trimmedLine.includes('user'))
-        ) {
-          const match = trimmedLine.match(/name:\s*(.+)/);
-          if (match && match[1] && !userInfo.includes(match[1].trim())) {
-            userInfo.push(match[1].trim());
-          }
-        }
-      }
-
-      // 构建预览文本
-      const parts: string[] = [];
-
-      if (clusterInfo.length > 0) {
-        parts.push(
-          `集群: ${clusterInfo.slice(0, 2).join(', ')}${clusterInfo.length > 2 ? '...' : ''}`,
-        );
-      }
-
-      if (userInfo.length > 0) {
-        parts.push(
-          `用户: ${userInfo.slice(0, 2).join(', ')}${userInfo.length > 2 ? '...' : ''}`,
-        );
-      }
-
-      // 如果没有提取到信息，显示前几行内容
-      if (parts.length === 0) {
-        const firstFewLines = lines
-          .slice(0, 3)
-          .map((line) => line.trim())
-          .filter((line) => line && !line.startsWith('#'))
-          .join(' | ');
-        return firstFewLines.length > 50
-          ? firstFewLines.substring(0, 47) + '...'
-          : firstFewLines || '配置内容';
-      }
-
-      return parts.join(' | ');
-    } catch (error) {
-      // 降级方案：显示前50个字符
-      return kubeConfigContent.length > 50
-        ? kubeConfigContent.substring(0, 47) + '...'
-        : kubeConfigContent;
-    }
   };
 
   return {
@@ -725,21 +556,10 @@ export function useClusterPage() {
     currentClusterDetail,
     showClusterDetail,
     closeDetailModal,
-    // kubeconfig modal
-    isKubeConfigModalVisible,
-    kubeConfigLoading,
-    currentKubeConfigCluster,
-    showKubeConfigModal,
-    closeKubeConfigModal,
-    copyKubeConfig,
-    downloadKubeConfig,
-    copyDetailKubeConfig,
-    downloadDetailKubeConfig,
+    // kubeconfig 状态
+    editHasKubeConfig,
 
     // pagination
     handlePageChange,
-
-    // kubeconfig preview
-    getKubeConfigPreview,
   };
 }

@@ -16,8 +16,6 @@ import {
   EditOutlined,
   DeploymentUnitOutlined,
   EyeOutlined,
-  CopyOutlined,
-  DownloadOutlined,
   SearchOutlined,
   TagOutlined,
 } from '@ant-design/icons-vue';
@@ -61,16 +59,8 @@ const {
   currentClusterDetail,
   showClusterDetail,
   closeDetailModal,
-  // kubeconfig modal
-  isKubeConfigModalVisible,
-  kubeConfigLoading,
-  currentKubeConfigCluster,
-
-  closeKubeConfigModal,
-  copyKubeConfig,
-  downloadKubeConfig,
-  copyDetailKubeConfig,
-  downloadDetailKubeConfig,
+  // kubeconfig 状态
+  editHasKubeConfig,
   // pagination
   handlePageChange,
   // filters
@@ -78,7 +68,6 @@ const {
   onSearch,
   onSearchInput,
   total,
-  // kubeconfig preview
 } = useClusterPage();
 
 const handleFilterChange = () => {
@@ -621,25 +610,40 @@ onMounted(async () => {
           <span style="color: #666; font-size: 14px">配置信息</span>
         </a-divider>
 
-        <a-form-item label="KubeConfig 内容" name="kube_config_content">
-          <a-spin
-            :spinning="editDetailLoading && isEdit"
-            tip="正在获取完整的KubeConfig内容..."
-          >
+        <a-form-item
+          :label="isEdit ? '替换 KubeConfig' : 'KubeConfig 内容'"
+          name="kube_config_content"
+        >
+          <div v-if="isEdit" style="margin-bottom: 8px">
+            <a-tag :color="editHasKubeConfig ? 'green' : 'default'">
+              {{
+                editHasKubeConfig ? '已配置 KubeConfig' : '未配置 KubeConfig'
+              }}
+            </a-tag>
+          </div>
+          <a-spin :spinning="editDetailLoading && isEdit">
             <a-textarea
               v-model:value="formModel.kube_config_content"
               :rows="6"
-              placeholder="请粘贴完整的 kubeconfig 内容..."
+              :placeholder="
+                isEdit
+                  ? '留空表示不修改；如需替换，请粘贴完整的新 kubeconfig'
+                  : '请粘贴完整的 kubeconfig 内容...'
+              "
               class="form-input"
               :maxlength="10000"
               show-count
+              autocomplete="off"
+              spellcheck="false"
             />
           </a-spin>
           <div style="color: #999; font-size: 12px; margin-top: 4px">
-            提示：请确保 kubeconfig 内容格式正确且具有足够的权限
-            <span v-if="editDetailLoading && isEdit" style="color: #1890ff">
-              <br />正在从服务器获取完整的配置信息...
-            </span>
+            <template v-if="isEdit">
+              出于安全考虑，已保存的 kubeconfig 不会回显；留空提交即保留原配置。
+            </template>
+            <template v-else>
+              提示：请确保 kubeconfig 内容格式正确且具有足够的权限
+            </template>
           </div>
         </a-form-item>
 
@@ -956,101 +960,24 @@ onMounted(async () => {
                 class="k8s-detail-card"
                 size="small"
               >
-                <div class="k8s-config-actions" style="margin-bottom: 12px">
-                  <a-space>
-                    <a-button
-                      size="small"
-                      @click="copyDetailKubeConfig"
-                      :disabled="!currentClusterDetail?.kube_config_content"
-                    >
-                      <template #icon
-                        ><CopyOutlined aria-hidden="true"
-                      /></template>
-                      复制配置
-                    </a-button>
-                    <a-button
-                      size="small"
-                      @click="downloadDetailKubeConfig"
-                      :disabled="!currentClusterDetail?.kube_config_content"
-                    >
-                      <template #icon
-                        ><DownloadOutlined aria-hidden="true"
-                      /></template>
-                      下载配置
-                    </a-button>
-                  </a-space>
-                </div>
-                <a-textarea
-                  :value="
-                    currentClusterDetail.kube_config_content || '暂无配置'
+                <a-tag
+                  :color="
+                    currentClusterDetail.has_kube_config ? 'green' : 'default'
                   "
-                  :rows="8"
-                  readonly
-                  class="k8s-config-textarea"
-                  :style="{ maxHeight: '240px', overflow: 'auto' }"
-                />
+                >
+                  {{
+                    currentClusterDetail.has_kube_config ? '已配置' : '未配置'
+                  }}
+                </a-tag>
+                <span style="color: #999; font-size: 12px; margin-left: 8px">
+                  出于安全考虑，kubeconfig
+                  内容不在页面展示；如需更换，请在编辑集群时替换。
+                </span>
               </a-card>
             </a-col>
           </a-row>
         </div>
       </a-spin>
-    </a-modal>
-
-    <!-- KubeConfig 查看模态框 -->
-    <a-modal
-      v-model:open="isKubeConfigModalVisible"
-      title="KubeConfig 配置内容"
-      :footer="null"
-      @cancel="closeKubeConfigModal"
-      width="900px"
-      :maskClosable="false"
-      destroyOnClose
-    >
-      <div class="kubeconfig-modal-content">
-        <div class="kubeconfig-header">
-          <div class="cluster-info">
-            <span class="cluster-name">{{
-              currentKubeConfigCluster?.name
-            }}</span>
-            <a-tag color="blue">{{
-              getEnvText(currentKubeConfigCluster?.env)
-            }}</a-tag>
-          </div>
-          <div class="kubeconfig-actions">
-            <a-tooltip title="复制到剪贴板">
-              <a-button size="small" @click="copyKubeConfig">
-                <template #icon><CopyOutlined aria-hidden="true" /></template>
-                复制
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="下载为文件">
-              <a-button size="small" @click="downloadKubeConfig">
-                <template #icon
-                  ><DownloadOutlined aria-hidden="true"
-                /></template>
-                下载
-              </a-button>
-            </a-tooltip>
-          </div>
-        </div>
-        <a-divider style="margin: 16px 0" />
-        <div class="kubeconfig-content">
-          <a-spin
-            :spinning="kubeConfigLoading"
-            tip="正在获取完整的KubeConfig内容..."
-          >
-            <a-textarea
-              :value="
-                currentKubeConfigCluster?.kube_config_content || '暂无配置内容'
-              "
-              :rows="20"
-              readonly
-              class="kubeconfig-textarea"
-              placeholder="暂无 KubeConfig 配置内容"
-            />
-          </a-spin>
-        </div>
-      </div>
     </a-modal>
   </OpsPage>
 </template>
