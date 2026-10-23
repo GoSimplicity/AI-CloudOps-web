@@ -28,5 +28,10 @@ export function useListRequest(loading: Ref<boolean>) {
       },
     };
   }
-  return { loadError, beginRequest };
+  function invalidate() {
+    revision += 1;
+    loading.value = false;
+    loadError.value = '';
+  }
+  return { loadError, beginRequest, invalidate };
 }

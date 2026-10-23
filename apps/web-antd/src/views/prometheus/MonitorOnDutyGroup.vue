@@ -1,15 +1,16 @@
 <template>
-  <div class="on-duty-group-container">
+  <OpsPage title="值班组" description="维护值班成员、轮转周期与换班安排">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button type="primary" @click="showAddModal" class="btn-create">
+    <template #actions>
+      <a-button type="primary" @click="showAddModal" class="btn-create">
           <template #icon>
             <PlusOutlined />
           </template>
           <span class="btn-text">新增值班组</span>
         </a-button>
-        <div class="search-filters">
+    </template>
+    <template #filters>
+      <div class="search-filters">
           <a-input-search 
             v-model:value="searchText" 
             placeholder="搜索值班组名称..." 
@@ -32,15 +33,15 @@
             重置
           </a-button>
         </div>
-      </div>
-    </div>
+    </template>
 
     <!-- 统计卡片 -->
-    <div class="stats-row">
+    <template #summary>
+      <div class="stats-row">
       <a-row :gutter="[16, 16]">
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="总值班组" :value="stats.total" :value-style="{ color: '#3f8600' }">
+            <a-statistic title="总值班组" :value="loadError ? '未知' : stats.total" :value-style="{ color: '#3f8600' }">
               <template #prefix>
                 <Icon icon="carbon:user-multiple" />
               </template>
@@ -49,7 +50,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="当前页成员" :value="stats.activeusers" :value-style="{ color: '#52c41a' }">
+            <a-statistic title="当前页成员" :value="loadError ? '未知' : stats.activeusers" :value-style="{ color: '#52c41a' }">
               <template #prefix>
                 <Icon icon="carbon:user-activity" />
               </template>
@@ -58,7 +59,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="平均周期" :value="stats.avgShiftDays" suffix="天" :value-style="{ color: '#faad14' }">
+            <a-statistic title="本页平均周期" :value="loadError ? '未知' : stats.avgShiftDays" suffix="天" :value-style="{ color: '#faad14' }">
               <template #prefix>
                 <Icon icon="carbon:calendar" />
               </template>
@@ -67,7 +68,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="当前页今日值班" :value="stats.todayOnDuty" :value-style="{ color: '#cf1322' }">
+            <a-statistic title="当前页今日值班" :value="loadError ? '未知' : stats.todayOnDuty" :value-style="{ color: '#cf1322' }">
               <template #prefix>
                 <Icon icon="carbon:user-certification" />
               </template>
@@ -76,8 +77,13 @@
         </a-col>
       </a-row>
     </div>
+    </template>
 
     <!-- 表格容器 -->
+    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
+      <template #action><a-button size="small" :loading="loading" @click="fetchOnDutyGroups">重试</a-button></template>
+    </a-alert>
+
     <div class="table-container">
       <a-card>
         <a-table 
@@ -533,7 +539,7 @@
           </div>
 
           <div class="plan-summary">
-            <a-statistic-group>
+            <a-space wrap size="large">
               <a-statistic 
                 title="总计划天数" 
                 :value="futurePlanDialog.data.details?.length || 0" 
@@ -549,7 +555,7 @@
                 :value="futurePlanDialog.shiftDays" 
                 suffix="天" 
               />
-            </a-statistic-group>
+            </a-space>
           </div>
 
           <div class="detail-footer">
@@ -827,11 +833,13 @@
         </a-form-item>
       </a-form>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useListRequest } from './useListRequest';
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { PlusOutlined, DownOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
@@ -918,12 +926,14 @@ const data = ref<MonitorOnDutyGroup[]>([]);
 const searchText = ref('');
 const enableFilter = ref<1 | 2 | undefined>(undefined);
 const loading = ref(false);
+const { loadError, beginRequest } = useListRequest(loading);
 const addFormRef = ref();
 const editFormRef = ref();
 const createChangeFormRef = ref();
 
 // 防抖处理
-let searchTimeout: any = null;
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+onBeforeUnmount(() => { if (searchTimeout) clearTimeout(searchTimeout); });
 
 // 分页配置
 const paginationConfig = reactive({
@@ -1215,7 +1225,7 @@ const updateStats = (): void => {
 
 // 数据加载
 const fetchOnDutyGroups = async (): Promise<void> => {
-  loading.value = true;
+  const request = beginRequest();
   try {
 
     const params: GetMonitorOnDutyGroupListReq = {
@@ -1225,6 +1235,7 @@ const fetchOnDutyGroups = async (): Promise<void> => {
       enable: enableFilter.value,
     };
     const response = await getMonitorOnDutyGroupListApi(params);
+    if (!request.isCurrent()) return;
 
     if (response && response.items) {
       data.value = response.items;
@@ -1239,13 +1250,13 @@ const fetchOnDutyGroups = async (): Promise<void> => {
       }
     }
   } catch (error: any) {
-
-    message.error(error.message || '获取值班组列表失败');
+    if (!request.fail(error, '获取值班组列表失败')) return;
     data.value = [];
     paginationConfig.total = 0;
     updateStats();
+    message.error(loadError.value);
   } finally {
-    loading.value = false;
+    request.finish();
   }
 };
 
@@ -1477,7 +1488,6 @@ const handleReset = (): void => {
   enableFilter.value = undefined;
   paginationConfig.current = 1;
   fetchOnDutyGroups();
-  message.success('过滤条件已重置');
 };
 
 const handleEnableChange = async (record: MonitorOnDutyGroup & { statusLoading?: boolean }, checked: boolean): Promise<void> => {
@@ -1586,7 +1596,6 @@ const resetPlanFilters = (): void => {
   planDateFilter.value = null;
   planUserFilter.value = '';
   planPaginationConfig.current = 1;
-  message.success('筛选条件已重置');
 };
 
 // 处理排班计划分页变化
@@ -1611,7 +1620,6 @@ const resetHistoryFilters = (): void => {
     historyPaginationConfig.current = 1;
     fetchOnDutyHistory(historyDialog.groupId, undefined, undefined, 1);
   }
-  message.success('筛选条件已重置');
 };
 
 // 处理历史记录分页变化
@@ -2015,35 +2023,10 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 </script>
 
 <style scoped>
-.on-duty-group-container {
-  padding: 12px;
-  min-height: 100vh;
-}
 
-.page-header {
-  margin-bottom: 20px;
-}
 
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
 
-.btn-create {
-  background: var(--ops-accent);
-  border: none;
-  flex-shrink: 0;
-}
 
-.search-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
 
 .search-input {
   width: 250px;
@@ -2438,36 +2421,15 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .on-duty-group-container {
-    padding: 8px;
-  }
 
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-  }
 
-  .search-filters {
-    width: 100%;
-    flex-direction: row;
-    justify-content: space-between;
-  }
 
   .search-input {
     width: calc(100% - 140px);
     min-width: auto;
   }
 
-  .btn-text {
-    display: none;
-  }
 
-  .btn-create {
-    padding: 4px 8px;
-    min-width: auto;
-    align-self: flex-end;
-  }
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
@@ -2525,9 +2487,6 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 }
 
 @media (max-width: 480px) {
-  .header-actions {
-    gap: 8px;
-  }
 
   .stats-card {
     text-align: center;

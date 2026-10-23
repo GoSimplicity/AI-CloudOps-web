@@ -742,7 +742,6 @@ const handleResetFilters = (): void => {
   supportRecordFilter.value = undefined;
   paginationConfig.current = 1;
   loadScrapePoolList();
-  message.success('过滤条件已重置');
 };
 
 const handleCreateScrapePool = (): void => {

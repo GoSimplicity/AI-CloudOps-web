@@ -1,47 +1,46 @@
 <template>
-  <div class="duty-schedule-container">
+  <OpsPage :title="dutyGroupDetail?.name || '值班安排'" description="按月查看排班与历史，管理换班申请">
     <!-- 页面标题和操作栏 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="title-section">
-          <div class="title-breadcrumb">
-            <a-button type="text" @click="goBack" class="back-btn" size="large">
-              <template #icon>
-                <Icon icon="carbon:arrow-left" />
-              </template>
-            </a-button>
-            <div class="title-info">
-              <h1 class="page-title">{{ dutyGroupDetail?.name || '值班组详情' }}</h1>
-              <div class="breadcrumb">
-                <span class="breadcrumb-item">值班管理</span>
-                <Icon icon="carbon:chevron-right" class="breadcrumb-separator" />
-                <span class="breadcrumb-item current">{{ currentMonthYear }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="header-actions">
-          <a-button type="default" @click="exportSchedule" class="action-btn" :loading="exportLoading">
+    <template #actions>
+      <a-button @click="goBack">返回值班组</a-button>
+<a-button type="default" @click="exportSchedule" class="action-btn" :loading="exportLoading" :disabled="!calendarDays.length || !!scheduleError">
             <template #icon>
             </template>
             导出
           </a-button>
-          <a-button type="primary" @click="handleCreateChange" class="action-btn">
+<a-button type="primary" @click="handleCreateChange" class="action-btn" :disabled="!dutyGroupDetail">
             申请换班
           </a-button>
+    </template>
+    <template #filters>
+<div class="search-filters">
+          <a-input-search
+            v-model:value="searchQuery"
+            placeholder="搜索值班历史..."
+            class="search-input"
+            @search="handleSearch"
+            allow-clear
+          />
+          <a-date-picker
+            v-model:value="dateFilter"
+            placeholder="筛选日期"
+            class="filter-select"
+            @change="handleDateChange"
+            allow-clear
+          />
         </div>
-      </div>
-    </div>
+    </template>
 
     <!-- 统计面板 -->
-    <div class="stats-section">
+    <template #summary>
+      <div class="stats-section">
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-icon">
             <Icon icon="carbon:user-multiple" />
           </div>
           <div class="stat-content">
-            <div class="stat-number">{{ stats.totalMembers }}</div>
+            <div class="stat-number">{{ loadError ? '未知' : stats.totalMembers }}</div>
             <div class="stat-label">值班成员</div>
           </div>
         </div>
@@ -51,7 +50,7 @@
             <Icon icon="carbon:user-online" />
           </div>
           <div class="stat-content">
-            <div class="stat-number">{{ stats.todayOnDuty }}</div>
+            <div class="stat-number">{{ loadError ? '未知' : stats.todayOnDuty }}</div>
             <div class="stat-label">今日值班</div>
           </div>
         </div>
@@ -61,7 +60,7 @@
             <Icon icon="carbon:calendar-heat-map" />
           </div>
           <div class="stat-content">
-            <div class="stat-number">{{ stats.monthlyDutyDays }}</div>
+            <div class="stat-number">{{ loadError ? '未知' : stats.monthlyDutyDays }}</div>
             <div class="stat-label">本月值班天数</div>
           </div>
         </div>
@@ -71,26 +70,30 @@
             <Icon icon="carbon:change-catalog" />
           </div>
           <div class="stat-content">
-            <div class="stat-number">{{ stats.changeRecords }}</div>
-            <div class="stat-label">换班记录</div>
+            <div class="stat-number">{{ loadError ? '未知' : stats.changeRecords }}</div>
+            <div class="stat-label">本页换班记录</div>
           </div>
         </div>
       </div>
     </div>
+    </template>
+    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
+      <template #action><a-button :loading="detailLoading" @click="fetchDutyGroups">重试</a-button></template>
+    </a-alert>
 
     <!-- 日历区域 -->
     <div class="calendar-section">
       <a-card class="calendar-card">
         <div class="calendar-header">
           <div class="calendar-nav">
-            <a-button @click="previousMonth" size="large" class="nav-btn" :disabled="loading">
+            <a-button @click="previousMonth" aria-label="上个月" size="large" class="nav-btn" :disabled="loading">
               <Icon icon="carbon:chevron-left" />
             </a-button>
             <div class="calendar-title">
               <h2>{{ currentMonthYear }}</h2>
               <span class="calendar-subtitle">值班安排</span>
             </div>
-            <a-button @click="nextMonth" size="large" class="nav-btn" :disabled="loading">
+            <a-button @click="nextMonth" aria-label="下个月" size="large" class="nav-btn" :disabled="loading">
               <Icon icon="carbon:chevron-right" />
             </a-button>
           </div>
@@ -116,11 +119,11 @@
 
             <!-- 日历内容 -->
             <div class="calendar-grid">
-              <div 
-                class="calendar-day" 
-                v-for="day in calendarDays" 
+              <div
+                class="calendar-day"
+                v-for="day in calendarDays"
                 :key="day.date"
-                @click="handleDayClick(day)" 
+                @click="handleDayClick(day)"
                 :class="{
                   'has-duty': day.user,
                   'today': isToday(day.date),
@@ -174,29 +177,14 @@
           </div>
         </template>
 
-        <div class="search-section">
-          <a-input-search 
-            v-model:value="searchQuery" 
-            placeholder="搜索值班历史..." 
-            class="search-input"
-            @search="handleSearch" 
-            allow-clear 
-          />
-          <a-date-picker 
-            v-model:value="dateFilter" 
-            placeholder="筛选日期" 
-            class="filter-select" 
-            @change="handleDateChange"
-            allow-clear 
-          />
-        </div>
 
-        <a-table 
-          :data-source="historyList" 
-          :columns="historyColumns" 
+
+        <a-table
+          :data-source="historyList"
+          :columns="historyColumns"
           :pagination="paginationConfig"
-          :loading="loading" 
-          row-key="id" 
+          :loading="historyLoading"
+          row-key="id"
           @change="handleTableChange"
           class="records-table"
         >
@@ -246,29 +234,29 @@
     </div>
 
     <!-- 换班申请对话框 -->
-    <a-modal 
-      :open="formDialogVisible" 
-      :title="formDialog.isEdit ? '编辑换班记录' : '申请换班'" 
-      @ok="saveChange" 
-      @cancel="closeFormDialog" 
+    <a-modal
+      :open="formDialogVisible"
+      :title="formDialog.isEdit ? '编辑换班记录' : '申请换班'"
+      @ok="saveChange"
+      @cancel="closeFormDialog"
       :confirmLoading="submitting"
     >
       <a-form :model="formDialog.form" layout="vertical">
         <a-form-item label="换班日期" required>
-          <a-date-picker 
-            v-model:value="formDialog.form.date" 
-            placeholder="请选择换班日期" 
+          <a-date-picker
+            v-model:value="formDialog.form.date"
+            placeholder="请选择换班日期"
             style="width: 100%"
             :disabled-date="disabledDate"
           />
         </a-form-item>
 
         <a-form-item label="原值班人" required>
-          <a-select 
-            v-model:value="formDialog.form.origin_user_id" 
-            placeholder="请选择原值班人" 
+          <a-select
+            v-model:value="formDialog.form.origin_user_id"
+            placeholder="请选择原值班人"
             style="width: 100%"
-            show-search 
+            show-search
             allow-clear
             :filter-option="filterOption"
           >
@@ -279,11 +267,11 @@
         </a-form-item>
 
         <a-form-item label="新值班人" required>
-          <a-select 
-            v-model:value="formDialog.form.on_duty_user_id" 
-            placeholder="请选择新值班人" 
+          <a-select
+            v-model:value="formDialog.form.on_duty_user_id"
+            placeholder="请选择新值班人"
             style="width: 100%"
-            show-search 
+            show-search
             allow-clear
             :filter-option="filterOption"
           >
@@ -294,9 +282,9 @@
         </a-form-item>
 
         <a-form-item label="换班原因" required>
-          <a-textarea 
-            v-model:value="formDialog.form.reason" 
-            placeholder="请输入换班原因" 
+          <a-textarea
+            v-model:value="formDialog.form.reason"
+            placeholder="请输入换班原因"
             :rows="3"
             :maxlength="200"
             show-count
@@ -306,9 +294,9 @@
     </a-modal>
 
     <!-- 日期详情对话框 -->
-    <a-modal 
-      :open="dayDetailVisible" 
-      title="值班日详情" 
+    <a-modal
+      :open="dayDetailVisible"
+      title="值班日详情"
       :footer="null"
       @cancel="closeDayDetail"
       width="400"
@@ -363,11 +351,13 @@
         </div>
       </div>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, nextTick } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useListRequest } from './useListRequest';
+import { ref, reactive, onMounted, computed, nextTick, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import dayjs, { Dayjs } from 'dayjs';
@@ -423,6 +413,14 @@ const historyColumns = [
 
 // 状态数据
 const loading = ref(false);
+const detailLoading = ref(false);
+const historyLoading = ref(false);
+const changesLoading = ref(false);
+const { loadError: detailError, beginRequest: beginDetailRequest } = useListRequest(detailLoading);
+const { loadError: scheduleError, beginRequest: beginScheduleRequest, invalidate: invalidateSchedule } = useListRequest(loading);
+const { loadError: historyError, beginRequest: beginHistoryRequest, invalidate: invalidateHistory } = useListRequest(historyLoading);
+const { loadError: changeError, beginRequest: beginChangeRequest, invalidate: invalidateChanges } = useListRequest(changesLoading);
+const loadError = computed(() => detailError.value || scheduleError.value || historyError.value || changeError.value);
 const submitting = ref(false);
 const exportLoading = ref(false);
 const searchQuery = ref('');
@@ -491,14 +489,18 @@ const isCurrentMonthToday = computed(() => {
 
 // 数据加载函数声明（提前声明避免初始化问题）
 const fetchDutyGroups = async (): Promise<void> => {
+  invalidateSchedule();
+  invalidateHistory();
+  invalidateChanges();
+  const request = beginDetailRequest();
   try {
     const id = dutyGroupId.value;
     if (!id) {
-      message.error('无效的值班组ID');
-      return;
+      throw new Error('无效的值班组ID');
     }
 
     const response = await getMonitorOnDutyGroupDetailApi(id);
+    if (!request.isCurrent()) return;
 
     // 改进的API响应结构处理 - 使用与值班组页面相同的逻辑
     let groupData = null;
@@ -548,9 +550,10 @@ const fetchDutyGroups = async (): Promise<void> => {
       ]);
     } else {
 
-      message.error('获取值班组信息失败：数据格式异常');
+      throw new Error('获取值班组信息失败：数据格式异常');
     }
   } catch (error: any) {
+    if (!request.isCurrent()) return;
 
     // 更详细的错误信息
     let errorMessage = '获取值班组信息失败';
@@ -573,12 +576,18 @@ const fetchDutyGroups = async (): Promise<void> => {
       errorMessage = error.message || '未知错误';
     }
 
-    message.error(errorMessage);
+    request.fail(new Error(errorMessage), '数据加载失败');
+    message.error(detailError.value);
 
-    // 错误时跳转回列表页
-    setTimeout(() => {
-      router.push('/monitor_onduty_group');
-    }, 2000);
+    dutyGroupDetail.value = null;
+    dutyPlanData.value = [];
+    calendarDays.value = [];
+    historyList.value = [];
+    changeRecordsList.value = [];
+    paginationConfig.total = 0;
+    updateStats();
+  } finally {
+    request.finish();
   }
 };
 
@@ -588,7 +597,7 @@ const fetchDutySchedule = async (): Promise<void> => {
     return;
   }
 
-  loading.value = true;
+  const request = beginScheduleRequest();
   try {
     const id = dutyGroupId.value;
     const currentMonth = dayjs(currentDate.value);
@@ -599,6 +608,7 @@ const fetchDutySchedule = async (): Promise<void> => {
       start_time: startOfCalendar.format('YYYY-MM-DD'),
       end_time: endOfCalendar.format('YYYY-MM-DD')
     });
+    if (!request.isCurrent()) return;
 
     // 改进的响应数据处理 - 兼容多种响应格式
     let planDetails: DutyPlanDetail[] = [];
@@ -704,6 +714,7 @@ const fetchDutySchedule = async (): Promise<void> => {
 
     updateStats();
   } catch (error: any) {
+    if (!request.isCurrent()) return;
 
     let errorMessage = '获取值班计划失败';
     if (error.response?.status === 404) {
@@ -714,10 +725,13 @@ const fetchDutySchedule = async (): Promise<void> => {
       errorMessage = error.message || '获取值班计划失败';
     }
 
-    message.error(errorMessage);
+    request.fail(new Error(errorMessage), '数据加载失败');
+    message.error(scheduleError.value);
     calendarDays.value = [];
+    dutyPlanData.value = [];
+    updateStats();
   } finally {
-    loading.value = false;
+    request.finish();
   }
 };
 
@@ -727,17 +741,20 @@ const loadHistoryRecords = async (): Promise<void> => {
     return;
   }
 
+  const request = beginHistoryRequest();
   try {
     const currentMonth = dayjs(currentDate.value);
     const startDate = currentMonth.startOf('month').format('YYYY-MM-DD');
     const endDate = currentMonth.endOf('month').format('YYYY-MM-DD');
 
     const response = await getMonitorOnDutyHistoryApi(dutyGroupId.value, {
-      start_date: startDate,
-      end_date: endDate,
+      start_date: dateFilter.value?.format('YYYY-MM-DD') || startDate,
+      end_date: dateFilter.value?.format('YYYY-MM-DD') || endDate,
+      search: searchQuery.value.trim() || undefined,
       page: paginationConfig.current,
       size: paginationConfig.pageSize
     });
+    if (!request.isCurrent()) return;
 
     // 改进的历史数据响应处理 - 使用与值班组页面相同的逻辑
     let historyData: MonitorOnDutyHistory[] = [];
@@ -786,6 +803,7 @@ const loadHistoryRecords = async (): Promise<void> => {
 
     updateStats();
   } catch (error: any) {
+    if (!request.isCurrent()) return;
 
     let errorMessage = '加载值班历史失败';
     if (error.response?.status === 404) {
@@ -796,9 +814,12 @@ const loadHistoryRecords = async (): Promise<void> => {
       errorMessage = error.message || '加载值班历史失败';
     }
 
-    message.error(errorMessage);
+    request.fail(new Error(errorMessage), '数据加载失败');
+    message.error(historyError.value);
     historyList.value = [];
     paginationConfig.total = 0;
+  } finally {
+    request.finish();
   }
 };
 
@@ -817,11 +838,13 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
     return;
   }
 
+  const request = beginChangeRequest();
   try {
     const response = await getMonitorOnDutyGroupChangeListApi(dutyGroupId.value, {
       page,
       size: changeRecordsPagination.pageSize
     });
+    if (!request.isCurrent()) return;
 
     // 改进的调班记录响应处理
     let changeData: any[] = [];
@@ -865,6 +888,7 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
     changeRecordsPagination.hasMore = page * changeRecordsPagination.pageSize < total;
     updateStats();
   } catch (error: any) {
+    if (!request.isCurrent()) return;
 
     let errorMessage = '加载调班记录失败';
     if (error.response?.status === 404) {
@@ -875,11 +899,14 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
       errorMessage = error.message || '加载调班记录失败';
     }
 
-    message.error(errorMessage);
+    request.fail(new Error(errorMessage), '数据加载失败');
+    message.error(changeError.value);
     if (!append) {
       changeRecordsList.value = [];
       changeRecordsPagination.total = 0;
     }
+  } finally {
+    request.finish();
   }
 };
 
@@ -891,10 +918,7 @@ const initializeData = async (): Promise<void> => {
     dutyGroupId.value = id;
     await fetchDutyGroups();
   } else {
-    message.error('缺少值班组ID参数');
-    setTimeout(() => {
-      router.push('/monitor_onduty_group');
-    }, 1000);
+    detailError.value = '缺少值班组ID参数，请返回值班组列表重新选择';
   }
 };
 
@@ -986,6 +1010,8 @@ const getWeekendType = (dateStr: string): string => {
 const updateStats = (): void => {
   if (dutyGroupDetail.value) {
     stats.totalMembers = dutyGroupDetail.value.users?.length || 0;
+  } else {
+    stats.totalMembers = 0;
   }
 
   // 今日值班 - 显示值班人姓名
@@ -1007,17 +1033,17 @@ const goBack = (): void => {
 
 // 月份导航
 const previousMonth = (): void => {
-  const newDate = new Date(currentDate.value);
-  newDate.setMonth(newDate.getMonth() - 1);
-  currentDate.value = newDate;
+  currentDate.value = dayjs(currentDate.value).subtract(1, 'month').toDate();
+  paginationConfig.current = 1;
+  dateFilter.value = undefined;
   fetchDutySchedule();
   loadHistoryRecords();
 };
 
 const nextMonth = (): void => {
-  const newDate = new Date(currentDate.value);
-  newDate.setMonth(newDate.getMonth() + 1);
-  currentDate.value = newDate;
+  currentDate.value = dayjs(currentDate.value).add(1, 'month').toDate();
+  paginationConfig.current = 1;
+  dateFilter.value = undefined;
   fetchDutySchedule();
   loadHistoryRecords();
 };
@@ -1180,6 +1206,8 @@ const closeDayDetail = (): void => {
   selectedDay.value = null;
 };
 
+watch(() => route.query.id, () => { initializeData(); });
+
 // 生命周期钩子 - 修复初始化问题
 onMounted(async () => {
 
@@ -1191,75 +1219,16 @@ onMounted(async () => {
 
 <style scoped>
 /* 保持原有样式不变 */
-.duty-schedule-container {
-  padding: 20px;
-  background: #f5f7fa;
-  min-height: 100vh;
-}
 
 /* 页面头部 */
-.page-header {
-  margin-bottom: 24px;
-}
 
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 16px;
-}
 
-.title-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 
-.back-btn {
-  height: 40px;
-  width: 40px;
-  border-radius: var(--ops-radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
-.page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--ops-ink);
-  margin: 0;
-}
 
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--ops-muted);
-  margin-top: 4px;
-}
 
-.breadcrumb-item.current {
-  color: #1890ff;
-  font-weight: 500;
-}
 
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
 
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 16px;
-  font-size: 16px;
-}
 
 /* 统计面板 */
 .stats-section {
@@ -1276,7 +1245,7 @@ onMounted(async () => {
   background: var(--ops-surface);
   padding: 20px;
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -1317,7 +1286,7 @@ onMounted(async () => {
 
 .calendar-card {
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
 .calendar-header {
@@ -1518,7 +1487,7 @@ onMounted(async () => {
 
 .no-duty-text {
   font-size: 12px;
-  color: #999;
+  color: var(--ops-muted);
 }
 
 /* 搜索区域 */
@@ -1563,7 +1532,7 @@ onMounted(async () => {
 
 .date-sub {
   font-size: 12px;
-  color: #999;
+  color: var(--ops-muted);
 }
 
 .users-change {
@@ -1743,14 +1712,7 @@ onMounted(async () => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .duty-schedule-container {
-    padding: 16px;
-  }
 
-  .header-content {
-    flex-direction: column;
-    align-items: stretch;
-  }
 
   .search-section {
     flex-direction: column;

@@ -1,5 +1,5 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-import Antd from 'ant-design-vue';
+import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Component } from 'vue';
 
@@ -9,6 +9,9 @@ import MonitorSend from './MonitorSend.vue';
 import MonitorAlertPool from './MonitorAlertPool.vue';
 import MonitorAlertRecord from './MonitorAlertRecord.vue';
 import MonitorAlertEvent from './MonitorAlertEvent.vue';
+import MonitorConfig from './MonitorConfig.vue';
+import MonitorOnDutyGroup from './MonitorOnDutyGroup.vue';
+import MonitorAlertRule from './MonitorAlertRule.vue';
 
 const client = vi.hoisted(() => ({
   get: vi.fn(),
@@ -17,6 +20,7 @@ const client = vi.hoisted(() => ({
   delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
+vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@vben/stores', () => ({
   useUserStore: () => ({ userInfo: { userId: 1 } }),
 }));
@@ -24,6 +28,7 @@ vi.mock('@vben/stores', () => ({
 let wrapper: VueWrapper | undefined;
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(message, 'success');
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
@@ -86,12 +91,37 @@ const pages: {
     title: '告警事件',
     path: '/monitor/alert_events/list',
   },
+  {
+    component: MonitorConfig,
+    title: '监控配置',
+    path: '/monitor/configs/list',
+    create: '新增监控配置',
+  },
+  {
+    component: MonitorOnDutyGroup,
+    title: '值班组',
+    path: '/monitor/onduty_groups/list',
+    create: '新增值班组',
+  },
+  {
+    component: MonitorAlertRule,
+    title: '告警规则',
+    path: '/monitor/alert_rules/list',
+    create: '新建告警规则',
+  },
 ];
 const row = (name: string) => ({
   alert_name: name,
   status: 1,
   labels: [],
   event_times: 5,
+  shift_days: 1,
+  users: [],
+  today_duty_user: null,
+  config_type: 1,
+  instance_ip: '127.0.0.1',
+  expr: 'up',
+  severity: 1,
   id: 1,
   name,
   name_zh: name,
@@ -137,6 +167,7 @@ describe.each(pages)('$title 页面真实控件', (page) => {
     expect(wrapper!.text()).toContain('旧记录');
     await button('重置').trigger('click');
     await flushPromises();
+    expect(message.success).not.toHaveBeenCalled();
     expect(wrapper!.text()).not.toContain('旧记录');
     expect(wrapper!.text()).toContain('离线测试失败');
     await button('重试').trigger('click');

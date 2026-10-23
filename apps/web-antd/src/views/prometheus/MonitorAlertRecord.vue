@@ -823,7 +823,6 @@ const handleReset = (): void => {
   enabledFilter.value = undefined;
   paginationConfig.current = 1;
   fetchRecordRules();
-  message.success('过滤条件已重置');
 };
 
 // 查看记录详情

@@ -931,7 +931,6 @@ const handleResetFilters = (): void => {
   poolFilter.value = undefined;
   paginationConfig.current = 1;
   loadScrapeJobList();
-  message.success('过滤条件已重置');
 };
 
 const handleCreateScrapeJob = (): void => {

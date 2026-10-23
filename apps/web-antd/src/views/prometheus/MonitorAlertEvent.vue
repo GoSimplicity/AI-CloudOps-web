@@ -440,7 +440,6 @@ const handleResetFilters = (): void => {
   eventTimesFilter.value = undefined;
   paginationConfig.current = 1;
   fetchResources();
-  message.success('过滤条件已重置');
 };
 
 const handleMenuClick = (command: string, record: MonitorAlertEvent): void => {

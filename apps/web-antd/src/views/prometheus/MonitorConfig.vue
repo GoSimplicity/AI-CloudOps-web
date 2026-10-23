@@ -1,15 +1,16 @@
 <template>
-  <div class="config-container">
+  <OpsPage title="监控配置" description="管理配置版本、实例与生效状态">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button type="primary" @click="showAddModal" class="btn-create">
+    <template #actions>
+      <a-button type="primary" @click="showAddModal" class="btn-create">
           <template #icon>
             <PlusOutlined />
           </template>
           <span class="btn-text">新增监控配置</span>
         </a-button>
-        <div class="search-filters">
+    </template>
+    <template #filters>
+      <div class="search-filters">
           <a-input-search 
             v-model:value="searchText" 
             placeholder="搜索配置名称..." 
@@ -20,7 +21,7 @@
           />
           <a-select 
             v-model:value="searchPoolId" 
-            placeholder="全部实例池" 
+            placeholder="实例池（本页）"
             class="filter-select"
             @change="handleFilterChange" 
             allow-clear
@@ -59,17 +60,17 @@
             重置
           </a-button>
         </div>
-      </div>
-    </div>
+    </template>
 
     <!-- 统计卡片 -->
-    <div class="stats-row">
+    <template #summary>
+      <div class="stats-row">
       <a-row :gutter="[16, 16]">
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic 
               title="总配置数" 
-              :value="stats.total" 
+              :value="loadError ? '未知' : stats.total"
               :value-style="{ color: '#3f8600' }"
             >
               <template #prefix>
@@ -81,8 +82,8 @@
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic 
-              title="激活配置" 
-              :value="stats.active" 
+              title="本页激活配置"
+              :value="loadError ? '未知' : stats.active"
               :value-style="{ color: '#52c41a' }"
             >
               <template #prefix>
@@ -94,8 +95,8 @@
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic 
-              title="告警规则" 
-              :value="stats.alertRules" 
+              title="本页告警规则"
+              :value="loadError ? '未知' : stats.alertRules"
               :value-style="{ color: '#faad14' }"
             >
               <template #prefix>
@@ -107,8 +108,8 @@
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic 
-              title="实例数" 
-              :value="stats.instances" 
+              title="本页实例数"
+              :value="loadError ? '未知' : stats.instances"
               :value-style="{ color: '#cf1322' }"
             >
               <template #prefix>
@@ -119,8 +120,13 @@
         </a-col>
       </a-row>
     </div>
+    </template>
 
     <!-- 表格容器 -->
+    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
+      <template #action><a-button size="small" :loading="loading" @click="fetchConfigs">重试</a-button></template>
+    </a-alert>
+
     <div class="table-container">
       <a-card>
         <a-table 
@@ -516,11 +522,13 @@
         </div>
       </div>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useListRequest } from './useListRequest';
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
   PlusOutlined,
@@ -615,6 +623,7 @@ const poolOptions = ref<PoolOption[]>([]);
 
 // 状态数据
 const loading = ref(false);
+const { loadError, beginRequest } = useListRequest(loading);
 const data = ref<MonitorConfigItem[]>([]);
 const searchText = ref('');
 const searchPoolId = ref<number | undefined>(undefined);
@@ -622,7 +631,8 @@ const searchConfigType = ref<ConfigType | undefined>(undefined);
 const searchStatus = ref<ConfigStatus | undefined>(undefined);
 
 // 防抖处理
-let searchTimeout: any = null;
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+onBeforeUnmount(() => { if (searchTimeout) clearTimeout(searchTimeout); });
 
 // 分页配置
 const paginationConfig = reactive<PaginationConfig>({
@@ -758,7 +768,7 @@ const updateStats = (): void => {
 
 // 数据加载
 const fetchConfigs = async (): Promise<void> => {
-  loading.value = true;
+  const request = beginRequest();
   try {
     const params: GetMonitorConfigListParams = {
       page: paginationConfig.current,
@@ -769,6 +779,7 @@ const fetchConfigs = async (): Promise<void> => {
     };
 
     const response = await getMonitorConfigListApi(params);
+    if (!request.isCurrent()) return;
     if (response) {
       let items: MonitorConfigItem[] = response.items || [];
       // 客户端按实例池过滤（后端参数未定义）
@@ -780,10 +791,13 @@ const fetchConfigs = async (): Promise<void> => {
       updateStats();
     }
   } catch (error: any) {
-
-    message.error(error.message || '加载配置列表失败');
+    if (!request.fail(error, '加载配置列表失败')) return;
+    data.value = [];
+    paginationConfig.total = 0;
+    updateStats();
+    message.error(loadError.value);
   } finally {
-    loading.value = false;
+    request.finish();
   }
 };
 
@@ -858,7 +872,6 @@ const handleReset = (): void => {
   searchStatus.value = undefined;
   paginationConfig.current = 1;
   fetchConfigs();
-  message.success('过滤条件已重置');
 };
 
 const handleMenuClick = (command: string, record: MonitorConfigItem): void => {
@@ -1008,35 +1021,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.config-container {
-  padding: 12px;
-  min-height: 100vh;
-}
 
-.page-header {
-  margin-bottom: 20px;
-}
 
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
 
-.btn-create {
-  background: var(--ops-accent);
-  border: none;
-  flex-shrink: 0;
-}
 
-.search-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
 
 .search-input {
   width: 250px;
@@ -1265,18 +1253,8 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .config-container {
-    padding: 8px;
-  }
 
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
 
-  .search-filters {
-    width: 100%;
-  }
 
   .search-input {
     width: 100%;
@@ -1288,14 +1266,7 @@ onMounted(() => {
     min-width: auto;
   }
 
-  .btn-text {
-    display: none;
-  }
 
-  .btn-create {
-    padding: 4px 8px;
-    min-width: auto;
-  }
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
@@ -1325,9 +1296,6 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-  .header-actions {
-    gap: 8px;
-  }
 
   .stats-card {
     text-align: center;

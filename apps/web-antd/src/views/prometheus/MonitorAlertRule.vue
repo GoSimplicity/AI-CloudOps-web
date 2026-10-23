@@ -1,5 +1,5 @@
 <template>
-  <OpsPage title="告警规则">
+  <OpsPage title="告警规则" description="维护告警表达式、严重性与通知分组">
     <!-- 页面标题 -->
     <template #actions>
       <a-button type="primary" @click="showAddModal" class="btn-create">
@@ -56,7 +56,7 @@
           <a-card class="stats-card">
             <a-statistic
               title="总规则"
-              :value="stats.total"
+              :value="loadError ? '未知' : stats.total"
               :value-style="{ color: '#3f8600' }"
             >
               <template #prefix>
@@ -68,8 +68,8 @@
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic
-              title="Critical"
-              :value="stats.critical"
+              title="本页Critical"
+              :value="loadError ? '未知' : stats.critical"
               :value-style="{ color: '#cf1322' }"
             >
               <template #prefix>
@@ -81,8 +81,8 @@
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic
-              title="Warning"
-              :value="stats.warning"
+              title="本页Warning"
+              :value="loadError ? '未知' : stats.warning"
               :value-style="{ color: '#faad14' }"
             >
               <template #prefix>
@@ -94,8 +94,8 @@
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic
-              title="已启用"
-              :value="stats.enabled"
+              title="本页已启用"
+              :value="loadError ? '未知' : stats.enabled"
               :value-style="{ color: '#1890ff' }"
             >
               <template #prefix>
@@ -108,6 +108,10 @@
     </div></template>
 
     <!-- 表格容器 -->
+    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
+      <template #action><a-button size="small" :loading="loading" @click="fetchAlertRules">重试</a-button></template>
+    </a-alert>
+
     <div class="table-container">
       <a-card>
         <a-table
@@ -845,6 +849,7 @@
 
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+import { useListRequest } from './useListRequest';
 
 import { ref, reactive, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
@@ -932,6 +937,7 @@ const handleApiError = (error: any, defaultMessage: string) => {
 
 // --- 响应式状态 ---
 const loading = ref(false);
+const { loadError, beginRequest } = useListRequest(loading);
 const data = ref<MonitorAlertRule[]>([]);
 const scrapePools = ref<MonitorAlertManagerPool[]>([]);
 const sendGroups = ref<MonitorSendGroup[]>([]);
@@ -1098,7 +1104,7 @@ const getDisplayAnnotations = (annotations: string[]) => {
 
 // --- API 调用 ---
 const fetchAlertRules = async () => {
-  loading.value = true;
+  const request = beginRequest();
   try {
     const params: GetMonitorAlertRuleListReq = {
       page: paginationConfig.current,
@@ -1108,12 +1114,16 @@ const fetchAlertRules = async () => {
       enable: searchParams.enable,
     };
     const response = await getMonitorAlertRuleListApi(params);
+    if (!request.isCurrent()) return;
     data.value = response.items || [];
     paginationConfig.total = response.total || 0;
   } catch (error: any) {
-    handleApiError(error, '加载告警规则列表失败');
+    if (!request.fail(error, '加载告警规则列表失败')) return;
+    data.value = [];
+    paginationConfig.total = 0;
+    message.error(loadError.value);
   } finally {
-    loading.value = false;
+    request.finish();
   }
 };
 
@@ -1214,7 +1224,6 @@ const handleReset = () => {
   searchParams.enable = undefined;
   paginationConfig.current = 1;
   fetchAlertRules();
-  message.success('筛选条件已重置');
 };
 
 const handleMenuClick = (key: string, record: MonitorAlertRule) => {
@@ -1507,11 +1516,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.btn-create {
-  background: var(--ops-accent);
-  border: none;
-  flex-shrink: 0;
-}
 
 .search-filters {
   display: flex;
@@ -1660,7 +1664,7 @@ onMounted(() => {
 }
 
 .label-value {
-  color: #555;
+  color: var(--ops-muted);
 }
 
 .all-tags-container {
@@ -1880,14 +1884,7 @@ onMounted(() => {
     min-width: auto;
   }
 
-  .btn-text {
-    display: none;
-  }
 
-  .btn-create {
-    padding: 4px 8px;
-    min-width: auto;
-  }
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;

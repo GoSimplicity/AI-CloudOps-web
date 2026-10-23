@@ -1199,7 +1199,6 @@ const handleResetFilters = (): void => {
   upgradeFilter.value = undefined;
   paginationConfig.current = 1;
   loadSendGroupList();
-  message.success('过滤条件已重置');
 };
 
 const handleCreateSendGroup = (): void => {

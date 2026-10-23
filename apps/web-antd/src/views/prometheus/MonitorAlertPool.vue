@@ -691,7 +691,6 @@ const handleReset = (): void => {
   searchText.value = '';
   paginationConfig.current = 1;
   fetchAlertManagerPools();
-  message.success('过滤条件已重置');
 };
 
 const showAddModal = (): void => {
