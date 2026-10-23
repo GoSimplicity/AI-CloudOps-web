@@ -8,10 +8,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { HTTP_ERROR_MESSAGE_KEY_PREFIX, requestClient } from '#/api/request';
 import {
+  getAccountCPermissionCodes,
+  getAccountPermissionCodes,
   PERMISSION_CODES,
+  S1B_PERMISSION_CODES,
   U3_PERMISSION_CODES,
 } from '#/constants/permission-codes';
-import { PERMISSION_DENIED_MESSAGE_KEY } from '#/utils/permission/forbidden';
+import {
+  PERMISSION_DENIED_MESSAGE,
+  PERMISSION_DENIED_MESSAGE_KEY,
+} from '#/utils/permission/forbidden';
 
 import { BATCH_CORDON_CONCURRENCY } from './Node';
 import Node from './Node.vue';
@@ -50,9 +56,9 @@ vi.mock('#/constants/permission-codes', async (importOriginal) => {
   };
 });
 
-const BATCH_CORDON = U3_PERMISSION_CODES['k8s.node.batchCordon'];
-const CORDON = U3_PERMISSION_CODES['k8s.node.cordon'];
-const UNCORDON = U3_PERMISSION_CODES['k8s.node.uncordon'];
+const BATCH_CORDON = S1B_PERMISSION_CODES['k8s.node.batchCordon'];
+const CORDON = S1B_PERMISSION_CODES['k8s.node.cordon'];
+const UNCORDON = S1B_PERMISSION_CODES['k8s.node.uncordon'];
 
 type TestNode = {
   cluster_id: number;
@@ -104,6 +110,8 @@ const adapter: AxiosAdapter = async (config) => {
 const cordonUrl = (name: string) => `/k8s/node/7/${name}/cordon`;
 const cordonRequests = () =>
   requests.filter((request) => request.url.endsWith('/cordon'));
+const scheduleRequests = () =>
+  requests.filter((request) => /\/(un)?cordon$/.test(request.url));
 async function settle() {
   await vi.waitFor(() => expect(inFlight).toBe(0));
   for (let i = 0; i < 5; i += 1) {
@@ -245,9 +253,10 @@ afterEach(() => {
 });
 
 describe('Node 批量禁用调度（逐个调用单节点 cordon）', () => {
-  it('权限码 k8s.node.batchCordon 取单节点 cordon 路由模板，留在 U3 表（清单 v3 #87）但始终按码判断', () => {
+  it('权限码 k8s.node.batchCordon 取单节点 cordon 路由模板，属 S1b（清单 v4 #87），始终按码判断', () => {
     expect(BATCH_CORDON).toBe('/api/k8s/node/:cluster_id/:node_name/cordon');
     expect('k8s.node.batchCordon' in PERMISSION_CODES).toBe(false);
+    expect('k8s.node.batchCordon' in U3_PERMISSION_CODES).toBe(false);
   });
 
   it('U3 未获批（默认）：没有 cordon 码时选中节点也隐藏批量按钮（P2-A，与 a21af97 一致）', async () => {
@@ -482,7 +491,7 @@ describe('行内禁用/启用调度按钮（toggleNodeSchedule）', () => {
     NODES = makeNodes(2, ['node-2']); // node-1 可调度，node-2 已禁用调度
   });
 
-  it('cordon / uncordon 码取各自的单节点路由模板（清单 v3 #84 / #85）', () => {
+  it('cordon / uncordon 码取各自的单节点路由模板（清单 v4 S1b #84 / #85）', () => {
     expect(CORDON).toBe('/api/k8s/node/:cluster_id/:node_name/cordon');
     expect(UNCORDON).toBe('/api/k8s/node/:cluster_id/:node_name/uncordon');
   });
@@ -529,6 +538,118 @@ describe('行内禁用/启用调度按钮（toggleNodeSchedule）', () => {
       await mountPage();
       expect(rowScheduleButton(0)).not.toBeNull();
       expect(rowScheduleButton(1)).not.toBeNull();
+    });
+  });
+});
+
+/**
+ * 验收标准 v3 FE-02「cordon 类不受 U3 开关影响」：U3 获批前（默认开关），
+ * B（空码）和 C（A 去掉 cordon / uncordon，59 个码）看不到批量 / 行内调度按钮，
+ * 直接调用对应函数也不发 cordon / uncordon 请求；A（61 个码）可用，行内各 1 次、批量 N 次。
+ */
+describe('测试账号 A / B / C（U3 未获批）：Node 调度按钮', () => {
+  beforeEach(() => {
+    NODES = makeNodes(3, ['node-3']); // node-1、node-2 可调度，node-3 已禁用调度
+  });
+
+  async function confirmIfShown(okText: string) {
+    const ok = bodyButton(okText);
+    if (ok) {
+      ok.click();
+      await flushPromises();
+    }
+    await settle();
+  }
+
+  it('账号码数：A 61、C 59，C 只比 A 少 cordon / uncordon', () => {
+    expect(getAccountPermissionCodes()).toHaveLength(61);
+    expect(getAccountCPermissionCodes()).toHaveLength(59);
+    expect(getAccountCPermissionCodes()).not.toContain(CORDON);
+    expect(getAccountCPermissionCodes()).not.toContain(UNCORDON);
+  });
+
+  describe.each([
+    ['B（空码）', (): string[] => []],
+    ['C（59 个码）', (): string[] => getAccountCPermissionCodes()],
+  ])('%s', (_label, codes) => {
+    it('行内「禁用调度」「启用调度」都不渲染；选中节点后也没有批量按钮', async () => {
+      setSubject(codes());
+      await mountPage();
+      expect(rowScheduleButton(0)).toBeNull();
+      expect(rowScheduleButton(1)).toBeNull();
+      expect(rowScheduleButton(2)).toBeNull();
+      await selectRows(3);
+      expect(batchButton()).toBeNull();
+    });
+
+    it('直接调用行内 cordon / uncordon 函数：不弹确认、不发请求，提示无权限', async () => {
+      setSubject(codes());
+      await mountPage();
+      wrapper.vm.toggleNodeSchedule({ ...NODES[0]! });
+      await flushPromises();
+      await confirmIfShown('确认禁用');
+      wrapper.vm.toggleNodeSchedule({ ...NODES[2]! });
+      await flushPromises();
+      await confirmIfShown('确认启用');
+      expect(scheduleRequests()).toEqual([]);
+      expect(message.error).toHaveBeenCalledWith({
+        content: PERMISSION_DENIED_MESSAGE,
+        key: PERMISSION_DENIED_MESSAGE_KEY,
+      });
+    });
+
+    it('直接调用批量禁用调度函数：不弹确认、不发请求，提示无权限', async () => {
+      setSubject(codes());
+      await mountPage();
+      await selectRows(2);
+      wrapper.vm.batchOperation('禁用调度');
+      await flushPromises();
+      await confirmIfShown('确认执行');
+      expect(scheduleRequests()).toEqual([]);
+      expect(message.error).toHaveBeenCalledWith({
+        content: PERMISSION_DENIED_MESSAGE,
+        key: PERMISSION_DENIED_MESSAGE_KEY,
+      });
+    });
+  });
+
+  describe('A（61 个码）', () => {
+    beforeEach(() => {
+      setSubject(getAccountPermissionCodes());
+    });
+
+    it('可调度节点「禁用调度」确认后发 1 次 cordon', async () => {
+      await mountPage();
+      expect(rowScheduleButton(0)?.getAttribute('title')).toBe('禁用调度');
+      rowScheduleButton(0)!.click();
+      await flushPromises();
+      await confirmIfShown('确认禁用');
+      expect(scheduleRequests()).toEqual([
+        { method: 'POST', url: cordonUrl('node-1') },
+      ]);
+    });
+
+    it('不可调度节点「启用调度」确认后发 1 次 uncordon', async () => {
+      await mountPage();
+      expect(rowScheduleButton(2)?.getAttribute('title')).toBe('启用调度');
+      rowScheduleButton(2)!.click();
+      await flushPromises();
+      await confirmIfShown('确认启用');
+      expect(scheduleRequests()).toEqual([
+        { method: 'POST', url: '/k8s/node/7/node-3/uncordon' },
+      ]);
+    });
+
+    it('选中 N 个可调度节点批量禁用调度，发 N 次 cordon', async () => {
+      await mountPage();
+      await selectRows(2);
+      await runBatch();
+      expect(scheduleRequests()).toEqual(
+        ['node-1', 'node-2'].map((name) => ({
+          method: 'POST',
+          url: cordonUrl(name),
+        })),
+      );
     });
   });
 });

@@ -18,10 +18,11 @@ vi.mock('#/constants/permission-codes', async (importOriginal) => {
 import {
   ALL_PERMISSION_CODES,
   FE02_SUPPLEMENT_PERMISSION_CODES,
+  getAccountCPermissionCodes,
   getAccountPermissionCodes,
   PERMISSION_CODES,
   type PermissionKey,
-  U3_ALWAYS_ENFORCED_KEYS,
+  S1B_PERMISSION_CODES,
   U3_PERMISSION_CODES,
   U3_SCOPE_APPROVED,
 } from '#/constants/permission-codes';
@@ -40,11 +41,10 @@ import {
 } from './forbidden';
 
 const ALL_KEYS = Object.keys(PERMISSION_CODES) as PermissionKey[];
+/** S3（U3 表）：受开关控制的 19 个 key */
 const U3_KEYS = Object.keys(U3_PERMISSION_CODES) as PermissionKey[];
-/** U3 表里受开关控制的 key（去掉始终判断的 Node 调度三个） */
-const U3_GATED_KEYS = U3_KEYS.filter(
-  (key) => !(U3_ALWAYS_ENFORCED_KEYS as readonly string[]).includes(key),
-);
+/** S1b：Node 调度三个按钮，始终按码判断 */
+const S1B_KEYS = Object.keys(S1B_PERMISSION_CODES) as PermissionKey[];
 const POD_DELETE = '/api/k8s/pod/:cluster_id/:namespace/:name/delete';
 const distinct = (group: Record<string, string>) =>
   new Set(Object.values(group));
@@ -53,7 +53,7 @@ afterEach(() => {
   u3.override = undefined;
 });
 
-describe('权限码常量（permission-codes.md v3 第 6 / 6.1 节）', () => {
+describe('权限码常量（permission-codes.md v4 第 6 / 6.1 节）', () => {
   it('按钮 key 映射为后端路由模板路径（字符串，不带方法）', () => {
     expect(getPermissionCode('k8s.pod.delete')).toBe(POD_DELETE);
     expect(getPermissionCode('k8s.pod.exec')).toBe(
@@ -68,24 +68,30 @@ describe('权限码常量（permission-codes.md v3 第 6 / 6.1 节）', () => {
     }
   });
 
-  it('S1 / S2 / S3 按钮数与码数和清单一致，三个码集两两不相交', () => {
+  it('S1 / S1b / S2 / S3 按钮数与码数和清单 v4 6.1 一致，四个码集两两不相交', () => {
     // S1：主表 #1–#77（含 6 个主范围待定按钮的临时码）
     expect(Object.keys(PERMISSION_CODES)).toHaveLength(77);
     expect(distinct(PERMISSION_CODES).size).toBe(57);
+    // S1b：主表 #84 / #85 / #87（batchCordon 和 cordon 同码）
+    expect(S1B_KEYS).toHaveLength(3);
+    expect(distinct(S1B_PERMISSION_CODES).size).toBe(2);
     // S2：补表 #1–#4（views/k8s/cluster/**）
     expect(Object.keys(FE02_SUPPLEMENT_PERMISSION_CODES)).toHaveLength(4);
     expect(distinct(FE02_SUPPLEMENT_PERMISSION_CODES).size).toBe(2);
-    // S3：主表 #78–#99（U3）
-    expect(U3_KEYS).toHaveLength(22);
-    expect(distinct(U3_PERMISSION_CODES).size).toBe(16);
+    // S3：主表 #78–#83、#86、#88–#99（U3）
+    expect(U3_KEYS).toHaveLength(19);
+    expect(distinct(U3_PERMISSION_CODES).size).toBe(14);
     // 合计 103 个按钮 / 75 个码
     expect(Object.keys(ALL_PERMISSION_CODES)).toHaveLength(103);
     expect(distinct(ALL_PERMISSION_CODES).size).toBe(75);
     const groups = [
       distinct(PERMISSION_CODES),
+      distinct(S1B_PERMISSION_CODES),
       distinct(FE02_SUPPLEMENT_PERMISSION_CODES),
       distinct(U3_PERMISSION_CODES),
     ];
+    // 四个码集的码数相加 = 全部码数，即没有重叠
+    expect(groups.reduce((sum, group) => sum + group.size, 0)).toBe(75);
     for (const [i, a] of groups.entries()) {
       for (const b of groups.slice(i + 1)) {
         expect([...a].filter((code) => b.has(code))).toEqual([]);
@@ -112,30 +118,28 @@ describe('权限码常量（permission-codes.md v3 第 6 / 6.1 节）', () => {
     });
   });
 
-  it('Node 调度三个按钮属于 U3，码为单节点 cordon / uncordon', () => {
-    expect(U3_PERMISSION_CODES).toMatchObject({
+  it('Node 调度三个按钮属于 S1b（清单 v4），码为单节点 cordon / uncordon；drain 仍属 S3', () => {
+    expect(S1B_PERMISSION_CODES).toEqual({
       'k8s.node.cordon': '/api/k8s/node/:cluster_id/:node_name/cordon',
       'k8s.node.uncordon': '/api/k8s/node/:cluster_id/:node_name/uncordon',
       'k8s.node.batchCordon': '/api/k8s/node/:cluster_id/:node_name/cordon',
     });
     expect(PERMISSION_CODES).not.toHaveProperty('k8s.node.batchCordon');
+    for (const key of S1B_KEYS) {
+      expect(U3_PERMISSION_CODES).not.toHaveProperty(key);
+    }
+    expect(U3_PERMISSION_CODES).toHaveProperty(
+      'k8s.node.drain',
+      '/api/k8s/node/:cluster_id/:node_name/drain',
+    );
   });
 
-  it('Node 调度三个按钮始终按码判断（P2-A），其余 19 个 U3 key 受开关控制', () => {
-    expect([...U3_ALWAYS_ENFORCED_KEYS].sort()).toEqual([
-      'k8s.node.batchCordon',
-      'k8s.node.cordon',
-      'k8s.node.uncordon',
-    ]);
-    expect(U3_GATED_KEYS).toHaveLength(19);
-  });
-
-  it('U3 开关默认关闭；测试账号 A 码集：U3 获批前 61（59 + cordon / uncordon），获批后 75', () => {
+  it('U3 开关默认关闭；测试账号 A 码集：U3 获批前 S1 ∪ S1b ∪ S2 = 61，获批后 75', () => {
     expect(U3_SCOPE_APPROVED).toBe(false);
     expect(getAccountPermissionCodes()).toHaveLength(61);
     expect(getAccountPermissionCodes(false)).toHaveLength(61);
     expect(getAccountPermissionCodes(true)).toHaveLength(75);
-    // 获批前 = S1 ∪ S2（59 个码）再加 Node 调度的 2 个码
+    // 获批前 = S1 ∪ S2（59 个码）再加 S1b 的 2 个码
     const s1s2 = new Set<string>([
       ...Object.values(PERMISSION_CODES),
       ...Object.values(FE02_SUPPLEMENT_PERMISSION_CODES),
@@ -147,7 +151,10 @@ describe('权限码常量（permission-codes.md v3 第 6 / 6.1 节）', () => {
       '/api/k8s/node/:cluster_id/:node_name/cordon',
       '/api/k8s/node/:cluster_id/:node_name/uncordon',
     ]);
-    // 按码判断的按钮数：获批前 77 + 4 + 3 = 84，获批后 103
+    expect(new Set(getAccountPermissionCodes(false))).toEqual(
+      new Set([...s1s2, ...Object.values(S1B_PERMISSION_CODES)]),
+    );
+    // 按码判断的按钮数：获批前 S1 77 + S1b 3 + S2 4 = 84，获批后再加 S3 19 = 103
     const allKeys = Object.keys(ALL_PERMISSION_CODES) as PermissionKey[];
     expect(
       allKeys.filter((key) => isPermissionEnforced(key, false)),
@@ -161,11 +168,43 @@ describe('权限码常量（permission-codes.md v3 第 6 / 6.1 节）', () => {
     );
   });
 
-  it('U3 开关关闭时其余 U3 key 不按码判断，Node 调度三个仍判断；打开后全部判断', () => {
-    expect(U3_GATED_KEYS.some((key) => isPermissionEnforced(key))).toBe(false);
+  it('测试账号 C（验收标准 v3）= A 去掉 cordon / uncordon = 59 个码，B 为空', () => {
+    const accountC = getAccountCPermissionCodes();
+    expect(accountC).toHaveLength(59);
+    expect(getAccountCPermissionCodes(false)).toEqual(accountC);
     expect(
-      U3_ALWAYS_ENFORCED_KEYS.every((key) => isPermissionEnforced(key)),
+      getAccountPermissionCodes(false).filter(
+        (code) => !accountC.includes(code),
+      ),
+    ).toEqual([
+      '/api/k8s/node/:cluster_id/:node_name/cordon',
+      '/api/k8s/node/:cluster_id/:node_name/uncordon',
+    ]);
+    expect(new Set(accountC)).toEqual(
+      new Set([
+        ...Object.values(PERMISSION_CODES),
+        ...Object.values(FE02_SUPPLEMENT_PERMISSION_CODES),
+      ]),
+    );
+  });
+
+  it('账号 C：S1b 三个按钮无权限，S1 / S2 其余按钮都有权限（U3 未获批）', () => {
+    setActivePinia(createPinia());
+    useAccessStore().setAccessCodes(getAccountCPermissionCodes());
+    useUserStore().setUserInfo({ roles: ['ops'], username: 'ops' } as any);
+    const { can } = usePermission();
+    expect(S1B_KEYS.filter((key) => can(key))).toEqual([]);
+    expect(ALL_KEYS.every((key) => can(key))).toBe(true);
+    expect(
+      (Object.keys(FE02_SUPPLEMENT_PERMISSION_CODES) as PermissionKey[]).every(
+        (key) => can(key),
+      ),
     ).toBe(true);
+  });
+
+  it('U3 开关关闭时 S3 不按码判断，S1 / S1b / S2 仍判断；打开后全部判断', () => {
+    expect(U3_KEYS.some((key) => isPermissionEnforced(key))).toBe(false);
+    expect(S1B_KEYS.every((key) => isPermissionEnforced(key))).toBe(true);
     expect(ALL_KEYS.every((key) => isPermissionEnforced(key))).toBe(true);
     expect(U3_KEYS.every((key) => isPermissionEnforced(key, true))).toBe(true);
     u3.override = true;
@@ -289,14 +328,14 @@ describe('usePermission 读取 store', () => {
     expect(can('k8s.pod.exec')).toBe(true);
   });
 
-  it('U3 未获批：普通账号无码时其余 U3 按钮保持现状可见，主范围按钮和 Node 调度按钮隐藏', () => {
+  it('U3 未获批：普通账号无码时 S3 按钮保持现状可见，S1 按钮和 S1b（Node 调度）按钮隐藏', () => {
     const accessStore = useAccessStore();
     accessStore.setAccessCodes([]);
     useUserStore().setUserInfo({ roles: ['ops'], username: 'ops' } as any);
     const { can } = usePermission();
-    expect(U3_GATED_KEYS.every((key) => can(key))).toBe(true);
+    expect(U3_KEYS.every((key) => can(key))).toBe(true);
     expect(can('k8s.node.taintDelete')).toBe(false);
-    expect(U3_ALWAYS_ENFORCED_KEYS.filter((key) => can(key))).toEqual([]);
+    expect(S1B_KEYS.filter((key) => can(key))).toEqual([]);
     // 有 cordon 码：禁用调度、批量禁用调度可见，启用调度仍隐藏
     accessStore.setAccessCodes([getPermissionCode('k8s.node.cordon')]);
     expect(can('k8s.node.cordon')).toBe(true);

@@ -6,11 +6,12 @@ import { describe, expect, it } from 'vitest';
 import {
   FE02_SUPPLEMENT_PERMISSION_CODES,
   PERMISSION_CODES,
+  S1B_PERMISSION_CODES,
   U3_PERMISSION_CODES,
 } from '#/constants/permission-codes';
 
 /**
- * 静态核对：清单 v3 主表 #1–#77 的每个 key 都在页面源码里以 can('<key>') 门禁。
+ * 静态核对：清单 v4 S1（主表 #1–#77）和 S1b（#84 / #85 / #87）的每个 key 都在页面源码里以 can('<key>') 门禁。
  * views/k8s/cluster/** 不在本轮可改范围（W3），集群补充码单独列出。
  */
 const SRC = resolve(__dirname, '../..');
@@ -61,13 +62,23 @@ describe('权限码门禁覆盖（静态）', () => {
     ['k8s.node.cordon', 'views/k8s/node/Node.vue'],
     ['k8s.node.uncordon', 'views/k8s/node/Node.vue'],
     ['k8s.node.batchCordon', 'views/k8s/node/Node.vue'],
-  ])('U3 %s 已接到按钮（受 U3 开关控制）', (key, file) => {
-    expect(key in U3_PERMISSION_CODES).toBe(true);
+  ])('S1b %s 已接到按钮（清单 v4：始终按码判断）', (key, file) => {
+    expect(key in S1B_PERMISSION_CODES).toBe(true);
+    expect(key in U3_PERMISSION_CODES).toBe(false);
     expect(gatedIn(key)).toContain(file);
   });
 
-  it('本轮未接的码如实列出：其余 U3（W3/范围待批）与集群补充码（views/k8s/cluster 不改）', () => {
+  it('S1b 三个 key 就是上面逐个核对的三个', () => {
+    expect(Object.keys(S1B_PERMISSION_CODES).sort()).toEqual([
+      'k8s.node.batchCordon',
+      'k8s.node.cordon',
+      'k8s.node.uncordon',
+    ]);
+  });
+
+  it('本轮未接的码如实列出：S3（U3 范围待批）与 S2 集群补充码（views/k8s/cluster 不改）', () => {
     const notWired = [
+      ...Object.keys(S1B_PERMISSION_CODES),
       ...Object.keys(U3_PERMISSION_CODES),
       ...Object.keys(FE02_SUPPLEMENT_PERMISSION_CODES),
     ].filter((key) => gatedIn(key).length === 0);
