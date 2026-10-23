@@ -50,7 +50,10 @@ import {
   AUTOFIX_ERROR_TEXT,
   reportAutoFixError,
 } from '#/views/autofix/autofix-errors';
-import { PERMISSION_DENIED_MESSAGE_KEY } from '#/utils/permission/forbidden';
+import {
+  PERMISSION_DENIED_MESSAGE,
+  PERMISSION_DENIED_MESSAGE_KEY,
+} from '#/utils/permission/forbidden';
 import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
 
 import { resetHttpErrorNoticeTracking } from './http-error-notice';
@@ -106,6 +109,23 @@ function visibleNotices() {
   return byKey;
 }
 
+/** 按调用顺序列出 message.error 弹出的文案（同 key 替换也算一次），用于确认「弹的是哪条」 */
+function noticeContents() {
+  return notices.error.mock.calls.map(([arg]) =>
+    typeof arg === 'object' && arg ? arg.content : String(arg),
+  );
+}
+
+/** 所有提示通道（error / warning / info / success）的全部调用参数，用于断言不含后端原文 */
+function allNoticeCalls() {
+  return [
+    notices.error,
+    notices.warning,
+    notices.info,
+    notices.success,
+  ].flatMap((fn) => fn.mock.calls);
+}
+
 const ERROR_BODY = (code: string) => ({
   code: 1,
   message: `后端原文 ${code}`,
@@ -143,6 +163,30 @@ describe('autofix 错误提示 · 请求链路集成', () => {
     },
   );
 
+  // incr8 后续 3：400 / 422 的后端原文（含 data.message、data.error.message）不出现在任何一次提示调用里
+  // （不只看最终可见的那条：请求层先弹后端原文、页面再替换掉，也算透出）
+  it.each([400, 422])(
+    '%s：所有提示调用（error / warning / info / success）都不含后端原文',
+    async (status) => {
+      const inline = await confirmWith(
+        adapterOf(status, {
+          code: 1,
+          message: '后端原文 fake-top-level-detail',
+          error: { message: '后端原文 fake-nested-detail' },
+          error_code: 'WORKFLOW_APPROVAL_ERROR',
+        }),
+      );
+      expect(inline).toBe(AUTOFIX_ERROR_TEXT.invalid);
+      expect(allNoticeCalls().length).toBeGreaterThan(0);
+      const everything = JSON.stringify(allNoticeCalls());
+      expect(everything).not.toContain('后端原文');
+      expect(everything).not.toContain('fake-top-level-detail');
+      expect(everything).not.toContain('fake-nested-detail');
+      expect(everything).not.toContain('WORKFLOW_APPROVAL_ERROR');
+      expect(noticeContents().at(-1)).toBe(AUTOFIX_ERROR_TEXT.invalid);
+    },
+  );
+
   it('500：只有请求层的通用错误一条，页面不追加', async () => {
     const inline = await confirmWith(
       adapterOf(500, ERROR_BODY('AUTOFIX_INTERNAL_ERROR')),
@@ -153,6 +197,7 @@ describe('autofix 错误提示 · 请求链路集成', () => {
       content: $t('fallback.http.internalServerError'),
       key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${$t('fallback.http.internalServerError')}`,
     });
+    expect(noticeContents()).toEqual([$t('fallback.http.internalServerError')]);
   });
 
   it('403：只有权限提示一条', async () => {
@@ -161,6 +206,7 @@ describe('autofix 错误提示 · 请求链路集成', () => {
     expect(notices.error.mock.calls[0]![0].key).toBe(
       PERMISSION_DENIED_MESSAGE_KEY,
     );
+    expect(noticeContents()).toEqual([PERMISSION_DENIED_MESSAGE]);
   });
 
   it('HTTP 200 + code≠0：只有业务错误提示一条', async () => {
@@ -172,6 +218,7 @@ describe('autofix 错误提示 · 请求链路集成', () => {
     expect(notices.error.mock.calls[0]![0].key).toBe(
       `${BUSINESS_ERROR_MESSAGE_KEY_PREFIX}业务失败`,
     );
+    expect(noticeContents()).toEqual(['业务失败']);
   });
 });
 
@@ -214,6 +261,9 @@ describe('autofix 错误提示 · 共用 key 不串改', () => {
     expect(visible.size).toBe(1);
     expect(visible.get(GENERIC_KEY())).toBe(GENERIC());
     expect(autofixContents()).toEqual([]);
+    // incr8 后续 2：次数 + 内容——两次都是请求层的通用文案，没有第三次替换成 autofix 文案
+    expect(notices.error).toHaveBeenCalledTimes(2);
+    expect(noticeContents()).toEqual([GENERIC(), GENERIC()]);
   });
 
   it('autofix 先失败、页面处理前非 autofix 请求也失败（并发）：同样不替换', async () => {
@@ -232,6 +282,8 @@ describe('autofix 错误提示 · 共用 key 不串改', () => {
     expect(visible.size).toBe(1);
     expect(visible.get(GENERIC_KEY())).toBe(GENERIC());
     expect(autofixContents()).toEqual([]);
+    expect(notices.error).toHaveBeenCalledTimes(2);
+    expect(noticeContents()).toEqual([GENERIC(), GENERIC()]);
   });
 
   it('Promise.all 真并发：非 autofix 的提示不被改写', async () => {
@@ -248,6 +300,8 @@ describe('autofix 错误提示 · 共用 key 不串改', () => {
     reportAutoFixError(autofixError);
     expect(visibleNotices().get(GENERIC_KEY())).toBe(GENERIC());
     expect(autofixContents()).toEqual([]);
+    expect(notices.error).toHaveBeenCalledTimes(2);
+    expect(noticeContents()).toEqual([GENERIC(), GENERIC()]);
   });
 
   it('非 autofix 的提示已关闭后，autofix 自己的错误照常替换为一条', async () => {
@@ -258,6 +312,13 @@ describe('autofix 错误提示 · 共用 key 不串改', () => {
     const visible = visibleNotices();
     expect(visible.size).toBe(1);
     expect(visible.get(GENERIC_KEY())).toBe(AUTOFIX_ERROR_TEXT.conflict);
+    // 内容：非 autofix 的通用文案（已关闭）→ autofix 请求层通用文案 → 替换为 autofix 具体文案
+    expect(notices.error).toHaveBeenCalledTimes(3);
+    expect(noticeContents()).toEqual([
+      GENERIC(),
+      GENERIC(),
+      AUTOFIX_ERROR_TEXT.conflict,
+    ]);
   });
 
   it('autofix 连续两次同类错误：仍只有一个 key（不堆叠），显示最后一次的具体文案', async () => {
@@ -272,5 +333,10 @@ describe('autofix 错误提示 · 共用 key 不串改', () => {
     expect(visibleNotices().get(GENERIC_KEY())).toBe(
       AUTOFIX_ERROR_TEXT.conflict,
     );
+    // 最后一次 409：请求层通用文案 → 替换为 autofix 具体文案（不是 404 的 expired）
+    expect(noticeContents().slice(-2)).toEqual([
+      GENERIC(),
+      AUTOFIX_ERROR_TEXT.conflict,
+    ]);
   });
 });
