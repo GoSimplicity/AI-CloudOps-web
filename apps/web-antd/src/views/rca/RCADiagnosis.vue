@@ -858,7 +858,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 20px;
   transition: border-color var(--ops-duration) ease-out;
-  cursor: pointer;
   border: 1px solid var(--ops-border);
 }
 
@@ -899,17 +898,17 @@ onUnmounted(() => {
 }
 
 .trend-stable {
-  background: #f6ffed;
+  background: var(--ops-ground);
   color: #52c41a;
 }
 
 .trend-warning {
-  background: #fffbe6;
+  background: var(--ops-ground);
   color: #faad14;
 }
 
 .trend-up {
-  background: #fff2f0;
+  background: var(--ops-ground);
   color: #ff4d4f;
 }
 
@@ -1022,7 +1021,7 @@ onUnmounted(() => {
 }
 
 .step-item.active .step-icon {
-  background: #1890ff;
+  background: var(--ops-accent);
   border-color: #1890ff;
   color: hsl(var(--primary-foreground));
 }
@@ -1099,7 +1098,7 @@ onUnmounted(() => {
 }
 
 .critical-item:hover {
-  background: #fff2f0;
+  background: var(--ops-ground);
 }
 
 .issue-header {
@@ -1119,7 +1118,7 @@ onUnmounted(() => {
 }
 
 .issue-severity {
-  background: #fff2f0;
+  background: var(--ops-ground);
   color: #ff4d4f;
   padding: 2px 8px;
   border-radius: 4px;
@@ -1178,13 +1177,13 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: #f6ffed;
+  background: var(--ops-ground);
   border-radius: 6px;
   transition: border-color var(--ops-duration) ease-out;
 }
 
 .recommendation-item:hover {
-  background: #d9f7be;
+  background: var(--ops-ground);
 }
 
 .rec-icon {
@@ -1293,7 +1292,7 @@ onUnmounted(() => {
 }
 
 .cause-type {
-  background: #1890ff;
+  background: var(--ops-accent);
   color: hsl(var(--primary-foreground));
   padding: 4px 12px;
   border-radius: 4px;
@@ -1354,7 +1353,7 @@ onUnmounted(() => {
   color: var(--ops-muted);
   line-height: 1.4;
   padding: 8px 12px;
-  background: #f9f9f9;
+  background: var(--ops-ground);
   border-radius: 4px;
   border: 1px solid var(--ops-border);
   transition: border-color var(--ops-duration) ease-out;
@@ -1519,7 +1518,8 @@ onUnmounted(() => {
 
 @media (max-width: 575px) {
   .overview-grid, .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ops-space-sm); }
-  .overview-card, .metric-card { min-width: 0; padding: var(--ops-space-md); }
+  .overview-card, .metric-card { min-width: 0; padding: var(--ops-space-md); gap: var(--ops-space-sm); flex-wrap: wrap; }
+  .metric-icon { font-size: 20px; }
   .card-value, .metric-value { overflow-wrap: anywhere; }
   .section-header { flex-wrap: wrap; gap: var(--ops-space-sm); }
 }

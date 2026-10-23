@@ -459,7 +459,7 @@ padding: 48px 24px;
 }
 
 .cache-step-item.active .cache-step-icon {
-  background: #1890ff;
+  background: var(--ops-accent);
   border-color: #1890ff;
   color: hsl(var(--primary-foreground));
 }
@@ -505,7 +505,6 @@ padding: 48px 24px;
   align-items: center;
   gap: 20px;
   transition: border-color var(--ops-duration) ease-out;
-  cursor: pointer;
 }
 
 .overview-card:hover {
@@ -551,12 +550,12 @@ padding: 48px 24px;
 }
 
 .trend-up {
-  background: #fff2f0;
+  background: var(--ops-ground);
   color: #ff4d4f;
 }
 
 .trend-down {
-  background: #f6ffed;
+  background: var(--ops-ground);
   color: #52c41a;
 }
 
@@ -734,7 +733,7 @@ padding: 48px 24px;
 }
 
 .tab-content::-webkit-scrollbar-thumb:hover {
-  background: #bfbfbf;
+  background: var(--ops-border);
 }
 
 /* 缓存项样式 */
@@ -798,7 +797,7 @@ padding: 48px 24px;
 }
 
 .view-btn:hover {
-  background: #1890ff;
+  background: var(--ops-accent);
   color: hsl(var(--primary-foreground));
 }
 
@@ -945,7 +944,7 @@ padding: 48px 24px;
   align-items: flex-start;
   gap: 12px;
   padding: 16px;
-  background: #fff7e6;
+  background: var(--ops-ground);
   border: 1px solid #ffd591;
   border-radius: 6px;
   margin-bottom: 16px;
@@ -1032,7 +1031,8 @@ padding: 48px 24px;
 
 @media (max-width: 575px) {
   .overview-grid, .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ops-space-sm); }
-  .overview-card, .metric-card { min-width: 0; padding: var(--ops-space-md); }
+  .overview-card, .metric-card { min-width: 0; padding: var(--ops-space-md); gap: var(--ops-space-sm); flex-wrap: wrap; }
+  .card-icon { font-size: 20px; }
   .card-value, .metric-value { overflow-wrap: anywhere; }
   .section-header { flex-wrap: wrap; gap: var(--ops-space-sm); }
 }

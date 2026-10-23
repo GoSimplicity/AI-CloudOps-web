@@ -1032,7 +1032,7 @@ onUnmounted(() => {
   justify-content: center;
   gap: 8px;
   padding: 16px;
-  background: #f6ffed;
+  background: var(--ops-ground);
   border: 1px solid #b7eb8f;
   border-radius: 6px;
   color: #389e0d;
@@ -1093,18 +1093,18 @@ onUnmounted(() => {
 }
 
 .tab-content::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
 .tab-content::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--ops-border);
   border-radius: 3px;
   transition: background 0.3s ease;
 }
 
 .tab-content::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--ops-border);
 }
 
 /* 元信息样式 */
