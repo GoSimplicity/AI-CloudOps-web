@@ -43,6 +43,12 @@ import {
 /** 批量禁用调度的最大并发请求数（复审 P2-1：避免一次性打出 N 个请求） */
 export const BATCH_CORDON_CONCURRENCY = 5;
 
+/** 新增行与已保存污点同 key、但没有删除权限 */
+export const TAINT_KEY_EXISTS_MESSAGE = '该 key 已存在，修改需先删除（需删除权限）';
+/** 同一 key + effect 出现多行 */
+export const TAINT_DUPLICATE_EFFECT_MESSAGE =
+  '同一污点 key 的同一 effect 只能有一条，请修改原有的那一行';
+
 /**
  * 小型并发池：按顺序取任务，同时最多 limit 个在跑；结果按输入顺序返回，语义同 Promise.allSettled。
  */
@@ -467,43 +473,91 @@ export function useNodePage() {
   // 是否为本次弹窗里新增、尚未保存的行（不在原始污点里）：删除它只改本地表单，不调删除接口
   const isNewTaint = (taint: CoreTaint) => !savedOriginOf(taint);
 
-  // 要添加或更新的污点（只发送新的或修改过的污点）
-  const getTaintsToAdd = (): CoreTaint[] =>
-    taintFormModel.value.taints.filter((taint) => {
-      if (!taint.key) return false; // 忽略没有key的污点
+  // 提交计划：要删除的 key、要添加（后端 add = mergeTaints）的行，以及需要拦下的情况
+  // 后端 mergeTaints（AI-CloudOps internal/k8s/manager/taint_manager.go:247-263）按 key 整体替换：
+  // 先去掉已有污点里所有出现在本次 add 里的 key，再追加本次的行；删除接口按 key 删掉该 key 的所有 effect（:312-344）
+  const planTaintChanges = () => {
+    const { taints, originalTaints, taintsToDelete } = taintFormModel.value;
+    const deleteKeys = [...taintsToDelete];
+    const rows = taints.filter((taint) => taint.key); // 忽略没有key的污点
+    // 复审 P3-1 兜底：已保存的行 key 输入框只读；万一 key 被改了，当作先删原 key 再加新 key，不留下原 key 的孤儿
+    for (const row of rows) {
+      const origin = savedOriginOf(row);
+      if (origin?.key && origin.key !== row.key && !deleteKeys.includes(origin.key)) {
+        deleteKeys.push(origin.key);
+      }
+    }
+    const savedKeys = new Set(originalTaints.map((taint) => taint.key));
+    const dirtyKeys = new Set<string>();
+    const conflictKeys = new Set<string>();
+    for (const row of rows) {
       // 先删后加同一个 key（复审 P3-4）：提交时先删除再添加，必须重新添加，否则最终被删掉
-      if (taintFormModel.value.taintsToDelete.includes(taint.key)) return true;
+      if (deleteKeys.includes(row.key)) {
+        dirtyKeys.add(row.key);
+        continue;
+      }
+      // 已保存的行和自己的原始值比较（行身份）
+      const origin = savedOriginOf(row);
+      if (origin && origin.key === row.key) {
+        if (origin.value !== row.value || origin.effect !== row.effect) dirtyKeys.add(row.key);
+        continue;
+      }
+      // 新增行：key 与仍保留的已保存污点相同，等于修改已有污点（窝窝头答复 2），需要删除权限
+      dirtyKeys.add(row.key);
+      if (savedKeys.has(row.key)) conflictKeys.add(row.key);
+    }
+    // 复审 P3-2：某个 key 只要有一行要发，就把这个 key 当前的所有行一起发，避免同 key 的其他 effect 被替换掉
+    const taintsToAdd = rows.filter((row) => dirtyKeys.has(row.key));
+    // 同一 key + effect 只能有一条（Kubernetes 校验），重复时整单不发
+    const seen = new Set<string>();
+    const duplicateKeys = new Set<string>();
+    for (const row of taintsToAdd) {
+      const id = `${row.key}\u0000${row.effect}`;
+      if (seen.has(id)) duplicateKeys.add(row.key);
+      seen.add(id);
+    }
+    return {
+      conflictKeys: [...conflictKeys],
+      duplicateKeys: [...duplicateKeys],
+      taintsToAdd,
+      taintsToDelete: deleteKeys,
+    };
+  };
 
-      // 已保存的行和自己的原始值比较（行身份）；新增行和同 key 的已保存污点比较，完全相同就不用发
-      const originalTaint =
-        savedOriginOf(taint) ??
-        taintFormModel.value.originalTaints.find((t) => t.key === taint.key);
-      if (!originalTaint) return true; // 新污点
-
-      // 检查是否有修改
-      return (
-        originalTaint.key !== taint.key ||
-        originalTaint.value !== taint.value ||
-        originalTaint.effect !== taint.effect
-      );
-    });
+  // 要添加或更新的污点（按 key 整组发送，见 planTaintChanges）
+  const getTaintsToAdd = (): CoreTaint[] => planTaintChanges().taintsToAdd;
 
   // c-7：没有可提交的变更时「保存更改」禁用
-  const hasTaintChanges = computed(
-    () =>
-      taintFormModel.value.taintsToDelete.length > 0 ||
-      getTaintsToAdd().length > 0,
-  );
+  const hasTaintChanges = computed(() => {
+    const plan = planTaintChanges();
+    return plan.taintsToDelete.length > 0 || plan.taintsToAdd.length > 0;
+  });
 
   const submitTaintForm = async () => {
     if (!taintFormRef.value || !currentOperationNode.value) return;
 
-    const taintsToDelete = [...taintFormModel.value.taintsToDelete];
-    const taintsToAdd = getTaintsToAdd();
+    const plan = planTaintChanges();
+    const { taintsToAdd, taintsToDelete } = plan;
     if (taintsToDelete.length === 0 && taintsToAdd.length === 0) return;
 
     // c-6：调用接口前按变更内容逐项校验，任一越权就整单不发请求，弹窗保持打开
     const { can } = usePermission();
+    // 新增行与已保存污点同 key（等于修改已有污点）：没有删除权限时拦下，不发请求
+    if (plan.conflictKeys.length > 0 && !can('k8s.node.taintDelete')) {
+      message.error({
+        content: TAINT_KEY_EXISTS_MESSAGE,
+        key: TAINT_KEY_EXISTS_MESSAGE,
+      });
+      return;
+    }
+    // 同一 key + effect 重复：谁都不能提交
+    if (plan.duplicateKeys.length > 0) {
+      message.error({
+        content: TAINT_DUPLICATE_EFFECT_MESSAGE,
+        key: TAINT_DUPLICATE_EFFECT_MESSAGE,
+      });
+      return;
+    }
     if (
       (taintsToDelete.length > 0 && !can('k8s.node.taintDelete')) ||
       (taintsToAdd.length > 0 && !can('k8s.node.taintAdd'))
@@ -615,6 +669,8 @@ export function useNodePage() {
       cancelText: '取消',
       centered: true,
       onOk: async () => {
+        // 复审 P3-4：确认框打开期间权限可能被收回，点确定时再复核一次
+        if (denyWithoutCode(needCordon ? 'k8s.node.cordon' : 'k8s.node.uncordon')) return;
         try {
           const clusterId = record.cluster_id || filterClusterId.value;
           if (!clusterId || clusterId === 0) {
@@ -711,6 +767,8 @@ export function useNodePage() {
       cancelText: '取消',
       centered: true,
       onOk: async () => {
+        // 复审 P3-4：确认框打开期间权限可能被收回，点确定时再复核一次
+        if (operation === '禁用调度' && denyWithoutCode('k8s.node.batchCordon')) return;
         // 后端只有单节点 cordon（POST /api/k8s/node/:cluster_id/:node_name/cordon），没有批量接口，
         // 这里逐个节点调用单节点接口，再汇总成功/失败
         if (operation !== '禁用调度') {

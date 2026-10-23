@@ -653,3 +653,65 @@ describe('测试账号 A / B / C（U3 未获批）：Node 调度按钮', () => {
     });
   });
 });
+
+/**
+ * 第一层复审 v4 P3-4：确认框 UI 不动，打开后权限被收回，点确定时 onOk 再复核一次，不发请求
+ */
+describe('复审 v4 P3-4：确认框打开后权限被收回，点确定不发请求', () => {
+  beforeEach(() => {
+    NODES = makeNodes(2, ['node-2']); // node-1 可调度，node-2 已禁用调度
+  });
+
+  function expectDeniedOnce() {
+    expect(scheduleRequests()).toHaveLength(0);
+    expect(message.error).toHaveBeenCalledTimes(1);
+    expect(message.error).toHaveBeenCalledWith({
+      content: PERMISSION_DENIED_MESSAGE,
+      key: PERMISSION_DENIED_MESSAGE_KEY,
+    });
+  }
+
+  it.each([
+    ['行内禁用调度', 0, CORDON, '确认禁用'],
+    ['行内启用调度', 1, UNCORDON, '确认启用'],
+  ])('%s', async (_label, rowIndex, code, okText) => {
+    setSubject([code]);
+    await mountPage();
+    rowScheduleButton(rowIndex)!.click();
+    await flushPromises();
+    expect(bodyButton(okText)).toBeTruthy();
+    useAccessStore().setAccessCodes([]);
+    await flushPromises();
+    bodyButton(okText)!.click();
+    await flushPromises();
+    await settle();
+    expectDeniedOnce();
+  });
+
+  it('批量禁用调度', async () => {
+    NODES = makeNodes(3);
+    setSubject([BATCH_CORDON]);
+    await mountPage();
+    await selectRows(2);
+    batchButton()!.click();
+    await flushPromises();
+    expect(bodyButton('确认执行')).toBeTruthy();
+    useAccessStore().setAccessCodes([]);
+    await flushPromises();
+    bodyButton('确认执行')!.click();
+    await flushPromises();
+    await settle();
+    expectDeniedOnce();
+  });
+
+  it('权限未被收回：同样的操作正常发请求（对照）', async () => {
+    setSubject([CORDON]);
+    await mountPage();
+    rowScheduleButton(0)!.click();
+    await flushPromises();
+    bodyButton('确认禁用')!.click();
+    await flushPromises();
+    await settle();
+    expect(scheduleRequests()).toHaveLength(1);
+  });
+});
