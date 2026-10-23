@@ -63,13 +63,33 @@ interface CronJobPageState {
   // 表单数据
   createFormModel: CreateCronJobReq;
   editFormModel: UpdateCronJobReq;
+
+  // 后端是否允许本地命令/脚本任务（列表接口 allow_local_exec）
+  allowLocalExec: boolean;
 }
+
+// 本地执行类任务：命令行(2)、脚本(4)，受后端 cron.allow_local_exec 开关控制
+const LOCAL_EXEC_JOB_TYPES: CronJobType[] = [CronJobType.COMMAND, CronJobType.SCRIPT];
+export const isLocalExecJobType = (jobType?: CronJobType) =>
+  jobType !== undefined && LOCAL_EXEC_JOB_TYPES.includes(jobType);
+
+// 列表接口未返回 allow_local_exec（旧版后端没有该开关）时按允许处理：
+// 旧后端本来就能执行本地任务，前端不应凭空禁用；新后端在开关关闭时会显式返回 false，且写入/触发由后端兜底拒绝
+export const resolveAllowLocalExec = (data: any): boolean =>
+  typeof data?.allow_local_exec === 'boolean' ? data.allow_local_exec : true;
+
+// 取后端返回的原始提示：业务码非 0 时响应解构抛出 `Error <HTTP状态>: <message>`，HTTP 错误时为响应体 message
+export const getBackendErrorMessage = (error: any, fallback: string): string => {
+  const raw = error?.response?.data?.message ?? error?.message;
+  if (typeof raw !== 'string' || !raw.trim()) return fallback;
+  return raw.replace(/^Error \d{3}: /, '') || fallback;
+};
 
 // 创建表单初始数据
 const createInitialFormModel = (): CreateCronJobReq => ({
   name: '',
   description: '',
-  job_type: CronJobType.COMMAND,
+  job_type: CronJobType.HTTP,
   schedule: '',
   timeout: 300,
   max_retry: 3,
@@ -94,7 +114,7 @@ const createInitialEditFormModel = (): UpdateCronJobReq => ({
   id: 0,
   name: '',
   description: '',
-  job_type: CronJobType.COMMAND,
+  job_type: CronJobType.HTTP,
   schedule: '',
   timeout: 300,
   max_retry: 3,
@@ -162,6 +182,8 @@ export function useCronJobPage() {
     // 表单数据
     createFormModel: createInitialFormModel(),
     editFormModel: createInitialEditFormModel(),
+
+    allowLocalExec: true,
   });
 
   // 计算属性
@@ -201,7 +223,12 @@ export function useCronJobPage() {
     state.filteredSshResources = [];
     state.loading = state.detailLoading = state.submitLoading = state.sshResourcesLoading = false;
     state.error = null;
+    state.allowLocalExec = true;
   };
+
+  // 开关关闭时，已有的命令行/脚本任务不可编辑、不可触发（后端会拒绝）
+  const isLocalExecLocked = (job?: Pick<CronJob, 'job_type'> | null) =>
+    !state.allowLocalExec && isLocalExecJobType(job?.job_type);
 
   // 创建表单验证规则
   const createFormRules = {
@@ -444,6 +471,7 @@ export function useCronJobPage() {
       // 根据实际API返回结构处理数据
       state.cronJobs = response.data?.items || response.items || [];
       state.total = response.data?.total || response.total || 0;
+      state.allowLocalExec = resolveAllowLocalExec(response.data ?? response);
     } catch (error: any) {
       if (ticket !== listRequest) return;
 
@@ -570,7 +598,8 @@ export function useCronJobPage() {
       await formRef.value?.validate();
       if (!state.isCreateModalVisible || generation !== pageGeneration || ticket !== createRequest) return;
 
-      await createCronJob(state.createFormModel);
+      // job_type 显式随请求发送，后端为必填
+      await createCronJob({ ...state.createFormModel, job_type: state.createFormModel.job_type });
       if (generation !== pageGeneration || ticket !== createRequest) return;
       message.success('定时任务创建成功');
 
@@ -581,7 +610,7 @@ export function useCronJobPage() {
       if (error?.errorFields) {
         message.error('请检查表单输入');
       } else {
-        message.error('定时任务创建失败');
+        message.error(getBackendErrorMessage(error, '定时任务创建失败'));
 
       }
     } finally {
@@ -591,6 +620,7 @@ export function useCronJobPage() {
 
   // 编辑操作
   const openEditModal = async (job: CronJob) => {
+    if (isLocalExecLocked(job)) return;
     const ticket = ++editRequest;
     try {
       state.submitLoading = true;
@@ -647,7 +677,7 @@ export function useCronJobPage() {
       await formRef.value?.validate();
       if (!state.isEditModalVisible || generation !== pageGeneration || ticket !== editRequest) return;
 
-      await updateCronJob(state.editFormModel);
+      await updateCronJob({ ...state.editFormModel, job_type: state.editFormModel.job_type });
       if (generation !== pageGeneration || ticket !== editRequest) return;
       message.success('定时任务更新成功');
 
@@ -658,7 +688,7 @@ export function useCronJobPage() {
       if (error?.errorFields) {
         message.error('请检查表单输入');
       } else {
-        message.error('定时任务更新失败');
+        message.error(getBackendErrorMessage(error, '定时任务更新失败'));
 
       }
     } finally {
@@ -711,6 +741,7 @@ export function useCronJobPage() {
   };
 
   const triggerJob = (job: CronJob) => {
+    if (isLocalExecLocked(job)) return;
     Modal.confirm({
       title: '执行确认',
       content: `确定要立即执行定时任务 "${job.name}" 吗？`,
@@ -724,7 +755,7 @@ export function useCronJobPage() {
           message.success(`定时任务 "${job.name}" 触发成功`);
           await fetchCronJobs();
         } catch (error) {
-          message.error(`定时任务触发失败`);
+          message.error(getBackendErrorMessage(error, '定时任务触发失败'));
 
         }
       },
@@ -952,6 +983,9 @@ export function useCronJobPage() {
     // 表单操作
     validateScheduleExpression,
     handleJobTypeChange,
+
+    // 本地执行开关
+    isLocalExecLocked,
 
     // HTTP头部管理
     addHttpHeader,

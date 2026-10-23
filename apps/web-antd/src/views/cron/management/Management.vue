@@ -117,6 +117,10 @@ const {
   validateScheduleExpression,
   handleJobTypeChange,
 
+  // 本地执行开关
+  allowLocalExec,
+  isLocalExecLocked,
+
   // 常量
   CronJobStatus,
   CronJobType,
@@ -414,11 +418,12 @@ onUnmounted(clearPage);
         </template>
 
         <template #last_run_status="{ text, record }">
-          <a-badge
-            :status="getLastRunStatusColor(text)"
-            :text="getLastRunStatusText(text)"
-            v-if="record.last_run_time"
-          />
+          <a-tooltip v-if="record.last_run_time" :title="record.last_run_error || undefined">
+            <a-badge
+              :status="getLastRunStatusColor(text)"
+              :text="getLastRunStatusText(text)"
+            />
+          </a-tooltip>
           <span v-else class="k8s-no-data">暂无</span>
         </template>
 
@@ -430,8 +435,13 @@ onUnmounted(clearPage);
               </a-button>
             </a-tooltip>
 
-            <a-tooltip title="编辑任务">
-              <a-button type="text" size="small" @click="openEditModal(record)">
+            <a-tooltip :title="isLocalExecLocked(record) ? '本地命令/脚本任务已停用，不可编辑' : '编辑任务'">
+              <a-button
+                type="text"
+                size="small"
+                @click="openEditModal(record)"
+                :disabled="isLocalExecLocked(record)"
+              >
                 <template #icon><EditOutlined /></template>
               </a-button>
             </a-tooltip>
@@ -449,12 +459,12 @@ onUnmounted(clearPage);
               </a-button>
             </a-tooltip>
 
-            <a-tooltip v-if="can('cron.job.trigger')" title="立即执行">
+            <a-tooltip v-if="can('cron.job.trigger')" :title="isLocalExecLocked(record) ? '本地命令/脚本任务已停用，不可执行' : '立即执行'">
               <a-button
                 type="text"
                 size="small"
                 @click="triggerJob(record)"
-                :disabled="record.status === CronJobStatus.DISABLED"
+                :disabled="record.status === CronJobStatus.DISABLED || isLocalExecLocked(record)"
               >
                 <template #icon><PlaySquareOutlined /></template>
               </a-button>
@@ -510,11 +520,16 @@ onUnmounted(clearPage);
           />
         </a-form-item>
 
-        <a-form-item label="任务类型" name="job_type" has-feedback>
+        <a-form-item
+          label="任务类型"
+          name="job_type"
+          has-feedback
+          :extra="allowLocalExec ? undefined : '本地命令/脚本任务已停用（cron.allow_local_exec=false），请改用 HTTP 或 SSH 任务'"
+        >
           <a-select v-model:value="createFormModel.job_type" placeholder="请选择任务类型" @change="handleJobTypeChange">
-            <a-select-option :value="CronJobType.COMMAND">命令行</a-select-option>
+            <a-select-option :value="CronJobType.COMMAND" :disabled="!allowLocalExec">命令行</a-select-option>
             <a-select-option :value="CronJobType.HTTP">HTTP请求</a-select-option>
-            <a-select-option :value="CronJobType.SCRIPT">脚本任务</a-select-option>
+            <a-select-option :value="CronJobType.SCRIPT" :disabled="!allowLocalExec">脚本任务</a-select-option>
             <a-select-option :value="CronJobType.SSH">SSH远程</a-select-option>
           </a-select>
         </a-form-item>
