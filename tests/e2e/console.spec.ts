@@ -167,6 +167,7 @@ test('authenticated navigation renders every standalone business route', async (
     };
     visit(source);
   }
+  const routeExpect = expect.configure({ soft: true });
   for (const route of [...new Set(routes)]) {
     await page.goto(routePath(route));
     await page.waitForTimeout(700);
@@ -178,20 +179,20 @@ test('authenticated navigation renders every standalone business route', async (
       await expect(page.locator('.chart-container canvas')).toBeVisible();
       await expect(page.locator('.chart-container-small canvas')).toBeVisible();
     }
-    await expect(page.locator('body')).not.toBeEmpty();
-    await expect
+    await routeExpect(page.locator('body')).not.toBeEmpty();
+    await routeExpect
       .poll(() => {
         const url = new URL(page.url());
         return url.hash.startsWith('#/')
           ? url.hash.slice(1).split('?')[0]
           : url.pathname;
       })
-      .toBe(
-        route === '/monitor_onduty_group_table'
-          ? '/monitor_onduty_group'
-          : route,
-      );
-    await expect(page).not.toHaveURL(/auth\/login/);
+      .toBe(route);
+    if (route === '/monitor_onduty_group_table')
+      await routeExpect(
+        page.getByText('缺少值班组ID参数，请返回值班组列表重新选择', { exact: true }),
+      ).toBeVisible();
+    await routeExpect(page).not.toHaveURL(/auth\/login/);
   }
   expect(errors, 'browser runtime errors').toEqual([]);
   const expectedUnavailable = new Set(
@@ -1127,6 +1128,8 @@ test('expired login preserves its dialog and rebuilds current route permissions'
     localStorage.setItem(key, JSON.stringify(cached));
   });
   await page.goto(routePath('/system_user'));
+  // Hash 导航不重启应用，重新加载后才能应用刚写入缓存的过期登录策略
+  await page.reload();
   await expect(page.locator('.ops-page h1')).toHaveText('用户管理');
   // 仅注入一次过期响应，重新登录与资料、权限及列表均使用真实本地服务
   await page.route('**/api/user/list?*', route => route.fulfill({
