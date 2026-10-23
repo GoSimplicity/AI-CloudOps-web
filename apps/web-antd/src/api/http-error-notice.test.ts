@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createBusinessError,
@@ -16,7 +16,19 @@ import {
 
 afterEach(() => {
   resetHttpErrorNoticeTracking();
+  vi.useRealTimers();
 });
+
+/** 模拟 message.error 的返回值：手动触发「提示已关闭」 */
+function closableHandle() {
+  let close = () => {};
+  const handle = {
+    then(onClose: () => void) {
+      close = onClose;
+    },
+  };
+  return { close: () => close(), handle };
+}
 
 describe('isNotifiedByRequestLayer（复审 P3-3）', () => {
   it('通用 http-error 提示过的错误（含网络错误）视为已提示', () => {
@@ -63,5 +75,43 @@ describe('冻结 / 不可扩展的错误对象（复审 P3-6）', () => {
     const normal = new Error('normal');
     markHttpErrorNotified(normal, key);
     expect(claimHttpErrorNotice(normal)).toBe(key);
+  });
+});
+
+describe('claim 认领（incr6 P3-3）', () => {
+  it('M3a：不是这条提示弹出者的错误不能认领（旧提示关闭后同 key 被别的错误重新弹出并已替换）', () => {
+    const key = 'http-error:假的网络异常';
+    const first = new Error('fake first failure');
+    const firstNotice = closableHandle();
+    markHttpErrorNotified(first, key, firstNotice.handle);
+    // first 那条提示关闭，同 key 被 second 重新弹出，second 的页面已换成具体文案
+    firstNotice.close();
+    const second = new Error('fake second failure');
+    markHttpErrorNotified(second, key, closableHandle().handle);
+    expect(claimHttpErrorNotice(second)).toBe(key);
+    markHttpErrorNoticeReplaced(second);
+    // first 仍带着同一个 key，但当前可见的这条不是它弹的：不能认领，否则会覆盖 second 页面的文案
+    expect(getHttpErrorNoticeKey(first)).toBe(key);
+    expect(claimHttpErrorNotice(first)).toBeUndefined();
+  });
+});
+
+describe('NOTICE_STALE_MS 兜底过期（incr6 P3-3）', () => {
+  it('M5：onClose 没回调时，10s 内仍可认领，超过 10s 视为已关闭', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+    const key = 'http-error:假的服务器错误';
+    const error = new Error('fake server failure');
+    markHttpErrorNotified(error, key);
+    vi.advanceTimersByTime(9999);
+    expect(claimHttpErrorNotice(error)).toBe(key);
+    vi.advanceTimersByTime(1);
+    // 恰好 10_000ms：还没过期（判断是 >）
+    expect(claimHttpErrorNotice(error)).toBe(key);
+    vi.advanceTimersByTime(1);
+    expect(claimHttpErrorNotice(error)).toBeUndefined();
+    // 过期后记录已清掉：再 mark 一次是新提示，可以认领
+    markHttpErrorNotified(error, key);
+    expect(claimHttpErrorNotice(error)).toBe(key);
   });
 });
