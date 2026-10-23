@@ -16,6 +16,10 @@ import { message } from 'ant-design-vue';
 
 import { useAuthStore } from '#/store';
 import {
+  createBusinessError,
+  notifyBusinessError,
+} from '#/utils/permission/business-error';
+import {
   createForbiddenResponseInterceptor,
   createPermissionDeniedError,
   FORBIDDEN_STATUS,
@@ -153,7 +157,8 @@ function createRequestClient(baseURL: string) {
       if (code === FORBIDDEN_STATUS) {
         throw createPermissionDeniedError(msg);
       }
-      throw new Error(`Error ${status}: ${msg}`);
+      // 其它业务错误打上标记，由下方通用错误拦截器弹后端原文并标记已提示
+      throw createBusinessError(status, msg);
     },
   });
 
@@ -177,9 +182,19 @@ function createRequestClient(baseURL: string) {
   );
 
   // 通用的错误处理,如果没有进入上面的错误处理逻辑，就会进入这里
+  // 业务错误（code≠0）弹后端原文，取代通用的「内部服务器错误」，同文案同 key 合并；
   // 已由 403 拦截器提示过的错误不再重复提示
   client.addResponseInterceptor(
     errorMessageResponseInterceptor((msg: string, error: any) => {
+      if (
+        notifyBusinessError(
+          error,
+          (content, key) => message.error({ content, key }),
+          msg,
+        )
+      ) {
+        return;
+      }
       if (isPermissionDeniedError(error)) return;
       message.error(msg);
     }),

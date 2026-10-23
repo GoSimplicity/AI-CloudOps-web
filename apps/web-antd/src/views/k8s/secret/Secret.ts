@@ -583,7 +583,7 @@ export function useSecretPage() {
       
       isYamlModalVisible.value = true;
     } catch (err) {
-      message.error('获取 Secret YAML 失败');
+      if (!isPermissionDeniedError(err)) message.error('获取 Secret YAML 失败');
     } finally {
       submitLoading.value = false;
     }
@@ -695,7 +695,7 @@ export function useSecretPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('Secret YAML 更新失败');
+      if (!isPermissionDeniedError(err)) message.error('Secret YAML 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -760,7 +760,7 @@ export function useSecretPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('Secret 创建失败');
+      if (!isPermissionDeniedError(err)) message.error('Secret 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -788,7 +788,7 @@ export function useSecretPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('Secret YAML 创建失败');
+      if (!isPermissionDeniedError(err)) message.error('Secret YAML 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -840,7 +840,7 @@ export function useSecretPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('Secret 更新失败');
+      if (!isPermissionDeniedError(err)) message.error('Secret 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -870,7 +870,7 @@ export function useSecretPage() {
           message.success('Secret 删除成功');
           await fetchSecrets();
         } catch (err) {
-          message.error('Secret 删除失败');
+          if (!isPermissionDeniedError(err)) message.error('Secret 删除失败');
 
         }
       },
@@ -933,7 +933,7 @@ export function useSecretPage() {
           selectedRows.value = [];
           await fetchSecrets();
         } catch (err) {
-          message.error(`批量${operation}失败`);
+          if (!isPermissionDeniedError(err)) message.error(`批量${operation}失败`);
 
         }
       },

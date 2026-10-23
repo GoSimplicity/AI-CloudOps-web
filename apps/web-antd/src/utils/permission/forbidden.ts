@@ -5,6 +5,8 @@
  * 这里只负责：识别 403 → 标记错误 → 弹出唯一一种提示；
  * 同时让通用错误拦截器跳过已标记的错误，避免同一请求弹两次。
  */
+import { hasBusinessErrorNotified } from './business-error';
+
 export const PERMISSION_DENIED_MESSAGE = '没有权限执行此操作，请联系管理员';
 /** 同 key 的 message 会合并为一条，并发多个 403 也只显示一条提示 */
 export const PERMISSION_DENIED_MESSAGE_KEY = 'permission-denied';
@@ -53,15 +55,18 @@ function hasPermissionDeniedFlag(error: any) {
 }
 
 /**
- * 页面 catch 中可用它判断错误是否已被统一提示过，从而跳过自己的提示。
- * 除已提示标记外，HTTP 状态为 403 的错误也视为已提示：经 requestClient 发出的
- * HTTP 403 必定经过统一提示拦截器，而 403 响应体不是对象时，RequestClient
- * 会把它包成 new Error(data)，标记可能随之丢失。
+ * 页面 catch 中可用它判断错误是否已被请求层统一提示过，从而跳过自己的提示。
+ * - 除已提示标记外，HTTP 状态为 403 的错误也视为已提示：经 requestClient 发出的
+ *   HTTP 403 必定经过统一提示拦截器，而 403 响应体不是对象时，RequestClient
+ *   会把它包成 new Error(data)，标记可能随之丢失。
+ * - 已由请求层弹过后端原文的业务错误（code≠0，见 business-error.ts）同样返回 true。
+ *   函数名沿用 FE-02 时的命名，页面守卫无需改动。
  */
 export function isPermissionDeniedError(error: any) {
   return (
     hasPermissionDeniedFlag(error) ||
-    error?.response?.status === FORBIDDEN_STATUS
+    error?.response?.status === FORBIDDEN_STATUS ||
+    hasBusinessErrorNotified(error)
   );
 }
 
