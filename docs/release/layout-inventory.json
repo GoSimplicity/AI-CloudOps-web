@@ -1,6 +1,6 @@
 {
   "routes": 58,
-  "migratedShells": 43,
+  "migratedShells": 45,
   "entries": [
     {
       "route": "/assistant/info",
@@ -390,9 +390,9 @@
     {
       "route": "/terminal_connect",
       "view": "servicetree/TerminalConnect.vue",
-      "sharedPage": false,
-      "inlineStyles": 2,
-      "scopedStyle": true
+      "sharedPage": true,
+      "inlineStyles": 0,
+      "scopedStyle": false
     },
     {
       "route": "/tree_node_manager",
@@ -404,9 +404,9 @@
     {
       "route": "/web-terminal/:id",
       "view": "servicetree/WebTerminal.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 0,
-      "scopedStyle": true
+      "scopedStyle": false
     }
   ]
 }

@@ -23,6 +23,9 @@ vi.mock('#/api/request', () => ({
 }));
 vi.mock('xterm', () => ({
   Terminal: class {
+    cols = 120;
+    rows = 30;
+    reset = vi.fn();
     write = vi.fn();
     writeln = vi.fn();
     open = vi.fn();
@@ -90,14 +93,14 @@ function expectHandshake(path: string, search = '') {
 describe('三个终端客户端的握手契约', () => {
   it('本地主机终端仅通过子协议发送凭证', () => {
     wrapper = mount(WebTerminal);
-    expectHandshake('/api/tree/local/terminal/42');
+    expectHandshake('/api/tree/local/terminal/42', '?terminal_mode=pty-v1&cols=120&rows=30');
   });
 
   it('云主机终端仅通过子协议发送凭证', () => {
     wrapper = mount(TerminalConnect, {
       global: { config: { warnHandler: () => {} } },
     });
-    expectHandshake('/api/tree/cloud/42/terminal');
+    expectHandshake('/api/tree/cloud/42/terminal', '?terminal_mode=pty-v1&cols=120&rows=30');
   });
 
   it('Pod 终端通过实际连接入口遵守同一握手契约', async () => {
