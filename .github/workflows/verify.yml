@@ -2,6 +2,9 @@ name: Verify web
 on:
   push:
   pull_request:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -25,6 +28,6 @@ jobs:
       - name: Verify production login bootstrap
         run: pnpm test:e2e --grep "login is usable"
         env:
-          CLOUDOPS_PREVIEW: 'true'
+          CLOUDOPS_PREVIEW: "true"
           CLOUDOPS_ROUTER_HISTORY: hash
           PLAYWRIGHT_CHANNEL: chromium

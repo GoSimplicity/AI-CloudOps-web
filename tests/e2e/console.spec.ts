@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ts from 'typescript';
@@ -16,6 +16,25 @@ function adminPassword() {
     .match(/^BOOTSTRAP_ADMIN_PASSWORD=(.*)$/m)?.[1]
     ?.trim()
     .replace(/^['"]|['"]$/g, '');
+}
+
+async function expectUncovered(control: Locator) {
+  await control.scrollIntoViewIfNeeded();
+  await expect
+    .poll(() =>
+      control.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        const target = document.elementFromPoint(
+          rect.x + rect.width / 2,
+          rect.y + rect.height / 2,
+        );
+        return target !== null &&
+          (target === element || element.contains(target))
+          ? 'uncovered'
+          : `blocked by ${target?.tagName}.${target?.className}; x=${Math.round(rect.x)} y=${Math.round(rect.y)} w=${Math.round(rect.width)}`;
+      }),
+    )
+    .toBe('uncovered');
 }
 
 test('login is usable on mobile and supports both themes', async ({ page }) => {
@@ -259,6 +278,29 @@ test('system list layouts preserve responsive filters and role creation controls
       ),
       route,
     ).toBe(true);
+    await expect(page.locator('.assistant-float-button')).not.toBeVisible();
+    await expect(
+      page.locator('.layout-floating-preferences').first(),
+    ).not.toBeVisible();
+    const cards = page.locator('.ops-page__summary .stat-card');
+    const cardRects = await cards.evaluateAll((elements) =>
+      elements.map((element) => ({
+        top: element.getBoundingClientRect().top,
+        height: element.getBoundingClientRect().height,
+      })),
+    );
+    expect(cardRects[0]!.top).toBe(cardRects[1]!.top);
+    expect(cardRects.every((card) => card.height <= 100)).toBe(true);
+    for (const name of [/^搜\s*索$/, /^重\s*置$/]) {
+      const control = page
+        .locator('.ops-page__filters')
+        .getByRole('button', { name });
+      await expectUncovered(control);
+      await control.click();
+    }
+    await expectUncovered(
+      page.locator('.ops-page__content .ant-table-thead th').first(),
+    );
     if (route === '/system_user')
       await page.screenshot({
         path: '.cache/ui-verification/system-user-mobile-dark.png',
@@ -268,4 +310,87 @@ test('system list layouts preserve responsive filters and role creation controls
   }
   expect(errors, 'system list browser runtime errors').toEqual([]);
   expect(apiFailures, 'system list API errors').toEqual([]);
+});
+
+test('workorder list layouts preserve mobile actions and cancellation', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  page.setDefaultTimeout(15_000);
+  const password = adminPassword();
+  test.skip(
+    !password,
+    'Set an isolated administrator password for workorder list acceptance.',
+  );
+  const errors: string[] = [];
+  const apiFailures: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('response', (response) => {
+    if (
+      new URL(response.url()).pathname.startsWith('/api/') &&
+      response.status() >= 400
+    )
+      apiFailures.push(
+        `${response.status()} ${new URL(response.url()).pathname}`,
+      );
+  });
+  await page.goto(routePath('/auth/login'));
+  await page
+    .getByLabel('账号', { exact: true })
+    .fill(process.env.CLOUDOPS_TEST_USER || 'admin');
+  await page.getByLabel('密码', { exact: true }).fill(password!);
+  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>('#password');
+    if (input) input.value = '';
+  });
+  await expect(page).not.toHaveURL(/auth\/login/, { timeout: 30_000 });
+  for (const [route, title] of [
+    ['/process', '流程管理'],
+    ['/template', '模板管理'],
+    ['/form_management', '表单管理'],
+  ]) {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(routePath(route!));
+    await expect(page.locator('.ops-page h1')).toHaveText(title!);
+    const action = page.locator('.ops-page__actions button').first();
+    await expectUncovered(action);
+    await action.click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: /^取\s*消$/ })
+      .click();
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(() =>
+        page
+          .locator('aside')
+          .first()
+          .evaluate((element) => element.getBoundingClientRect().right),
+      )
+      .toBeLessThanOrEqual(1);
+    const search = page.locator('.ops-page__filters .ant-input-search button');
+    await expectUncovered(search);
+    await search.click();
+    await expectUncovered(
+      page.locator('.ops-page__content .ant-table-thead th').first(),
+    );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      route,
+    ).toBe(true);
+    await expect(page.locator('.assistant-float-button')).not.toBeVisible();
+    if (route === '/process')
+      await page.screenshot({
+        path: '.cache/ui-verification/workorder-process-mobile.png',
+        fullPage: true,
+        animations: 'disabled',
+      });
+  }
+  expect(errors).toEqual([]);
+  expect(apiFailures).toEqual([]);
 });

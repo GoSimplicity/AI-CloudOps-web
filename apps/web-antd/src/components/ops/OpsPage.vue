@@ -109,6 +109,18 @@ defineProps<{ title: string; description?: string }>();
   gap: var(--ops-space-lg);
   min-width: 0;
 }
+.ops-page__content :deep(.table-container) {
+  padding: 0;
+  box-shadow: none;
+}
+.ops-page__content :deep(.table-container > .ant-card) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.ops-page__content :deep(.table-container > .ant-card > .ant-card-body) {
+  padding: 0;
+}
 .ops-page__summary :deep(.stats-card),
 .ops-page__summary :deep(.stat-card) {
   border: 1px solid var(--ops-border);
@@ -136,6 +148,24 @@ defineProps<{ title: string; description?: string }>();
   .ops-page {
     padding: 16px 12px;
   }
+  .ops-page__summary :deep(.stats-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ops-space-sm);
+  }
+  .ops-page__summary :deep(.stat-card),
+  .ops-page__summary :deep(.ant-card-body) {
+    padding: var(--ops-space-md);
+    min-height: 84px;
+  }
+  .ops-page__summary :deep(.stat-number) {
+    margin-bottom: 4px;
+    font-size: 24px;
+    line-height: 1.25;
+  }
+  .ops-page__summary :deep(.stat-label),
+  .ops-page__summary :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
   .ops-page__header {
     align-items: flex-start;
     flex-direction: column;
@@ -155,6 +185,8 @@ defineProps<{ title: string; description?: string }>();
   .ops-page__filters :deep(.search-right) {
     width: 100%;
   }
+  .ops-page__filters :deep(.search-filters > .ant-select),
+  .ops-page__filters :deep(.search-filters > .ant-input-group-wrapper),
   .ops-page__filters :deep(.search-left > *),
   .ops-page__filters :deep(.search-input),
   .ops-page__filters :deep(.filter-select),

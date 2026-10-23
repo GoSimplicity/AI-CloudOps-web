@@ -175,10 +175,12 @@ const headerSlots = computed(() => {
     @side-mouse-leave="handleSideMouseLeave"
     @toggle-sidebar="toggleSidebar"
     @update:sidebar-collapse="
-      (value: boolean | undefined) => updatePreferences({ sidebar: { collapsed: value ?? false } })
+      (value: boolean | undefined) =>
+        updatePreferences({ sidebar: { collapsed: value ?? false } })
     "
     @update:sidebar-enable="
-      (value: boolean | undefined) => updatePreferences({ sidebar: { enable: value ?? false } })
+      (value: boolean | undefined) =>
+        updatePreferences({ sidebar: { enable: value ?? false } })
     "
     @update:sidebar-expand-on-hover="
       (value: boolean | undefined) =>
@@ -323,7 +325,7 @@ const headerSlots = computed(() => {
 
       <template v-if="preferencesButtonPosition.fixed">
         <Preferences
-          class="z-100 fixed bottom-20 right-0"
+          class="layout-floating-preferences z-100 fixed bottom-20 right-0"
           @clear-preferences-and-logout="clearPreferencesAndLogout"
         />
       </template>

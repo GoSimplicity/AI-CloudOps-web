@@ -1,371 +1,5 @@
-<template>
-  <div class="process-management-container">
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button
-          type="primary"
-          @click="handleCreateProcess"
-          class="btn-create"
-        >
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          创建新流程
-        </a-button>
-        <div class="search-filters">
-          <a-input-search
-            v-model:value="searchQuery"
-            placeholder="搜索流程..."
-            class="search-input"
-            @search="handleSearch"
-            allow-clear
-          />
-          <a-select
-            v-model:value="statusFilter"
-            placeholder="状态"
-            class="status-filter"
-            @change="handleStatusChange"
-          >
-            <a-select-option :value="null">全部</a-select-option>
-            <a-select-option :value="ProcessStatus.Draft">草稿</a-select-option>
-            <a-select-option :value="ProcessStatus.Published"
-              >已发布</a-select-option
-            >
-            <a-select-option :value="ProcessStatus.Archived"
-              >已归档</a-select-option
-            >
-          </a-select>
-          <a-select
-            v-model:value="categoryFilter"
-            placeholder="分类"
-            class="category-filter"
-            @change="handleCategoryChange"
-          >
-            <a-select-option :value="null">全部分类</a-select-option>
-            <a-select-option
-              v-for="category in categories"
-              :key="category.id"
-              :value="category.id"
-            >
-              {{ category.name }}
-            </a-select-option>
-          </a-select>
-        </div>
-      </div>
-    </div>
-
-    <div class="stats-row">
-      <a-row :gutter="16">
-        <a-col :span="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="总流程数"
-              :value="stats.total"
-              :value-style="{ color: '#3f8600' }"
-            >
-              <template #prefix>
-                <ApartmentOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :span="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="已发布"
-              :value="stats.published"
-              :value-style="{ color: '#52c41a' }"
-            >
-              <template #prefix>
-                <CheckCircleOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :span="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="草稿"
-              :value="stats.draft"
-              :value-style="{ color: '#faad14' }"
-            >
-              <template #prefix>
-                <EditOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :span="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="已归档"
-              :value="stats.archived"
-              :value-style="{ color: '#cf1322' }"
-            >
-              <template #prefix>
-                <StopOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div>
-
-    <div class="table-container">
-      <a-card>
-        <a-table
-          :data-source="processList"
-          :columns="columns"
-          :pagination="paginationConfig"
-          :loading="loading"
-          row-key="id"
-          bordered
-          :scroll="{ x: 1200 }"
-          @change="handleTableChange"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'name'">
-              <div class="process-name-cell">
-                <div
-                  class="process-badge"
-                  :class="getStatusClass(record.status)"
-                ></div>
-                <span class="process-name-text">{{ record.name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'description'">
-              <span class="description-text">{{
-                record.description || '无描述'
-              }}</span>
-            </template>
-
-            <template v-if="column.key === 'status'">
-              <a-tag :color="getStatusColor(record.status)">
-                {{ getStatusText(record.status) }}
-              </a-tag>
-            </template>
-
-            <template v-if="column.key === 'form_design'">
-              <span>{{ getFormName(record.form_design_id) }}</span>
-            </template>
-
-            <template v-if="column.key === 'category'">
-              <span>{{ getCategoryName(record.category_id) }}</span>
-            </template>
-
-            <template v-if="column.key === 'operator'">
-              <div class="creator-info">
-                <a-avatar
-                  size="small"
-                  :style="{
-                    backgroundColor: getAvatarColor(record.operator_name),
-                  }"
-                >
-                  {{ getInitials(record.operator_name) }}
-                </a-avatar>
-                <span class="creator-name">{{ record.operator_name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'is_default'">
-              <a-tag
-                :color="
-                  isDefaultProcess(record.is_default) ? 'green' : 'default'
-                "
-              >
-                {{ isDefaultProcess(record.is_default) ? '是' : '否' }}
-              </a-tag>
-            </template>
-
-            <template v-if="column.key === 'tags'">
-              <div class="tags-container">
-                <a-tag v-for="tag in record.tags" :key="tag" color="blue">
-                  {{ tag }}
-                </a-tag>
-                <span
-                  v-if="!record.tags || record.tags.length === 0"
-                  class="no-tags"
-                  >无标签</span
-                >
-              </div>
-            </template>
-
-            <template v-if="column.key === 'createdAt'">
-              <div class="date-info">
-                <span class="date">{{ formatDate(record.created_at) }}</span>
-                <span class="time">{{ formatTime(record.created_at) }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'action'">
-              <div class="action-buttons">
-                <a-button
-                  type="primary"
-                  size="small"
-                  @click="handleViewProcess(record)"
-                >
-                  查看
-                </a-button>
-                <a-button
-                  type="default"
-                  size="small"
-                  @click="handleEditProcess(record)"
-                >
-                  编辑
-                </a-button>
-                <a-dropdown>
-                  <template #overlay>
-                    <a-menu @click="(e: any) => handleCommand(e.key, record)">
-                      <a-menu-item
-                        key="publish"
-                        v-if="record.status === ProcessStatus.Draft"
-                        >发布</a-menu-item
-                      >
-                      <a-menu-item
-                        key="archive"
-                        v-if="record.status === ProcessStatus.Published"
-                        >归档</a-menu-item
-                      >
-                      <a-menu-item
-                        key="activate"
-                        v-if="record.status === ProcessStatus.Archived"
-                        >激活</a-menu-item
-                      >
-                      <a-menu-item
-                        key="setDefault"
-                        v-if="!isDefaultProcess(record.is_default)"
-                        >设为默认</a-menu-item
-                      >
-                      <a-menu-divider />
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
-                    </a-menu>
-                  </template>
-                  <a-button size="small">
-                    更多
-                    <DownOutlined />
-                  </a-button>
-                </a-dropdown>
-              </div>
-            </template>
-          </template>
-        </a-table>
-      </a-card>
-    </div>
-
-    <!-- 流程创建/编辑对话框 -->
-    <a-modal
-      :open="processDialog.visible"
-      :title="processDialog.isEdit ? '编辑流程' : '创建流程'"
-      :width="formDialogWidth"
-      @ok="saveProcess"
-      @cancel="closeProcessDialog"
-      :destroy-on-close="true"
-      class="responsive-modal process-design-modal"
-      :confirm-loading="loading"
-    >
-      <div class="modal-content">
-        <!-- 流程编辑模式切换 -->
-        <div class="edit-mode-tabs">
-          <a-tabs v-model:activeKey="editMode" type="card">
-            <a-tab-pane key="basic" tab="基本信息">
-              <ProcessBasicConfig
-                ref="basicConfigRef"
-                v-model="processDialog.form"
-                :categories="categories"
-                :forms="formDesigns"
-              />
-            </a-tab-pane>
-          </a-tabs>
-        </div>
-      </div>
-    </a-modal>
-
-    <!-- 详情对话框 -->
-    <a-modal
-      :open="detailDialog.visible"
-      title="流程详情"
-      :width="previewDialogWidth"
-      :footer="null"
-      @cancel="closeDetailDialog"
-      class="detail-dialog responsive-modal"
-    >
-      <div v-if="detailDialog.process" class="process-details">
-        <div class="detail-header">
-          <h2>{{ detailDialog.process.name }}</h2>
-          <a-tag :color="getStatusColor(detailDialog.process.status)">
-            {{ getStatusText(detailDialog.process.status) }}
-          </a-tag>
-        </div>
-
-        <a-descriptions bordered :column="2">
-          <a-descriptions-item label="ID">{{
-            detailDialog.process.id
-          }}</a-descriptions-item>
-          <a-descriptions-item label="操作人">{{
-            detailDialog.process.operator_name
-          }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{
-            formatFullDateTime(detailDialog.process.created_at)
-          }}</a-descriptions-item>
-          <a-descriptions-item label="更新时间">{{
-            formatFullDateTime(detailDialog.process.updated_at)
-          }}</a-descriptions-item>
-          <a-descriptions-item label="关联表单">{{
-            getFormName(detailDialog.process.form_design_id)
-          }}</a-descriptions-item>
-          <a-descriptions-item label="分类">{{
-            getCategoryName(detailDialog.process.category_id)
-          }}</a-descriptions-item>
-          <a-descriptions-item label="是否默认">{{
-            isDefaultProcess(detailDialog.process.is_default) ? '是' : '否'
-          }}</a-descriptions-item>
-          <a-descriptions-item label="标签">
-            <div class="tags-container">
-              <a-tag
-                v-for="tag in detailDialog.process.tags"
-                :key="tag"
-                color="blue"
-              >
-                {{ tag }}
-              </a-tag>
-              <span
-                v-if="
-                  !detailDialog.process.tags ||
-                  detailDialog.process.tags.length === 0
-                "
-                >无标签</span
-              >
-            </div>
-          </a-descriptions-item>
-          <a-descriptions-item label="描述" :span="2">{{
-            detailDialog.process.description || '无描述'
-          }}</a-descriptions-item>
-        </a-descriptions>
-
-        <div class="process-preview">
-          <h3>流程定义</h3>
-          <a-card>
-            <pre class="definition-json">{{
-              formatDefinitionForDisplay(detailDialog.process.definition)
-            }}</pre>
-          </a-card>
-        </div>
-
-        <div class="detail-footer">
-          <a-button @click="closeDetailDialog">关闭</a-button>
-          <a-button
-            type="primary"
-            @click="handleEditProcess(detailDialog.process)"
-            >编辑</a-button
-          >
-        </div>
-      </div>
-    </a-modal>
-  </div>
-</template>
-
 <script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { ref, reactive, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
@@ -568,8 +202,11 @@ const handleTableChange = (pagination: any): void => {
 /**
  * 加载流程列表数据 - 实现真分页
  */
+const loadError = ref('');
+
 const loadProcesses = async (): Promise<void> => {
   loading.value = true;
+  loadError.value = '';
   try {
     const params: ListWorkorderProcessReq = {
       page: currentPage.value,
@@ -598,7 +235,11 @@ const loadProcesses = async (): Promise<void> => {
       ).length;
     }
   } catch (error: any) {
-    message.error('加载流程数据失败');
+    processList.value = [];
+    total.value = 0;
+    Object.assign(stats, { total: 0, published: 0, draft: 0, archived: 0 });
+    loadError.value = '加载流程数据失败';
+    message.error(loadError.value);
   } finally {
     loading.value = false;
   }
@@ -1133,16 +774,377 @@ onMounted(async (): Promise<void> => {
 });
 </script>
 
+<template>
+  <OpsPage title="流程管理">
+    <template #actions>
+      <a-button type="primary" @click="handleCreateProcess" class="btn-create">
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        创建新流程
+      </a-button>
+    </template>
+    <template #filters
+      ><div class="search-filters">
+        <a-input-search
+          v-model:value="searchQuery"
+          placeholder="搜索流程..."
+          class="search-input"
+          @search="handleSearch"
+          allow-clear
+        />
+        <a-select
+          v-model:value="statusFilter"
+          placeholder="状态"
+          class="status-filter"
+          @change="handleStatusChange"
+        >
+          <a-select-option :value="null">全部</a-select-option>
+          <a-select-option :value="ProcessStatus.Draft">草稿</a-select-option>
+          <a-select-option :value="ProcessStatus.Published"
+            >已发布</a-select-option
+          >
+          <a-select-option :value="ProcessStatus.Archived"
+            >已归档</a-select-option
+          >
+        </a-select>
+        <a-select
+          v-model:value="categoryFilter"
+          placeholder="分类"
+          class="category-filter"
+          @change="handleCategoryChange"
+        >
+          <a-select-option :value="null">全部分类</a-select-option>
+          <a-select-option
+            v-for="category in categories"
+            :key="category.id"
+            :value="category.id"
+          >
+            {{ category.name }}
+          </a-select-option>
+        </a-select>
+      </div></template
+    >
+
+    <template #summary
+      ><div class="stats-row">
+        <a-row :gutter="16">
+          <a-col :xs="12" :sm="12" :md="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="总流程数"
+                :value="stats.total"
+                :value-style="{ color: '#3f8600' }"
+              >
+                <template #prefix>
+                  <ApartmentOutlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="12" :md="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页已发布"
+                :value="stats.published"
+                :value-style="{ color: '#52c41a' }"
+              >
+                <template #prefix>
+                  <CheckCircleOutlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="12" :md="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页草稿"
+                :value="stats.draft"
+                :value-style="{ color: '#faad14' }"
+              >
+                <template #prefix>
+                  <EditOutlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="12" :md="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页已归档"
+                :value="stats.archived"
+                :value-style="{ color: '#cf1322' }"
+              >
+                <template #prefix>
+                  <StopOutlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row></div
+    ></template>
+
+    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+      <template #action
+        ><a-button size="small" @click="loadProcesses">重试</a-button></template
+      >
+    </a-alert>
+
+    <div class="table-container">
+      <a-card>
+        <a-table
+          :data-source="processList"
+          :columns="columns"
+          :pagination="paginationConfig"
+          :loading="loading"
+          row-key="id"
+          bordered
+          :scroll="{ x: 1200 }"
+          @change="handleTableChange"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'name'">
+              <div class="process-name-cell">
+                <div
+                  class="process-badge"
+                  :class="getStatusClass(record.status)"
+                ></div>
+                <span class="process-name-text">{{ record.name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'description'">
+              <span class="description-text">{{
+                record.description || '无描述'
+              }}</span>
+            </template>
+
+            <template v-if="column.key === 'status'">
+              <a-tag :color="getStatusColor(record.status)">
+                {{ getStatusText(record.status) }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'form_design'">
+              <span>{{ getFormName(record.form_design_id) }}</span>
+            </template>
+
+            <template v-if="column.key === 'category'">
+              <span>{{ getCategoryName(record.category_id) }}</span>
+            </template>
+
+            <template v-if="column.key === 'operator'">
+              <div class="creator-info">
+                <a-avatar
+                  size="small"
+                  :style="{
+                    backgroundColor: getAvatarColor(record.operator_name),
+                  }"
+                >
+                  {{ getInitials(record.operator_name) }}
+                </a-avatar>
+                <span class="creator-name">{{ record.operator_name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'is_default'">
+              <a-tag
+                :color="
+                  isDefaultProcess(record.is_default) ? 'green' : 'default'
+                "
+              >
+                {{ isDefaultProcess(record.is_default) ? '是' : '否' }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'tags'">
+              <div class="tags-container">
+                <a-tag v-for="tag in record.tags" :key="tag" color="blue">
+                  {{ tag }}
+                </a-tag>
+                <span
+                  v-if="!record.tags || record.tags.length === 0"
+                  class="no-tags"
+                  >无标签</span
+                >
+              </div>
+            </template>
+
+            <template v-if="column.key === 'createdAt'">
+              <div class="date-info">
+                <span class="date">{{ formatDate(record.created_at) }}</span>
+                <span class="time">{{ formatTime(record.created_at) }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'action'">
+              <div class="action-buttons">
+                <a-button
+                  type="primary"
+                  size="small"
+                  @click="handleViewProcess(record)"
+                >
+                  查看
+                </a-button>
+                <a-button
+                  type="default"
+                  size="small"
+                  @click="handleEditProcess(record)"
+                >
+                  编辑
+                </a-button>
+                <a-dropdown>
+                  <template #overlay>
+                    <a-menu @click="(e: any) => handleCommand(e.key, record)">
+                      <a-menu-item
+                        key="publish"
+                        v-if="record.status === ProcessStatus.Draft"
+                        >发布</a-menu-item
+                      >
+                      <a-menu-item
+                        key="archive"
+                        v-if="record.status === ProcessStatus.Published"
+                        >归档</a-menu-item
+                      >
+                      <a-menu-item
+                        key="activate"
+                        v-if="record.status === ProcessStatus.Archived"
+                        >激活</a-menu-item
+                      >
+                      <a-menu-item
+                        key="setDefault"
+                        v-if="!isDefaultProcess(record.is_default)"
+                        >设为默认</a-menu-item
+                      >
+                      <a-menu-divider />
+                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                    </a-menu>
+                  </template>
+                  <a-button size="small">
+                    更多
+                    <DownOutlined />
+                  </a-button>
+                </a-dropdown>
+              </div>
+            </template>
+          </template>
+        </a-table>
+      </a-card>
+    </div>
+
+    <!-- 流程创建/编辑对话框 -->
+    <a-modal
+      :open="processDialog.visible"
+      :title="processDialog.isEdit ? '编辑流程' : '创建流程'"
+      :width="formDialogWidth"
+      @ok="saveProcess"
+      @cancel="closeProcessDialog"
+      :destroy-on-close="true"
+      class="responsive-modal process-design-modal"
+      :confirm-loading="loading"
+    >
+      <div class="modal-content">
+        <!-- 流程编辑模式切换 -->
+        <div class="edit-mode-tabs">
+          <a-tabs v-model:activeKey="editMode" type="card">
+            <a-tab-pane key="basic" tab="基本信息">
+              <ProcessBasicConfig
+                ref="basicConfigRef"
+                v-model="processDialog.form"
+                :categories="categories"
+                :forms="formDesigns"
+              />
+            </a-tab-pane>
+          </a-tabs>
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- 详情对话框 -->
+    <a-modal
+      :open="detailDialog.visible"
+      title="流程详情"
+      :width="previewDialogWidth"
+      :footer="null"
+      @cancel="closeDetailDialog"
+      class="detail-dialog responsive-modal"
+    >
+      <div v-if="detailDialog.process" class="process-details">
+        <div class="detail-header">
+          <h2>{{ detailDialog.process.name }}</h2>
+          <a-tag :color="getStatusColor(detailDialog.process.status)">
+            {{ getStatusText(detailDialog.process.status) }}
+          </a-tag>
+        </div>
+
+        <a-descriptions bordered :column="2">
+          <a-descriptions-item label="ID">{{
+            detailDialog.process.id
+          }}</a-descriptions-item>
+          <a-descriptions-item label="操作人">{{
+            detailDialog.process.operator_name
+          }}</a-descriptions-item>
+          <a-descriptions-item label="创建时间">{{
+            formatFullDateTime(detailDialog.process.created_at)
+          }}</a-descriptions-item>
+          <a-descriptions-item label="更新时间">{{
+            formatFullDateTime(detailDialog.process.updated_at)
+          }}</a-descriptions-item>
+          <a-descriptions-item label="关联表单">{{
+            getFormName(detailDialog.process.form_design_id)
+          }}</a-descriptions-item>
+          <a-descriptions-item label="分类">{{
+            getCategoryName(detailDialog.process.category_id)
+          }}</a-descriptions-item>
+          <a-descriptions-item label="是否默认">{{
+            isDefaultProcess(detailDialog.process.is_default) ? '是' : '否'
+          }}</a-descriptions-item>
+          <a-descriptions-item label="标签">
+            <div class="tags-container">
+              <a-tag
+                v-for="tag in detailDialog.process.tags"
+                :key="tag"
+                color="blue"
+              >
+                {{ tag }}
+              </a-tag>
+              <span
+                v-if="
+                  !detailDialog.process.tags ||
+                  detailDialog.process.tags.length === 0
+                "
+                >无标签</span
+              >
+            </div>
+          </a-descriptions-item>
+          <a-descriptions-item label="描述" :span="2">{{
+            detailDialog.process.description || '无描述'
+          }}</a-descriptions-item>
+        </a-descriptions>
+
+        <div class="process-preview">
+          <h3>流程定义</h3>
+          <a-card>
+            <pre class="definition-json">{{
+              formatDefinitionForDisplay(detailDialog.process.definition)
+            }}</pre>
+          </a-card>
+        </div>
+
+        <div class="detail-footer">
+          <a-button @click="closeDetailDialog">关闭</a-button>
+          <a-button
+            type="primary"
+            @click="handleEditProcess(detailDialog.process)"
+            >编辑</a-button
+          >
+        </div>
+      </div>
+    </a-modal>
+  </OpsPage>
+</template>
+
 <style scoped>
-.process-management-container {
-  padding: 12px;
-  min-height: 100vh;
-}
-
-.page-header {
-  margin-bottom: 20px;
-}
-
 .header-actions {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -1189,6 +1191,7 @@ onMounted(async (): Promise<void> => {
 }
 
 .table-container {
+  min-width: 0;
   margin-bottom: 24px;
 }
 
@@ -1337,10 +1340,6 @@ onMounted(async (): Promise<void> => {
 }
 
 @media (max-width: 768px) {
-  .process-management-container {
-    padding: 8px;
-  }
-
   .search-input {
     min-width: auto;
   }

@@ -26,3 +26,19 @@ code, pre { font-family: var(--ops-font-data); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+@media (max-width: 640px) {
+  /* 窄屏使用横向滚动，避免左右固定列叠加遮住中间内容 */
+  .ops-page__content .ant-table-cell-fix-left,
+  .ops-page__content .ant-table-cell-fix-right {
+    position: static !important;
+  }
+  .ops-page__content .ant-table-cell-fix-left-last::after,
+  .ops-page__content .ant-table-cell-fix-right-first::after {
+    display: none;
+  }
+  .layout-floating-preferences,
+  .ai-assistant-container {
+    display: none;
+  }
+}

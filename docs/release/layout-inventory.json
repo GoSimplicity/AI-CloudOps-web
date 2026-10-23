@@ -1,6 +1,6 @@
 {
   "routes": 58,
-  "migratedShells": 6,
+  "migratedShells": 9,
   "entries": [
     {
       "route": "/assistant/info",
@@ -75,7 +75,7 @@
     {
       "route": "/form_management",
       "view": "workorder/FormManagement.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 13,
       "scopedStyle": true
     },
@@ -313,7 +313,7 @@
     {
       "route": "/process",
       "view": "workorder/Process.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 1,
       "scopedStyle": true
     },
@@ -383,7 +383,7 @@
     {
       "route": "/template",
       "view": "workorder/Template.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 11,
       "scopedStyle": true
     },

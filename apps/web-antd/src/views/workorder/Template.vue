@@ -1,447 +1,5 @@
-<template>
-  <div class="template-management-container">
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button type="primary" @click="handleCreateTemplate" class="btn-create">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          创建模板
-        </a-button>
-        <div class="search-filters">
-          <a-input-search 
-            v-model:value="searchQuery" 
-            placeholder="搜索模板名称..." 
-            class="search-input" 
-            @search="handleSearch"
-            allow-clear 
-          />
-          <a-select 
-            v-model:value="statusFilter" 
-            placeholder="状态" 
-            class="status-filter" 
-            @change="handleStatusChange"
-          >
-            <a-select-option :value="null">全部状态</a-select-option>
-            <a-select-option :value="1">启用</a-select-option>
-            <a-select-option :value="2">禁用</a-select-option>
-          </a-select>
-          <a-select 
-            v-model:value="categoryFilter" 
-            placeholder="分类" 
-            class="category-filter" 
-            @change="handleCategoryChange"
-          >
-            <a-select-option :value="null">全部分类</a-select-option>
-            <a-select-option v-for="category in categories" :key="category.id" :value="category.id">
-              {{ category.name }}
-            </a-select-option>
-          </a-select>
-        </div>
-      </div>
-    </div>
-
-    <div class="stats-row">
-      <a-row :gutter="16">
-        <a-col :span="6">
-          <a-card class="stats-card">
-            <a-statistic title="总模板数" :value="stats.total" :value-style="{ color: '#3f8600' }">
-              <template #prefix>
-                <FileOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :span="6">
-          <a-card class="stats-card">
-            <a-statistic title="启用" :value="stats.enabled" :value-style="{ color: '#52c41a' }">
-              <template #prefix>
-                <CheckCircleOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :span="6">
-          <a-card class="stats-card">
-            <a-statistic title="禁用" :value="stats.disabled" :value-style="{ color: '#cf1322' }">
-              <template #prefix>
-                <StopOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :span="6">
-          <a-card class="stats-card">
-            <a-statistic title="本月新增" :value="stats.thisMonth" :value-style="{ color: '#faad14' }">
-              <template #prefix>
-                <EditOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div>
-
-    <div class="table-container">
-      <a-card>
-        <a-table 
-          :data-source="templateList" 
-          :columns="columns" 
-          :pagination="paginationConfig" 
-          :loading="loading"
-          row-key="id" 
-          bordered 
-          :scroll="{ x: 1300 }" 
-          @change="handleTableChange"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'name'">
-              <div class="template-name-cell">
-                <div class="status-badge" :class="getStatusClass(record.status)"></div>
-                <span class="template-name-text">{{ record.name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'description'">
-              <span class="description-text">{{ record.description || '无描述' }}</span>
-            </template>
-
-            <template v-if="column.key === 'status'">
-              <a-tag :color="getStatusColor(record.status)">
-                {{ getStatusText(record.status) }}
-              </a-tag>
-            </template>
-
-            <template v-if="column.key === 'category'">
-              <a-tag v-if="record.category?.name" color="blue">
-                {{ record.category.name }}
-              </a-tag>
-              <span v-else class="text-gray">未分类</span>
-            </template>
-
-            <template v-if="column.key === 'process'">
-              <span v-if="record.process?.name">{{ record.process.name }}</span>
-              <span v-else class="text-gray">未关联</span>
-            </template>
-
-            <template v-if="column.key === 'form_design'">
-              <span v-if="record.form_design?.name">{{ record.form_design.name }}</span>
-              <span v-else class="text-gray">未关联</span>
-            </template>
-
-            <template v-if="column.key === 'creator'">
-              <div class="creator-info">
-                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.operator_name || '') }">
-                  {{ getInitials(record.operator_name) }}
-                </a-avatar>
-                <span class="creator-name">{{ record.operator_name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'createdAt'">
-              <div class="date-info">
-                <span class="date">{{ formatDate(record.created_at) }}</span>
-                <span class="time">{{ formatTime(record.created_at) }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'action'">
-              <div class="action-buttons">
-                <a-button type="primary" size="small" @click="handleViewTemplate(record)">
-                  查看
-                </a-button>
-                <a-button type="default" size="small" @click="handleEditTemplate(record)">
-                  编辑
-                </a-button>
-                <a-dropdown>
-                  <template #overlay>
-                    <a-menu @click="(e: any) => handleCommand(e.key, record)">
-                      <a-menu-divider />
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
-                    </a-menu>
-                  </template>
-                  <a-button size="small">
-                    更多
-                    <DownOutlined />
-                  </a-button>
-                </a-dropdown>
-              </div>
-            </template>
-          </template>
-        </a-table>
-      </a-card>
-    </div>
-
-    <!-- 模板创建/编辑对话框 -->
-    <a-modal 
-      :open="templateDialog.visible" 
-      :title="templateDialog.isEdit ? '编辑模板' : '创建模板'" 
-      :width="formDialogWidth"
-      @ok="saveTemplate" 
-      @cancel="() => { templateDialog.visible = false }" 
-      :destroy-on-close="true"
-      class="responsive-modal template-form-modal" 
-      :confirm-loading="loading"
-    >
-      <a-form ref="formRef" :model="templateDialog.form" :rules="formRules" layout="vertical">
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="模板名称" name="name">
-              <a-input v-model:value="templateDialog.form.name" placeholder="请输入模板名称" />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="状态" name="status">
-              <a-select v-model:value="templateDialog.form.status" placeholder="请选择状态">
-                <a-select-option :value="1">启用</a-select-option>
-                <a-select-option :value="2">禁用</a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-        </a-row>
-
-        <a-row :gutter="16">
-          <a-col :span="8">
-            <a-form-item label="分类" name="category_id">
-              <a-select 
-                v-model:value="templateDialog.form.category_id" 
-                placeholder="请选择分类" 
-                style="width: 100%"
-                show-search 
-                :filter-option="false" 
-                option-label-prop="children"
-                :not-found-content="categorySelectorLoading ? undefined : (categorySearchKeyword ? '无搜索结果' : '无数据')"
-                @search="handleCategorySearch" 
-                @dropdown-visible-change="handleCategoryDropdownChange"
-                @popup-scroll="handleCategoryScroll" 
-                allow-clear 
-                :loading="categorySelectorLoading"
-              >
-                <template #notFoundContent>
-                  <div v-if="categorySelectorLoading" class="selector-loading">
-                    <a-spin size="small" />
-                    <span style="margin-left: 8px;">加载中...</span>
-                  </div>
-                  <div v-else class="selector-empty">
-                    {{ categorySearchKeyword ? '无搜索结果' : '暂无分类数据' }}
-                  </div>
-                </template>
-
-                <a-select-option v-for="cat in dialogCategories" :key="cat.id" :value="cat.id">
-                  <div class="category-option">
-                    <span class="category-name">{{ cat.name }}</span>
-                    <span v-if="cat.description" class="category-desc">{{ cat.description }}</span>
-                  </div>
-                </a-select-option>
-
-                <a-select-option 
-                  v-if="categoryPagination.hasMore" 
-                  :value="'__load_more__'" 
-                  disabled
-                  class="load-more-option"
-                >
-                  <div class="load-more-content" @click.stop="loadMoreCategories">
-                    <a-button type="link" size="small" :loading="categorySelectorLoading"
-                      style="padding: 0; height: auto; font-size: 12px;">
-                      <template v-if="!categorySelectorLoading">
-                        加载更多 ({{ categoryPagination.current }}/{{ categoryTotalPages }})
-                      </template>
-                      <template v-else>
-                        正在加载...
-                      </template>
-                    </a-button>
-                  </div>
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-          <a-col :span="8">
-            <a-form-item label="关联流程" name="process_id">
-              <a-select 
-                v-model:value="templateDialog.form.process_id" 
-                placeholder="请选择流程" 
-                style="width: 100%"
-                show-search 
-                :filter-option="false" 
-                option-label-prop="children"
-                :not-found-content="processSelectorLoading ? undefined : (processSearchKeyword ? '无搜索结果' : '无数据')"
-                @search="handleProcessSearch" 
-                @dropdown-visible-change="handleProcessDropdownChange"
-                @popup-scroll="handleProcessScroll" 
-                allow-clear 
-                :loading="processSelectorLoading"
-              >
-                <template #notFoundContent>
-                  <div v-if="processSelectorLoading" class="selector-loading">
-                    <a-spin size="small" />
-                    <span style="margin-left: 8px;">加载中...</span>
-                  </div>
-                  <div v-else class="selector-empty">
-                    {{ processSearchKeyword ? '无搜索结果' : '暂无流程数据' }}
-                  </div>
-                </template>
-
-                <a-select-option v-for="process in dialogProcesses" :key="process.id" :value="process.id">
-                  <div class="process-option">
-                    <span class="process-name">{{ process.name }}</span>
-                    <span v-if="process.description" class="process-desc">{{ process.description }}</span>
-                  </div>
-                </a-select-option>
-
-                <a-select-option 
-                  v-if="processPagination.hasMore" 
-                  :value="'__load_more_process__'" 
-                  disabled
-                  class="load-more-option"
-                >
-                  <div class="load-more-content" @click.stop="loadMoreProcesses">
-                    <a-button type="link" size="small" :loading="processSelectorLoading"
-                      style="padding: 0; height: auto; font-size: 12px;">
-                      <template v-if="!processSelectorLoading">
-                        加载更多 ({{ processPagination.current }}/{{ processTotalPages }})
-                      </template>
-                      <template v-else>
-                        正在加载...
-                      </template>
-                    </a-button>
-                  </div>
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-          <a-col :span="8">
-            <a-form-item label="关联表单" name="form_design_id">
-              <a-select 
-                v-model:value="templateDialog.form.form_design_id" 
-                placeholder="请选择表单" 
-                style="width: 100%"
-                show-search 
-                :filter-option="false" 
-                option-label-prop="children"
-                :not-found-content="formSelectorLoading ? undefined : (formSearchKeyword ? '无搜索结果' : '无数据')"
-                @search="handleFormSearch" 
-                @dropdown-visible-change="handleFormDropdownChange"
-                @popup-scroll="handleFormScroll" 
-                allow-clear 
-                :loading="formSelectorLoading"
-              >
-                <template #notFoundContent>
-                  <div v-if="formSelectorLoading" class="selector-loading">
-                    <a-spin size="small" />
-                    <span style="margin-left: 8px;">加载中...</span>
-                  </div>
-                  <div v-else class="selector-empty">
-                    {{ formSearchKeyword ? '无搜索结果' : '暂无表单数据' }}
-                  </div>
-                </template>
-
-                <a-select-option v-for="form in dialogForms" :key="form.id" :value="form.id">
-                  <div class="form-option">
-                    <span class="form-name">{{ form.name }}</span>
-                    <span v-if="form.description" class="form-desc">{{ form.description }}</span>
-                  </div>
-                </a-select-option>
-
-                <a-select-option 
-                  v-if="formPagination.hasMore" 
-                  :value="'__load_more_form__'" 
-                  disabled
-                  class="load-more-option"
-                >
-                  <div class="load-more-content" @click.stop="loadMoreForms">
-                    <a-button type="link" size="small" :loading="formSelectorLoading"
-                      style="padding: 0; height: auto; font-size: 12px;">
-                      <template v-if="!formSelectorLoading">
-                        加载更多 ({{ formPagination.current }}/{{ formTotalPages }})
-                      </template>
-                      <template v-else>
-                        正在加载...
-                      </template>
-                    </a-button>
-                  </div>
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-        </a-row>
-
-        <a-form-item label="标签" name="tags">
-          <a-select
-            v-model:value="templateDialog.form.tags"
-            mode="tags"
-            placeholder="输入标签按回车添加"
-            style="width: 100%"
-            :max-tag-count="10"
-            allow-clear
-          >
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="描述" name="description">
-          <a-textarea v-model:value="templateDialog.form.description" :rows="3" placeholder="请输入模板描述" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <!-- 详情对话框 -->
-    <a-modal 
-      :open="detailDialog.visible" 
-      title="模板详情" 
-      :width="previewDialogWidth" 
-      :footer="null"
-      @cancel="() => { detailDialog.visible = false }" 
-      class="detail-dialog responsive-modal"
-    >
-      <div v-if="detailDialog.template" class="template-details">
-        <div class="detail-header">
-          <h2>{{ detailDialog.template.name }}</h2>
-          <a-tag :color="getStatusColor(detailDialog.template.status)">
-            {{ getStatusText(detailDialog.template.status) }}
-          </a-tag>
-        </div>
-
-        <a-descriptions bordered :column="2" :labelStyle="{ width: '120px' }">
-          <a-descriptions-item label="模板ID">{{ detailDialog.template.id }}</a-descriptions-item>
-          <a-descriptions-item label="创建人">{{ detailDialog.template.operator_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">
-            {{ formatFullDateTime(detailDialog.template.created_at || '') }}
-          </a-descriptions-item>
-          <a-descriptions-item label="更新时间">
-            {{ formatFullDateTime(detailDialog.template.updated_at || '') }}
-          </a-descriptions-item>
-          <a-descriptions-item label="分类">
-            <a-tag v-if="detailDialog.template.category?.name" color="blue">
-              {{ detailDialog.template.category.name }}
-            </a-tag>
-            <span v-else class="text-gray">未分类</span>
-          </a-descriptions-item>
-          <a-descriptions-item label="关联流程">
-            {{ detailDialog.template.process?.name || '未关联' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="关联表单" :span="2">
-            {{ detailDialog.template.form_design?.name || '未关联' }}
-          </a-descriptions-item>
-          <a-descriptions-item label="标签" :span="2">
-            <template v-if="detailDialog.template.tags && detailDialog.template.tags.length">
-              <a-tag v-for="tag in detailDialog.template.tags" :key="tag" color="blue">{{ tag }}</a-tag>
-            </template>
-            <span v-else class="text-gray">无标签</span>
-          </a-descriptions-item>
-          <a-descriptions-item label="描述" :span="2">
-            {{ detailDialog.template.description || '无描述' }}
-          </a-descriptions-item>
-        </a-descriptions>
-
-        <div class="detail-footer">
-          <a-button @click="detailDialog.visible = false">关闭</a-button>
-          <a-button type="primary" @click="handleEditTemplate(detailDialog.template)">编辑</a-button>
-        </div>
-      </div>
-    </a-modal>
-  </div>
-</template>
-
 <script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
@@ -450,7 +8,7 @@ import {
   CheckCircleOutlined,
   EditOutlined,
   StopOutlined,
-  DownOutlined
+  DownOutlined,
 } from '@ant-design/icons-vue';
 
 import {
@@ -465,22 +23,22 @@ import {
   detailWorkorderTemplate,
   createWorkorderTemplate,
   updateWorkorderTemplate,
-  deleteWorkorderTemplate
+  deleteWorkorderTemplate,
 } from '#/api/core/workorder/workorder_template';
 
 import {
   type WorkorderCategoryItem,
-  listWorkorderCategory
+  listWorkorderCategory,
 } from '#/api/core/workorder/workorder_category';
 
 import {
   type WorkorderProcessItem,
-  listWorkorderProcess
+  listWorkorderProcess,
 } from '#/api/core/workorder/workorder_process';
 
 import {
   type WorkorderFormDesignItem,
-  listWorkorderFormDesign
+  listWorkorderFormDesign,
 } from '#/api/core/workorder/workorder_form_design';
 
 // 列定义 - 修复嵌套数据显示问题
@@ -490,7 +48,7 @@ const columns = [
     dataIndex: 'name',
     key: 'name',
     width: 200,
-    fixed: 'left'
+    fixed: 'left',
   },
   {
     title: '描述',
@@ -539,7 +97,7 @@ const columns = [
     key: 'action',
     width: 200,
     align: 'center' as const,
-    fixed: 'right'
+    fixed: 'right',
   },
 ];
 
@@ -561,7 +119,7 @@ const stats = reactive({
   total: 0,
   enabled: 0,
   disabled: 0,
-  thisMonth: 0
+  thisMonth: 0,
 });
 
 // 分页配置
@@ -588,28 +146,28 @@ const templateDialog = reactive({
     process_id: 0,
     form_design_id: 0,
     tags: [],
-    default_values: {}
-  } as CreateWorkorderTemplateReq & { id?: number }
+    default_values: {},
+  } as CreateWorkorderTemplateReq & { id?: number },
 });
 
 // 表单验证规则
 const formRules = {
   name: [
     { required: true, message: '请输入模板名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' }
+    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
   ],
   process_id: [
-    { required: true, message: '请选择关联流程', trigger: 'change' }
+    { required: true, message: '请选择关联流程', trigger: 'change' },
   ],
   form_design_id: [
-    { required: true, message: '请选择关联表单', trigger: 'change' }
-  ]
+    { required: true, message: '请选择关联表单', trigger: 'change' },
+  ],
 };
 
 // 详情对话框
 const detailDialog = reactive({
   visible: false,
-  template: null as WorkorderTemplateItem | null
+  template: null as WorkorderTemplateItem | null,
 });
 
 // 分类选择器相关
@@ -622,7 +180,7 @@ const categoryPagination = reactive({
   current: 1,
   pageSize: 20,
   total: 0,
-  hasMore: false
+  hasMore: false,
 });
 
 // 流程选择器相关
@@ -635,7 +193,7 @@ const processPagination = reactive({
   current: 1,
   pageSize: 20,
   total: 0,
-  hasMore: false
+  hasMore: false,
 });
 
 // 表单选择器相关
@@ -648,7 +206,7 @@ const formPagination = reactive({
   current: 1,
   pageSize: 20,
   total: 0,
-  hasMore: false
+  hasMore: false,
 });
 
 // 清理定时器
@@ -693,7 +251,7 @@ const formTotalPages = computed(() => {
 const getStatusColor = (status: number): string => {
   const colorMap = {
     [TemplateStatus.Enabled]: 'green',
-    [TemplateStatus.Disabled]: 'default'
+    [TemplateStatus.Disabled]: 'default',
   };
   return colorMap[status as keyof typeof colorMap] || 'default';
 };
@@ -701,7 +259,7 @@ const getStatusColor = (status: number): string => {
 const getStatusText = (status: number): string => {
   const textMap = {
     [TemplateStatus.Enabled]: '启用',
-    [TemplateStatus.Disabled]: '禁用'
+    [TemplateStatus.Disabled]: '禁用',
   };
   return textMap[status as keyof typeof textMap] || '未知';
 };
@@ -709,7 +267,7 @@ const getStatusText = (status: number): string => {
 const getStatusClass = (status: number): string => {
   const classMap = {
     [TemplateStatus.Enabled]: 'status-enabled',
-    [TemplateStatus.Disabled]: 'status-disabled'
+    [TemplateStatus.Disabled]: 'status-disabled',
   };
   return classMap[status as keyof typeof classMap] || '';
 };
@@ -717,7 +275,11 @@ const getStatusClass = (status: number): string => {
 const formatDate = (dateStr: string | undefined) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  return d.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
 };
 
 const formatTime = (dateStr: string | undefined) => {
@@ -734,25 +296,27 @@ const formatFullDateTime = (dateStr: string | undefined) => {
     month: 'long',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 };
 
 const getInitials = (name: string | undefined) => {
   if (!name) return '';
-  return name
-    .split('')
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+  return name.split('').slice(0, 2).join('').toUpperCase();
 };
 
 const getAvatarColor = (name: string | undefined) => {
   if (!name) return '#1890ff';
 
   const colors = [
-    '#1890ff', '#52c41a', '#faad14', '#f5222d',
-    '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
   ];
 
   let hash = 0;
@@ -764,7 +328,10 @@ const getAvatarColor = (name: string | undefined) => {
 };
 
 // 分类选择器方法
-const loadDialogCategories = async (reset: boolean = false, search?: string): Promise<void> => {
+const loadDialogCategories = async (
+  reset: boolean = false,
+  search?: string,
+): Promise<void> => {
   if (categorySelectorLoading.value && !reset) {
     return;
   }
@@ -775,7 +342,10 @@ const loadDialogCategories = async (reset: boolean = false, search?: string): Pr
     const params = {
       page: reset ? 1 : categoryPagination.current,
       size: categoryPagination.pageSize,
-      search: search !== undefined ? search : categorySearchKeyword.value || undefined
+      search:
+        search !== undefined
+          ? search
+          : categorySearchKeyword.value || undefined,
     };
 
     const response = await listWorkorderCategory(params);
@@ -785,17 +355,21 @@ const loadDialogCategories = async (reset: boolean = false, search?: string): Pr
         dialogCategories.value = response.items || [];
         categoryPagination.current = 1;
       } else {
-        const existingIds = new Set(dialogCategories.value.map(cat => cat.id));
-        const newItems = (response.items || []).filter((cat: any) => !existingIds.has(cat.id));
+        const existingIds = new Set(
+          dialogCategories.value.map((cat) => cat.id),
+        );
+        const newItems = (response.items || []).filter(
+          (cat: any) => !existingIds.has(cat.id),
+        );
         dialogCategories.value = [...dialogCategories.value, ...newItems];
       }
 
       categoryPagination.total = response.total || 0;
-      categoryPagination.hasMore = (response.items || []).length === categoryPagination.pageSize &&
+      categoryPagination.hasMore =
+        (response.items || []).length === categoryPagination.pageSize &&
         dialogCategories.value.length < categoryPagination.total;
     }
   } catch (error: any) {
-
     if (reset) {
       message.error(error.message || '加载分类列表失败');
       dialogCategories.value = [];
@@ -836,9 +410,11 @@ const handleCategoryScroll = (e: Event): void => {
   const element = target as HTMLElement;
   const { scrollTop, scrollHeight, clientHeight } = element;
 
-  if (scrollTop + clientHeight >= scrollHeight - 10 &&
+  if (
+    scrollTop + clientHeight >= scrollHeight - 10 &&
     categoryPagination.hasMore &&
-    !categorySelectorLoading.value) {
+    !categorySelectorLoading.value
+  ) {
     loadMoreCategories();
   }
 };
@@ -853,7 +429,10 @@ const loadMoreCategories = async (): Promise<void> => {
 };
 
 // 流程选择器方法
-const loadDialogProcesses = async (reset: boolean = false, search?: string): Promise<void> => {
+const loadDialogProcesses = async (
+  reset: boolean = false,
+  search?: string,
+): Promise<void> => {
   if (processSelectorLoading.value && !reset) {
     return;
   }
@@ -864,7 +443,8 @@ const loadDialogProcesses = async (reset: boolean = false, search?: string): Pro
     const params = {
       page: reset ? 1 : processPagination.current,
       size: processPagination.pageSize,
-      search: search !== undefined ? search : processSearchKeyword.value || undefined
+      search:
+        search !== undefined ? search : processSearchKeyword.value || undefined,
     };
 
     const response = await listWorkorderProcess(params);
@@ -874,17 +454,21 @@ const loadDialogProcesses = async (reset: boolean = false, search?: string): Pro
         dialogProcesses.value = response.items || [];
         processPagination.current = 1;
       } else {
-        const existingIds = new Set(dialogProcesses.value.map(process => process.id));
-        const newItems = (response.items || []).filter((process: any) => !existingIds.has(process.id));
+        const existingIds = new Set(
+          dialogProcesses.value.map((process) => process.id),
+        );
+        const newItems = (response.items || []).filter(
+          (process: any) => !existingIds.has(process.id),
+        );
         dialogProcesses.value = [...dialogProcesses.value, ...newItems];
       }
 
       processPagination.total = response.total || 0;
-      processPagination.hasMore = (response.items || []).length === processPagination.pageSize &&
+      processPagination.hasMore =
+        (response.items || []).length === processPagination.pageSize &&
         dialogProcesses.value.length < processPagination.total;
     }
   } catch (error: any) {
-
     if (reset) {
       message.error(error.message || '加载流程列表失败');
       dialogProcesses.value = [];
@@ -925,9 +509,11 @@ const handleProcessScroll = (e: Event): void => {
   const element = target as HTMLElement;
   const { scrollTop, scrollHeight, clientHeight } = element;
 
-  if (scrollTop + clientHeight >= scrollHeight - 10 &&
+  if (
+    scrollTop + clientHeight >= scrollHeight - 10 &&
     processPagination.hasMore &&
-    !processSelectorLoading.value) {
+    !processSelectorLoading.value
+  ) {
     loadMoreProcesses();
   }
 };
@@ -942,7 +528,10 @@ const loadMoreProcesses = async (): Promise<void> => {
 };
 
 // 表单选择器方法
-const loadDialogForms = async (reset: boolean = false, search?: string): Promise<void> => {
+const loadDialogForms = async (
+  reset: boolean = false,
+  search?: string,
+): Promise<void> => {
   if (formSelectorLoading.value && !reset) {
     return;
   }
@@ -953,7 +542,8 @@ const loadDialogForms = async (reset: boolean = false, search?: string): Promise
     const params = {
       page: reset ? 1 : formPagination.current,
       size: formPagination.pageSize,
-      search: search !== undefined ? search : formSearchKeyword.value || undefined
+      search:
+        search !== undefined ? search : formSearchKeyword.value || undefined,
     };
 
     const response = await listWorkorderFormDesign(params);
@@ -963,17 +553,19 @@ const loadDialogForms = async (reset: boolean = false, search?: string): Promise
         dialogForms.value = response.items || [];
         formPagination.current = 1;
       } else {
-        const existingIds = new Set(dialogForms.value.map(form => form.id));
-        const newItems = (response.items || []).filter((form: any) => !existingIds.has(form.id));
+        const existingIds = new Set(dialogForms.value.map((form) => form.id));
+        const newItems = (response.items || []).filter(
+          (form: any) => !existingIds.has(form.id),
+        );
         dialogForms.value = [...dialogForms.value, ...newItems];
       }
 
       formPagination.total = response.total || 0;
-      formPagination.hasMore = (response.items || []).length === formPagination.pageSize &&
+      formPagination.hasMore =
+        (response.items || []).length === formPagination.pageSize &&
         dialogForms.value.length < formPagination.total;
     }
   } catch (error: any) {
-
     if (reset) {
       message.error(error.message || '加载表单列表失败');
       dialogForms.value = [];
@@ -1014,9 +606,11 @@ const handleFormScroll = (e: Event): void => {
   const element = target as HTMLElement;
   const { scrollTop, scrollHeight, clientHeight } = element;
 
-  if (scrollTop + clientHeight >= scrollHeight - 10 &&
+  if (
+    scrollTop + clientHeight >= scrollHeight - 10 &&
     formPagination.hasMore &&
-    !formSelectorLoading.value) {
+    !formSelectorLoading.value
+  ) {
     loadMoreForms();
   }
 };
@@ -1043,15 +637,18 @@ const handleTableChange = (pagination: any): void => {
 };
 
 // 数据加载
+const loadError = ref('');
+
 const loadTemplates = async () => {
   loading.value = true;
+  loadError.value = '';
   try {
     const params: ListWorkorderTemplateReq = {
       page: currentPage.value,
       size: pageSize.value,
       search: searchQuery.value || undefined,
       status: statusFilter.value || undefined,
-      category_id: categoryFilter.value || undefined
+      category_id: categoryFilter.value || undefined,
     };
 
     const res = await listWorkorderTemplate(params);
@@ -1061,20 +658,30 @@ const loadTemplates = async () => {
 
       // 计算统计数据
       stats.total = res.total || 0;
-      stats.enabled = res.items?.filter((item: any) => item.status === TemplateStatus.Enabled).length || 0;
-      stats.disabled = res.items?.filter((item: any) => item.status === TemplateStatus.Disabled).length || 0;
+      stats.enabled =
+        res.items?.filter((item: any) => item.status === TemplateStatus.Enabled)
+          .length || 0;
+      stats.disabled =
+        res.items?.filter(
+          (item: any) => item.status === TemplateStatus.Disabled,
+        ).length || 0;
 
       // 计算本月新增（简单示例）
       const thisMonth = new Date();
       thisMonth.setDate(1);
-      stats.thisMonth = res.items?.filter((item: any) => {
-        const createdAt = new Date(item.created_at);
-        return createdAt >= thisMonth;
-      }).length || 0;
+      thisMonth.setHours(0, 0, 0, 0);
+      stats.thisMonth =
+        res.items?.filter((item: any) => {
+          const createdAt = new Date(item.created_at);
+          return createdAt >= thisMonth;
+        }).length || 0;
     }
   } catch (error) {
-    message.error('加载模板数据失败');
-
+    templateList.value = [];
+    total.value = 0;
+    Object.assign(stats, { total: 0, enabled: 0, disabled: 0, thisMonth: 0 });
+    loadError.value = '加载模板数据失败';
+    message.error(loadError.value);
   } finally {
     loading.value = false;
   }
@@ -1088,16 +695,19 @@ const loadCategories = async () => {
     let hasMoreData = true;
 
     while (hasMoreData) {
-      const res = await listWorkorderCategory({ 
-        page: currentPage, 
-        size: pageSize 
+      const res = await listWorkorderCategory({
+        page: currentPage,
+        size: pageSize,
       });
 
       if (res && res.items && res.items.length > 0) {
         allCategories = [...allCategories, ...res.items];
 
         // 检查是否还有更多数据
-        if (res.items.length < pageSize || allCategories.length >= (res.total || 0)) {
+        if (
+          res.items.length < pageSize ||
+          allCategories.length >= (res.total || 0)
+        ) {
           hasMoreData = false;
         } else {
           currentPage++;
@@ -1109,7 +719,6 @@ const loadCategories = async () => {
 
     categories.value = allCategories;
   } catch (error: any) {
-
     message.error(`加载分类列表失败: ${error.message || '未知错误'}`);
     categories.value = [];
   }
@@ -1141,7 +750,7 @@ const handleCreateTemplate = () => {
     process_id: 0,
     form_design_id: 0,
     tags: [],
-    default_values: {}
+    default_values: {},
   };
   templateDialog.visible = true;
   resetSelectors();
@@ -1152,7 +761,9 @@ const handleEditTemplate = async (row: WorkorderTemplateItem) => {
   loading.value = true;
 
   try {
-    const res = await detailWorkorderTemplate({ id: row.id } as DetailWorkorderTemplateReq);
+    const res = await detailWorkorderTemplate({
+      id: row.id,
+    } as DetailWorkorderTemplateReq);
     if (res) {
       templateDialog.form = {
         id: res.id,
@@ -1163,7 +774,7 @@ const handleEditTemplate = async (row: WorkorderTemplateItem) => {
         process_id: res.process_id,
         form_design_id: res.form_design_id,
         tags: res.tags || [],
-        default_values: res.default_values || {}
+        default_values: res.default_values || {},
       };
 
       templateDialog.visible = true;
@@ -1172,7 +783,6 @@ const handleEditTemplate = async (row: WorkorderTemplateItem) => {
     }
   } catch (error) {
     message.error('获取模板详情失败');
-
   } finally {
     loading.value = false;
   }
@@ -1182,14 +792,15 @@ const handleViewTemplate = async (row: WorkorderTemplateItem) => {
   loading.value = true;
 
   try {
-    const res = await detailWorkorderTemplate({ id: row.id } as DetailWorkorderTemplateReq);
+    const res = await detailWorkorderTemplate({
+      id: row.id,
+    } as DetailWorkorderTemplateReq);
     if (res) {
       detailDialog.template = res;
       detailDialog.visible = true;
     }
   } catch (error) {
     message.error('获取模板详情失败');
-
   } finally {
     loading.value = false;
   }
@@ -1214,7 +825,7 @@ const confirmDelete = (template: WorkorderTemplateItem) => {
       try {
         loading.value = true;
         const params: DeleteWorkorderTemplateReq = {
-          id: template.id
+          id: template.id,
         };
 
         await deleteWorkorderTemplate(params);
@@ -1227,11 +838,10 @@ const confirmDelete = (template: WorkorderTemplateItem) => {
         loadTemplates();
       } catch (error: any) {
         message.error(`删除模板失败: ${error.message || '未知错误'}`);
-
       } finally {
         loading.value = false;
       }
-    }
+    },
   });
 };
 
@@ -1263,7 +873,7 @@ const saveTemplate = async () => {
         form_design_id: templateDialog.form.form_design_id,
         status: templateDialog.form.status,
         category_id: templateDialog.form.category_id,
-        tags: templateDialog.form.tags
+        tags: templateDialog.form.tags,
       };
 
       await updateWorkorderTemplate(updateData);
@@ -1276,7 +886,7 @@ const saveTemplate = async () => {
         form_design_id: templateDialog.form.form_design_id,
         status: templateDialog.form.status,
         category_id: templateDialog.form.category_id,
-        tags: templateDialog.form.tags
+        tags: templateDialog.form.tags,
       };
 
       await createWorkorderTemplate(createData);
@@ -1288,11 +898,11 @@ const saveTemplate = async () => {
     templateDialog.visible = false;
     loadTemplates();
   } catch (error: any) {
-    message.error(templateDialog.isEdit
-      ? `更新模板失败: ${error.message || '未知错误'}`
-      : `创建模板失败: ${error.message || '未知错误'}`
+    message.error(
+      templateDialog.isEdit
+        ? `更新模板失败: ${error.message || '未知错误'}`
+        : `创建模板失败: ${error.message || '未知错误'}`,
     );
-
   } finally {
     loading.value = false;
   }
@@ -1341,23 +951,27 @@ const resetSelectors = (): void => {
 };
 
 // 为编辑模式加载选择器信息
-const loadSelectorsForEdit = async (templateData: WorkorderTemplateItem): Promise<void> => {
+const loadSelectorsForEdit = async (
+  templateData: WorkorderTemplateItem,
+): Promise<void> => {
   resetSelectors();
 
   try {
     await Promise.all([
       loadCategoryForEdit(templateData),
       loadProcessForEdit(templateData),
-      loadFormForEdit(templateData)
+      loadFormForEdit(templateData),
     ]);
-  } catch (error) {
-
-  }
+  } catch (error) {}
 };
 
-const loadCategoryForEdit = async (templateData: WorkorderTemplateItem): Promise<void> => {
+const loadCategoryForEdit = async (
+  templateData: WorkorderTemplateItem,
+): Promise<void> => {
   try {
-    const existingCategory = categories.value.find(cat => cat.id === templateData.category_id);
+    const existingCategory = categories.value.find(
+      (cat) => cat.id === templateData.category_id,
+    );
 
     if (templateData.category_id && existingCategory) {
       dialogCategories.value = [existingCategory];
@@ -1365,7 +979,10 @@ const loadCategoryForEdit = async (templateData: WorkorderTemplateItem): Promise
 
     await loadDialogCategories(true);
 
-    if (templateData.category_id && !dialogCategories.value.find(cat => cat.id === templateData.category_id)) {
+    if (
+      templateData.category_id &&
+      !dialogCategories.value.find((cat) => cat.id === templateData.category_id)
+    ) {
       const categoryInfo: WorkorderCategoryItem = {
         id: templateData.category_id,
         name: templateData.category?.name || `分类${templateData.category_id}`,
@@ -1374,21 +991,29 @@ const loadCategoryForEdit = async (templateData: WorkorderTemplateItem): Promise
         updated_at: '',
         operator_id: 0,
         operator_name: '',
-        status: 1
+        status: 1,
       };
 
-      dialogCategories.value = [categoryInfo, ...dialogCategories.value.filter(c => c.id !== categoryInfo.id)];
+      dialogCategories.value = [
+        categoryInfo,
+        ...dialogCategories.value.filter((c) => c.id !== categoryInfo.id),
+      ];
     }
-  } catch (error) {
-
-  }
+  } catch (error) {}
 };
 
-const loadProcessForEdit = async (templateData: WorkorderTemplateItem): Promise<void> => {
+const loadProcessForEdit = async (
+  templateData: WorkorderTemplateItem,
+): Promise<void> => {
   try {
     await loadDialogProcesses(true);
 
-    if (templateData.process_id && !dialogProcesses.value.find(process => process.id === templateData.process_id)) {
+    if (
+      templateData.process_id &&
+      !dialogProcesses.value.find(
+        (process) => process.id === templateData.process_id,
+      )
+    ) {
       const processInfo: WorkorderProcessItem = {
         id: templateData.process_id,
         name: templateData.process?.name || `流程${templateData.process_id}`,
@@ -1400,23 +1025,31 @@ const loadProcessForEdit = async (templateData: WorkorderTemplateItem): Promise<
         status: 1,
         is_default: 2,
         definition: {},
-        form_design_id: 0
+        form_design_id: 0,
       };
-      dialogProcesses.value = [processInfo, ...dialogProcesses.value.filter(p => p.id !== processInfo.id)];
+      dialogProcesses.value = [
+        processInfo,
+        ...dialogProcesses.value.filter((p) => p.id !== processInfo.id),
+      ];
     }
-  } catch (error) {
-
-  }
+  } catch (error) {}
 };
 
-const loadFormForEdit = async (templateData: WorkorderTemplateItem): Promise<void> => {
+const loadFormForEdit = async (
+  templateData: WorkorderTemplateItem,
+): Promise<void> => {
   try {
     await loadDialogForms(true);
 
-    if (templateData.form_design_id && !dialogForms.value.find(form => form.id === templateData.form_design_id)) {
+    if (
+      templateData.form_design_id &&
+      !dialogForms.value.find((form) => form.id === templateData.form_design_id)
+    ) {
       const formInfo: WorkorderFormDesignItem = {
         id: templateData.form_design_id,
-        name: templateData.form_design?.name || `表单${templateData.form_design_id}`,
+        name:
+          templateData.form_design?.name ||
+          `表单${templateData.form_design_id}`,
         description: '',
         created_at: '',
         updated_at: '',
@@ -1426,43 +1059,617 @@ const loadFormForEdit = async (templateData: WorkorderTemplateItem): Promise<voi
         is_template: 1,
         category_id: 0,
         schema: {
-          fields: []
-        }
+          fields: [],
+        },
       };
-      dialogForms.value = [formInfo, ...dialogForms.value.filter(f => f.id !== formInfo.id)];
+      dialogForms.value = [
+        formInfo,
+        ...dialogForms.value.filter((f) => f.id !== formInfo.id),
+      ];
     }
-  } catch (error) {
-
-  }
+  } catch (error) {}
 };
 
 // 初始化加载
 onMounted(async () => {
   loading.value = true;
   try {
-    await Promise.all([
-      loadCategories(),
-      loadTemplates()
-    ]);
+    await Promise.all([loadCategories(), loadTemplates()]);
   } catch (error: any) {
-
-    message.error(`初始化数据加载失败: ${error.message || '未知错误'}, 请刷新页面重试`);
+    message.error(
+      `初始化数据加载失败: ${error.message || '未知错误'}, 请刷新页面重试`,
+    );
   } finally {
     loading.value = false;
   }
 });
 </script>
 
+<template>
+  <OpsPage title="模板管理">
+    <template #actions>
+      <a-button type="primary" @click="handleCreateTemplate" class="btn-create">
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        创建模板
+      </a-button>
+    </template>
+    <template #filters
+      ><div class="search-filters">
+        <a-input-search
+          v-model:value="searchQuery"
+          placeholder="搜索模板名称..."
+          class="search-input"
+          @search="handleSearch"
+          allow-clear
+        />
+        <a-select
+          v-model:value="statusFilter"
+          placeholder="状态"
+          class="status-filter"
+          @change="handleStatusChange"
+        >
+          <a-select-option :value="null">全部状态</a-select-option>
+          <a-select-option :value="1">启用</a-select-option>
+          <a-select-option :value="2">禁用</a-select-option>
+        </a-select>
+        <a-select
+          v-model:value="categoryFilter"
+          placeholder="分类"
+          class="category-filter"
+          @change="handleCategoryChange"
+        >
+          <a-select-option :value="null">全部分类</a-select-option>
+          <a-select-option
+            v-for="category in categories"
+            :key="category.id"
+            :value="category.id"
+          >
+            {{ category.name }}
+          </a-select-option>
+        </a-select>
+      </div></template
+    >
+
+    <template #summary
+      ><div class="stats-row">
+        <a-row :gutter="16">
+          <a-col :xs="12" :sm="12" :md="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="总模板数"
+                :value="stats.total"
+                :value-style="{ color: '#3f8600' }"
+              >
+                <template #prefix>
+                  <FileOutlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="12" :md="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页启用"
+                :value="stats.enabled"
+                :value-style="{ color: '#52c41a' }"
+              >
+                <template #prefix>
+                  <CheckCircleOutlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="12" :md="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页禁用"
+                :value="stats.disabled"
+                :value-style="{ color: '#cf1322' }"
+              >
+                <template #prefix>
+                  <StopOutlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="12" :md="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页本月新增"
+                :value="stats.thisMonth"
+                :value-style="{ color: '#faad14' }"
+              >
+                <template #prefix>
+                  <EditOutlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row></div
+    ></template>
+
+    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+      <template #action
+        ><a-button size="small" @click="loadTemplates">重试</a-button></template
+      >
+    </a-alert>
+
+    <div class="table-container">
+      <a-card>
+        <a-table
+          :data-source="templateList"
+          :columns="columns"
+          :pagination="paginationConfig"
+          :loading="loading"
+          row-key="id"
+          bordered
+          :scroll="{ x: 1300 }"
+          @change="handleTableChange"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'name'">
+              <div class="template-name-cell">
+                <div
+                  class="status-badge"
+                  :class="getStatusClass(record.status)"
+                ></div>
+                <span class="template-name-text">{{ record.name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'description'">
+              <span class="description-text">{{
+                record.description || '无描述'
+              }}</span>
+            </template>
+
+            <template v-if="column.key === 'status'">
+              <a-tag :color="getStatusColor(record.status)">
+                {{ getStatusText(record.status) }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'category'">
+              <a-tag v-if="record.category?.name" color="blue">
+                {{ record.category.name }}
+              </a-tag>
+              <span v-else class="text-gray">未分类</span>
+            </template>
+
+            <template v-if="column.key === 'process'">
+              <span v-if="record.process?.name">{{ record.process.name }}</span>
+              <span v-else class="text-gray">未关联</span>
+            </template>
+
+            <template v-if="column.key === 'form_design'">
+              <span v-if="record.form_design?.name">{{
+                record.form_design.name
+              }}</span>
+              <span v-else class="text-gray">未关联</span>
+            </template>
+
+            <template v-if="column.key === 'creator'">
+              <div class="creator-info">
+                <a-avatar
+                  size="small"
+                  :style="{
+                    backgroundColor: getAvatarColor(record.operator_name || ''),
+                  }"
+                >
+                  {{ getInitials(record.operator_name) }}
+                </a-avatar>
+                <span class="creator-name">{{ record.operator_name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'createdAt'">
+              <div class="date-info">
+                <span class="date">{{ formatDate(record.created_at) }}</span>
+                <span class="time">{{ formatTime(record.created_at) }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'action'">
+              <div class="action-buttons">
+                <a-button
+                  type="primary"
+                  size="small"
+                  @click="handleViewTemplate(record)"
+                >
+                  查看
+                </a-button>
+                <a-button
+                  type="default"
+                  size="small"
+                  @click="handleEditTemplate(record)"
+                >
+                  编辑
+                </a-button>
+                <a-dropdown>
+                  <template #overlay>
+                    <a-menu @click="(e: any) => handleCommand(e.key, record)">
+                      <a-menu-divider />
+                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                    </a-menu>
+                  </template>
+                  <a-button size="small">
+                    更多
+                    <DownOutlined />
+                  </a-button>
+                </a-dropdown>
+              </div>
+            </template>
+          </template>
+        </a-table>
+      </a-card>
+    </div>
+
+    <!-- 模板创建/编辑对话框 -->
+    <a-modal
+      :open="templateDialog.visible"
+      :title="templateDialog.isEdit ? '编辑模板' : '创建模板'"
+      :width="formDialogWidth"
+      @ok="saveTemplate"
+      @cancel="
+        () => {
+          templateDialog.visible = false;
+        }
+      "
+      :destroy-on-close="true"
+      class="responsive-modal template-form-modal"
+      :confirm-loading="loading"
+    >
+      <a-form
+        ref="formRef"
+        :model="templateDialog.form"
+        :rules="formRules"
+        layout="vertical"
+      >
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="模板名称" name="name">
+              <a-input
+                v-model:value="templateDialog.form.name"
+                placeholder="请输入模板名称"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="状态" name="status">
+              <a-select
+                v-model:value="templateDialog.form.status"
+                placeholder="请选择状态"
+              >
+                <a-select-option :value="1">启用</a-select-option>
+                <a-select-option :value="2">禁用</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="8">
+            <a-form-item label="分类" name="category_id">
+              <a-select
+                v-model:value="templateDialog.form.category_id"
+                placeholder="请选择分类"
+                style="width: 100%"
+                show-search
+                :filter-option="false"
+                option-label-prop="children"
+                :not-found-content="
+                  categorySelectorLoading
+                    ? undefined
+                    : categorySearchKeyword
+                      ? '无搜索结果'
+                      : '无数据'
+                "
+                @search="handleCategorySearch"
+                @dropdown-visible-change="handleCategoryDropdownChange"
+                @popup-scroll="handleCategoryScroll"
+                allow-clear
+                :loading="categorySelectorLoading"
+              >
+                <template #notFoundContent>
+                  <div v-if="categorySelectorLoading" class="selector-loading">
+                    <a-spin size="small" />
+                    <span style="margin-left: 8px">加载中...</span>
+                  </div>
+                  <div v-else class="selector-empty">
+                    {{ categorySearchKeyword ? '无搜索结果' : '暂无分类数据' }}
+                  </div>
+                </template>
+
+                <a-select-option
+                  v-for="cat in dialogCategories"
+                  :key="cat.id"
+                  :value="cat.id"
+                >
+                  <div class="category-option">
+                    <span class="category-name">{{ cat.name }}</span>
+                    <span v-if="cat.description" class="category-desc">{{
+                      cat.description
+                    }}</span>
+                  </div>
+                </a-select-option>
+
+                <a-select-option
+                  v-if="categoryPagination.hasMore"
+                  :value="'__load_more__'"
+                  disabled
+                  class="load-more-option"
+                >
+                  <div
+                    class="load-more-content"
+                    @click.stop="loadMoreCategories"
+                  >
+                    <a-button
+                      type="link"
+                      size="small"
+                      :loading="categorySelectorLoading"
+                      style="padding: 0; height: auto; font-size: 12px"
+                    >
+                      <template v-if="!categorySelectorLoading">
+                        加载更多 ({{ categoryPagination.current }}/{{
+                          categoryTotalPages
+                        }})
+                      </template>
+                      <template v-else> 正在加载... </template>
+                    </a-button>
+                  </div>
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :span="8">
+            <a-form-item label="关联流程" name="process_id">
+              <a-select
+                v-model:value="templateDialog.form.process_id"
+                placeholder="请选择流程"
+                style="width: 100%"
+                show-search
+                :filter-option="false"
+                option-label-prop="children"
+                :not-found-content="
+                  processSelectorLoading
+                    ? undefined
+                    : processSearchKeyword
+                      ? '无搜索结果'
+                      : '无数据'
+                "
+                @search="handleProcessSearch"
+                @dropdown-visible-change="handleProcessDropdownChange"
+                @popup-scroll="handleProcessScroll"
+                allow-clear
+                :loading="processSelectorLoading"
+              >
+                <template #notFoundContent>
+                  <div v-if="processSelectorLoading" class="selector-loading">
+                    <a-spin size="small" />
+                    <span style="margin-left: 8px">加载中...</span>
+                  </div>
+                  <div v-else class="selector-empty">
+                    {{ processSearchKeyword ? '无搜索结果' : '暂无流程数据' }}
+                  </div>
+                </template>
+
+                <a-select-option
+                  v-for="process in dialogProcesses"
+                  :key="process.id"
+                  :value="process.id"
+                >
+                  <div class="process-option">
+                    <span class="process-name">{{ process.name }}</span>
+                    <span v-if="process.description" class="process-desc">{{
+                      process.description
+                    }}</span>
+                  </div>
+                </a-select-option>
+
+                <a-select-option
+                  v-if="processPagination.hasMore"
+                  :value="'__load_more_process__'"
+                  disabled
+                  class="load-more-option"
+                >
+                  <div
+                    class="load-more-content"
+                    @click.stop="loadMoreProcesses"
+                  >
+                    <a-button
+                      type="link"
+                      size="small"
+                      :loading="processSelectorLoading"
+                      style="padding: 0; height: auto; font-size: 12px"
+                    >
+                      <template v-if="!processSelectorLoading">
+                        加载更多 ({{ processPagination.current }}/{{
+                          processTotalPages
+                        }})
+                      </template>
+                      <template v-else> 正在加载... </template>
+                    </a-button>
+                  </div>
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :span="8">
+            <a-form-item label="关联表单" name="form_design_id">
+              <a-select
+                v-model:value="templateDialog.form.form_design_id"
+                placeholder="请选择表单"
+                style="width: 100%"
+                show-search
+                :filter-option="false"
+                option-label-prop="children"
+                :not-found-content="
+                  formSelectorLoading
+                    ? undefined
+                    : formSearchKeyword
+                      ? '无搜索结果'
+                      : '无数据'
+                "
+                @search="handleFormSearch"
+                @dropdown-visible-change="handleFormDropdownChange"
+                @popup-scroll="handleFormScroll"
+                allow-clear
+                :loading="formSelectorLoading"
+              >
+                <template #notFoundContent>
+                  <div v-if="formSelectorLoading" class="selector-loading">
+                    <a-spin size="small" />
+                    <span style="margin-left: 8px">加载中...</span>
+                  </div>
+                  <div v-else class="selector-empty">
+                    {{ formSearchKeyword ? '无搜索结果' : '暂无表单数据' }}
+                  </div>
+                </template>
+
+                <a-select-option
+                  v-for="form in dialogForms"
+                  :key="form.id"
+                  :value="form.id"
+                >
+                  <div class="form-option">
+                    <span class="form-name">{{ form.name }}</span>
+                    <span v-if="form.description" class="form-desc">{{
+                      form.description
+                    }}</span>
+                  </div>
+                </a-select-option>
+
+                <a-select-option
+                  v-if="formPagination.hasMore"
+                  :value="'__load_more_form__'"
+                  disabled
+                  class="load-more-option"
+                >
+                  <div class="load-more-content" @click.stop="loadMoreForms">
+                    <a-button
+                      type="link"
+                      size="small"
+                      :loading="formSelectorLoading"
+                      style="padding: 0; height: auto; font-size: 12px"
+                    >
+                      <template v-if="!formSelectorLoading">
+                        加载更多 ({{ formPagination.current }}/{{
+                          formTotalPages
+                        }})
+                      </template>
+                      <template v-else> 正在加载... </template>
+                    </a-button>
+                  </div>
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-form-item label="标签" name="tags">
+          <a-select
+            v-model:value="templateDialog.form.tags"
+            mode="tags"
+            placeholder="输入标签按回车添加"
+            style="width: 100%"
+            :max-tag-count="10"
+            allow-clear
+          >
+          </a-select>
+        </a-form-item>
+
+        <a-form-item label="描述" name="description">
+          <a-textarea
+            v-model:value="templateDialog.form.description"
+            :rows="3"
+            placeholder="请输入模板描述"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 详情对话框 -->
+    <a-modal
+      :open="detailDialog.visible"
+      title="模板详情"
+      :width="previewDialogWidth"
+      :footer="null"
+      @cancel="
+        () => {
+          detailDialog.visible = false;
+        }
+      "
+      class="detail-dialog responsive-modal"
+    >
+      <div v-if="detailDialog.template" class="template-details">
+        <div class="detail-header">
+          <h2>{{ detailDialog.template.name }}</h2>
+          <a-tag :color="getStatusColor(detailDialog.template.status)">
+            {{ getStatusText(detailDialog.template.status) }}
+          </a-tag>
+        </div>
+
+        <a-descriptions bordered :column="2" :labelStyle="{ width: '120px' }">
+          <a-descriptions-item label="模板ID">{{
+            detailDialog.template.id
+          }}</a-descriptions-item>
+          <a-descriptions-item label="创建人">{{
+            detailDialog.template.operator_name
+          }}</a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{ formatFullDateTime(detailDialog.template.created_at || '') }}
+          </a-descriptions-item>
+          <a-descriptions-item label="更新时间">
+            {{ formatFullDateTime(detailDialog.template.updated_at || '') }}
+          </a-descriptions-item>
+          <a-descriptions-item label="分类">
+            <a-tag v-if="detailDialog.template.category?.name" color="blue">
+              {{ detailDialog.template.category.name }}
+            </a-tag>
+            <span v-else class="text-gray">未分类</span>
+          </a-descriptions-item>
+          <a-descriptions-item label="关联流程">
+            {{ detailDialog.template.process?.name || '未关联' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="关联表单" :span="2">
+            {{ detailDialog.template.form_design?.name || '未关联' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="标签" :span="2">
+            <template
+              v-if="
+                detailDialog.template.tags && detailDialog.template.tags.length
+              "
+            >
+              <a-tag
+                v-for="tag in detailDialog.template.tags"
+                :key="tag"
+                color="blue"
+                >{{ tag }}</a-tag
+              >
+            </template>
+            <span v-else class="text-gray">无标签</span>
+          </a-descriptions-item>
+          <a-descriptions-item label="描述" :span="2">
+            {{ detailDialog.template.description || '无描述' }}
+          </a-descriptions-item>
+        </a-descriptions>
+
+        <div class="detail-footer">
+          <a-button @click="detailDialog.visible = false">关闭</a-button>
+          <a-button
+            type="primary"
+            @click="handleEditTemplate(detailDialog.template)"
+            >编辑</a-button
+          >
+        </div>
+      </div>
+    </a-modal>
+  </OpsPage>
+</template>
+
 <style scoped>
-.template-management-container {
-  padding: 12px;
-  min-height: 100vh;
-}
-
-.page-header {
-  margin-bottom: 20px;
-}
-
 .header-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1506,6 +1713,7 @@ onMounted(async () => {
 }
 
 .table-container {
+  min-width: 0;
   margin-bottom: 24px;
 }
 
@@ -1684,10 +1892,6 @@ onMounted(async () => {
 
 /* 移动端适配 */
 @media (max-width: 768px) {
-  .template-management-container {
-    padding: 8px;
-  }
-
   .header-actions {
     flex-direction: column;
     align-items: stretch;
@@ -1752,10 +1956,6 @@ onMounted(async () => {
 
 /* 平板端适配 */
 @media (max-width: 1024px) and (min-width: 769px) {
-  .template-management-container {
-    padding: 16px;
-  }
-
   .search-input {
     width: 200px;
   }
