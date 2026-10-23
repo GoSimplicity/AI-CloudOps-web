@@ -38,6 +38,10 @@ import {
 } from '#/api/core/tree/tree_local';
 import { getTreeList } from '#/api/core/tree/tree_node';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 const loadError = ref<string | null>(null);
 let listRequest = 0;
 let detailRequest = 0;
@@ -852,11 +856,11 @@ const closeDetails = () => {
                       >
                         <deployment-unit-outlined /> 解绑服务树
                       </a-menu-item>
-                      <a-menu-item key="terminal" @click="handleConnectTerminal(record)">
+                      <a-menu-item v-if="can('tree.local.terminal')" key="terminal" @click="handleConnectTerminal(record)">
                         <code-outlined /> 连接终端
                       </a-menu-item>
-                      <a-menu-divider />
-                      <a-menu-item key="delete" @click="handleDelete(record)" danger>
+                      <a-menu-divider v-if="can('tree.local.delete')" />
+                      <a-menu-item v-if="can('tree.local.delete')" key="delete" @click="handleDelete(record)" danger>
                         <delete-outlined /> 删除
                       </a-menu-item>
                     </a-menu>
@@ -1201,7 +1205,7 @@ const closeDetails = () => {
                   <edit-outlined /> 编辑
                 </a-button>
               </a-button-group>
-              <a-button danger @click="handleDelete(currentDetail)">
+              <a-button v-if="can('tree.local.delete')" danger @click="handleDelete(currentDetail)">
                 <delete-outlined /> 删除
               </a-button>
             </div>

@@ -80,7 +80,7 @@
               placeholder="输入要清除缓存的命名空间"
               class="operation-input"
             />
-            <a-button
+            <a-button v-if="can('aiops.rca.clearNamespace')"
               type="primary" 
               @click="handleClearNamespaceCache"
               :loading="clearingCache"
@@ -110,7 +110,7 @@
               <a-select-option value="metrics">指标数据</a-select-option>
               <a-select-option value="logs">日志数据</a-select-option>
             </a-select>
-            <a-button
+            <a-button v-if="can('aiops.rca.clearOperation')"
               type="primary" 
               @click="handleClearOperationCache"
               :loading="clearingCache"
@@ -129,7 +129,7 @@
           </div>
           <div class="operation-content">
             <a-space direction="vertical" style="width: 100%;">
-              <a-button
+              <a-button v-if="can('aiops.rca.clearAll')"
                 type="primary" 
                 danger
                 @click="showClearAllModal"
@@ -282,6 +282,10 @@ import OpsPage from '#/components/ops/OpsPage.vue';
 import { useRcaCache } from './useRcaCache';
 import { CheckCircleOutlined, ExclamationCircleOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 const { loadingStats, clearingCache, clearAllModalVisible, cacheStats, statsError, operationError, clearNamespaceForm, clearOperationForm, operationHistory, refreshCacheStats, handleClearNamespaceCache, handleClearOperationCache, showClearAllModal, confirmClearAllCache, clearHistory } = useRcaCache();
 
 // 格式化命中率

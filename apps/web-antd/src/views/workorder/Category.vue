@@ -158,8 +158,8 @@
                           启用
                         </template>
                       </a-menu-item>
-                      <a-menu-divider />
-                      <a-menu-item key="delete" danger>
+                      <a-menu-divider v-if="can('workorder.category.delete')" />
+                      <a-menu-item v-if="can('workorder.category.delete')" key="delete" danger>
                         <DeleteOutlined />
                         删除
                       </a-menu-item>
@@ -303,6 +303,10 @@ import {
   listWorkorderCategory,
   detailWorkorderCategory,
 } from '#/api/core/workorder/workorder_category';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 /**
  * 表格列配置

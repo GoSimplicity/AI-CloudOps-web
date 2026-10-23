@@ -155,7 +155,7 @@
             danger 
             @click="() => batchOperation('删除')" 
             :disabled="!selectedRows.length" 
-            v-if="selectedRows.length > 0"
+            v-if="can('k8s.secret.batchDelete') && (selectedRows.length > 0)"
             class="k8s-toolbar-btn"
             title="批量删除选中的 Secret"
           >
@@ -319,7 +319,7 @@
                 <template #icon><EditOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="删除">
+            <a-tooltip v-if="can('k8s.secret.delete')" title="删除">
               <a-button 
                 title="删除" 
                 danger 
@@ -1065,6 +1065,10 @@ import {
   CheckCircleOutlined,
   ClearOutlined,
 } from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 const {
   // state

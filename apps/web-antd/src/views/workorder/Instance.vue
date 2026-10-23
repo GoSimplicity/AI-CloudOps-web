@@ -353,7 +353,7 @@
                       <a-menu-item
                         key="delete"
                         danger
-                        v-if="canDeleteInstance(record)"
+                        v-if="can('workorder.instance.delete') && (canDeleteInstance(record))"
                       >
                         删除
                       </a-menu-item>
@@ -1882,6 +1882,10 @@ import {
   getSendLogs,
   getNotificationSendStatus as getSendStatus,
 } from '#/api/core/workorder/workorder_notification';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 // 列定义
 const columns = [

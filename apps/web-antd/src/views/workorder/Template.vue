@@ -41,6 +41,10 @@ import {
   listWorkorderFormDesign,
 } from '#/api/core/workorder/workorder_form_design';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 // 列定义 - 修复嵌套数据显示问题
 const columns = [
   {
@@ -1287,7 +1291,7 @@ onMounted(async () => {
                 >
                   编辑
                 </a-button>
-                <a-dropdown>
+                <a-dropdown v-if="can('workorder.template.delete')">
                   <template #overlay>
                     <a-menu @click="(e: any) => handleCommand(e.key, record)">
                       <a-menu-divider />

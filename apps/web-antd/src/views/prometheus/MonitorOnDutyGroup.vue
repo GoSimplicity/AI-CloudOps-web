@@ -193,8 +193,8 @@
                       <a-menu-item key="change">
                         <Icon icon="carbon:change-catalog" /> 调班记录
                       </a-menu-item>
-                      <a-menu-divider />
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                      <a-menu-divider v-if="can('monitor.onDutyGroup.delete')" />
+                      <a-menu-item v-if="can('monitor.onDutyGroup.delete')" key="delete" danger>删除</a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
@@ -864,6 +864,10 @@ import {
 } from '#/api/core/prometheus/prometheus_onduty';
 import dayjs, { type Dayjs } from 'dayjs';
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 const router = useRouter();
 

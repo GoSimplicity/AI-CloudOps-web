@@ -316,7 +316,7 @@
                 >
                   编辑
                 </a-button>
-                <a-dropdown>
+                <a-dropdown v-if="can('monitor.alertRule.delete')">
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
                       <a-menu-divider />
@@ -882,6 +882,10 @@ import {
   getMonitorSendGroupDetailApi,
   type MonitorSendGroup,
 } from '#/api/core/prometheus/prometheus_send_group';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 const ENABLE_STATUS = {
   ENABLED: 1,

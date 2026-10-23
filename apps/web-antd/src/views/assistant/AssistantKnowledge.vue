@@ -2,7 +2,7 @@
   <OpsPage title="知识库管理" description="上传 UTF-8 文档并管理知识索引" class="knowledge-container">
     <!-- 页面头部 -->
     <template #actions>
-<a-button type="primary" @click="refreshKnowledge" :loading="refreshing">
+<a-button v-if="can('aiops.assistant.refreshKnowledge')" type="primary" @click="refreshKnowledge" :loading="refreshing">
             <template #icon><ReloadOutlined /></template>
             重建知识索引
           </a-button>
@@ -164,6 +164,10 @@ import {
   type UploadKnowledgeResponse,
   type AddDocumentResponse
 } from '#/api/core/aiops/assistant';
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 
 // 响应式数据
 const refreshing = ref(false);

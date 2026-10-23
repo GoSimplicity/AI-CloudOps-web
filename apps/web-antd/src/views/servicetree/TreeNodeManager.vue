@@ -32,6 +32,10 @@ import {
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 import { getTreeLocalList, type GetTreeLocalResourceListReq, type TreeLocalResource, ResourceStatus } from '#/api/core/tree/tree_local';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 const loadError = ref<string | null>(null);
 let listRequest = 0;
 let detailRequest = 0;
@@ -872,7 +876,7 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
                       <a-menu @click="(e: any) => handleMenuClick(e.key, selectedNode!)">
                         <a-menu-item key="move">移动节点</a-menu-item>
                         <a-menu-item key="children">添加子节点</a-menu-item>
-                        <a-menu-item key="delete" danger>删除</a-menu-item>
+                        <a-menu-item v-if="can('tree.node.delete')" key="delete" danger>删除</a-menu-item>
                       </a-menu>
                     </template>
                     <a-button size="small">
@@ -943,6 +947,7 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
                         <div class="member-email">{{ admin.email }}</div>
                       </div>
                       <a-button
+                        v-if="can('tree.node.removeMember')"
                         type="text"
                         danger
                         size="small"
@@ -979,6 +984,7 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
                         <div class="member-email">{{ member.email }}</div>
                       </div>
                       <a-button
+                        v-if="can('tree.node.removeMember')"
                         type="text"
                         danger
                         size="small"

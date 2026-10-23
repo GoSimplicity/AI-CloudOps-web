@@ -21,6 +21,10 @@ import {
 
 import { listApisApi } from '#/api/core/system/api';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 // 表单引用
 const formRef = ref<FormInstance>();
 
@@ -772,6 +776,7 @@ onMounted(() => {
                 >权限</a-button
               >
               <a-popconfirm
+                v-if="can('system.role.delete')"
                 title="确定要删除吗？"
                 @confirm="handleDelete(record)"
                 :disabled="record.is_system === 1"

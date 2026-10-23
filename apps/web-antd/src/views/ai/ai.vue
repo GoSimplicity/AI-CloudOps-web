@@ -35,10 +35,10 @@
             <Minimize2 v-if="isExpanded" :size="16" />
             <Maximize2 v-else :size="16" />
           </button>
-          <button class="action-button clear-btn" @mousedown.stop @click="clearChat" title="清空聊天">
+          <button v-if="can('aiops.assistant.clearCache')" class="action-button clear-btn" @mousedown.stop @click="clearChat" title="清空聊天">
             <Trash2 :size="16" />
           </button>
-          <button class="action-button refresh-btn" @mousedown.stop @click="refreshKnowledge" title="刷新知识库" :disabled="isRefreshing">
+          <button v-if="can('aiops.assistant.refreshKnowledge')" class="action-button refresh-btn" @mousedown.stop @click="refreshKnowledge" title="刷新知识库" :disabled="isRefreshing">
             <RefreshCw :size="16" :class="{ 'spinning': isRefreshing }" />
           </button>
           <button class="action-button close-btn" @mousedown.stop @click="closeWindow" title="关闭">
@@ -339,6 +339,10 @@ import {
   clearAssistantCache,
   refreshKnowledgeBase
 } from '#/api/core/aiops/assistant';
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 
 // 状态管理
 const isFloatWindowVisible = ref(false);

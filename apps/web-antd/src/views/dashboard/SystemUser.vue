@@ -25,6 +25,10 @@ import {
   listRolesApi,
 } from '#/api/core/system/system';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 // 类型定义
 interface UserStatistics {
   admin_count: number;
@@ -816,6 +820,7 @@ onMounted(() => {
                 >角色</a-button
               >
               <a-popconfirm
+                v-if="can('system.user.delete')"
                 title="确定要删除吗？"
                 @confirm="handleDelete(record)"
               >

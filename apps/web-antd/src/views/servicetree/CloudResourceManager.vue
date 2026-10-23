@@ -93,6 +93,10 @@ import {
 import { getTreeList } from '#/api/core/tree/tree_node';
 import type { TreeNode } from '#/api/core/tree/tree_local';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 const loadError = ref<string | null>(null);
 let listRequest = 0;
 let detailRequest = 0;
@@ -1473,7 +1477,7 @@ const closeDetails = () => {
                   </a-button>
                 </a-tooltip>
                 <a-tooltip
-                  v-if="record.resource_type === CloudResourceType.ECS"
+                  v-if="can('tree.cloudResource.terminal') && (record.resource_type === CloudResourceType.ECS)"
                   title="连接终端"
                 >
                   <a-button
@@ -1500,8 +1504,8 @@ const closeDetails = () => {
                       >
                         <disconnect-outlined /> 解绑节点
                       </a-menu-item>
-                      <a-menu-divider />
-                      <a-menu-item
+                      <a-menu-divider v-if="can('tree.cloudResource.delete')" />
+                      <a-menu-item v-if="can('tree.cloudResource.delete')"
                         key="delete"
                         danger
                         :disabled="!supportsResource(record)"
@@ -2277,7 +2281,7 @@ const closeDetails = () => {
             <!-- 操作按钮 -->
             <div class="drawer-actions">
               <a-button-group>
-                <a-button
+                <a-button v-if="can('tree.cloudResource.terminal')"
                   type="primary"
                   @click="handleConnectTerminal(currentDetail)"
                   :disabled="
@@ -2293,7 +2297,7 @@ const closeDetails = () => {
                   <apartment-outlined /> 绑定节点
                 </a-button>
               </a-button-group>
-              <a-button danger :disabled="!supportsResource(currentDetail)" @click="handleDelete(currentDetail)">
+              <a-button v-if="can('tree.cloudResource.delete')" danger :disabled="!supportsResource(currentDetail)" @click="handleDelete(currentDetail)">
                 <delete-outlined /> 删除
               </a-button>
             </div>

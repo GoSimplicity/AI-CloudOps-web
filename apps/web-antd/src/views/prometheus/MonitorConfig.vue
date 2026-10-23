@@ -195,7 +195,7 @@
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
                       <a-menu-item key="preview">预览配置</a-menu-item>
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                      <a-menu-item v-if="can('monitor.config.delete')" key="delete" danger>删除</a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
@@ -553,6 +553,10 @@ import {
   getMonitorScrapePoolListApi,
   type MonitorScrapePool
 } from '#/api/core/prometheus/prometheus_scrape_pool';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 // 实例池接口
 type PoolOption = Pick<MonitorScrapePool, 'id' | 'name'>;

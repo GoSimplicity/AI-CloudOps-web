@@ -20,6 +20,7 @@ import {
   CronJobType,
 } from '#/api/core/cron/cron';
 import { getTreeLocalList } from '#/api/core/tree/tree_local';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 // 页面状态接口
 interface CronJobPageState {
@@ -453,7 +454,8 @@ export function useCronJobPage() {
         message.warning('登录已过期，请重新登录');
       } else if (error?.response?.status === 403) {
         state.error = '没有权限访问定时任务功能';
-        message.error('没有权限访问定时任务功能');
+        // 403 已由请求拦截器统一提示，这里只保留页面错误状态
+        if (!isPermissionDeniedError(error)) message.error('没有权限访问定时任务功能');
       } else if (error?.response?.status === 400) {
         state.error = '请求参数错误，请检查筛选条件';
         message.error('请求参数错误，请检查筛选条件');
@@ -495,7 +497,7 @@ export function useCronJobPage() {
       if (error?.response?.status === 401) {
         message.warning('获取SSH资源失败：登录已过期');
       } else if (error?.response?.status === 403) {
-        message.error('没有权限获取SSH资源');
+        if (!isPermissionDeniedError(error)) message.error('没有权限获取SSH资源');
       } else {
         message.error('获取SSH资源列表失败，请稍后重试');
       }

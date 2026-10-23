@@ -116,7 +116,7 @@
             danger 
             @click="() => batchOperation('删除')" 
             :disabled="!selectedRows.length" 
-            v-if="selectedRows.length > 0"
+            v-if="can('k8s.clusterrolebinding.batchDelete') && (selectedRows.length > 0)"
             class="k8s-toolbar-btn"
             title="批量删除选中的 ClusterRoleBinding"
           >
@@ -266,7 +266,7 @@
                 <template #icon><EditOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="删除">
+            <a-tooltip v-if="can('k8s.clusterrolebinding.delete')" title="删除">
               <a-button 
                 title="删除" 
                 danger 
@@ -948,6 +948,10 @@ import {
   ClearOutlined,
   EditOutlined,
 } from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 const {
   // state

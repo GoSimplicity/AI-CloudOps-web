@@ -45,6 +45,10 @@ import {
 } from '#/api/core/tree/tree_account';
 import { downloadCsv } from '#/utils/export-csv';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 const loadError = ref<string | null>(null);
 let listRequest = 0;
 let detailRequest = 0;
@@ -817,7 +821,7 @@ const closeDetails = () => {
                     <safety-certificate-outlined />
                   </a-button>
                 </a-tooltip>
-                <a-popconfirm
+                <a-popconfirm v-if="can('tree.cloudAccount.delete')"
                   title="确定删除此云账户吗？"
                   ok-text="确定"
                   cancel-text="取消"
@@ -1093,7 +1097,7 @@ const closeDetails = () => {
                   <edit-outlined /> 编辑
                 </a-button>
               </a-button-group>
-              <a-button danger :disabled="currentDetail.provider !== CloudProvider.AliCloud" @click="handleDelete(currentDetail)">
+              <a-button v-if="can('tree.cloudAccount.delete')" danger :disabled="currentDetail.provider !== CloudProvider.AliCloud" @click="handleDelete(currentDetail)">
                 <delete-outlined /> 删除
               </a-button>
             </div>

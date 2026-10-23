@@ -38,6 +38,10 @@ import {
 
 import ProcessBasicConfig from './components/ProcessBasicConfig.vue';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 // 列定义
 const columns = [
   {
@@ -1016,8 +1020,13 @@ onMounted(async (): Promise<void> => {
                         v-if="!isDefaultProcess(record.is_default)"
                         >设为默认</a-menu-item
                       >
-                      <a-menu-divider />
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                      <a-menu-divider v-if="can('workorder.process.delete')" />
+                      <a-menu-item
+                        v-if="can('workorder.process.delete')"
+                        key="delete"
+                        danger
+                        >删除</a-menu-item
+                      >
                     </a-menu>
                   </template>
                   <a-button size="small">

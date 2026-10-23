@@ -250,7 +250,7 @@
                 <a-button type="default" size="small" @click="handleEditSendGroup(record)">
                   编辑
                 </a-button>
-                <a-dropdown>
+                <a-dropdown v-if="can('monitor.sendGroup.delete')">
                   <template #overlay>
                     <a-menu @click="handleDeleteClick(record)">
                       <a-menu-item key="delete" danger>删除</a-menu-item>
@@ -566,6 +566,10 @@ import {
 import { getUserList } from '#/api/core/system/user';
 import { getMonitorScrapePoolListApi, type MonitorScrapePool } from '#/api/core/prometheus/prometheus_scrape_pool';
 import { getMonitorOnDutyGroupListApi, type MonitorOnDutyGroup } from '#/api/core/prometheus/prometheus_onduty';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 // 修复类型定义
 interface UserOption {

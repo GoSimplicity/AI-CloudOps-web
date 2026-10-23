@@ -436,7 +436,7 @@
                   <a-select-option value="PreferNoSchedule">PreferNoSchedule</a-select-option>
                   <a-select-option value="NoExecute">NoExecute</a-select-option>
                 </a-select>
-                <a-button type="text" danger @click="removeTaint(idx)" class="k8s-remove-btn">
+                <a-button v-if="can('k8s.node.taintDelete')" type="text" danger @click="removeTaint(idx)" class="k8s-remove-btn">
                   <template #icon><DeleteOutlined aria-hidden="true"  /></template>
                   删除
                 </a-button>
@@ -808,6 +808,10 @@ import {
   SearchOutlined,
   CheckOutlined,
 } from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 const {
   // state

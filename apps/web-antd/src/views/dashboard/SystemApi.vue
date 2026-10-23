@@ -16,6 +16,10 @@ import {
   type UpdateApiReq,
 } from '#/api/core/system/api';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 interface ApiInfo {
   id: number;
   name: string;
@@ -469,6 +473,7 @@ onMounted(() => {
                 >编辑</a-button
               >
               <a-popconfirm
+                v-if="can('system.api.delete')"
                 title="确定要删除吗？"
                 @confirm="handleDelete(record)"
               >

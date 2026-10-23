@@ -30,6 +30,10 @@ import {
 import type { WorkorderCategoryItem } from '#/api/core/workorder/workorder_category';
 import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 const formDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
     const width = window.innerWidth;
@@ -1387,8 +1391,15 @@ onMounted(() => {
                       <a-menu-item key="unarchive" v-if="record.status === 3"
                         >取消归档</a-menu-item
                       >
-                      <a-menu-divider />
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                      <a-menu-divider
+                        v-if="can('workorder.formDesign.delete')"
+                      />
+                      <a-menu-item
+                        v-if="can('workorder.formDesign.delete')"
+                        key="delete"
+                        danger
+                        >删除</a-menu-item
+                      >
                     </a-menu>
                   </template>
                   <a-button size="small">

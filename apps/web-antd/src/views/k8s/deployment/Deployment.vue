@@ -29,6 +29,10 @@ import {
   ClearOutlined,
 } from '@ant-design/icons-vue';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 const {
   // state
   clusters,
@@ -712,7 +716,7 @@ onMounted(async () => {
             danger
             @click="() => batchOperation('删除')"
             :disabled="!selectedRows.length"
-            v-if="selectedRows.length > 0"
+            v-if="can('k8s.deployment.batchDelete') && selectedRows.length > 0"
             class="k8s-toolbar-btn"
             title="批量删除选中的 Deployment"
           >
@@ -1062,7 +1066,7 @@ onMounted(async () => {
                 /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="删除">
+            <a-tooltip v-if="can('k8s.deployment.delete')" title="删除">
               <a-button title="删除" danger @click="deleteDeployment(record)">
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>

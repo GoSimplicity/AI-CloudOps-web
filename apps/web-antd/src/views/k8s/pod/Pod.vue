@@ -38,6 +38,10 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons-vue';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 const {
   // state
   clusters,
@@ -876,7 +880,7 @@ const handleCloseFileManagerModal = () => {
             danger
             @click="() => batchOperation('删除')"
             :disabled="!selectedRows.length"
-            v-if="selectedRows.length > 0"
+            v-if="can('k8s.pod.batchDelete') && selectedRows.length > 0"
             class="k8s-toolbar-btn"
             title="批量删除选中的 Pod"
           >
@@ -1120,7 +1124,7 @@ const handleCloseFileManagerModal = () => {
                 /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="执行命令">
+            <a-tooltip v-if="can('k8s.pod.exec')" title="执行命令">
               <a-button
                 title="执行命令"
                 @click="showExecModal(record)"
@@ -1152,7 +1156,7 @@ const handleCloseFileManagerModal = () => {
                 <template #icon><EditOutlined aria-hidden="true" /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="删除">
+            <a-tooltip v-if="can('k8s.pod.delete')" title="删除">
               <a-button title="删除" danger @click="deletePod(record)">
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -2286,6 +2290,7 @@ const handleCloseFileManagerModal = () => {
             </a-form-item>
             <a-form-item>
               <a-button
+                v-if="can('k8s.pod.exec')"
                 type="primary"
                 @click="connectToTerminal"
                 :loading="terminalLoading"

@@ -360,6 +360,7 @@ import { useListRequest } from './useListRequest';
 import { ref, reactive, onMounted, computed, nextTick, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 import dayjs, { Dayjs } from 'dayjs';
 import { Icon } from '@iconify/vue';
 import {
@@ -577,7 +578,7 @@ const fetchDutyGroups = async (): Promise<void> => {
     }
 
     request.fail(new Error(errorMessage), '数据加载失败');
-    message.error(detailError.value);
+    if (!isPermissionDeniedError(error)) message.error(detailError.value);
 
     dutyGroupDetail.value = null;
     dutyPlanData.value = [];
@@ -726,7 +727,7 @@ const fetchDutySchedule = async (): Promise<void> => {
     }
 
     request.fail(new Error(errorMessage), '数据加载失败');
-    message.error(scheduleError.value);
+    if (!isPermissionDeniedError(error)) message.error(scheduleError.value);
     calendarDays.value = [];
     dutyPlanData.value = [];
     updateStats();
@@ -815,7 +816,7 @@ const loadHistoryRecords = async (): Promise<void> => {
     }
 
     request.fail(new Error(errorMessage), '数据加载失败');
-    message.error(historyError.value);
+    if (!isPermissionDeniedError(error)) message.error(historyError.value);
     historyList.value = [];
     paginationConfig.total = 0;
   } finally {
@@ -900,7 +901,7 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
     }
 
     request.fail(new Error(errorMessage), '数据加载失败');
-    message.error(changeError.value);
+    if (!isPermissionDeniedError(error)) message.error(changeError.value);
     if (!append) {
       changeRecordsList.value = [];
       changeRecordsPagination.total = 0;

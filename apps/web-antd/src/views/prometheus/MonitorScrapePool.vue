@@ -206,7 +206,7 @@
                 <a-button type="default" size="small" @click="handleEditScrapePool(record)">
                   编辑
                 </a-button>
-                <a-dropdown>
+                <a-dropdown v-if="can('monitor.scrapePool.delete')">
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
                       <a-menu-item key="delete" danger>删除</a-menu-item>
@@ -510,6 +510,10 @@ import {
   type CreateMonitorScrapePoolReq,
   type UpdateMonitorScrapePoolReq
 } from '#/api/core/prometheus/prometheus_scrape_pool';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 // 动态表单项接口
 interface DynamicItem {

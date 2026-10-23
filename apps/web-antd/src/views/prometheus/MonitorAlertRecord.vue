@@ -181,7 +181,7 @@
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
                       <a-menu-item key="enable" v-if="record.enable === 2">启用</a-menu-item>
                       <a-menu-item key="disable" v-if="record.enable === 1">禁用</a-menu-item>
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                      <a-menu-item v-if="can('monitor.recordRule.delete')" key="delete" danger>删除</a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
@@ -524,6 +524,10 @@ import {
 } from '#/api/core/prometheus/prometheus_alert_record';
 import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_scrape_pool';
 import { promqlExprCheckApi } from '#/api/core/prometheus/prometheus_alert_rule';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 // 定义 Pool 类型
 interface Pool {
