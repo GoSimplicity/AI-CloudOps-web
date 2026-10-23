@@ -154,6 +154,24 @@ describe('三个终端客户端的握手契约', () => {
       op: 'stdin',
       data: 'echo safe',
     });
+    const longPaste = 'a'.repeat(65_535) + '中文😀\0'.repeat(12_000);
+    const beforePaste = socket.send.mock.calls.length;
+    const onData = vi.mocked(page.terminal.value!.onData).mock.calls[0]![0];
+    onData(longPaste);
+    const frames = socket.send.mock.calls
+      .slice(beforePaste)
+      .map(([frame]: [string]) => JSON.parse(frame));
+    expect(frames.length).toBeGreaterThan(1);
+    expect(
+      frames.every(
+        (frame: { op: string; data: string }) =>
+          frame.op === 'stdin' &&
+          new TextEncoder().encode(frame.data).byteLength <= 65_536,
+      ),
+    ).toBe(true);
+    expect(frames.map((frame: { data: string }) => frame.data).join('')).toBe(
+      longPaste,
+    );
     const firstInput = vi.mocked(page.terminal.value!.onData).mock.results[0]!
       .value;
     socket.onclose({ code: 1006, wasClean: false });

@@ -1,3 +1,4 @@
+import { utf8Chunks } from '#/utils/terminal-input';
 import {
   ref,
   computed,
@@ -1941,7 +1942,9 @@ export function usePodPage() {
     // 发送命令到容器
     const sendCommand = (command: string) => {
       if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ op: 'stdin', data: command }));
+        for (const chunk of utf8Chunks(command)) {
+          socket.send(JSON.stringify({ op: 'stdin', data: chunk }));
+        }
       } else {
       }
     };
