@@ -55,7 +55,7 @@
       "route": "/cloud_resource_management",
       "view": "servicetree/CloudResourceManager.vue",
       "sharedPage": true,
-      "inlineStyles": 23,
+      "inlineStyles": 24,
       "scopedStyle": true
     },
     {

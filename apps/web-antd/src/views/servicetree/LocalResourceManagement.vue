@@ -41,6 +41,8 @@ import { getTreeList } from '#/api/core/tree/tree_node';
 const loadError = ref<string | null>(null);
 let listRequest = 0;
 let detailRequest = 0;
+let formRequest = 0;
+const existingAuthMode = ref<AuthMode>();
 
 
 const loading = ref(false);
@@ -136,7 +138,7 @@ const formRules = computed(() => ({
   os_type: [{ required: true, message: '请选择操作系统类型', trigger: 'change' }],
   auth_mode: [{ required: true, message: '请选择认证方式', trigger: 'change' }],
   password:
-    formData.value.auth_mode === AuthMode.PASSWORD && !isEdit.value
+    formData.value.auth_mode === AuthMode.PASSWORD && (!isEdit.value || existingAuthMode.value !== AuthMode.PASSWORD)
       ? [
           { required: true, message: '请输入登录密码', trigger: 'blur' },
           { min: 6, message: '密码长度至少6位', trigger: 'blur' },
@@ -145,7 +147,7 @@ const formRules = computed(() => ({
   key:
     formData.value.auth_mode === AuthMode.KEY
       ? [
-          { required: true, message: '请输入SSH私钥', trigger: 'blur' },
+          { required: !isEdit.value || existingAuthMode.value !== AuthMode.KEY, message: '请输入SSH私钥', trigger: 'blur' },
           { validator: validatePrivateKey, trigger: 'blur' },
         ]
       : [],
@@ -360,6 +362,9 @@ const resetFormData = (): void => {
 };
 
 const showCreateModal = (): void => {
+  formRequest++;
+  submitLoading.value = false;
+  existingAuthMode.value = undefined;
   isEdit.value = false;
   resetFormData();
   modalVisible.value = true;
@@ -367,13 +372,16 @@ const showCreateModal = (): void => {
 
 // 修复：编辑时的数据复制
 const handleEdit = (record: TreeLocalResource): void => {
+  formRequest++;
+  submitLoading.value = false;
+  existingAuthMode.value = record.auth_mode;
   isEdit.value = true;
   formData.value = {
     id: record.id,
     name: record.name,
     environment: record.environment,
     description: record.description,
-    tags: Array.isArray(record.tags) ? [...record.tags] : [], // 确保复制数组
+    tags: record.tags?.map(tag => ({ ...tag })) ?? [],
     ip_addr: record.ip_addr,
     port: record.port,
     username: record.username,
@@ -435,7 +443,10 @@ const addTag = (): void => {
     formData.value.tags = [];
   }
 
-  if (formData.value.tags.includes(tagValue)) {
+  const separator = tagValue.indexOf('=');
+  const tag = { key: (separator < 0 ? tagValue : tagValue.slice(0, separator)).trim(), value: separator < 0 ? '' : tagValue.slice(separator + 1).trim() };
+  if (!tag.key) { message.warning('请输入标签键'); return; }
+  if (formData.value.tags.some(current => current.key === tag.key)) {
     message.warning('标签已存在');
     return;
   }
@@ -446,7 +457,7 @@ const addTag = (): void => {
   }
 
   // 使用 Vue 3 推荐的方式更新数组，确保响应式
-  formData.value.tags = [...formData.value.tags, tagValue];
+  formData.value.tags = [...formData.value.tags, tag];
 
   // 使用 nextTick 确保DOM更新后再清空输入框
   nextTick(() => {
@@ -545,40 +556,37 @@ const handleUnbind = async (): Promise<void> => {
   }
 };
 
-// 修复：表单提交功能
+const cancelForm = (): void => {
+  formRequest++;
+  submitLoading.value = false;
+  modalVisible.value = false;
+};
+
 const handleSubmit = async (): Promise<void> => {
+  if (submitLoading.value) return;
+  submitLoading.value = true;
+  const ticket = ++formRequest;
+  const editing = isEdit.value;
+  const { id, ...data } = { ...formData.value, tags: formData.value.tags?.map(tag => ({ ...tag })) ?? [] };
+  if (!data.key) delete data.key;
+  if (!data.password) delete data.password;
   try {
     await formRef.value?.validate();
-
-    submitLoading.value = true;
-
-    // 确保 tags 数组正确处理
-    const submitData = {
-      ...formData.value,
-      tags: Array.isArray(formData.value.tags) ? formData.value.tags : []
-    };
-
-    // 移除 id 字段（用于区分创建和更新）
-    const { id, ...rest } = submitData;
-
-    if (isEdit.value) {
-      if (!id) {
-        throw new Error('缺少资源ID');
-      }
-      await updateTreeLocal(id, rest as UpdateTreeLocalResourceReq);
-      message.success('服务器信息更新成功');
+    if (ticket !== formRequest) return;
+    if (editing) {
+      if (!id) throw new Error('缺少资源ID');
+      await updateTreeLocal(id, data as UpdateTreeLocalResourceReq);
     } else {
-      await createTreeLocal(rest as CreateTreeLocalResourceReq);
-      message.success('服务器添加成功');
+      await createTreeLocal(data);
     }
-
+    if (ticket !== formRequest) return;
+    message.success(editing ? '服务器信息更新成功' : '服务器添加成功');
     modalVisible.value = false;
     await fetchLocalResources();
-  } catch (error) {
-    message.error(isEdit.value ? '更新服务器失败' : '添加服务器失败');
-
+  } catch {
+    if (ticket === formRequest) message.error(editing ? '更新服务器失败' : '添加服务器失败');
   } finally {
-    submitLoading.value = false;
+    if (ticket === formRequest) submitLoading.value = false;
   }
 };
 
@@ -618,7 +626,7 @@ onMounted(async () => {
     message.error('页面数据加载失败，请刷新页面重试');
   }
 });
-onBeforeUnmount(() => { listRequest++; detailRequest++; });
+onBeforeUnmount(() => { listRequest++; detailRequest++; formRequest++; });
 const closeDetails = () => {
   detailRequest++;
   detailVisible.value = false;
@@ -778,10 +786,10 @@ const closeDetails = () => {
                 <template v-if="record.tags && record.tags.length > 0">
                   <a-tag
                     v-for="tag in record.tags.slice(0, 3)"
-                    :key="tag"
+                    :key="tag.key"
                     class="tech-tag tag-item"
                   >
-                    {{ tag }}
+                    {{ tag.value ? `${tag.key}=${tag.value}` : tag.key }}
                   </a-tag>
                   <a-tag v-if="record.tags.length > 3" color="default">
                     +{{ record.tags.length - 3 }}
@@ -873,6 +881,7 @@ const closeDetails = () => {
       :footer="null"
       :destroy-on-close="true"
       class="responsive-modal server-modal"
+      @cancel="cancelForm"
     >
       <a-form
         :model="formData"
@@ -960,7 +969,7 @@ const closeDetails = () => {
           >
             <a-input-password
               v-model:value="formData.password"
-              placeholder="请输入登录密码"
+              :placeholder="isEdit && existingAuthMode === AuthMode.PASSWORD ? '留空保留原密码' : '请输入登录密码'"
               autocomplete="new-password"
             />
           </a-form-item>
@@ -972,7 +981,7 @@ const closeDetails = () => {
           >
             <a-textarea
               v-model:value="formData.key"
-              placeholder="请粘贴SSH私钥内容"
+              :placeholder="isEdit && existingAuthMode === AuthMode.KEY ? '留空保留原私钥' : '请粘贴SSH私钥内容'"
               :rows="6"
               style="font-family: 'Courier New', monospace;"
             />
@@ -999,17 +1008,16 @@ const closeDetails = () => {
                   @close="removeTag(index)"
                   class="tech-tag tag-item"
                 >
-                  {{ tag }}
+                  {{ tag.value ? `${tag.key}=${tag.value}` : tag.key }}
                 </a-tag>
               </div>
               <div class="add-tag">
                 <a-input
                   ref="tagInputRef"
                   v-model:value="newTag"
-                  placeholder="输入标签，按回车添加"
+                  placeholder="输入标签（如 team=ops），按回车添加"
                   style="width: 200px; margin-right: 8px;"
                   @pressEnter="addTag"
-                  @keyup.enter="addTag"
                 />
                 <a-button type="dashed" @click="addTag" class="add-tag-btn">
                   <plus-outlined /> 添加标签
@@ -1020,7 +1028,7 @@ const closeDetails = () => {
         </div>
 
         <div class="form-actions">
-          <a-button @click="modalVisible = false">取消</a-button>
+          <a-button @click="cancelForm">取消</a-button>
           <a-button
             type="primary"
             @click="handleSubmit"
@@ -1164,7 +1172,7 @@ const closeDetails = () => {
                     :key="index"
                     class="tech-tag tag-item"
                   >
-                    {{ tag }}
+                    {{ tag.value ? `${tag.key}=${tag.value}` : tag.key }}
                   </a-tag>
                 </template>
                 <a-empty v-else :image="Empty.PRESENTED_IMAGE_SIMPLE" description="暂无标签" />

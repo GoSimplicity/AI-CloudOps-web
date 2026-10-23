@@ -1,3 +1,4 @@
+import type { KeyValueList } from './tree_cloud';
 import { requestClient } from '#/api/request';
 
 export enum AuthMode {
@@ -35,14 +36,13 @@ export interface TreeLocalResource {
   status: ResourceStatus;
   environment: string;
   description: string;
-  tags: string[];
+  tags: KeyValueList;
   cpu: number;
   memory: number;
   disk: number;
   ip_addr: string;
   port: number;
   username: string;
-  key: string;
   auth_mode: AuthMode;
   os_type: string;
   os_name: string;
@@ -66,7 +66,7 @@ export interface CreateTreeLocalResourceReq {
   name: string;
   environment?: string;
   description?: string;
-  tags?: string[];
+  tags?: KeyValueList;
   ip_addr: string;
   port?: number;
   username?: string;
@@ -83,7 +83,7 @@ export interface UpdateTreeLocalResourceReq {
   name?: string;
   environment?: string;
   description?: string;
-  tags?: string[];
+  tags?: KeyValueList;
   ip_addr?: string;
   port?: number;
   os_type?: string;
