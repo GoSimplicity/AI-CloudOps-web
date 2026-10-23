@@ -770,8 +770,8 @@ const copyComment = async (content: string) => {
   try {
     await navigator.clipboard.writeText(content);
     message.success('内容已复制到剪贴板');
-  } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('复制失败');
+  } catch {
+    message.error('复制失败');
   }
 };
 

@@ -259,6 +259,69 @@ describe('业务错误（code≠0）统一提示 · 请求链路集成', () => {
     );
   });
 
+  it('cron 场景：创建任务返回 code≠0（本地执行已禁用），页面按 getBackendErrorMessage 写法处理，全程只弹一条后端原文', async () => {
+    // 与 sched/w2-huajuan-cron 的 Management.ts getBackendErrorMessage 同一写法
+    const getBackendErrorMessage = (error: any, fallback: string) => {
+      const raw = error?.response?.data?.message ?? error?.message;
+      if (typeof raw !== 'string' || !raw.trim()) return fallback;
+      return raw.replace(/^Error \d{3}: /, '') || fallback;
+    };
+    let pageText = '';
+    try {
+      await requestClient.post(
+        '/cron/job/create',
+        { job_type: 2 },
+        {
+          adapter: businessAdapter(),
+        },
+      );
+    } catch (error: any) {
+      pageText = getBackendErrorMessage(error, '创建任务失败');
+      if (!isPermissionDeniedError(error)) notices.error(pageText);
+    }
+    // 页面仍能取到后端原文（兼容），但不会再弹第二条
+    expect(pageText).toBe(BACKEND_MESSAGE);
+    expectSingleBusinessNotice();
+  });
+
+  it.each([
+    [
+      'HTTP 200 + code 1',
+      adapterOf(200, { code: 1, message: BACKEND_MESSAGE }),
+    ],
+    ['HTTP 200 + code 1 且 message 为空', adapterOf(200, { code: 1 })],
+    ['HTTP 200 + code 403', adapterOf(200, { code: 403, message: 'no' })],
+    ['HTTP 400', adapterOf(400, { code: 400, message: 'bad' })],
+    ['HTTP 403', adapterOf(403, { code: 403, message: 'no' })],
+    ['HTTP 404', adapterOf(404, { code: 404, message: 'nf' })],
+    ['HTTP 500', adapterOf(500, { code: 1, message: 'boom' })],
+    ['HTTP 502（响应体为字符串）', adapterOf(502, 'Bad Gateway')],
+    [
+      '网络错误',
+      (async (config) => {
+        throw new AxiosError('Network Error', 'ERR_NETWORK', config as any);
+      }) as AxiosAdapter,
+    ],
+    [
+      '超时',
+      (async (config) => {
+        throw new AxiosError(
+          'timeout of 1000ms exceeded',
+          'ECONNABORTED',
+          config as any,
+        );
+      }) as AxiosAdapter,
+    ],
+  ])(
+    '没有任何错误落到无提示：%s 且页面空 catch 时恰好弹一条',
+    async (_kind, adapter) => {
+      try {
+        await requestClient.get('/x', { adapter });
+      } catch {}
+      expect(notices.error).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it('401 → 刷新 token → 重放返回业务错误：内外两层拦截链只提示一次', async () => {
     let calls = 0;
     const adapter: AxiosAdapter = async (config) => {
