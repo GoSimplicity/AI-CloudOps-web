@@ -41,6 +41,8 @@ export function useClusterPage() {
   const isEdit = ref(false);
   const submitLoading = ref(false);
   const editDetailLoading = ref(false);
+  // 新建/编辑弹窗的打开会话序号：晚到的编辑详情只能写回发起它的那次打开
+  let formSessionId = 0;
 
   // detail modal state
   const isDetailModalVisible = ref(false);
@@ -100,13 +102,20 @@ export function useClusterPage() {
     kube_config_content: [
       {
         required: !isEdit.value,
-        message: '请输入 KubeConfig 内容',
         trigger: 'blur',
-      },
-      {
-        min: 100,
-        message: 'KubeConfig 内容过短，请检查是否完整',
-        trigger: 'blur',
+        // 先 trim 再判断：纯空白等同于未填写（新建报必填，编辑视为不修改）
+        validator: (_rule: Rule, value: unknown) => {
+          const content = typeof value === 'string' ? value.trim() : '';
+          if (!content) {
+            return isEdit.value
+              ? Promise.resolve()
+              : Promise.reject('请输入 KubeConfig 内容');
+          }
+          if (content.length < 100) {
+            return Promise.reject('KubeConfig 内容过短，请检查是否完整');
+          }
+          return Promise.resolve();
+        },
       },
     ],
   }));
@@ -203,7 +212,22 @@ export function useClusterPage() {
     }
   };
 
+  // 纯空白的 kubeconfig 归一为空串（编辑时即“留空不修改”）
+  const normalizeKubeConfigInput = () => {
+    const content = formModel.value.kube_config_content;
+    if (typeof content === 'string' && !content.trim()) {
+      formModel.value.kube_config_content = '';
+    }
+  };
+
+  // 弹窗结束（取消/保存成功）后不在前端状态里保留 kubeconfig 输入
+  const clearKubeConfigInput = () => {
+    formModel.value.kube_config_content = '';
+  };
+
   const openCreate = () => {
+    formSessionId++;
+    editDetailLoading.value = false;
     isEdit.value = false;
     editHasKubeConfig.value = false;
     formModel.value = {
@@ -224,6 +248,8 @@ export function useClusterPage() {
   };
 
   const openEdit = async (record: K8sCluster) => {
+    const sessionId = ++formSessionId;
+    const isCurrentSession = () => sessionId === formSessionId;
     try {
       isEdit.value = true;
       editDetailLoading.value = true;
@@ -251,6 +277,8 @@ export function useClusterPage() {
       // 获取最新的集群详情（不含 kubeconfig 原文）
       if (record.id) {
         const detailData = await getClusterDetailApi(record.id);
+        // 响应晚到：期间已重新打开（新建/编辑其他集群）或已关闭，丢弃
+        if (!isCurrentSession()) return;
         if (detailData) {
           editHasKubeConfig.value = Boolean(
             detailData.has_kube_config ?? record.has_kube_config,
@@ -276,22 +304,27 @@ export function useClusterPage() {
         }
       }
     } catch (err) {
+      if (!isCurrentSession()) return;
       isModalVisible.value = false;
       message.error('获取集群详细信息失败，请重试后再编辑');
     } finally {
-      editDetailLoading.value = false;
+      if (isCurrentSession()) editDetailLoading.value = false;
     }
   };
 
   const closeModal = () => {
+    formSessionId++;
+    editDetailLoading.value = false;
     isModalVisible.value = false;
+    clearKubeConfigInput();
   };
 
   const submitForm = async () => {
     if (!formRef.value) return;
 
     try {
-      // 先进行表单验证
+      // 先把纯空白归一为空串，再进行表单验证
+      normalizeKubeConfigInput();
       await formRef.value.validate();
 
       // 检查是否需要二次确认
@@ -314,10 +347,12 @@ export function useClusterPage() {
         await updateClusterApi(m.id as number, payload);
         message.success('集群更新成功');
       } else {
-        await createClusterApi(formModel.value as CreateClusterReq);
+        await createClusterApi({ ...formModel.value } as CreateClusterReq);
         message.success('集群创建成功');
       }
+      formSessionId++;
       isModalVisible.value = false;
+      clearKubeConfigInput();
       await fetchClusters();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {

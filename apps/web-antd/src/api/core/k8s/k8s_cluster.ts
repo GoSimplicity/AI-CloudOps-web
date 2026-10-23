@@ -59,7 +59,7 @@ export interface CreateClusterReq {
   env?: Env; // 集群环境
   version?: string; // 集群版本
   api_server_addr?: string; // API Server 地址
-  kube_config_content?: string; // kubeConfig 内容
+  kube_config_content: string; // kubeConfig 内容（必填）
   action_timeout_seconds?: number; // 操作超时时间（秒）
   tags?: KeyValueList; // 标签
 }
