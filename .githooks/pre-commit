@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # pre-commit: 使用 gitleaks 扫描暂存内容，发现密钥即阻止提交（SEC-01A）。
+# web 仓库: 由 husky 的 .husky/pre-commit 调用（pnpm install 后自动生效）；也可单独执行。
 # 启用: scripts/setup-git-hooks.sh
 set -uo pipefail
 

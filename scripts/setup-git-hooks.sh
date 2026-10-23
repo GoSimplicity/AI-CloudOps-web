@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
-# 配置本仓库使用 .githooks/ 下的 Git 钩子，并检查 gitleaks 是否已安装。
+# 启用本仓库的 Git 钩子（husky）并检查 gitleaks 是否已安装。
+#
+# web 仓库使用 husky v9：`pnpm install` 的 prepare 脚本会执行 `husky`，把 core.hooksPath 设为 .husky/_，
+# 然后 .husky/_/pre-commit -> .husky/pre-commit -> .githooks/pre-commit（gitleaks）。
+# 因此这里不再把 core.hooksPath 指向 .githooks（否则会与 husky 互相覆盖），而是：
+#   1. 清除旧版本脚本写入的 core.hooksPath=.githooks 覆盖（仅 worktree 级 / 本仓库 local 级）；
+#   2. 运行 husky 生成 .husky/_ 并设置 core.hooksPath；
+#   3. 检查 gitleaks。
 # 用法: scripts/setup-git-hooks.sh
 set -euo pipefail
 
@@ -17,25 +24,27 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     exit 1
 fi
 
-# 只给钩子脚本加可执行位（不改动 README 等文档的文件模式）
-find .githooks -maxdepth 1 -type f ! -name "*.md" -exec chmod +x {} + 2>/dev/null || true
+chmod +x .husky/pre-commit .githooks/pre-commit 2>/dev/null || true
 
-# 在 linked worktree 中写入 worktree 级配置，避免修改主仓库/其他 worktree 共享的 .git/config。
-git_dir="$(cd "$(git rev-parse --git-dir)" && pwd)"
-common_dir="$(cd "$(git rev-parse --git-common-dir)" && pwd)"
-if [ "$git_dir" != "$common_dir" ]; then
-    if [ "$(git config --type=bool --get extensions.worktreeConfig 2>/dev/null || echo false)" != "true" ]; then
-        log_error "当前是 linked worktree，且未启用 extensions.worktreeConfig。"
-        log_error "为避免改动共享配置，请先执行: git config extensions.worktreeConfig true  后重试。"
-        exit 1
-    fi
-    git config --worktree core.hooksPath .githooks
-    log_info "已设置 (worktree 级) core.hooksPath=.githooks"
-else
-    git config core.hooksPath .githooks
-    log_info "已设置 core.hooksPath=.githooks"
+# 1. 清除旧的 .githooks 覆盖（worktree 级配置优先级高于 husky 写入的配置，会让 husky 失效）
+if [ "$(git config --worktree --get core.hooksPath 2>/dev/null || true)" = ".githooks" ]; then
+    git config --worktree --unset core.hooksPath
+    log_info "已移除 worktree 级 core.hooksPath=.githooks"
+fi
+if [ "$(git config --local --get core.hooksPath 2>/dev/null || true)" = ".githooks" ]; then
+    git config --local --unset core.hooksPath
+    log_info "已移除 local 级 core.hooksPath=.githooks"
 fi
 
+# 2. 安装 husky（与 pnpm install 的 prepare 脚本相同）
+if [ -x node_modules/.bin/husky ]; then
+    node_modules/.bin/husky
+    log_info "已运行 husky，core.hooksPath=$(git config --get core.hooksPath || echo '<未设置>')"
+else
+    log_warning "未找到 node_modules/.bin/husky，请先执行 pnpm install（prepare 脚本会自动安装 husky 钩子）。"
+fi
+
+# 3. 检查 gitleaks
 if command -v gitleaks >/dev/null 2>&1; then
     log_success "gitleaks 已安装: $(gitleaks version)"
 else
@@ -44,8 +53,4 @@ else
     exit 1
 fi
 
-if [ -f package.json ] && grep -q '"husky"' package.json; then
-    log_warning "本仓库依赖 husky：执行 pnpm install 时 husky 可能把 core.hooksPath 改回 .husky/_，之后请重新运行本脚本。"
-fi
-
-log_success "Git hooks 设置完成（提交前将运行 gitleaks 密钥扫描）。"
+log_success "Git hooks 设置完成（提交前将经 husky 运行 gitleaks 密钥扫描）。"
