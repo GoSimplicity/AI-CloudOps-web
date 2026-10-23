@@ -2,6 +2,7 @@ import { computed, reactive, ref, toRefs } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 // import { useRouter } from 'vue-router'; // 暂时未使用
 import type { FormInstance } from 'ant-design-vue';
+import axios from 'axios';
 import {
   getCronJobList,
   getCronJobDetail,
@@ -87,9 +88,14 @@ export const getBackendErrorMessage = (error: any, fallback: string): string => 
 };
 
 // 请求层已提示过的错误，页面 catch 不再弹：403 / 已提示的业务错误（isPermissionDeniedError），
-// 以及带 response 的 HTTP 错误（4xx/5xx 由通用错误拦截器按固定 key 弹过一条）
+// 带 response 的 HTTP 错误（4xx/5xx 由通用错误拦截器按固定 key 弹过一条），
+// 以及发出了请求但没有响应的 axios 错误（复审 v4 P3-3：网络错误 / 超时，通用错误拦截器
+// packages/effects/request preset-interceptors.ts errorMessageResponseInterceptor 已按固定 key 弹过一条）；
+// 取消的请求（isCancel）请求层不提示，这里也不算已提示
 export const isNotifiedByRequestLayer = (error: any): boolean =>
-  isPermissionDeniedError(error) || !!error?.response;
+  isPermissionDeniedError(error) ||
+  !!error?.response ||
+  (axios.isAxiosError(error) && !!error.request && !axios.isCancel(error));
 
 // 创建表单初始数据
 const createInitialFormModel = (): CreateCronJobReq => ({

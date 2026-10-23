@@ -3,7 +3,7 @@ import type { FormInstance } from 'ant-design-vue';
 import { $t } from '@vben/locales';
 
 import axios, { AxiosError, type AxiosAdapter } from 'axios';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
 
@@ -50,8 +50,11 @@ const DISABLED_MESSAGE =
 type Route = (config: any) => { data: unknown; status: number };
 let route: Route = () => ({ status: 200, data: { code: 0, data: null } });
 const requests: string[] = [];
+// 写请求在传输层失败（没有 response）：网络错误 / 超时
+let transportError: ((config: any) => AxiosError) | null = null;
 const adapter: AxiosAdapter = async (config) => {
   requests.push(`${config.method?.toUpperCase()} ${config.url}`);
+  if (transportError && config.method !== 'get') throw transportError(config);
   const { status, data } = route(config);
   const response = {
     config,
@@ -74,7 +77,8 @@ const adapter: AxiosAdapter = async (config) => {
 };
 // requestClient 在 axios.create 时合并 defaults，必须在导入页面（进而导入 request.ts）之前设置
 axios.defaults.adapter = adapter;
-const { useCronJobPage } = await import('./Management');
+const { isNotifiedByRequestLayer, useCronJobPage } =
+  await import('./Management');
 const { HTTP_ERROR_MESSAGE_KEY_PREFIX } = await import('#/api/request');
 
 const job = (id: number, job_type: number) =>
@@ -238,5 +242,101 @@ describe('HTTP 错误（带 response）只提示一次、不展示响应体原�
     await confirm.mock.calls[0]?.[0].onOk();
     expect(requests.some((r) => r.startsWith('POST /cron/job/10/'))).toBe(true);
     expectSingleHttpNotice();
+  });
+});
+
+/**
+ * 复审 v4 P3-3：发出了请求但没有响应的 axios 错误（网络错误 / 超时），请求层通用错误拦截器
+ * （packages/effects/request preset-interceptors.ts errorMessageResponseInterceptor）已按固定 key
+ * 弹过一条，页面不再叠加「定时任务创建失败」等提示
+ */
+describe('网络错误 / 超时（有 request 无 response）只提示一次（真实请求链路）', () => {
+  // 与浏览器 xhr adapter 一致：带 request、不带 response
+  const networkError = (config: any) =>
+    new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, {});
+  const timeoutError = (config: any) =>
+    new AxiosError(
+      `timeout of ${config.timeout ?? 0}ms exceeded`,
+      AxiosError.ECONNABORTED,
+      config,
+      {},
+    );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requests.length = 0;
+    rejectWrites();
+  });
+  afterEach(() => {
+    transportError = null;
+  });
+
+  const expectSingleTransportNotice = (key: string) => {
+    const text = $t(key);
+    expect(text).not.toBe('');
+    expect(notices.error).toHaveBeenCalledTimes(1);
+    expect(notices.error).toHaveBeenCalledWith({
+      content: text,
+      key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${text}`,
+    });
+    expect(notices.success).not.toHaveBeenCalled();
+  };
+
+  describe.each([
+    ['网络错误', networkError, 'fallback.http.networkError'],
+    ['超时', timeoutError, 'fallback.http.requestTimeout'],
+  ])('%s', (_label, makeError, key) => {
+    beforeEach(() => {
+      transportError = makeError;
+    });
+
+    it('创建：只弹请求层一条', async () => {
+      const page = useCronJobPage();
+      page.openCreateModal();
+      page.createFormModel.value.job_type = 3;
+      passValidation(page);
+      await page.submitCreateForm();
+      expect(requests).toContain('POST /cron/job/create');
+      expectSingleTransportNotice(key);
+      expect(page.isCreateModalVisible.value).toBe(true);
+    });
+
+    it('更新：只弹请求层一条', async () => {
+      const page = useCronJobPage();
+      await page.openEditModal(job(9, 3));
+      passValidation(page);
+      await page.submitEditForm();
+      expect(requests).toContain('PUT /cron/job/9/update');
+      expectSingleTransportNotice(key);
+    });
+
+    it('立即执行：只弹请求层一条', async () => {
+      const page = useCronJobPage();
+      page.triggerJob(job(10, 3));
+      await confirm.mock.calls[0]?.[0].onOk();
+      expect(requests.some((r) => r.startsWith('POST /cron/job/10/'))).toBe(
+        true,
+      );
+      expectSingleTransportNotice(key);
+    });
+  });
+
+  it('判定边界：取消的请求、没有发出请求的错误不算已提示', () => {
+    expect(
+      isNotifiedByRequestLayer(
+        new AxiosError('Network Error', AxiosError.ERR_NETWORK, {} as any, {}),
+      ),
+    ).toBe(true);
+    expect(
+      isNotifiedByRequestLayer(
+        new axios.CanceledError(undefined, {} as any, {}),
+      ),
+    ).toBe(false);
+    expect(
+      isNotifiedByRequestLayer(
+        new AxiosError('bad option', AxiosError.ERR_BAD_OPTION),
+      ),
+    ).toBe(false);
+    expect(isNotifiedByRequestLayer(new Error('Network Error'))).toBe(false);
   });
 });
