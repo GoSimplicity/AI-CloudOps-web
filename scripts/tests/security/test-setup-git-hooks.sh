@@ -5,6 +5,7 @@
 #   review3g N3：HUSKY=0 时（包括钩子已安装后重跑）必须失败
 #   review3g N4：.husky/pre-commit 必须与 setup 中内嵌的内容逐字节一致（": .githooks/pre-commit"、提前 exit 0、"|| true" 都要失败）
 #   review3g N6：gitleaks 版本低于 8.25.0 或无法解析时必须失败（假 gitleaks 只改写 `gitleaks version` 输出）
+#   review3h P3-i：版本号带前导零（08.25.0）或数字超长时同样视为无法解析而失败（情况5e/5f）
 # 正常情况使用仓库 node_modules 中真实的 husky（9.x，需先 pnpm install），并做端到端验证：
 #   安装后提交合成密钥被 gitleaks 拦下、提交干净文件成功。
 # 用法: scripts/tests/security/test-setup-git-hooks.sh [--rev <git-rev>]   （对修复前版本运行应报 FAIL）
@@ -97,6 +98,8 @@ fake_gl_dir() { # fake_gl_dir <名> <version 输出>
 run_case "情况5a gitleaks 8.24.3（低于 8.25.0）" fail real "" PATH="$(fake_gl_dir low 8.24.3):$PATH" || true
 run_case "情况5b gitleaks v8.18.4" fail real "" PATH="$(fake_gl_dir old v8.18.4):$PATH" || true
 run_case "情况5c gitleaks 版本无法解析（dev）" fail real "" PATH="$(fake_gl_dir bad dev):$PATH" || true
+run_case "情况5e gitleaks 版本前导零（08.25.0）" fail real "" PATH="$(fake_gl_dir lz 08.25.0):$PATH" || true
+run_case "情况5f gitleaks 版本超长（99999999999999999999.0.0）" fail real "" PATH="$(fake_gl_dir long 99999999999999999999.0.0):$PATH" || true
 run_case "情况5d 对照 gitleaks 8.25.0" ok real "" PATH="$(fake_gl_dir min 8.25.0):$PATH" || true
 
 # 情况3 的实际后果（仅说明，不计入结果）：真实 husky 安装后删掉 .husky/pre-commit，带密钥的提交会静默成功
