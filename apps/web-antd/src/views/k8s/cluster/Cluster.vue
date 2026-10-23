@@ -639,7 +639,8 @@ onMounted(async () => {
           </a-spin>
           <div style="color: #999; font-size: 12px; margin-top: 4px">
             <template v-if="isEdit">
-              出于安全考虑，已保存的 kubeconfig 不会回显；留空提交即保留原配置。
+              留空表示不修改：提交后保留原
+              kubeconfig。出于安全考虑，已保存的内容不会回显。
             </template>
             <template v-else>
               提示：请确保 kubeconfig 内容格式正确且具有足够的权限
