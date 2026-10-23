@@ -1,58 +1,62 @@
 <template>
-  <div class="alert-rule-container">
+  <OpsPage title="告警规则">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button type="primary" @click="showAddModal" class="btn-create">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          <span class="btn-text">新增AlertRule</span>
-        </a-button>
-        <div class="search-filters">
-          <a-input-search
-            v-model:value="searchParams.search"
-            placeholder="搜索规则名称..."
-            class="search-input"
-            @search="handleSearch"
-            allow-clear
-          />
-          <a-select
-            v-model:value="searchParams.severity"
-            placeholder="严重性"
-            class="filter-select"
-            @change="handleSearch"
-            allow-clear
+    <template #actions>
+      <a-button type="primary" @click="showAddModal" class="btn-create">
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        <span class="btn-text">新建告警规则</span>
+      </a-button>
+    </template>
+    <template #filters>
+      <div class="search-filters">
+        <a-input-search
+          v-model:value="searchParams.search"
+          placeholder="搜索规则名称..."
+          class="search-input"
+          @search="handleSearch"
+          allow-clear
+        />
+        <a-select
+          v-model:value="searchParams.severity"
+          placeholder="严重性"
+          class="filter-select"
+          @change="handleSearch"
+          allow-clear
+        >
+          <a-select-option :value="AlertRuleSeverity.Critical"
+            >Critical</a-select-option
           >
-            <a-select-option :value="AlertRuleSeverity.Critical">Critical</a-select-option>
-            <a-select-option :value="AlertRuleSeverity.Warning">Warning</a-select-option>
-            <a-select-option :value="AlertRuleSeverity.Info">Info</a-select-option>
-          </a-select>
-          <a-select
-            v-model:value="searchParams.enable"
-            placeholder="启用状态"
-            class="filter-select"
-            @change="handleSearch"
-            allow-clear
+          <a-select-option :value="AlertRuleSeverity.Warning"
+            >Warning</a-select-option
           >
-            <a-select-option :value="1">启用</a-select-option>
-            <a-select-option :value="2">禁用</a-select-option>
-          </a-select>
-          <a-button @click="handleReset" class="reset-btn">
-            重置
-          </a-button>
-        </div>
+          <a-select-option :value="AlertRuleSeverity.Info"
+            >Info</a-select-option
+          >
+        </a-select>
+        <a-select
+          v-model:value="searchParams.enable"
+          placeholder="启用状态"
+          class="filter-select"
+          @change="handleSearch"
+          allow-clear
+        >
+          <a-select-option :value="1">启用</a-select-option>
+          <a-select-option :value="2">禁用</a-select-option>
+        </a-select>
+        <a-button @click="handleReset" class="reset-btn"> 重置 </a-button>
       </div>
-    </div>
+    </template>
 
     <!-- 统计卡片 -->
-    <div class="stats-row">
+    <template #summary><div class="stats-row">
       <a-row :gutter="[16, 16]">
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic 
-              title="总规则" 
-              :value="stats.total" 
+            <a-statistic
+              title="总规则"
+              :value="stats.total"
               :value-style="{ color: '#3f8600' }"
             >
               <template #prefix>
@@ -63,9 +67,9 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic 
-              title="Critical" 
-              :value="stats.critical" 
+            <a-statistic
+              title="Critical"
+              :value="stats.critical"
               :value-style="{ color: '#cf1322' }"
             >
               <template #prefix>
@@ -76,9 +80,9 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic 
-              title="Warning" 
-              :value="stats.warning" 
+            <a-statistic
+              title="Warning"
+              :value="stats.warning"
               :value-style="{ color: '#faad14' }"
             >
               <template #prefix>
@@ -89,9 +93,9 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic 
-              title="已启用" 
-              :value="stats.enabled" 
+            <a-statistic
+              title="已启用"
+              :value="stats.enabled"
               :value-style="{ color: '#1890ff' }"
             >
               <template #prefix>
@@ -101,7 +105,7 @@
           </a-card>
         </a-col>
       </a-row>
-    </div>
+    </div></template>
 
     <!-- 表格容器 -->
     <div class="table-container">
@@ -119,7 +123,10 @@
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="rule-name-cell">
-                <div class="rule-badge" :class="getAlertStatusClass(record)"></div>
+                <div
+                  class="rule-badge"
+                  :class="getAlertStatusClass(record)"
+                ></div>
                 <span class="rule-name-text">{{ record.name }}</span>
               </div>
             </template>
@@ -132,8 +139,13 @@
 
             <template v-if="column.key === 'labels'">
               <div class="tag-container">
-                <template v-if="record.labels?.length && record.labels[0] !== ''">
-                  <template v-for="label in getDisplayLabels(record.labels)" :key="label">
+                <template
+                  v-if="record.labels?.length && record.labels[0] !== ''"
+                >
+                  <template
+                    v-for="label in getDisplayLabels(record.labels)"
+                    :key="label"
+                  >
                     <a-tag class="tech-tag label-tag">
                       <span class="label-key">{{ label.split(',')[0] }}</span>
                       <span class="label-separator">:</span>
@@ -153,13 +165,19 @@
                           :key="label"
                           class="tech-tag label-tag"
                         >
-                          <span class="label-key">{{ label.split(',')[0] }}</span>
+                          <span class="label-key">{{
+                            label.split(',')[0]
+                          }}</span>
                           <span class="label-separator">:</span>
-                          <span class="label-value">{{ label.split(',')[1] }}</span>
+                          <span class="label-value">{{
+                            label.split(',')[1]
+                          }}</span>
                         </a-tag>
                       </div>
                     </template>
-                    <a-tag class="tech-tag more-tag">+{{ record.labels.length - 2 }}</a-tag>
+                    <a-tag class="tech-tag more-tag"
+                      >+{{ record.labels.length - 2 }}</a-tag
+                    >
                   </a-popover>
                 </template>
                 <span v-else class="empty-text">无标签</span>
@@ -168,12 +186,25 @@
 
             <template v-if="column.key === 'annotations'">
               <div class="tag-container">
-                <template v-if="record.annotations?.length && record.annotations[0] !== ''">
-                  <template v-for="annotation in getDisplayAnnotations(record.annotations)" :key="annotation">
+                <template
+                  v-if="
+                    record.annotations?.length && record.annotations[0] !== ''
+                  "
+                >
+                  <template
+                    v-for="annotation in getDisplayAnnotations(
+                      record.annotations,
+                    )"
+                    :key="annotation"
+                  >
                     <a-tag class="tech-tag annotation-tag">
-                      <span class="label-key">{{ annotation.split(',')[0] }}</span>
+                      <span class="label-key">{{
+                        annotation.split(',')[0]
+                      }}</span>
                       <span class="label-separator">:</span>
-                      <span class="label-value">{{ annotation.split(',')[1] }}</span>
+                      <span class="label-value">{{
+                        annotation.split(',')[1]
+                      }}</span>
                     </a-tag>
                   </template>
                   <a-popover
@@ -189,13 +220,19 @@
                           :key="annotation"
                           class="tech-tag annotation-tag"
                         >
-                          <span class="label-key">{{ annotation.split(',')[0] }}</span>
+                          <span class="label-key">{{
+                            annotation.split(',')[0]
+                          }}</span>
                           <span class="label-separator">:</span>
-                          <span class="label-value">{{ annotation.split(',')[1] }}</span>
+                          <span class="label-value">{{
+                            annotation.split(',')[1]
+                          }}</span>
                         </a-tag>
                       </div>
                     </template>
-                    <a-tag class="tech-tag more-tag">+{{ record.annotations.length - 2 }}</a-tag>
+                    <a-tag class="tech-tag more-tag"
+                      >+{{ record.annotations.length - 2 }}</a-tag
+                    >
                   </a-popover>
                 </template>
                 <span v-else class="empty-text">无注解</span>
@@ -203,7 +240,12 @@
             </template>
 
             <template v-if="column.key === 'severity'">
-              <a-tag :class="['tech-tag', `severity-${severityText(record.severity)}`]">
+              <a-tag
+                :class="[
+                  'tech-tag',
+                  `severity-${severityText(record.severity)}`,
+                ]"
+              >
                 {{ severityLabel(record.severity) }}
               </a-tag>
             </template>
@@ -218,11 +260,15 @@
               <div class="config-info">
                 <div class="config-item">
                   <span class="config-label">实例池:</span>
-                  <span class="config-value">{{ getPoolName(record.pool_id) }}</span>
+                  <span class="config-value">{{
+                    getPoolName(record.pool_id)
+                  }}</span>
                 </div>
                 <div class="config-item">
                   <span class="config-label">发送组:</span>
-                  <span class="config-value">{{ getSendGroupName(record.send_group_id) }}</span>
+                  <span class="config-value">{{
+                    getSendGroupName(record.send_group_id)
+                  }}</span>
                 </div>
               </div>
             </template>
@@ -231,7 +277,11 @@
               <div class="creator-info">
                 <a-avatar
                   size="small"
-                  :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
+                  :style="{
+                    backgroundColor: getAvatarColor(
+                      record.create_user_name || '',
+                    ),
+                  }"
                 >
                   {{ getInitials(record.create_user_name) }}
                 </a-avatar>
@@ -248,10 +298,18 @@
 
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
-                <a-button type="primary" size="small" @click="showDetailModal(record)">
+                <a-button
+                  type="primary"
+                  size="small"
+                  @click="showDetailModal(record)"
+                >
                   查看
                 </a-button>
-                <a-button type="default" size="small" @click="showEditModal(record)">
+                <a-button
+                  type="default"
+                  size="small"
+                  @click="showEditModal(record)"
+                >
                   编辑
                 </a-button>
                 <a-dropdown>
@@ -270,23 +328,31 @@
       </a-card>
     </div>
 
-    <!-- 新增AlertRule对话框 -->
+    <!-- 新建告警规则对话框 -->
     <a-modal
       :open="isAddModalVisible"
-      title="新增AlertRule"
+      title="新建告警规则"
       :width="formDialogWidth"
       @ok="handleAdd"
       @cancel="closeAddModal"
       :destroy-on-close="true"
       class="responsive-modal alert-rule-modal"
     >
-      <a-form ref="addFormRef" :model="addForm" :rules="formRules" layout="vertical">
+      <a-form
+        ref="addFormRef"
+        :model="addForm"
+        :rules="formRules"
+        layout="vertical"
+      >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="名称" name="name">
-                <a-input v-model:value="addForm.name" placeholder="请输入名称" />
+                <a-input
+                  v-model:value="addForm.name"
+                  placeholder="请输入名称"
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -300,7 +366,11 @@
                   @popupScroll="handlePoolScroll"
                   :loading="poolLoading"
                 >
-                  <a-select-option v-for="pool in scrapePools" :key="pool.id" :value="pool.id">
+                  <a-select-option
+                    v-for="pool in scrapePools"
+                    :key="pool.id"
+                    :value="pool.id"
+                  >
                     {{ pool.name }}
                   </a-select-option>
                 </a-select>
@@ -315,7 +385,11 @@
                   @popupScroll="handleSendGroupScroll"
                   :loading="sendGroupLoading"
                 >
-                  <a-select-option v-for="group in sendGroups" :key="group.id" :value="group.id">
+                  <a-select-option
+                    v-for="group in sendGroups"
+                    :key="group.id"
+                    :value="group.id"
+                  >
                     {{ group.name }}
                   </a-select-option>
                 </a-select>
@@ -325,19 +399,30 @@
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="IP地址" name="ip">
-                <a-input v-model:value="addForm.ip" placeholder="请输入IP地址" class="ip-input" />
+                <a-input
+                  v-model:value="addForm.ip"
+                  placeholder="请输入IP地址"
+                  class="ip-input"
+                />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="端口" name="port">
-                <a-input v-model:value="addForm.port" placeholder="端口" class="port-input" />
+                <a-input
+                  v-model:value="addForm.port"
+                  placeholder="端口"
+                  class="port-input"
+                />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="Grafana链接" name="grafana_link">
-                <a-input v-model:value="addForm.grafana_link" placeholder="请输入Grafana链接" />
+                <a-input
+                  v-model:value="addForm.grafana_link"
+                  placeholder="请输入Grafana链接"
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -346,7 +431,11 @@
         <div class="form-section">
           <div class="section-title">规则配置</div>
           <a-form-item label="表达式" name="expr">
-            <a-textarea v-model:value="addForm.expr" placeholder="请输入PromQL表达式" :rows="4" />
+            <a-textarea
+              v-model:value="addForm.expr"
+              placeholder="请输入PromQL表达式"
+              :rows="4"
+            />
           </a-form-item>
           <a-form-item>
             <a-button type="primary" @click="validateExpression(addForm.expr)">
@@ -356,16 +445,28 @@
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="严重性" name="severity">
-                <a-select v-model:value="addForm.severity" placeholder="请选择严重性">
-                  <a-select-option :value="AlertRuleSeverity.Critical">Critical</a-select-option>
-                  <a-select-option :value="AlertRuleSeverity.Warning">Warning</a-select-option>
-                  <a-select-option :value="AlertRuleSeverity.Info">Info</a-select-option>
+                <a-select
+                  v-model:value="addForm.severity"
+                  placeholder="请选择严重性"
+                >
+                  <a-select-option :value="AlertRuleSeverity.Critical"
+                    >Critical</a-select-option
+                  >
+                  <a-select-option :value="AlertRuleSeverity.Warning"
+                    >Warning</a-select-option
+                  >
+                  <a-select-option :value="AlertRuleSeverity.Info"
+                    >Info</a-select-option
+                  >
                 </a-select>
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="持续时间" name="for_time">
-                <a-input v-model:value="addForm.for_time" placeholder="例如: 10s" />
+                <a-input
+                  v-model:value="addForm.for_time"
+                  placeholder="例如: 10s"
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -379,9 +480,17 @@
             :label="index === 0 ? '分组标签' : ''"
           >
             <div class="label-input-group">
-              <a-input v-model:value="label.labelKey" placeholder="标签名" class="label-key-input" />
+              <a-input
+                v-model:value="label.labelKey"
+                placeholder="标签名"
+                class="label-key-input"
+              />
               <div class="label-separator">:</div>
-              <a-input v-model:value="label.labelValue" placeholder="标签值" class="label-value-input" />
+              <a-input
+                v-model:value="label.labelValue"
+                placeholder="标签值"
+                class="label-value-input"
+              />
               <MinusCircleOutlined
                 v-if="addForm.labels.length > 1"
                 class="dynamic-delete-button"
@@ -390,7 +499,11 @@
             </div>
           </a-form-item>
           <a-form-item>
-            <a-button type="dashed" class="add-dynamic-button" @click="addLabel">
+            <a-button
+              type="dashed"
+              class="add-dynamic-button"
+              @click="addLabel"
+            >
               <PlusOutlined /> 添加标签
             </a-button>
           </a-form-item>
@@ -404,9 +517,17 @@
             :label="index === 0 ? '注解' : ''"
           >
             <div class="label-input-group">
-              <a-input v-model:value="annotation.labelKey" placeholder="注解名" class="label-key-input" />
+              <a-input
+                v-model:value="annotation.labelKey"
+                placeholder="注解名"
+                class="label-key-input"
+              />
               <div class="label-separator">:</div>
-              <a-input v-model:value="annotation.labelValue" placeholder="注解值" class="label-value-input" />
+              <a-input
+                v-model:value="annotation.labelValue"
+                placeholder="注解值"
+                class="label-value-input"
+              />
               <MinusCircleOutlined
                 v-if="addForm.annotations.length > 1"
                 class="dynamic-delete-button"
@@ -415,7 +536,11 @@
             </div>
           </a-form-item>
           <a-form-item>
-            <a-button type="dashed" @click="addAnnotation" class="add-dynamic-button">
+            <a-button
+              type="dashed"
+              @click="addAnnotation"
+              class="add-dynamic-button"
+            >
               <PlusOutlined /> 添加注解
             </a-button>
           </a-form-item>
@@ -433,13 +558,21 @@
       :destroy-on-close="true"
       class="responsive-modal alert-rule-modal"
     >
-      <a-form ref="editFormRef" :model="editForm" :rules="formRules" layout="vertical">
+      <a-form
+        ref="editFormRef"
+        :model="editForm"
+        :rules="formRules"
+        layout="vertical"
+      >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="名称" name="name">
-                <a-input v-model:value="editForm.name" placeholder="请输入名称" />
+                <a-input
+                  v-model:value="editForm.name"
+                  placeholder="请输入名称"
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -453,7 +586,11 @@
                   @popupScroll="handlePoolScroll"
                   :loading="poolLoading"
                 >
-                  <a-select-option v-for="pool in scrapePools" :key="pool.id" :value="pool.id">
+                  <a-select-option
+                    v-for="pool in scrapePools"
+                    :key="pool.id"
+                    :value="pool.id"
+                  >
                     {{ pool.name }}
                   </a-select-option>
                 </a-select>
@@ -468,7 +605,11 @@
                   @popupScroll="handleSendGroupScroll"
                   :loading="sendGroupLoading"
                 >
-                  <a-select-option v-for="group in sendGroups" :key="group.id" :value="group.id">
+                  <a-select-option
+                    v-for="group in sendGroups"
+                    :key="group.id"
+                    :value="group.id"
+                  >
                     {{ group.name }}
                   </a-select-option>
                 </a-select>
@@ -478,26 +619,40 @@
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="IP地址" name="ip">
-                <a-input v-model:value="editForm.ip" placeholder="请输入IP地址" class="ip-input" />
+                <a-input
+                  v-model:value="editForm.ip"
+                  placeholder="请输入IP地址"
+                  class="ip-input"
+                />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="端口" name="port">
-                <a-input v-model:value="editForm.port" placeholder="端口" class="port-input" />
+                <a-input
+                  v-model:value="editForm.port"
+                  placeholder="端口"
+                  class="port-input"
+                />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="Grafana链接" name="grafana_link">
-                <a-input v-model:value="editForm.grafana_link" placeholder="请输入Grafana链接" />
+                <a-input
+                  v-model:value="editForm.grafana_link"
+                  placeholder="请输入Grafana链接"
+                />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="启用状态" name="enable">
-                <a-switch v-model:checked="editForm.enableSwitch" class="tech-switch" />
+                <a-switch
+                  v-model:checked="editForm.enableSwitch"
+                  class="tech-switch"
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -506,7 +661,11 @@
         <div class="form-section">
           <div class="section-title">规则配置</div>
           <a-form-item label="表达式" name="expr">
-            <a-textarea v-model:value="editForm.expr" placeholder="请输入PromQL表达式" :rows="4" />
+            <a-textarea
+              v-model:value="editForm.expr"
+              placeholder="请输入PromQL表达式"
+              :rows="4"
+            />
           </a-form-item>
           <a-form-item>
             <a-button type="primary" @click="validateExpression(editForm.expr)">
@@ -516,16 +675,28 @@
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="严重性" name="severity">
-                <a-select v-model:value="editForm.severity" placeholder="请选择严重性">
-                  <a-select-option :value="AlertRuleSeverity.Critical">Critical</a-select-option>
-                  <a-select-option :value="AlertRuleSeverity.Warning">Warning</a-select-option>
-                  <a-select-option :value="AlertRuleSeverity.Info">Info</a-select-option>
+                <a-select
+                  v-model:value="editForm.severity"
+                  placeholder="请选择严重性"
+                >
+                  <a-select-option :value="AlertRuleSeverity.Critical"
+                    >Critical</a-select-option
+                  >
+                  <a-select-option :value="AlertRuleSeverity.Warning"
+                    >Warning</a-select-option
+                  >
+                  <a-select-option :value="AlertRuleSeverity.Info"
+                    >Info</a-select-option
+                  >
                 </a-select>
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="持续时间" name="for_time">
-                <a-input v-model:value="editForm.for_time" placeholder="例如: 10s" />
+                <a-input
+                  v-model:value="editForm.for_time"
+                  placeholder="例如: 10s"
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -539,9 +710,17 @@
             :label="index === 0 ? '分组标签' : ''"
           >
             <div class="label-input-group">
-              <a-input v-model:value="label.labelKey" placeholder="标签名" class="label-key-input" />
+              <a-input
+                v-model:value="label.labelKey"
+                placeholder="标签名"
+                class="label-key-input"
+              />
               <div class="label-separator">:</div>
-              <a-input v-model:value="label.labelValue" placeholder="标签值" class="label-value-input" />
+              <a-input
+                v-model:value="label.labelValue"
+                placeholder="标签值"
+                class="label-value-input"
+              />
               <MinusCircleOutlined
                 v-if="editForm.labels.length > 1"
                 class="dynamic-delete-button"
@@ -550,7 +729,11 @@
             </div>
           </a-form-item>
           <a-form-item>
-            <a-button type="dashed" class="add-dynamic-button" @click="addEditLabel">
+            <a-button
+              type="dashed"
+              class="add-dynamic-button"
+              @click="addEditLabel"
+            >
               <PlusOutlined /> 添加标签
             </a-button>
           </a-form-item>
@@ -564,9 +747,17 @@
             :label="index === 0 ? '注解' : ''"
           >
             <div class="label-input-group">
-              <a-input v-model:value="annotation.labelKey" placeholder="注解名" class="label-key-input" />
+              <a-input
+                v-model:value="annotation.labelKey"
+                placeholder="注解名"
+                class="label-key-input"
+              />
               <div class="label-separator">:</div>
-              <a-input v-model:value="annotation.labelValue" placeholder="注解值" class="label-value-input" />
+              <a-input
+                v-model:value="annotation.labelValue"
+                placeholder="注解值"
+                class="label-value-input"
+              />
               <MinusCircleOutlined
                 v-if="editForm.annotations.length > 1"
                 class="dynamic-delete-button"
@@ -575,7 +766,11 @@
             </div>
           </a-form-item>
           <a-form-item>
-            <a-button type="dashed" @click="addEditAnnotation" class="add-dynamic-button">
+            <a-button
+              type="dashed"
+              @click="addEditAnnotation"
+              class="add-dynamic-button"
+            >
               <PlusOutlined /> 添加注解
             </a-button>
           </a-form-item>
@@ -596,7 +791,12 @@
         <div class="detail-header">
           <h2>{{ currentRecord.name }}</h2>
           <div class="detail-badges">
-            <a-tag :class="['tech-tag', `severity-${severityText(currentRecord.severity)}`]">
+            <a-tag
+              :class="[
+                'tech-tag',
+                `severity-${severityText(currentRecord.severity)}`,
+              ]"
+            >
               {{ severityLabel(currentRecord.severity) }}
             </a-tag>
             <a-tag :color="currentRecord.enable === 1 ? 'success' : 'default'">
@@ -606,10 +806,18 @@
         </div>
 
         <a-descriptions bordered :column="1" :label-style="{ width: '150px' }">
-          <a-descriptions-item label="ID">{{ currentRecord.id }}</a-descriptions-item>
-          <a-descriptions-item label="表达式">{{ currentRecord.expr }}</a-descriptions-item>
-          <a-descriptions-item label="持续时间">{{ currentRecord.for_time }}</a-descriptions-item>
-          <a-descriptions-item label="目标地址">{{ currentRecord.ip_address }}</a-descriptions-item>
+          <a-descriptions-item label="ID">{{
+            currentRecord.id
+          }}</a-descriptions-item>
+          <a-descriptions-item label="表达式">{{
+            currentRecord.expr
+          }}</a-descriptions-item>
+          <a-descriptions-item label="持续时间">{{
+            currentRecord.for_time
+          }}</a-descriptions-item>
+          <a-descriptions-item label="目标地址">{{
+            currentRecord.ip_address
+          }}</a-descriptions-item>
           <a-descriptions-item label="实例池">
             {{ getPoolName(currentRecord.pool_id) }}
           </a-descriptions-item>
@@ -626,17 +834,25 @@
 
         <div class="detail-footer">
           <a-button @click="closeDetailModal">关闭</a-button>
-          <a-button type="primary" @click="showEditModal(currentRecord!)">编辑</a-button>
+          <a-button type="primary" @click="showEditModal(currentRecord!)"
+            >编辑</a-button
+          >
         </div>
       </div>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+
 import { ref, reactive, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { PlusOutlined, DownOutlined, MinusCircleOutlined } from '@ant-design/icons-vue';
+import {
+  PlusOutlined,
+  DownOutlined,
+  MinusCircleOutlined,
+} from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import { useDebounceFn } from '@vueuse/core';
 import {
@@ -699,13 +915,18 @@ const createInitialForm = () => ({
   expr: '',
   severity: undefined as AlertRuleSeverity | undefined,
   for_time: '10s',
-  labels: [{ key: Date.now(), labelKey: '', labelValue: '' }] as LabelOrAnnotationItem[],
-  annotations: [{ key: Date.now(), labelKey: '', labelValue: '' }] as LabelOrAnnotationItem[],
+  labels: [
+    { key: Date.now(), labelKey: '', labelValue: '' },
+  ] as LabelOrAnnotationItem[],
+  annotations: [
+    { key: Date.now(), labelKey: '', labelValue: '' },
+  ] as LabelOrAnnotationItem[],
   grafana_link: '',
 });
 
 const handleApiError = (error: any, defaultMessage: string) => {
-  const errorMessage = error?.response?.data?.message || error.message || defaultMessage;
+  const errorMessage =
+    error?.response?.data?.message || error.message || defaultMessage;
   message.error(errorMessage);
 };
 
@@ -732,15 +953,20 @@ const paginationConfig = reactive({
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
-  size: 'default' as const
+  size: 'default' as const,
 });
 
 // --- 统计数据 ---
 const stats = computed(() => ({
   total: paginationConfig.total,
-  critical: data.value.filter((item) => item.severity === AlertRuleSeverity.Critical).length,
-  warning: data.value.filter((item) => item.severity === AlertRuleSeverity.Warning).length,
-  enabled: data.value.filter((item) => item.enable === ENABLE_STATUS.ENABLED).length,
+  critical: data.value.filter(
+    (item) => item.severity === AlertRuleSeverity.Critical,
+  ).length,
+  warning: data.value.filter(
+    (item) => item.severity === AlertRuleSeverity.Warning,
+  ).length,
+  enabled: data.value.filter((item) => item.enable === ENABLE_STATUS.ENABLED)
+    .length,
 }));
 
 // --- 模态框状态 ---
@@ -811,16 +1037,51 @@ const previewDialogWidth = computed(() => {
 
 // --- 列定义 ---
 const columns = [
-  { title: 'AlertRule名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
-  { title: '表达式', dataIndex: 'expr', key: 'expr', width: 250, ellipsis: true },
-  { title: '严重性', dataIndex: 'severity', key: 'severity', width: 100, align: 'center' as const },
-  { title: '启用状态', dataIndex: 'enable', key: 'enable', width: 100, align: 'center' as const },
+  {
+    title: 'AlertRule名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 200,
+    fixed: 'left',
+  },
+  {
+    title: '表达式',
+    dataIndex: 'expr',
+    key: 'expr',
+    width: 250,
+    ellipsis: true,
+  },
+  {
+    title: '严重性',
+    dataIndex: 'severity',
+    key: 'severity',
+    width: 100,
+    align: 'center' as const,
+  },
+  {
+    title: '启用状态',
+    dataIndex: 'enable',
+    key: 'enable',
+    width: 100,
+    align: 'center' as const,
+  },
   { title: '标签', dataIndex: 'labels', key: 'labels', width: 220 },
   { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 220 },
   { title: '实例配置', key: 'pool_config', width: 180 },
-  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
+  {
+    title: '创建人',
+    dataIndex: 'create_user_name',
+    key: 'creator',
+    width: 120,
+  },
   { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' },
+  {
+    title: '操作',
+    key: 'action',
+    width: 200,
+    align: 'center' as const,
+    fixed: 'right',
+  },
 ];
 
 // --- 标签显示函数 ---
@@ -830,7 +1091,8 @@ const getDisplayLabels = (labels: string[]) => {
 };
 
 const getDisplayAnnotations = (annotations: string[]) => {
-  if (!annotations || annotations.length === 0 || annotations[0] === '') return [];
+  if (!annotations || annotations.length === 0 || annotations[0] === '')
+    return [];
   return annotations.slice(0, 2);
 };
 
@@ -912,7 +1174,10 @@ const handleSendGroupScroll = (e: any) => {
     !sendGroupLoading.value &&
     sendGroups.value.length < sendGroupPagination.total
   ) {
-    fetchSendGroups(sendGroupPagination.current + 1, sendGroupPagination.pageSize);
+    fetchSendGroups(
+      sendGroupPagination.current + 1,
+      sendGroupPagination.pageSize,
+    );
   }
 };
 
@@ -929,7 +1194,10 @@ const onSendGroupDropdownChange = (open: boolean) => {
 };
 
 // --- 事件处理 ---
-const handleTableChange = (pagination: { current: number; pageSize: number }) => {
+const handleTableChange = (pagination: {
+  current: number;
+  pageSize: number;
+}) => {
   paginationConfig.current = pagination.current;
   paginationConfig.pageSize = pagination.pageSize;
   fetchAlertRules();
@@ -986,7 +1254,10 @@ const closeAddModal = () => {
 const showEditModal = async (record: MonitorAlertRule) => {
   // --- 确保关联数据显示 ---
   // 确保关联的实例池在选项列表中，以便正确显示名称
-  if (record.pool_id && !scrapePools.value.some((p) => p.id === record.pool_id)) {
+  if (
+    record.pool_id &&
+    !scrapePools.value.some((p) => p.id === record.pool_id)
+  ) {
     try {
       const pool = await getMonitorAlertManagerPoolApi(record.pool_id);
       if (pool) {
@@ -999,7 +1270,10 @@ const showEditModal = async (record: MonitorAlertRule) => {
   }
 
   // 确保关联的发送组在选项列表中
-  if (record.send_group_id && !sendGroups.value.some((g) => g.id === record.send_group_id)) {
+  if (
+    record.send_group_id &&
+    !sendGroups.value.some((g) => g.id === record.send_group_id)
+  ) {
     try {
       const group = await getMonitorSendGroupDetailApi(record.send_group_id);
       if (group) {
@@ -1091,7 +1365,9 @@ const handleEdit = async () => {
     const apiData: UpdateMonitorAlertRuleReq = {
       ...editForm,
       ip_address: `${editForm.ip}:${editForm.port}`,
-      enable: editForm.enableSwitch ? ENABLE_STATUS.ENABLED : ENABLE_STATUS.DISABLED,
+      enable: editForm.enableSwitch
+        ? ENABLE_STATUS.ENABLED
+        : ENABLE_STATUS.DISABLED,
       pool_id: editForm.pool_id!,
       send_group_id: editForm.send_group_id!,
       severity: editForm.severity!,
@@ -1122,28 +1398,34 @@ const validateExpression = async (expr: string) => {
 };
 
 // --- 动态表单项 ---
-const addLabel = () => addForm.labels.push({ key: Date.now(), labelKey: '', labelValue: '' });
+const addLabel = () =>
+  addForm.labels.push({ key: Date.now(), labelKey: '', labelValue: '' });
 const removeLabel = (item: LabelOrAnnotationItem) => {
   const index = addForm.labels.indexOf(item);
   if (index !== -1) addForm.labels.splice(index, 1);
 };
-const addAnnotation = () => addForm.annotations.push({ key: Date.now(), labelKey: '', labelValue: '' });
+const addAnnotation = () =>
+  addForm.annotations.push({ key: Date.now(), labelKey: '', labelValue: '' });
 const removeAnnotation = (item: LabelOrAnnotationItem) => {
   const index = addForm.annotations.indexOf(item);
   if (index !== -1) addForm.annotations.splice(index, 1);
 };
-const addEditLabel = () => editForm.labels.push({ key: Date.now(), labelKey: '', labelValue: '' });
+const addEditLabel = () =>
+  editForm.labels.push({ key: Date.now(), labelKey: '', labelValue: '' });
 const removeEditLabel = (item: LabelOrAnnotationItem) => {
   const index = editForm.labels.indexOf(item);
   if (index !== -1) editForm.labels.splice(index, 1);
 };
-const addEditAnnotation = () => editForm.annotations.push({ key: Date.now(), labelKey: '', labelValue: '' });
+const addEditAnnotation = () =>
+  editForm.annotations.push({ key: Date.now(), labelKey: '', labelValue: '' });
 const removeEditAnnotation = (item: LabelOrAnnotationItem) => {
   const index = editForm.annotations.indexOf(item);
   if (index !== -1) editForm.annotations.splice(index, 1);
 };
 
-const severityText = (severity: AlertRuleSeverity | undefined): 'critical' | 'warning' | 'info' => {
+const severityText = (
+  severity: AlertRuleSeverity | undefined,
+): 'critical' | 'warning' | 'info' => {
   if (severity === AlertRuleSeverity.Critical) return 'critical';
   if (severity === AlertRuleSeverity.Warning) return 'warning';
   return 'info';
@@ -1157,20 +1439,37 @@ const severityLabel = (severity: AlertRuleSeverity | undefined): string => {
 };
 
 const getAlertStatusClass = (record: MonitorAlertRule): string => {
-  if (record.enable === ENABLE_STATUS.ENABLED && record.severity === AlertRuleSeverity.Critical) return 'status-critical';
-  if (record.enable === ENABLE_STATUS.ENABLED && record.severity === AlertRuleSeverity.Warning) return 'status-warning';
+  if (
+    record.enable === ENABLE_STATUS.ENABLED &&
+    record.severity === AlertRuleSeverity.Critical
+  )
+    return 'status-critical';
+  if (
+    record.enable === ENABLE_STATUS.ENABLED &&
+    record.severity === AlertRuleSeverity.Warning
+  )
+    return 'status-warning';
   if (record.enable === ENABLE_STATUS.ENABLED) return 'status-enabled';
   return 'status-disabled';
 };
 
-const getPoolName = (poolId?: number) => 
+const getPoolName = (poolId?: number) =>
   scrapePools.value.find((p) => p.id === poolId)?.name || `ID: ${poolId}`;
 
-const getSendGroupName = (groupId?: number) => 
+const getSendGroupName = (groupId?: number) =>
   sendGroups.value.find((g) => g.id === groupId)?.name || `ID: ${groupId}`;
 
 const getAvatarColor = (name: string): string => {
-  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
+  const colors = [
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
+  ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -1190,7 +1489,10 @@ const formatDate = (dateString: string): string => {
 
 const formatTime = (dateString: string): string => {
   if (!dateString) return '';
-  return new Date(dateString).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  return new Date(dateString).toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 const formatFullDateTime = (dateString?: string): string => {
@@ -1205,22 +1507,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.alert-rule-container {
-  padding: 12px;
-  min-height: 100vh;
-}
-
-.page-header {
-  margin-bottom: 20px;
-}
-
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
 .btn-create {
   background: var(--ops-accent);
   border: none;
@@ -1251,12 +1537,6 @@ onMounted(() => {
 
 .stats-row {
   margin-bottom: 20px;
-}
-
-.stats-card {
-  border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  height: 100%;
 }
 
 .table-container {
@@ -1520,8 +1800,7 @@ onMounted(() => {
   gap: 8px;
 }
 
-.label-key-input,
-.label-value-input {
+.label-key-input, .label-value-input {
   flex: 1;
 }
 
@@ -1586,14 +1865,6 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .alert-rule-container {
-    padding: 8px;
-  }
-
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
 
   .search-filters {
     width: 100%;
@@ -1646,13 +1917,6 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-  .header-actions {
-    gap: 8px;
-  }
-
-  .stats-card {
-    text-align: center;
-  }
 
   .creator-info {
     flex-direction: column;

@@ -1,43 +1,46 @@
 <template>
-  <div class="workorder-category-container">
+  <OpsPage title="工单分类">
     <!-- 页面头部操作区 -->
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button type="primary" @click="handleCreate" class="create-btn">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          创建分类
-        </a-button>
-
-        <div class="search-filters">
-          <a-input-search 
-            v-model:value="searchQuery" 
-            placeholder="搜索分类名称..." 
-            class="search-input"
-            @search="handleSearch"
-            allow-clear 
-          />
-          <a-select 
-            v-model:value="statusFilter" 
-            placeholder="状态筛选" 
-            class="status-filter"
-            @change="handleStatusChange"
-            allow-clear
+    <template #actions>
+      <a-button type="primary" @click="handleCreate" class="create-btn">
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        创建分类
+      </a-button>
+    </template>
+    <template #filters>
+      <div class="search-filters">
+        <a-input-search
+          v-model:value="searchQuery"
+          placeholder="搜索分类名称..."
+          class="search-input"
+          @search="handleSearch"
+          allow-clear
+        />
+        <a-select
+          v-model:value="statusFilter"
+          placeholder="状态筛选"
+          class="status-filter"
+          @change="handleStatusChange"
+          allow-clear
+        >
+          <a-select-option :value="CategoryStatus.Enabled"
+            >启用</a-select-option
           >
-            <a-select-option :value="CategoryStatus.Enabled">启用</a-select-option>
-            <a-select-option :value="CategoryStatus.Disabled">禁用</a-select-option>
-          </a-select>
-        </div>
+          <a-select-option :value="CategoryStatus.Disabled"
+            >禁用</a-select-option
+          >
+        </a-select>
       </div>
-    </div>
+    </template>
 
     <!-- 统计卡片 -->
-    <div class="stats-grid">
+    <template #summary><div class="stats-grid">
       <a-card class="stats-card">
-        <a-statistic 
-          title="总分类数" 
-          :value="statistics.total" 
+        <a-statistic
+          title="总分类数"
+          :value="statistics.total"
           :value-style="{ color: '#1890ff' }"
         >
           <template #prefix>
@@ -47,9 +50,9 @@
       </a-card>
 
       <a-card class="stats-card">
-        <a-statistic 
-          title="启用分类" 
-          :value="statistics.enabled" 
+        <a-statistic
+          title="启用分类"
+          :value="statistics.enabled"
           :value-style="{ color: '#52c41a' }"
         >
           <template #prefix>
@@ -59,9 +62,9 @@
       </a-card>
 
       <a-card class="stats-card">
-        <a-statistic 
-          title="禁用分类" 
-          :value="statistics.disabled" 
+        <a-statistic
+          title="禁用分类"
+          :value="statistics.disabled"
           :value-style="{ color: '#ff4d4f' }"
         >
           <template #prefix>
@@ -69,16 +72,16 @@
           </template>
         </a-statistic>
       </a-card>
-    </div>
+    </div></template>
 
     <!-- 数据表格 -->
     <div class="table-container">
       <a-card>
-        <a-table 
-          :data-source="categoryList" 
-          :columns="tableColumns" 
+        <a-table
+          :data-source="categoryList"
+          :columns="tableColumns"
           :pagination="paginationConfig"
-          :loading="loading" 
+          :loading="loading"
           row-key="id"
           bordered
           :scroll="{ x: 'max-content' }"
@@ -92,14 +95,23 @@
             </template>
 
             <template v-if="column.key === 'status'">
-              <a-tag :color="record.status === CategoryStatus.Enabled ? 'green' : 'default'">
+              <a-tag
+                :color="
+                  record.status === CategoryStatus.Enabled ? 'green' : 'default'
+                "
+              >
                 {{ record.status === CategoryStatus.Enabled ? '启用' : '禁用' }}
               </a-tag>
             </template>
 
             <template v-if="column.key === 'operator'">
               <div class="operator-info">
-                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.operator_name) }">
+                <a-avatar
+                  size="small"
+                  :style="{
+                    backgroundColor: getAvatarColor(record.operator_name),
+                  }"
+                >
                   {{ getInitials(record.operator_name) }}
                 </a-avatar>
                 <span class="operator-name">{{ record.operator_name }}</span>
@@ -115,17 +127,29 @@
 
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
-                <a-button type="primary" size="small" @click="handleView(record)">
+                <a-button
+                  type="primary"
+                  size="small"
+                  @click="handleView(record)"
+                >
                   查看
                 </a-button>
-                <a-button type="default" size="small" @click="handleEdit(record)">
+                <a-button
+                  type="default"
+                  size="small"
+                  @click="handleEdit(record)"
+                >
                   编辑
                 </a-button>
                 <a-dropdown>
                   <template #overlay>
-                    <a-menu @click="({ key }: any) => handleMenuAction(key, record)">
+                    <a-menu
+                      @click="({ key }: any) => handleMenuAction(key, record)"
+                    >
                       <a-menu-item key="toggleStatus">
-                        <template v-if="record.status === CategoryStatus.Enabled">
+                        <template
+                          v-if="record.status === CategoryStatus.Enabled"
+                        >
                           <StopOutlined />
                           禁用
                         </template>
@@ -154,33 +178,33 @@
     </div>
 
     <!-- 创建/编辑对话框 -->
-    <a-modal 
-      :open="formDialog.visible" 
-      :title="formDialog.isEdit ? '编辑分类' : '创建分类'" 
+    <a-modal
+      :open="formDialog.visible"
+      :title="formDialog.isEdit ? '编辑分类' : '创建分类'"
       :width="dialogWidth"
-      @ok="handleSubmit" 
+      @ok="handleSubmit"
       @cancel="closeFormDialog"
       :confirm-loading="submitLoading"
       destroy-on-close
     >
-      <a-form 
-        ref="formRef" 
-        :model="formDialog.data" 
-        :rules="formRules" 
+      <a-form
+        ref="formRef"
+        :model="formDialog.data"
+        :rules="formRules"
         layout="vertical"
       >
         <a-form-item label="分类名称" name="name">
-          <a-input 
-            v-model:value="formDialog.data.name" 
-            placeholder="请输入分类名称" 
+          <a-input
+            v-model:value="formDialog.data.name"
+            placeholder="请输入分类名称"
             maxlength="100"
           />
         </a-form-item>
 
         <a-form-item label="分类描述" name="description">
-          <a-textarea 
-            v-model:value="formDialog.data.description" 
-            :rows="3" 
+          <a-textarea
+            v-model:value="formDialog.data.description"
+            :rows="3"
             placeholder="请输入分类描述（可选）"
             maxlength="500"
           />
@@ -196,11 +220,11 @@
     </a-modal>
 
     <!-- 详情对话框 -->
-    <a-modal 
-      :open="detailDialog.visible" 
-      title="分类详情" 
-      :width="dialogWidth" 
-      :footer="null" 
+    <a-modal
+      :open="detailDialog.visible"
+      title="分类详情"
+      :width="dialogWidth"
+      :footer="null"
       @cancel="closeDetailDialog"
     >
       <div v-if="detailDialog.data" class="detail-content">
@@ -215,8 +239,18 @@
             {{ detailDialog.data.description || '无描述' }}
           </a-descriptions-item>
           <a-descriptions-item label="状态">
-            <a-tag :color="detailDialog.data.status === CategoryStatus.Enabled ? 'green' : 'default'">
-              {{ detailDialog.data.status === CategoryStatus.Enabled ? '启用' : '禁用' }}
+            <a-tag
+              :color="
+                detailDialog.data.status === CategoryStatus.Enabled
+                  ? 'green'
+                  : 'default'
+              "
+            >
+              {{
+                detailDialog.data.status === CategoryStatus.Enabled
+                  ? '启用'
+                  : '禁用'
+              }}
             </a-tag>
           </a-descriptions-item>
           <a-descriptions-item label="操作人">
@@ -238,10 +272,12 @@
         </div>
       </div>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { message, Modal, type FormInstance } from 'ant-design-vue';
 import {
@@ -250,7 +286,7 @@ import {
   CheckCircleOutlined,
   StopOutlined,
   DownOutlined,
-  DeleteOutlined
+  DeleteOutlined,
 } from '@ant-design/icons-vue';
 
 import {
@@ -265,7 +301,7 @@ import {
   updateWorkorderCategory,
   deleteWorkorderCategory,
   listWorkorderCategory,
-  detailWorkorderCategory
+  detailWorkorderCategory,
 } from '#/api/core/workorder/workorder_category';
 
 /**
@@ -277,41 +313,41 @@ const tableColumns = [
     dataIndex: 'name',
     key: 'name',
     width: 200,
-    ellipsis: true
+    ellipsis: true,
   },
   {
     title: '描述',
     dataIndex: 'description',
     key: 'description',
     width: 250,
-    ellipsis: true
+    ellipsis: true,
   },
   {
     title: '状态',
     dataIndex: 'status',
     key: 'status',
     width: 100,
-    align: 'center' as const
+    align: 'center' as const,
   },
   {
     title: '操作人',
     dataIndex: 'operator_name',
     key: 'operator',
-    width: 150
+    width: 150,
   },
   {
     title: '创建时间',
     dataIndex: 'created_at',
     key: 'created_at',
-    width: 180
+    width: 180,
   },
   {
     title: '操作',
     key: 'action',
     width: 200,
     align: 'center' as const,
-    fixed: 'right' as const
-  }
+    fixed: 'right' as const,
+  },
 ];
 
 /**
@@ -336,7 +372,7 @@ const categoryList = ref<WorkorderCategoryItem[]>([]);
 const statistics = reactive({
   total: 0,
   enabled: 0,
-  disabled: 0
+  disabled: 0,
 });
 
 // 表单引用
@@ -361,7 +397,7 @@ const paginationConfig = computed(() => ({
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
-  pageSizeOptions: ['10', '20', '50', '100']
+  pageSizeOptions: ['10', '20', '50', '100'],
 }));
 
 /**
@@ -373,13 +409,13 @@ const formDialog = reactive({
   data: {
     name: '',
     description: '',
-    status: CategoryStatus.Enabled
-  } as CreateWorkorderCategoryReq & { id?: number }
+    status: CategoryStatus.Enabled,
+  } as CreateWorkorderCategoryReq & { id?: number },
 });
 
 const detailDialog = reactive({
   visible: false,
-  data: null as WorkorderCategoryItem | null
+  data: null as WorkorderCategoryItem | null,
 });
 
 /**
@@ -388,11 +424,9 @@ const detailDialog = reactive({
 const formRules = {
   name: [
     { required: true, message: '请输入分类名称', trigger: 'blur' },
-    { min: 2, max: 100, message: '分类名称长度为2-100个字符', trigger: 'blur' }
+    { min: 2, max: 100, message: '分类名称长度为2-100个字符', trigger: 'blur' },
   ],
-  status: [
-    { required: true, message: '请选择状态', trigger: 'change' }
-  ]
+  status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 };
 
 /**
@@ -403,7 +437,7 @@ const loadCategoryList = async (): Promise<void> => {
   try {
     const params: ListWorkorderCategoryReq = {
       page: currentPage.value,
-      size: pageSize.value
+      size: pageSize.value,
     };
 
     // 添加搜索条件
@@ -429,7 +463,6 @@ const loadCategoryList = async (): Promise<void> => {
       total.value = 0;
     }
   } catch (error) {
-
     message.error('加载分类列表失败');
     categoryList.value = [];
     total.value = 0;
@@ -443,8 +476,12 @@ const loadCategoryList = async (): Promise<void> => {
  */
 const updateStatistics = (): void => {
   statistics.total = total.value;
-  statistics.enabled = categoryList.value.filter(item => item.status === CategoryStatus.Enabled).length;
-  statistics.disabled = categoryList.value.filter(item => item.status === CategoryStatus.Disabled).length;
+  statistics.enabled = categoryList.value.filter(
+    (item) => item.status === CategoryStatus.Enabled,
+  ).length;
+  statistics.disabled = categoryList.value.filter(
+    (item) => item.status === CategoryStatus.Disabled,
+  ).length;
 };
 
 /**
@@ -485,7 +522,7 @@ const handleCreate = (): void => {
   formDialog.data = {
     name: '',
     description: '',
-    status: CategoryStatus.Enabled
+    status: CategoryStatus.Enabled,
   };
   formDialog.visible = true;
 };
@@ -505,13 +542,12 @@ const handleEdit = async (record: WorkorderCategoryItem): Promise<void> => {
         id: response.id,
         name: response.name,
         description: response.description || '',
-        status: response.status
+        status: response.status,
       };
       formDialog.visible = true;
       detailDialog.visible = false; // 如果是从详情对话框打开的，关闭详情对话框
     }
   } catch (error) {
-
     message.error('加载分类详情失败');
   }
 };
@@ -530,7 +566,6 @@ const handleView = async (record: WorkorderCategoryItem): Promise<void> => {
       detailDialog.visible = true;
     }
   } catch (error) {
-
     message.error('加载分类详情失败');
   }
 };
@@ -549,15 +584,20 @@ const handleMenuAction = (key: string, record: WorkorderCategoryItem): void => {
 /**
  * 状态切换
  */
-const handleToggleStatus = async (record: WorkorderCategoryItem): Promise<void> => {
+const handleToggleStatus = async (
+  record: WorkorderCategoryItem,
+): Promise<void> => {
   try {
-    const newStatus = record.status === CategoryStatus.Enabled ? CategoryStatus.Disabled : CategoryStatus.Enabled;
+    const newStatus =
+      record.status === CategoryStatus.Enabled
+        ? CategoryStatus.Disabled
+        : CategoryStatus.Enabled;
 
     const params: UpdateWorkorderCategoryReq = {
       id: record.id!,
       name: record.name,
       description: record.description,
-      status: newStatus
+      status: newStatus,
     };
 
     await updateWorkorderCategory(params);
@@ -568,7 +608,6 @@ const handleToggleStatus = async (record: WorkorderCategoryItem): Promise<void> 
     // 重新加载当前页数据
     await loadCategoryList();
   } catch (error) {
-
     message.error('更新分类状态失败');
   }
 };
@@ -597,10 +636,9 @@ const handleDelete = (record: WorkorderCategoryItem): void => {
 
         await loadCategoryList();
       } catch (error) {
-
         message.error('删除分类失败');
       }
-    }
+    },
   });
 };
 
@@ -624,7 +662,7 @@ const handleSubmit = async (): Promise<void> => {
         id: formDialog.data.id!,
         name: formDialog.data.name,
         description: formDialog.data.description,
-        status: formDialog.data.status
+        status: formDialog.data.status,
       };
 
       await updateWorkorderCategory(params);
@@ -634,7 +672,7 @@ const handleSubmit = async (): Promise<void> => {
       const params: CreateWorkorderCategoryReq = {
         name: formDialog.data.name,
         description: formDialog.data.description,
-        status: formDialog.data.status
+        status: formDialog.data.status,
       };
 
       await createWorkorderCategory(params);
@@ -647,7 +685,6 @@ const handleSubmit = async (): Promise<void> => {
     closeFormDialog();
     await loadCategoryList();
   } catch (error) {
-
     message.error('保存分类失败');
   } finally {
     submitLoading.value = false;
@@ -676,9 +713,9 @@ const formatDate = (dateStr: string): string => {
 
 const formatTime = (dateStr: string): string => {
   if (!dateStr) return '';
-  return new Date(dateStr).toLocaleTimeString('zh-CN', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  return new Date(dateStr).toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
   });
 };
 
@@ -695,8 +732,14 @@ const getInitials = (name: string): string => {
 
 const getAvatarColor = (name: string): string => {
   const colors = [
-    '#1890ff', '#52c41a', '#faad14', '#f5222d',
-    '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
   ];
 
   let hash = 0;
@@ -730,22 +773,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.workorder-category-container {
-  padding: 12px;
-  min-height: 100vh;
-}
-
-.page-header {
-  margin-bottom: 20px;
-}
-
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
 .create-btn {
   background: var(--ops-accent);
   border: none;
@@ -775,12 +802,6 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
-}
-
-.stats-card {
-  border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  height: 100%;
 }
 
 .table-container {
@@ -864,14 +885,6 @@ onMounted(() => {
 
 /* 移动端适配 */
 @media (max-width: 768px) {
-  .workorder-category-container {
-    padding: 8px;
-  }
-
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
 
   .search-filters {
     width: 100%;
@@ -932,9 +945,6 @@ onMounted(() => {
 
 /* 平板端适配 */
 @media (max-width: 1024px) and (min-width: 769px) {
-  .workorder-category-container {
-    padding: 16px;
-  }
 
   .search-input {
     width: 200px;
@@ -947,13 +957,6 @@ onMounted(() => {
 
 /* 超小屏幕适配 */
 @media (max-width: 480px) {
-  .header-actions {
-    gap: 8px;
-  }
-
-  .stats-card {
-    text-align: center;
-  }
 
   .operator-info {
     flex-direction: column;
