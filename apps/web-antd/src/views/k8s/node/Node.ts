@@ -524,9 +524,6 @@ export function useNodePage() {
     };
   };
 
-  // 要添加或更新的污点（按 key 整组发送，见 planTaintChanges）
-  const getTaintsToAdd = (): CoreTaint[] => planTaintChanges().taintsToAdd;
-
   // c-7：没有可提交的变更时「保存更改」禁用
   const hasTaintChanges = computed(() => {
     const plan = planTaintChanges();
