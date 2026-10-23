@@ -304,7 +304,8 @@
 
         <template #actions="{ record }">
           <div class="k8s-action-column">
-            <a-tooltip v-if="can('k8s.secret.viewPlain')" title="查看详情">
+            <!-- SEC-25/26 第 4 条：详情入口按详情码（普通权限），明文按钮在详情内另按 reveal 码门禁 -->
+            <a-tooltip v-if="hasPerm(SECRET_DETAIL_PERMISSION_CODE)" title="查看详情">
               <a-button title="查看详情" @click="showSecretDetail(record)">
                 <template #icon><EyeOutlined aria-hidden="true"  /></template>
               </a-button>
@@ -1130,10 +1131,11 @@ import {
   ClearOutlined,
 } from '@ant-design/icons-vue';
 
+import { SECRET_DETAIL_PERMISSION_CODE } from '#/constants/permission-codes';
 import { usePermission } from '#/utils/permission';
 import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
 
 const {
   // state

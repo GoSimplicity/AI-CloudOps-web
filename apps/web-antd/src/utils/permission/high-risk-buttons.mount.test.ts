@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ALL_PERMISSION_CODES,
   type PermissionKey,
+  SECRET_DETAIL_PERMISSION_CODE,
 } from '#/constants/permission-codes';
 
 /**
@@ -73,9 +74,18 @@ const pages = {
 
 let wrapper: undefined | VueWrapper<any>;
 
-function setSubject(keys: PermissionKey[]) {
+/** 不属于清单按钮 key 的路由码（SEC-25/26 第 4 条：Secret 详情码），直接以码字符串参与 */
+type Gate = PermissionKey | typeof SECRET_DETAIL_PERMISSION_CODE;
+
+function codeOf(gate: Gate): string {
+  return gate === SECRET_DETAIL_PERMISSION_CODE
+    ? gate
+    : ALL_PERMISSION_CODES[gate];
+}
+
+function setSubject(keys: Gate[]) {
   useUserStore().setUserInfo({ roles: ['ops'], username: 'ops' } as any);
-  useAccessStore().setAccessCodes(keys.map((key) => ALL_PERMISSION_CODES[key]));
+  useAccessStore().setAccessCodes(keys.map((key) => codeOf(key)));
 }
 
 async function mountPage(page: keyof typeof pages) {
@@ -136,10 +146,10 @@ type Case = {
   /** 用例名 */
   name: string;
   page: keyof typeof pages;
-  /** 被测按钮 key */
-  key: PermissionKey;
+  /** 被测按钮 key（或非清单路由码） */
+  key: Gate;
   /** 打开按钮所在界面所需的其它码（不含被测 key） */
-  prerequisite?: PermissionKey[];
+  prerequisite?: Gate[];
   /** 挂载后到达按钮所在界面的操作（勾选行、打开详情） */
   prepare?: () => Promise<void>;
   /** 返回被测按钮的渲染结果 */
@@ -193,9 +203,10 @@ const CASES: Case[] = [
     find: () => all('button[title="批量删除选中的命名空间"]'),
   },
   {
-    name: 'Secret 查看明文（查看详情）',
+    // SEC-25/26 第 4 条：详情入口改由详情码控制（不再用 viewPlain/reveal 码）
+    name: 'Secret 查看详情（详情码）',
     page: 'Secret',
-    key: 'k8s.secret.viewPlain',
+    key: SECRET_DETAIL_PERMISSION_CODE,
     find: () => rowButtons('查看详情'),
   },
   {
@@ -310,5 +321,22 @@ describe('高危按钮挂载级门禁（非 admin 账号）', () => {
       await item.prepare?.();
       expect(item.find().length).toBeGreaterThan(0);
     });
+  });
+});
+
+describe('Secret 查看详情与明文分层（SEC-25/26 第 4 条）', () => {
+  it('只有 reveal 码（viewPlain/copyPlain）：不渲染「查看详情」', async () => {
+    setSubject(['k8s.secret.viewPlain', 'k8s.secret.copyPlain']);
+    await mountPage('Secret');
+    expect(rowButtons('查看详情')).toHaveLength(0);
+  });
+
+  it('只有详情码：渲染「查看详情」，详情内没有查看 / 复制明文按钮', async () => {
+    setSubject([SECRET_DETAIL_PERMISSION_CODE]);
+    await mountPage('Secret');
+    expect(rowButtons('查看详情')).toHaveLength(1);
+    await openRedactedSecretDetail();
+    expect(all('.secret-data-keys button.secret-view-plain')).toHaveLength(0);
+    expect(buttonsByText('复制内容', '.secret-data-keys')).toHaveLength(0);
   });
 });

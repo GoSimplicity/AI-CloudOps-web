@@ -337,6 +337,17 @@ export const U3_PERMISSION_CODES = {
 } as const;
 
 /** 全部按钮 key → 权限码（S1 ∪ S1b ∪ S2 ∪ S3） */
+/**
+ * Secret 详情路由码（SEC-25/26 第 4 条：详情与明文分层）。
+ * 即清单 v4 #46/#47 原来的临时码（permission-codes.md 第 6 节 JSON `k8s.secret.viewPlain/copyPlain.code`、
+ * 第 7 节 #27 `GET /api/k8s/secret/:cluster_id/:namespace/:name/detail`，后端 internal/k8s/api/secret.go:51）。
+ * 「查看详情」入口按此码走普通权限体系（super/admin 角色、通配码按旧规则放行），详情只返回脱敏内容。
+ * 不进 PERMISSION_CODES 等按钮 key 表：v4 清单没有独立的「查看详情」按钮 key，放进去会改变 v4 码集计数，
+ * 是否在清单补一个按钮 key 待产品（面包）确认。
+ */
+export const SECRET_DETAIL_PERMISSION_CODE =
+  '/api/k8s/secret/:cluster_id/:namespace/:name/detail';
+
 /** Secret 明文 reveal 路由码（SEC-25/26，显式授权码，只认精确匹配） */
 export const SECRET_REVEAL_PERMISSION_CODE =
   PERMISSION_CODES['k8s.secret.viewPlain'];
