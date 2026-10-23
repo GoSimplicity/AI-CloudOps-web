@@ -60,8 +60,21 @@ function readBadRequestDetail(data: any): string {
 }
 
 /**
+ * autofix 接口（路径里有独立的 autofix 段：/autofix、/autofix/…、…/api/v1/autofix/…，可带查询串）。
+ * SEC-26 规则 3：autofix 错误提示不透出后端 message；与 P2-2「400 透出后端原文」重叠时以 SEC-26 为准
+ * （窝窝头 2026-10-24，待面包最终确认），所以这类接口的 400 仍用通用文案。
+ */
+const AUTOFIX_REQUEST_PATTERN = /(?:^|\/)autofix(?=[/?#]|$)/i;
+
+export function isAutofixRequest(error: any): boolean {
+  const url = error?.config?.url;
+  return typeof url === 'string' && AUTOFIX_REQUEST_PATTERN.test(url);
+}
+
+/**
  * 按错误改写通用错误拦截器给出的文案（只用于 HTTP / 传输层错误，业务错误不经过这里）：
  * - 400：显示后端原文（去换行、截断到 200 字），原文为空时用通用文案（FE-02b incr3 P2-2）；
+ *   autofix 接口除外（isAutofixRequest，仍用通用文案，以 SEC-26 规则 3 为准）；
  * - 409 / 429：专门文案（不带错误码）；
  * - 浏览器中止请求（xhr onabort / onloadend status 0 → AxiosError code ECONNABORTED，没有 response）：
  *   packages 里既不算网络错误也不算超时，落到「内部服务器错误」；这里按网络异常提示。
@@ -70,7 +83,10 @@ function readBadRequestDetail(data: any): string {
  */
 export function resolveHttpErrorMessage(msg: string, error: any): string {
   const status = error?.response?.status;
-  if (status === 400) return readBadRequestDetail(error.response.data) || msg;
+  if (status === 400) {
+    if (isAutofixRequest(error)) return msg;
+    return readBadRequestDetail(error.response.data) || msg;
+  }
   if (status === 409) return HTTP_CONFLICT_MESSAGE;
   if (status === 429) return HTTP_TOO_MANY_REQUESTS_MESSAGE;
   if (

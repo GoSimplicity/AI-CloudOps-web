@@ -7,7 +7,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * FE-02b：400 / 409 / 429 / 浏览器中止请求的请求层提示文案（应用层 request.ts 回调里改写，不改 packages）
  * - 409 →「数据已变化，请刷新后重试」，429 →「请求过于频繁，请稍后重试」（文案不带错误码，常量收口在
  *   constants/http-error-messages.ts，incr3 P2-1）
- * - incr3 P2-2：400 显示后端原文（去换行、截断到 200 字），原文为空用通用文案
+ * - incr3 P2-2：400 显示后端原文（去换行、截断到 200 字），原文为空用通用文案；
+ *   autofix 接口（/autofix/…）例外，仍不透出后端原文（与 SEC-26 规则 3 重叠时以 SEC-26 为准，窝窝头 2026-10-24）
  * - P3-C / incr3 P3-2：浏览器中止请求（xhr onabort / onloadend status 0：ECONNABORTED，没有 response，不是超时）
  *   不再显示「内部服务器错误」，按网络异常提示；不依赖 'Request aborted' 原文，axios 行为由 xhr 用例锁定
  * - 401 / 403 / 5xx、业务错误（HTTP 200 + code≠0，含 code 409 / 429）、取消类不受影响
@@ -70,6 +71,7 @@ import {
   HTTP_ERROR_MESSAGE_KEY_PREFIX,
   HTTP_TOO_MANY_REQUESTS_MESSAGE,
   requestClient,
+  requestClientAIOps,
 } from './request';
 
 function reply(config: any, status: number, data: unknown) {
@@ -211,6 +213,37 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
     ])('%s：用通用的请求错误文案', async (_label, data) => {
       await call(adapterOf(400, data));
       expectSingleHttpNotice($t('fallback.http.badRequest'));
+    });
+  });
+
+  describe('incr3 P2-2 例外：autofix 接口 400 不透出后端原文（以 SEC-26 规则 3 为准）', () => {
+    const BACKEND = { code: 400, data: null, message: '后端原文 WORKFLOW_APPROVAL_ERROR' };
+
+    it.each([
+      ['POST /autofix/workflow', () => requestClientAIOps.post('/autofix/workflow', {}, { adapter: adapterOf(400, BACKEND) })],
+      ['POST /autofix/workflow/confirm', () => requestClientAIOps.post('/autofix/workflow/confirm', {}, { adapter: adapterOf(400, BACKEND) })],
+      ['GET /autofix/info', () => requestClientAIOps.get('/autofix/info', { adapter: adapterOf(400, BACKEND) })],
+      ['GET autofix/ready?x=1（无前导斜杠、带查询串）', () => requestClientAIOps.get('autofix/ready?x=1', { adapter: adapterOf(400, BACKEND) })],
+      ['绝对地址 …/api/v1/autofix/workflow', () => requestClientAIOps.post('http://127.0.0.1:9/api/v1/autofix/workflow', {}, { adapter: adapterOf(400, BACKEND) })],
+    ])('%s：只弹一条通用的请求错误文案，不含后端原文', async (_label, run) => {
+      await run().catch((error) => error);
+      expectSingleHttpNotice($t('fallback.http.badRequest'));
+      expect(JSON.stringify(notices.error.mock.calls)).not.toContain('WORKFLOW_APPROVAL_ERROR');
+    });
+
+    it.each([
+      ['aiops 其它接口 /rca/analyze', () => requestClientAIOps.post('/rca/analyze', {}, { adapter: adapterOf(400, BACKEND) })],
+      ['主站路径只是包含 autofix 字样 /k8s/autofixer', () => requestClient.post('/k8s/autofixer', {}, { adapter: adapterOf(400, BACKEND) })],
+    ])('对照：%s 仍显示后端原文', async (_label, run) => {
+      await run().catch((error) => error);
+      expectSingleHttpNotice(BACKEND.message);
+    });
+
+    it('autofix 接口的 409 / 5xx 不受影响（仍是原有通用文案）', async () => {
+      await requestClientAIOps
+        .post('/autofix/workflow/confirm', {}, { adapter: adapterOf(409, BACKEND) })
+        .catch((error) => error);
+      expectSingleHttpNotice(HTTP_CONFLICT_MESSAGE);
     });
   });
 
