@@ -1,27 +1,15 @@
 <template>
-  <div class="predict-analysis">
+  <OpsPage title="预测分析" description="明确开始后预测单个指标，保留真实时间、零值与缺失区间" class="predict-analysis">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <div class="header-icon">
-            <LineChartOutlined />
-          </div>
-          <div class="header-text">
-            <h1 class="page-title">智能预测分析</h1>
-            <p class="page-subtitle">深度分析和预测系统性能趋势</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <a-button @click="resetForm">
+    <template #actions>
+<a-space wrap><a-button @click="resetForm">
             重置
           </a-button>
-          <a-button type="primary" @click="startAnalysis" :loading="analyzing" :disabled="!isFormValid">
+<a-button type="primary" @click="startAnalysis" :loading="analyzing" :disabled="!isFormValid || analyzing">
             开始分析
-          </a-button>
-        </div>
-      </div>
-    </div>
+          </a-button></a-space>
+    </template>
+    <a-alert v-if="predictionError" :message="predictionError" type="error" show-icon role="alert" />
 
     <a-row :gutter="[24, 24]">
       <a-col :xs="24" :lg="8">
@@ -136,15 +124,16 @@
               </a-collapse-panel>
             </a-collapse>
           </a-form>
+          <p class="request-note">仅点击开始分析时调用服务；重置或改参数不会取消已发出的预测。</p>
         </a-card>
       </a-col>
 
       <a-col :xs="24" :lg="16">
         <a-card title="预测结果" class="result-card" v-if="predictionResult">
           <template #extra>
-            <a-space>
+            <a-space wrap>
               <a-tag :color="getAccuracyColor(predictionResult.model_accuracy)">
-                模型准确率: {{ ((predictionResult.model_accuracy || 0) * 100).toFixed(1) }}%
+                模型准确率: {{ Number.isFinite(predictionResult.model_accuracy) ? (predictionResult.model_accuracy! * 100).toFixed(1) + '%' : '未知' }}
               </a-tag>
               <a-button size="small" @click="exportResult">
                 <DownloadOutlined />
@@ -168,7 +157,7 @@
             <template #image>
               <BarChartOutlined style="font-size: 64px; color: #bfbfbf;" />
             </template>
-            <a-button type="primary" @click="startAnalysis" :loading="analyzing" :disabled="!isFormValid">
+            <a-button type="primary" @click="startAnalysis" :loading="analyzing" :disabled="!isFormValid || analyzing">
               开始预测分析
             </a-button>
           </a-empty>
@@ -210,11 +199,15 @@
         </a-card>
       </a-col>
     </a-row>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick, onUnmounted } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useAiRequestScope } from '../assistant/useAiRequestScope';
+import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
+import { forecastPoints, confidenceValues, formatPredictionTime } from './prediction-series';
+import { ref, reactive, computed, onMounted, nextTick, onUnmounted, watch } from 'vue';
 // 按需引入echarts，减少打包体积
 import * as echarts from 'echarts/core';
 import { LineChart } from 'echarts/charts';
@@ -229,7 +222,6 @@ echarts.use([
 ]);
 import { message } from 'ant-design-vue';
 import {
-  LineChartOutlined,
   ThunderboltOutlined,
   ApiOutlined,
   DatabaseOutlined,
@@ -252,6 +244,7 @@ import {
 } from '#/api/core/aiops/predict';
 
 const analyzing = ref(false);
+const predictionError = ref('');
 const activeChartTab = ref('trend');
 const predictionResult = ref<PredictionResponse | null>(null);
 
@@ -272,6 +265,12 @@ const formData = reactive({
   enableAiInsights: true
 });
 
+const scope = useAiRequestScope(() => { analysisLane.invalidate(); analyzing.value = false; predictionError.value = ''; predictionResult.value = null; disposeCharts(); formData.currentValue = null; });
+const analysisLane = scope.createLane();
+watch(formData, () => { analysisLane.invalidate(); analyzing.value = false; predictionError.value = ''; predictionResult.value = null; disposeCharts(); }, { flush: 'sync' });
+useChartAppearance(() => { if (predictionResult.value) initCharts(); });
+function disposeCharts() { trendChart?.dispose(); confidenceChart?.dispose(); trendChart = null; confidenceChart = null; }
+
 const timeMarks = {
   1: '1h',
   6: '6h',
@@ -282,7 +281,7 @@ const timeMarks = {
 
 // 表单验证
 const isFormValid = computed(() => {
-  return formData.currentValue !== null && 
+  return !!scope.owner.value && Number.isFinite(formData.currentValue) && formData.currentValue !== null &&
          formData.currentValue >= 0 &&
          formData.currentValue <= getCurrentValueMax();
 });
@@ -318,6 +317,7 @@ const getCurrentValueMax = () => {
 };
 
 const onPredictionTypeChange = () => {
+  analysisLane.invalidate(); analyzing.value = false; predictionError.value = ''; disposeCharts();
   // 清空当前值，让用户重新填写
   formData.currentValue = null;
   // 清空之前的预测结果
@@ -325,12 +325,14 @@ const onPredictionTypeChange = () => {
 };
 
 const startAnalysis = async () => {
+  if (!scope.owner.value || analyzing.value) return;
   if (!isFormValid.value) {
     message.warning(`请填写有效的${getCurrentValueLabel()}值`);
     return;
   }
 
-  analyzing.value = true;
+  const ticket = analysisLane.begin();
+  analyzing.value = true; predictionResult.value = null; predictionError.value = ''; disposeCharts();
   try {
     let response: PredictionResponse;
 
@@ -373,16 +375,20 @@ const startAnalysis = async () => {
         throw new Error('不支持的预测类型');
     }
 
+    if (!analysisLane.current(ticket)) return;
+    forecastPoints(response);
     predictionResult.value = response;
 
     await nextTick();
+    if (!analysisLane.current(ticket)) return;
     initCharts();
     message.success('预测分析完成');
   } catch (error) {
-
-    message.error('预测分析失败，请检查输入参数');
+    if (!analysisLane.current(ticket)) return;
+    predictionResult.value = null; disposeCharts();
+    predictionError.value = error instanceof Error ? error.message : '预测分析失败，请核对输入后重试';
   } finally {
-    analyzing.value = false;
+    if (analysisLane.current(ticket)) analyzing.value = false;
   }
 };
 
@@ -396,20 +402,23 @@ const initCharts = () => {
 const initTrendChart = () => {
   if (!trendChartRef.value || !predictionResult.value) return;
 
+  trendChart?.dispose();
   trendChart = echarts.init(trendChartRef.value);
 
-  const data = predictionResult.value.predicted_data;
+  const data = forecastPoints(predictionResult.value).map(item => item.point);
   const xAxisData = data.map(point => formatTimeForChart(point.timestamp));
   const predictedData = data.map(point => point.predicted_value);
 
   const option = {
+    textStyle: { color: chartColors().text },
+    backgroundColor: "transparent",
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'cross' }
     },
     legend: {
       data: ['预测值', '当前值'],
-      textStyle: { color: 'var(--ant-text-color)' }
+      textStyle: { color: chartColors().text }
     },
     grid: {
       left: '3%',
@@ -420,13 +429,13 @@ const initTrendChart = () => {
     xAxis: {
       type: 'category',
       data: xAxisData,
-      axisLine: { lineStyle: { color: 'var(--ant-border-color)' } }
+      axisLine: { lineStyle: { color: chartColors().border } }
     },
     yAxis: {
       type: 'value',
       name: getCurrentValueLabel(),
-      axisLine: { lineStyle: { color: 'var(--ant-border-color)' } },
-      splitLine: { lineStyle: { color: 'var(--ant-border-color-split)' } }
+      axisLine: { lineStyle: { color: chartColors().border } },
+      splitLine: { lineStyle: { color: chartColors().border } }
     },
     series: [
       {
@@ -452,29 +461,32 @@ const initTrendChart = () => {
 const initConfidenceChart = () => {
   if (!confidenceChartRef.value || !predictionResult.value) return;
 
+  confidenceChart?.dispose();
   confidenceChart = echarts.init(confidenceChartRef.value);
 
-  const data = predictionResult.value.predicted_data;
+  const data = forecastPoints(predictionResult.value).map(item => item.point);
   const xAxisData = data.map(point => formatTimeForChart(point.timestamp));
   const predictedData = data.map(point => point.predicted_value);
-  const upperData = data.map(point => point.confidence_upper || point.predicted_value);
-  const lowerData = data.map(point => point.confidence_lower || point.predicted_value);
+  const upperData = confidenceValues(data, 'confidence_upper');
+  const lowerData = confidenceValues(data, 'confidence_lower');
 
   const option = {
+    textStyle: { color: chartColors().text },
+    backgroundColor: "transparent",
     tooltip: {
       trigger: 'axis',
       formatter: (params: any) => {
         const dataIndex = params[0].dataIndex;
         const time = xAxisData[dataIndex];
         const predicted = predictedData[dataIndex];
-        const upper = upperData[dataIndex];
-        const lower = lowerData[dataIndex];
+        const upper = upperData[dataIndex] ?? '未知';
+        const lower = lowerData[dataIndex] ?? '未知';
         return `时间: ${time}<br/>预测值: ${predicted}<br/>置信上限: ${upper}<br/>置信下限: ${lower}`;
       }
     },
     legend: {
       data: ['预测值', '置信上限', '置信下限'],
-      textStyle: { color: 'var(--ant-text-color)' }
+      textStyle: { color: chartColors().text }
     },
     grid: {
       left: '3%',
@@ -485,12 +497,12 @@ const initConfidenceChart = () => {
     xAxis: {
       type: 'category',
       data: xAxisData,
-      axisLine: { lineStyle: { color: 'var(--ant-border-color)' } }
+      axisLine: { lineStyle: { color: chartColors().border } }
     },
     yAxis: {
       type: 'value',
-      axisLine: { lineStyle: { color: 'var(--ant-border-color)' } },
-      splitLine: { lineStyle: { color: 'var(--ant-border-color-split)' } }
+      axisLine: { lineStyle: { color: chartColors().border } },
+      splitLine: { lineStyle: { color: chartColors().border } }
     },
     series: [
       {
@@ -522,7 +534,9 @@ const initConfidenceChart = () => {
 
 const onChartTabChange = (key: string) => {
   activeChartTab.value = key;
+  const result = predictionResult.value;
   nextTick(() => {
+    if (predictionResult.value !== result || !result || activeChartTab.value !== key) return;
     switch (key) {
       case 'trend':
         initTrendChart();
@@ -535,9 +549,9 @@ const onChartTabChange = (key: string) => {
 };
 
 const getAccuracyColor = (accuracy?: number) => {
-  if (!accuracy) return 'default';
-  if (accuracy > 0.9) return 'green';
-  if (accuracy > 0.7) return 'orange';
+  if (!Number.isFinite(accuracy)) return 'default';
+  if (accuracy! > 0.9) return 'green';
+  if (accuracy! > 0.7) return 'orange';
   return 'red';
 };
 
@@ -569,35 +583,11 @@ const getActionIcon = (action: string) => {
 };
 
 // 时间转换工具函数：UTC转北京时间
-const convertToBeijingTime = (utcTimestamp: string | Date): Date => {
-  const date = typeof utcTimestamp === 'string' ? new Date(utcTimestamp) : utcTimestamp;
-  // 北京时间 = UTC时间 + 8小时
-  return new Date(date.getTime() + 8 * 60 * 60 * 1000);
-};
-
-const formatTime = (timestamp: string) => {
-  const beijingTime = convertToBeijingTime(timestamp);
-  return beijingTime.toLocaleString('zh-CN', { 
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-};
-
-const formatTimeForChart = (timestamp: string | Date): string => {
-  const beijingTime = convertToBeijingTime(timestamp);
-  return beijingTime.toLocaleTimeString('zh-CN', {
-    timeZone: 'Asia/Shanghai',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
+const formatTime = (timestamp: string) => formatPredictionTime(timestamp);
+const formatTimeForChart = (timestamp: string | Date) => formatPredictionTime(timestamp, true);
 
 const resetForm = () => {
+  analysisLane.invalidate(); analyzing.value = false; predictionError.value = ''; disposeCharts();
   Object.assign(formData, {
     predictionType: 'qps',
     currentValue: null,
@@ -610,7 +600,7 @@ const resetForm = () => {
     enableAiInsights: true
   });
   predictionResult.value = null;
-  message.success('表单已重置');
+
 };
 
 const exportResult = () => {
@@ -653,65 +643,15 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.predict-analysis {
-  padding: 24px;
-  background-color: var(--ant-background-color-light, var(--ops-ground));
-  min-height: 100vh;
-}
 
 /* 页面头部 */
-.predict-analysis .page-header {
-  background: var(--ops-surface);
-  border-radius: var(--ops-radius);
-  padding: 16px 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--ops-border);
-}
 
-.predict-analysis .header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
 
-.predict-analysis .header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
 
-.predict-analysis .header-icon {
-  font-size: 32px;
-  color: #1890ff;
-}
 
-.predict-analysis .header-text {
-  display: flex;
-  flex-direction: column;
-}
 
-.predict-analysis .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--ops-ink);
-  line-height: 1.2;
-}
 
-.predict-analysis .page-subtitle {
-  color: var(--ops-muted);
-  margin: 0;
-  font-size: 12px;
-  margin-top: 4px;
-}
 
-.predict-analysis .header-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
 
 .config-card,
 .result-card,
@@ -719,8 +659,8 @@ onUnmounted(() => {
 .recommendations-card,
 .insights-card {
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 24px;
+  box-shadow: none;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .option-content {
@@ -756,14 +696,13 @@ onUnmounted(() => {
   display: flex;
   gap: 16px;
   padding: 16px;
-  border: 1px solid var(--ant-border-color-split);
+  border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
-  transition: all 0.3s;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .recommendation-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+  box-shadow: none;
 }
 
 .rec-icon {
@@ -791,7 +730,7 @@ onUnmounted(() => {
 
 .rec-confidence {
   font-size: 12px;
-  color: var(--ant-text-color-secondary);
+  color: var(--ops-muted);
 }
 
 .rec-details {
@@ -799,12 +738,12 @@ onUnmounted(() => {
 }
 
 .rec-time {
-  color: var(--ant-text-color-secondary);
+  color: var(--ops-muted);
   margin-bottom: 4px;
 }
 
 .rec-reason {
-  color: var(--ant-text-color);
+  color: var(--ops-ink);
 }
 
 .insights-list {
@@ -816,7 +755,7 @@ onUnmounted(() => {
   display: flex;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--ant-border-color-split);
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .insight-item:last-child {
@@ -833,47 +772,22 @@ onUnmounted(() => {
   flex: 1;
   font-size: 14px;
   line-height: 1.5;
-  color: var(--ant-text-color);
+  color: var(--ops-ink);
 }
 
 @media (max-width: 1200px) {
   .predict-analysis :deep(.ant-col-lg-8) {
-    margin-bottom: 24px;
+    margin-bottom: var(--ops-space-lg);
   }
 }
 
 @media (max-width: 768px) {
-  .predict-analysis {
-    padding: 16px;
-  }
 
-  .predict-analysis .page-header {
-    padding: 20px;
-    margin-bottom: 16px;
-  }
 
-  .predict-analysis .header-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
 
-  .predict-analysis .header-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
 
-  .predict-analysis .page-title {
-    font-size: 20px;
-  }
 
-  .predict-analysis .page-subtitle {
-    font-size: 13px;
-  }
 
-  .predict-analysis .header-icon {
-    font-size: 36px;
-  }
 
   .chart-container {
     height: 300px;
@@ -883,4 +797,12 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 575px) {
+  .metric-name { overflow-wrap: anywhere; }
+  .metric-value { font-size: 18px; }
+  .cost-overview { grid-template-columns: 1fr; }
+  .chart-container, .chart-container-small { min-width: 0; }
+}
+.request-note { color: var(--ops-muted); font-size: 12px; margin: var(--ops-space-md) 0 0; }
 </style>

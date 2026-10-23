@@ -1,7 +1,9 @@
 import { shallowMount } from '@vue/test-utils';
+import { reactive } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PredictDashboard from './PredictDashboard.vue';
 
+vi.mock('@vben/stores', () => ({ useUserStore: () => reactive({ userInfo: { userId: '1' } }), useAccessStore: () => reactive({ accessToken: 'offline' }) }));
 const api = vi.hoisted(() => ({ predictQps: vi.fn(), predictCpu: vi.fn(), predictMemory: vi.fn(), predictDisk: vi.fn() }));
 const messages = vi.hoisted(() => ({ success: vi.fn(), warning: vi.fn(), error: vi.fn() }));
 vi.mock('#/api/core/aiops/predict', () => api);

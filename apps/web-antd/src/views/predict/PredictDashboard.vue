@@ -1,30 +1,18 @@
 <template>
-  <div class="predict-dashboard">
+  <OpsPage title="预测看板" description="对输入指标发起预测，各序列按实际时间对齐" class="predict-dashboard">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <div class="header-icon">
-            <BarChartOutlined />
-          </div>
-          <div class="header-text">
-            <h1 class="page-title">AI预测看板</h1>
-            <p class="page-subtitle">智能预测系统资源使用趋势</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <a-button @click="resetForm">
+    <template #actions>
+<a-space wrap><a-button @click="resetForm">
             重置
           </a-button>
-          <a-button type="primary" @click="refreshAllPredictions" :loading="loading" :disabled="!isFormValid">
+<a-button type="primary" @click="refreshAllPredictions" :loading="loading" :disabled="!isFormValid || loading">
             {{ hasInitialData ? '刷新预测' : '开始预测' }}
-          </a-button>
-        </div>
-      </div>
-    </div>
+          </a-button></a-space>
+    </template>
+    <a-alert v-if="predictionError" :message="predictionError" type="error" show-icon role="alert" />
 
     <!-- 数据输入区域 -->
-    <a-card title="输入当前指标数据" class="input-card" :class="{ 'highlight-required': !hasInitialData }">
+    <a-card title="输入当前指标数据" class="input-card" >
       <template #extra>
         <a-tag color="blue" v-if="hasInitialData">数据已输入</a-tag>
         <a-tag color="orange" v-else>请填写指标数据</a-tag>
@@ -102,12 +90,13 @@
           </a-col>
         </a-row>
       </a-form>
+      <p class="request-note">仅点击开始或刷新预测时调用服务；改参数或重置不会取消已发出的请求。</p>
     </a-card>
 
 <a-alert v-if="predictionFailures.length" type="warning" :message="`以下预测未完成：${predictionFailures.join('、')}，失败项不展示旧数据。`" show-icon class="mb-4" />
     <!-- 关键指标卡片 -->
     <a-row :gutter="[16, 16]" class="metrics-overview">
-      <a-col :xs="24" :sm="12" :lg="6" v-for="metric in metricsData" :key="metric.type">
+      <a-col :xs="12" :lg="6" v-for="metric in metricsData" :key="metric.type">
         <a-card :class="['metric-card', `metric-${metric.type}`]">
           <div class="metric-content">
             <div class="metric-header">
@@ -122,12 +111,13 @@
             <div class="metric-trend">
               <div class="trend-info">
                 <span class="trend-label">预测趋势:</span>
-                <span v-if="predictionCache[metric.type]" :class="['trend-value', metric.trend > 0 ? 'trend-up' : 'trend-down']">
-                  <component :is="metric.trend > 0 ? 'ArrowUpOutlined' : 'ArrowDownOutlined'" />
-                  {{ Math.abs(metric.trend) }}%
+                <span v-if="predictionCache[metric.type] && metric.trend !== null" :class="['trend-value', metric.trend > 0 ? 'trend-up' : 'trend-down']">
+                  <component v-if="metric.trend !== 0" :is="metric.trend > 0 ? ArrowUpOutlined : ArrowDownOutlined" />
+                  {{ metric.trend === 0 ? '持平' : Math.abs(metric.trend).toFixed(1) + '%' }}
                 </span>
+                <span v-else-if="predictionCache[metric.type]">无法计算变化率</span>
               </div>
-              <div class="prediction-time">{{ timeRange }}小时预测</div>
+              <div class="prediction-time">{{ predictionContext?.hours ?? '未知' }}小时预测</div>
             </div>
           </div>
         </a-card>
@@ -151,7 +141,7 @@
 
       <!-- 资源利用率预测 -->
       <a-col :xs="24" :lg="8">
-        <a-card title="资源利用率预测" class="chart-card">
+        <a-card title="当前资源利用率" class="chart-card">
           <div ref="utilizationChartRef" class="chart-container-small"></div>
         </a-card>
       </a-col>
@@ -168,6 +158,7 @@
           <div class="recommendations-list">
             <div v-for="(rec, index) in scalingRecommendations" :key="index" class="recommendation-item">
               <div class="rec-header">
+                <a-tag>{{ rec.source }}</a-tag>
                 <a-tag :color="getActionColor(rec.action)">
                   {{ getActionText(rec.action) }}
                 </a-tag>
@@ -208,29 +199,28 @@
     <!-- 成本分析 -->
     <a-row :gutter="[16, 16]" class="cost-section">
       <a-col :xs="24">
-        <a-card title="成本分析与优化建议" class="cost-card">
-          <div class="cost-overview">
-            <div class="cost-current">
-              <div class="cost-label">当前每小时成本</div>
-              <div class="cost-value">${{ costAnalysis.current_hourly_cost || 0 }}</div>
-            </div>
-            <div class="cost-predicted">
-              <div class="cost-label">预测每小时成本</div>
-              <div class="cost-value">${{ costAnalysis.predicted_hourly_cost || 0 }}</div>
-            </div>
-            <div class="cost-savings">
-              <div class="cost-label">潜在节省</div>
-              <div class="cost-value savings">${{ costAnalysis.cost_savings_potential || 0 }}</div>
-            </div>
-          </div>
+        <a-card title="各指标的成本估算" class="cost-card">
+          <a-empty v-if="!costEntries.length" description="当前响应未提供成本估算" />
+          <section v-for="entry in costEntries" :key="entry.type" class="cost-entry">
+            <h3>{{ entry.name }}</h3>
+            <a-descriptions :column="{ xs: 1, md: 3 }" bordered size="small">
+              <a-descriptions-item label="当前每小时成本">{{ formatCost(entry.cost.current_hourly_cost) }}</a-descriptions-item>
+              <a-descriptions-item label="预测每小时成本">{{ formatCost(entry.cost.predicted_hourly_cost) }}</a-descriptions-item>
+              <a-descriptions-item label="潜在节省">{{ formatCost(entry.cost.cost_savings_potential) }}</a-descriptions-item>
+            </a-descriptions>
+          </section>
         </a-card>
       </a-col>
     </a-row>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useAiRequestScope } from '../assistant/useAiRequestScope';
+import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
+import { alignForecasts, forecastPoints, formatPredictionTime } from './prediction-series';
+import { ref, computed, onMounted, nextTick, onUnmounted, watch } from 'vue';
 // 按需引入echarts，减少打包体积
 import * as echarts from 'echarts/core';
 import { LineChart, BarChart, PieChart } from 'echarts/charts';
@@ -244,7 +234,8 @@ echarts.use([
   CanvasRenderer
 ]);
 import {
-  BarChartOutlined, 
+  ArrowUpOutlined,
+  ArrowDownOutlined,
   ApiOutlined, 
   DatabaseOutlined, 
   HddOutlined, 
@@ -259,12 +250,13 @@ import {
   predictMemory,
   predictDisk,
   type PredictionResponse,
-  type ScalingRecommendation,
-  type CostAnalysis
+  type ScalingRecommendation
 } from '#/api/core/aiops/predict';
 
 // 响应式数据
 const loading = ref(false);
+const predictionError = ref('');
+const predictionContext = ref<{ hours: number } | null>(null);
 const timeRange = ref('24');
 const chartType = ref('line');
 const aiEnhanced = ref(true);
@@ -280,7 +272,7 @@ const inputData = ref({
 
 // 表单验证
 const isFormValid = computed(() => {
-  return inputData.value.currentQps !== null && 
+  return !!scope.owner.value && Object.values(inputData.value).every(value => Number.isFinite(value)) && inputData.value.currentQps !== null &&
          inputData.value.currentCpu !== null && 
          inputData.value.currentMemory !== null && 
          inputData.value.currentDisk !== null &&
@@ -304,7 +296,7 @@ const metricsData = ref([
     icon: ThunderboltOutlined,
     currentValue: 0,
     unit: '/s',
-    trend: 0
+    trend: null as number | null
   },
   {
     type: 'cpu',
@@ -312,7 +304,7 @@ const metricsData = ref([
     icon: ApiOutlined,
     currentValue: 0,
     unit: '%',
-    trend: 0
+    trend: null as number | null
   },
   {
     type: 'memory',
@@ -320,7 +312,7 @@ const metricsData = ref([
     icon: DatabaseOutlined,
     currentValue: 0,
     unit: '%',
-    trend: 0
+    trend: null as number | null
   },
   {
     type: 'disk',
@@ -328,115 +320,70 @@ const metricsData = ref([
     icon: HddOutlined,
     currentValue: 0,
     unit: '%',
-    trend: 0
+    trend: null as number | null
   }
 ]);
 
-const scalingRecommendations = ref<ScalingRecommendation[]>([]);
+const scalingRecommendations = ref<Array<ScalingRecommendation & { source: string }>>([]);
 const aiInsights = ref<string[]>([]);
-const costAnalysis = ref<CostAnalysis>({
-  cost_trend_analysis: {}
-});
+
 
 // 预测数据缓存
 const predictionCache = ref<Record<string, PredictionResponse>>({});
 const predictionFailures = ref<string[]>([]);
+const scope = useAiRequestScope(() => { clearPredictions(); inputData.value = { currentQps: null, currentCpu: null, currentMemory: null, currentDisk: null }; });
+const predictionLane = scope.createLane();
+watch([inputData, timeRange, aiEnhanced], clearPredictions, { deep: true, flush: 'sync' });
+const costEntries = computed(() => Object.entries(predictionCache.value).flatMap(([type, response]) => response.cost_analysis ? [{ type, name: ({ qps: 'QPS', cpu: 'CPU', memory: '内存', disk: '磁盘' } as Record<string, string>)[type], cost: response.cost_analysis }] : []));
+const formatCost = (value?: number) => Number.isFinite(value) ? value!.toFixed(2) : '未知';
+useChartAppearance(() => { initTrendChart(); initUtilizationChart(); updateCharts(); });
+function clearPredictions() {
+  predictionLane.invalidate(); loading.value = false; hasInitialData.value = false; predictionError.value = '';
+  predictionCache.value = {}; predictionFailures.value = []; predictionContext.value = null;
+  scalingRecommendations.value = []; aiInsights.value = [];
+  metricsData.value.forEach(metric => { metric.currentValue = 0; metric.trend = null; });
+  trendChart?.clear(); utilizationChart?.clear();
+}
 
 // 方法定义
 const refreshAllPredictions = async () => {
-  if (!isFormValid.value) {
-    message.warning('请填写完整的指标数据');
-    return;
-  }
-
+  if (!scope.owner.value || loading.value) return;
+  if (!isFormValid.value) { message.warning('请填写完整有效的指标数据'); return; }
+  clearPredictions();
+  const ticket = predictionLane.begin();
+  const input = { ...inputData.value };
+  const hours = Number(timeRange.value);
+  const enhanced = aiEnhanced.value;
   loading.value = true;
   try {
-    // 清空之前的数据
-    scalingRecommendations.value = [];
-    aiInsights.value = [];
-
-    predictionCache.value = {};
-    predictionFailures.value = [];
-    costAnalysis.value = { cost_trend_analysis: {} };
+    const common = { prediction_hours: hours, enable_ai_insights: enhanced };
     const results = await Promise.allSettled([
-      fetchQpsPrediction(),
-      fetchCpuPrediction(),
-      fetchMemoryPrediction(),
-      fetchDiskPrediction()
+      predictQps({ ...common, current_qps: input.currentQps! }),
+      predictCpu({ ...common, current_cpu_percent: input.currentCpu! }),
+      predictMemory({ ...common, current_memory_percent: input.currentMemory! }),
+      predictDisk({ ...common, current_disk_percent: input.currentDisk! }),
     ]);
-
+    if (!predictionLane.current(ticket)) return;
+    const keys = ['qps', 'cpu', 'memory', 'disk'];
     const labels = ['QPS', 'CPU', '内存', '磁盘'];
-    predictionFailures.value = results.flatMap((result, index) => result.status === 'rejected' ? [labels[index]!] : []);
-    hasInitialData.value = results.some(result => result.status === 'fulfilled');
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') { predictionFailures.value.push(`${labels[index]}：${result.reason instanceof Error ? result.reason.message : '服务未返回结果'}`); return; }
+      try { forecastPoints(result.value); }
+      catch (error) { predictionFailures.value.push(`${labels[index]}：${error instanceof Error ? error.message : '响应数据无效'}`); return; }
+      predictionCache.value[keys[index]!] = result.value;
+      updateMetricData(keys[index]!, result.value);
+    });
+    hasInitialData.value = Object.keys(predictionCache.value).length > 0;
+    predictionContext.value = hasInitialData.value ? { hours } : null;
     updateCharts();
-    if (predictionFailures.value.length === 4) message.error('全部预测失败，请检查服务状态后重试');
+    if (!hasInitialData.value) { predictionError.value = '全部预测失败或数据无效，请检查服务与历史数据后重试'; message.error(predictionError.value); }
     else if (predictionFailures.value.length) message.warning('部分预测完成，请重试失败项');
     else message.success('预测数据已更新');
   } catch (error) {
-
-    message.error('获取预测数据失败');
+    if (!predictionLane.current(ticket)) return;
+    predictionError.value = error instanceof Error ? error.message : '预测读取失败，请核对参数后重试';
   } finally {
-    loading.value = false;
-  }
-};
-
-const fetchQpsPrediction = async () => {
-  try {
-    const response = await predictQps({
-      current_qps: inputData.value.currentQps!,
-      prediction_hours: Number(timeRange.value),
-      enable_ai_insights: aiEnhanced.value
-    });
-
-    predictionCache.value.qps = response;
-    updateMetricData('qps', response);
-  } catch (error) {
-    throw error;
-  }
-};
-
-const fetchCpuPrediction = async () => {
-  try {
-    const response = await predictCpu({
-      current_cpu_percent: inputData.value.currentCpu!,
-      prediction_hours: Number(timeRange.value),
-      enable_ai_insights: aiEnhanced.value
-    });
-
-    predictionCache.value.cpu = response;
-    updateMetricData('cpu', response);
-  } catch (error) {
-    throw error;
-  }
-};
-
-const fetchMemoryPrediction = async () => {
-  try {
-    const response = await predictMemory({
-      current_memory_percent: inputData.value.currentMemory!,
-      prediction_hours: Number(timeRange.value),
-      enable_ai_insights: aiEnhanced.value
-    });
-
-    predictionCache.value.memory = response;
-    updateMetricData('memory', response);
-  } catch (error) {
-    throw error;
-  }
-};
-
-const fetchDiskPrediction = async () => {
-  try {
-    const response = await predictDisk({
-      current_disk_percent: inputData.value.currentDisk!,
-      prediction_hours: Number(timeRange.value),
-      enable_ai_insights: aiEnhanced.value
-    });
-
-    predictionCache.value.disk = response;
-    updateMetricData('disk', response);
-  } catch (error) {
-    throw error;
+    if (predictionLane.current(ticket)) loading.value = false;
   }
 };
 
@@ -451,39 +398,38 @@ const updateMetricData = (type: string, response: PredictionResponse) => {
       const lastPoint = predicted[predicted.length - 1];
       if (lastPoint) {
         const lastValue = lastPoint.predicted_value;
-        metric.trend = response.current_value === 0 ? 0 : ((lastValue - response.current_value) / response.current_value) * 100;
+        metric.trend = response.current_value === 0 ? (lastValue === 0 ? 0 : null) : ((lastValue - response.current_value) / response.current_value) * 100;
       }
     }
   }
 
   // 更新扩缩容建议
   if (response.scaling_recommendations) {
-    scalingRecommendations.value.push(...response.scaling_recommendations);
+    scalingRecommendations.value.push(...response.scaling_recommendations.map(item => ({ ...item, source: metric?.name || type })));
   }
 
   if (response.ai_insights) {
-    aiInsights.value.push(...response.ai_insights);
+    aiInsights.value.push(...response.ai_insights.map(insight => `${metric?.name || type}：${insight}`));
   }
 
-  // 更新成本分析
-  if (response.cost_analysis) {
-    costAnalysis.value = response.cost_analysis;
-  }
 };
 
 const initTrendChart = () => {
   if (!trendChartRef.value) return;
 
+  trendChart?.dispose();
   trendChart = echarts.init(trendChartRef.value);
 
   const option = {
+    textStyle: { color: chartColors().text },
+    backgroundColor: "transparent",
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'cross' }
     },
     legend: {
       data: ['QPS', 'CPU', '内存', '磁盘'],
-      textStyle: { color: 'var(--ant-text-color)' }
+      textStyle: { color: chartColors().text }
     },
     grid: {
       left: '3%',
@@ -494,12 +440,12 @@ const initTrendChart = () => {
     xAxis: {
       type: 'category',
       data: [],
-      axisLine: { lineStyle: { color: 'var(--ant-border-color)' } }
+      axisLine: { lineStyle: { color: chartColors().border } }
     },
     yAxis: {
       type: 'value',
-      axisLine: { lineStyle: { color: 'var(--ant-border-color)' } },
-      splitLine: { lineStyle: { color: 'var(--ant-border-color-split)' } }
+      axisLine: { lineStyle: { color: chartColors().border } },
+      splitLine: { lineStyle: { color: chartColors().border } }
     },
     series: []
   };
@@ -510,6 +456,7 @@ const initTrendChart = () => {
 const initUtilizationChart = () => {
   if (!utilizationChartRef.value) return;
 
+  utilizationChart?.dispose();
   utilizationChart = echarts.init(utilizationChartRef.value);
 
   updateUtilizationChart();
@@ -522,54 +469,16 @@ const updateCharts = () => {
 
 const updateTrendChart = () => {
   if (!trendChart) return;
-
-  const categories = ['QPS', 'CPU', '内存', '磁盘'];
-  const series: any[] = [];
-  const xAxisData: string[] = [];
-
-  // 构建时间轴（使用北京时间）
-  for (let i = 0; i < Number(timeRange.value); i++) {
-    const utcTime = new Date(Date.now() + i * 60 * 60 * 1000);
-    const beijingTime = convertToBeijingTime(utcTime);
-    xAxisData.push(beijingTime.getHours().toString().padStart(2, '0') + ':00');
-  }
-
-  // 构建系列数据
-  categories.forEach((category, index) => {
-    let type = category.toLowerCase();
-    if (type === 'cpu') type = 'cpu';
-    if (type === '内存') type = 'memory';
-    if (type === '磁盘') type = 'disk';
-
-    const prediction = predictionCache.value[type];
-    const data: number[] = [];
-
-    if (prediction && prediction.predicted_data) {
-      prediction.predicted_data.forEach(point => {
-        data.push(point.predicted_value);
-      });
-    }
-
-    // 填充数据到指定长度
-    while (data.length < Number(timeRange.value)) {
-      data.push(0);
-    }
-
-    series.push({
-      name: category,
-      type: chartType.value === 'area' ? 'line' : 'line',
-      smooth: true,
-      data: data,
-      areaStyle: chartType.value === 'area' ? {} : undefined,
-      lineStyle: { width: 3 },
-      itemStyle: { color: getSeriesColor(index) }
-    });
-  });
-
+  const data = alignForecasts(predictionCache.value);
   trendChart.setOption({
-    xAxis: { data: xAxisData },
-    series: series
-  }, { replaceMerge: ['series'] });
+    textStyle: { color: chartColors().text },
+    xAxis: { type: 'category', data: data.labels, axisLine: { lineStyle: { color: chartColors().border } } },
+    yAxis: [
+      { type: 'value', name: 'QPS (/s)', min: 0, axisLabel: { color: chartColors().muted }, splitLine: { lineStyle: { color: chartColors().border } } },
+      { type: 'value', name: '使用率 (%)', min: 0, max: 100, axisLabel: { color: chartColors().muted }, splitLine: { show: false } },
+    ],
+    series: data.series.map((series, index) => ({ ...series, type: 'line', connectNulls: false, smooth: false, areaStyle: chartType.value === 'area' ? {} : undefined, lineStyle: { width: 2 }, itemStyle: { color: getSeriesColor(index) } })),
+  }, { replaceMerge: ['series', 'yAxis'] });
 };
 
 const updateUtilizationChart = () => {
@@ -577,6 +486,7 @@ const updateUtilizationChart = () => {
 
   utilizationChart.setOption({
     tooltip: { trigger: 'axis', valueFormatter: (value: number) => `${value}%` },
+    textStyle: { color: chartColors().text },
     grid: { left: 48, right: 24, top: 24, bottom: 32 },
     xAxis: { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%' } },
     yAxis: { type: 'category', data: ['CPU', '内存', '磁盘'] },
@@ -608,69 +518,15 @@ const getActionText = (action: string) => {
 };
 
 // 时间转换工具函数：UTC转北京时间
-const convertToBeijingTime = (utcTimestamp: string | Date): Date => {
-  const date = typeof utcTimestamp === 'string' ? new Date(utcTimestamp) : utcTimestamp;
-  // 北京时间 = UTC时间 + 8小时
-  return new Date(date.getTime() + 8 * 60 * 60 * 1000);
-};
-
-const formatTime = (timestamp: string) => {
-  const beijingTime = convertToBeijingTime(timestamp);
-  return beijingTime.toLocaleString('zh-CN', { 
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-};
-
-const onTimeRangeChange = () => {
-  if (hasInitialData.value) {
-    refreshAllPredictions();
-  }
-};
-
-const resetForm = () => {
-  inputData.value = {
-    currentQps: null,
-    currentCpu: null,
-    currentMemory: null,
-    currentDisk: null
-  };
-  hasInitialData.value = false;
-  predictionCache.value = {};
-  predictionFailures.value = [];
-  scalingRecommendations.value = [];
-  aiInsights.value = [];
-  costAnalysis.value = { cost_trend_analysis: {} };
-
-  // 重置指标数据
-  metricsData.value.forEach(metric => {
-    metric.currentValue = 0;
-    metric.trend = 0;
-  });
-
-  // 清空图表
-  if (trendChart) {
-    trendChart.clear();
-  }
-  if (utilizationChart) {
-    utilizationChart.clear();
-  }
-
-  message.success('表单已重置');
-};
+const formatTime = (timestamp: string) => formatPredictionTime(timestamp);
+const onTimeRangeChange = () => { clearPredictions(); };
+const resetForm = () => { clearPredictions(); inputData.value = { currentQps: null, currentCpu: null, currentMemory: null, currentDisk: null }; };
 
 const updateChart = () => {
   updateTrendChart();
 };
 
-const onAIToggle = () => {
-  refreshAllPredictions();
-};
+const onAIToggle = () => { clearPredictions(); };
 
 
 
@@ -680,8 +536,10 @@ const handleChartResize = () => {
   utilizationChart?.resize();
 };
 
+let pageDisposed = false;
 onMounted(async () => {
   await nextTick();
+  if (pageDisposed) return;
   initTrendChart();
   initUtilizationChart();
 
@@ -690,6 +548,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  pageDisposed = true;
   // 安全地销毁ECharts实例
   if (trendChart && !trendChart.isDisposed()) {
     trendChart.dispose();
@@ -704,96 +563,40 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.predict-dashboard {
-  padding: 24px;
-  background-color: var(--ant-background-color-light, var(--ops-ground));
-  min-height: 100vh;
-}
 
 /* 页面头部 */
-.predict-dashboard .page-header {
-  background: var(--ops-surface);
-  border-radius: var(--ops-radius);
-  padding: 16px 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--ops-border);
-}
 
-.predict-dashboard .header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
 
-.predict-dashboard .header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
 
-.predict-dashboard .header-icon {
-  font-size: 32px;
-  color: #1890ff;
-}
 
-.predict-dashboard .header-text {
-  display: flex;
-  flex-direction: column;
-}
 
-.predict-dashboard .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--ops-ink);
-  line-height: 1.2;
-}
 
-.predict-dashboard .page-subtitle {
-  color: var(--ops-muted);
-  margin: 0;
-  font-size: 12px;
-  margin-top: 4px;
-}
 
-.predict-dashboard .header-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
 
 .input-card {
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
-.input-card.highlight-required {
-  border: 2px solid #faad14;
-  box-shadow: 0 0 10px rgba(250, 173, 20, 0.3);
-}
+
 
 .metrics-overview {
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .metric-card {
-  cursor: pointer;
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
   border-radius: var(--ops-radius);
   overflow: hidden;
 }
 
 .metric-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: none;
 }
 
-.metric-content {
-  padding: 8px 0;
-}
+.metric-card :deep(.ant-card-body) { padding: var(--ops-space-md); }
+.metric-content { min-width: 0; }
 
 .metric-header {
   display: flex;
@@ -803,46 +606,31 @@ onUnmounted(() => {
 }
 
 .metric-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  color: hsl(var(--primary-foreground));
-}
-
-.metric-qps .metric-icon {
-  background: var(--ops-accent);
-}
-
-.metric-cpu .metric-icon {
-  background: var(--ops-accent);
-}
-
-.metric-memory .metric-icon {
-  background: var(--ops-accent);
-}
-
-.metric-disk .metric-icon {
-  background: var(--ops-accent);
+  flex-shrink: 0;
+  font-size: 20px;
+  color: var(--ops-muted);
 }
 
 .metric-info {
   flex: 1;
+  min-width: 0;
 }
 
 .metric-name {
   font-size: 14px;
-  color: var(--ant-text-color-secondary);
+  color: var(--ops-muted);
   margin-bottom: 4px;
 }
 
 .metric-value {
   font-size: 24px;
   font-weight: bold;
-  color: var(--ant-text-color);
+  color: var(--ops-ink);
 }
 
 .metric-trend {
@@ -859,7 +647,7 @@ onUnmounted(() => {
 
 .trend-label {
   font-size: 12px;
-  color: var(--ant-text-color-secondary);
+  color: var(--ops-muted);
 }
 
 .trend-value {
@@ -880,16 +668,16 @@ onUnmounted(() => {
 
 .prediction-time {
   font-size: 12px;
-  color: var(--ant-text-color-secondary);
+  color: var(--ops-muted);
 }
 
 .charts-section {
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .chart-card {
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
 .chart-container {
@@ -903,12 +691,12 @@ onUnmounted(() => {
 }
 
 .insights-section {
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .insights-card {
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
 .recommendations-list {
@@ -918,12 +706,12 @@ onUnmounted(() => {
 
 .recommendation-item {
   padding: 12px;
-  border-bottom: 1px solid var(--ant-border-color-split);
+  border-bottom: 1px solid var(--ops-border);
   transition: background-color 0.2s;
 }
 
 .recommendation-item:hover {
-  background-color: var(--ant-background-color-light);
+  background-color: var(--ops-ground);
 }
 
 .recommendation-item:last-child {
@@ -939,7 +727,7 @@ onUnmounted(() => {
 
 .rec-confidence {
   font-size: 12px;
-  color: var(--ant-text-color-secondary);
+  color: var(--ops-muted);
 }
 
 .rec-content {
@@ -947,12 +735,12 @@ onUnmounted(() => {
 }
 
 .rec-time {
-  color: var(--ant-text-color-secondary);
+  color: var(--ops-muted);
   margin-bottom: 4px;
 }
 
 .rec-reason {
-  color: var(--ant-text-color);
+  color: var(--ops-ink);
 }
 
 .ai-insights-list {
@@ -964,7 +752,7 @@ onUnmounted(() => {
   display: flex;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--ant-border-color-split);
+  border-bottom: 1px solid var(--ops-border);
 }
 
 .insight-item:last-child {
@@ -981,16 +769,16 @@ onUnmounted(() => {
   flex: 1;
   font-size: 14px;
   line-height: 1.5;
-  color: var(--ant-text-color);
+  color: var(--ops-ink);
 }
 
 .cost-section {
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .cost-card {
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
 .cost-overview {
@@ -1006,19 +794,19 @@ onUnmounted(() => {
   text-align: center;
   padding: 16px;
   border-radius: var(--ops-radius);
-  background-color: var(--ant-background-color-light);
+  background-color: var(--ops-ground);
 }
 
 .cost-label {
   font-size: 14px;
-  color: var(--ant-text-color-secondary);
+  color: var(--ops-muted);
   margin-bottom: 8px;
 }
 
 .cost-value {
   font-size: 24px;
   font-weight: bold;
-  color: var(--ant-text-color);
+  color: var(--ops-ink);
 }
 
 .cost-value.savings {
@@ -1027,45 +815,20 @@ onUnmounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .predict-dashboard {
-    padding: 16px;
-  }
 
-  .predict-dashboard .page-header {
-    padding: 20px;
-    margin-bottom: 16px;
-  }
 
-  .predict-dashboard .header-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
 
-  .predict-dashboard .header-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
 
-  .predict-dashboard .page-title {
-    font-size: 20px;
-  }
 
-  .predict-dashboard .page-subtitle {
-    font-size: 13px;
-  }
 
-  .predict-dashboard .header-icon {
-    font-size: 36px;
-  }
 
   .metric-header {
     gap: 12px;
   }
 
   .metric-icon {
-    width: 40px;
-    height: 40px;
+    width: 24px;
+    height: 24px;
     font-size: 20px;
   }
 
@@ -1082,4 +845,15 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 575px) {
+  .metric-name, .metric-value { overflow-wrap: anywhere; }
+  .metric-header { gap: var(--ops-space-sm); align-items: flex-start; }
+  .metric-trend { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .metric-value { font-size: 18px; }
+  .cost-overview { grid-template-columns: 1fr; }
+  .chart-container, .chart-container-small { min-width: 0; }
+}
+.request-note { color: var(--ops-muted); font-size: 12px; margin: var(--ops-space-md) 0 0; }
+.cost-entry { margin-bottom: var(--ops-space-lg); }
 </style>
