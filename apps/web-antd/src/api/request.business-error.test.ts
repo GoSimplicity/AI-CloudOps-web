@@ -56,7 +56,7 @@ import {
   PERMISSION_DENIED_MESSAGE_KEY,
 } from '#/utils/permission/forbidden';
 
-import { requestClient } from './request';
+import { HTTP_ERROR_MESSAGE_KEY_PREFIX, requestClient } from './request';
 
 const BACKEND_MESSAGE = '本地执行已禁用，请联系管理员开启 allow_local_exec';
 
@@ -180,15 +180,38 @@ describe('业务错误（code≠0）统一提示 · 请求链路集成', () => {
     expect(Object.keys(error)).toEqual([]);
   });
 
-  it('3. HTTP 500 的提示保持原样（通用「内部服务器错误」，字符串形式）', async () => {
+  it('3. HTTP 500 的提示保持原样（通用「内部服务器错误」，固定 key 合并）', async () => {
     const error = await requestClient
       .get('/x', { adapter: adapterOf(500, { code: 1, message: 'boom' }) })
       .catch((error_) => error_);
     expect(isBusinessError(error)).toBe(false);
     expect(isPermissionDeniedError(error)).toBe(false);
     expect(notices.error).toHaveBeenCalledTimes(1);
-    expect(notices.error).toHaveBeenCalledWith(
-      $t('fallback.http.internalServerError'),
+    const content = $t('fallback.http.internalServerError');
+    expect(notices.error).toHaveBeenCalledWith({
+      content,
+      key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${content}`,
+    });
+  });
+
+  it('3. 批量请求同时 500：通用提示按固定 key 合并，ant message 只剩一条', async () => {
+    const results = await Promise.allSettled(
+      Array.from({ length: 50 }, (_, i) =>
+        requestClient.post(
+          `/k8s/node/7/node-${i}/cordon`,
+          {},
+          {
+            adapter: adapterOf(500, { code: 1, message: 'boom' }),
+          },
+        ),
+      ),
+    );
+    expect(results.every((r) => r.status === 'rejected')).toBe(true);
+    const keys = new Set(notices.error.mock.calls.map((call) => call[0]?.key));
+    expect(keys).toEqual(
+      new Set([
+        `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${$t('fallback.http.internalServerError')}`,
+      ]),
     );
   });
 
@@ -202,10 +225,39 @@ describe('业务错误（code≠0）统一提示 · 请求链路集成', () => {
     expect(isBusinessError(error)).toBe(false);
     expect(isPermissionDeniedError(error)).toBe(false);
     expect(notices.error).toHaveBeenCalledTimes(1);
-    expect(notices.error).toHaveBeenCalledWith(
-      $t('fallback.http.networkError'),
-    );
+    const content = $t('fallback.http.networkError');
+    expect(notices.error).toHaveBeenCalledWith({
+      content,
+      key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${content}`,
+    });
   });
+
+  it.each([
+    ['timeout', '连接 timeout，请重试'],
+    ['Network Error', '远端 Network Error，请检查网关'],
+  ])(
+    '3. 后端原文里带「%s」字样：按业务错误弹后端原文，不误判成超时/网络错误',
+    async (_word, text) => {
+      const error = await requestClient
+        .post(
+          '/cron/job/1/trigger',
+          {},
+          {
+            adapter: adapterOf(200, { code: 1, data: null, message: text }),
+          },
+        )
+        .catch((error_) => error_);
+      expect(isBusinessError(error)).toBe(true);
+      expect(notices.error).toHaveBeenCalledTimes(1);
+      expect(notices.error).toHaveBeenCalledWith({
+        content: text,
+        key: `${BUSINESS_ERROR_MESSAGE_KEY_PREFIX}${text}`,
+      });
+      expect(JSON.stringify(notices.error.mock.calls)).not.toContain(
+        $t('fallback.http.requestTimeout'),
+      );
+    },
+  );
 
   it.each([
     ['HTTP 403', 403, { code: 403, message: '无权限访问该接口' }],

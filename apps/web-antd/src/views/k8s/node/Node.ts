@@ -35,11 +35,9 @@ import {
 import { usePermission } from '#/utils/permission';
 import {
   isPermissionDeniedError,
+  PERMISSION_DENIED_MESSAGE,
   PERMISSION_DENIED_MESSAGE_KEY,
 } from '#/utils/permission/forbidden';
-
-/** 污点「保存更改」越权兜底提示（fe02-scope-decisions.md c-6 指定文案） */
-export const TAINT_NO_PERMISSION_MESSAGE = '无权限访问该接口';
 
 export function useNodePage() {
   // state
@@ -473,7 +471,7 @@ export function useNodePage() {
       (taintsToAdd.length > 0 && !can('k8s.node.taintAdd'))
     ) {
       message.error({
-        content: TAINT_NO_PERMISSION_MESSAGE,
+        content: PERMISSION_DENIED_MESSAGE,
         key: PERMISSION_DENIED_MESSAGE_KEY,
       });
       return;

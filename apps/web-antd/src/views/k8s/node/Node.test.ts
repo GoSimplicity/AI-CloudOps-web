@@ -9,6 +9,7 @@ import { PERMISSION_CODES } from '#/constants/permission-codes';
 import {
   createForbiddenResponseInterceptor,
   createPermissionDeniedError,
+  PERMISSION_DENIED_MESSAGE,
   PERMISSION_DENIED_MESSAGE_KEY,
 } from '#/utils/permission/forbidden';
 
@@ -237,7 +238,7 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     expect(api.addK8sNodeTaints).not.toHaveBeenCalled();
     expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
     expect(message.error).toHaveBeenCalledWith({
-      content: '无权限访问该接口',
+      content: PERMISSION_DENIED_MESSAGE,
       key: PERMISSION_DENIED_MESSAGE_KEY,
     });
     expect(message.success).not.toHaveBeenCalled();
@@ -254,7 +255,7 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
     expect(api.addK8sNodeTaints).not.toHaveBeenCalled();
     expect(message.error).toHaveBeenCalledWith({
-      content: '无权限访问该接口',
+      content: PERMISSION_DENIED_MESSAGE,
       key: PERMISSION_DENIED_MESSAGE_KEY,
     });
     expect(wrapper.vm.isTaintModalVisible).toBe(true);

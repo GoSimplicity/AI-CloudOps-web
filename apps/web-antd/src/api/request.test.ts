@@ -113,7 +113,9 @@ describe('请求层 403 统一提示', () => {
     expect(notices.error.mock.calls[0]?.[0]).not.toBe(
       PERMISSION_DENIED_MESSAGE,
     );
-    expect(typeof notices.error.mock.calls[0]?.[0]).toBe('string');
+    expect(notices.error.mock.calls[0]?.[0]).toMatchObject({
+      key: expect.stringMatching(/^http-error:/),
+    });
   });
 
   it('页面 catch 用 isPermissionDeniedError 跳过自身提示后，全程只有一条', async () => {
