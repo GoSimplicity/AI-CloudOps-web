@@ -924,8 +924,10 @@ export function useSecretPage() {
       // data 改由 editDataRows 管理（列表返回的是脱敏空值，不能回填）
       data: {},
       string_data: parseJsonField(record.string_data, {}),
-      labels: parseJsonField(record.labels, {}),
-      annotations: parseJsonField(record.annotations, {}),
+      // 第四轮：labels / annotations 提交时是整体覆盖，列表行里的可能已过期（会冲掉别人刚改的），
+      // 先置空，等详情返回后整体用详情的值
+      labels: {},
+      annotations: {},
     };
     // 列表行里的 data_keys 可能已过期，先清空，等详情返回后再填
     resetEditData();
@@ -938,6 +940,10 @@ export function useSecretPage() {
         name: record.name,
       });
       if (seq !== editOpenSeq) return;
+      editFormModel.value.labels = { ...parseJsonField(detail?.labels, {}) };
+      editFormModel.value.annotations = {
+        ...parseJsonField(detail?.annotations, {}),
+      };
       editDataOriginalKeys.value = getSecretDataKeys(detail);
       editDataRows.value = createDataRows(editDataOriginalKeys.value);
       editDataLoading.value = false;

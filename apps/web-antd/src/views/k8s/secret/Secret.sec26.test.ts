@@ -342,6 +342,72 @@ describe('规则 2：更新 Secret 的 data', () => {
     return api.update.mock.calls.at(-1)![0];
   }
 
+  it('第四轮：labels / annotations 取自重新拉取的详情，覆盖列表行；提交的是详情里的值', async () => {
+    const pending = deferred<unknown>();
+    api.detail.mockReturnValueOnce(pending.promise);
+    const page = useSecretPage();
+    page.formRef.value = { validate: vi.fn(async () => ({})) } as any;
+    const staleRow = {
+      ...RECORD,
+      labels: { app: 'fake-stale', removed: 'fake-stale' },
+      annotations: { note: 'fake-stale' },
+    };
+    const opening = page.openEditModal(staleRow);
+    // 加载中不展示列表行里可能过期的 labels / annotations
+    expect(page.editFormModel.value.labels).toEqual({});
+    expect(page.editFormModel.value.annotations).toEqual({});
+    pending.resolve({
+      ...RECORD,
+      labels: { app: 'fake-fresh', added: 'fake-fresh' },
+      // 详情接口可能返回 JSON 字符串
+      annotations: JSON.stringify({ note: 'fake-fresh' }),
+    });
+    await opening;
+    expect(page.editFormModel.value.labels).toEqual({
+      app: 'fake-fresh',
+      added: 'fake-fresh',
+    });
+    expect(page.editFormModel.value.annotations).toEqual({
+      note: 'fake-fresh',
+    });
+    await page.submitEditForm();
+    expect(api.update).toHaveBeenCalledTimes(1);
+    expect(lastPayload().labels).toEqual({
+      app: 'fake-fresh',
+      added: 'fake-fresh',
+    });
+    expect(lastPayload().annotations).toEqual({ note: 'fake-fresh' });
+  });
+
+  it('第四轮：详情里没有 labels / annotations：不沿用列表行的旧值', async () => {
+    api.detail.mockResolvedValueOnce({
+      ...RECORD,
+      labels: undefined,
+      annotations: undefined,
+    });
+    const page = useSecretPage();
+    page.formRef.value = { validate: vi.fn(async () => ({})) } as any;
+    await page.openEditModal({
+      ...RECORD,
+      labels: { app: 'fake-stale' },
+      annotations: { note: 'fake-stale' },
+    });
+    await page.submitEditForm();
+    expect(lastPayload().labels).toBeUndefined();
+    expect(lastPayload().annotations).toBeUndefined();
+  });
+
+  it('第四轮：拉详情失败：不回退到列表行数据，也提交不了', async () => {
+    api.detail.mockRejectedValueOnce(new Error('local failure'));
+    const page = useSecretPage();
+    page.formRef.value = { validate: vi.fn(async () => ({})) } as any;
+    await page.openEditModal({ ...RECORD, labels: { app: 'fake-stale' } });
+    expect(page.isEditModalVisible.value).toBe(false);
+    expect(page.currentOperationSecret.value).toBeNull();
+    await page.submitEditForm();
+    expect(api.update).not.toHaveBeenCalled();
+  });
+
   it('data 没动：发 data: null', async () => {
     const page = await openEdit();
     expect(page.editDataRows.value.map((row) => row.key)).toEqual([
