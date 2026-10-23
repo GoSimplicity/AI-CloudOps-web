@@ -1,6 +1,6 @@
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
 import { reactive, nextTick } from 'vue';
-import Antd from 'ant-design-vue';
+import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AssistantQuery from './AssistantQuery.vue';
 import AssistantSession from './AssistantSession.vue';
@@ -56,6 +56,45 @@ afterEach(() => {
 });
 
 describe('独立助手页面账户隔离', () => {
+  it('页面挂载只展示现有信息，不发问答或会话搜索请求', async () => {
+    mountScreen(AssistantQuery);
+    await flushPromises();
+    expect(api.assistantQuery).not.toHaveBeenCalled();
+    expect(wrapper.find('[role="switch"]').exists()).toBe(false);
+    expect(wrapper.findAll('button').map(button => button.text().replace(/\s+/g, ''))).toContain('发送');
+    wrapper.unmount();
+    mountScreen(AssistantSession);
+    await flushPromises();
+    expect(api.getSessionInfo).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain('本地会话历史');
+  });
+  it('读取失败的原因保持可见，明确重试后更新且不发送查询成功提示', async () => {
+    const toast = vi.spyOn(message, 'success');
+    api.getSessionInfo.mockRejectedValueOnce(new Error('会话已过期，请重新创建'));
+    mountScreen(AssistantSession);
+    await wrapper.find('input').setValue('expired-id');
+    const button = wrapper.findAll('button').find(item => item.text() === '搜索')!;
+    await button.trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[role="alert"]').text()).toContain('会话已过期');
+    api.getSessionInfo.mockResolvedValueOnce({ session_id: 'owned', status: 'active' });
+    await button.trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('owned');
+    expect(toast).not.toHaveBeenCalled();
+  });
+  it('换账户同步清除上一账户的错误原因', async () => {
+    api.getSessionInfo.mockRejectedValueOnce(new Error('账户1私有错误原因'));
+    mountScreen(AssistantSession);
+    await wrapper.find('input').setValue('one-private-id');
+    await wrapper.findAll('button').find(item => item.text() === '搜索')!.trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).toContain('账户1私有错误原因');
+    state.user.userInfo = { userId: '2' };
+    await nextTick();
+    expect(wrapper.text()).not.toContain('账户1私有错误原因');
+  });
   it('会话管理只恢复本人缓存，切换与退出同步清空当前资料', () => {
     const scope = createAssistantAccountScope(localStorage);
     scope.setOwner('1');

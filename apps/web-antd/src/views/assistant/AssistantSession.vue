@@ -1,27 +1,15 @@
 <template>
-  <div class="session-container">
+  <OpsPage title="会话管理" description="查询本人会话，查看当前浏览器保存的本地历史" class="session-container">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <div class="header-icon">
-            <MessageOutlined />
-          </div>
-          <div class="header-text">
-            <h1 class="page-title">会话管理</h1>
-            <p class="page-subtitle">管理和查看智能助手的对话会话</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <a-button type="primary" @click="clearAllHistory" :disabled="sessionHistory.length === 0">
+    <template #actions>
+<a-button type="primary" @click="clearAllHistory" :disabled="sessionHistory.length === 0">
             <template #icon><DeleteOutlined /></template>
             清空历史
           </a-button>
-        </div>
-      </div>
-    </div>
+    </template>
 
     <div class="session-content">
+      <a-alert v-if="sessionError" :message="sessionError" type="error" show-icon role="alert" class="session-error" />
       <!-- 会话搜索 -->
       <a-card title="会话搜索" class="search-card">
         <div class="search-area">
@@ -42,7 +30,7 @@
 
       <!-- 会话详情 -->
       <a-card v-if="currentSession.session_id" title="会话详情" class="session-detail-card">
-        <a-descriptions :column="2" bordered>
+        <a-descriptions :column="{ xs: 1, sm: 2 }" bordered>
           <a-descriptions-item label="会话ID">
             <a-typography-text copyable>{{ currentSession.session_id }}</a-typography-text>
           </a-descriptions-item>
@@ -68,7 +56,7 @@
         </a-descriptions>
 
         <div class="session-actions">
-          <a-space>
+          <a-space wrap>
             <a-button @click="refreshSession" :loading="searching">
               <template #icon><ReloadOutlined /></template>
               刷新会话
@@ -86,7 +74,7 @@
       </a-card>
 
       <!-- 会话历史 -->
-      <a-card title="会话历史" class="history-card">
+      <a-card title="本地会话历史" class="history-card">
         <div v-if="sessionHistory.length === 0" class="empty-history">
           <a-empty description="暂无会话历史记录">
             <template #image>
@@ -145,7 +133,7 @@
       <!-- 快速操作 -->
       <a-card title="快速操作" class="quick-actions-card">
         <a-row :gutter="16">
-          <a-col :span="8">
+          <a-col :xs="24" :md="8">
             <div class="quick-action-item">
               <div class="action-icon">
                 <PlusCircleOutlined />
@@ -159,7 +147,7 @@
               </div>
             </div>
           </a-col>
-          <a-col :span="8">
+          <a-col :xs="24" :md="8">
             <div class="quick-action-item">
               <div class="action-icon">
                 <FileTextOutlined />
@@ -178,7 +166,7 @@
               </div>
             </div>
           </a-col>
-          <a-col :span="8">
+          <a-col :xs="24" :md="8">
             <div class="quick-action-item">
               <div class="action-icon">
                 <BarChartOutlined />
@@ -196,27 +184,27 @@
       </a-card>
 
       <!-- 统计信息 -->
-      <a-card v-if="showStats" title="会话统计" class="statistics-card">
+      <a-card v-if="showStats" title="本地会话统计" class="statistics-card">
         <a-row :gutter="16">
-          <a-col :span="6">
+          <a-col :xs="12" :md="6">
             <a-statistic
-              title="总会话数"
+              title="本地会话数"
               :value="sessionStats.totalSessions"
               :value-style="{ color: '#1890ff' }"
             >
               <template #prefix><MessageOutlined /></template>
             </a-statistic>
           </a-col>
-          <a-col :span="6">
+          <a-col :xs="12" :md="6">
             <a-statistic
-              title="总消息数"
+              title="本地消息数"
               :value="sessionStats.totalMessages"
               :value-style="{ color: '#52c41a' }"
             >
               <template #prefix><CommentOutlined /></template>
             </a-statistic>
           </a-col>
-          <a-col :span="6">
+          <a-col :xs="12" :md="6">
             <a-statistic
               title="RAG模式会话"
               :value="sessionStats.ragSessions"
@@ -225,7 +213,7 @@
               <template #prefix><DatabaseOutlined /></template>
             </a-statistic>
           </a-col>
-          <a-col :span="6">
+          <a-col :xs="12" :md="6">
             <a-statistic
               title="MCP模式会话"
               :value="sessionStats.mcpSessions"
@@ -237,10 +225,11 @@
         </a-row>
       </a-card>
     </div>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { ref, reactive, computed, watch, onBeforeUnmount } from 'vue';
 import { message } from 'ant-design-vue';
 import { useRouter } from 'vue-router';
@@ -274,6 +263,7 @@ const accessStore = useAccessStore();
 const userStore = useUserStore();
 const accountScope = createAssistantAccountScope(localStorage);
 const searching = ref(false);
+const sessionError = ref('');
 const searchSessionId = ref('');
 const showStats = ref(false);
 
@@ -357,6 +347,7 @@ const searchSession = async () => {
   const ticket = accountScope.ticket();
   const requestedSession = searchSessionId.value.trim();
   resetCurrentSession();
+  sessionError.value = '';
   try {
     searching.value = true;
     const response = await getSessionInfo(requestedSession);
@@ -366,7 +357,7 @@ const searchSession = async () => {
     // 更新当前会话信息
     Object.assign(currentSession, data);
 
-    message.success('会话信息获取成功');
+
   } catch (error: any) {
     if (!accountScope.current(ticket)) return;
     resetCurrentSession();
@@ -374,7 +365,7 @@ const searchSession = async () => {
       sessionHistory.value = sessionHistory.value.filter(session => session.session_id !== requestedSession);
       saveHistoryToStorage();
     }
-    message.error(`获取会话信息失败: ${error.message}`);
+    sessionError.value = error?.message || '会话读取失败，可核对会话ID后重试';
 
   } finally {
     if (accountScope.current(ticket)) searching.value = false;
@@ -507,6 +498,7 @@ watch(() => assistantOwner(userStore.userInfo, accessStore.accessToken), (owner)
   accountScope.setOwner(owner);
   searching.value = false;
   searchSessionId.value = '';
+  sessionError.value = '';
   showStats.value = false;
   resetCurrentSession();
   sessionHistory.value = [];
@@ -516,76 +508,25 @@ onBeforeUnmount(() => accountScope.invalidate());
 </script>
 
 <style scoped>
-.session-container {
-  padding: 24px;
-  background-color: var(--ant-background-color-light, var(--ops-ground));
-  min-height: 100vh;
-}
 
 /* 页面头部 */
-.session-container .page-header {
-  background: var(--ops-surface);
-  border-radius: var(--ops-radius);
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--ops-border);
-}
 
-.session-container .header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
 
-.session-container .header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
 
-.session-container .header-icon {
-  font-size: 32px;
-  color: #1890ff;
-}
 
-.session-container .header-text {
-  display: flex;
-  flex-direction: column;
-}
 
-.session-container .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--ops-ink);
-  line-height: 1.2;
-}
 
-.session-container .page-subtitle {
-  color: var(--ops-muted);
-  margin: 0;
-  font-size: 14px;
-  margin-top: 4px;
-}
 
-.session-container .header-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
 
 .session-content {
   .search-card {
     border-radius: var(--ops-radius);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 24px;
-    transition: all 0.3s ease;
+    box-shadow: none;
+    margin-bottom: var(--ops-space-lg);
+    transition: border-color var(--ops-duration) ease-out;
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      box-shadow: none;
     }
 
     .search-area {
@@ -595,13 +536,12 @@ onBeforeUnmount(() => accountScope.invalidate());
 
   .session-detail-card {
     border-radius: var(--ops-radius);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 24px;
-    transition: all 0.3s ease;
+    box-shadow: none;
+    margin-bottom: var(--ops-space-lg);
+    transition: border-color var(--ops-duration) ease-out;
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      box-shadow: none;
     }
 
     .session-actions {
@@ -612,13 +552,12 @@ onBeforeUnmount(() => accountScope.invalidate());
 
   .history-card {
     border-radius: var(--ops-radius);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 24px;
-    transition: all 0.3s ease;
+    box-shadow: none;
+    margin-bottom: var(--ops-space-lg);
+    transition: border-color var(--ops-duration) ease-out;
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      box-shadow: none;
     }
 
     .empty-history {
@@ -633,11 +572,10 @@ onBeforeUnmount(() => accountScope.invalidate());
         border: 1px solid var(--ant-border-color-split);
         border-radius: var(--ops-radius);
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: border-color var(--ops-duration) ease-out;
 
         &:hover {
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          transform: translateY(-2px);
+          box-shadow: none;
         }
 
         &:last-child {
@@ -690,13 +628,12 @@ onBeforeUnmount(() => accountScope.invalidate());
 
   .quick-actions-card {
     border-radius: var(--ops-radius);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 24px;
-    transition: all 0.3s ease;
+    box-shadow: none;
+    margin-bottom: var(--ops-space-lg);
+    transition: border-color var(--ops-duration) ease-out;
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      box-shadow: none;
     }
 
     .quick-action-item {
@@ -706,11 +643,10 @@ onBeforeUnmount(() => accountScope.invalidate());
       padding: 16px;
       border: 1px solid var(--ant-border-color-split);
       border-radius: var(--ops-radius);
-      transition: all 0.3s ease;
+      transition: border-color var(--ops-duration) ease-out;
 
       &:hover {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        transform: translateY(-2px);
+        box-shadow: none;
       }
 
       .action-icon {
@@ -748,43 +684,18 @@ onBeforeUnmount(() => accountScope.invalidate());
 
   .statistics-card {
     border-radius: var(--ops-radius);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    margin-bottom: 24px;
+    box-shadow: none;
+    margin-bottom: var(--ops-space-lg);
   }
 }
 
 @media (max-width: 768px) {
-  .session-container {
-    padding: 16px;
-  }
 
-  .session-container .page-header {
-    padding: 20px;
-    margin-bottom: 16px;
-  }
 
-  .session-container .header-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
 
-  .session-container .header-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
 
-  .session-container .page-title {
-    font-size: 20px;
-  }
 
-  .session-container .page-subtitle {
-    font-size: 13px;
-  }
 
-  .session-container .header-icon {
-    font-size: 36px;
-  }
 
   .search-area {
     max-width: none;
@@ -815,5 +726,13 @@ onBeforeUnmount(() => accountScope.invalidate());
       }
     }
   }
+}
+.accent-icon { color: var(--ops-accent); }
+.muted-icon { color: var(--ops-muted); }
+.session-error { margin-bottom: var(--ops-space-lg); }
+@media (max-width: 575px) {
+  .page-content .chat-history, .page-content .chat-input, .sidebar-card .card-content { padding: var(--ops-space-md); }
+  .message-content { min-width: 0; overflow-wrap: anywhere; }
+  .session-actions :deep(.ant-space) { flex-wrap: wrap; }
 }
 </style>

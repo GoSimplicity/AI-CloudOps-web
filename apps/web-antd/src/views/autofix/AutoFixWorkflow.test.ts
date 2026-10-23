@@ -233,6 +233,9 @@ describe('AutoFixWorkflow.vue', () => {
     await flushPromises();
 
     expect(autofixMocks.getAutoFixInfo).toHaveBeenCalledTimes(1);
+    expect(autofixMocks.getAutoFixReady).not.toHaveBeenCalled();
+    await wrapper.findAll('button').find(button => button.text().includes('检查服务依赖'))!.trigger('click');
+    await flushPromises();
     expect(autofixMocks.getAutoFixReady).toHaveBeenCalledTimes(1);
     expect(wrapper.text()).toContain('AutoFix Service');
     expect(wrapper.text()).toContain('ready');

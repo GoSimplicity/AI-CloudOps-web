@@ -155,7 +155,7 @@ export function useAutoFixWorkflow() {
       ? [...new Set([...selectedBlockedActionIds.value, id])]
       : selectedBlockedActionIds.value.filter((value) => value !== id);
   }
-  async function loadServiceInfo() {
+  async function loadServiceInfo(checkDependencies = true) {
     if (!scope.owner.value) return;
     const ticket = infoLane.begin();
     infoLoading.value = true;
@@ -163,7 +163,7 @@ export function useAutoFixWorkflow() {
     try {
       const [info, ready] = await Promise.allSettled([
         getAutoFixInfo(),
-        getAutoFixReady(),
+        checkDependencies ? getAutoFixReady() : Promise.resolve(undefined),
       ]);
       if (!infoLane.current(ticket)) return;
       serviceInfo.value = info.status === 'fulfilled' ? info.value : undefined;
@@ -251,7 +251,7 @@ export function useAutoFixWorkflow() {
   }
   let timer: ReturnType<typeof setInterval> | undefined;
   onMounted(() => {
-    loadServiceInfo();
+    loadServiceInfo(false);
     timer = setInterval(() => {
       now.value = Date.now();
     }, 30_000);

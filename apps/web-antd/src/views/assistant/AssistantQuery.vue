@@ -1,45 +1,32 @@
 <template>
-  <div class="query-container">
+  <OpsPage title="智能问答" description="明确发送问题后调用模型；会话按当前账户隔离" class="query-container">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <div class="header-icon">
-            <Icon icon="lucide:message-square" size="48" color="#1890ff" />
-          </div>
-          <div class="header-text">
-            <h1 class="page-title">智能问答</h1>
-            <p class="page-subtitle">基于RAG和MCP的智能对话助手</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <a-space>
+    <template #actions>
+<a-space wrap>
             <a-button @click="clearSession" type="default">
-              <Icon icon="lucide:trash-2" size="16" color="#8c8c8c" />
+              <Icon icon="lucide:trash-2" size="16" class="muted-icon" />
               清空会话
             </a-button>
             <a-button @click="exportSession" type="default">
-              <Icon icon="lucide:download" size="16" color="#8c8c8c" />
+              <Icon icon="lucide:download" size="16" class="muted-icon" />
               导出会话
             </a-button>
             <a-button @click="goToSessionManage" type="primary">
-              <Icon icon="lucide:users" size="16" color="#ffffff" />
+              <Icon icon="lucide:users" size="16"  />
               会话管理
             </a-button>
           </a-space>
-        </div>
-      </div>
-    </div>
+    </template>
 
     <!-- 主要内容区域 -->
     <div class="page-content">
-      <a-row :gutter="24">
+      <a-row :gutter="[16, 16]">
         <!-- 聊天区域 -->
-        <a-col :span="18">
+        <a-col :xs="24" :xl="18">
           <div class="content-card">
             <div class="card-header">
               <div class="header-title">
-                <Icon icon="lucide:message-circle" size="18" color="#1890ff" />
+                <Icon icon="lucide:message-circle" size="18" class="accent-icon" />
                 对话
               </div>
             </div>
@@ -48,7 +35,7 @@
               <!-- 聊天历史 -->
               <div class="chat-history" ref="chatHistoryRef">
                 <div v-if="chatHistory.length === 0" class="empty-state">
-                  <Icon icon="lucide:message-circle" size="48" color="#bfbfbf" />
+                  <Icon icon="lucide:message-circle" size="48" class="muted-icon" />
                   <p>开始您的第一次对话吧！</p>
                 </div>
 
@@ -59,14 +46,14 @@
                       <div class="message-text">{{ message.content }}</div>
                       <div class="message-time">{{ formatTime(message.timestamp) }}</div>
                     </div>
-                    <a-avatar class="message-avatar" style="background-color: #1890ff;">
+                    <a-avatar class="message-avatar" style="background-color: var(--ops-accent);">
                       <Icon icon="lucide:user" size="16" />
                     </a-avatar>
                   </div>
 
                   <!-- 助手消息 -->
                   <div v-else class="assistant-message">
-                    <a-avatar class="message-avatar" style="background-color: #52c41a;">
+                    <a-avatar class="message-avatar" style="background-color: var(--ops-accent);">
                       <Icon icon="lucide:bot" size="16" />
                     </a-avatar>
                     <div class="message-content">
@@ -78,7 +65,7 @@
                         class="source-documents">
                         <a-divider style="margin: 12px 0 8px 0;" />
                         <div class="source-title">
-                          <Icon icon="lucide:file-text" size="14" color="#8c8c8c" />
+                          <Icon icon="lucide:file-text" size="14" class="muted-icon" />
                           参考文档
                         </div>
                         <div class="source-list">
@@ -94,7 +81,7 @@
                         class="follow-up-questions">
                         <a-divider style="margin: 12px 0 8px 0;" />
                         <div class="follow-up-title">
-                          <Icon icon="lucide:lightbulb" size="14" color="#8c8c8c" />
+                          <Icon icon="lucide:lightbulb" size="14" class="muted-icon" />
                           相关问题
                         </div>
                         <div class="question-list">
@@ -110,7 +97,7 @@
 
                 <!-- 加载中状态 -->
                 <div v-if="isLoading" class="loading-message">
-                  <a-avatar class="message-avatar" style="background-color: #52c41a;">
+                  <a-avatar class="message-avatar" style="background-color: var(--ops-accent);">
                     <Icon icon="lucide:bot" size="16" />
                   </a-avatar>
                   <div class="message-content">
@@ -124,11 +111,7 @@
               <div class="chat-input">
                 <a-input-search v-model:value="questionInput" placeholder="请输入您的问题..." enter-button="发送" size="large"
                   :loading="isLoading" :disabled="isLoading" @search="sendMessage" @keydown.enter.prevent="sendMessage">
-                  <template #enterButton>
-                    <a-button type="primary" :loading="isLoading">
-                      <Icon icon="lucide:send" size="16" />
-                    </a-button>
-                  </template>
+
                 </a-input-search>
               </div>
             </div>
@@ -136,12 +119,12 @@
         </a-col>
 
         <!-- 侧边栏 -->
-        <a-col :span="6">
+        <a-col :xs="24" :xl="6">
           <!-- 会话信息 -->
           <div class="content-card sidebar-card">
             <div class="card-header">
               <div class="header-title">
-                <Icon icon="lucide:info" size="18" color="#1890ff" />
+                <Icon icon="lucide:info" size="18" class="accent-icon" />
                 会话信息
               </div>
             </div>
@@ -154,15 +137,10 @@
 
               <div class="info-item">
                 <label class="form-label">助手模式</label>
-                <a-select v-model:value="assistantMode" class="form-control" @change="onModeChange">
+                <a-select v-model:value="assistantMode" class="form-control" :disabled="isLoading" @change="onModeChange">
                   <a-select-option :value="1">RAG模式</a-select-option>
                   <a-select-option :value="2">MCP模式</a-select-option>
                 </a-select>
-              </div>
-
-              <div class="info-item">
-                <label class="form-label">网络搜索</label>
-                <a-switch v-model:checked="useWebSearch" />
               </div>
 
               <div class="info-item">
@@ -176,7 +154,7 @@
           <div class="content-card sidebar-card">
             <div class="card-header">
               <div class="header-title">
-                <Icon icon="lucide:zap" size="18" color="#1890ff" />
+                <Icon icon="lucide:zap" size="18" class="accent-icon" />
                 快捷问题
               </div>
             </div>
@@ -211,10 +189,11 @@
         </div>
       </div>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { ref, nextTick, watch, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
@@ -238,7 +217,6 @@ const questionInput = ref('');
 const isLoading = ref(false);
 const currentSessionId = ref('');
 const assistantMode = ref(1);
-const useWebSearch = ref(false);
 const chatHistoryRef = ref<HTMLElement>();
 
 // 聊天历史
@@ -300,7 +278,6 @@ const sendMessage = async () => {
     const request: AssistantRequest = {
       question,
       mode: assistantMode.value,
-      use_web_search: useWebSearch.value,
       session_id: currentSessionId.value || undefined,
       chat_history: chatHistory.value.slice(0, -1).map(msg => ({
         role: msg.role, content: msg.content
@@ -386,7 +363,6 @@ const exportSession = () => {
     session_id: currentSessionId.value,
     timestamp: new Date().toISOString(),
     mode: assistantMode.value,
-    use_web_search: useWebSearch.value,
     messages: chatHistory.value
   };
 
@@ -451,81 +427,34 @@ onBeforeUnmount(() => { accountScope.invalidate(); abortController?.abort(); });
 </script>
 
 <style scoped>
-.query-container {
-  padding: 24px;
-  background-color: var(--ant-background-color-light, var(--ops-ground));
-  min-height: 100vh;
-}
 
 /* 页面头部 */
-.query-container .page-header {
-  background: var(--ops-surface);
-  border-radius: var(--ops-radius);
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--ops-border);
-}
 
-.query-container .header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
 
-.query-container .header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
 
-.query-container .header-icon {
-  font-size: 32px;
-  color: #1890ff;
-}
 
-.query-container .header-text {
-  display: flex;
-  flex-direction: column;
-}
 
-.query-container .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--ops-ink);
-  line-height: 1.2;
-}
 
-.query-container .page-subtitle {
-  color: var(--ops-muted);
-  margin: 0;
-  font-size: 14px;
-  margin-top: 4px;
-}
 
-.query-container .header-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
 
 /* 内容区域 */
 .page-content {
   .content-card {
     background: var(--bg-color-white, var(--ops-surface));
     border-radius: var(--ops-radius);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: none;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 200px);
+    height: min(720px, 75dvh);
+    min-height: 420px;
+    border: 1px solid var(--ops-border);
   }
 
   .sidebar-card {
     height: auto;
-    margin-bottom: 24px;
+    min-height: 0;
+    margin-bottom: var(--ops-space-lg);
 
     &:last-child {
       margin-bottom: 0;
@@ -565,7 +494,7 @@ onBeforeUnmount(() => { accountScope.invalidate(); abortController?.abort(); });
       align-items: center;
       justify-content: center;
       height: 300px;
-      color: var(--text-color-tertiary, #bfbfbf);
+      color: var(--ops-muted);
 
       p {
         margin: 16px 0 0 0;
@@ -574,7 +503,7 @@ onBeforeUnmount(() => { accountScope.invalidate(); abortController?.abort(); });
     }
 
     .message-item {
-      margin-bottom: 24px;
+      margin-bottom: var(--ops-space-lg);
 
       &:last-child {
         margin-bottom: 0;
@@ -604,7 +533,7 @@ onBeforeUnmount(() => { accountScope.invalidate(); abortController?.abort(); });
         .message-time {
           text-align: right;
           font-size: 12px;
-          color: var(--text-color-tertiary, #bfbfbf);
+          color: var(--ops-muted);
           margin-top: 4px;
         }
       }
@@ -669,7 +598,7 @@ onBeforeUnmount(() => { accountScope.invalidate(); abortController?.abort(); });
 
         .message-time {
           font-size: 12px;
-          color: var(--text-color-tertiary, #bfbfbf);
+          color: var(--ops-muted);
           margin-top: 4px;
         }
 
@@ -691,10 +620,9 @@ onBeforeUnmount(() => { accountScope.invalidate(); abortController?.abort(); });
 
           .source-tag {
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: border-color var(--ops-duration) ease-out;
 
             &:hover {
-              transform: translateY(-1px);
             }
           }
         }
@@ -795,11 +723,10 @@ onBeforeUnmount(() => { accountScope.invalidate(); abortController?.abort(); });
   text-align: left;
   font-size: 13px;
   white-space: normal;
-  transition: all 0.2s ease;
+  transition: border-color var(--ops-duration) ease-out;
 
   &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
   }
 }
 
@@ -827,21 +754,6 @@ onBeforeUnmount(() => { accountScope.invalidate(); abortController?.abort(); });
   }
 }
 
-/* 响应式调整 */
-@media (max-width: 1200px) {
-  .page-content {
-    :deep(.ant-col:first-child) {
-      width: 100% !important;
-      flex: 0 0 100% !important;
-      max-width: 100% !important;
-    }
-
-    :deep(.ant-col:last-child) {
-      display: none;
-    }
-  }
-}
-
 /* 滚动条样式 */
 .chat-history::-webkit-scrollbar {
   width: 6px;
@@ -858,6 +770,14 @@ onBeforeUnmount(() => { accountScope.invalidate(); abortController?.abort(); });
 }
 
 .chat-history::-webkit-scrollbar-thumb:hover {
-  background: var(--text-color-tertiary, #bfbfbf);
+  background: var(--ops-muted);
+}
+.accent-icon { color: var(--ops-accent); }
+.muted-icon { color: var(--ops-muted); }
+.session-error { margin-bottom: var(--ops-space-lg); }
+@media (max-width: 575px) {
+  .page-content .chat-history, .page-content .chat-input, .sidebar-card .card-content { padding: var(--ops-space-md); }
+  .message-content { min-width: 0; overflow-wrap: anywhere; }
+  .session-actions :deep(.ant-space) { flex-wrap: wrap; }
 }
 </style>

@@ -2,8 +2,8 @@
   <OpsPage title="自动修复工作流" description="诊断、规划与逐项审批，只执行已验证的原计划动作" class="autofix-workflow">
     <template #actions>
 <a-space class="action-toolbar" :size="10">
-            <a-button class="tool-button" @click="loadServiceInfo" :loading="infoLoading">
-              刷新服务
+            <a-button class="tool-button" @click="loadServiceInfo()" :loading="infoLoading">
+              检查服务依赖
             </a-button>
             <a-button class="tool-button" @click="showRawDrawer = true" :disabled="!workflowResult">
               原始结果

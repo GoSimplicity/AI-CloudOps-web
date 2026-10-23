@@ -141,6 +141,7 @@ describe('自动修复页面的显式调用和审批状态', () => {
   it('初始没有虚构故障输入且不会执行工作流', async () => {
     await start();
     expect(button('执行工作流').attributes('disabled')).toBeDefined();
+    expect(api.getAutoFixReady).not.toHaveBeenCalled();
     expect(api.executeAutoFixWorkflow).not.toHaveBeenCalled();
     expect(api.confirmAutoFixWorkflow).not.toHaveBeenCalled();
   });
@@ -235,7 +236,7 @@ describe('自动修复页面的显式调用和审批状态', () => {
     expect(wrapper!.text()).toContain('测试修复服务');
     api.getAutoFixInfo.mockRejectedValueOnce(new Error('元数据不可用'));
     api.getAutoFixReady.mockRejectedValueOnce(new Error('就绪检查不可用'));
-    await button('刷新服务').trigger('click');
+    await button('检查服务依赖').trigger('click');
     await flushPromises();
     expect(wrapper!.text()).not.toContain('测试修复服务');
     expect(wrapper!.find('[role="alert"]').exists()).toBe(true);
