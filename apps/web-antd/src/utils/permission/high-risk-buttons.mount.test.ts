@@ -110,6 +110,28 @@ async function selectFirstRow() {
   await flushPromises();
 }
 
+/** 打开 Secret 详情弹窗并填入脱敏详情（值为空，只有 data_keys） */
+async function openRedactedSecretDetail() {
+  const vm = wrapper!.vm as any;
+  vm.currentSecretDetail = {
+    cluster_id: 1,
+    namespace: 'ns-a',
+    name: 'secret-a',
+    type: 1,
+    labels: [],
+    annotations: [],
+    data: { token: '' },
+    data_keys: [{ key: 'token', size: 16 }],
+    redacted: true,
+    string_data: {},
+  };
+  vm.isDetailModalVisible = true;
+  for (let i = 0; i < 3; i += 1) await flushPromises();
+  expect(document.body.textContent).toContain('加密数据内容');
+  expect(document.body.textContent).toContain('token');
+  expect(document.body.textContent).toContain('16 bytes');
+}
+
 type Case = {
   /** 用例名 */
   name: string;
@@ -186,33 +208,17 @@ const CASES: Case[] = [
     name: 'Secret 复制明文（详情弹窗内）',
     page: 'Secret',
     key: 'k8s.secret.copyPlain',
-    // copyPlain 与 viewPlain 是同一个码（清单 v4 4.2 节 .../detail），不能靠「只给 viewPlain 码」
-    // 打开详情；这里直接把详情弹窗置为打开并填入明文，只验证复制按钮本身的门禁。
-    prepare: async () => {
-      const vm = wrapper!.vm as any;
-      vm.currentSecretDetail = {
-        cluster_id: 1,
-        namespace: 'ns-a',
-        name: 'secret-a',
-        type: 1,
-        labels: [],
-        annotations: [],
-        data: { token: btoa('plain-text-value') },
-        string_data: {},
-      };
-      vm.isDetailModalVisible = true;
-      for (let i = 0; i < 3; i += 1) await flushPromises();
-      expect(document.body.textContent).toContain('加密数据内容');
-      // 展开加密数据面板（复制按钮在面板内容里），确认已展示解码后的明文
-      const header = all('.secret-data-collapse .ant-collapse-header').find(
-        (element) => (element.textContent ?? '').includes('token'),
-      );
-      expect(header).toBeDefined();
-      header!.click();
-      for (let i = 0; i < 3; i += 1) await flushPromises();
-      expect(document.body.textContent).toContain('plain-text-value');
-    },
-    find: () => buttonsByText('复制内容'),
+    // SEC-25/26：copyPlain 与 viewPlain 同为 reveal 码，这里直接把详情弹窗置为打开并填入脱敏详情
+    // （只有键名与字节数），只验证复制按钮本身的门禁；详情里不应出现任何明文。
+    prepare: openRedactedSecretDetail,
+    find: () => buttonsByText('复制内容', '.secret-data-keys'),
+  },
+  {
+    name: 'Secret 按键查看明文（详情弹窗内，调 reveal）',
+    page: 'Secret',
+    key: 'k8s.secret.viewPlain',
+    prepare: openRedactedSecretDetail,
+    find: () => all('.secret-data-keys button.secret-view-plain'),
   },
   {
     name: '审计行内删除',
@@ -271,7 +277,9 @@ beforeEach(() => {
     namespace: 'ns-a',
     name: 'secret-a',
     type: 1,
-    data: { token: btoa('plain-text-value') },
+    data: { token: '' },
+    data_keys: [{ key: 'token', size: 16 }],
+    redacted: true,
   });
   api.auditLogs.mockResolvedValue({
     items: [{ id: 11, user_id: 1, method: 'DELETE', endpoint: '/api/x' }],

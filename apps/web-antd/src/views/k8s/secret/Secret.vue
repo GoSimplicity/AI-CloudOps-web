@@ -636,6 +636,62 @@
         </a-row>
 
         <!-- 字符串数据配置 -->
+        <!-- 加密数据（SEC-25/26：原有值已脱敏，输入框留空 = 保留原值；不支持设为空值） -->
+        <a-form-item label="加密数据">
+          <div class="k8s-key-value-inputs secret-edit-data">
+            <div v-if="editDataRows.length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
+              暂无加密数据，点击下方按钮添加
+            </div>
+            <div v-for="row in editDataRows" :key="row.id" class="secret-edit-data-row" :data-key="row.key">
+              <a-form-item
+                :validate-status="getEditDataRowError(row) ? 'error' : undefined"
+                :help="getEditDataRowError(row) || undefined"
+                style="margin-bottom: 8px;"
+              >
+                <div class="k8s-key-value-row">
+                  <a-input
+                    v-if="row.original"
+                    :value="row.key"
+                    disabled
+                    class="k8s-form-input"
+                  />
+                  <a-input
+                    v-else
+                    v-model:value="row.key"
+                    placeholder="键名"
+                    class="k8s-form-input"
+                  />
+                  <a-input-password
+                    :value="row.value"
+                    :placeholder="row.original ? '已脱敏，留空保留原值' : '值'"
+                    class="k8s-form-input secret-edit-data-value"
+                    autocomplete="new-password"
+                    @update:value="(value: string) => setEditDataValue(row, value)"
+                  />
+                  <a-button v-if="row.original && row.modified" type="text" size="small" class="secret-edit-data-reset" @click="resetEditDataRow(row)">
+                    撤销修改
+                  </a-button>
+                  <a-button type="text" danger size="small" @click="removeEditDataRow(row)">
+                    <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+                  </a-button>
+                </div>
+              </a-form-item>
+            </div>
+            <div class="add-input-row" style="margin-top: 8px;">
+              <a-input
+                v-model:value="newEditDataKey"
+                placeholder="输入数据键"
+                style="flex: 1; margin-right: 8px;"
+                @press-enter="addNewEditData"
+              />
+              <a-button type="primary" @click="addNewEditData" :disabled="!newEditDataKey.trim()">
+                <template #icon><PlusOutlined aria-hidden="true"  /></template>
+                添加
+              </a-button>
+            </div>
+          </div>
+        </a-form-item>
+
         <a-form-item label="字符串数据" name="string_data">
           <div class="k8s-key-value-inputs">
             <div v-if="!editFormModel.string_data || Object.keys(editFormModel.string_data).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
@@ -804,10 +860,10 @@
 
             <a-col :xs="24" :lg="12">
               <a-card title="数据统计" class="k8s-detail-card" size="small">
-                <div class="k8s-detail-item" v-if="currentSecretDetail.data && Object.keys(currentSecretDetail.data).length > 0">
+                <div class="k8s-detail-item" v-if="secretDetailDataKeys.length > 0">
                   <span class="k8s-detail-label">加密数据项:</span>
                   <span class="k8s-detail-value">
-                    <a-tag color="cyan">{{ Object.keys(currentSecretDetail.data || {}).length }} 项</a-tag>
+                    <a-tag color="cyan">{{ secretDetailDataKeys.length }} 项</a-tag>
                   </span>
                 </div>
                 <div class="k8s-detail-item" v-if="currentSecretDetail.string_data && Object.keys(currentSecretDetail.string_data).length > 0">
@@ -866,38 +922,44 @@
             </a-col>
           </a-row>
 
-          <!-- 加密数据内容 -->
-          <a-row :gutter="[24, 16]" style="margin-top: 16px;" v-if="currentSecretDetail.data && Object.keys(currentSecretDetail.data).length > 0">
+          <!-- 加密数据内容：SEC-25/26 详情只返回键名与字节数，明文按键调 reveal 获取（每次都会写审计），不在前端解码 -->
+          <a-row :gutter="[24, 16]" style="margin-top: 16px;" v-if="secretDetailDataKeys.length > 0">
             <a-col :span="24">
               <a-card title="加密数据内容" class="k8s-detail-card" size="small">
                 <a-alert
-                  message="敏感数据解码显示"
-                  description="以下是解码后的加密数据内容，请注意保密。"
+                  message="敏感数据已脱敏"
+                  description="详情只显示键名与大小。查看或复制明文会单独请求并记录审计，关闭详情后明文即清除，请注意保密。"
                   type="warning"
                   show-icon
                   style="margin-bottom: 16px;"
                 />
 
-                <a-collapse class="secret-data-collapse">
-                  <a-collapse-panel 
-                    v-for="[key, value] in Object.entries(currentSecretDetail.data || {})" 
-                    :key="key" 
-                    :header="`${key} (${typeof value === 'string' ? Math.ceil(value.length * 3/4) : 0} bytes)`"
-                  >
-                    <template #extra>
+                <div class="secret-data-keys">
+                  <div v-for="item in secretDetailDataKeys" :key="item.key" class="secret-data-key-row" :data-key="item.key">
+                    <div class="secret-data-key-header">
+                      <span class="secret-data-key-name">{{ item.key }}</span>
+                      <span v-if="item.size !== undefined" class="secret-data-key-size">({{ item.size }} bytes)</span>
                       <a-tag color="red" size="small">敏感</a-tag>
-                    </template>
-                    <div class="secret-data-content">
-                      <pre style="background: var(--ops-ground); padding: 16px; border-radius: 4px; max-height: 400px; overflow-y: auto; font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 12px; line-height: 1.4;">{{ decodeBase64Data(value) }}</pre>
-                      <div style="margin-top: 8px; text-align: right;">
-                        <a-button v-if="can('k8s.secret.copyPlain')" size="small" @click="copyToClipboard(decodeBase64Data(value))">
+                      <span class="secret-data-key-actions">
+                        <template v-if="can('k8s.secret.viewPlain')">
+                          <a-button v-if="item.key in revealedValues" size="small" class="secret-hide-plain" @click="hideRevealedKey(item.key)">
+                            <template #icon><EyeInvisibleOutlined aria-hidden="true" /></template>
+                            隐藏
+                          </a-button>
+                          <a-button v-else size="small" class="secret-view-plain" :loading="!!revealingKeys[item.key]" @click="revealSecretKey(item.key)">
+                            <template #icon><EyeOutlined aria-hidden="true" /></template>
+                            查看
+                          </a-button>
+                        </template>
+                        <a-button v-if="can('k8s.secret.copyPlain')" size="small" class="secret-copy-plain" @click="copySecretKey(item.key)">
                           <template #icon><CopyOutlined aria-hidden="true"  /></template>
                           复制内容
                         </a-button>
-                      </div>
+                      </span>
                     </div>
-                  </a-collapse-panel>
-                </a-collapse>
+                    <pre v-if="item.key in revealedValues" class="secret-data-plain" style="background: var(--ops-ground); padding: 16px; border-radius: 4px; max-height: 400px; overflow-y: auto; font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 12px; line-height: 1.4;">{{ revealedValues[item.key] }}</pre>
+                  </div>
+                </div>
               </a-card>
             </a-col>
           </a-row>
@@ -946,8 +1008,8 @@
       cancelText="取消"
     >
       <a-alert
-        message="Secret 数据已解码显示"
-        description="为了便于查看和编辑，data 字段中的 base64 编码数据已自动解码为可读格式。保存时将自动重新编码。"
+        message="Secret 数据已脱敏"
+        description="data / stringData 的值显示为脱敏占位符 <redacted>。保存前请把需要修改的值替换为真实内容，或删除不改的键；含 <redacted> 的 YAML 不会提交。"
         type="info"
         show-icon
         closable
@@ -1041,9 +1103,10 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { namespacedResourceKey } from '../shared/utils';
-import { onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { useSecretPage } from './Secret';
+import { BINARY_VALUE_NOTICE } from './secret-data';
 import { formatK8sTime, formatK8sAge, formatDateTime, getRelativeTime } from '../shared/utils';
 import { 
   PlusOutlined, 
@@ -1060,6 +1123,7 @@ import {
   SecurityScanOutlined,
   ExclamationCircleOutlined,
   CopyOutlined,
+  EyeInvisibleOutlined,
   FileAddOutlined,
   FormatPainterOutlined,
   CheckCircleOutlined,
@@ -1191,7 +1255,44 @@ const {
   clearYaml,
   formatEditYaml,
   validateEditYaml,
+
+  // SEC-25/26 reveal / data 编辑
+  revealedValues,
+  revealingKeys,
+  secretDetailDataKeys,
+  revealSecretKey,
+  hideRevealedKey,
+  getPlainValueForCopy,
+  clearRevealedValues,
+  editDataRows,
+  setEditDataValue,
+  resetEditDataRow,
+  removeEditDataRow,
+  addEditDataRow,
+  getEditDataRowError,
 } = useSecretPage();
+
+// 页面卸载时清空 reveal 得到的明文
+onBeforeUnmount(clearRevealedValues);
+
+const newEditDataKey = ref('');
+const addNewEditData = () => {
+  if (newEditDataKey.value.trim()) {
+    addEditDataRow(newEditDataKey.value);
+    newEditDataKey.value = '';
+  }
+};
+
+/** 复制明文：经 reveal 取值，二进制内容不复制 */
+const copySecretKey = async (key: string) => {
+  const value = await getPlainValueForCopy(key);
+  if (value === undefined) return;
+  if (value === BINARY_VALUE_NOTICE) {
+    message.warning(BINARY_VALUE_NOTICE);
+    return;
+  }
+  await copyToClipboard(value);
+};
 
 // 添加新字段的方法
 const newStringDataKey = ref('');
@@ -1259,41 +1360,6 @@ const getSecretTypeClass = (type: string) => {
 };
 
 // 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime 和 formatK8sAge
-
-// Base64 解码方法
-const decodeBase64Data = (base64Str?: any) => {
-  // 处理各种数据类型
-  if (!base64Str) return '';
-
-  // 如果不是字符串，尝试转换为字符串
-  const str = typeof base64Str === 'string' ? base64Str : String(base64Str);
-
-  // 检查是否是有效的 base64 字符串
-  if (!/^[A-Za-z0-9+/]+=*$/.test(str)) {
-    return str; // 如果不是 base64，直接返回原始值
-  }
-
-  try {
-    // 使用 atob 解码 base64
-    const binaryStr = atob(str);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
-    }
-
-    // 先尝试 UTF-8 解码
-    try {
-      const decoder = new TextDecoder('utf-8', { fatal: true });
-      return decoder.decode(bytes);
-    } catch (utfError) {
-      // 如果 UTF-8 解码失败，尝试其他编码或直接返回二进制字符串
-      return binaryStr;
-    }
-  } catch (error) {
-
-    return `解码失败 (原始长度: ${str.length}): ${str.substring(0, 50)}${str.length > 50 ? '...' : ''}`;
-  }
-};
 
 // 复制到剪贴板
 const copyToClipboard = async (text: string) => {
@@ -1436,6 +1502,35 @@ onMounted(async () => {
 }
 
 /* Secret 数据显示样式 */
+.secret-data-key-row {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ops-border, rgba(0, 0, 0, 0.06));
+}
+
+.secret-data-key-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.secret-data-key-name {
+  font-weight: 500;
+}
+
+.secret-data-key-size {
+  color: var(--ops-muted);
+}
+
+.secret-data-key-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.secret-data-plain {
+  margin-top: 8px;
+}
+
 .secret-data-collapse :deep(.ant-collapse-header) {
   background: var(--ops-ground);
   border-radius: 4px !important;

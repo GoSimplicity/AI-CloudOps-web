@@ -1,0 +1,160 @@
+import type { VueWrapper } from '@vue/test-utils';
+
+import { useAccessStore, useUserStore } from '@vben/stores';
+
+import { flushPromises, mount } from '@vue/test-utils';
+import Antd from 'ant-design-vue';
+import { createPinia, setActivePinia } from 'pinia';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { SECRET_REVEAL_PERMISSION_CODE } from '#/constants/permission-codes';
+
+import { EMPTY_VALUE_MESSAGE } from './secret-data';
+
+/** SEC-25/26 Secret 页面挂载级断言（假值） */
+vi.setConfig({ testTimeout: 15_000 });
+
+const api = vi.hoisted(() => ({
+  clusters: vi.fn(),
+  namespaces: vi.fn(),
+  secrets: vi.fn(),
+  reveal: vi.fn(),
+  update: vi.fn(),
+}));
+vi.mock('#/api/core/k8s/k8s_cluster', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#/api/core/k8s/k8s_cluster')>()),
+  getClustersListApi: api.clusters,
+}));
+vi.mock('#/api/core/k8s/k8s_namespace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#/api/core/k8s/k8s_namespace')>()),
+  getNamespacesListApi: api.namespaces,
+}));
+vi.mock('#/api/core/k8s/k8s_secret', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#/api/core/k8s/k8s_secret')>()),
+  getSecretListApi: api.secrets,
+  revealSecretApi: api.reveal,
+  updateSecretApi: api.update,
+}));
+
+const FAKE = 'fake-mount-value-for-test';
+const DETAIL = {
+  cluster_id: 1,
+  namespace: 'ns-a',
+  name: 'secret-a',
+  type: 'Opaque',
+  labels: [],
+  annotations: [],
+  data: { token: '' },
+  data_keys: [{ key: 'token', size: 25 }],
+  redacted: true,
+  string_data: {},
+};
+
+let wrapper: undefined | VueWrapper<any>;
+const settle = async () => {
+  for (let i = 0; i < 4; i += 1) {
+    await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+};
+const all = (selector: string) => [
+  ...document.body.querySelectorAll<HTMLElement>(selector),
+];
+
+async function mountSecret() {
+  const component = (await import('./Secret.vue')).default;
+  wrapper = mount(component, {
+    attachTo: document.body,
+    global: { plugins: [Antd], stubs: { Icon: true } },
+  });
+  await settle();
+  return wrapper.vm as any;
+}
+
+beforeEach(() => {
+  setActivePinia(createPinia());
+  vi.clearAllMocks();
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn(() => ({
+      matches: false,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  );
+  useUserStore().setUserInfo({ roles: ['ops'], username: 'ops' } as any);
+  useAccessStore().setAccessCodes([SECRET_REVEAL_PERMISSION_CODE]);
+  api.clusters.mockResolvedValue({ items: [], total: 0 });
+  api.namespaces.mockResolvedValue({ items: [], total: 0 });
+  api.secrets.mockResolvedValue({ items: [], total: 0 });
+  api.reveal.mockResolvedValue({
+    data: { token: btoa(FAKE) },
+    string_data: {},
+    keys: ['token'],
+  });
+});
+afterEach(() => {
+  wrapper?.unmount();
+  wrapper = undefined;
+  document.body.innerHTML = '';
+  vi.unstubAllGlobals();
+});
+
+describe('Secret 详情：脱敏展示 + 按键 reveal', () => {
+  it('打开时不出现明文；点「查看」后才调 reveal 并展示；隐藏 / 关闭后明文从页面消失', async () => {
+    const vm = await mountSecret();
+    vm.currentSecretDetail = { ...DETAIL };
+    vm.isDetailModalVisible = true;
+    await settle();
+    expect(document.body.textContent).toContain('25 bytes');
+    expect(document.body.textContent).not.toContain(FAKE);
+    expect(api.reveal).not.toHaveBeenCalled();
+
+    all('.secret-data-keys button.secret-view-plain')[0]!.click();
+    await settle();
+    expect(api.reveal).toHaveBeenCalledWith({
+      cluster_id: 1,
+      namespace: 'ns-a',
+      name: 'secret-a',
+      keys: ['token'],
+    });
+    expect(all('.secret-data-plain')[0]?.textContent).toBe(FAKE);
+
+    all('.secret-data-keys button.secret-hide-plain')[0]!.click();
+    await settle();
+    expect(document.body.textContent).not.toContain(FAKE);
+
+    all('.secret-data-keys button.secret-view-plain')[0]!.click();
+    await settle();
+    vm.closeDetailModal();
+    await settle();
+    expect(vm.revealedValues).toEqual({});
+    expect(document.body.textContent).not.toContain(FAKE);
+  });
+});
+
+describe('Secret 编辑：data 行', () => {
+  it('原有键输入框为空；改成空值时表单内提示「不支持设为空值，请删除该键」', async () => {
+    const vm = await mountSecret();
+    vm.openEditModal({ ...DETAIL });
+    await settle();
+    const input = document.body.querySelector<HTMLInputElement>(
+      '.secret-edit-data-row input[type="password"]',
+    );
+    expect(input).not.toBeNull();
+    expect(input!.value).toBe('');
+    expect(input!.placeholder).toBe('已脱敏，留空保留原值');
+    expect(document.body.textContent).not.toContain(EMPTY_VALUE_MESSAGE);
+
+    input!.value = FAKE;
+    input!.dispatchEvent(new Event('input'));
+    await settle();
+    input!.value = '';
+    input!.dispatchEvent(new Event('input'));
+    await settle();
+    expect(document.body.textContent).toContain(EMPTY_VALUE_MESSAGE);
+    expect(document.body.textContent).toContain('撤销修改');
+  });
+});

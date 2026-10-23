@@ -21,6 +21,7 @@ import {
   updateSecretApi,
   updateSecretByYamlApi,
   deleteSecretApi,
+  revealSecretApi,
 } from '#/api/core/k8s/k8s_secret';
 import {
   type K8sCluster,
@@ -35,6 +36,21 @@ import {
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
 import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import {
+  type SecretDataRow,
+  buildSecretDataPayload,
+  createDataRows,
+  createNewDataRow,
+  findRedactedPlaceholder,
+  getDataRowError,
+  getSecretDataKeys,
+  isDataEdited,
+  readRevealedValue,
+  REDACTED_VALUE_MESSAGE,
+  validateDataRows,
+  YAML_REDACTED_MESSAGE,
+  yamlContainsRedacted,
+} from './secret-data';
 
 // YAML 模板常量
 const SECRET_YAML_TEMPLATE = `apiVersion: v1
@@ -99,6 +115,16 @@ export function useSecretPage() {
   // current operation target
   const currentOperationSecret = ref<K8sSecret | null>(null);
   const currentSecretDetail = ref<any | null>(null);
+
+  // SEC-25/26 规则 1：reveal 得到的明文只放在这个页面局部 ref 里（不进 pinia / storage / 日志），
+  // 关闭详情、打开另一个 Secret、页面卸载时清空；revealGeneration 防止迟到的响应写回。
+  const revealedValues = ref<Record<string, string>>({});
+  const revealingKeys = ref<Record<string, boolean>>({});
+  let revealGeneration = 0;
+
+  // SEC-25/26 规则 2：编辑弹窗的 data 行（原有键不回填值，输入框为空 = 保留原值）
+  const editDataRows = ref<SecretDataRow[]>([]);
+  const editDataOriginalKeys = ref<string[]>([]);
 
   // form models
   const createFormModel = ref<{
@@ -424,10 +450,82 @@ export function useSecretPage() {
     }
   };
 
+  const clearRevealedValues = () => {
+    revealGeneration += 1;
+    revealedValues.value = {};
+    revealingKeys.value = {};
+  };
+
+  /** 详情里的 data 键（脱敏后只有键名与字节数） */
+  const secretDetailDataKeys = computed<Array<{ key: string; size?: number }>>(() => {
+    const detail = currentSecretDetail.value;
+    if (!detail) return [];
+    if (Array.isArray(detail.data_keys)) {
+      return detail.data_keys.map((item: { key: string; size?: number }) => ({
+        key: item.key,
+        size: item.size,
+      }));
+    }
+    return getSecretDataKeys(detail).map((key) => ({ key }));
+  });
+
+  /** 调 reveal 取单个键的明文；失败或已过期（详情已关闭 / 已切换）返回 undefined */
+  const fetchRevealedValue = async (key: string): Promise<string | undefined> => {
+    const detail = currentSecretDetail.value;
+    if (!detail) return undefined;
+    const generation = revealGeneration;
+    try {
+      const res = await revealSecretApi({
+        cluster_id: detail.cluster_id,
+        namespace: detail.namespace,
+        name: detail.name,
+        keys: [key],
+      });
+      if (generation !== revealGeneration) return undefined;
+      const value = readRevealedValue(res, key);
+      if (value === undefined) message.error('未获取到该键的明文');
+      return value;
+    } catch (err) {
+      if (generation === revealGeneration && !isPermissionDeniedError(err)) {
+        message.error('获取明文失败');
+      }
+      return undefined;
+    }
+  };
+
+  const revealSecretKey = async (key: string) => {
+    const generation = revealGeneration;
+    revealingKeys.value = { ...revealingKeys.value, [key]: true };
+    try {
+      const value = await fetchRevealedValue(key);
+      if (value !== undefined && generation === revealGeneration) {
+        revealedValues.value = { ...revealedValues.value, [key]: value };
+      }
+      return value;
+    } finally {
+      if (generation === revealGeneration) {
+        const { [key]: _done, ...rest } = revealingKeys.value;
+        revealingKeys.value = rest;
+      }
+    }
+  };
+
+  const hideRevealedKey = (key: string) => {
+    const { [key]: _hidden, ...rest } = revealedValues.value;
+    revealedValues.value = rest;
+  };
+
+  /** 复制用：已查看过的直接复用，否则调 reveal 取值但不留在页面上 */
+  const getPlainValueForCopy = async (key: string) => {
+    if (key in revealedValues.value) return revealedValues.value[key];
+    return fetchRevealedValue(key);
+  };
+
   // 查看详情
   const showSecretDetail = async (record: K8sSecret) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
+    clearRevealedValues();
     
     try {
       detailLoading.value = true;
@@ -490,6 +588,7 @@ export function useSecretPage() {
   const closeDetailModal = () => {
     isDetailModalVisible.value = false;
     currentSecretDetail.value = null;
+    clearRevealedValues();
   };
 
   // Base64 解码辅助函数
@@ -674,6 +773,12 @@ export function useSecretPage() {
     
     try {
       await yamlFormRef.value.validate();
+      // SEC-25/26：YAML 接口返回的值是脱敏占位符，原样（或被下面的编码逻辑 base64 后）提交会把占位符写进集群，
+      // 这里一律拦截，不发送 <redacted>
+      if (yamlContainsRedacted(yamlFormModel.value.yaml)) {
+        message.warning(YAML_REDACTED_MESSAGE);
+        return;
+      }
       submitLoading.value = true;
       
       // 处理 YAML 中的明文数据，重新编码为 base64
@@ -801,13 +906,45 @@ export function useSecretPage() {
     editFormModel.value = {
       name: record.name,
       namespace: record.namespace,
-      data: parseJsonField(record.data, {}),
+      // data 改由 editDataRows 管理（列表返回的是脱敏空值，不能回填）
+      data: {},
       string_data: parseJsonField(record.string_data, {}),
       labels: parseJsonField(record.labels, {}),
       annotations: parseJsonField(record.annotations, {}),
     };
+    editDataOriginalKeys.value = getSecretDataKeys(record);
+    editDataRows.value = createDataRows(editDataOriginalKeys.value);
     isEditModalVisible.value = true;
   };
+
+  const findEditDataRow = (row: SecretDataRow) =>
+    editDataRows.value.find((item) => item.id === row.id);
+
+  const setEditDataValue = (row: SecretDataRow, value: string) => {
+    const target = findEditDataRow(row);
+    if (!target) return;
+    target.value = value;
+    target.modified = true;
+  };
+
+  /** 撤销对原有键的修改（恢复为保留原值） */
+  const resetEditDataRow = (row: SecretDataRow) => {
+    const target = findEditDataRow(row);
+    if (!target || !target.original) return;
+    target.value = '';
+    target.modified = false;
+  };
+
+  const removeEditDataRow = (row: SecretDataRow) => {
+    editDataRows.value = editDataRows.value.filter((item) => item.id !== row.id);
+  };
+
+  const addEditDataRow = (key = '') => {
+    editDataRows.value.push(createNewDataRow(key.trim()));
+    return editDataRows.value[editDataRows.value.length - 1]!;
+  };
+
+  const getEditDataRowError = (row: SecretDataRow) => getDataRowError(row);
 
   const closeEditModal = () => {
     isEditModalVisible.value = false;
@@ -819,14 +956,38 @@ export function useSecretPage() {
     
     try {
       await formRef.value.validate();
+
+      // SEC-25/26 规则 2：data 没动发 null；改了发全部键（未改 ""，删除的不发）；空值 / <redacted> 在表单拦截
+      if (isDataEdited(editDataOriginalKeys.value, editDataRows.value)) {
+        const dataError = validateDataRows(editDataRows.value);
+        if (dataError) {
+          message.warning(dataError);
+          return;
+        }
+      }
+      const data = buildSecretDataPayload(
+        editDataOriginalKeys.value,
+        editDataRows.value,
+      );
+      const stringData =
+        Object.keys(editFormModel.value.string_data).length > 0
+          ? editFormModel.value.string_data
+          : undefined;
+      // 最终防线：任何字段都不发送脱敏占位符
+      if (findRedactedPlaceholder({ data, string_data: stringData })) {
+        message.warning(REDACTED_VALUE_MESSAGE);
+        return;
+      }
       submitLoading.value = true;
       
+      // 冲突时后端返回 HTTP 200 + code=1（该接口没有 409）：由请求层按业务错误弹后端原文，
+      // 下面 catch 里 isPermissionDeniedError 跳过页面自身提示，弹窗保留供用户刷新后重试
       const params: UpdateSecretReq = {
         cluster_id: currentOperationSecret.value.cluster_id,
         namespace: currentOperationSecret.value.namespace,
         name: currentOperationSecret.value.name,
-        data: Object.keys(editFormModel.value.data).length > 0 ? editFormModel.value.data : undefined,
-        string_data: Object.keys(editFormModel.value.string_data).length > 0 ? editFormModel.value.string_data : undefined,
+        data,
+        string_data: stringData,
         labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
         annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
       };
@@ -1237,6 +1398,21 @@ export function useSecretPage() {
   };
 
   return {
+    // SEC-25/26 reveal / data 编辑
+    revealedValues,
+    revealingKeys,
+    secretDetailDataKeys,
+    revealSecretKey,
+    hideRevealedKey,
+    getPlainValueForCopy,
+    clearRevealedValues,
+    editDataRows,
+    setEditDataValue,
+    resetEditDataRow,
+    removeEditDataRow,
+    addEditDataRow,
+    getEditDataRowError,
+
     // state
     secrets,
     clusters,

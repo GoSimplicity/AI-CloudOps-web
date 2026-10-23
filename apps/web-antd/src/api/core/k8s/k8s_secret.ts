@@ -25,10 +25,39 @@ export interface K8sSecret {
   annotations: Record<string, string>; // 注解
   immutable: boolean; // 是否不可变
   data_count: number; // 数据条目数量
+  // SEC-25：list / detail 默认脱敏，data / string_data 的值为空，键与字节数见下面两个字段
+  data_keys?: K8sSecretKeyInfo[];
+  string_data_keys?: K8sSecretKeyInfo[];
+  redacted?: boolean; // 为 true 表示 data / string_data 的值已被移除
   size: string; // 数据大小
   age: string; // 存在时间
   created_at: string; // 创建时间
   updated_at: string; // 更新时间
+}
+
+// 脱敏后单个键的描述：只有键名与值的字节数，不含值
+export interface K8sSecretKeyInfo {
+  key: string;
+  size: number;
+}
+
+// 获取 Secret 明文请求（SEC-25 reveal，每次调用后端写审计）
+export interface RevealSecretReq {
+  cluster_id: number;
+  namespace: string;
+  name: string;
+  keys?: string[]; // 只取指定键；为空时返回全部（前端始终按键单取）
+}
+
+// 获取 Secret 明文响应：data 为 base64 编码的明文，string_data 为明文
+export interface K8sSecretRevealRes {
+  cluster_id: number;
+  namespace: string;
+  name: string;
+  type: K8sSecretType;
+  data: Record<string, string>;
+  string_data: Record<string, string>;
+  keys: string[];
 }
 
 // 获取Secret列表请求
@@ -73,7 +102,8 @@ export interface UpdateSecretReq {
   cluster_id: number; // 集群ID，必填
   name: string; // Secret名称，必填
   namespace: string; // 命名空间，必填
-  data?: Record<string, Uint8Array>; // 加密数据
+  // SEC-25：null = 不修改 data；非空 map = 整体替换（缺的键删除），值为 base64，"" = 保留该键原值
+  data?: null | Record<string, string>;
   string_data?: Record<string, string>; // 明文数据
   labels?: Record<string, string>; // 标签
   annotations?: Record<string, string>; // 注解
@@ -124,6 +154,21 @@ export async function getSecretListApi(params: GetSecretListReq) {
 export async function getSecretDetailsApi(params: GetSecretDetailsReq) {
   return requestClient.get(
     `/k8s/secret/${params.cluster_id}/${params.namespace}/${params.name}/detail`,
+  );
+}
+
+/**
+ * 获取 Secret 明文（SEC-25）。权限码为 reveal 路由模板，只认显式授权（见 utils/permission）。
+ * 业务失败（键或 Secret 不存在）为 HTTP 200 + code=1；审计写入失败为 500。返回值只在调用方局部使用，不进 store。
+ */
+export async function revealSecretApi(
+  params: RevealSecretReq,
+): Promise<K8sSecretRevealRes> {
+  return requestClient.get(
+    `/k8s/secret/${params.cluster_id}/${encodeURIComponent(params.namespace)}/${encodeURIComponent(params.name)}/reveal`,
+    {
+      params: params.keys?.length ? { keys: params.keys.join(',') } : undefined,
+    },
   );
 }
 
