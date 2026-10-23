@@ -52,9 +52,13 @@ let route: Route = () => ({ status: 200, data: { code: 0, data: null } });
 const requests: string[] = [];
 // 写请求在传输层失败（没有 response）：网络错误 / 超时
 let transportError: ((config: any) => AxiosError) | null = null;
+// 列表加载（GET /cron/job/list）在传输层失败
+let listTransportError: ((config: any) => AxiosError) | null = null;
 const adapter: AxiosAdapter = async (config) => {
   requests.push(`${config.method?.toUpperCase()} ${config.url}`);
   if (transportError && config.method !== 'get') throw transportError(config);
+  if (listTransportError && config.url === '/cron/job/list')
+    throw listTransportError(config);
   const { status, data } = route(config);
   const response = {
     config,
@@ -338,5 +342,103 @@ describe('网络错误 / 超时（有 request 无 response）只提示一次（�
       ),
     ).toBe(false);
     expect(isNotifiedByRequestLayer(new Error('Network Error'))).toBe(false);
+  });
+});
+
+/**
+ * 列表加载双提示：网络错误 / 超时、HTTP 4xx/5xx 由请求层按固定 key 弹过一条，
+ * fetchCronJobs 只保留页面错误状态（isNotifiedByRequestLayer），不再叠加「网络连接失败」等提示；
+ * 业务错误（HTTP 200 + code≠0）处理不变
+ */
+describe('列表加载失败只提示一次（真实请求链路）', () => {
+  const networkError = (config: any) =>
+    new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, {});
+  const timeoutError = (config: any) =>
+    new AxiosError(
+      `timeout of ${config.timeout ?? 0}ms exceeded`,
+      AxiosError.ECONNABORTED,
+      config,
+      {},
+    );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requests.length = 0;
+    rejectWrites();
+  });
+  afterEach(() => {
+    listTransportError = null;
+  });
+
+  const expectSingleRequestLayerNotice = (key: string) => {
+    const text = $t(key);
+    expect(text).not.toBe('');
+    expect(notices.error).toHaveBeenCalledTimes(1);
+    expect(notices.error).toHaveBeenCalledWith({
+      content: text,
+      key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${text}`,
+    });
+    expect(notices.warning).not.toHaveBeenCalled();
+    expect(notices.success).not.toHaveBeenCalled();
+  };
+
+  it.each([
+    ['网络错误', networkError, 'fallback.http.networkError'],
+    ['超时', timeoutError, 'fallback.http.requestTimeout'],
+  ])(
+    '列表加载遇到%s：只弹请求层一条，页面保留错误状态',
+    async (_label, makeError, key) => {
+      listTransportError = makeError;
+      const page = useCronJobPage();
+      await page.fetchCronJobs();
+      expect(requests).toContain('GET /cron/job/list');
+      expectSingleRequestLayerNotice(key);
+      expect(notices.error).not.toHaveBeenCalledWith(
+        '网络连接失败，请检查网络后重试',
+      );
+      expect(page.error.value).toBe('网络连接失败，请检查网络后重试');
+      expect(page.cronJobs.value).toEqual([]);
+      expect(page.loading.value).toBe(false);
+    },
+  );
+
+  it.each([
+    [500, 'fallback.http.internalServerError', '服务器内部错误，请稍后重试'],
+    [400, 'fallback.http.badRequest', '请求参数错误，请检查筛选条件'],
+  ])(
+    '列表加载返回 HTTP %s：只弹请求层一条，页面保留错误状态',
+    async (status, key, pageError) => {
+      route = () => ({
+        status,
+        data: { code: status, data: null, message: 'x' },
+      });
+      const page = useCronJobPage();
+      await page.fetchCronJobs();
+      expectSingleRequestLayerNotice(key);
+      expect(page.error.value).toBe(pageError);
+    },
+  );
+
+  it('列表加载返回 HTTP 401：页面不再叠加「登录已过期」警告', async () => {
+    route = () => ({
+      status: 401,
+      data: { code: 401, data: null, message: 'x' },
+    });
+    const page = useCronJobPage();
+    await page.fetchCronJobs();
+    expectSingleRequestLayerNotice('fallback.http.unauthorized');
+    expect(page.error.value).toBe('登录已过期，请重新登录');
+  });
+
+  it('业务错误（HTTP 200 + code≠0）处理不变：只弹后端原文一条，页面保留错误状态', async () => {
+    const text = '列表查询失败：参数非法';
+    route = () => ({
+      status: 200,
+      data: { code: 1, data: null, message: text },
+    });
+    const page = useCronJobPage();
+    await page.fetchCronJobs();
+    expectSingleBackendNotice(text);
+    expect(page.error.value).toBe('获取定时任务列表失败，请刷新重试');
   });
 });

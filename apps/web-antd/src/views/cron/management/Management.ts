@@ -489,22 +489,25 @@ export function useCronJobPage() {
 
 
       // 根据错误类型提供不同的处理
+      // 列表加载双提示修复：HTTP 错误（带 response）、网络错误 / 超时由请求层按固定 key 弹过一条，
+      // 页面只保留错误状态，用 isNotifiedByRequestLayer 判定（与创建 / 更新 / 立即执行同一口径）；
+      // 业务错误（HTTP 200 + code≠0）走最后的 else，处理不变
       if (error?.response?.status === 401) {
         state.error = '登录已过期，请重新登录';
-        if (!isPermissionDeniedError(error)) message.warning('登录已过期，请重新登录');
+        if (!isNotifiedByRequestLayer(error)) message.warning('登录已过期，请重新登录');
       } else if (error?.response?.status === 403) {
         state.error = '没有权限访问定时任务功能';
         // 403 已由请求拦截器统一提示，这里只保留页面错误状态
-        if (!isPermissionDeniedError(error)) message.error('没有权限访问定时任务功能');
+        if (!isNotifiedByRequestLayer(error)) message.error('没有权限访问定时任务功能');
       } else if (error?.response?.status === 400) {
         state.error = '请求参数错误，请检查筛选条件';
-        if (!isPermissionDeniedError(error)) message.error('请求参数错误，请检查筛选条件');
+        if (!isNotifiedByRequestLayer(error)) message.error('请求参数错误，请检查筛选条件');
       } else if (error?.response?.status >= 500) {
         state.error = '服务器内部错误，请稍后重试';
-        if (!isPermissionDeniedError(error)) message.error('服务器内部错误，请稍后重试');
+        if (!isNotifiedByRequestLayer(error)) message.error('服务器内部错误，请稍后重试');
       } else if (error?.message?.includes('Network Error') || error?.code === 'ECONNABORTED') {
         state.error = '网络连接失败，请检查网络后重试';
-        if (!isPermissionDeniedError(error)) message.error('网络连接失败，请检查网络后重试');
+        if (!isNotifiedByRequestLayer(error)) message.error('网络连接失败，请检查网络后重试');
       } else {
         state.error = '获取定时任务列表失败，请刷新重试';
         if (!isPermissionDeniedError(error)) message.error('获取定时任务列表失败，请刷新重试');
