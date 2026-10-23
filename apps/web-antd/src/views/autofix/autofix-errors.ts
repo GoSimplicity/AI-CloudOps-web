@@ -1,6 +1,10 @@
 import { message } from 'ant-design-vue';
 
-import { getHttpErrorNoticeKey } from '#/api/http-error-notice';
+import {
+  claimHttpErrorNotice,
+  getHttpErrorNoticeKey,
+  markHttpErrorNoticeReplaced,
+} from '#/api/http-error-notice';
 import { isBusinessError } from '#/utils/permission/business-error';
 import {
   isPermissionDeniedError,
@@ -74,10 +78,23 @@ export function describeAutoFixError(error: unknown): AutoFixErrorDescription {
 export function reportAutoFixError(error: unknown): string {
   const { text, toast } = describeAutoFixError(error);
   if (toast) {
-    // 已知取舍：同一 http-error key 若同时被另一个请求使用，会被这里的文案覆盖
-    const key =
-      getHttpErrorNoticeKey(error) ?? `${FALLBACK_NOTICE_KEY_PREFIX}${text}`;
-    message.error({ content: text, key });
+    if (getHttpErrorNoticeKey(error) === undefined) {
+      // 请求层没提示过（例如被 mock 的接口）：页面补一条，同文案同 key 合并
+      message.error({
+        content: text,
+        key: `${FALLBACK_NOTICE_KEY_PREFIX}${text}`,
+      });
+    } else {
+      // 请求层已提示：只有这条提示确实归当前错误时才替换；被别的未处理错误共用 / 已关闭时
+      // 不替换也不新增，具体文案只出现在行内（第 6 条）
+      const key = claimHttpErrorNotice(error);
+      if (key !== undefined) {
+        markHttpErrorNoticeReplaced(
+          error,
+          message.error({ content: text, key }),
+        );
+      }
+    }
   }
   return text;
 }

@@ -275,9 +275,9 @@ function createRequestClient(baseURL: string) {
       if (isPermissionDeniedError(error)) return;
       // 固定 key：同一文案的并发错误（如批量操作碰上 500 / 网络错误）合并为一条
       const key = `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${msg}`;
-      message.error({ content: msg, key });
-      // 记下 key，页面需要更具体的文案时用同一个 key 替换，避免一个错误两条提示
-      markHttpErrorNotified(error, key);
+      const handle = message.error({ content: msg, key });
+      // 记下 key 和弹出者，页面需要更具体的文案时先确认这条提示归自己，再用同一个 key 替换
+      markHttpErrorNotified(error, key, handle);
     }),
   );
 

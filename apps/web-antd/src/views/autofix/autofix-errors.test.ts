@@ -1,7 +1,10 @@
 import { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { markHttpErrorNotified } from '#/api/http-error-notice';
+import {
+  markHttpErrorNotified,
+  resetHttpErrorNoticeTracking,
+} from '#/api/http-error-notice';
 import {
   createBusinessError,
   notifyBusinessError,
@@ -21,6 +24,7 @@ const httpError = (status: number, body: Record<string, unknown> = {}) =>
   });
 
 beforeEach(() => {
+  resetHttpErrorNoticeTracking();
   vi.spyOn(message, 'error').mockImplementation((() => {}) as any);
 });
 afterEach(() => {
@@ -128,5 +132,32 @@ describe('reportAutoFixError：每个错误只一条提示', () => {
     expect(message.error).toHaveBeenCalledWith(
       expect.objectContaining({ content: AUTOFIX_ERROR_TEXT.conflict }),
     );
+  });
+});
+
+describe('reportAutoFixError：共用 key 时不串改（第 6 条）', () => {
+  it.each([
+    ['其它错误先弹', true],
+    ['autofix 先弹', false],
+  ])('%s：同 key 被另一个未处理错误共用时，不替换、不新增', (_, otherFirst) => {
+    const other = httpError(500);
+    const own = httpError(409);
+    if (otherFirst) markHttpErrorNotified(other, 'http-error:通用提示');
+    markHttpErrorNotified(own, 'http-error:通用提示');
+    if (!otherFirst) markHttpErrorNotified(other, 'http-error:通用提示');
+    expect(reportAutoFixError(own)).toBe(AUTOFIX_ERROR_TEXT.conflict);
+    expect(message.error).not.toHaveBeenCalled();
+  });
+
+  it('key 不同的其它错误不影响替换', () => {
+    markHttpErrorNotified(httpError(500), 'http-error:另一条');
+    const own = httpError(409);
+    markHttpErrorNotified(own, 'http-error:通用提示');
+    reportAutoFixError(own);
+    expect(message.error).toHaveBeenCalledTimes(1);
+    expect(message.error).toHaveBeenCalledWith({
+      content: AUTOFIX_ERROR_TEXT.conflict,
+      key: 'http-error:通用提示',
+    });
   });
 });
