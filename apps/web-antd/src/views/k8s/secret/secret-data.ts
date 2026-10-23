@@ -22,8 +22,16 @@ export const REDACTED_VALUE_MESSAGE = `不能提交脱敏占位符 ${REDACTED_PL
  * YAML 里带引号的占位符（P2-1，契约 a.4 / F7）。裸 `<redacted>` 由后端 RestoreRedactedSecretYAML 还原原值；
  * 带双引号时 encodeSecretYamlForSubmission 会把 data 下的值当明文 base64 编码，后端不再识别为占位符，
  * 字面值 `<redacted>` 会被写进集群。单引号按约定同样拦截。
+ * 第四轮决策 1：单引号（以及 stringData 下的双引号）后端其实会还原，但**有意**一并拦截——
+ * 按 YAML 路径精确区分要引入完整解析，增加复杂度和新的失败方式；代价只是用户去掉引号再保存一次，提示里已写明。
  */
 export const YAML_QUOTED_REDACTED_MESSAGE = `YAML 中有带引号的脱敏占位符（"${REDACTED_PLACEHOLDER}" 或 '${REDACTED_PLACEHOLDER}'），保存时会被当作普通文本写入 Secret。要保留原值请去掉引号写成 ${REDACTED_PLACEHOLDER}，要修改请填写真实值`;
+/**
+ * 第四轮：块标量（`|` / `>` 及 `|-` `|+` `>-` `>+`、带缩进指示符如 `|2-`）里单独一行的占位符。
+ * 后端 RestoreRedactedSecretYAML 只还原解析后整值恰好为 `<redacted>` 的字符串；块标量按字面保存
+ * （`|` 还会带行尾换行，多行时还有别的内容），不会还原。按约定一律拦截，与带引号的走同一条路径。
+ */
+export const YAML_BLOCK_REDACTED_MESSAGE = `YAML 中有写在块标量（| 或 >）里的脱敏占位符 ${REDACTED_PLACEHOLDER}，不会还原为原值，保存时会被当作普通文本写入 Secret。要保留原值请把该键写成单行的 key: ${REDACTED_PLACEHOLDER}（不用 | 或 >），要修改请填写真实值`;
 export const BINARY_VALUE_NOTICE = '（二进制内容，无法以文本显示或复制）';
 
 /** K8s Secret 键名规则：字母数字、-、_、. */
@@ -185,6 +193,47 @@ const QUOTED_REDACTED_VALUE_PATTERN =
 /** YAML 文本里是否有带引号的占位符（裸 `<redacted>` 合法，不算） */
 export function yamlHasQuotedRedacted(yamlText: string) {
   return QUOTED_REDACTED_VALUE_PATTERN.test(yamlText);
+}
+
+/**
+ * 块标量头：行首缩进，可选若干 `- `（列表项），可选 `key:`（含带引号的键），可选标签 / 锚点，然后是 `|` 或 `>`，
+ * 后接可选的块尾指示符（`-` / `+`）与缩进指示符（1-9，两者顺序任意），再可选行尾注释。
+ * 值里普通出现的 `|` / `>`（如 `"x |"`、`x>`）不匹配。
+ */
+const BLOCK_SCALAR_HEADER_PATTERN =
+  /^([ \t]*)(?:-[ \t]+)*(?:(?:"[^"\n]*"|'[^'\n]*'|[^\s#'"][^:\n]*):[ \t]+)?(?:[!&]\S*[ \t]+)*[|>](?:[1-9][+-]?|[+-][1-9]?)?[ \t]*(?:#.*)?$/;
+
+function leadingWidth(line: string) {
+  return line.length - line.trimStart().length;
+}
+
+/**
+ * YAML 文本里是否有块标量里单独一行的占位符：块内任一行去掉首尾空白后**恰好等于** `<redacted>` 即算；
+ * 只是包含（如 `foo <redacted>`）不算。块的范围按缩进判断：块头之后、缩进比块头所在行更深的行（含空行），
+ * 遇到缩进回落到块头所在行或更浅的非空行即结束，之后的普通键按正常规则处理。
+ */
+export function yamlHasBlockScalarRedacted(yamlText: string) {
+  const lines = yamlText.split(/\r?\n/);
+  let blockParentIndent: null | number = null;
+  for (const line of lines) {
+    if (blockParentIndent !== null) {
+      if (line.trim() === '' || leadingWidth(line) > blockParentIndent) {
+        if (line.trim() === REDACTED_PLACEHOLDER) return true;
+        continue;
+      }
+      blockParentIndent = null;
+    }
+    const header = BLOCK_SCALAR_HEADER_PATTERN.exec(line);
+    if (header) blockParentIndent = header[1]!.length;
+  }
+  return false;
+}
+
+/** YAML 保存前的占位符检查：返回拦截文案，没有问题返回 null（裸 `<redacted>` 放行） */
+export function getYamlRedactedError(yamlText: string): null | string {
+  if (yamlHasQuotedRedacted(yamlText)) return YAML_QUOTED_REDACTED_MESSAGE;
+  if (yamlHasBlockScalarRedacted(yamlText)) return YAML_BLOCK_REDACTED_MESSAGE;
+  return null;
 }
 
 /**

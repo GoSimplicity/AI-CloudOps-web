@@ -13,6 +13,7 @@ import {
 import {
   EMPTY_VALUE_MESSAGE,
   REDACTED_PLACEHOLDER,
+  YAML_BLOCK_REDACTED_MESSAGE,
   YAML_QUOTED_REDACTED_MESSAGE,
 } from './secret-data';
 import { useSecretPage } from './Secret';
@@ -436,6 +437,29 @@ describe('规则 2：更新 Secret 的 data', () => {
       );
     },
   );
+
+  it.each(['|', '|-', '|+', '>', '>-', '>+', '|2-'])(
+    '第四轮：YAML 里 %s 块标量单独一行 <redacted>：拦截并提示，不发请求',
+    async (indicator) => {
+      const page = yamlPage(
+        `apiVersion: v1\nkind: Secret\nstringData:\n  conf: ${indicator}\n    line-one\n    <redacted>\n`,
+      );
+      await page.submitYamlForm();
+      expect(api.updateByYaml).not.toHaveBeenCalled();
+      expect(message.warning).toHaveBeenCalledTimes(1);
+      expect(message.warning).toHaveBeenCalledWith(YAML_BLOCK_REDACTED_MESSAGE);
+    },
+  );
+
+  it('第四轮：块里只是包含 <redacted> 的长行放行，照常提交', async () => {
+    api.updateByYaml.mockResolvedValueOnce({});
+    const page = yamlPage(
+      `apiVersion: v1\nkind: Secret\nstringData:\n  conf: |\n    foo <redacted>\n  s: ${REDACTED_PLACEHOLDER}\n`,
+    );
+    await page.submitYamlForm();
+    expect(message.warning).not.toHaveBeenCalled();
+    expect(api.updateByYaml).toHaveBeenCalledTimes(1);
+  });
 
   it('P2-1：YAML 里裸的 <redacted> 放行，原样提交由后端还原原值', async () => {
     api.updateByYaml.mockResolvedValueOnce({});

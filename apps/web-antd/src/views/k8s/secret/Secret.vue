@@ -1013,7 +1013,7 @@
     >
       <a-alert
         message="Secret 数据已脱敏"
-        description="data / stringData 的值显示为脱敏占位符 <redacted>。保存时仍为 <redacted>（不加引号）的键保留集群中的原值；要修改某个键，把它替换为真实内容。YAML 保存是整体覆盖：从 YAML 中删掉的键会从 Secret 中删除。带引号的 &quot;<redacted>&quot; 会被拦截。"
+        description="data / stringData 的值显示为脱敏占位符 <redacted>。保存时仍为 <redacted>（不加引号）的键保留集群中的原值；要修改某个键，把它替换为真实内容。YAML 保存是整体覆盖：从 YAML 中删掉的键会从 Secret 中删除。带引号的 &quot;<redacted>&quot;、以及写在块标量（| 或 &gt;）里的 <redacted> 不会还原，会被拦截。"
         type="info"
         show-icon
         closable

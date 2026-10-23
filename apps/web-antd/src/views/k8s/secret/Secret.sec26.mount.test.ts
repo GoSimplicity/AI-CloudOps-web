@@ -207,4 +207,13 @@ describe('Secret YAML 编辑：脱敏说明（P2-1）', () => {
     expect(text).toContain('保留集群中的原值');
     expect(text).toContain('整体覆盖');
   });
+
+  it('第四轮：说明写在 | / > 块标量里的 <redacted> 也会被拦截', async () => {
+    const vm = await mountSecret();
+    vm.currentOperationSecret = { ...DETAIL };
+    vm.isYamlModalVisible = true;
+    await settle();
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('块标量');
+  });
 });

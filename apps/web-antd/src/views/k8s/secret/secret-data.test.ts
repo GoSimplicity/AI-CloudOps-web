@@ -9,8 +9,11 @@ import {
   isDataEdited,
   REDACTED_PLACEHOLDER,
   readRevealedValue,
+  getYamlRedactedError,
   validateDataRows,
+  YAML_BLOCK_REDACTED_MESSAGE,
   YAML_QUOTED_REDACTED_MESSAGE,
+  yamlHasBlockScalarRedacted,
   yamlHasQuotedRedacted,
 } from './secret-data';
 
@@ -189,6 +192,98 @@ describe('findRedactedPlaceholder（最终防线）', () => {
   it('P2-1：拦截文案准确，不再让用户删除不改的键（YAML 更新是整体覆盖）', () => {
     expect(YAML_QUOTED_REDACTED_MESSAGE).toContain('去掉引号');
     expect(YAML_QUOTED_REDACTED_MESSAGE).not.toContain('删除');
+  });
+});
+
+describe('第四轮：块标量（| / >）里的 <redacted> 拦截', () => {
+  // 后端 RestoreRedactedSecretYAML 只认解析后整值等于 `<redacted>` 的字符串；
+  // 块标量按字面保存（`|` 还带行尾换行），不会还原。规则：块内任一行去掉首尾空白后恰好等于 `<redacted>` 即拦截。
+  it.each(['|', '|-', '|+', '>', '>-', '>+'])(
+    '%s 块里单独一行 <redacted>：拦截',
+    (indicator) => {
+      const text = `data:\n  a: ${indicator}\n    <redacted>\n`;
+      expect(yamlHasBlockScalarRedacted(text)).toBe(true);
+      expect(getYamlRedactedError(text)).toBe(YAML_BLOCK_REDACTED_MESSAGE);
+    },
+  );
+
+  it.each(['|2', '|2-', '|-2', '>1+', '>+1', '|9'])(
+    '带缩进指示符 %s：同样拦截',
+    (indicator) => {
+      expect(
+        yamlHasBlockScalarRedacted(
+          `stringData:\n  s: ${indicator}\n    <redacted>\n`,
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it('占位符在块中间、前后还有其它行：拦截', () => {
+    expect(
+      yamlHasBlockScalarRedacted(
+        'stringData:\n  conf: |\n    line-one\n\n    <redacted>\n    line-three\n  other: plain\n',
+      ),
+    ).toBe(true);
+  });
+
+  it('占位符前后带空白（空格 / 制表符）：去掉首尾空白后比较，拦截', () => {
+    expect(
+      yamlHasBlockScalarRedacted('data:\n  a: |-\n      <redacted> \t \n'),
+    ).toBe(true);
+    expect(
+      yamlHasBlockScalarRedacted('data:\n  a: >\n    \t<redacted>\n'),
+    ).toBe(true);
+  });
+
+  it('块头带行尾注释、标签，或在列表项里：拦截', () => {
+    expect(
+      yamlHasBlockScalarRedacted('data:\n  a: | # 注释\n    <redacted>\n'),
+    ).toBe(true);
+    expect(
+      yamlHasBlockScalarRedacted('stringData:\n  a: !!str |\n    <redacted>\n'),
+    ).toBe(true);
+    expect(yamlHasBlockScalarRedacted('items:\n  - |\n    <redacted>\n')).toBe(
+      true,
+    );
+  });
+
+  it('反例：裸 key: <redacted> 仍放行', () => {
+    const text = 'data:\n  a: <redacted>\nstringData:\n  s: <redacted>\n';
+    expect(yamlHasBlockScalarRedacted(text)).toBe(false);
+    expect(getYamlRedactedError(text)).toBeNull();
+  });
+
+  it('反例：块内只是包含 <redacted> 的长行（如 foo <redacted>）不拦截（规则：去空白后恰好等于）', () => {
+    expect(
+      yamlHasBlockScalarRedacted(
+        'stringData:\n  conf: |\n    foo <redacted>\n    <redacted>bar\n    <redacted> # 块里 # 是正文\n',
+      ),
+    ).toBe(false);
+  });
+
+  it('反例：块结束、缩进回落后的普通键不误判', () => {
+    const text =
+      'stringData:\n  conf: |\n    line-one\n  b: <redacted>\ndata:\n  c: <redacted>\n';
+    expect(yamlHasBlockScalarRedacted(text)).toBe(false);
+    expect(getYamlRedactedError(text)).toBeNull();
+  });
+
+  it('反例：值里普通出现的 | / > 不当作块头', () => {
+    expect(
+      yamlHasBlockScalarRedacted(
+        'data:\n  a: "x |"\n    <redacted>\n  b: x>\n    <redacted>\n',
+      ),
+    ).toBe(false);
+  });
+
+  it('带引号仍走原拦截；文案说明块标量不会还原、怎么改', () => {
+    expect(getYamlRedactedError('data:\n  a: "<redacted>"\n')).toBe(
+      YAML_QUOTED_REDACTED_MESSAGE,
+    );
+    expect(YAML_BLOCK_REDACTED_MESSAGE).toContain('|');
+    expect(YAML_BLOCK_REDACTED_MESSAGE).toContain('>');
+    expect(YAML_BLOCK_REDACTED_MESSAGE).toContain('<redacted>');
+    expect(YAML_BLOCK_REDACTED_MESSAGE).not.toContain('删除');
   });
 });
 

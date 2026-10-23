@@ -45,12 +45,11 @@ import {
   findRedactedPlaceholder,
   getDataRowError,
   getSecretDataKeys,
+  getYamlRedactedError,
   isDataEdited,
   readRevealedValue,
   REDACTED_VALUE_MESSAGE,
   validateDataRows,
-  YAML_QUOTED_REDACTED_MESSAGE,
-  yamlHasQuotedRedacted,
 } from './secret-data';
 
 // YAML 模板常量
@@ -779,9 +778,11 @@ export function useSecretPage() {
     try {
       await yamlFormRef.value.validate();
       // SEC-25/26 P2-1：裸 <redacted> 由后端还原为集群原值，原样放行；
-      // 带引号的会被下面的编码逻辑当明文 base64，后端不再识别，拦截
-      if (yamlHasQuotedRedacted(yamlFormModel.value.yaml)) {
-        message.warning(YAML_QUOTED_REDACTED_MESSAGE);
+      // 带引号的会被下面的编码逻辑当明文 base64，后端不再识别，拦截；
+      // 第四轮：块标量（| / >）里单独一行的 <redacted> 后端按字面保存、不还原，同样拦截
+      const yamlRedactedError = getYamlRedactedError(yamlFormModel.value.yaml);
+      if (yamlRedactedError) {
+        message.warning(yamlRedactedError);
         return;
       }
       submitLoading.value = true;
