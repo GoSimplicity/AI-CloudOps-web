@@ -55,12 +55,21 @@ function tokenOf(error: unknown): number | undefined {
   return typeof token === 'number' ? token : undefined;
 }
 
+/**
+ * 写不可枚举标记；冻结 / 密封 / 不可扩展的对象会抛 TypeError（复审 P3-6），
+ * 这里吞掉并返回 false，调用方降级为不记录。
+ */
 function defineHidden(target: object, symbol: symbol, value: unknown) {
-  Object.defineProperty(target, symbol, {
-    configurable: true,
-    enumerable: false,
-    value,
-  });
+  try {
+    Object.defineProperty(target, symbol, {
+      configurable: true,
+      enumerable: false,
+      value,
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -73,8 +82,13 @@ export function markHttpErrorNotified(
 ) {
   if (!error || typeof error !== 'object') return;
   const token = tokenOf(error) ?? ++tokenSeq;
-  defineHidden(error, HTTP_ERROR_NOTICE_KEY, key);
-  defineHidden(error, HTTP_ERROR_NOTICE_TOKEN, token);
+  // 写不上标记（冻结等）就不记录：页面拿不到 key / token，也不能让它占住这条提示的共用者名单
+  if (
+    !defineHidden(error, HTTP_ERROR_NOTICE_KEY, key) ||
+    !defineHidden(error, HTTP_ERROR_NOTICE_TOKEN, token)
+  ) {
+    return;
+  }
   let entry = liveEntry(key);
   if (entry) {
     entry.version += 1;

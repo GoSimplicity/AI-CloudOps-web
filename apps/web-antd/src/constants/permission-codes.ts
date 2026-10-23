@@ -336,7 +336,6 @@ export const U3_PERMISSION_CODES = {
   'workorder.notification.manualSend': '/api/workorder/notification/send',
 } as const;
 
-/** 全部按钮 key → 权限码（S1 ∪ S1b ∪ S2 ∪ S3） */
 /**
  * Secret 详情路由码（SEC-25/26 第 4 条：详情与明文分层）。
  * 即清单 v4 #46/#47 原来的临时码（permission-codes.md 第 6 节 JSON `k8s.secret.viewPlain/copyPlain.code`、
@@ -352,6 +351,7 @@ export const SECRET_DETAIL_PERMISSION_CODE =
 export const SECRET_REVEAL_PERMISSION_CODE =
   PERMISSION_CODES['k8s.secret.viewPlain'];
 
+/** 全部按钮 key → 权限码（S1 ∪ S1b ∪ S2 ∪ S3） */
 export const ALL_PERMISSION_CODES = {
   ...PERMISSION_CODES,
   ...S1B_PERMISSION_CODES,
