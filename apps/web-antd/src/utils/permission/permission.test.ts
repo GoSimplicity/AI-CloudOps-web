@@ -52,7 +52,8 @@ describe('权限码常量', () => {
     ]) {
       expect(PERMISSION_CODES).not.toHaveProperty(key);
     }
-    expect(ALL_KEYS).toHaveLength(70);
+    // 主范围 70 个 + 污点弹窗补充的 k8s.node.taintAdd（fe02-scope-decisions (c)）
+    expect(ALL_KEYS).toHaveLength(71);
   });
 });
 

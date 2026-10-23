@@ -32,7 +32,14 @@ import {
   getClustersListApi,
   Env,
 } from '#/api/core/k8s/k8s_cluster';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { usePermission } from '#/utils/permission';
+import {
+  isPermissionDeniedError,
+  PERMISSION_DENIED_MESSAGE_KEY,
+} from '#/utils/permission/forbidden';
+
+/** 污点「保存更改」越权兜底提示（fe02-scope-decisions.md c-6 指定文案） */
+export const TAINT_NO_PERMISSION_MESSAGE = '无权限访问该接口';
 
 export function useNodePage() {
   // state
@@ -381,9 +388,10 @@ export function useNodePage() {
       const res = await getK8sNodeTaints(params);
       const taints = Array.isArray(res?.taints) ? res.taints : (Array.isArray(record.taints) ? record.taints : []);
       
+      // originalTaints 存副本：行内编辑不能改到原始值，否则检测不到 value/effect 的修改
       taintFormModel.value = {
-        taints: [...taints],
-        originalTaints: [...taints],
+        taints: taints.map((taint: CoreTaint) => ({ ...taint })),
+        originalTaints: taints.map((taint: CoreTaint) => ({ ...taint })),
         taintsToDelete: [],
       };
       isTaintModalVisible.value = true;
@@ -391,8 +399,8 @@ export function useNodePage() {
       // 如果获取失败，使用记录中的污点数据
       const taints = Array.isArray(record.taints) ? record.taints : [];
       taintFormModel.value = {
-        taints: [...taints],
-        originalTaints: [...taints],
+        taints: taints.map((taint: CoreTaint) => ({ ...taint })),
+        originalTaints: taints.map((taint: CoreTaint) => ({ ...taint })),
         taintsToDelete: [],
       };
       isTaintModalVisible.value = true;
@@ -426,50 +434,94 @@ export function useNodePage() {
     taintFormModel.value.taints.splice(index, 1);
   };
 
+  // 要添加或更新的污点（只发送新的或修改过的污点）
+  const getTaintsToAdd = (): CoreTaint[] =>
+    taintFormModel.value.taints.filter((taint) => {
+      if (!taint.key) return false; // 忽略没有key的污点
+
+      // 检查是否是新污点或者是否发生了变化
+      const originalTaint = taintFormModel.value.originalTaints.find(
+        (t) => t.key === taint.key,
+      );
+      if (!originalTaint) return true; // 新污点
+
+      // 检查是否有修改
+      return (
+        originalTaint.value !== taint.value ||
+        originalTaint.effect !== taint.effect
+      );
+    });
+
+  // c-7：没有可提交的变更时「保存更改」禁用
+  const hasTaintChanges = computed(
+    () =>
+      taintFormModel.value.taintsToDelete.length > 0 ||
+      getTaintsToAdd().length > 0,
+  );
+
   const submitTaintForm = async () => {
     if (!taintFormRef.value || !currentOperationNode.value) return;
-    
+
+    const taintsToDelete = [...taintFormModel.value.taintsToDelete];
+    const taintsToAdd = getTaintsToAdd();
+    if (taintsToDelete.length === 0 && taintsToAdd.length === 0) return;
+
+    // c-6：调用接口前按变更内容逐项校验，任一越权就整单不发请求，弹窗保持打开
+    const { can } = usePermission();
+    if (
+      (taintsToDelete.length > 0 && !can('k8s.node.taintDelete')) ||
+      (taintsToAdd.length > 0 && !can('k8s.node.taintAdd'))
+    ) {
+      message.error({
+        content: TAINT_NO_PERMISSION_MESSAGE,
+        key: PERMISSION_DENIED_MESSAGE_KEY,
+      });
+      return;
+    }
+
+    const node = currentOperationNode.value;
+    let deleted = false;
+    let added = false;
     try {
       submitLoading.value = true;
-      
+
       // 先删除标记为删除的污点
-      if (taintFormModel.value.taintsToDelete.length > 0) {
+      if (taintsToDelete.length > 0) {
         const deleteParams: DeleteK8sNodeTaintsReq = {
-          cluster_id: currentOperationNode.value.cluster_id,
-          node_name: currentOperationNode.value.name,
-          taint_keys: taintFormModel.value.taintsToDelete,
+          cluster_id: node.cluster_id,
+          node_name: node.name,
+          taint_keys: taintsToDelete,
         };
         await deleteK8sNodeTaints(deleteParams);
+        deleted = true;
       }
-      
-      // 再添加或更新污点（只发送新的或修改过的污点）
-      const taintsToAdd: CoreTaint[] = taintFormModel.value.taints.filter(taint => {
-        if (!taint.key) return false; // 忽略没有key的污点
-        
-        // 检查是否是新污点或者是否发生了变化
-        const originalTaint = taintFormModel.value.originalTaints.find(t => t.key === taint.key);
-        if (!originalTaint) return true; // 新污点
-        
-        // 检查是否有修改
-        return originalTaint.value !== taint.value || 
-               originalTaint.effect !== taint.effect;
-      });
-      
+
+      // 再添加或更新污点
       if (taintsToAdd.length > 0) {
         const addParams: AddK8sNodeTaintsReq = {
-          cluster_id: currentOperationNode.value.cluster_id,
-          node_name: currentOperationNode.value.name,
+          cluster_id: node.cluster_id,
+          node_name: node.name,
           taints: taintsToAdd,
         };
         await addK8sNodeTaints(addParams);
       }
-      
+      added = true;
+
       message.success('节点污点更新成功');
       isTaintModalVisible.value = false;
       await fetchNodes();
     } catch (err: unknown) {
-      if (!isPermissionDeniedError(err)) message.error('污点更新失败');
-
+      if (deleted && !added) {
+        // c-9：删除已生效、添加失败 → 部分成功，刷新列表，不提示整体成功
+        message.warning(
+          `部分成功：已删除污点 ${taintsToDelete.join('、')}，添加/修改污点失败`,
+        );
+        isTaintModalVisible.value = false;
+        await fetchNodes();
+      } else if (!isPermissionDeniedError(err)) {
+        // c-8：403 已由请求层统一提示，不再弹通用失败
+        message.error('污点更新失败');
+      }
     } finally {
       submitLoading.value = false;
     }
@@ -725,6 +777,7 @@ export function useNodePage() {
     addTaint,
     removeTaint,
     submitTaintForm,
+    hasTaintChanges,
     validateTaintYaml,
     
     // schedule operations

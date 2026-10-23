@@ -247,7 +247,7 @@
                 <template #icon><TagsOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="管理污点">
+            <a-tooltip v-if="can('k8s.node.taintAdd') || can('k8s.node.taintDelete')" title="管理污点">
               <a-button title="管理污点" @click="openTaintModal(record)">
                 <template #icon><WarningOutlined aria-hidden="true"  /></template>
               </a-button>
@@ -373,6 +373,7 @@
       :maskClosable="false"
       destroyOnClose
       okText="保存更改"
+      :okButtonProps="{ disabled: !hasTaintChanges }"
       cancelText="取消"
       :focusTriggerAfterClose="false"
       :autoFocus="false"
@@ -419,18 +420,21 @@
                   placeholder="污点键" 
                   class="k8s-form-input"
                   :maxlength="100"
+                  :disabled="!can('k8s.node.taintAdd')"
                 />
                 <a-input 
                   v-model:value="taint.value" 
                   placeholder="污点值（可选）" 
                   class="k8s-form-input"
                   :maxlength="100"
+                  :disabled="!can('k8s.node.taintAdd')"
                 />
                 <a-select 
                   v-model:value="taint.effect" 
                   placeholder="污点效果" 
                   class="k8s-form-input"
                   style="width: 150px"
+                  :disabled="!can('k8s.node.taintAdd')"
                 >
                   <a-select-option value="NoSchedule">NoSchedule</a-select-option>
                   <a-select-option value="PreferNoSchedule">PreferNoSchedule</a-select-option>
@@ -441,7 +445,7 @@
                   删除
                 </a-button>
               </div>
-              <a-button type="dashed" @click="addTaint" block style="margin-top: 12px;">
+              <a-button v-if="can('k8s.node.taintAdd')" type="dashed" @click="addTaint" block style="margin-top: 12px;">
                 <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加污点
               </a-button>
@@ -883,6 +887,7 @@ const {
   addTaint,
   removeTaint,
   submitTaintForm,
+  hasTaintChanges,
   validateTaintYaml,
   
   // schedule operations
