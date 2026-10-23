@@ -39,6 +39,7 @@ import {
 } from '@ant-design/icons-vue';
 
 import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 const { can } = usePermission();
 
@@ -605,7 +606,7 @@ const handleUploadFiles = async () => {
     }, 2000);
   } catch (error) {
     uploadProgress.value.status = 'exception';
-    message.error('文件上传失败');
+    if (!isPermissionDeniedError(error)) message.error('文件上传失败');
   } finally {
     uploadLoading.value = false;
   }

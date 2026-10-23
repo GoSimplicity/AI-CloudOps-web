@@ -526,6 +526,7 @@ import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_sc
 import { getTreeList, type TreeNode } from '#/api/core/tree/tree_node';
 
 import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 const { can } = usePermission();
 
@@ -800,7 +801,7 @@ const loadDialogPools = async (isNewSearch = false) => {
       dialogPoolHasMore.value = false;
     }
   } catch (error: any) {
-    message.error(error.message || '获取采集池数据失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '获取采集池数据失败');
   } finally {
     dialogPoolLoading.value = false;
   }
@@ -864,7 +865,7 @@ const loadScrapeJobList = async (): Promise<void> => {
     scrapeJobList.value = [];
     paginationConfig.total = 0;
     updateStats();
-    message.error(loadError.value);
+    if (!isPermissionDeniedError(error)) message.error(loadError.value);
   } finally {
     request.finish();
   }
@@ -907,7 +908,7 @@ const loadPools = async (): Promise<void> => {
     pools.value = allPools;
   } catch (error: any) {
     pools.value = [];
-    message.error(error.message || '获取采集池数据失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '获取采集池数据失败');
   }
 };
 
@@ -1017,7 +1018,7 @@ const handleViewScrapeJob = async (record: MonitorScrapeJob): Promise<void> => {
     const response = await getMonitorScrapeJobDetailApi(record.id!);
     detailDialog.form = response as MonitorScrapeJob;
   } catch (error: any) {
-    message.error(error.message || '获取任务详情失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '获取任务详情失败');
     detailDialogVisible.value = false;
   } finally {
     detailDialog.loading = false;
@@ -1066,7 +1067,7 @@ const toggleJobStatus = async (record: MonitorScrapeJob): Promise<void> => {
     loadScrapeJobList();
   } catch (error: any) {
 
-    message.error(error.message || '切换采集任务状态失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '切换采集任务状态失败');
   }
 };
 
@@ -1090,7 +1091,7 @@ const confirmDelete = (record: MonitorScrapeJob): void => {
         loadScrapeJobList();
       } catch (error: any) {
 
-        message.error(error.message || '删除采集任务失败');
+        if (!isPermissionDeniedError(error)) message.error(error.message || '删除采集任务失败');
       }
     }
   });
@@ -1148,7 +1149,7 @@ const saveScrapeJob = async (): Promise<void> => {
     loadScrapeJobList();
   } catch (error: any) {
 
-    message.error(error.message || '保存采集任务失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '保存采集任务失败');
   }
 };
 
@@ -1349,7 +1350,7 @@ const loadTreeData = async (): Promise<void> => {
     treeData.value = response.items || [];
   } catch (error) {
 
-    message.error('获取服务树数据失败');
+    if (!isPermissionDeniedError(error)) message.error('获取服务树数据失败');
     treeData.value = [];
   }
 };

@@ -204,6 +204,7 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 import { assistantOwner, createAssistantAccountScope } from '#/utils/assistant-account-scope';
 import { assistantQuery } from '#/api/core/aiops/assistant';
 import type { AssistantRequest, AssistantResponse } from '#/api/core/aiops/assistant';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 // 路由
 const router = useRouter();
@@ -316,7 +317,7 @@ const sendMessage = async () => {
       selectedDocument.value = null;
       documentModalVisible.value = false;
     }
-    message.error(`发送失败: ${error.message}`);
+    if (!isPermissionDeniedError(error)) message.error(`发送失败: ${error.message}`);
 
   } finally {
     if (accountScope.current(ticket)) { isLoading.value = false; abortController = undefined; }

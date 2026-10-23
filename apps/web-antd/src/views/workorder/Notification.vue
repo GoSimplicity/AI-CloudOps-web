@@ -1863,9 +1863,9 @@ const handleViewNotification = async (record: Notification): Promise<void> => {
         detailDialogVisible.value = true;
       }
     }
-  } catch {
+  } catch (error) {
     if (request !== detailRequest) return;
-    message.error('获取通知配置详情失败');
+    if (!isPermissionDeniedError(error)) message.error('获取通知配置详情失败');
 
   }
 };
@@ -1886,7 +1886,7 @@ const handleStatusToggle = async (record: Notification & { statusLoading?: boole
     const statusText = newStatus === NotificationStatus.Enabled ? '启用' : '禁用';
     message.success(`通知配置已${statusText}`);
   } catch (error) {
-    message.error('更新状态失败');
+    if (!isPermissionDeniedError(error)) message.error('更新状态失败');
 
   } finally {
     record.statusLoading = false;
@@ -2248,7 +2248,7 @@ const saveNotification = async (): Promise<void> => {
       }
     }
 
-    message.error(errorMessage);
+    if (!isPermissionDeniedError(error)) message.error(errorMessage);
   } finally {
     if (epoch === formEpoch) notificationDialog.saving = false;
   }

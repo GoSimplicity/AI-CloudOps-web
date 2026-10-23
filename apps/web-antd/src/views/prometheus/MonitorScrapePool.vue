@@ -512,6 +512,7 @@ import {
 } from '#/api/core/prometheus/prometheus_scrape_pool';
 
 import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 const { can } = usePermission();
 
@@ -702,7 +703,7 @@ const loadScrapePoolList = async (): Promise<void> => {
     scrapePoolList.value = [];
     paginationConfig.total = 0;
     updateStats();
-    message.error(loadError.value);
+    if (!isPermissionDeniedError(error)) message.error(loadError.value);
   } finally {
     request.finish();
   }
@@ -783,7 +784,7 @@ const handleViewScrapePool = async (record: MonitorScrapePool): Promise<void> =>
     detailDialogVisible.value = true;
   } catch (error: any) {
 
-    message.error(error.message || '获取采集池详情失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '获取采集池详情失败');
   }
 };
 
@@ -809,7 +810,7 @@ const confirmDelete = (record: MonitorScrapePool): void => {
         loadScrapePoolList();
       } catch (error: any) {
 
-        message.error(error.message || '删除采集池失败');
+        if (!isPermissionDeniedError(error)) message.error(error.message || '删除采集池失败');
       }
     }
   });
@@ -854,7 +855,7 @@ const saveScrapePool = async (): Promise<void> => {
     loadScrapePoolList();
   } catch (error: any) {
 
-    message.error(error.message || '保存采集池失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '保存采集池失败');
   }
 };
 

@@ -46,6 +46,7 @@ import {
 import { downloadCsv } from '#/utils/export-csv';
 
 import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 const { can } = usePermission();
 
@@ -283,7 +284,7 @@ const fetchCloudAccounts = async (): Promise<void> => {
   } catch (error) {
     if (ticket !== listRequest) return;
     loadError.value = '获取云账户列表失败，请重试';
-    message.error('获取云账户列表失败');
+    if (!isPermissionDeniedError(error)) message.error('获取云账户列表失败');
     cloudAccounts.value = [];
     pagination.total = 0;
   } finally {
@@ -391,9 +392,9 @@ const handleEdit = async (record: CloudAccount): Promise<void> => {
       account_alias: current.account_alias ?? '',
       description: current.description ?? '',
     };
-  } catch {
+  } catch (error) {
     if (ticket !== formRequest) return;
-    message.error('获取账户详情失败，请重试');
+    if (!isPermissionDeniedError(error)) message.error('获取账户详情失败，请重试');
     closeForm();
   } finally {
     if (ticket === formRequest) formLoading.value = false;
@@ -438,7 +439,7 @@ const handleSubmit = async (): Promise<void> => {
     void fetchCloudAccounts();
   } catch (error: any) {
     if (ticket !== formRequest || error?.errorFields) return;
-    message.error(
+    if (!isPermissionDeniedError(error)) message.error(
       editing ? '更新云账户失败，已保留表单' : '创建云账户失败，已保留表单',
     );
   } finally {
@@ -461,7 +462,7 @@ const handleDelete = (record: CloudAccount): void => {
         detailVisible.value = false;
         fetchCloudAccounts();
       } catch (error) {
-        message.error('删除失败');
+        if (!isPermissionDeniedError(error)) message.error('删除失败');
       }
     },
   });
@@ -492,7 +493,7 @@ const handleStatusChange = async (
       currentDetail.value.status = newStatus;
     }
   } catch (error) {
-    message.error('状态更新失败');
+    if (!isPermissionDeniedError(error)) message.error('状态更新失败');
   } finally {
     switchLoading.value[record.id] = false;
   }
@@ -510,8 +511,8 @@ const handleVerify = (record: CloudAccount): void => {
       try {
         await verifyCloudAccountApi(record.id);
         message.success('凭据验证成功');
-      } catch {
-        message.error('凭据验证失败，账户配置已保留');
+      } catch (error) {
+        if (!isPermissionDeniedError(error)) message.error('凭据验证失败，账户配置已保留');
       } finally {
         hide();
       }
@@ -531,7 +532,7 @@ const handleViewDetail = async (record: CloudAccount): Promise<void> => {
     currentDetail.value = response;
   } catch (error) {
     if (ticket !== detailRequest) return;
-    message.error('获取详情失败');
+    if (!isPermissionDeniedError(error)) message.error('获取详情失败');
   } finally {
     if (ticket === detailRequest) detailLoading.value = false;
   }

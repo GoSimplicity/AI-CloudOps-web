@@ -13,6 +13,11 @@ import {
   isSuperAdmin,
   usePermission,
 } from './index';
+import {
+  createPermissionDeniedError,
+  isForbiddenResponse,
+  isPermissionDeniedError,
+} from './forbidden';
 
 const ALL_KEYS = Object.keys(PERMISSION_CODES) as PermissionKey[];
 const POD_DELETE = '/api/k8s/pod/:cluster_id/:namespace/:name/delete';
@@ -90,6 +95,41 @@ describe('checkPermission 纯函数', () => {
     expect(checkPermission({ codes: [], roles: ['ops'] }, POD_DELETE)).toBe(
       false,
     );
+  });
+});
+
+describe('P3-2 / P3-4 / P3-1 边界', () => {
+  it('roles 不是数组时不报错、不放行（仍可按用户名 admin 放行）', () => {
+    for (const roles of ['admin', { 0: 'admin' }, 1] as any[]) {
+      expect(isSuperAdmin({ roles, username: 'ops' })).toBe(false);
+      expect(isSuperAdmin({ roles, username: 'admin' })).toBe(true);
+    }
+  });
+
+  it('业务码 403 只在 HTTP 2xx / 403 时认作无权限', () => {
+    const body = { code: 403 };
+    expect(isForbiddenResponse({ response: { status: 200, data: body } })).toBe(
+      true,
+    );
+    expect(isForbiddenResponse({ response: { status: 403, data: 'x' } })).toBe(
+      true,
+    );
+    for (const status of [400, 404, 500, 502, undefined]) {
+      expect(isForbiddenResponse({ response: { status, data: body } })).toBe(
+        false,
+      );
+    }
+    expect(isForbiddenResponse(createPermissionDeniedError())).toBe(true);
+  });
+
+  it('HTTP 403 的错误即使标记丢失也视为已统一提示', () => {
+    const wrapped = Object.defineProperty(new Error('Forbidden'), 'response', {
+      value: { status: 403, data: 'Forbidden' },
+    });
+    expect(isPermissionDeniedError(wrapped)).toBe(true);
+    expect(isPermissionDeniedError({ response: { status: 500 } })).toBe(false);
+    expect(isPermissionDeniedError(new Error('x'))).toBe(false);
+    expect(isPermissionDeniedError(null)).toBe(false);
   });
 });
 

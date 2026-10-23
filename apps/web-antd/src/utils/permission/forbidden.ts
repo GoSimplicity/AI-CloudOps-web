@@ -35,16 +35,34 @@ function defineFlag(
 }
 
 export function isForbiddenResponse(error: any) {
+  const status = error?.response?.status;
+  if (status === FORBIDDEN_STATUS) return true;
+  if (error?.[BUSINESS_FORBIDDEN_FLAG] === true) return true;
+  // 业务码 403 只在 HTTP 2xx 时认（HTTP 403 已在上面判断），
+  // 避免 500 等其它状态的响应体里恰好带 code 403 被误判为无权限
   return (
-    error?.response?.status === FORBIDDEN_STATUS ||
-    error?.response?.data?.code === FORBIDDEN_STATUS ||
-    error?.[BUSINESS_FORBIDDEN_FLAG] === true
+    error?.response?.data?.code === FORBIDDEN_STATUS &&
+    typeof status === 'number' &&
+    status >= 200 &&
+    status < 300
   );
 }
 
-/** 页面 catch 中可用它判断错误是否已被统一提示过，从而跳过自己的提示 */
-export function isPermissionDeniedError(error: any) {
+function hasPermissionDeniedFlag(error: any) {
   return !!error && error[PERMISSION_DENIED_FLAG] === true;
+}
+
+/**
+ * 页面 catch 中可用它判断错误是否已被统一提示过，从而跳过自己的提示。
+ * 除已提示标记外，HTTP 状态为 403 的错误也视为已提示：经 requestClient 发出的
+ * HTTP 403 必定经过统一提示拦截器，而 403 响应体不是对象时，RequestClient
+ * 会把它包成 new Error(data)，标记可能随之丢失。
+ */
+export function isPermissionDeniedError(error: any) {
+  return (
+    hasPermissionDeniedFlag(error) ||
+    error?.response?.status === FORBIDDEN_STATUS
+  );
 }
 
 /** 业务码为 403 的响应（HTTP 200）也统一视为无权限 */
@@ -68,7 +86,7 @@ export function createForbiddenResponseInterceptor(
 ) {
   return {
     rejected: (error: any) => {
-      if (isForbiddenResponse(error) && !isPermissionDeniedError(error)) {
+      if (isForbiddenResponse(error) && !hasPermissionDeniedFlag(error)) {
         defineFlag(error, PERMISSION_DENIED_FLAG);
         // 同时标记响应体，使 RequestClient 包装后抛给页面的错误对象也带上标记
         defineFlag(error?.response?.data, PERMISSION_DENIED_FLAG, true);

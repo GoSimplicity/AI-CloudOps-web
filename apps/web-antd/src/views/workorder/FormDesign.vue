@@ -521,6 +521,7 @@ import type {
   ListWorkorderCategoryReq,
 } from '#/api/core/workorder/workorder_category';
 import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 // 响应式数据
 const showDesigner = ref(true);
@@ -885,7 +886,8 @@ const submitForm = async () => {
       await dynamicFormRef.value.validate();
       handleSubmit(formData.value);
     } catch (error) {
-      message.error('表单验证失败，请检查输入');
+      if (!isPermissionDeniedError(error))
+        message.error('表单验证失败，请检查输入');
     }
   }
 };
@@ -919,7 +921,8 @@ const copyJson = async () => {
     if (successful) {
       message.success('配置已复制到剪贴板');
     } else {
-      message.error('复制失败，请手动复制');
+      if (!isPermissionDeniedError(error))
+        message.error('复制失败，请手动复制');
     }
   }
 };

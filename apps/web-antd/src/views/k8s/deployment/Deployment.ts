@@ -37,6 +37,7 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 // YAML 模板常量
 const DEPLOYMENT_YAML_TEMPLATE = `apiVersion: apps/v1
@@ -394,7 +395,7 @@ export function useDeploymentPage() {
         clearDeployments();
       }
       clustersError.value = '获取集群列表失败，请重试';
-      message.error(clustersError.value);
+      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -441,7 +442,7 @@ export function useDeploymentPage() {
       namespaces.value = [];
       namespacesTotal.value = 0;
       namespacesError.value = '获取命名空间列表失败，请重试';
-      message.error(namespacesError.value);
+      if (!isPermissionDeniedError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -499,7 +500,7 @@ export function useDeploymentPage() {
         return;
       clearDeployments();
       loadError.value = '获取 Deployment 列表失败，请重试';
-      message.error(loadError.value);
+      if (!isPermissionDeniedError(err)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -540,7 +541,8 @@ export function useDeploymentPage() {
 
       currentDeploymentDetail.value = processedDetail;
     } catch (err) {
-      message.error('获取 Deployment 详情失败');
+      if (!isPermissionDeniedError(err))
+        message.error('获取 Deployment 详情失败');
 
       // 错误时也要处理格式转换
       const fallbackDetail = {
@@ -579,7 +581,8 @@ export function useDeploymentPage() {
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (err) {
-      message.error('获取 Deployment YAML 失败');
+      if (!isPermissionDeniedError(err))
+        message.error('获取 Deployment YAML 失败');
     } finally {
       submitLoading.value = false;
     }
@@ -617,10 +620,12 @@ export function useDeploymentPage() {
       await fetchDeployments();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查 YAML 格式是否正确');
+        if (!isPermissionDeniedError(err))
+          message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('Deployment YAML 更新失败');
+      if (!isPermissionDeniedError(err))
+        message.error('Deployment YAML 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -685,10 +690,11 @@ export function useDeploymentPage() {
       await fetchDeployments();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
+        if (!isPermissionDeniedError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('Deployment 创建失败');
+      if (!isPermissionDeniedError(err)) message.error('Deployment 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -711,10 +717,12 @@ export function useDeploymentPage() {
       await fetchDeployments();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查 YAML 格式是否正确');
+        if (!isPermissionDeniedError(err))
+          message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('Deployment YAML 创建失败');
+      if (!isPermissionDeniedError(err))
+        message.error('Deployment YAML 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -780,10 +788,11 @@ export function useDeploymentPage() {
       await fetchDeployments();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
+        if (!isPermissionDeniedError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('Deployment 更新失败');
+      if (!isPermissionDeniedError(err)) message.error('Deployment 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -807,7 +816,8 @@ export function useDeploymentPage() {
           message.success('Deployment 删除成功');
           await fetchDeployments();
         } catch (err) {
-          message.error('Deployment 删除失败');
+          if (!isPermissionDeniedError(err))
+            message.error('Deployment 删除失败');
         }
       },
     });
@@ -831,7 +841,8 @@ export function useDeploymentPage() {
           message.success('Deployment 重启成功');
           await fetchDeployments();
         } catch (err) {
-          message.error('Deployment 重启失败');
+          if (!isPermissionDeniedError(err))
+            message.error('Deployment 重启失败');
         }
       },
     });
@@ -874,10 +885,11 @@ export function useDeploymentPage() {
       await fetchDeployments();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
+        if (!isPermissionDeniedError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('Deployment 伸缩失败');
+      if (!isPermissionDeniedError(err)) message.error('Deployment 伸缩失败');
     } finally {
       submitLoading.value = false;
     }
@@ -901,7 +913,8 @@ export function useDeploymentPage() {
           message.success('Deployment 暂停成功');
           await fetchDeployments();
         } catch (err) {
-          message.error('Deployment 暂停失败');
+          if (!isPermissionDeniedError(err))
+            message.error('Deployment 暂停失败');
         }
       },
     });
@@ -924,7 +937,8 @@ export function useDeploymentPage() {
           message.success('Deployment 恢复成功');
           await fetchDeployments();
         } catch (err) {
-          message.error('Deployment 恢复失败');
+          if (!isPermissionDeniedError(err))
+            message.error('Deployment 恢复失败');
         }
       },
     });
@@ -946,7 +960,7 @@ export function useDeploymentPage() {
       deploymentPods.value = res?.items || [];
       isPodModalVisible.value = true;
     } catch (err) {
-      message.error('获取 Pod 列表失败');
+      if (!isPermissionDeniedError(err)) message.error('获取 Pod 列表失败');
     } finally {
       submitLoading.value = false;
     }
@@ -974,7 +988,7 @@ export function useDeploymentPage() {
       deploymentHistory.value = res?.items || [];
       isHistoryModalVisible.value = true;
     } catch (err) {
-      message.error('获取版本历史失败');
+      if (!isPermissionDeniedError(err)) message.error('获取版本历史失败');
     } finally {
       submitLoading.value = false;
     }
@@ -1048,7 +1062,8 @@ export function useDeploymentPage() {
           selectedRows.value = [];
           await fetchDeployments();
         } catch (err) {
-          message.error(`批量${operation}失败`);
+          if (!isPermissionDeniedError(err))
+            message.error(`批量${operation}失败`);
         }
       },
     });

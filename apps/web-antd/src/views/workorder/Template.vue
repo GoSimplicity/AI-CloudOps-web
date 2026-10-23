@@ -42,6 +42,7 @@ import {
 } from '#/api/core/workorder/workorder_form_design';
 
 import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 const { can } = usePermission();
 
@@ -375,7 +376,8 @@ const loadDialogCategories = async (
     }
   } catch (error: any) {
     if (reset) {
-      message.error(error.message || '加载分类列表失败');
+      if (!isPermissionDeniedError(error))
+        message.error(error.message || '加载分类列表失败');
       dialogCategories.value = [];
       categoryPagination.current = 1;
       categoryPagination.total = 0;
@@ -474,7 +476,8 @@ const loadDialogProcesses = async (
     }
   } catch (error: any) {
     if (reset) {
-      message.error(error.message || '加载流程列表失败');
+      if (!isPermissionDeniedError(error))
+        message.error(error.message || '加载流程列表失败');
       dialogProcesses.value = [];
       processPagination.current = 1;
       processPagination.total = 0;
@@ -571,7 +574,8 @@ const loadDialogForms = async (
     }
   } catch (error: any) {
     if (reset) {
-      message.error(error.message || '加载表单列表失败');
+      if (!isPermissionDeniedError(error))
+        message.error(error.message || '加载表单列表失败');
       dialogForms.value = [];
       formPagination.current = 1;
       formPagination.total = 0;
@@ -685,7 +689,7 @@ const loadTemplates = async () => {
     total.value = 0;
     Object.assign(stats, { total: 0, enabled: 0, disabled: 0, thisMonth: 0 });
     loadError.value = '加载模板数据失败';
-    message.error(loadError.value);
+    if (!isPermissionDeniedError(error)) message.error(loadError.value);
   } finally {
     loading.value = false;
   }
@@ -723,7 +727,8 @@ const loadCategories = async () => {
 
     categories.value = allCategories;
   } catch (error: any) {
-    message.error(`加载分类列表失败: ${error.message || '未知错误'}`);
+    if (!isPermissionDeniedError(error))
+      message.error(`加载分类列表失败: ${error.message || '未知错误'}`);
     categories.value = [];
   }
 };
@@ -786,7 +791,7 @@ const handleEditTemplate = async (row: WorkorderTemplateItem) => {
       await loadSelectorsForEdit(res);
     }
   } catch (error) {
-    message.error('获取模板详情失败');
+    if (!isPermissionDeniedError(error)) message.error('获取模板详情失败');
   } finally {
     loading.value = false;
   }
@@ -804,7 +809,7 @@ const handleViewTemplate = async (row: WorkorderTemplateItem) => {
       detailDialog.visible = true;
     }
   } catch (error) {
-    message.error('获取模板详情失败');
+    if (!isPermissionDeniedError(error)) message.error('获取模板详情失败');
   } finally {
     loading.value = false;
   }
@@ -841,7 +846,8 @@ const confirmDelete = (template: WorkorderTemplateItem) => {
 
         loadTemplates();
       } catch (error: any) {
-        message.error(`删除模板失败: ${error.message || '未知错误'}`);
+        if (!isPermissionDeniedError(error))
+          message.error(`删除模板失败: ${error.message || '未知错误'}`);
       } finally {
         loading.value = false;
       }
@@ -902,11 +908,12 @@ const saveTemplate = async () => {
     templateDialog.visible = false;
     loadTemplates();
   } catch (error: any) {
-    message.error(
-      templateDialog.isEdit
-        ? `更新模板失败: ${error.message || '未知错误'}`
-        : `创建模板失败: ${error.message || '未知错误'}`,
-    );
+    if (!isPermissionDeniedError(error))
+      message.error(
+        templateDialog.isEdit
+          ? `更新模板失败: ${error.message || '未知错误'}`
+          : `创建模板失败: ${error.message || '未知错误'}`,
+      );
   } finally {
     loading.value = false;
   }
@@ -1080,9 +1087,10 @@ onMounted(async () => {
   try {
     await Promise.all([loadCategories(), loadTemplates()]);
   } catch (error: any) {
-    message.error(
-      `初始化数据加载失败: ${error.message || '未知错误'}, 请刷新页面重试`,
-    );
+    if (!isPermissionDeniedError(error))
+      message.error(
+        `初始化数据加载失败: ${error.message || '未知错误'}, 请刷新页面重试`,
+      );
   } finally {
     loading.value = false;
   }

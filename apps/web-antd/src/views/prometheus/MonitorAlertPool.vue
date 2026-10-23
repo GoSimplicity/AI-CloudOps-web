@@ -461,6 +461,7 @@ import {
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 
 import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 const { can } = usePermission();
 
@@ -664,7 +665,7 @@ const fetchAlertManagerPools = async (): Promise<void> => {
     data.value = [];
     paginationConfig.total = 0;
     updateStats();
-    message.error(loadError.value);
+    if (!isPermissionDeniedError(error)) message.error(loadError.value);
   } finally {
     request.finish();
   }
@@ -713,7 +714,7 @@ const handleViewPool = async (record: MonitorAlertManagerPool): Promise<void> =>
     detailDialogVisible.value = true;
   } catch (error: any) {
 
-    message.error(error.message || '获取实例池详情失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '获取实例池详情失败');
   }
 };
 
@@ -743,7 +744,7 @@ const confirmDelete = (record: MonitorAlertManagerPool): void => {
         fetchAlertManagerPools();
       } catch (error: any) {
 
-        message.error(error.message || '删除实例池失败');
+        if (!isPermissionDeniedError(error)) message.error(error.message || '删除实例池失败');
       }
     }
   });
@@ -764,7 +765,7 @@ const fetchUsers = async () => {
       userPagination.total = response.total || 0;
     }
   } catch (error: any) {
-    message.error(error.message || '加载用户列表失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '加载用户列表失败');
   } finally {
     userLoading.value = false;
   }
@@ -910,7 +911,7 @@ const handleAdd = async (): Promise<void> => {
     await fetchAlertManagerPools();
     closeAddModal();
   } catch (error: any) {
-    message.error(error.message || '新增实例池失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '新增实例池失败');
   }
 };
 
@@ -968,7 +969,7 @@ const handleEdit = async (): Promise<void> => {
     await fetchAlertManagerPools();
     closeEditModal();
   } catch (error: any) {
-    message.error(error.message || '更新实例池失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '更新实例池失败');
   }
 };
 

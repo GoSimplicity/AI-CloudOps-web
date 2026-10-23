@@ -1091,6 +1091,7 @@ import {
 } from '@ant-design/icons-vue';
 
 import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 const { can } = usePermission();
 
@@ -1399,7 +1400,7 @@ const rollbackToVersion = (revision: number) => {
           closeHistoryModal();
           await fetchDaemonSets();
         } catch (err) {
-          message.error(`DaemonSet 回滚到版本 ${revision} 失败`);
+          if (!isPermissionDeniedError(err)) message.error(`DaemonSet 回滚到版本 ${revision} 失败`);
 
         }
       },
