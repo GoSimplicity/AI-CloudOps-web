@@ -49,9 +49,9 @@
   align-items: flex-start;
   padding: 8px 12px;
   margin-bottom: 8px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border: 1px solid #e9ecef;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
+  border: 1px solid var(--ops-border);
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
   transition: all 0.2s;
@@ -59,13 +59,13 @@
 
 .k8s-detail-label-item:hover,
 .k8s-detail-annotation-item:hover {
-  background: #e9ecef;
-  border-color: #1677ff;
+  background: var(--ops-border);
+  border-color: var(--ops-accent);
 }
 
 .detail-label-key,
 .detail-annotation-key {
-  color: #1677ff;
+  color: var(--ops-accent);
   font-weight: 600;
   word-break: break-word;
   flex-shrink: 0;
@@ -100,7 +100,7 @@
 /* 集群名称列样式 */
 .k8s-cluster-name {
   font-weight: 500;
-  color: #1677ff;
+  color: var(--ops-accent);
   font-size: 13px;
 }
 
@@ -135,7 +135,7 @@
 }
 
 .k8s-uid-display .uid-copy-btn:hover {
-  color: #1677ff;
+  color: var(--ops-accent);
 }
 
 /* 标签和注解显示 - 优化样式 */
@@ -150,7 +150,7 @@
 
 .k8s-labels-display .k8s-label-item {
   font-size: 12px;
-  border-radius: 4px;
+  border-radius: var(--ops-radius);
   margin: 0;
   padding: 2px 8px;
   display: inline-flex;
@@ -188,7 +188,7 @@
 
 .k8s-labels-display .k8s-label-count {
   font-size: 12px;
-  border-radius: 4px;
+  border-radius: var(--ops-radius);
   margin: 0;
   padding: 2px 8px;
   font-weight: 600;
@@ -197,7 +197,7 @@
 
 .k8s-annotations-display .k8s-annotation-count {
   font-size: 12px;
-  border-radius: 4px;
+  border-radius: var(--ops-radius);
   margin: 0;
   padding: 2px 8px;
   font-weight: 600;
@@ -205,23 +205,23 @@
 }
 
 .k8s-system-label {
-  background: #f0f2ff;
-  color: #1677ff;
-  border: 1px solid #d6e4ff;
+  background: hsl(var(--primary) / 0.08);
+  color: var(--ops-accent);
+  border: 1px solid var(--ops-border);
   font-weight: 600;
 }
 
 .k8s-user-label {
-  background: #f0f2ff;
-  color: #1677ff;
-  border: 1px solid #d6e4ff;
+  background: hsl(var(--primary) / 0.08);
+  color: var(--ops-accent);
+  border: 1px solid var(--ops-border);
   font-weight: 600;
 }
 
 /* 移除旧的注解样式，使用统一样式 */
 
 .k8s-no-data {
-  color: #999;
+  color: var(--ops-muted);
   font-size: 12px;
   font-style: italic;
 }
@@ -237,8 +237,8 @@
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
   line-height: 1.5;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
   padding: 16px;
 }
@@ -287,8 +287,8 @@
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
   line-height: 1.4;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: var(--ops-ground);
+  border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
   padding: 20px;
   resize: none;
@@ -297,7 +297,7 @@
 /* 命名空间表格列样式 */
 .namespace-table :deep(.ant-table-tbody td[data-index="0"]) {
   font-weight: 600;
-  color: #1677ff;
+  color: var(--ops-accent);
 }
 
 .namespace-table :deep(.ant-table-tbody td[data-index="3"]) {
@@ -308,12 +308,12 @@
 
 .namespace-table :deep(.ant-table-tbody td[data-index="4"]) {
   font-weight: 500;
-  color: #52c41a;
+  color: hsl(var(--success));
 }
 
 .namespace-yaml-column .ant-btn {
   height: 32px;
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   font-size: 12px;
   padding: 0 12px;
 }
@@ -331,7 +331,7 @@
   padding: 0 12px;
   border: 1px solid var(--ops-border);
   background: var(--ops-surface);
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   transition: all 0.2s ease;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -345,7 +345,7 @@
 }
 
 .k8s-cluster-selector.ant-select-focused :deep(.ant-select-selector) {
-  border-color: #1890ff;
+  border-color: var(--ops-accent);
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
 }
 
@@ -371,7 +371,7 @@
 
 /* 下拉框选项内容优化 */
 .k8s-cluster-selector :deep(.ant-select-dropdown) {
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -411,7 +411,7 @@
 
 .namespace-labels-filter .k8s-toolbar-btn {
   height: 36px;
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   font-weight: 500;
   border: 1px solid var(--ops-border);
   background: var(--ops-ground);
@@ -420,8 +420,8 @@
 
 .namespace-labels-filter .k8s-toolbar-btn:hover {
   background: var(--ops-border);
-  border-color: #1677ff;
-  color: #1677ff;
+  border-color: var(--ops-accent);
+  color: var(--ops-accent);
 }
 
 .namespace-labels-filter .active-filters {
@@ -437,7 +437,7 @@
   overflow: auto;
   background: var(--ops-surface);
   border: 1px solid var(--ops-border);
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   padding: 8px;
   margin-top: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -448,12 +448,12 @@
 .namespace-table :deep(.ant-table-tbody > tr[data-row-key="kube-system"]),
 .namespace-table :deep(.ant-table-tbody > tr[data-row-key="kube-public"]),
 .namespace-table :deep(.ant-table-tbody > tr[data-row-key="kube-node-lease"]) {
-  background-color: #fff7e6;
+  background-color: hsl(var(--warning) / 0.1);
 }
 
 /* 命名空间状态样式 */
 .namespace-table :deep(.ant-table-tbody > tr[data-namespace-status="Terminating"]) {
-  background-color: #fff2f0;
+  background-color: hsl(var(--destructive) / 0.1);
 }
 
 /* 标签过滤器样式 */
@@ -464,9 +464,9 @@
 .current-filters {
   margin-bottom: 16px;
   padding: 16px;
-  background: #f6ffed;
+  background: hsl(var(--success) / 0.1);
   border-radius: var(--ops-radius);
-  border: 1px solid #e6f7ff;
+  border: 1px solid hsl(var(--primary) / 0.08);
 }
 
 .filter-tags {
@@ -489,7 +489,7 @@
   margin-bottom: 16px;
   padding: 8px;
   background: var(--ops-surface);
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   border: 1px solid var(--ops-border);
 }
 
@@ -501,7 +501,7 @@
 .delete-config-form .ant-radio-wrapper {
   padding: 8px;
   border: 1px solid var(--ops-border);
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
   background: var(--ops-ground);
   margin-bottom: 6px;
 }
@@ -512,21 +512,21 @@
   align-items: center;
   gap: 8px;
   padding: 8px;
-  background: #f8f9fa;
+  background: var(--ops-ground);
   border: 1px dashed var(--ops-border);
-  border-radius: 6px;
+  border-radius: var(--ops-radius);
 }
 
 /* 系统标签样式 */
 .k8s-detail-content .system-labels .k8s-label-item {
-  background: #f6ffed;
+  background: hsl(var(--success) / 0.1);
   border: 1px solid #b7eb8f;
   color: #389e0d;
 }
 
 /* 特殊状态指示器 */
 .namespace-table :deep(.ant-table-tbody > tr[data-namespace-phase="Active"]) {
-  border-left: 2px solid #52c41a;
+  border-left: 2px solid hsl(var(--success));
 }
 
 .namespace-table :deep(.ant-table-tbody > tr[data-namespace-phase="Terminating"]) {
@@ -622,13 +622,13 @@
 .config-textarea::-webkit-scrollbar-track,
 .k8s-config-textarea::-webkit-scrollbar-track {
   background: #f1f1f1;
-  border-radius: 4px;
+  border-radius: var(--ops-radius);
 }
 
 .config-textarea::-webkit-scrollbar-thumb,
 .k8s-config-textarea::-webkit-scrollbar-thumb {
   background: #c1c1c1;
-  border-radius: 4px;
+  border-radius: var(--ops-radius);
 }
 
 /* 响应式优化 */

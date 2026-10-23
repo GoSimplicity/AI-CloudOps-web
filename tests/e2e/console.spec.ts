@@ -447,3 +447,121 @@ test('account menu reflects profile API and notifications have an honest empty s
     animations: 'disabled',
   });
 });
+
+test('kubernetes cluster and namespace lists use real isolated resources', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  page.setDefaultTimeout(15_000);
+  const password = adminPassword();
+  const clusterName = process.env.CLOUDOPS_TEST_CLUSTER_NAME;
+  const namespace = process.env.CLOUDOPS_TEST_NAMESPACE;
+  test.skip(
+    !password || !clusterName || !namespace,
+    'Set isolated Kubernetes acceptance resource names.',
+  );
+  const errors: string[] = [];
+  const apiFailures: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('response', (response) => {
+    if (
+      new URL(response.url()).pathname.startsWith('/api/') &&
+      response.status() >= 400
+    )
+      apiFailures.push(
+        `${response.status()} ${new URL(response.url()).pathname}`,
+      );
+  });
+  await page.goto(routePath('/auth/login'));
+  await page
+    .getByLabel('账号', { exact: true })
+    .fill(process.env.CLOUDOPS_TEST_USER || 'admin');
+  await page.getByLabel('密码', { exact: true }).fill(password!);
+  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>('#password');
+    if (input) input.value = '';
+  });
+  await expect(page).not.toHaveURL(/auth\/login/, { timeout: 30_000 });
+  await page.goto(routePath('/k8s_cluster'));
+  await expect(page.locator('.ops-page h1')).toHaveText('集群管理');
+  await expect(
+    page.locator('.ant-table-tbody').getByText(clusterName!, { exact: true }),
+  ).toBeVisible();
+  await page
+    .locator('.ops-page__actions')
+    .getByRole('button', { name: '新建集群', exact: true })
+    .click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^取\s*消$/ })
+    .click();
+  await expect(page.getByRole('dialog')).not.toBeVisible();
+  await page.screenshot({
+    path: '.cache/ui-verification/k8s-cluster-desktop.png',
+    fullPage: true,
+    animations: 'disabled',
+  });
+  await page.goto(routePath('/k8s_namespace'));
+  await expect(page.locator('.ops-page h1')).toHaveText('命名空间管理');
+  await expect(
+    page
+      .locator('.ant-table-tbody td:nth-child(2)')
+      .getByText(namespace!, { exact: true }),
+  ).toBeVisible();
+  const selector = page.locator('.k8s-cluster-selector');
+  await selector.hover();
+  await selector.locator('.ant-select-clear').click();
+  await expect(
+    page
+      .locator('.ops-page__actions')
+      .getByRole('button', { name: '创建命名空间', exact: true }),
+  ).toBeDisabled();
+  await expect(page.getByText('请先选择集群', { exact: true })).toBeVisible();
+  await selector.click();
+  await page
+    .locator('.ant-select-dropdown:visible .ant-select-item-option')
+    .filter({ hasText: clusterName! })
+    .click();
+  await expect(
+    page
+      .locator('.ant-table-tbody td:nth-child(2)')
+      .getByText(namespace!, { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel('深色', { exact: true }).click();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(() =>
+      page
+        .locator('aside')
+        .first()
+        .evaluate((element) => element.getBoundingClientRect().right),
+    )
+    .toBeLessThanOrEqual(1);
+  const accountBounds = await page
+    .getByRole('button', { name: '账户菜单', exact: true })
+    .boundingBox();
+  expect(accountBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(accountBounds!.x + accountBounds!.width).toBeLessThanOrEqual(390);
+  await expectUncovered(
+    page
+      .locator('.ops-page__actions')
+      .getByRole('button', { name: '刷新数据', exact: true }),
+  );
+  await expectUncovered(page.locator('.k8s-search-input'));
+  await expectUncovered(page.locator('.ant-table-thead th:visible').first());
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: '.cache/ui-verification/k8s-namespace-mobile.png',
+    fullPage: true,
+    animations: 'disabled',
+  });
+  expect(errors).toEqual([]);
+  expect(apiFailures).toEqual([]);
+});

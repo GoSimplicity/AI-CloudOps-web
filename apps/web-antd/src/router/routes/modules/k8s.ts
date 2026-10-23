@@ -7,8 +7,8 @@ const routes: RouteRecordRaw[] = [
     component: BasicLayout,
     meta: {
       order: 3,
-      title: 'k8s运维管理',
-      icon: 'tabler:cloud-network'
+      title: 'Kubernetes 运维',
+      icon: 'tabler:cloud-network',
     },
     name: 'K8s',
     path: '/k8s',
@@ -20,7 +20,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 1,
           icon: 'lucide:database',
-          title: 'cluster管理',
+          title: '集群管理',
         },
       },
       {
@@ -30,7 +30,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 2,
           icon: 'lucide:folder',
-          title: 'namespace管理',
+          title: '命名空间管理',
         },
       },
       {
@@ -166,7 +166,8 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'K8sClusterRoleBinding',
         path: '/k8s_clusterrolebinding',
-        component: () => import('#/views/k8s/clusterrolebinding/ClusterRoleBinding.vue'),
+        component: () =>
+          import('#/views/k8s/clusterrolebinding/ClusterRoleBinding.vue'),
         meta: {
           order: 19,
           icon: 'lucide:settings',

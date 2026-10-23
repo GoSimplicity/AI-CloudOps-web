@@ -89,6 +89,29 @@ defineProps<{ title: string; description?: string }>();
 .ops-page__filters :deep(.search-filters) {
   width: 100%;
 }
+.ops-page .ops-page__filters :deep(.ant-select-selector),
+.ops-page .ops-page__filters :deep(.ant-input),
+.ops-page .ops-page__filters :deep(.ant-btn),
+.ops-page .ops-page__filters :deep(.ant-input-affix-wrapper) {
+  border-radius: var(--ops-radius);
+}
+.ops-page__content :deep(.k8s-cluster-name) {
+  display: block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ops-page__filters :deep(.k8s-toolbar-filters),
+.ops-page__filters :deep(.k8s-filter-group),
+.ops-page__filters :deep(.k8s-toolbar-actions) {
+  gap: var(--ops-space-md);
+  min-width: 0;
+}
+.ops-page__filters :deep(.k8s-search-group) {
+  min-width: min(240px, 100%);
+  max-width: none;
+}
 .ops-page__filters :deep(.ops-filter-row) {
   display: flex;
   flex-wrap: wrap;
@@ -185,6 +208,9 @@ defineProps<{ title: string; description?: string }>();
   .ops-page__filters :deep(.search-right) {
     width: 100%;
   }
+  .ops-page__filters :deep(.k8s-filter-group),
+  .ops-page__filters :deep(.k8s-filter-group > .ant-select),
+  .ops-page__filters :deep(.k8s-search-group),
   .ops-page__filters :deep(.search-filters > .ant-select),
   .ops-page__filters :deep(.search-filters > .ant-input-group-wrapper),
   .ops-page__filters :deep(.search-left > *),

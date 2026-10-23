@@ -21,6 +21,8 @@ export function useClusterPage() {
   // state
   const clusters = ref<K8sCluster[]>([]);
   const loading = ref(false);
+  const loadError = ref('');
+  let listRequestId = 0;
   const searchText = ref('');
   const filterEnv = ref<Env | undefined>(undefined);
   const filterStatus = ref<ClusterStatus | undefined>(undefined);
@@ -30,7 +32,7 @@ export function useClusterPage() {
   const pageSize = ref(10);
   const total = ref(0);
   const clustersTotal = ref(0); // 用于集群下拉选择
-  
+
   // form refs
   const formRef = ref<FormInstance>();
 
@@ -39,12 +41,12 @@ export function useClusterPage() {
   const isEdit = ref(false);
   const submitLoading = ref(false);
   const editDetailLoading = ref(false);
-  
+
   // detail modal state
   const isDetailModalVisible = ref(false);
   const detailLoading = ref(false);
   const currentClusterDetail = ref<K8sCluster | null>(null);
-  
+
   // kubeconfig modal state
   const isKubeConfigModalVisible = ref(false);
   const kubeConfigLoading = ref(false);
@@ -70,26 +72,41 @@ export function useClusterPage() {
   const formRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入集群名称', trigger: 'blur' },
-      { min: 2, max: 50, message: '集群名称长度应在2-50个字符之间', trigger: 'blur' },
-      { pattern: /^[a-zA-Z0-9\u4e00-\u9fa5_-]+$/, message: '集群名称只能包含字母、数字、中文、下划线和横线', trigger: 'blur' }
+      {
+        min: 2,
+        max: 50,
+        message: '集群名称长度应在2-50个字符之间',
+        trigger: 'blur',
+      },
+      {
+        pattern: /^[a-zA-Z0-9\u4e00-\u9fa5_-]+$/,
+        message: '集群名称只能包含字母、数字、中文、下划线和横线',
+        trigger: 'blur',
+      },
     ],
     api_server_addr: [
-      { 
+      {
         validator: (_rule: Rule, value: string) => {
           if (!value) return Promise.resolve();
           const urlPattern = /^https?:\/\/.+:\d+$/;
           if (!urlPattern.test(value)) {
-            return Promise.reject('API Server地址格式不正确，应为 https://host:port 格式');
+            return Promise.reject(
+              'API Server地址格式不正确，应为 https://host:port 格式',
+            );
           }
           return Promise.resolve();
-        }, 
-        trigger: 'blur' 
-      }
+        },
+        trigger: 'blur',
+      },
     ],
     kube_config_content: [
       { required: true, message: '请输入 KubeConfig 内容', trigger: 'blur' },
-      { min: 100, message: 'KubeConfig 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      {
+        min: 100,
+        message: 'KubeConfig 内容过短，请检查是否完整',
+        trigger: 'blur',
+      },
+    ],
   };
 
   // computed - 不在前端做过滤，因为后端API已经处理了过滤
@@ -143,8 +160,12 @@ export function useClusterPage() {
 
   // crud
   const fetchClusters = async () => {
+    const requestId = ++listRequestId;
     try {
       loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
       const params: ListClustersReq = {
         page: currentPage.value,
         size: pageSize.value,
@@ -154,13 +175,17 @@ export function useClusterPage() {
         status: filterStatus.value ? String(filterStatus.value) : undefined,
       };
       const res = await getClustersListApi(params);
+      if (requestId !== listRequestId) return;
       clusters.value = res?.items || [];
       total.value = res?.total || 0;
     } catch (err) {
-      message.error('获取集群失败');
-
+      if (requestId !== listRequestId) return;
+      clusters.value = [];
+      total.value = 0;
+      loadError.value = '获取集群失败，请重试';
+      message.error(loadError.value);
     } finally {
-      loading.value = false;
+      if (requestId === listRequestId) loading.value = false;
     }
   };
 
@@ -187,7 +212,7 @@ export function useClusterPage() {
     try {
       isEdit.value = true;
       editDetailLoading.value = true;
-      
+
       // 显示加载状态，先用列表数据填充基本信息
       formModel.value = {
         id: record.id,
@@ -204,9 +229,9 @@ export function useClusterPage() {
         action_timeout_seconds: record.action_timeout_seconds,
         tags: record.tags || [],
       } as UpdateClusterReq & { id?: number };
-      
+
       isModalVisible.value = true;
-      
+
       // 获取完整的集群详情，包括完整的KubeConfig内容
       if (record.id) {
         const detailData = await getClusterDetailApi(record.id);
@@ -218,21 +243,23 @@ export function useClusterPage() {
             restrict_namespace: detailData.restrict_namespace || [],
             env: detailData.env || record.env,
             version: detailData.version || record.version,
-            api_server_addr: detailData.api_server_addr || record.api_server_addr,
+            api_server_addr:
+              detailData.api_server_addr || record.api_server_addr,
             kube_config_content: detailData.kube_config_content || '', // 使用详情API返回的完整内容
             cpu_request: detailData.cpu_request || record.cpu_request,
             cpu_limit: detailData.cpu_limit || record.cpu_limit,
             memory_request: detailData.memory_request || record.memory_request,
             memory_limit: detailData.memory_limit || record.memory_limit,
-            action_timeout_seconds: detailData.action_timeout_seconds || record.action_timeout_seconds,
+            action_timeout_seconds:
+              detailData.action_timeout_seconds ||
+              record.action_timeout_seconds,
             tags: detailData.tags || [],
           } as UpdateClusterReq & { id?: number };
         }
       }
     } catch (err) {
-
-      message.warning('获取集群详细信息失败，部分字段可能不完整');
-      // 继续使用列表数据，至少可以进行基本编辑
+      isModalVisible.value = false;
+      message.error('获取集群详细信息失败，请重试后再编辑');
     } finally {
       editDetailLoading.value = false;
     }
@@ -244,17 +271,17 @@ export function useClusterPage() {
 
   const submitForm = async () => {
     if (!formRef.value) return;
-    
+
     try {
       // 先进行表单验证
       await formRef.value.validate();
-      
+
       // 检查是否需要二次确认
       const needsConfirmation = await checkDangerousOperations();
       if (needsConfirmation && !(await showDangerousOperationConfirm())) {
         return;
       }
-      
+
       submitLoading.value = true;
       if (
         isEdit.value &&
@@ -276,7 +303,6 @@ export function useClusterPage() {
         return;
       }
       message.error(isEdit.value ? '集群更新失败' : '集群创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -285,29 +311,34 @@ export function useClusterPage() {
   // 检查是否为危险操作
   const checkDangerousOperations = async (): Promise<boolean> => {
     if (!isEdit.value) return false; // 新建不需要确认
-    
+
     // 获取原始数据进行对比
-    const currentFormData = formModel.value as UpdateClusterReq & { id?: number };
+    const currentFormData = formModel.value as UpdateClusterReq & {
+      id?: number;
+    };
     if (!currentFormData.id) return false;
-    
+
     try {
       const originalData = await getClusterDetailApi(currentFormData.id);
       if (!originalData) return false;
-      
+
       // 检查资源配置是否变化
-      const resourceChanged = 
-        (originalData?.cpu_request || '') !== (currentFormData.cpu_request || '') ||
+      const resourceChanged =
+        (originalData?.cpu_request || '') !==
+          (currentFormData.cpu_request || '') ||
         (originalData?.cpu_limit || '') !== (currentFormData.cpu_limit || '') ||
-        (originalData?.memory_request || '') !== (currentFormData.memory_request || '') ||
-        (originalData?.memory_limit || '') !== (currentFormData.memory_limit || '');
-      
+        (originalData?.memory_request || '') !==
+          (currentFormData.memory_request || '') ||
+        (originalData?.memory_limit || '') !==
+          (currentFormData.memory_limit || '');
+
       // 检查命名空间限制是否变化
-      const namespaceChanged = JSON.stringify(originalData?.restrict_namespace || []) !== 
-                              JSON.stringify(currentFormData.restrict_namespace || []);
-      
+      const namespaceChanged =
+        JSON.stringify(originalData?.restrict_namespace || []) !==
+        JSON.stringify(currentFormData.restrict_namespace || []);
+
       return resourceChanged || namespaceChanged;
     } catch (error) {
-
       return false;
     }
   };
@@ -354,7 +385,6 @@ export function useClusterPage() {
           await fetchClusters();
         } catch (err) {
           message.error('集群删除失败');
-
         }
       },
     });
@@ -391,7 +421,6 @@ export function useClusterPage() {
           await fetchClusters();
         } catch (err) {
           message.error('批量删除失败');
-
         }
       },
     });
@@ -404,7 +433,6 @@ export function useClusterPage() {
       await fetchClusters();
     } catch (err) {
       message.error('刷新失败');
-
     }
   };
 
@@ -443,21 +471,23 @@ export function useClusterPage() {
       // 先显示模态框，使用列表数据作为初始显示
       currentKubeConfigCluster.value = record;
       isKubeConfigModalVisible.value = true;
-      
+
       // 如果有ID且列表数据没有完整的KubeConfig，获取完整的集群详情
-      if (record.id && (!record.kube_config_content || record.kube_config_content.length < 100)) {
+      if (
+        record.id &&
+        (!record.kube_config_content || record.kube_config_content.length < 100)
+      ) {
         kubeConfigLoading.value = true;
         const detailData = await getClusterDetailApi(record.id);
         if (detailData && detailData.kube_config_content) {
           // 更新为完整的数据
           currentKubeConfigCluster.value = {
             ...record,
-            kube_config_content: detailData.kube_config_content
+            kube_config_content: detailData.kube_config_content,
           };
         }
       }
     } catch (error) {
-
       // 继续显示，使用列表中的数据（可能不完整）
     } finally {
       kubeConfigLoading.value = false;
@@ -475,11 +505,12 @@ export function useClusterPage() {
         message.warning('暂无配置内容可复制');
         return;
       }
-      await navigator.clipboard.writeText(currentKubeConfigCluster.value.kube_config_content);
+      await navigator.clipboard.writeText(
+        currentKubeConfigCluster.value.kube_config_content,
+      );
       message.success('KubeConfig 配置已复制到剪贴板');
     } catch (err) {
       message.error('复制失败，请手动复制');
-
     }
   };
 
@@ -489,10 +520,10 @@ export function useClusterPage() {
         message.warning('暂无配置内容可下载');
         return;
       }
-      
+
       const content = currentKubeConfigCluster.value.kube_config_content;
       const filename = `${currentKubeConfigCluster.value.name || 'cluster'}-kubeconfig.yaml`;
-      
+
       const blob = new Blob([content], { type: 'text/yaml' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -502,11 +533,10 @@ export function useClusterPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
+
       message.success(`KubeConfig 配置已下载为 ${filename}`);
     } catch (err) {
       message.error('下载失败');
-
     }
   };
 
@@ -517,11 +547,12 @@ export function useClusterPage() {
         message.warning('暂无配置内容可复制');
         return;
       }
-      await navigator.clipboard.writeText(currentClusterDetail.value.kube_config_content);
+      await navigator.clipboard.writeText(
+        currentClusterDetail.value.kube_config_content,
+      );
       message.success('KubeConfig 配置已复制到剪贴板');
     } catch (err) {
       message.error('复制失败，请手动复制');
-
     }
   };
 
@@ -531,10 +562,10 @@ export function useClusterPage() {
         message.warning('暂无配置内容可下载');
         return;
       }
-      
+
       const content = currentClusterDetail.value.kube_config_content;
       const filename = `${currentClusterDetail.value.name || 'cluster'}-kubeconfig.yaml`;
-      
+
       const blob = new Blob([content], { type: 'text/yaml' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -544,11 +575,10 @@ export function useClusterPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
+
       message.success(`KubeConfig 配置已下载为 ${filename}`);
     } catch (err) {
       message.error('下载失败');
-
     }
   };
 
@@ -577,70 +607,74 @@ export function useClusterPage() {
   // KubeConfig 预览内容生成
   const getKubeConfigPreview = (kubeConfigContent?: string): string => {
     if (!kubeConfigContent) return '暂无配置';
-    
+
     try {
       // 尝试提取关键信息
       const lines = kubeConfigContent.split('\n');
       const clusterInfo: string[] = [];
       const userInfo: string[] = [];
-      
+
       // 查找集群和用户信息
       for (const line of lines) {
         const trimmedLine = line.trim();
-        
+
         // 提取集群名
-        if (trimmedLine.includes('name:') && (
-          lines[lines.indexOf(line) - 1]?.trim().includes('cluster:') || 
-          trimmedLine.includes('cluster')
-        )) {
+        if (
+          trimmedLine.includes('name:') &&
+          (lines[lines.indexOf(line) - 1]?.trim().includes('cluster:') ||
+            trimmedLine.includes('cluster'))
+        ) {
           const match = trimmedLine.match(/name:\s*(.+)/);
           if (match && match[1] && !clusterInfo.includes(match[1].trim())) {
             clusterInfo.push(match[1].trim());
           }
         }
-        
+
         // 提取用户信息
-        if (trimmedLine.includes('name:') && (
-          lines[lines.indexOf(line) - 1]?.trim().includes('user:') ||
-          trimmedLine.includes('user')
-        )) {
+        if (
+          trimmedLine.includes('name:') &&
+          (lines[lines.indexOf(line) - 1]?.trim().includes('user:') ||
+            trimmedLine.includes('user'))
+        ) {
           const match = trimmedLine.match(/name:\s*(.+)/);
           if (match && match[1] && !userInfo.includes(match[1].trim())) {
             userInfo.push(match[1].trim());
           }
         }
       }
-      
+
       // 构建预览文本
       const parts: string[] = [];
-      
+
       if (clusterInfo.length > 0) {
-        parts.push(`集群: ${clusterInfo.slice(0, 2).join(', ')}${clusterInfo.length > 2 ? '...' : ''}`);
+        parts.push(
+          `集群: ${clusterInfo.slice(0, 2).join(', ')}${clusterInfo.length > 2 ? '...' : ''}`,
+        );
       }
-      
+
       if (userInfo.length > 0) {
-        parts.push(`用户: ${userInfo.slice(0, 2).join(', ')}${userInfo.length > 2 ? '...' : ''}`);
+        parts.push(
+          `用户: ${userInfo.slice(0, 2).join(', ')}${userInfo.length > 2 ? '...' : ''}`,
+        );
       }
-      
+
       // 如果没有提取到信息，显示前几行内容
       if (parts.length === 0) {
         const firstFewLines = lines
           .slice(0, 3)
-          .map(line => line.trim())
-          .filter(line => line && !line.startsWith('#'))
+          .map((line) => line.trim())
+          .filter((line) => line && !line.startsWith('#'))
           .join(' | ');
-        return firstFewLines.length > 50 
-          ? firstFewLines.substring(0, 47) + '...' 
+        return firstFewLines.length > 50
+          ? firstFewLines.substring(0, 47) + '...'
           : firstFewLines || '配置内容';
       }
-      
-      return parts.join(' | ');
-      
-    } catch (error) {
 
+      return parts.join(' | ');
+    } catch (error) {
       // 降级方案：显示前50个字符
-      return kubeConfigContent.length > 50 
-        ? kubeConfigContent.substring(0, 47) + '...' 
+      return kubeConfigContent.length > 50
+        ? kubeConfigContent.substring(0, 47) + '...'
         : kubeConfigContent;
     }
   };
@@ -648,6 +682,7 @@ export function useClusterPage() {
   return {
     clusters,
     loading,
+    loadError,
     searchText,
     filterEnv,
     filterStatus,
@@ -700,10 +735,10 @@ export function useClusterPage() {
     downloadKubeConfig,
     copyDetailKubeConfig,
     downloadDetailKubeConfig,
-    
+
     // pagination
     handlePageChange,
-    
+
     // kubeconfig preview
     getKubeConfigPreview,
   };

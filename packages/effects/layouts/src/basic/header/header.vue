@@ -30,7 +30,8 @@ withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{ clearPreferencesAndLogout: [] }>();
 
 const accessStore = useAccessStore();
-const { globalSearchShortcutKey, preferencesButtonPosition } = usePreferences();
+const { globalSearchShortcutKey, preferencesButtonPosition, isMobile } =
+  usePreferences();
 const slots = useSlots();
 const rightSlots = computed(() => {
   const list = [{ index: 100, name: 'user-dropdown' }];
@@ -122,6 +123,7 @@ function clearPreferencesAndLogout() {
       <slot :name="slot.name">
         <template v-if="slot.name === 'global-search'">
           <GlobalSearch
+            v-if="!isMobile"
             :enable-shortcut-key="globalSearchShortcutKey"
             :menus="accessStore.accessMenus"
             class="mr-1 sm:mr-4"
@@ -141,7 +143,7 @@ function clearPreferencesAndLogout() {
           <LanguageToggle class="mr-2" />
         </template>
         <template v-else-if="slot.name === 'fullscreen'">
-          <VbenFullScreen class="mr-2" />
+          <VbenFullScreen v-if="!isMobile" class="mr-2" />
         </template>
       </slot>
     </template>

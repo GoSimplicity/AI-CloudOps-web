@@ -1,6 +1,6 @@
 {
   "routes": 58,
-  "migratedShells": 9,
+  "migratedShells": 11,
   "entries": [
     {
       "route": "/assistant/info",
@@ -89,7 +89,7 @@
     {
       "route": "/k8s_cluster",
       "view": "k8s/cluster/Cluster.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 27,
       "scopedStyle": true
     },
@@ -131,7 +131,7 @@
     {
       "route": "/k8s_namespace",
       "view": "k8s/namespace/Namespace.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 35,
       "scopedStyle": true
     },

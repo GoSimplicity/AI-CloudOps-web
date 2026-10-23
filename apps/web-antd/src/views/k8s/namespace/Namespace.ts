@@ -33,6 +33,9 @@ export function useNamespacePage() {
   const namespaces = ref<K8sNamespace[]>([]);
   const clusters = ref<K8sCluster[]>([]);
   const loading = ref(false);
+  const loadError = ref('');
+  let namespaceRequestId = 0;
+  const clustersError = ref('');
   const clustersLoading = ref(false);
   const searchText = ref('');
   const filterStatus = ref<string | undefined>(undefined);
@@ -110,16 +113,27 @@ export function useNamespacePage() {
   const createFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入命名空间名称', trigger: 'blur' },
-      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: '命名空间名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
-      { max: 63, message: '命名空间名称长度不能超过63个字符', trigger: 'blur' }
-    ]
+      {
+        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        message:
+          '命名空间名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        trigger: 'blur',
+      },
+      { max: 63, message: '命名空间名称长度不能超过63个字符', trigger: 'blur' },
+    ],
   };
 
   const deleteFormRules: Record<string, Rule[]> = {
     grace_period_seconds: [
       { required: true, message: '请输入优雅删除时间', trigger: 'blur' },
-      { type: 'number', min: 0, max: 3600, message: '优雅删除时间必须在0-3600秒之间', trigger: 'blur' }
-    ]
+      {
+        type: 'number',
+        min: 0,
+        max: 3600,
+        message: '优雅删除时间必须在0-3600秒之间',
+        trigger: 'blur',
+      },
+    ],
   };
 
   // computed
@@ -159,12 +173,19 @@ export function useNamespacePage() {
   };
 
   // 转换函数：Record<string, string> -> KeyValueList
-  const recordToKeyValueList = (record: Record<string, string>): KeyValueList => {
-    return Object.entries(record).map(([key, value]: [string, string]) => ({ key, value }));
+  const recordToKeyValueList = (
+    record: Record<string, string>,
+  ): KeyValueList => {
+    return Object.entries(record).map(([key, value]: [string, string]) => ({
+      key,
+      value,
+    }));
   };
 
   // 转换函数：KeyValueList 或对象 -> Record<string, string>
-  const keyValueListToRecord = (data?: KeyValueList | Record<string, string>): Record<string, string> => {
+  const keyValueListToRecord = (
+    data?: KeyValueList | Record<string, string>,
+  ): Record<string, string> => {
     if (!data) return {};
 
     // 如果已经是对象格式，直接返回
@@ -174,10 +195,13 @@ export function useNamespacePage() {
 
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce((acc, { key, value }) => {
-        acc[key] = value;
-        return acc;
-      }, {} as Record<string, string>);
+      return data.reduce(
+        (acc, { key, value }) => {
+          acc[key] = value;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
     }
 
     return {};
@@ -189,11 +213,11 @@ export function useNamespacePage() {
     // Handle both Chinese and English status
     const map: Record<string, string> = {
       [NamespaceStatus.Active]: '活跃',
-      '活跃': '活跃',
+      活跃: '活跃',
       [NamespaceStatus.Terminating]: '终止中',
-      '终止中': '终止中',
+      终止中: '终止中',
       [NamespaceStatus.Unknown]: '未知',
-      '未知': '未知',
+      未知: '未知',
     };
     return map[status] || status;
   };
@@ -204,11 +228,11 @@ export function useNamespacePage() {
     // Handle both Chinese and English status
     const map: Record<string, string> = {
       [NamespaceStatus.Active]: 'success',
-      '活跃': 'success',
+      活跃: 'success',
       [NamespaceStatus.Terminating]: 'warning',
-      '终止中': 'warning',
+      终止中: 'warning',
       [NamespaceStatus.Unknown]: 'default',
-      '未知': 'default',
+      未知: 'default',
     };
     return map[status] || 'default';
   };
@@ -217,10 +241,10 @@ export function useNamespacePage() {
     if (!phase) return '-';
 
     const map: Record<string, string> = {
-      'Active': '活跃',
-      'Terminating': '终止中',
-      'Pending': '待定',
-      'Failed': '失败',
+      Active: '活跃',
+      Terminating: '终止中',
+      Pending: '待定',
+      Failed: '失败',
     };
     return map[phase] || phase;
   };
@@ -229,23 +253,27 @@ export function useNamespacePage() {
     if (!phase) return 'default';
 
     const map: Record<string, string> = {
-      'Active': 'success',
-      'Terminating': 'warning',
-      'Pending': 'processing',
-      'Failed': 'error',
+      Active: 'success',
+      Terminating: 'warning',
+      Pending: 'processing',
+      Failed: 'error',
     };
     return map[phase] || 'default';
   };
 
   const getClusterName = (clusterId?: number) => {
     if (!clusterId) return '-';
-    const cluster = clusters.value.find(c => c.id === clusterId);
+    const cluster = clusters.value.find((c) => c.id === clusterId);
     return cluster?.name || `集群 ${clusterId}`;
   };
 
   // cluster operations
   const clearNamespaces = () => {
+    namespaceRequestId++;
+    loading.value = false;
     namespaces.value = [];
+    total.value = 0;
+    loadError.value = '';
     selectedRowKeys.value = [];
     selectedRows.value = [];
   };
@@ -256,6 +284,7 @@ export function useNamespacePage() {
     }
     try {
       clustersLoading.value = true;
+      clustersError.value = '';
       const params: ListClustersReq = {
         page: clustersPage.value,
         size: clustersSize.value, // 动态获取集群，用于下拉选择
@@ -274,14 +303,19 @@ export function useNamespacePage() {
         const firstCluster = clusters.value[0];
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
-          message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
           // 自动加载该集群的命名空间数据
           await fetchNamespaces();
         }
       }
     } catch (err) {
-      message.error('获取集群列表失败');
-
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearNamespaces();
+      }
+      clustersError.value = '获取集群列表失败，请重试';
+      message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -289,34 +323,55 @@ export function useNamespacePage() {
 
   // crud operations
   const fetchNamespaces = async () => {
-    if (!filterClusterId.value) {
-      message.warning('请先选择集群');
+    const clusterId = filterClusterId.value;
+    if (!clusterId) {
+      clearNamespaces();
       return;
     }
 
+    const requestId = ++namespaceRequestId;
     try {
       loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
       const params: K8sNamespaceListReq = {
-        cluster_id: filterClusterId.value,
+        cluster_id: clusterId,
         page: currentPage.value,
         size: pageSize.value,
         search: searchText.value || undefined,
         status: filterStatus.value || undefined,
-        labels: Object.keys(filterLabels.value).length > 0 ? recordToKeyValueList(filterLabels.value) : undefined,
+        labels:
+          Object.keys(filterLabels.value).length > 0
+            ? recordToKeyValueList(filterLabels.value)
+            : undefined,
       };
-      const res = await getNamespacesListApi(filterClusterId.value, params);
+      const res = await getNamespacesListApi(clusterId, params);
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       // 确保每个namespace对象都有正确的cluster_id
-      const namespacesWithClusterId = (res?.items || []).map((namespace: any) => ({
-        ...namespace,
-        cluster_id: namespace.cluster_id || filterClusterId.value || 0
-      }));
+      const namespacesWithClusterId = (res?.items || []).map(
+        (namespace: any) => ({
+          ...namespace,
+          cluster_id: namespace.cluster_id || clusterId,
+        }),
+      );
       namespaces.value = namespacesWithClusterId;
       total.value = res?.total || 0;
     } catch (err) {
-      message.error('获取命名空间列表失败');
-
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      clearNamespaces();
+      loadError.value = '获取命名空间列表失败，请重试';
+      message.error(loadError.value);
     } finally {
-      loading.value = false;
+      if (requestId === namespaceRequestId) loading.value = false;
     }
   };
 
@@ -329,7 +384,10 @@ export function useNamespacePage() {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
       const res = await getNamespaceDetailsApi(clusterId, record.name);
-      currentNamespaceDetail.value = res || { ...record, cluster_id: clusterId };
+      currentNamespaceDetail.value = res || {
+        ...record,
+        cluster_id: clusterId,
+      };
     } catch (err) {
       message.error('获取命名空间详情失败');
 
@@ -368,8 +426,14 @@ export function useNamespacePage() {
       const params: CreateNamespaceReq = {
         cluster_id: filterClusterId.value,
         name: createFormModel.value.name,
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? recordToKeyValueList(createFormModel.value.labels) : undefined,
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? recordToKeyValueList(createFormModel.value.annotations) : undefined,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? recordToKeyValueList(createFormModel.value.labels)
+            : undefined,
+        annotations:
+          Object.keys(createFormModel.value.annotations).length > 0
+            ? recordToKeyValueList(createFormModel.value.annotations)
+            : undefined,
       };
 
       await createNamespaceApi(filterClusterId.value, params);
@@ -382,7 +446,6 @@ export function useNamespacePage() {
         return;
       }
       message.error('命名空间创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -412,17 +475,26 @@ export function useNamespacePage() {
       const params: UpdateNamespaceReq = {
         cluster_id: currentOperationNamespace.value.cluster_id,
         name: currentOperationNamespace.value.name,
-        labels: Object.keys(labelFormModel.value.labels).length > 0 ? recordToKeyValueList(labelFormModel.value.labels) : undefined,
-        annotations: Object.keys(labelFormModel.value.annotations).length > 0 ? recordToKeyValueList(labelFormModel.value.annotations) : undefined,
+        labels:
+          Object.keys(labelFormModel.value.labels).length > 0
+            ? recordToKeyValueList(labelFormModel.value.labels)
+            : undefined,
+        annotations:
+          Object.keys(labelFormModel.value.annotations).length > 0
+            ? recordToKeyValueList(labelFormModel.value.annotations)
+            : undefined,
       };
 
-      await updateNamespaceApi(currentOperationNamespace.value.cluster_id, currentOperationNamespace.value.name, params);
+      await updateNamespaceApi(
+        currentOperationNamespace.value.cluster_id,
+        currentOperationNamespace.value.name,
+        params,
+      );
       message.success('命名空间标签/注解更新成功');
       isLabelModalVisible.value = false;
       await fetchNamespaces();
     } catch (err: unknown) {
       message.error('标签/注解更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -456,13 +528,16 @@ export function useNamespacePage() {
         grace_period_seconds: deleteFormModel.value.grace_period_seconds,
       };
 
-      await deleteNamespaceApi(currentOperationNamespace.value.cluster_id, currentOperationNamespace.value.name, params);
+      await deleteNamespaceApi(
+        currentOperationNamespace.value.cluster_id,
+        currentOperationNamespace.value.name,
+        params,
+      );
       message.success('命名空间删除成功');
       isDeleteModalVisible.value = false;
       await fetchNamespaces();
     } catch (err) {
       message.error('命名空间删除失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -495,7 +570,6 @@ export function useNamespacePage() {
           await fetchNamespaces();
         } catch (err) {
           message.error('命名空间强制删除失败');
-
         }
       },
     });
@@ -568,7 +642,6 @@ export function useNamespacePage() {
           await fetchNamespaces();
         } catch (err) {
           message.error(`批量${operation}失败`);
-
         }
       },
     });
@@ -601,30 +674,38 @@ export function useNamespacePage() {
   // 标签检查辅助函数
   const hasSystemLabels = (labels: Record<string, string>) => {
     if (!labels) return false;
-    return Object.keys(labels).some(key => 
-      String(key).startsWith('kubernetes.io/') || String(key).startsWith('k8s.io/')
+    return Object.keys(labels).some(
+      (key) =>
+        String(key).startsWith('kubernetes.io/') ||
+        String(key).startsWith('k8s.io/'),
     );
   };
 
   const hasUserLabels = (labels: Record<string, string>) => {
     if (!labels) return false;
-    return Object.keys(labels).some(key => 
-      !String(key).startsWith('kubernetes.io/') && !String(key).startsWith('k8s.io/')
+    return Object.keys(labels).some(
+      (key) =>
+        !String(key).startsWith('kubernetes.io/') &&
+        !String(key).startsWith('k8s.io/'),
     );
   };
 
   // 针对 KeyValueList 类型的标签检查函数
   const getSystemLabelsFromKeyValueList = (labels?: KeyValueList) => {
     if (!labels) return [];
-    return labels.filter(item => 
-      String(item.key).startsWith('kubernetes.io/') || String(item.key).startsWith('k8s.io/')
+    return labels.filter(
+      (item) =>
+        String(item.key).startsWith('kubernetes.io/') ||
+        String(item.key).startsWith('k8s.io/'),
     );
   };
 
   const getUserLabelsFromKeyValueList = (labels?: KeyValueList) => {
     if (!labels) return [];
-    return labels.filter(item => 
-      !String(item.key).startsWith('kubernetes.io/') && !String(item.key).startsWith('k8s.io/')
+    return labels.filter(
+      (item) =>
+        !String(item.key).startsWith('kubernetes.io/') &&
+        !String(item.key).startsWith('k8s.io/'),
     );
   };
 
@@ -632,6 +713,8 @@ export function useNamespacePage() {
     // state
     namespaces,
     clusters,
+    loadError,
+    clustersError,
     loading,
     clustersLoading,
     searchText,
