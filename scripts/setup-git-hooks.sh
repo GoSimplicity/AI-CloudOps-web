@@ -9,7 +9,7 @@
 #   3. 检查 .husky/pre-commit 存在、可执行且调用 .githooks/pre-commit
 #      （husky 的 .husky/_/h 在 .husky/pre-commit 缺失时会静默以 0 退出，钩子形同虚设）；
 #   4. 检查 gitleaks。
-# 任何一步不满足都以非 0 退出。本地钩子可以被 --no-verify / HUSKY=0 跳过，CI 的 gitleaks 工作流才是最终防线。
+# 任何一步不满足都以非 0 退出；设置了 HUSKY=0 时直接失败。本地钩子可以被 --no-verify / HUSKY=0 跳过，CI 的 gitleaks 工作流才是最终防线。
 # 用法: scripts/setup-git-hooks.sh
 set -euo pipefail
 
@@ -30,6 +30,9 @@ if [ "${HUSKY:-}" = "0" ]; then
     log_warning "~/.zshrc / ~/.bashrc、IDE 的环境配置中是否导出了 HUSKY=0。"
     log_warning "CI 的 gitleaks 工作流仍会扫描，但密钥一旦推送到远端就必须轮换。"
     log_warning "=================================================================="
+    # review3g N3：即使钩子此前已安装，提交时 HUSKY=0 仍会跳过全部钩子，因此一律失败（与 README 一致）
+    log_error "HUSKY=0：提交前的 gitleaks 扫描不会执行，拒绝继续。请在未设置 HUSKY=0 的环境中重新运行本脚本。"
+    exit 1
 fi
 
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then

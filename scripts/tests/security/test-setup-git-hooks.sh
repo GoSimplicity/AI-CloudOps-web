@@ -2,6 +2,7 @@
 # SEC-01A 审查（web）：scripts/setup-git-hooks.sh 在钩子不会真正运行 gitleaks 的任何情况下都必须失败（非 0 退出）。
 #   第二轮：没有 husky、husky 运行后 core.hooksPath 不是 .husky/_、.husky/_/pre-commit 缺失
 #   第三轮 P3-2：.husky/pre-commit 缺失 / 不可执行 / 没有调用 .githooks/pre-commit（husky 会静默放行）；HUSKY=0 要有明确警告
+#   review3g N3：HUSKY=0 时（包括钩子已安装后重跑）必须失败
 # 正常情况使用仓库 node_modules 中真实的 husky（9.x，需先 pnpm install），并做端到端验证：
 #   安装后提交合成密钥被 gitleaks 拦下、提交干净文件成功。
 # 用法: scripts/tests/security/test-setup-git-hooks.sh [--rev <git-rev>]   （对修复前版本运行应报 FAIL）
@@ -85,10 +86,10 @@ if run_case "对照 真实 husky 正常安装" ok real; then
     ( cd "$d" && env -u HUSKY git commit -qm clean ) >"$TMP/e2e2.out" 2>&1 || rc=$?
     if [ "$rc" -eq 0 ] && [ "$(git -C "$d" rev-parse HEAD)" != "$before" ]; then echo "PASS [对照 端到端：干净提交成功]"
     else echo "FAIL [对照 端到端：干净提交失败（rc=${rc}）]: $(tail -1 "$TMP/e2e2.out" | strip_color)"; FAILS=$((FAILS+1)); fi
-    # 已安装后在 HUSKY=0 的环境里重跑：必须有明确警告（提交时 HUSKY=0 会跳过全部钩子）
-    ( cd "$d" && HUSKY=0 bash scripts/setup-git-hooks.sh ) >"$TMP/out" 2>&1 || true
-    if grep -q 'HUSKY=0' "$TMP/out" && grep -q 'WARNING' "$TMP/out"; then echo "PASS [情况4 已安装后 HUSKY=0 重跑有明确警告]"
-    else echo "FAIL [情况4 已安装后 HUSKY=0 重跑没有警告]"; FAILS=$((FAILS+1)); fi
+    # 已安装后在 HUSKY=0 的环境里重跑：必须警告并失败（提交时 HUSKY=0 会跳过全部钩子；review3g N3，与 README 一致）
+    rc=0; ( cd "$d" && HUSKY=0 bash scripts/setup-git-hooks.sh ) >"$TMP/out" 2>&1 || rc=$?
+    if [ "$rc" -ne 0 ] && grep -q 'HUSKY=0' "$TMP/out" && grep -q 'WARNING' "$TMP/out"; then echo "PASS [情况4 已安装后 HUSKY=0 重跑：警告并失败（rc=${rc}）]"
+    else echo "FAIL [情况4 已安装后 HUSKY=0 重跑应警告并失败（rc=${rc}）]"; FAILS=$((FAILS+1)); fi
 fi
 echo "目标版本: ${REV:-工作区}；失败 ${FAILS} 项"
 [ "$FAILS" -eq 0 ]
