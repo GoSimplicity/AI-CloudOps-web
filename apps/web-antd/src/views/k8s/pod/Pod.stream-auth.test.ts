@@ -254,6 +254,7 @@ describe('Pod 日志 SSE：令牌刷新与重连', () => {
     expect(refreshTokenApi).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(cb.onClose).toHaveBeenCalledTimes(1);
+    expect(cb.onClose).toHaveBeenCalledWith('login-expired');
     expectSingleLoginExpiredNotice();
   });
 
@@ -276,6 +277,7 @@ describe('Pod 日志 SSE：令牌刷新与重连', () => {
     expect(refreshTokenApi).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(cb.onClose).toHaveBeenCalledTimes(1);
+    expect(cb.onClose).toHaveBeenCalledWith('login-expired');
     expectSingleLoginExpiredNotice();
   });
 
@@ -338,6 +340,8 @@ describe('Pod 终端 exec WS：令牌刷新与重连', () => {
     ]);
     lastSocket().open();
     expect(cb.onOpen).toHaveBeenCalledTimes(1);
+    // 握手失败的错误在刷新成功后补报一次（是否提示由调用方决定）
+    expect(cb.onError).toHaveBeenCalledTimes(1);
     expect(cb.onClose).not.toHaveBeenCalled();
     expect(notices.warning).not.toHaveBeenCalled();
     conn.close();
@@ -375,6 +379,9 @@ describe('Pod 终端 exec WS：令牌刷新与重连', () => {
     expect(refreshTokenApi).toHaveBeenCalledTimes(1);
     expect(FakeWebSocket.instances).toHaveLength(1);
     expect(cb.onClose).toHaveBeenCalledTimes(1);
+    expect(cb.onClose).toHaveBeenCalledWith('login-expired');
+    // 握手失败的 onerror 不再报给调用方：刷新失败只提示登录过期（窝窝头答复 5）
+    expect(cb.onError).not.toHaveBeenCalled();
     expectSingleLoginExpiredNotice();
   });
 
@@ -396,6 +403,57 @@ describe('Pod 终端 exec WS：令牌刷新与重连', () => {
     expect(refreshTokenApi).toHaveBeenCalledTimes(1);
     expect(FakeWebSocket.instances).toHaveLength(2);
     expect(cb.onClose).toHaveBeenCalledTimes(1);
+    expect(cb.onClose).toHaveBeenCalledWith('login-expired');
+    expectSingleLoginExpiredNotice();
+  });
+
+  it('复审 v4 P2-C：连上后收到 4401，反复循环：刷新只调 1 次、onClose 只调 1 次，并提示重新登录', async () => {
+    const cb = callbacks();
+    const { execK8sPodWebSocket } = usePodPage();
+    execK8sPodWebSocket(
+      EXEC_PARAMS,
+      cb.onMessage,
+      cb.onError,
+      cb.onOpen,
+      cb.onClose,
+    );
+    // 服务端每次都先接受连接，随后用 4401 关闭（令牌在会话中失效）
+    for (let i = 0; i < 10; i++) {
+      const socket = lastSocket();
+      if (socket.readyState !== 0) break;
+      socket.open();
+      socket.readyState = FakeWebSocket.CLOSED;
+      socket.onclose?.({ code: 4401, wasClean: true });
+      await flush(30_000);
+    }
+
+    expect(refreshTokenApi).toHaveBeenCalledTimes(1);
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    expect(cb.onOpen).toHaveBeenCalledTimes(2);
+    expect(cb.onClose).toHaveBeenCalledTimes(1);
+    expect(cb.onClose).toHaveBeenCalledWith('login-expired');
+    expectSingleLoginExpiredNotice();
+  });
+
+  it('复审 v4 P2-C：连上后收到 4401 且刷新失败：停止重连，onClose 1 次，只提示一条重新登录', async () => {
+    refreshTokenApi.mockRejectedValue(new Error('刷新令牌失败，请重新登录'));
+    const cb = callbacks();
+    const { execK8sPodWebSocket } = usePodPage();
+    execK8sPodWebSocket(
+      EXEC_PARAMS,
+      cb.onMessage,
+      cb.onError,
+      cb.onOpen,
+      cb.onClose,
+    );
+    lastSocket().open();
+    lastSocket().onclose?.({ code: 4401, wasClean: true });
+    await flush(60_000);
+
+    expect(refreshTokenApi).toHaveBeenCalledTimes(1);
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(cb.onClose).toHaveBeenCalledTimes(1);
+    expect(cb.onClose).toHaveBeenCalledWith('login-expired');
     expectSingleLoginExpiredNotice();
   });
 
@@ -420,6 +478,8 @@ describe('Pod 终端 exec WS：令牌刷新与重连', () => {
       1 + STREAM_MAX_RECONNECT_ATTEMPTS,
     );
     expect(cb.onClose).toHaveBeenCalledTimes(1);
+    // 不是登录过期：结束原因为空，调用方照常提示连接已断开
+    expect(cb.onClose).toHaveBeenCalledWith(undefined);
     expect(notices.warning).not.toHaveBeenCalled();
   });
 });
