@@ -63,6 +63,8 @@ function plan(reason = '账户1私有审批结论') {
       state: 'pending',
       expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
       retry_safe: false,
+      // 复审 P3-1：缺 pending_action_ids 时不允许确认，夹具按契约带上
+      pending_action_ids: [item.action_id],
     },
   };
 }

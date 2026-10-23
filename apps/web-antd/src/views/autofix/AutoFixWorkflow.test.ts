@@ -289,7 +289,13 @@ describe('AutoFixWorkflow.vue', () => {
         plan_id: 'autofix-default-payment-service-123',
       },
       status: 'needs_human_confirmation',
-      approval: { state: 'pending', expires_at: '2099-01-01T00:00:00Z', retry_safe: false },
+      approval: {
+        state: 'pending',
+        expires_at: '2099-01-01T00:00:00Z',
+        retry_safe: false,
+        // 复审 P3-1：缺 pending_action_ids 时不允许确认，夹具按契约带上
+        pending_action_ids: ['block-secret-check'],
+      },
       timestamp: '2026-06-06T10:30:00Z',
     });
 

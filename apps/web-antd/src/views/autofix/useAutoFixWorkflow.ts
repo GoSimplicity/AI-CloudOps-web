@@ -65,18 +65,18 @@ export function useAutoFixWorkflow() {
       !!formData.namespace.trim() &&
       !!formData.problem_description.trim(),
   );
-  // SEC-25/26：后端给了 pending_action_ids 时只允许确认其中的动作（confirm 只接受当前待确认项）
+  // SEC-25/26：只允许确认 pending_action_ids 里的动作（confirm 只接受当前待确认项）；
+  // 复审 P3-1：缺这个字段时一律视为没有可确认的动作，不发请求
   const pendingActionIds = computed(() => {
     const ids = workflowResult.value?.approval?.pending_action_ids;
-    return Array.isArray(ids) ? new Set(ids) : undefined;
+    return new Set(Array.isArray(ids) ? ids : []);
   });
   const confirmableBlockedActions = computed(() =>
     (workflowResult.value?.blocked_actions || []).filter((action) => {
       const risk = action.risk_assessment;
       return (
         !!action.action_id &&
-        (!pendingActionIds.value ||
-          pendingActionIds.value.has(action.action_id)) &&
+        pendingActionIds.value.has(action.action_id) &&
         action.executable === true &&
         risk?.namespace_allowed === true &&
         risk.permission_allowed === true &&
@@ -318,6 +318,7 @@ export function useAutoFixWorkflow() {
     loadServiceInfo,
     runWorkflow,
     confirmWorkflowExecution,
+    confirmActions,
     confirmSingleAction,
     confirmAllActions,
   };
