@@ -134,6 +134,8 @@ export function useSecretPage() {
   let editOpenSeq = 0;
   // incr8 P3-5：YAML 弹窗的打开序号（打开 / 关闭都 +1），提交在 validate 前取快照，与编辑表单一致
   let yamlOpenSeq = 0;
+  // incr9 P3-D：「查看 YAML」加载中（按钮禁用）；迟到的响应按 yamlOpenSeq 丢弃
+  const isYamlLoading = ref(false);
 
   // form models
   const createFormModel = ref<{
@@ -606,9 +608,11 @@ export function useSecretPage() {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     yamlOpenSeq += 1;
+    const seq = yamlOpenSeq;
     
     try {
       submitLoading.value = true;
+      isYamlLoading.value = true;
       currentOperationSecret.value = { ...record, cluster_id: clusterId };
       const params: GetSecretYamlReq = {
         cluster_id: clusterId,
@@ -616,6 +620,8 @@ export function useSecretPage() {
         name: record.name
       };
       const res = await getSecretYamlApi(params);
+      // incr9 P3-D：等待期间关闭了弹窗或打开了别的 Secret，这次的响应作废
+      if (seq !== yamlOpenSeq) return;
       
       let originalYaml = '';
       
@@ -636,14 +642,24 @@ export function useSecretPage() {
       
       isYamlModalVisible.value = true;
     } catch (err) {
+      if (seq !== yamlOpenSeq) return;
       if (!isPermissionDeniedError(err)) message.error('获取 Secret YAML 失败');
     } finally {
-      submitLoading.value = false;
+      // 迟到的响应不动加载状态（后打开的那次还在加载）
+      if (seq === yamlOpenSeq) {
+        submitLoading.value = false;
+        isYamlLoading.value = false;
+      }
     }
   };
 
   const closeYamlModal = () => {
     yamlOpenSeq += 1;
+    // incr9 P3-D：加载中关闭，复位加载状态（迟到的响应不再复位）
+    if (isYamlLoading.value) {
+      isYamlLoading.value = false;
+      submitLoading.value = false;
+    }
     isYamlModalVisible.value = false;
     currentOperationSecret.value = null;
     yamlFormModel.value.yaml = '';
@@ -1420,6 +1436,7 @@ export function useSecretPage() {
     isYamlModalVisible,
     submitLoading,
     detailLoading,
+    isYamlLoading,
     
     // operation targets
     currentOperationSecret,

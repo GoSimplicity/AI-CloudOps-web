@@ -102,8 +102,16 @@ export function isDataEdited(
   return originalKeys.some((key) => !kept.has(key));
 }
 
+/**
+ * incr9 P3-C：按 Go strings.TrimSpace 去首尾空白（unicode.IsSpace：含 U+0085、NBSP、U+3000 等）。
+ * JS 的 \s 不含 U+0085、多一个 U+FEFF：这里取并集，只会比 Go 多拦（U+FEFF），不会漏。
+ */
+function goTrim(value: string) {
+  return value.replaceAll(/^[\s\u0085]+|[\s\u0085]+$/g, '');
+}
+
 function isRedactedText(value: string) {
-  return value.trim() === REDACTED_PLACEHOLDER;
+  return goTrim(value) === REDACTED_PLACEHOLDER;
 }
 
 /** 单行错误（用于表单 help） */
@@ -169,6 +177,18 @@ function decodeBase64Text(value: string): string | undefined {
   }
 }
 
+/** incr9 P3-C：字节按 UTF-8 转文本（非法序列为 U+FFFD，与 Go 一致不算空白） */
+function utf8Text(bytes: Uint8Array) {
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+/** incr9 P3-C：base64 解码后按 UTF-8 转文本（atob 给的是 Latin-1，NBSP / U+3000 的多字节去不掉） */
+function decodeBase64Utf8(value: string): string | undefined {
+  const binary = decodeBase64Text(value);
+  if (binary === undefined) return undefined;
+  return utf8Text(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
+}
+
 /**
  * 最终防线：payload 里出现 `<redacted>`（原文或其 base64）时返回字段路径，否则 null。
  * incr7：参数放宽为 unknown 值（新建表单的 data 类型声明为 Uint8Array）；Uint8Array 按字节检查。
@@ -179,15 +199,12 @@ export function findRedactedPlaceholder(payload: {
 }): null | string {
   for (const [key, value] of Object.entries(payload.data ?? {})) {
     if (value instanceof Uint8Array) {
-      const bytes = Array.from(value, (byte) => String.fromCharCode(byte)).join(
-        '',
-      );
-      if (isRedactedText(bytes)) return `data.${key}`;
+      if (isRedactedText(utf8Text(value))) return `data.${key}`;
       continue;
     }
     if (typeof value !== 'string' || value === '') continue;
     if (isRedactedText(value)) return `data.${key}`;
-    const decoded = decodeBase64Text(value);
+    const decoded = decodeBase64Utf8(value);
     if (decoded !== undefined && isRedactedText(decoded)) return `data.${key}`;
   }
   for (const [key, value] of Object.entries(payload.string_data ?? {})) {
@@ -552,6 +569,10 @@ export const yamlStringDataRedactedMessage = (key: string) =>
   `YAML 中 stringData.${key} 的值去掉首尾空白后是脱敏占位符 ${REDACTED_PLACEHOLDER}，但不完全等于它，后端不会还原，会被当作真实内容写入 Secret。要保留原值请写成 ${key}: ${REDACTED_PLACEHOLDER}（前后不带空格或换行），要修改请填写真实值`;
 
 /** 取舍 5：data 值为 null / ~；口径与表单的 EMPTY_VALUE_MESSAGE 一致 */
+export const YAML_MERGE_KEY_MESSAGE =
+  'YAML 中有合并键 <<。后端与编辑器对 << 的处理不一致，可能把脱敏占位符当作真实内容写入 Secret；请把 << 展开成普通键后再保存';
+export const yamlStringDataBinaryRedactedMessage = (key: string) =>
+  `YAML 中 stringData.${key} 是 !!binary，解码后是脱敏占位符 ${REDACTED_PLACEHOLDER}，后端不会还原，会当作真实内容写入 Secret。要保留原值请删除该键或在 data 下写成 ${REDACTED_PLACEHOLDER}，要修改请填写真实值`;
 export const yamlDataEmptyValueMessage = (key: string) =>
   `YAML 中 data.${key} 的值为空（null / ~）。不支持设为空值，空值请删除该键`;
 
@@ -562,16 +583,18 @@ export const yamlDataEmptyValueMessage = (key: string) =>
  */
 function isNonCanonicalSecretFieldKey(key: string) {
   if (key === 'data' || key === 'stringData') return false;
-  const folded = key
-    .replaceAll('\u017F', 's')
-    .replaceAll('\u212A', 'k')
-    .toLowerCase();
+  // incr9：去掉了 K（U+212A）→ k 的折叠：data / stringdata 里没有 k，是死代码（M02 等价变体）
+  const folded = key.replaceAll('\u017F', 's').toLowerCase();
   return folded === 'data' || folded === 'stringdata';
 }
 
-/** 顶格行的键名（裸键或单 / 双引号键，不处理转义）；不是 `键:` 写法返回 null */
+/**
+ * 顶格行的键名（裸键或单 / 双引号键，不处理转义）；不是 `键:` 写法返回 null。
+ * incr9 P2-1'：裸键原为 `[^:]*?` 后接 `[ \t]*:`，两者都能吃空白，无冒号的长行平方级回溯（200KB 约 26s）；
+ * 改为裸键必须以非空白、非冒号结尾，冒号前的空白只归 `[ \t]*`，线性时间。
+ */
 const TOP_LEVEL_KEY_PATTERN =
-  /^(?:"([^"\\]*)"|'([^']*)'|([^\s"'#?:[{\-][^:]*?))[ \t]*:(?:[ \t]|$)/;
+  /^(?:"([^"\\]*)"|'([^']*)'|([^\s"'#?:[{\-](?:[^:]*[^ \t:])?))[ \t]*:(?:[ \t]|$)/;
 
 /** incr8 P3-2：js-yaml 当作普通字符、Go（YAML 1.1）当作换行的字符；U+FEFF 只允许出现在开头（BOM） */
 const YAML_LINE_BREAK_CHAR_PATTERN = /[\u0085\u2028\u2029]/;
@@ -715,8 +738,8 @@ export function getYamlDataFormatError(yamlText: string): null | string {
 function decodesToRedacted(encoded: string): boolean | undefined {
   const compact = encoded.replace(/[\r\n]/g, '');
   if (!STRICT_BASE64_PATTERN.test(compact)) return undefined;
-  const decoded = decodeBase64Text(compact);
-  return decoded !== undefined && decoded.trim() === REDACTED_PLACEHOLDER;
+  const decoded = decodeBase64Utf8(compact);
+  return decoded !== undefined && isRedactedText(decoded);
 }
 
 /** 文本里某个位置所在行的键名（找不到时用行号），用于 token 扫描的提示 */
@@ -737,6 +760,39 @@ function keyOfLineAt(text: string, offset: number) {
   return `第 ${lineNumber} 行`;
 }
 
+/**
+ * incr9 P3-A：不含 merge 的解析 schema。js-yaml 的 `<<` 显式键优先，Go yaml.v2 是后写的 `<<` 覆盖前面的显式键，
+ * 两边结果不同；这里把 `<<` 当普通键解析出来，再由 hasMergeKey 拦截。保留 !!binary 与时间戳（CORE_SCHEMA 不含）。
+ */
+const yamlTypes = (
+  yaml as unknown as { types: Record<'binary' | 'timestamp', yaml.Type> }
+).types;
+const SECRET_YAML_SCHEMA = yaml.CORE_SCHEMA.extend([
+  yamlTypes.binary,
+  yamlTypes.timestamp,
+]);
+
+/** 任意深度（映射 / 列表）有 `<<` 键 */
+function hasMergeKey(root: unknown) {
+  const seen = new Set<object>();
+  const stack: unknown[] = [root];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    if (node === null || typeof node !== 'object' || seen.has(node)) continue;
+    seen.add(node);
+    if (node instanceof Uint8Array || node instanceof Date) continue;
+    if (Array.isArray(node)) {
+      stack.push(...node);
+      continue;
+    }
+    for (const [key, value] of Object.entries(node)) {
+      if (key === '<<') return true;
+      stack.push(value);
+    }
+  }
+  return false;
+}
+
 /** 可能是 base64 的片段（主体 ≥8 个字符；`<redacted>` 的 base64 为 14 个字符 + `==`） */
 const BASE64_TOKEN_PATTERN = /[A-Za-z0-9+/]{8,}={0,2}/g;
 
@@ -746,6 +802,8 @@ const BASE64_TOKEN_PATTERN = /[A-Za-z0-9+/]{8,}={0,2}/g;
  *    `yaml.loadAll(…, { json: true })` 解析：多于一个文档 → 拦截；其他解析失败 → 先 token 扫描，
  *    没命中也拦截（P3-1，取舍 8「解析失败只做 token 扫描」作废）；顶层非规范 data / stringData 键 → 拦截（P2-1）；
  *    stringData 的值去掉首尾空白后等于占位符但不完全相等 → 拦截（P3-3）。
+ *    incr9：解析用不含 merge 的 schema，任意深度有 `<<` 键 → 拦截（P3-A）；stringData 的 !!binary 值解码后
+ *    是占位符 → 拦截（P3-B）；「去首尾空白」一律按 Go TrimSpace（goTrim），base64 / 二进制按 UTF-8 转文本（P3-C）。
  * 1. 按 js-yaml 解析，data 下每个值：null 跳过；裸 `<redacted>` 放行（后端保留原值）；字符串去掉 \r \n 后
  *    必须是严格 base64，且解码（去首尾空白）后不能是占位符；`!!binary`（Uint8Array）同样检查解码内容；
  *    数字 / 布尔等其他类型一律视为「不是 base64」。
@@ -759,7 +817,10 @@ export function getYamlDataPayloadError(yamlText: string): null | string {
   // incr8 P3-1：json:true 与 Go（yaml v2 非严格）一致，重复键取后一个；多文档 / 其他解析失败一律拦截
   let docs: unknown[];
   try {
-    docs = yaml.loadAll(yamlText, undefined, { json: true });
+    docs = yaml.loadAll(yamlText, undefined, {
+      json: true,
+      schema: SECRET_YAML_SCHEMA,
+    });
   } catch (error) {
     // 解析失败：先按 token 扫描给出更具体的提示，否则提示 YAML 不合法（只给行号，不带解析器原文——里面有值）
     const tokenError = findEncodedRedactedToken(yamlText);
@@ -769,6 +830,8 @@ export function getYamlDataPayloadError(yamlText: string): null | string {
   }
   if (docs.length > 1) return YAML_MULTI_DOCUMENT_MESSAGE;
   const doc = docs[0];
+  // incr9 P3-A：任意深度的 << 合并键
+  if (hasMergeKey(doc)) return YAML_MERGE_KEY_MESSAGE;
   if (doc !== null && typeof doc === 'object' && !Array.isArray(doc)) {
     // incr8 P2-1：顶层非规范的 data / stringData 键
     for (const key of Object.keys(doc)) {
@@ -783,9 +846,13 @@ export function getYamlDataPayloadError(yamlText: string): null | string {
         if (
           typeof value === 'string' &&
           value !== REDACTED_PLACEHOLDER &&
-          value.trim() === REDACTED_PLACEHOLDER
+          isRedactedText(value)
         ) {
           return yamlStringDataRedactedMessage(key);
+        }
+        // incr9 P3-B：stringData 里 !!binary 的值，Go 解码成字符串后同样参与 TrimSpace 比较
+        if (value instanceof Uint8Array && isRedactedText(utf8Text(value))) {
+          return yamlStringDataBinaryRedactedMessage(key);
         }
       }
     }
@@ -803,10 +870,8 @@ export function getYamlDataPayloadError(yamlText: string): null | string {
         if (typeof value === 'string') {
           encoded = value;
         } else if (value instanceof Uint8Array) {
-          const latin1 = Array.from(value, (byte) =>
-            String.fromCharCode(byte),
-          ).join('');
-          if (latin1.trim() === REDACTED_PLACEHOLDER) {
+          // incr9 P3-C：按 UTF-8 转文本、goTrim 后比较（原为 Latin-1 + trim）
+          if (isRedactedText(utf8Text(value))) {
             return yamlDataEncodedRedactedMessage(key);
           }
           continue;

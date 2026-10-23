@@ -311,7 +311,7 @@
               </a-button>
             </a-tooltip>
             <a-tooltip v-if="can('k8s.secret.viewYaml')" title="查看 YAML">
-              <a-button title="查看 YAML" @click="showYamlModal(record)">
+              <a-button title="查看 YAML" :disabled="isYamlLoading" @click="showYamlModal(record)">
                 <template #icon><FileTextOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
@@ -1174,6 +1174,7 @@ const {
   isYamlModalVisible,
   submitLoading,
   detailLoading,
+  isYamlLoading,
 
   // operation targets
   currentOperationSecret,
