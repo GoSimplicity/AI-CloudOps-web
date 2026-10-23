@@ -36,13 +36,28 @@ if [ "$(git config --local --get core.hooksPath 2>/dev/null || true)" = ".githoo
     log_info "已移除 local 级 core.hooksPath=.githooks"
 fi
 
-# 2. 安装 husky（与 pnpm install 的 prepare 脚本相同）
-if [ -x node_modules/.bin/husky ]; then
-    node_modules/.bin/husky
-    log_info "已运行 husky，core.hooksPath=$(git config --get core.hooksPath || echo '<未设置>')"
-else
-    log_warning "未找到 node_modules/.bin/husky，请先执行 pnpm install（prepare 脚本会自动安装 husky 钩子）。"
+# 2. 安装 husky（与 pnpm install 的 prepare 脚本相同）。husky 缺失或未生效时失败（exit 1），
+#    否则钩子不会执行、gitleaks 被静默跳过。本脚本不在 prepare/postinstall 中调用，不影响 CI 的 pnpm install。
+if [ ! -x node_modules/.bin/husky ]; then
+    log_error "未找到 node_modules/.bin/husky，Git 钩子（含 gitleaks）未启用。"
+    log_error "请先执行 pnpm install（prepare 脚本会安装 husky 钩子），然后重新运行本脚本。"
+    exit 1
 fi
+node_modules/.bin/husky || { log_error "husky 执行失败"; exit 1; }
+
+expected_hooks_path=".husky/_"
+actual_hooks_path="$(git config --get core.hooksPath 2>/dev/null || true)"
+if [ "$actual_hooks_path" != "$expected_hooks_path" ]; then
+    log_error "core.hooksPath=${actual_hooks_path:-<未设置>}，期望 ${expected_hooks_path}：Git 钩子（含 gitleaks）不会执行。"
+    [ "${HUSKY:-}" = "0" ] && log_error "检测到 HUSKY=0（husky 跳过安装），请在未设置 HUSKY=0 的环境中重试。"
+    log_error "请检查是否有更高优先级的 core.hooksPath 配置（git config --show-origin --get-all core.hooksPath）。"
+    exit 1
+fi
+if [ ! -f "$expected_hooks_path/pre-commit" ]; then
+    log_error "${expected_hooks_path}/pre-commit 不存在，husky 未正确安装钩子。"
+    exit 1
+fi
+log_info "已运行 husky，core.hooksPath=${actual_hooks_path}"
 
 # 3. 检查 gitleaks
 if command -v gitleaks >/dev/null 2>&1; then
