@@ -1,6 +1,6 @@
 {
   "routes": 58,
-  "migratedShells": 21,
+  "migratedShells": 25,
   "entries": [
     {
       "route": "/assistant/info",
@@ -61,7 +61,7 @@
     {
       "route": "/cron/management",
       "view": "cron/management/Management.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 12,
       "scopedStyle": true
     },
@@ -250,7 +250,7 @@
     {
       "route": "/monitor_config",
       "view": "prometheus/MonitorConfig.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 0,
       "scopedStyle": true
     },
@@ -264,14 +264,14 @@
     {
       "route": "/monitor_onduty_group",
       "view": "prometheus/MonitorOnDutyGroup.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 17,
       "scopedStyle": true
     },
     {
       "route": "/monitor_onduty_group_table",
       "view": "prometheus/MonitorOnDutyGroupTable.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 7,
       "scopedStyle": true
     },
