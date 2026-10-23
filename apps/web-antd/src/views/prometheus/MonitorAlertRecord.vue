@@ -1140,7 +1140,7 @@ onMounted(() => {
 .prometheus-tag {
   background-color: #e6f7ff;
   color: #0958d9;
-  border-left: 3px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .empty-text {
@@ -1207,7 +1207,7 @@ onMounted(() => {
   color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
-  border-left: 4px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .full-width {

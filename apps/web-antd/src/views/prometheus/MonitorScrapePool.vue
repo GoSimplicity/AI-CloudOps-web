@@ -988,19 +988,19 @@ onMounted(() => {
 .prometheus-tag {
   background-color: #e6f7ff;
   color: #0958d9;
-  border-left: 3px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .alert-tag {
   background-color: #fff7e6;
   color: #d46b08;
-  border-left: 3px solid #fa8c16;
+  border-left: 1px solid #fa8c16;
 }
 
 .label-tag {
   background-color: #f6ffed;
   color: #389e0d;
-  border-left: 3px solid #52c41a;
+  border-left: 1px solid #52c41a;
 }
 
 .empty-text {
@@ -1091,7 +1091,7 @@ onMounted(() => {
   color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
-  border-left: 4px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .full-width {

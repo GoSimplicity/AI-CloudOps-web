@@ -1094,37 +1094,37 @@ onMounted(() => {
 .prometheus-tag {
   background-color: #e6f7ff;
   color: #0958d9;
-  border-left: 3px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .alert-tag {
   background-color: #fff7e6;
   color: #d46b08;
-  border-left: 3px solid #fa8c16;
+  border-left: 1px solid #fa8c16;
 }
 
 .rule-tag {
   background-color: #fff1f0;
   color: #cf1322;
-  border-left: 3px solid #ff4d4f;
+  border-left: 1px solid #ff4d4f;
 }
 
 .record-tag {
   background-color: #f6ffed;
   color: #389e0d;
-  border-left: 3px solid #52c41a;
+  border-left: 1px solid #52c41a;
 }
 
 .webhook-tag {
   background-color: #f9f0ff;
   color: #722ed1;
-  border-left: 3px solid #722ed1;
+  border-left: 1px solid #722ed1;
 }
 
 .default-tag {
   background-color: var(--ops-ground);
   color: var(--ops-muted);
-  border-left: 3px solid var(--ops-border);
+  border-left: 1px solid var(--ops-border);
 }
 
 .instance-info {
@@ -1179,7 +1179,7 @@ onMounted(() => {
   color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
-  border-left: 4px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .tech-switch {

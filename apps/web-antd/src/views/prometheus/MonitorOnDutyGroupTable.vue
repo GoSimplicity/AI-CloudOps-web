@@ -1380,12 +1380,12 @@ onMounted(async () => {
 }
 
 .calendar-day.has-duty {
-  border-left: 3px solid #52c41a;
+  border-left: 1px solid #52c41a;
 }
 
 .calendar-day.today {
   background: #e6f7ff;
-  border-left: 3px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .calendar-day.weekend {
@@ -1393,7 +1393,7 @@ onMounted(async () => {
 }
 
 .calendar-day.is-adjusted {
-  border-left: 3px solid #722ed1;
+  border-left: 1px solid #722ed1;
 }
 
 .calendar-day:not(.current-month) {

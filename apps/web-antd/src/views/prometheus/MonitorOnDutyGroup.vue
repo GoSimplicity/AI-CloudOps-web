@@ -2097,7 +2097,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 .user-tag {
   background-color: #e6f7ff;
   color: #0958d9;
-  border-left: 3px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .empty-text {
@@ -2200,7 +2200,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
   color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
-  border-left: 4px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .full-width {
@@ -2346,7 +2346,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
   padding: 8px 12px;
   background: var(--ops-ground);
   border-radius: 6px;
-  border-left: 3px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .duty-user {

@@ -1534,7 +1534,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
   color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
-  border-left: 4px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .full-width {

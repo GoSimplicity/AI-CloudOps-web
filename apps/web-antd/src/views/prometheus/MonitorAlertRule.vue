@@ -1591,7 +1591,7 @@ onMounted(() => {
   background: #f8f9fa;
   padding: 4px 8px;
   border-radius: 4px;
-  border-left: 3px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .tag-container {
@@ -1614,37 +1614,37 @@ onMounted(() => {
 .severity-critical {
   background-color: #fff1f0;
   color: #cf1322;
-  border-left: 3px solid #ff4d4f;
+  border-left: 1px solid #ff4d4f;
 }
 
 .severity-warning {
   background-color: #fff7e6;
   color: #d46b08;
-  border-left: 3px solid #fa8c16;
+  border-left: 1px solid #fa8c16;
 }
 
 .severity-info {
   background-color: #e6f7ff;
   color: #0958d9;
-  border-left: 3px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .label-tag {
   background-color: #f6ffed;
   color: #389e0d;
-  border-left: 3px solid #52c41a;
+  border-left: 1px solid #52c41a;
 }
 
 .annotation-tag {
   background-color: #f0f5ff;
   color: #1d39c4;
-  border-left: 3px solid #2f54eb;
+  border-left: 1px solid #2f54eb;
 }
 
 .more-tag {
   background-color: var(--ops-ground);
   color: var(--ops-muted);
-  border-left: 3px solid var(--ops-border);
+  border-left: 1px solid var(--ops-border);
   cursor: pointer;
 }
 
@@ -1743,7 +1743,7 @@ onMounted(() => {
   color: var(--ops-ink);
   margin-bottom: 16px;
   padding-left: 12px;
-  border-left: 4px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .full-width {

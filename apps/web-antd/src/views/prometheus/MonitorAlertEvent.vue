@@ -650,7 +650,7 @@ onMounted(() => {
 .label-tag {
   background-color: #f6ffed;
   color: #389e0d;
-  border-left: 3px solid #52c41a;
+  border-left: 1px solid #52c41a;
 }
 
 .empty-text {
