@@ -4,6 +4,7 @@ import { onMounted, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { usePodPage } from './Pod';
 import {
+  namespacedResourceKey,
   formatK8sTime,
   formatDateTime,
   getRelativeTime,
@@ -922,7 +923,7 @@ const handleCloseFileManagerModal = () => {
         :data-source="filteredPods"
         :row-selection="rowSelection"
         :loading="loading"
-        row-key="name"
+        :row-key="namespacedResourceKey"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,

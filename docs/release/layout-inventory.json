@@ -1,6 +1,6 @@
 {
   "routes": 58,
-  "migratedShells": 13,
+  "migratedShells": 21,
   "entries": [
     {
       "route": "/assistant/info",
@@ -103,7 +103,7 @@
     {
       "route": "/k8s_configmap",
       "view": "k8s/configmap/ConfigMap.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 48,
       "scopedStyle": true
     },
@@ -187,7 +187,7 @@
     {
       "route": "/k8s_service",
       "view": "k8s/service/Service.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 53,
       "scopedStyle": true
     },
@@ -222,21 +222,21 @@
     {
       "route": "/monitor_alert_event",
       "view": "prometheus/MonitorAlertEvent.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 1,
       "scopedStyle": true
     },
     {
       "route": "/monitor_alert_pool",
       "view": "prometheus/MonitorAlertPool.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 5,
       "scopedStyle": true
     },
     {
       "route": "/monitor_alert_record",
       "view": "prometheus/MonitorAlertRecord.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 1,
       "scopedStyle": true
     },
@@ -257,7 +257,7 @@
     {
       "route": "/monitor_job",
       "view": "prometheus/MonitorScrapeJob.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 3,
       "scopedStyle": true
     },
@@ -278,14 +278,14 @@
     {
       "route": "/monitor_pool",
       "view": "prometheus/MonitorScrapePool.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 2,
       "scopedStyle": true
     },
     {
       "route": "/monitor_send",
       "view": "prometheus/MonitorSend.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 1,
       "scopedStyle": true
     },

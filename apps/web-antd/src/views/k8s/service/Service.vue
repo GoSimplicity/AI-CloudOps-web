@@ -1,53 +1,37 @@
 <template>
-  <div class="k8s-management-container">
-    <!-- 页面头部 -->
-    <div class="k8s-page-header">
-      <a-row class="k8s-header-content" :gutter="[24, 16]">
-        <a-col :xs="24" :sm="24" :md="16" :lg="16" :xl="18">
-          <div class="k8s-title-section">
-            <div class="k8s-page-title">
-              <GlobalOutlined class="k8s-title-icon" />
-              <div>
-                <h1>Service 管理</h1>
-                <p class="k8s-page-subtitle">管理和监控集群中的所有 Kubernetes Service</p>
-              </div>
-            </div>
-          </div>
-        </a-col>
-        <a-col :xs="24" :sm="24" :md="8" :lg="8" :xl="6">
-          <div class="k8s-header-actions">
-            <a-button type="primary" @click="openCreateModal" :disabled="!filterClusterId">
-              <template #icon><PlusOutlined /></template>
-              创建 Service
-            </a-button>
-            <a-button @click="fetchServices" :loading="loading">
-              <template #icon><ReloadOutlined /></template>
-              刷新数据
-            </a-button>
-          </div>
-        </a-col>
-      </a-row>
-    </div>
+  <OpsPage title="Service 管理" description="按集群和命名空间查询与维护 Service">
+    <template #actions>
+      <a-button type="primary" @click="openCreateModal" :disabled="!filterClusterId">
+        <template #icon><PlusOutlined aria-hidden="true" /></template>
+        创建 Service
+      </a-button>
+      <a-button @click="fetchServices" :loading="loading" :disabled="!filterClusterId">
+        <template #icon><ReloadOutlined aria-hidden="true" /></template>
+        刷新数据
+      </a-button>
+    </template>
 
     <!-- 工具栏 -->
-    <div class="k8s-toolbar">
+    <template #filters>
+    <div class="ops-filter-row">
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
           <a-select 
             v-model:value="filterClusterId" 
             placeholder="选择集群" 
-            class="k8s-cluster-selector" 
+            class="k8s-cluster-selector"
+            aria-label="选择集群"
             allow-clear 
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
             @popup-scroll="handleClusterDropdownScroll"
           >
-            <template #suffixIcon><DeploymentUnitOutlined /></template>
+            <template #suffixIcon><DeploymentUnitOutlined aria-hidden="true" /></template>
             <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
               <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span>{{ cluster.name }}</span>
+                <span class="k8s-cluster-name" :title="cluster.name">{{ cluster.name }}</span>
                 <a-tag color="blue" size="small">{{ getEnvText(cluster.env) }}</a-tag>
               </div>
             </a-select-option>
@@ -65,13 +49,14 @@
           <a-select 
             v-model:value="filterNamespace" 
             placeholder="选择命名空间" 
-            class="k8s-filter-select" 
+            class="k8s-filter-select k8s-namespace-selector"
+            aria-label="选择命名空间"
             allow-clear 
             @change="handleFilterChange"
             :disabled="!filterClusterId"
             :loading="namespacesLoading"
           >
-            <template #suffixIcon><AppstoreOutlined /></template>
+            <template #suffixIcon><AppstoreOutlined aria-hidden="true" /></template>
             <a-select-option v-for="ns in namespaces" :key="ns.name" :value="ns.name">
               {{ ns.name }}
             </a-select-option>
@@ -94,7 +79,7 @@
             allow-clear 
             @change="handleFilterChange"
           >
-            <template #suffixIcon><NodeIndexOutlined /></template>
+            <template #suffixIcon><NodeIndexOutlined aria-hidden="true" /></template>
             <a-select-option value="ClusterIP">ClusterIP</a-select-option>
             <a-select-option value="NodePort">NodePort</a-select-option>
             <a-select-option value="LoadBalancer">LoadBalancer</a-select-option>
@@ -108,7 +93,7 @@
             allow-clear 
             @change="handleFilterChange"
           >
-            <template #suffixIcon><FilterOutlined /></template>
+            <template #suffixIcon><FilterOutlined aria-hidden="true" /></template>
             <a-select-option :value="K8sSvcStatus.Running">运行中</a-select-option>
             <a-select-option :value="K8sSvcStatus.Stopped">已停止</a-select-option>
             <a-select-option :value="K8sSvcStatus.Error">异常</a-select-option>
@@ -117,7 +102,7 @@
           <!-- 标签过滤器 -->
           <div class="k8s-labels-filter">
             <a-button type="dashed" @click="openLabelsFilter" class="k8s-toolbar-btn">
-              <template #icon><TagsOutlined /></template>
+              <template #icon><TagsOutlined aria-hidden="true" /></template>
               标签过滤 
               <a-tag v-if="Object.keys(filterLabels).length > 0" color="blue" size="small" style="margin-left: 8px;">
                 {{ Object.keys(filterLabels).length }}
@@ -149,7 +134,7 @@
             allow-clear 
           >
             <template #suffix>
-              <SearchOutlined class="k8s-search-icon" />
+              <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
             </template>
           </a-input>
         </div>
@@ -164,19 +149,10 @@
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
           >
-            <template #icon><DeleteOutlined /></template>
+            <template #icon><DeleteOutlined aria-hidden="true" /></template>
             重置筛选
           </a-button>
 
-          <a-button 
-            @click="fetchServices" 
-            :loading="loading"
-            class="k8s-toolbar-btn"
-            title="刷新数据"
-          >
-            <template #icon><ReloadOutlined /></template>
-            刷新
-          </a-button>
 
           <a-button 
             @click="openCreateYamlModal" 
@@ -184,7 +160,7 @@
             class="k8s-toolbar-btn"
             title="通过YAML创建Service"
           >
-            <template #icon><FileTextOutlined /></template>
+            <template #icon><FileTextOutlined aria-hidden="true" /></template>
             YAML 创建
           </a-button>
 
@@ -197,12 +173,24 @@
             class="k8s-toolbar-btn"
             title="批量删除选中的 Service"
           >
-            <template #icon><DeleteOutlined /></template>
+            <template #icon><DeleteOutlined aria-hidden="true" /></template>
             删除 ({{ selectedRows.length }})
           </a-button>
         </div>
       </div>
     </div>
+
+    </template>
+
+    <a-alert v-if="clustersError" type="error" :message="clustersError" show-icon>
+      <template #action><a-button size="small" @click="fetchClusters(true)">重试集群</a-button></template>
+    </a-alert>
+    <a-alert v-if="namespacesError" type="error" :message="namespacesError" show-icon>
+      <template #action><a-button size="small" @click="fetchNamespaces(true)">重试命名空间</a-button></template>
+    </a-alert>
+    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+      <template #action><a-button size="small" @click="fetchServices">重试查询</a-button></template>
+    </a-alert>
 
     <!-- 数据展示区域 -->
     <div class="k8s-data-display">
@@ -211,7 +199,7 @@
         :data-source="filteredServices"
         :row-selection="rowSelection"
         :loading="loading"
-        row-key="name"
+        :row-key="namespacedResourceKey"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,
@@ -339,22 +327,22 @@
           <div class="k8s-action-column">
             <a-tooltip title="查看详情">
               <a-button title="查看详情" @click="showServiceDetail(record)">
-                <template #icon><EyeOutlined /></template>
+                <template #icon><EyeOutlined aria-hidden="true" /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="编辑">
               <a-button title="编辑" @click="openEditModal(record)">
-                <template #icon><EditOutlined /></template>
+                <template #icon><EditOutlined aria-hidden="true" /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="查看 YAML">
               <a-button title="查看 YAML" @click="showYamlModal(record)">
-                <template #icon><FileTextOutlined /></template>
+                <template #icon><FileTextOutlined aria-hidden="true" /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="查看端点">
               <a-button title="查看端点" @click="showEndpointsModal(record)">
-                <template #icon><NodeIndexOutlined /></template>
+                <template #icon><NodeIndexOutlined aria-hidden="true" /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="删除">
@@ -363,7 +351,7 @@
                 danger 
                 @click="deleteService(record)"
               >
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </a-tooltip>
           </div>
@@ -371,9 +359,10 @@
 
         <template #emptyText>
           <div class="k8s-empty-state">
-            <GlobalOutlined />
+            <GlobalOutlined aria-hidden="true" />
             <p>暂无 Service 数据</p>
-            <p>请先选择集群</p>
+            <p v-if="!filterClusterId">请先选择集群</p>
+            <p v-else>请调整筛选条件或刷新数据</p>
           </div>
         </template>
       </a-table>
@@ -476,11 +465,11 @@
                 :disabled="createFormModel.ports.length <= 1"
                 size="small"
                class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
             <a-button type="dashed" @click="addPortField" style="margin-top: 8px;">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><PlusOutlined aria-hidden="true" /></template>
               添加端口
             </a-button>
           </div>
@@ -505,7 +494,7 @@
                 :maxlength="200"
               />
               <a-button type="text" danger @click="removeSelectorField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -516,7 +505,7 @@
                 @press-enter="addNewSelector"
               />
               <a-button type="primary" @click="addNewSelector" :disabled="!newSelectorKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
               </a-button>
             </div>
@@ -542,7 +531,7 @@
                 :maxlength="200"
               />
               <a-button type="text" danger @click="removeLabelField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -553,7 +542,7 @@
                 @press-enter="addNewLabel"
               />
               <a-button type="primary" @click="addNewLabel" :disabled="!newLabelKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
               </a-button>
             </div>
@@ -579,7 +568,7 @@
                 :maxlength="500"
               />
               <a-button type="text" danger @click="removeAnnotationField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -590,7 +579,7 @@
                 @press-enter="addNewAnnotation"
               />
               <a-button type="primary" @click="addNewAnnotation" :disabled="!newAnnotationKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
               </a-button>
             </div>
@@ -696,11 +685,11 @@
                 :disabled="editFormModel.ports.length <= 1"
                 size="small"
                class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
             <a-button type="dashed" @click="addEditPortField" style="margin-top: 8px;">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><PlusOutlined aria-hidden="true" /></template>
               添加端口
             </a-button>
           </div>
@@ -725,7 +714,7 @@
                 :maxlength="200"
               />
               <a-button type="text" danger @click="removeEditSelectorField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -736,7 +725,7 @@
                 @press-enter="addNewEditSelector"
               />
               <a-button type="primary" @click="addNewEditSelector" :disabled="!newEditSelectorKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
               </a-button>
             </div>
@@ -762,7 +751,7 @@
                 :maxlength="200"
               />
               <a-button type="text" danger @click="removeEditLabelField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -773,7 +762,7 @@
                 @press-enter="addNewEditLabel"
               />
               <a-button type="primary" @click="addNewEditLabel" :disabled="!newEditLabelKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
               </a-button>
             </div>
@@ -799,7 +788,7 @@
                 :maxlength="500"
               />
               <a-button type="text" danger @click="removeEditAnnotationField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -810,7 +799,7 @@
                 @press-enter="addNewEditAnnotation"
               />
               <a-button type="primary" @click="addNewEditAnnotation" :disabled="!newEditAnnotationKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
               </a-button>
             </div>
@@ -842,19 +831,19 @@
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
             <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
-              <template #icon><FileAddOutlined /></template>
+              <template #icon><FileAddOutlined aria-hidden="true" /></template>
               插入模板
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
-              <template #icon><FormatPainterOutlined /></template>
+              <template #icon><FormatPainterOutlined aria-hidden="true" /></template>
               格式化
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
-              <template #icon><CheckCircleOutlined /></template>
+              <template #icon><CheckCircleOutlined aria-hidden="true" /></template>
               检查格式
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
-              <template #icon><ClearOutlined /></template>
+              <template #icon><ClearOutlined aria-hidden="true" /></template>
               清空
             </a-button>
           </div>
@@ -1066,7 +1055,7 @@
       </div>
       <a-empty v-else description="暂无端点数据" :image="undefined">
         <template #image>
-          <NodeIndexOutlined style="font-size: 48px; color: #d9d9d9;" />
+          <NodeIndexOutlined aria-hidden="true" style="font-size: 48px; color: #d9d9d9;" />
         </template>
       </a-empty>
     </a-modal>
@@ -1117,21 +1106,22 @@
               style="flex: 1;"
             />
             <a-button type="primary" @click="addNewFilterLabel" :disabled="!newFilterKey.trim()" size="small">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><PlusOutlined aria-hidden="true" /></template>
             </a-button>
           </div>
         </div>
       </div>
     </a-modal>
 
-  </div>
+  </OpsPage>
 </template>
 
 <script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { useServicePage } from './Service';
-import { formatK8sTime, formatDateTime, getRelativeTime } from '../shared/utils';
+import { formatK8sTime, formatDateTime, getRelativeTime, namespacedResourceKey } from '../shared/utils';
 import yaml from 'js-yaml';
 import { 
   PlusOutlined, 
@@ -1158,6 +1148,9 @@ const {
   clusters,
   namespaces,
   loading,
+  loadError,
+  clustersError,
+  namespacesError,
   clustersLoading,
   namespacesLoading,
   searchText,
@@ -1219,7 +1212,7 @@ const {
 
   // operations
   fetchClusters,
-
+  fetchNamespaces,
   fetchServices,
   clearServices,
   clearNamespaces,

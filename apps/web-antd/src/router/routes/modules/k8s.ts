@@ -80,7 +80,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 9,
           icon: 'lucide:network',
-          title: 'service管理',
+          title: 'Service 管理',
         },
       },
       {
@@ -110,7 +110,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 12,
           icon: 'lucide:settings',
-          title: 'ConfigMap管理',
+          title: 'ConfigMap 管理',
         },
       },
       {

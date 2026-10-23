@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
+import { namespacedResourceKey } from '../shared/utils';
 import { onMounted, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { useDeploymentPage } from './Deployment';
@@ -771,7 +772,7 @@ onMounted(async () => {
         :data-source="filteredDeployments"
         :row-selection="rowSelection"
         :loading="loading"
-        row-key="name"
+        :row-key="namespacedResourceKey"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,

@@ -1,6 +1,7 @@
 import { parse as parseSfc } from 'vue/compiler-sfc';
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { basename, relative, resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
@@ -10,13 +11,31 @@ const routesDirectory = resolve(
   'apps/web-antd/src/router/routes/modules',
 );
 const entries = [];
+// 并行开发时读取暂存快照，避免把其它批次未提交的页面写进清单
+const staged = process.argv.includes('--staged');
+const readSource = (path) =>
+  staged
+    ? execFileSync('git', ['show', `:${relative(root, path)}`], {
+        cwd: root,
+        encoding: 'utf8',
+      })
+    : readFileSync(path, 'utf8');
+const routeFiles = staged
+  ? execFileSync(
+      'git',
+      ['ls-files', '--', 'apps/web-antd/src/router/routes/modules/*.ts'],
+      { cwd: root, encoding: 'utf8' },
+    )
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((file) => basename(file))
+  : readdirSync(routesDirectory);
 
-for (const file of readdirSync(routesDirectory).filter((file) =>
-  file.endsWith('.ts'),
-)) {
+for (const file of routeFiles.filter((file) => file.endsWith('.ts'))) {
   const source = ts.createSourceFile(
     file,
-    readFileSync(resolve(routesDirectory, file), 'utf8'),
+    readSource(resolve(routesDirectory, file)),
     ts.ScriptTarget.Latest,
     true,
   );
@@ -47,9 +66,8 @@ for (const file of readdirSync(routesDirectory).filter((file) =>
           );
         }
         const view = body.arguments[0].text.replace('#/views/', '');
-        const content = readFileSync(
+        const content = readSource(
           resolve(root, 'apps/web-antd/src/views', view),
-          'utf8',
         );
         const { descriptor, errors } = parseSfc(content);
         if (errors.length || !descriptor.template)

@@ -628,8 +628,8 @@ test('kubernetes workloads display real Deployment and Pod resources', async ({
     await selectAcceptanceNamespace(page, namespace!);
     const rows =
       route === '/k8s_deployment'
-        ? page.locator('.ant-table-tbody tr[data-row-key="web"]')
-        : page.locator('.ant-table-tbody tr[data-row-key^="web-"]');
+        ? page.locator('.ant-table-tbody tr[data-row-key$="/web"]')
+        : page.locator('.ant-table-tbody tr[data-row-key*="/web-"]');
     await expect(rows).toHaveCount(route === '/k8s_deployment' ? 1 : 2);
     await page.locator('.ops-page__actions button').first().click();
     await expect(page.getByRole('dialog')).toBeVisible();
@@ -727,7 +727,7 @@ test('pod terminal negotiates credential subprotocol and returns real output', a
   await acceptanceLogin(page);
   await page.goto(routePath('/k8s_pod'));
   await selectAcceptanceNamespace(page, namespace!);
-  const pod = page.locator('.ant-table-tbody tr[data-row-key^="web-"]').first();
+  const pod = page.locator('.ant-table-tbody tr[data-row-key*="/web-"]').first();
   await pod.getByRole('button', { name: '执行命令', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('button', { name: '连接终端', exact: true }).click();
@@ -825,4 +825,71 @@ test('assistant clears an invalid owned session and permits a fresh question', a
   await expect(page).toHaveURL(/auth\/login/);
   await expect(page.locator('.ai-float-window')).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+test('kubernetes Service and ConfigMap preserve real queries and responsive actions', async ({ page }) => {
+  test.setTimeout(120_000);
+  page.setDefaultTimeout(15_000);
+  const namespace = process.env.CLOUDOPS_TEST_NAMESPACE;
+  const clusterName = process.env.CLOUDOPS_TEST_CLUSTER_NAME;
+  test.skip(!namespace || !clusterName, 'Requires isolated Kubernetes resources.');
+  const errors: string[] = [];
+  const failures: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('response', response => { if (new URL(response.url()).pathname.startsWith('/api/') && response.status() >= 400) failures.push(`${response.status()} ${new URL(response.url()).pathname}`); });
+  await acceptanceLogin(page);
+  for (const [route, title, resourceName] of [
+    ['/k8s_service', 'Service 管理', 'web'],
+    ['/k8s_configmap', 'ConfigMap 管理', 'web-content'],
+  ]) {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(routePath(route!));
+    await expect(page.locator('.ops-page h1')).toHaveText(title!);
+    await expect(page.locator('.k8s-cluster-selector')).toContainText(clusterName!);
+    await selectAcceptanceNamespace(page, namespace!);
+    const row = page.locator(`.ant-table-tbody tr[data-row-key$="/${resourceName}"]`);
+    await expect(row).toHaveCount(1);
+    await row.getByRole('button', { name: '查看详情', exact: true }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByRole('dialog')).toContainText(resourceName!);
+    await page.getByRole('dialog').locator('button.ant-modal-close').click();
+    await page.locator('.ops-page__actions button').first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('dialog').getByRole('button', { name: /^取\s*消$/ }).click();
+    const search = page.getByPlaceholder(`搜索 ${route === '/k8s_service' ? 'Service' : 'ConfigMap'} 名称`);
+    await search.fill('no-such-ui-resource'); await search.press('Enter');
+    await expect(row).toHaveCount(0);
+    await search.fill(resourceName!); await search.press('Enter'); await expect(row).toHaveCount(1);
+    if (process.env.CLOUDOPS_TEST_K8S_FILTER_READY === 'true') {
+      if (route === '/k8s_configmap') {
+        const key = page.getByPlaceholder('数据键过滤');
+        await key.fill('no-such-data-key'); await key.press('Enter'); await expect(row).toHaveCount(0);
+        await key.fill('INDEX'); await key.press('Enter'); await expect(row).toHaveCount(1);
+        await key.fill(''); await key.press('Enter'); await expect(row).toHaveCount(1);
+      } else {
+        await page.locator('.ops-page__filters .ant-select').filter({ hasText: '状态筛选' }).click();
+        await page.locator('.ant-select-dropdown:visible').getByText('已停止', { exact: true }).click();
+        await expect(row).toHaveCount(0);
+        await page.locator('.ops-page__filters .ant-select').filter({ hasText: '已停止' }).click();
+        await page.locator('.ant-select-dropdown:visible').getByText('运行中', { exact: true }).click();
+        await expect(row).toHaveCount(1);
+      }
+    }
+    if (route === '/k8s_service') await page.screenshot({ path: '.cache/ui-verification/k8s-service-desktop.png', fullPage: true, animations: 'disabled' });
+    await page.getByLabel('深色', { exact: true }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectUncovered(page.locator('.ops-page__actions').getByRole('button', { name: '刷新数据', exact: true }));
+    await expectUncovered(search);
+    expect(await row.evaluate(element => element.getBoundingClientRect().height)).toBeLessThan(160);
+    await expectUncovered(row.getByRole('button', { name: '查看详情', exact: true }));
+    await row.getByRole('button', { name: '查看详情', exact: true }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('dialog').locator('button.ant-modal-close').click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (route === '/k8s_configmap') {
+      await page.locator('.ant-table-content').evaluate(element => { element.scrollLeft = 0; });
+      await page.screenshot({ path: '.cache/ui-verification/k8s-configmap-mobile.png', fullPage: true, animations: 'disabled' });
+    }
+  }
+  expect(errors).toEqual([]); expect(failures).toEqual([]);
 });

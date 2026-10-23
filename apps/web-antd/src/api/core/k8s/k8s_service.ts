@@ -120,6 +120,7 @@ export interface K8sServiceYaml {
  * GetServiceListReq Service列表请求
  */
 export interface GetServiceListReq {
+  status?: K8sSvcStatus; // Service 状态
   page?: number;                        // 页码
   size?: number;                        // 每页条数
   cluster_id: number;                   // 集群ID

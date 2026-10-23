@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useDeploymentPage } from '../deployment/Deployment';
 import { usePodPage } from '../pod/Pod';
+import { useServicePage } from '../service/Service';
+import { useConfigMapPage } from '../configmap/ConfigMap';
 
 const client = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
@@ -14,6 +16,30 @@ vi.mock('xterm-addon-fit', () => ({ FitAddon: class {} }));
 vi.mock('xterm-addon-web-links', () => ({ WebLinksAddon: class {} }));
 
 const cases = [
+  {
+    name: 'Service',
+    create: () => {
+      const state = useServicePage();
+      return {
+        state,
+        items: state.services,
+        fetch: state.fetchServices,
+        clear: state.clearServices,
+      };
+    },
+  },
+  {
+    name: 'ConfigMap',
+    create: () => {
+      const state = useConfigMapPage();
+      return {
+        state,
+        items: state.configMaps,
+        fetch: state.fetchConfigMaps,
+        clear: state.clearConfigMaps,
+      };
+    },
+  },
   {
     name: 'Deployment',
     create: () => {
@@ -108,3 +134,38 @@ for (const testCase of cases) {
     });
   });
 }
+
+describe('资源过滤请求契约', () => {
+  it('Service 状态、名称和命名空间发送到后端分页前过滤', async () => {
+    const state = useServicePage();
+    state.filterClusterId.value = 1;
+    state.filterNamespace.value = 'alpha';
+    state.searchText.value = 'web';
+    state.filterStatus.value = 2;
+    client.get.mockResolvedValue({ items: [], total: 0 });
+    await state.fetchServices();
+    expect(client.get).toHaveBeenLastCalledWith('/k8s/service/1/list', {
+      params: expect.objectContaining({
+        namespace: 'alpha',
+        search: 'web',
+        status: 2,
+      }),
+    });
+  });
+  it('ConfigMap 名称、命名空间与数据键真实传给 API', async () => {
+    const state = useConfigMapPage();
+    state.filterClusterId.value = 1;
+    state.filterNamespace.value = 'alpha';
+    state.searchText.value = 'content';
+    state.filterDataKey.value = 'INDEX';
+    client.get.mockResolvedValue({ items: [], total: 0 });
+    await state.fetchConfigMaps();
+    expect(client.get).toHaveBeenLastCalledWith('/k8s/configmap/1/list', {
+      params: expect.objectContaining({
+        namespace: 'alpha',
+        search: 'content',
+        data_key: 'INDEX',
+      }),
+    });
+  });
+});

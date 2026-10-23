@@ -59,6 +59,11 @@ export function useConfigMapPage() {
   const clusters = ref<K8sCluster[]>([]);
   const namespaces = ref<K8sNamespace[]>([]);
   const loading = ref(false);
+  const loadError = ref('');
+  const clustersError = ref('');
+  const namespacesError = ref('');
+  let resourceRequestId = 0;
+  let namespaceRequestId = 0;
   const clustersLoading = ref(false);
   const namespacesLoading = ref(false);
   const searchText = ref('');
@@ -245,12 +250,19 @@ export function useConfigMapPage() {
 
   // cluster operations
   const clearConfigMaps = () => {
+    resourceRequestId++;
+    loading.value = false;
+    total.value = 0;
+    loadError.value = '';
     configMaps.value = [];
     selectedRowKeys.value = [];
     selectedRows.value = [];
   };
 
   const clearNamespaces = () => {
+    namespaceRequestId++;
+    namespacesLoading.value = false;
+    namespacesError.value = '';
     resetNamespaces();
     filterNamespace.value = undefined;
   };
@@ -261,6 +273,7 @@ export function useConfigMapPage() {
     }
     try {
       clustersLoading.value = true;
+      clustersError.value = '';
       const params: ListClustersReq = {
         page: clustersPage.value,
         size: clustersSize.value,
@@ -272,39 +285,58 @@ export function useConfigMapPage() {
         clusters.value = [...clusters.value, ...(res?.items || [])];
       }
       clustersTotal.value = res?.total || 0;
-      
+
+      // 如果当前没有选择集群且有可用集群，自动选择第一个
       if (!filterClusterId.value && clusters.value.length > 0) {
         const firstCluster = clusters.value[0];
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
-          message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
+          // 自动加载该集群的命名空间和ConfigMap数据
           await fetchNamespaces();
           await fetchConfigMaps();
         }
       }
     } catch (err) {
-      message.error('获取集群列表失败');
-
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearNamespaces();
+        clearConfigMaps();
+      }
+      clustersError.value = '获取集群列表失败，请重试';
+      message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
   };
 
   const fetchNamespaces = async (reset = false) => {
-    if (!filterClusterId.value) return;
-    
+    const clusterId = filterClusterId.value;
+    if (!clusterId) {
+      clearNamespaces();
+      return;
+    }
+    const requestId = ++namespaceRequestId;
+
     if (reset) {
       resetNamespaces();
     }
-    
+
     try {
       namespacesLoading.value = true;
+      namespacesError.value = '';
       const params: K8sNamespaceListReq = {
-        cluster_id: filterClusterId.value,
+        cluster_id: clusterId,
         page: namespacesPage.value,
         size: namespacesSize.value,
       };
-      const res = await getNamespacesListApi(filterClusterId.value, params);
+      const res = await getNamespacesListApi(clusterId, params);
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       if (namespacesPage.value === 1) {
         namespaces.value = res?.items || [];
       } else {
@@ -312,26 +344,39 @@ export function useConfigMapPage() {
       }
       namespacesTotal.value = res?.total || 0;
     } catch (err) {
-      message.error('获取命名空间列表失败');
-
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      namespaces.value = [];
+      namespacesTotal.value = 0;
+      namespacesError.value = '获取命名空间列表失败，请重试';
+      message.error(namespacesError.value);
     } finally {
-      namespacesLoading.value = false;
+      if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
   };
 
   // crud operations
   const fetchConfigMaps = async () => {
-    if (!filterClusterId.value || filterClusterId.value === 0) {
-      message.warning('请先选择有效的集群');
-      configMaps.value = [];
-      total.value = 0;
+    const clusterId = filterClusterId.value;
+    const namespace = filterNamespace.value;
+    if (!clusterId) {
+      clearConfigMaps();
       return;
     }
-
+    const requestId = ++resourceRequestId;
     try {
       loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
       const params: GetConfigMapListReq = {
-        cluster_id: filterClusterId.value,
+        cluster_id: clusterId,
+        namespace: namespace || undefined,
+        search: searchText.value || undefined,
+        data_key: filterDataKey.value || undefined,
         page: currentPage.value,
         size: pageSize.value,
         labels: Object.keys(filterLabels.value).length > 0 
@@ -339,10 +384,11 @@ export function useConfigMapPage() {
           : undefined,
       };
       const res = await getConfigMapListApi(params);
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       
       const configMapsWithClusterId = (res?.items || []).map((configMap: K8sConfigMap) => ({
         ...configMap,
-        cluster_id: configMap.cluster_id || filterClusterId.value || 0,
+        cluster_id: configMap.cluster_id || clusterId,
         data: parseJsonField(configMap.data, {}),
         binary_data: parseJsonField(configMap.binary_data, {}),
         labels: parseJsonField(configMap.labels, {}),
@@ -352,10 +398,13 @@ export function useConfigMapPage() {
       configMaps.value = configMapsWithClusterId;
       total.value = res?.total || 0;
     } catch (err) {
-      message.error('获取 ConfigMap 列表失败');
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      clearConfigMaps();
+      loadError.value = '获取 ConfigMap 列表失败，请重试';
+      message.error(loadError.value);
 
     } finally {
-      loading.value = false;
+      if (requestId === resourceRequestId) loading.value = false;
     }
   };
 
@@ -1075,6 +1124,9 @@ export function useConfigMapPage() {
     clusters,
     namespaces,
     loading,
+    loadError,
+    clustersError,
+    namespacesError,
     clustersLoading,
     namespacesLoading,
     searchText,

@@ -20,6 +20,8 @@ export interface K8sConfigMap {
 
 // 获取ConfigMap列表请求
 export interface GetConfigMapListReq {
+  search?: string; // 按名称过滤
+  data_key?: string; // 按数据键名过滤
   cluster_id: number; // 集群ID，必填
   namespace?: string; // 命名空间
   labels?: Record<string, string>; // 标签
@@ -94,6 +96,8 @@ export async function getConfigMapListApi(params: GetConfigMapListReq) {
     {
       params: {
         namespace: params.namespace,
+        search: params.search,
+        data_key: params.data_key,
         labels: params.labels,
         page: params.page,
         size: params.size,

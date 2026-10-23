@@ -102,6 +102,23 @@ defineProps<{ title: string; description?: string }>();
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.ops-page .ops-page__content :deep(.k8s-action-column .ant-btn) {
+  color: var(--ops-muted);
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
+  box-shadow: none;
+}
+.ops-page .ops-page__content :deep(.k8s-action-column .ant-btn:hover) {
+  color: var(--ops-accent);
+  border-color: var(--ops-accent);
+  background: var(--ops-surface);
+  box-shadow: none;
+  transform: none;
+}
+.ops-page .ops-page__content :deep(.k8s-action-column .ant-btn-dangerous) {
+  color: hsl(var(--destructive));
+}
 .ops-page__filters :deep(.k8s-toolbar-filters),
 .ops-page__filters :deep(.k8s-filter-group),
 .ops-page__filters :deep(.k8s-toolbar-actions) {
