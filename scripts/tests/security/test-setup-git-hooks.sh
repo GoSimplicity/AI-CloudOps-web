@@ -4,6 +4,7 @@
 #   第三轮 P3-2：.husky/pre-commit 缺失 / 不可执行 / 没有调用 .githooks/pre-commit（husky 会静默放行）；HUSKY=0 要有明确警告
 #   review3g N3：HUSKY=0 时（包括钩子已安装后重跑）必须失败
 #   review3g N4：.husky/pre-commit 必须与 setup 中内嵌的内容逐字节一致（": .githooks/pre-commit"、提前 exit 0、"|| true" 都要失败）
+#   review3g N6：gitleaks 版本低于 8.25.0 或无法解析时必须失败（假 gitleaks 只改写 `gitleaks version` 输出）
 # 正常情况使用仓库 node_modules 中真实的 husky（9.x，需先 pnpm install），并做端到端验证：
 #   安装后提交合成密钥被 gitleaks 拦下、提交干净文件成功。
 # 用法: scripts/tests/security/test-setup-git-hooks.sh [--rev <git-rev>]   （对修复前版本运行应报 FAIL）
@@ -84,6 +85,19 @@ done
 run_case "情况3d .husky/pre-commit 写成 \": .githooks/pre-commit\"（不执行）" fail real colon_husky_hook || true
 run_case "情况3e .husky/pre-commit 开头提前 exit 0" fail real early_exit_husky_hook || true
 run_case "情况3f .husky/pre-commit 末尾改成 || true（忽略 gitleaks 失败）" fail real or_true_husky_hook || true
+
+# review3g N6：gitleaks 最低版本 8.25.0
+REAL_GL="$(command -v gitleaks)"
+fake_gl_dir() { # fake_gl_dir <名> <version 输出>
+    local d="$TMP/gl-$1"; mkdir -p "$d"
+    { printf '#!/bin/sh\n'
+      printf 'if [ "$1" = version ]; then printf "%%s\\n" '"'"'%s'"'"'; exit 0; fi\n' "$2"
+      printf 'exec "%s" "$@"\n' "$REAL_GL"; } >"$d/gitleaks"; chmod +x "$d/gitleaks"; echo "$d"
+}
+run_case "情况5a gitleaks 8.24.3（低于 8.25.0）" fail real "" PATH="$(fake_gl_dir low 8.24.3):$PATH" || true
+run_case "情况5b gitleaks v8.18.4" fail real "" PATH="$(fake_gl_dir old v8.18.4):$PATH" || true
+run_case "情况5c gitleaks 版本无法解析（dev）" fail real "" PATH="$(fake_gl_dir bad dev):$PATH" || true
+run_case "情况5d 对照 gitleaks 8.25.0" ok real "" PATH="$(fake_gl_dir min 8.25.0):$PATH" || true
 
 # 情况3 的实际后果（仅说明，不计入结果）：真实 husky 安装后删掉 .husky/pre-commit，带密钥的提交会静默成功
 d="$(new_repo demo real)"; ( cd "$d" && env -u HUSKY bash scripts/setup-git-hooks.sh ) >/dev/null 2>&1 || true

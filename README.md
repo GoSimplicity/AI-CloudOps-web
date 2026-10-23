@@ -63,7 +63,7 @@ pnpm install --frozen-lockfile
 bash scripts/setup-git-hooks.sh
 ```
 
-脚本在以下情况返回非 0：找不到 husky、`core.hooksPath` 不是 `.husky/_`、`.husky/pre-commit` 缺失、不可执行或内容与脚本内嵌的预期内容不逐字节一致（修改该文件时须同步修改 `scripts/setup-git-hooks.sh`）、未安装 gitleaks（从 [官方发布页](https://github.com/gitleaks/gitleaks/releases) 下载并校验 sha256）
+脚本在以下情况返回非 0：找不到 husky、`core.hooksPath` 不是 `.husky/_`、`.husky/pre-commit` 缺失、不可执行或内容与脚本内嵌的预期内容不逐字节一致（修改该文件时须同步修改 `scripts/setup-git-hooks.sh`）、未安装 gitleaks（从 [官方发布页](https://github.com/gitleaks/gitleaks/releases) 下载并校验 sha256）或版本低于 8.25.0 / 版本无法解析（pre-commit 钩子同样会拒绝提交）
 
 注意事项
 
