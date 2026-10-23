@@ -301,3 +301,120 @@ export function readRevealedValue(
   const plain = parseRecord(res.string_data)[key];
   return typeof plain === 'string' ? plain : undefined;
 }
+
+// ---- YAML 编辑：展示时把 data 的 base64 解成明文、提交时再编码（incr7 从 Secret.ts 原样移入，便于与上面的拦截器对照测试） ----
+
+// Base64 解码辅助函数
+const decodeBase64ToUtf8 = (base64Str: string): string => {
+  try {
+    // 使用 atob 解码 base64，然后转换为 UTF-8
+    const binaryStr = atob(base64Str);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+    // 使用 TextDecoder 正确处理 UTF-8 编码
+    const decoder = new TextDecoder('utf-8');
+    return decoder.decode(bytes);
+  } catch (error) {
+    return base64Str; // 如果解码失败，返回原始字符串
+  }
+};
+
+// 处理 Secret YAML 中的 base64 编码数据
+export const processSecretYaml = (yamlContent: string): string => {
+  if (!yamlContent) return yamlContent;
+  
+  try {
+    // 使用正则表达式匹配 data 字段下的 base64 编码值
+    const processedYaml = yamlContent.replace(
+      /^(\s*)([\w\-\.]+):\s*([A-Za-z0-9+/]+=*)$/gm,
+      (match, indent, key, value) => {
+        // 检查是否在 data 字段下且值看起来像 base64
+        if (value && value.length > 0 && /^[A-Za-z0-9+/]+=*$/.test(value)) {
+          // 检查前面的内容中是否有 data: 字段
+          const beforeMatch = yamlContent.substring(0, yamlContent.indexOf(match));
+          const dataFieldPattern = /\ndata:\s*\n/;
+          const stringDataFieldPattern = /\nstringData:\s*\n/;
+          
+          if (dataFieldPattern.test(beforeMatch) && !stringDataFieldPattern.test(beforeMatch.substring(beforeMatch.lastIndexOf('\ndata:')))) {
+            const decodedValue = decodeBase64ToUtf8(value);
+            // 如果解码后的内容包含换行符，使用多行 YAML 格式
+            if (decodedValue.includes('\n')) {
+              const indentedContent = decodedValue
+                .split('\n')
+                .map((line, index) => index === 0 ? line : `${indent}  ${line}`)
+                .join('\n');
+              return `${indent}${key}: |\n${indent}  ${indentedContent}`;
+            } else {
+              return `${indent}${key}: "${decodedValue.replace(/"/g, '\\"')}"`;
+            }
+          }
+        }
+        return match;
+      }
+    );
+    
+    return processedYaml;
+  } catch (error) {
+    return yamlContent; // 如果处理失败，返回原始内容
+  }
+};
+
+// 处理提交时的 YAML，将明文数据重新编码为 base64
+export const encodeSecretYamlForSubmission = (yamlContent: string): string => {
+  if (!yamlContent) return yamlContent;
+  
+  try {
+    // 处理多行字符串（| 格式）
+    // incr6 P3-1：缩进与 `key:` 后只认同一行的空格 / 制表符（[ \t]*），不跨行：
+    // 原来的 \s* 会把空行并进缩进、把下一行的内容当成本键的值
+    let processedYaml = yamlContent.replace(
+      /^([ \t]*)([\w\-\.]+):[ \t]*\|\s*\n((?:\s{2,}.*\n?)*)/gm,
+      (match, indent, key, content) => {
+        // 检查是否在 data 字段下
+        const beforeMatch = yamlContent.substring(0, yamlContent.indexOf(match));
+        const dataFieldPattern = /\ndata:\s*\n/;
+        const stringDataFieldPattern = /\nstringData:\s*\n/;
+        
+        if (dataFieldPattern.test(beforeMatch) && !stringDataFieldPattern.test(beforeMatch.substring(beforeMatch.lastIndexOf('\ndata:')))) {
+          // 移除缩进并合并内容
+          const cleanContent = content
+            .split('\n')
+            .map((line: string) => line.replace(new RegExp(`^${indent}  `), ''))
+            .filter((line: string) => line.length > 0)
+            .join('\n');
+          
+          const encodedValue = encodeUtf8ToBase64(cleanContent);
+          return `${indent}${key}: ${encodedValue}`;
+        }
+        return match;
+      }
+    );
+    
+    // 处理带引号的字符串
+    // incr6 P3-1：只处理同一行的 `key: "..."`。原来 `:\s*"` 跨行，`token:` 换行后的 `"<redacted>"`
+    // 会被编码成 PHJlZGFjdGVkPg== 发出去（原值被覆盖），后续带引号的键（如 annotations 里的 "a/b": x）也会被误编码
+    processedYaml = processedYaml.replace(
+      /^([ \t]*)([\w\-\.]+):[ \t]*"([^"]*(?:\\.[^"]*)*)"/gm,
+      (match, indent, key, value) => {
+        // 检查是否在 data 字段下
+        const beforeMatch = processedYaml.substring(0, processedYaml.indexOf(match));
+        const dataFieldPattern = /\ndata:\s*\n/;
+        const stringDataFieldPattern = /\nstringData:\s*\n/;
+        
+        if (dataFieldPattern.test(beforeMatch) && !stringDataFieldPattern.test(beforeMatch.substring(beforeMatch.lastIndexOf('\ndata:')))) {
+          // 处理转义字符
+          const unescapedValue = value.replace(/\\"/g, '"');
+          const encodedValue = encodeUtf8ToBase64(unescapedValue);
+          return `${indent}${key}: ${encodedValue}`;
+        }
+        return match;
+      }
+    );
+    
+    return processedYaml;
+  } catch (error) {
+    return yamlContent; // 如果处理失败，返回原始内容
+  }
+};
