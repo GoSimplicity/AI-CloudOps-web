@@ -1,19 +1,8 @@
 <template>
-  <div class="rca-cache">
+  <OpsPage title="RCA 缓存管理" description="读取真实缓存状态；清理操作仅在明确提交后执行" class="rca-cache">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <div class="header-icon">
-          <DatabaseOutlined />
-          </div>
-          <div class="header-text">
-            <h1 class="page-title">缓存管理</h1>
-            <p class="page-subtitle">Redis 缓存监控、配置和优化</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <a-button 
+    <template #actions>
+<a-button
             type="primary" 
             size="large" 
             @click="refreshCacheStats"
@@ -22,55 +11,12 @@
           >
             {{ loadingStats ? '获取中...' : '刷新状态' }}
           </a-button>
-        </div>
-      </div>
-    </div>
+    </template>
+    <a-alert v-if="statsError" :message="statsError" type="error" show-icon role="alert" />
+    <a-alert v-if="operationError" :message="operationError" type="error" show-icon role="alert" />
 
     <!-- 加载状态 -->
-    <a-card v-if="loadingStats && !cacheStats" class="loading-state-card">
-      <div class="cache-loading-content">
-        <div class="loading-main-icon">
-          <Icon icon="mdi:database-cog" class="pulse-animation" />
-        </div>
-        <h3 class="loading-title">正在获取缓存状态...</h3>
-        <p class="loading-subtitle">系统正在检查Redis缓存的运行状态和配置</p>
-
-        <!-- 检查步骤指示器 -->
-        <div class="cache-check-steps">
-          <div class="cache-step-item" :class="{ active: getCacheCheckStep() >= 1 }">
-            <div class="cache-step-icon">
-              <Icon v-if="getCacheCheckStep() > 1" icon="mdi:check" />
-              <Icon v-else-if="getCacheCheckStep() === 1" icon="mdi:loading" class="rotate-animation" />
-              <Icon v-else icon="mdi:circle-outline" />
-            </div>
-            <span class="cache-step-text">连接Redis服务</span>
-          </div>
-          <div class="cache-step-item" :class="{ active: getCacheCheckStep() >= 2 }">
-            <div class="cache-step-icon">
-              <Icon v-if="getCacheCheckStep() > 2" icon="mdi:check" />
-              <Icon v-else-if="getCacheCheckStep() === 2" icon="mdi:loading" class="rotate-animation" />
-              <Icon v-else icon="mdi:circle-outline" />
-            </div>
-            <span class="cache-step-text">获取统计信息</span>
-          </div>
-          <div class="cache-step-item" :class="{ active: getCacheCheckStep() >= 3 }">
-            <div class="cache-step-icon">
-              <Icon v-if="getCacheCheckStep() > 3" icon="mdi:check" />
-              <Icon v-else-if="getCacheCheckStep() === 3" icon="mdi:loading" class="rotate-animation" />
-              <Icon v-else icon="mdi:circle-outline" />
-            </div>
-            <span class="cache-step-text">分析缓存健康度</span>
-          </div>
-        </div>
-
-        <a-alert 
-          message="预计耗时 5-15秒" 
-          type="info" 
-          show-icon
-          class="loading-tip"
-        />
-      </div>
-    </a-card>
+    <a-card v-if="loadingStats && !cacheStats" class="loading-container"><a-spin /><p>正在等待服务返回实际结果，请稍候</p></a-card>
 
     <!-- 缓存概览卡片 -->
     <div class="overview-grid" v-if="cacheStats">
@@ -82,13 +28,13 @@
         <div class="card-content">
           <div class="card-title">缓存状态</div>
           <div class="card-value" :class="cacheStats.healthy ? 'healthy' : 'unhealthy'">
-            {{ cacheStats.healthy ? '健康' : '异常' }}
+            {{ !cacheStats.available ? '不可用' : cacheStats.healthy ? '健康' : '异常' }}
           </div>
         </div>
       </div>
 
       <div class="overview-card keys">
-        <div class="card-icon">🔑</div>
+        <div class="card-icon"><Icon icon="lucide:key-round" /></div>
         <div class="card-content">
           <div class="card-title">缓存键数量</div>
           <div class="card-value">{{ formatTotalKeys(cacheStats.total_keys) }}</div>
@@ -96,7 +42,7 @@
       </div>
 
       <div class="overview-card hit-rate">
-        <div class="card-icon">📊</div>
+        <div class="card-icon"><Icon icon="lucide:chart-column" /></div>
         <div class="card-content">
           <div class="card-title">命中率</div>
           <div class="card-value">{{ formatHitRate(cacheStats.hit_rate) }}</div>
@@ -104,7 +50,7 @@
       </div>
 
       <div class="overview-card memory">
-        <div class="card-icon">💾</div>
+        <div class="card-icon"><Icon icon="lucide:hard-drive" /></div>
         <div class="card-content">
           <div class="card-title">内存使用</div>
           <div class="card-value">{{ formatMemoryUsage(cacheStats.memory_usage) }}</div>
@@ -130,11 +76,11 @@
           </div>
           <div class="operation-content">
             <a-input
-              v-model:value="clearNamespaceForm.namespace"
+              v-model:value="clearNamespaceForm.namespace" :disabled="clearingCache"
               placeholder="输入要清除缓存的命名空间"
               class="operation-input"
             />
-            <a-button 
+            <a-button
               type="primary" 
               @click="handleClearNamespaceCache"
               :loading="clearingCache"
@@ -153,7 +99,7 @@
           </div>
           <div class="operation-content">
             <a-select
-              v-model:value="clearOperationForm.operation"
+              v-model:value="clearOperationForm.operation" :disabled="clearingCache"
               placeholder="选择要清除缓存的操作类型"
               class="operation-select"
             >
@@ -164,7 +110,7 @@
               <a-select-option value="metrics">指标数据</a-select-option>
               <a-select-option value="logs">日志数据</a-select-option>
             </a-select>
-            <a-button 
+            <a-button
               type="primary" 
               @click="handleClearOperationCache"
               :loading="clearingCache"
@@ -183,7 +129,7 @@
           </div>
           <div class="operation-content">
             <a-space direction="vertical" style="width: 100%;">
-              <a-button 
+              <a-button
                 type="primary" 
                 danger
                 @click="showClearAllModal"
@@ -192,7 +138,7 @@
               >
                 清除所有缓存
               </a-button>
-              <a-button 
+              <a-button
                 @click="refreshCacheStats"
                 :loading="loadingStats"
                 block
@@ -231,7 +177,7 @@
             </a-descriptions-item>
             <a-descriptions-item label="健康状态">
               <a-tag :color="cacheStats.healthy ? 'green' : 'red'">
-                {{ cacheStats.healthy ? '健康' : '异常' }}
+                {{ !cacheStats.available ? '不可用' : cacheStats.healthy ? '健康' : '异常' }}
               </a-tag>
             </a-descriptions-item>
           </a-descriptions>
@@ -241,7 +187,7 @@
           <h4>性能指标</h4>
           <a-descriptions :column="1" bordered size="small">
             <a-descriptions-item label="命中率">
-              <a-progress 
+              <a-progress v-if="Number.isFinite(cacheStats.hit_rate) && cacheStats.hit_rate! >= 0 && cacheStats.hit_rate! <= 100"
                 :percent="getHitRatePercent(cacheStats.hit_rate)" 
                 :stroke-color="getHitRateColor(cacheStats.hit_rate)"
                 :show-info="false"
@@ -328,256 +274,20 @@
         </div>
       </div>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
-import { message } from 'ant-design-vue';
-import {
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  DatabaseOutlined,
-  CloseCircleOutlined
-} from '@ant-design/icons-vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useRcaCache } from './useRcaCache';
+import { CheckCircleOutlined, ExclamationCircleOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
-import {
-  getCacheStats,
-  clearAllCache,
-  clearNamespaceCache,
-  clearOperationCache,
-  type RCACacheStatsResponse,
-} from '#/api/core/aiops/rca';
-
-// 响应式数据
-const loadingStats = ref(false);
-const clearingCache = ref(false);
-const clearAllModalVisible = ref(false);
-const cacheStats = ref<RCACacheStatsResponse | null>(null);
-const cacheCheckStep = ref(0);
-
-// 表单数据
-const clearNamespaceForm = reactive({
-  namespace: ''
-});
-
-const clearOperationForm = reactive({
-  operation: ''
-});
-
-// 操作历史
-const operationHistory = ref<Array<{
-  operation: string;
-  success: boolean;
-  message: string;
-  timestamp: string;
-  cleared_count?: number;
-}>>([]);
-
-// 获取当前缓存检查步骤
-const getCacheCheckStep = () => {
-  return cacheCheckStep.value;
-};
-
-// 获取缓存统计
-const refreshCacheStats = async () => {
-  loadingStats.value = true;
-  cacheCheckStep.value = 0;
-
-  // 开始获取缓存状态提示
-  message.loading('开始获取缓存状态，请稍候...', 1.5);
-
-  try {
-    // 步骤1: 连接Redis服务
-    cacheCheckStep.value = 1;
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    // 步骤2: 获取统计信息
-    cacheCheckStep.value = 2;
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    // 步骤3: 分析缓存健康度
-    cacheCheckStep.value = 3;
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    const response = await getCacheStats();
-
-    // 完成所有步骤
-    cacheCheckStep.value = 4;
-
-    cacheStats.value = response;
-
-    // 根据缓存状态给出不同的反馈
-    if (response.healthy && response.available) {
-      message.success('缓存状态获取完成！所有指标正常');
-    } else if (response.available) {
-      message.success('缓存状态获取完成！');
-      setTimeout(() => {
-        message.warning('缓存状态存在异常，建议检查配置', 3);
-      }, 500);
-    } else {
-      message.success('缓存状态获取完成！');
-      setTimeout(() => {
-        message.error('缓存服务不可用，请检查Redis连接', 5);
-      }, 500);
-    }
-  } catch (error) {
-
-    let errorMessage = '获取缓存状态失败';
-    if (error instanceof Error) {
-      if (error.message.includes('Network Error')) {
-        errorMessage = '网络连接失败，请检查网络设置';
-      } else if (error.message.includes('timeout')) {
-        errorMessage = '请求超时，请稍后重试';
-      } else if (error.message.includes('500')) {
-        errorMessage = 'Redis服务内部错误，请联系管理员';
-      } else if (error.message.includes('404')) {
-        errorMessage = '缓存服务不可用，请检查服务状态';
-      }
-    }
-    message.error(errorMessage);
-  } finally {
-    loadingStats.value = false;
-    cacheCheckStep.value = 0;
-  }
-};
-
-// 清除命名空间缓存
-const handleClearNamespaceCache = async () => {
-  if (!clearNamespaceForm.namespace.trim()) {
-    message.warning('请输入命名空间');
-    return;
-  }
-
-  clearingCache.value = true;
-  try {
-    const response = await clearNamespaceCache({ namespace: clearNamespaceForm.namespace.trim() });
-
-    if (response.success) {
-      message.success(`命名空间 "${clearNamespaceForm.namespace}" 的缓存已清除`);
-
-      // 添加到操作历史
-      addToHistory('清除命名空间缓存', true, response.message, response.cleared_count);
-
-      // 清空表单
-      clearNamespaceForm.namespace = '';
-
-      // 刷新缓存状态
-      await refreshCacheStats();
-    } else {
-      message.error(response.message || '清除命名空间缓存失败');
-      addToHistory('清除命名空间缓存', false, response.message || '操作失败');
-    }
-  } catch (error) {
-
-    message.error('清除命名空间缓存失败，请稍后重试');
-    addToHistory('清除命名空间缓存', false, '网络错误');
-  } finally {
-    clearingCache.value = false;
-  }
-};
-
-// 清除操作缓存
-const handleClearOperationCache = async () => {
-  if (!clearOperationForm.operation) {
-    message.warning('请选择操作类型');
-    return;
-  }
-
-  clearingCache.value = true;
-  try {
-    const response = await clearOperationCache({ operation: clearOperationForm.operation });
-
-    if (response.success) {
-      message.success(`操作 "${clearOperationForm.operation}" 的缓存已清除`);
-
-      // 添加到操作历史
-      addToHistory('清除操作缓存', true, response.message, response.cleared_count);
-
-      // 清空表单
-      clearOperationForm.operation = '';
-
-      // 刷新缓存状态
-      await refreshCacheStats();
-    } else {
-      message.error(response.message || '清除操作缓存失败');
-      addToHistory('清除操作缓存', false, response.message || '操作失败');
-    }
-  } catch (error) {
-
-    message.error('清除操作缓存失败，请稍后重试');
-    addToHistory('清除操作缓存', false, '网络错误');
-  } finally {
-    clearingCache.value = false;
-  }
-};
-
-// 显示清除所有缓存模态框
-const showClearAllModal = () => {
-  clearAllModalVisible.value = true;
-};
-
-// 确认清除所有缓存
-const confirmClearAllCache = async () => {
-  clearingCache.value = true;
-  try {
-    const response = await clearAllCache();
-
-    if (response.success) {
-      message.success(`所有缓存已清除，共清除 ${response.cleared_count} 项`);
-
-      // 添加到操作历史
-      addToHistory('清除所有缓存', true, response.message, response.cleared_count);
-
-      // 关闭模态框
-      clearAllModalVisible.value = false;
-
-      // 刷新缓存状态
-      await refreshCacheStats();
-    } else {
-      message.error(response.message || '清除所有缓存失败');
-      addToHistory('清除所有缓存', false, response.message || '操作失败');
-    }
-  } catch (error) {
-
-    message.error('清除所有缓存失败，请稍后重试');
-    addToHistory('清除所有缓存', false, '网络错误');
-  } finally {
-    clearingCache.value = false;
-  }
-};
-
-// 添加到操作历史
-const addToHistory = (
-  operation: string, 
-  success: boolean, 
-  message: string, 
-  clearedCount?: number
-) => {
-  operationHistory.value.unshift({
-    operation,
-    success,
-    message,
-    timestamp: new Date().toISOString(),
-    cleared_count: clearedCount
-  });
-
-  // 限制历史记录数量
-  if (operationHistory.value.length > 50) {
-    operationHistory.value = operationHistory.value.slice(0, 50);
-  }
-};
-
-// 清空操作历史
-const clearHistory = () => {
-  operationHistory.value = [];
-  message.success('操作历史已清空');
-};
+const { loadingStats, clearingCache, clearAllModalVisible, cacheStats, statsError, operationError, clearNamespaceForm, clearOperationForm, operationHistory, refreshCacheStats, handleClearNamespaceCache, handleClearOperationCache, showClearAllModal, confirmClearAllCache, clearHistory } = useRcaCache();
 
 // 格式化命中率
 const formatHitRate = (hitRate?: number) => {
-  if (hitRate === undefined || hitRate === null) return 'N/A';
-  const percentage = hitRate;
+  if (!Number.isFinite(hitRate) || hitRate! < 0 || hitRate! > 100) return '未知';
+  const percentage = hitRate!;
   return `${percentage.toFixed(1)}%`;
 };
 
@@ -641,34 +351,17 @@ const formatStatusMessage = (message?: string) => {
   return message;
 };
 
-// 生命周期
-onMounted(() => {
-  refreshCacheStats();
-});
 </script>
 
 <style scoped>
-.rca-cache {
-padding: 24px;
-background: var(--ops-ground);
-min-height: 100vh;
-}
 
 /* 页面头部 */
-.rca-cache .page-header {
-  background: var(--ops-surface);
-  border-radius: var(--ops-radius);
-  padding: 16px 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--ops-border);
-}
 
 /* 加载状态 */
 .loading-state-card {
-margin-bottom: 24px;
+margin-bottom: var(--ops-space-lg);
 border-radius: var(--ops-radius);
-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+box-shadow: none;
 border: 1px solid var(--ops-border);
 text-align: center;
 padding: 48px 24px;
@@ -683,7 +376,7 @@ padding: 48px 24px;
 .loading-main-icon {
   font-size: 80px;
   color: #1890ff;
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .pulse-animation {
@@ -741,7 +434,7 @@ padding: 48px 24px;
   gap: 8px;
   padding: 16px;
   border-radius: var(--ops-radius);
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
   opacity: 0.5;
 }
 
@@ -762,7 +455,7 @@ padding: 48px 24px;
   justify-content: center;
   font-size: 18px;
   color: var(--ops-muted);
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .cache-step-item.active .cache-step-icon {
@@ -787,73 +480,36 @@ padding: 48px 24px;
   margin-top: 24px;
 }
 
-.rca-cache .header-content {
-display: flex;
-justify-content: space-between;
-align-items: center;
-width: 100%;
-}
 
-.rca-cache .header-left {
-display: flex;
-align-items: center;
-gap: 16px;
-}
 
-.rca-cache .header-icon {
-  font-size: 32px;
-  color: #1890ff;
-}
 
-.rca-cache .header-text {
-display: flex;
-flex-direction: column;
-}
 
-.rca-cache .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--ops-ink);
-}
 
-.rca-cache .page-subtitle {
-  color: var(--ops-muted);
-  margin: 0;
-  font-size: 12px;
-  margin-top: 4px;
-}
 
-.rca-cache .header-actions {
-display: flex;
-gap: 12px;
-align-items: center;
-}
 
 /* 概览卡片 */
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 24px;
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .overview-card {
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
   display: flex;
   align-items: center;
   gap: 20px;
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
   cursor: pointer;
 }
 
 .overview-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
 .card-icon {
@@ -922,8 +578,8 @@ align-items: center;
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: var(--ops-space-lg);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
 }
 
@@ -931,7 +587,7 @@ align-items: center;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .section-header h2 {
@@ -952,12 +608,11 @@ align-items: center;
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
   padding: 20px;
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .operation-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
+  box-shadow: none;
 }
 
 .operation-header {
@@ -984,7 +639,7 @@ align-items: center;
   height: 36px;
   border-radius: 6px;
   border: 1px solid var(--ops-border);
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .operation-select {
@@ -1004,7 +659,7 @@ align-items: center;
 
 .operation-input:focus {
   border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  box-shadow: none;
 }
 
 .operation-select:hover :deep(.ant-select-selector) {
@@ -1013,7 +668,7 @@ align-items: center;
 
 .operation-select.ant-select-focused :deep(.ant-select-selector) {
   border-color: #1890ff !important;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+  box-shadow: none;
 }
 
 .operation-input:hover {
@@ -1030,8 +685,8 @@ align-items: center;
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: var(--ops-space-lg);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
 }
 
@@ -1091,11 +746,11 @@ align-items: center;
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
   margin-bottom: 12px;
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .cache-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
   border-color: #1890ff;
 }
 
@@ -1179,7 +834,7 @@ align-items: center;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .stat-item {
@@ -1209,7 +864,7 @@ align-items: center;
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
 }
 
@@ -1226,11 +881,11 @@ align-items: center;
   padding: 16px;
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .history-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
 }
 
 .history-icon {
@@ -1309,37 +964,12 @@ align-items: center;
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .rca-cache {
-    padding: 16px;
-  }
 
-  .rca-cache .page-header {
-    padding: 20px;
-    margin-bottom: 16px;
-  }
 
-  .rca-cache .header-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
 
-  .rca-cache .header-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
 
-  .rca-cache .page-title {
-    font-size: 20px;
-  }
 
-  .rca-cache .page-subtitle {
-    font-size: 13px;
-  }
 
-  .rca-cache .header-icon {
-    font-size: 36px;
-  }
 
   .overview-grid {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -1358,21 +988,9 @@ align-items: center;
 }
 
 @media (max-width: 576px) {
-  .rca-cache {
-    padding: 12px;
-  }
 
-  .rca-cache .page-header {
-    padding: 16px;
-  }
 
-  .rca-cache .page-title {
-    font-size: 18px;
-  }
 
-  .rca-cache .header-icon {
-    font-size: 32px;
-  }
 
   .overview-grid {
     grid-template-columns: 1fr;
@@ -1410,5 +1028,12 @@ align-items: center;
   .loading-title {
     font-size: 20px;
   }
+}
+
+@media (max-width: 575px) {
+  .overview-grid, .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ops-space-sm); }
+  .overview-card, .metric-card { min-width: 0; padding: var(--ops-space-md); }
+  .card-value, .metric-value { overflow-wrap: anywhere; }
+  .section-header { flex-wrap: wrap; gap: var(--ops-space-sm); }
 }
 </style>

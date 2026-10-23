@@ -1,19 +1,8 @@
 <template>
-  <div class="rca-analysis">
+  <OpsPage title="根因分析" description="明确发起分析后汇总观测与根因证据" class="rca-analysis">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <div class="header-icon">
-            <LineChartOutlined />
-          </div>
-          <div class="header-text">
-            <h1 class="page-title">根因分析</h1>
-            <p class="page-subtitle">智能故障分析和根因定位</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <a-button 
+    <template #actions>
+<a-button
             type="primary" 
             size="large" 
             @click="startAnalysis"
@@ -22,9 +11,9 @@
           >
             {{ analyzing ? '分析中...' : '开始分析' }}
           </a-button>
-        </div>
-      </div>
-    </div>
+    </template>
+    <a-alert v-if="analysisError" :message="analysisError" type="error" show-icon role="alert" />
+    <a-alert v-if="metricsError" :message="metricsError" type="warning" show-icon role="alert" />
 
     <a-row :gutter="[24, 24]">
       <!-- 左侧配置面板 -->
@@ -33,7 +22,7 @@
           <a-form :model="formData" layout="vertical">
             <a-form-item label="Kubernetes命名空间" name="namespace" required>
               <a-input
-                v-model:value="formData.namespace"
+                v-model:value="formData.namespace" :disabled="analyzing"
                 placeholder="输入要分析的K8s命名空间"
                 :status="!formData.namespace ? 'warning' : ''"
               />
@@ -44,7 +33,7 @@
 
             <a-form-item label="分析时间窗口" name="timeWindowHours">
               <a-slider
-                v-model:value="formData.timeWindowHours"
+                v-model:value="formData.timeWindowHours" :disabled="analyzing"
                 :min="0.5"
                 :max="24"
                 :marks="timeMarks"
@@ -56,7 +45,7 @@
 
             <a-form-item label="Prometheus指标（可选）" name="metrics">
               <a-select
-                v-model:value="formData.metrics"
+                v-model:value="formData.metrics" :disabled="analyzing"
                 mode="multiple"
                 placeholder="选择要分析的指标"
                 :loading="loadingMetrics"
@@ -66,7 +55,7 @@
                 max-tag-count="responsive"
                 allow-clear
               />
-              <a-button 
+              <a-button
                 size="small" 
                 @click="loadAvailableMetrics" 
                 :loading="loadingMetrics" 
@@ -82,7 +71,7 @@
         <a-card v-if="analysisResult" title="分析概览" class="status-card">
           <a-statistic
             title="分析ID"
-            :value="analysisResult?.analysis_id?.substring(0, 8) + '...'"
+            :value="analysisResult?.analysis_id ? analysisResult.analysis_id.substring(0, 8) + '…' : '未知'"
             style="margin-bottom: 16px;"
           >
             <template #suffix>
@@ -94,8 +83,8 @@
 
           <a-statistic
             title="置信度"
-            :value="(analysisResult?.confidence_score * 100).toFixed(1)"
-            suffix="%"
+            :value="Number.isFinite(analysisResult?.confidence_score) ? (analysisResult.confidence_score * 100).toFixed(1) : '未知'"
+            :suffix="Number.isFinite(analysisResult?.confidence_score) ? '%' : ''"
             :value-style="{ color: getConfidenceColor(analysisResult?.confidence_score || 0) }"
           >
             <template #prefix>
@@ -113,35 +102,7 @@
           v-if="analyzing" 
           class="loading-card"
         >
-          <div class="loading-container">
-            <a-spin size="large">
-              <template #indicator>
-                <Icon icon="mdi:chart-line" class="loading-icon" />
-              </template>
-            </a-spin>
-            <div class="loading-content">
-              <h3 class="loading-title">正在进行根因分析...</h3>
-              <p class="loading-subtitle">系统正在深度分析故障原因，请稍候</p>
-              <div class="loading-steps">
-                <div class="step-item">
-                  <Icon icon="mdi:check-circle" class="step-icon completed" />
-                  <span class="step-text">收集系统数据</span>
-                </div>
-                <div class="step-item">
-                  <Icon icon="mdi:loading" class="step-icon loading" />
-                  <span class="step-text">分析异常模式</span>
-                </div>
-                <div class="step-item">
-                  <Icon icon="mdi:circle-outline" class="step-icon pending" />
-                  <span class="step-text">生成分析报告</span>
-                </div>
-              </div>
-              <div class="loading-tips">
-                <Icon icon="mdi:lightbulb-outline" />
-                <span>分析时间取决于数据量大小，通常需要30秒到2分钟</span>
-              </div>
-            </div>
-          </div>
+          <div  class="loading-container"><a-spin /><p>正在等待服务返回实际结果，请稍候</p></div>
         </a-card>
 
         <!-- 分析结果 -->
@@ -441,20 +402,23 @@
         </a-card>
       </a-col>
     </a-row>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useAiRequestScope } from '../assistant/useAiRequestScope';
+import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
 import { ref, reactive, computed, onMounted, nextTick, onUnmounted } from 'vue';
 // 按需引入echarts，减少打包体积
 import * as echarts from 'echarts/core';
-import { GraphChart, ScatterChart } from 'echarts/charts';
+import { BarChart, PieChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
 // 注册必需的组件
 echarts.use([
-  GraphChart, ScatterChart,
+  BarChart, PieChart,
   GridComponent, TooltipComponent, LegendComponent, TitleComponent,
   CanvasRenderer
 ]);
@@ -468,10 +432,8 @@ import {
   CheckCircleOutlined,
   InfoCircleOutlined,
   FileTextOutlined,
-  BugOutlined,
-  LineChartOutlined
+  BugOutlined
 } from '@ant-design/icons-vue';
-import { Icon } from '@iconify/vue';
 import {
   analyzeRootCause,
   getAllPrometheusMetrics,
@@ -480,6 +442,8 @@ import {
 } from '../../api/core/aiops/rca';
 
 // 响应式数据
+const analysisError = ref('');
+const metricsError = ref('');
 const analyzing = ref(false);
 const loadingMetrics = ref(false);
 const activeResultTab = ref('root-causes');
@@ -500,6 +464,21 @@ const formData = reactive({
   timeWindowHours: 2,
   metrics: [] as string[]
 });
+
+const scope = useAiRequestScope(() => {
+  analysisLane.invalidate(); metricsLane.invalidate();
+  analyzing.value = false; loadingMetrics.value = false;
+  analysisResult.value = null; availableMetrics.value = [];
+  analysisError.value = ''; metricsError.value = '';
+  formData.namespace = 'default'; formData.metrics = [];
+  disposeCharts();
+});
+const analysisLane = scope.createLane();
+const metricsLane = scope.createLane();
+function disposeCharts() {
+  eventsChart?.dispose(); clustersChart?.dispose(); errorLogsChart?.dispose();
+  eventsChart = null; clustersChart = null; errorLogsChart = null;
+}
 
 // 时间标记
 const timeMarks = {
@@ -544,8 +523,10 @@ const criticalEventsColumns = [
 ];
 
 // 计算属性
+useChartAppearance(() => { if (analysisResult.value && activeResultTab.value === 'anomalies') initCharts(); });
+
 const isFormValid = computed(() => {
-  return formData.namespace.trim() !== '';
+  return !!scope.owner.value && formData.namespace.trim() !== '';
 });
 
 const hasAnomalies = computed(() => {
@@ -568,20 +549,21 @@ const truncateText = (text: string, maxLength: number) => {
 
 // 加载可用指标
 const loadAvailableMetrics = async () => {
-  loadingMetrics.value = true;
+  if (!scope.owner.value) return;
+  const ticket = metricsLane.begin();
+  loadingMetrics.value = true; metricsError.value = '';
   try {
     const response = await getAllPrometheusMetrics();
+    if (!metricsLane.current(ticket)) return;
     const metrics = response.data?.items || response.items || response || [];
-    availableMetrics.value = metrics.map((metric: string) => ({
-      label: metric,
-      value: metric
-    }));
-    message.success('指标列表已更新');
+    if (!Array.isArray(metrics)) throw new Error('指标目录响应格式无效');
+    availableMetrics.value = metrics.filter((metric: unknown): metric is string => typeof metric === 'string').map(metric => ({ label: metric, value: metric }));
   } catch (error) {
-
-    message.error('获取指标列表失败');
+    if (!metricsLane.current(ticket)) return;
+    availableMetrics.value = [];
+    metricsError.value = error instanceof Error ? error.message : '指标目录读取失败，可刷新重试';
   } finally {
-    loadingMetrics.value = false;
+    if (metricsLane.current(ticket)) loadingMetrics.value = false;
   }
 };
 
@@ -592,6 +574,7 @@ const filterMetrics = (input: string, option: any) => {
 
 // 开始分析
 const startAnalysis = async () => {
+  if (!scope.owner.value || analyzing.value) return;
   if (!isFormValid.value) {
     message.warning('请填写命名空间');
     return;
@@ -604,25 +587,27 @@ const startAnalysis = async () => {
     return;
   }
 
-  analyzing.value = true;
-  message.info('开始根因分析，请稍候...');
+  const ticket = analysisLane.begin();
+  analyzing.value = true; analysisError.value = ''; analysisResult.value = null; disposeCharts();
 
   try {
     const request: RCAAnalyzeRequest = {
-      namespace: formData.namespace,
+      namespace,
       time_window_hours: formData.timeWindowHours,
-      metrics: formData.metrics.length > 0 ? formData.metrics : undefined
+      metrics: formData.metrics.length > 0 ? [...formData.metrics] : undefined
     };
 
     const response = await analyzeRootCause(request);
+    if (!analysisLane.current(ticket)) return;
     analysisResult.value = response;
 
     await nextTick();
+    if (!analysisLane.current(ticket)) return;
     if (activeResultTab.value === 'anomalies') {
       initCharts();
     }
 
-    message.success('根因分析完成！发现了一些有价值的信息');
+    message.success('根因分析已返回，请按实际证据评估结果');
 
     // 如果有根因结果，显示摘要
     if (response?.root_causes?.length > 0) {
@@ -632,24 +617,11 @@ const startAnalysis = async () => {
       }
     }
   } catch (error) {
-
-    let errorMessage = '根因分析失败';
-    if (error instanceof Error) {
-      if (error.message.includes('Network Error')) {
-        errorMessage = '网络连接失败，请检查网络设置';
-      } else if (error.message.includes('timeout')) {
-        errorMessage = '分析超时，请尝试缩小时间窗口';
-      } else if (error.message.includes('500')) {
-        errorMessage = '服务器内部错误，请联系管理员';
-      } else if (error.message.includes('404')) {
-        errorMessage = '分析服务不可用，请检查服务状态';
-      } else if (error.message.includes('400')) {
-        errorMessage = '请求参数有误，请检查命名空间和时间窗口设置';
-      }
-    }
-    message.error(errorMessage);
+    if (!analysisLane.current(ticket)) return;
+    analysisResult.value = null; disposeCharts();
+    analysisError.value = error instanceof Error ? error.message : '根因分析失败，请核对参数后重试';
   } finally {
-    analyzing.value = false;
+    if (analysisLane.current(ticket)) analyzing.value = false;
   }
 };
 
@@ -728,6 +700,8 @@ const initEventsChart = () => {
   );
 
   const option = {
+    textStyle: { color: chartColors().text },
+    backgroundColor: "transparent",
     grid: {
       left: '3%',
       right: '4%',
@@ -758,11 +732,7 @@ const initEventsChart = () => {
       data: sortedEvents.map(e => e.count),
       type: 'bar',
       itemStyle: {
-        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: '#83bff6' },
-          { offset: 0.5, color: '#188df0' },
-          { offset: 1, color: '#188df0' }
-        ])
+        color: chartColors().accent
       }
     }]
   };
@@ -782,10 +752,12 @@ const initClustersChart = () => {
   const clusters = analysisResult.value.anomalies?.events?.event_clusters || {};
   const clusterData = Object.entries(clusters).map(([key, events]) => ({
     name: truncateText(key, 20),
-    value: (events as any[]).reduce((sum, e) => sum + (e.count || 1), 0)
+    value: (events as any[]).reduce((sum, e) => sum + (e.count ?? 0), 0)
   }));
 
   const option = {
+    textStyle: { color: chartColors().text },
+    backgroundColor: "transparent",
     tooltip: {
       trigger: 'item',
       formatter: '{b}: {c} ({d}%)'
@@ -796,7 +768,7 @@ const initClustersChart = () => {
       avoidLabelOverlap: false,
       itemStyle: {
         borderRadius: 10,
-        borderColor: '#fff',
+        borderColor: chartColors().surface,
         borderWidth: 2
       },
       label: {
@@ -836,6 +808,8 @@ const initErrorLogsChart = () => {
     .slice(0, 10);
 
   const option = {
+    textStyle: { color: chartColors().text },
+    backgroundColor: "transparent",
     grid: {
       left: '3%',
       right: '4%',
@@ -873,8 +847,11 @@ const initErrorLogsChart = () => {
 };
 
 // 标签页切换
-const onResultTabChange = (key: string) => {
+const onResultTabChange = async (key: string) => {
+  const result = analysisResult.value;
   activeResultTab.value = key;
+  await nextTick();
+  if (analysisResult.value !== result || activeResultTab.value !== key) return;
   if (key === 'anomalies' && hasAnomalies.value) {
     initCharts();
   }
@@ -945,65 +922,15 @@ onUnmounted(() => {
 });
 </script>
 <style scoped>
-.rca-analysis {
-padding: 24px;
-background: var(--ops-ground);
-min-height: 100vh;
-}
 
 /* 页面头部 */
-.rca-analysis .page-header {
-  background: var(--ops-surface);
-  border-radius: var(--ops-radius);
-  padding: 16px 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--ops-border);
-}
 
-.rca-analysis .header-content {
-display: flex;
-justify-content: space-between;
-align-items: center;
-width: 100%;
-}
 
-.rca-analysis .header-left {
-display: flex;
-align-items: center;
-gap: 16px;
-}
 
-.rca-analysis .header-icon {
-  font-size: 32px;
-  color: #1890ff;
-}
 
-.rca-analysis .header-text {
-display: flex;
-  flex-direction: column;
-}
 
-.rca-analysis .page-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--ops-ink);
-  line-height: 1.2;
-}
 
-.rca-analysis .page-subtitle {
-  color: var(--ops-muted);
-  margin: 0;
-  font-size: 12px;
-  margin-top: 4px;
-}
 
-.rca-analysis .header-actions {
-display: flex;
-gap: 12px;
-align-items: center;
-}
 
 /* 卡片样式 */
 .config-card,
@@ -1012,7 +939,7 @@ align-items: center;
 .empty-card,
 .loading-card {
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
   overflow: hidden;
 }
@@ -1072,7 +999,7 @@ align-items: center;
   background: var(--ops-ground);
   border-radius: var(--ops-radius);
   border: 1px solid var(--ops-border);
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .step-icon {
@@ -1230,7 +1157,7 @@ align-items: center;
 }
 
 .root-cause-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
 }
 
 .cause-header {
@@ -1332,7 +1259,7 @@ align-items: center;
 
 /* 异常检测样式 */
 .anomaly-stats {
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .stat-card {
@@ -1357,7 +1284,7 @@ align-items: center;
 
 /* 图表样式 */
 .charts-container {
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .chart-wrapper {
@@ -1390,7 +1317,7 @@ align-items: center;
 }
 
 .detail-section {
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .section-title {
@@ -1399,7 +1326,7 @@ align-items: center;
   font-weight: 500;
   color: var(--ops-ink);
   padding-left: 8px;
-  border-left: 3px solid #1890ff;
+  border-left: 1px solid #1890ff;
 }
 
 .table-wrapper {
@@ -1569,7 +1496,7 @@ align-items: center;
   align-items: center;
   justify-content: center;
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
   background: var(--ops-surface);
 }
@@ -1597,37 +1524,12 @@ align-items: center;
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .rca-analysis {
-    padding: 16px;
-  }
 
-  .rca-analysis .page-header {
-    padding: 20px;
-    margin-bottom: 16px;
-  }
 
-  .rca-analysis .header-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
 
-  .rca-analysis .header-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
 
-  .rca-analysis .page-title {
-    font-size: 20px;
-  }
 
-  .rca-analysis .page-subtitle {
-    font-size: 13px;
-  }
 
-  .rca-analysis .header-icon {
-    font-size: 36px;
-  }
 
   /* 加载状态响应式 */
   .loading-container {
@@ -1682,25 +1584,10 @@ align-items: center;
 }
 
 @media (max-width: 576px) {
-  .rca-analysis {
-    padding: 12px;
-  }
 
-  .rca-analysis .page-header {
-    padding: 16px;
-  }
 
-  .rca-analysis .page-title {
-    font-size: 18px;
-  }
 
-  .rca-analysis .page-subtitle {
-    font-size: 12px;
-  }
 
-  .rca-analysis .header-icon {
-    font-size: 32px;
-  }
 
   /* 小屏幕加载状态 */
   .loading-container {
@@ -1749,5 +1636,12 @@ align-items: center;
     flex: 0 0 100%;
     margin-bottom: 8px;
   }
+}
+
+@media (max-width: 575px) {
+  .overview-grid, .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ops-space-sm); }
+  .overview-card, .metric-card { min-width: 0; padding: var(--ops-space-md); }
+  .card-value, .metric-value { overflow-wrap: anywhere; }
+  .section-header { flex-wrap: wrap; gap: var(--ops-space-sm); }
 }
 </style>

@@ -1,6 +1,8 @@
 import { shallowMount } from '@vue/test-utils';
+import { reactive } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 import RCADiagnosis from './RCADiagnosis.vue';
+vi.mock('@vben/stores', () => ({ useUserStore: () => reactive({ userInfo: { userId: '1' } }), useAccessStore: () => reactive({ accessToken: 'offline' }) }));
 const api = vi.hoisted(() => ({ quickDiagnosis: vi.fn(), getEventPatterns: vi.fn(), getErrorSummary: vi.fn(), analyzeRootCause: vi.fn() }));
 const messages = vi.hoisted(() => ({ success: vi.fn(), warning: vi.fn(), error: vi.fn(), loading: vi.fn() }));
 vi.mock('#/api/core/aiops/rca', () => api);

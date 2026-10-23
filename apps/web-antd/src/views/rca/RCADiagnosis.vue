@@ -1,19 +1,8 @@
 <template>
-  <div class="rca-diagnosis">
+  <OpsPage title="快速诊断" description="按选择范围诊断，部分失败与未知状态单独显示" class="rca-diagnosis">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <div class="header-icon">
-            <MedicineBoxOutlined />
-          </div>
-          <div class="header-text">
-            <h1 class="page-title">快速诊断</h1>
-            <p class="page-subtitle">系统故障快速诊断和修复建议</p>
-          </div>
-        </div>
-        <div class="header-actions">
-          <a-button 
+    <template #actions>
+<a-button
             type="primary" 
             size="large" 
             @click="refreshAllDiagnosis"
@@ -22,11 +11,10 @@
           >
             {{ loading ? '诊断中...' : '开始诊断' }}
           </a-button>
-        </div>
-      </div>
-    </div>
+    </template>
 
     <!-- 诊断参数配置 -->
+    <a-alert v-if="diagnosisError" :message="diagnosisError" type="error" show-icon role="alert" />
     <div class="config-section">
       <div class="section-header">
         <h2>诊断配置</h2>
@@ -39,14 +27,14 @@
         <div class="config-item">
           <label>命名空间</label>
           <a-input
-            v-model:value="inputData.namespace"
+            v-model:value="inputData.namespace" :disabled="loading"
             placeholder="输入K8s命名空间"
             class="modern-input"
           />
         </div>
         <div class="config-item">
           <label>时间范围</label>
-          <a-select v-model:value="timeRange" class="modern-select">
+          <a-select v-model:value="timeRange" :disabled="loading" class="modern-select">
             <a-select-option value="1">1小时</a-select-option>
             <a-select-option value="6">6小时</a-select-option>
             <a-select-option value="24">24小时</a-select-option>
@@ -54,14 +42,14 @@
         </div>
         <div class="config-item">
           <label>诊断级别</label>
-          <a-radio-group v-model:value="diagnosisLevel" button-style="solid">
+          <a-radio-group v-model:value="diagnosisLevel" :disabled="loading" button-style="solid">
             <a-radio-button value="quick">快速</a-radio-button>
             <a-radio-button value="standard">标准</a-radio-button>
             <a-radio-button value="comprehensive">全面</a-radio-button>
           </a-radio-group>
         </div>
         <div class="config-item">
-          <label>自动刷新</label>
+          <label>每30秒诊断（会重复调用分析服务）</label>
           <div class="switch-container">
             <a-switch v-model:checked="autoRefresh" @change="toggleAutoRefresh" />
             <span class="switch-label">{{ autoRefresh ? '已开启' : '已关闭' }}</span>
@@ -120,50 +108,7 @@
     <!-- 诊断结果区域 -->
     <div class="diagnosis-section" v-if="quickDiagnosisResult || loading">
       <!-- 加载状态 -->
-      <div v-if="loading" class="loading-container">
-        <div class="loading-content">
-          <div class="loading-main-icon">
-            <Icon icon="mdi:chart-line" class="pulse-animation" />
-          </div>
-          <h3 class="loading-title">正在进行快速诊断...</h3>
-          <p class="loading-subtitle">系统正在深度分析故障原因，请稍候</p>
-
-          <!-- 诊断步骤指示器 -->
-          <div class="diagnosis-steps">
-            <div class="step-item" :class="{ active: getCurrentStep() >= 1 }">
-              <div class="step-icon">
-                <Icon v-if="getCurrentStep() > 1" icon="mdi:check" />
-                <Icon v-else-if="getCurrentStep() === 1" icon="mdi:loading" class="rotate-animation" />
-                <Icon v-else icon="mdi:circle-outline" />
-              </div>
-              <span class="step-text">收集系统数据</span>
-            </div>
-            <div class="step-item" :class="{ active: getCurrentStep() >= 2 }">
-              <div class="step-icon">
-                <Icon v-if="getCurrentStep() > 2" icon="mdi:check" />
-                <Icon v-else-if="getCurrentStep() === 2" icon="mdi:loading" class="rotate-animation" />
-                <Icon v-else icon="mdi:circle-outline" />
-              </div>
-              <span class="step-text">分析异常模式</span>
-            </div>
-            <div class="step-item" :class="{ active: getCurrentStep() >= 3 }">
-              <div class="step-icon">
-                <Icon v-if="getCurrentStep() > 3" icon="mdi:check" />
-                <Icon v-else-if="getCurrentStep() === 3" icon="mdi:loading" class="rotate-animation" />
-                <Icon v-else icon="mdi:circle-outline" />
-              </div>
-              <span class="step-text">生成诊断报告</span>
-            </div>
-          </div>
-
-          <a-alert 
-            message="预计耗时 30秒 - 2分钟" 
-            type="info" 
-            show-icon
-            class="loading-tip"
-          />
-        </div>
-      </div>
+      <div v-if="loading" class="loading-container"><a-spin /><p>正在等待服务返回实际结果，请稍候</p></div>
 
       <!-- 诊断结果 -->
       <div v-else-if="quickDiagnosisResult" class="issues-container">
@@ -187,7 +132,7 @@
                 </span>
               </div>
               <div class="issue-description">{{ issue.description || issue }}</div>
-              <div class="issue-confidence" v-if="issue.confidence">
+              <div class="issue-confidence" v-if="Number.isFinite(issue.confidence)">
                 <div class="confidence-bar">
                   <div class="confidence-fill" :style="{width: (issue.confidence * 100) + '%'}"></div>
                 </div>
@@ -293,7 +238,7 @@
       <div class="summary-grid">
         <div class="summary-item">
           <span class="summary-label">命名空间</span>
-          <span class="summary-value">{{ inputData.namespace }}</span>
+          <span class="summary-value">{{ diagnosisContext?.namespace || '未知' }}</span>
         </div>
         <div class="summary-item">
           <span class="summary-label">分析时间</span>
@@ -301,7 +246,7 @@
         </div>
         <div class="summary-item">
           <span class="summary-label">时间范围</span>
-          <span class="summary-value">{{ timeRange }}小时</span>
+          <span class="summary-value">{{ diagnosisContext?.hours ?? '未知' }}小时</span>
         </div>
         <div class="summary-item">
           <span class="summary-label">诊断状态</span>
@@ -314,25 +259,27 @@
       </div>
     </div>
 
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useAiRequestScope } from '../assistant/useAiRequestScope';
+import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
 import { ref, computed, onMounted, nextTick, onUnmounted, watch } from 'vue';
 // 按需引入echarts，减少打包体积
 import * as echarts from 'echarts/core';
-import { BarChart, LineChart } from 'echarts/charts';
+import { BarChart, LineChart, PieChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
 // 注册必需的组件
 echarts.use([
-  BarChart, LineChart,
+  BarChart, LineChart, PieChart,
   GridComponent, TooltipComponent, LegendComponent, TitleComponent,
   CanvasRenderer
 ]);
 import { message } from 'ant-design-vue';
-import { MedicineBoxOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import type {
   QuickDiagnosisResponse,
@@ -372,12 +319,24 @@ const errorCategoriesChartRef = ref<HTMLElement>();
 let errorTrendsChart: echarts.ECharts | null = null;
 let errorCategoriesChart: echarts.ECharts | null = null;
 
-let refreshTimer: NodeJS.Timeout | null = null;
-const currentStep = ref(0);
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
+const diagnosisError = ref('');
+const diagnosisContext = ref<{ namespace: string; hours: number } | null>(null);
+const scope = useAiRequestScope(() => {
+  diagnosisLane.invalidate(); stopAutoRefresh(); autoRefresh.value = false;
+  loading.value = false; hasInitialData.value = false; diagnosisError.value = ''; diagnosisContext.value = null;
+  diagnosisFailures.value = []; quickDiagnosisResult.value = null;
+  eventPatternsResult.value = null; errorSummaryResult.value = null; rcaAnalysisResult.value = null;
+  inputData.value.namespace = 'default';
+  errorTrendsChart?.dispose(); errorTrendsChart = null;
+  errorCategoriesChart?.dispose(); errorCategoriesChart = null;
+});
+const diagnosisLane = scope.createLane();
+useChartAppearance(() => { if (hasInitialData.value) initCharts(); });
 
 // 计算属性
 const isFormValid = computed(() => {
-  return inputData.value.namespace.trim() !== '';
+  return !!scope.owner.value && inputData.value.namespace.trim() !== '';
 });
 
 const formattedCriticalIssues = computed(() => {
@@ -425,7 +384,8 @@ const getRecommendationsCount = () => {
 
 
 const getCurrentTime = () => {
-  return new Date().toLocaleString('zh-CN');
+  const timestamp = quickDiagnosisResult.value?.timestamp || rcaAnalysisResult.value?.timestamp || eventPatternsResult.value?.timestamp || errorSummaryResult.value?.timestamp;
+  return timestamp && Number.isFinite(Date.parse(timestamp)) ? new Date(timestamp).toLocaleString('zh-CN') : '未知';
 };
 
 const formatShortTime = (timestamp: string) => {
@@ -442,12 +402,8 @@ const formatShortTime = (timestamp: string) => {
 };
 
 // 获取当前诊断步骤
-const getCurrentStep = () => {
-  return currentStep.value;
-};
-
-// 刷新诊断
 const refreshAllDiagnosis = async () => {
+  if (!scope.owner.value || loading.value) return;
   if (!isFormValid.value) {
     message.warning('请填写命名空间');
     return;
@@ -459,41 +415,46 @@ const refreshAllDiagnosis = async () => {
     return;
   }
 
+  const ticket = diagnosisLane.begin();
+  const level = diagnosisLevel.value;
+  const hours = Number(timeRange.value);
+  diagnosisError.value = '';
   loading.value = true;
   hasInitialData.value = false;
+  diagnosisContext.value = null;
   quickDiagnosisResult.value = null;
   eventPatternsResult.value = null;
   errorSummaryResult.value = null;
   rcaAnalysisResult.value = null;
   diagnosisFailures.value = [];
-  currentStep.value = 0;
+
 
   // 开始诊断提示
-  message.loading('开始快速诊断，请稍候...', 2);
+
 
   try {
     const promises: Promise<any>[] = [];
 
     // 步骤1: 快速诊断
-    currentStep.value = 1;
+
 
     promises.push(
       quickDiagnosis({
-        namespace: inputData.value.namespace
+        namespace
       }).catch(_error => {
         // Quick diagnosis failed
         return null;
       })
     );
 
-    if (diagnosisLevel.value !== 'quick') {
+    if (level !== 'quick') {
       // 步骤2: 事件模式分析
-      currentStep.value = 2;
+
 
       promises.push(
         getEventPatterns({
-          namespace: inputData.value.namespace,
-          hours: Number(timeRange.value)
+          namespace,
+          hours: hours
         }).catch(_error => {
           // Event patterns analysis failed
           return null;
@@ -501,21 +462,21 @@ const refreshAllDiagnosis = async () => {
       );
     }
 
-    if (diagnosisLevel.value === 'comprehensive') {
+    if (level === 'comprehensive') {
       // 步骤3: 综合分析
-      currentStep.value = 3;
+
 
       promises.push(
         getErrorSummary({
-          namespace: inputData.value.namespace,
-          hours: Number(timeRange.value)
+          namespace,
+          hours: hours
         }).catch(_error => {
           // Error summary analysis failed
           return null;
         }),
         analyzeRootCause({
-          namespace: inputData.value.namespace,
-          time_window_hours: Number(timeRange.value),
+          namespace,
+          time_window_hours: hours,
           metrics: []
         }).catch(_error => {
           // Root cause analysis failed
@@ -525,35 +486,39 @@ const refreshAllDiagnosis = async () => {
     }
 
     const results = await Promise.all(promises);
+    if (!diagnosisLane.current(ticket)) return;
 
     const labels = ['快速诊断', '事件模式', '错误汇总', '根因分析'];
     diagnosisFailures.value = results.flatMap((result, index) => result === null ? [labels[index]!] : []);
     if (results.every(result => result === null)) {
-      message.error('全部诊断失败，请检查服务状态后重试');
+      diagnosisError.value = '全部诊断失败，请检查服务状态后重试';
+      message.error(diagnosisError.value);
       return;
     }
 
     // 完成所有步骤
-    currentStep.value = 4;
+
 
     if (results[0]) {
       quickDiagnosisResult.value = results[0];
     }
 
-    if (results[1] && diagnosisLevel.value !== 'quick') {
+    if (results[1] && level !== 'quick') {
       eventPatternsResult.value = results[1];
     }
 
-    if (results[2] && diagnosisLevel.value === 'comprehensive') {
+    if (results[2] && level === 'comprehensive') {
       errorSummaryResult.value = results[2];
     }
 
-    if (results[3] && diagnosisLevel.value === 'comprehensive') {
+    if (results[3] && level === 'comprehensive') {
       rcaAnalysisResult.value = results[3];
     }
 
+    diagnosisContext.value = { namespace, hours };
     hasInitialData.value = true;
     await nextTick();
+    if (!diagnosisLane.current(ticket)) return;
     initCharts();
 
     if (diagnosisFailures.value.length) {
@@ -562,23 +527,10 @@ const refreshAllDiagnosis = async () => {
       message.success('诊断完成，请查看各项检查结果');
     }
   } catch (error) {
-
-    let errorMessage = '诊断失败';
-    if (error instanceof Error) {
-      if (error.message.includes('Network Error')) {
-        errorMessage = '网络连接失败，请检查网络设置';
-      } else if (error.message.includes('timeout')) {
-        errorMessage = '请求超时，请稍后重试';
-      } else if (error.message.includes('500')) {
-        errorMessage = '服务器内部错误，请联系管理员';
-      } else if (error.message.includes('404')) {
-        errorMessage = '服务不可用，请检查服务状态';
-      }
-    }
-    message.error(errorMessage);
+    if (!diagnosisLane.current(ticket)) return;
+    diagnosisError.value = error instanceof Error ? error.message : '诊断失败，请核对参数后重试';
   } finally {
-    loading.value = false;
-    currentStep.value = 0;
+    if (diagnosisLane.current(ticket)) loading.value = false;
   }
 };
 
@@ -601,16 +553,18 @@ const initErrorTrendsChart = () => {
   }
 
   // Diagnosis returns aggregate counts, not a time-series histogram.
-  const data = [{ time: '本次诊断', value: getTotalErrors() }];
+  const data = errorSummaryResult.value ? [{ time: '本次诊断', value: getTotalErrors() }] : [];
 
   const option = {
+    textStyle: { color: chartColors().text },
+    backgroundColor: "transparent",
     color: ['#6366f1'],
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderColor: '#e5e7eb',
+      backgroundColor: chartColors().surface,
+      borderColor: chartColors().border,
       borderWidth: 1,
-      textStyle: { color: '#1f2937' }
+      textStyle: { color: chartColors().text }
     },
     grid: {
       left: '3%',
@@ -622,14 +576,14 @@ const initErrorTrendsChart = () => {
       type: 'category',
       boundaryGap: chartType.value === 'bar',
       data: data.map(d => d.time),
-      axisLine: { lineStyle: { color: '#e5e7eb' } },
-      axisLabel: { color: '#6b7280' }
+      axisLine: { lineStyle: { color: chartColors().border } },
+      axisLabel: { color: chartColors().muted }
     },
     yAxis: {
       type: 'value',
-      axisLine: { lineStyle: { color: '#e5e7eb' } },
-      splitLine: { lineStyle: { color: '#f3f4f6' } },
-      axisLabel: { color: '#6b7280' }
+      axisLine: { lineStyle: { color: chartColors().border } },
+      splitLine: { lineStyle: { color: chartColors().ground } },
+      axisLabel: { color: chartColors().muted }
     },
     series: [{
       name: '错误数量',
@@ -655,23 +609,23 @@ const initErrorCategoriesChart = () => {
   }
 
   const topErrors = errorSummaryResult.value?.top_errors || [];
-  const pieData = topErrors.slice(0, 5).map((error: any, index: number) => ({
+  const pieData = topErrors.filter((error: any) => Number.isFinite(error.count) && error.count >= 0).slice(0, 5).map((error: any, index: number) => ({
     name: error.error_type || `错误类型 ${index + 1}`,
-    value: error.count || 1
+    value: error.count
   }));
 
-  if (pieData.length === 0) {
-    pieData.push({ name: '无错误', value: 0 });
-  }
+
 
   const option = {
+    textStyle: { color: chartColors().text },
+    backgroundColor: "transparent",
     color: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'],
     tooltip: {
       trigger: 'item',
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderColor: '#e5e7eb',
+      backgroundColor: chartColors().surface,
+      borderColor: chartColors().border,
       borderWidth: 1,
-      textStyle: { color: '#1f2937' }
+      textStyle: { color: chartColors().text }
     },
     series: [{
       type: 'pie',
@@ -724,14 +678,14 @@ const startAutoRefresh = () => {
     }
   }, 30000);
 
-  message.info('已开启自动刷新，每30秒更新一次');
+  message.info('已明确开启每30秒诊断，离开页面或切换账户会停止');
 };
 
-const stopAutoRefresh = () => {
+function stopAutoRefresh() {
   if (refreshTimer) {
     clearInterval(refreshTimer);
     refreshTimer = null;
-    message.info('已停止自动刷新');
+
   }
 };
 
@@ -770,73 +724,23 @@ onUnmounted(() => {
 
 <style scoped>
 .trend-unknown { color: var(--ops-muted); background: var(--ops-ground); }
-.rca-diagnosis {
-padding: 24px;
-background: var(--ops-ground);
-min-height: 100vh;
-}
 
 /* 页面头部 */
-.rca-diagnosis .page-header {
-background: var(--ops-surface);
-border-radius: var(--ops-radius);
-padding: 24px;
-margin-bottom: 24px;
-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-border: 1px solid var(--ops-border);
-}
 
-.rca-diagnosis .header-content {
-display: flex;
-justify-content: space-between;
-align-items: center;
-width: 100%;
-}
 
-.rca-diagnosis .header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
 
-.header-icon {
-  font-size: 32px;
-  color: #1890ff;
-}
 
-.header-text {
-  display: flex;
-  flex-direction: column;
-}
 
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--ops-ink);
-  line-height: 1.2;
-}
 
-.page-subtitle {
-  color: var(--ops-muted);
-  margin: 0;
-  font-size: 12px;
-  margin-top: 4px;
-}
 
-.header-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
 
 /* 配置区域 */
 .config-section {
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: var(--ops-space-lg);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
 }
 
@@ -844,7 +748,7 @@ width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .section-header h2 {
@@ -879,7 +783,7 @@ width: 100%;
   height: 36px;
   border-radius: var(--ops-radius);
   border: 1px solid var(--ops-border);
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .modern-select {
@@ -891,7 +795,7 @@ width: 100%;
   height: 36px !important;
   border-radius: 8px !important;
   border: 1px solid var(--ops-border) !important;
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .modern-select :deep(.ant-select-selection-item) {
@@ -900,7 +804,7 @@ width: 100%;
 
 .modern-input:focus {
   border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  box-shadow: none;
 }
 
 .modern-select:hover :deep(.ant-select-selector) {
@@ -909,7 +813,7 @@ width: 100%;
 
 .modern-select.ant-select-focused :deep(.ant-select-selector) {
   border-color: #1890ff !important;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+  box-shadow: none;
 }
 
 .modern-input:hover {
@@ -942,25 +846,24 @@ width: 100%;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 24px;
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .metric-card {
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   display: flex;
   align-items: center;
   gap: 20px;
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
   cursor: pointer;
   border: 1px solid var(--ops-border);
 }
 
 .metric-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
 .metric-icon {
@@ -1012,7 +915,7 @@ width: 100%;
 
 /* 诊断结果 */
 .diagnosis-section {
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .loading-container {
@@ -1022,7 +925,7 @@ width: 100%;
   min-height: 400px;
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
 }
 
@@ -1036,7 +939,7 @@ width: 100%;
 .loading-main-icon {
   font-size: 80px;
   color: #1890ff;
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .pulse-animation {
@@ -1094,7 +997,7 @@ width: 100%;
   gap: 8px;
   padding: 16px;
   border-radius: var(--ops-radius);
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
   opacity: 0.5;
 }
 
@@ -1115,7 +1018,7 @@ width: 100%;
   justify-content: center;
   font-size: 18px;
   color: var(--ops-muted);
-  transition: all 0.3s ease;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .step-item.active .step-icon {
@@ -1150,7 +1053,7 @@ width: 100%;
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   padding: 20px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
 }
 
@@ -1187,8 +1090,8 @@ width: 100%;
   padding: 16px;
   border-radius: 6px;
   background: var(--ops-ground);
-  border-left: 4px solid;
-  transition: all 0.2s;
+  border-left: 1px solid;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .critical-item {
@@ -1277,7 +1180,7 @@ width: 100%;
   padding: 12px 16px;
   background: #f6ffed;
   border-radius: 6px;
-  transition: all 0.2s;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .recommendation-item:hover {
@@ -1324,14 +1227,14 @@ width: 100%;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
   gap: 24px;
-  margin-bottom: 24px;
+  margin-bottom: var(--ops-space-lg);
 }
 
 .chart-container {
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   padding: 20px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
 }
 
@@ -1358,8 +1261,8 @@ width: 100%;
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  margin-bottom: var(--ops-space-lg);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
 }
 
@@ -1374,11 +1277,11 @@ width: 100%;
   background: var(--ops-ground);
   border-radius: 6px;
   border: 1px solid var(--ops-border);
-  transition: all 0.2s;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .root-cause-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
   background: var(--ops-surface);
 }
 
@@ -1454,7 +1357,7 @@ width: 100%;
   background: #f9f9f9;
   border-radius: 4px;
   border: 1px solid var(--ops-border);
-  transition: all 0.2s ease;
+  transition: border-color var(--ops-duration) ease-out;
 }
 
 .rec-item:hover {
@@ -1467,7 +1370,7 @@ width: 100%;
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
 }
 
@@ -1512,37 +1415,12 @@ width: 100%;
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-.rca-diagnosis {
-  padding: 16px;
-}
 
-.rca-diagnosis .page-header {
-  padding: 20px;
-  margin-bottom: 16px;
-}
 
-.rca-diagnosis .header-content {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
-}
 
-.rca-diagnosis .header-actions {
-  width: 100%;
-  justify-content: flex-start;
-}
 
-.rca-diagnosis .page-title {
-  font-size: 20px;
-}
 
-.rca-diagnosis .page-subtitle {
-  font-size: 13px;
-}
 
-.rca-diagnosis .header-icon {
-  font-size: 36px;
-}
 
 .metrics-grid {
   grid-template-columns: 1fr;
@@ -1613,25 +1491,10 @@ width: 100%;
 }
 
 @media (max-width: 576px) {
-.rca-diagnosis {
-  padding: 12px;
-}
 
-.rca-diagnosis .page-header {
-  padding: 16px;
-}
 
-.rca-diagnosis .page-title {
-  font-size: 18px;
-}
 
-.rca-diagnosis .page-subtitle {
-  font-size: 12px;
-}
 
-.rca-diagnosis .header-icon {
-  font-size: 32px;
-}
 
 .config-grid {
   grid-template-columns: 1fr;
@@ -1652,5 +1515,12 @@ width: 100%;
 .metric-value {
   font-size: 20px;
 }
+}
+
+@media (max-width: 575px) {
+  .overview-grid, .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ops-space-sm); }
+  .overview-card, .metric-card { min-width: 0; padding: var(--ops-space-md); }
+  .card-value, .metric-value { overflow-wrap: anywhere; }
+  .section-header { flex-wrap: wrap; gap: var(--ops-space-sm); }
 }
 </style>
