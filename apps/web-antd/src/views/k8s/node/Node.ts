@@ -610,7 +610,7 @@ export function useNodePage() {
         isTaintModalVisible.value = false;
         await fetchNodes();
       } else if (shouldNotifyPageError(err)) {
-        // c-8：403 已由请求层统一提示，不再弹通用失败
+        // c-8：403、HTTP / 网络错误已由请求层提示，取消类静默；只有 shouldNotifyPageError 时才弹通用失败
         message.error('污点更新失败');
       }
     } finally {

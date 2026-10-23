@@ -2036,7 +2036,7 @@ const handleDeleteNotification = (record: Notification): void => {
           }
         }
 
-        // 403 已由请求拦截器统一提示，这里不再重复弹出
+        // 403 与已弹原文的业务错误（isPermissionDeniedError）已由请求层提示，这里跳过；其余错误按基线仍弹具体原因（未改为 shouldNotifyPageError）
         if (!isPermissionDeniedError(error)) message.error(errorMessage);
 
       }
@@ -2355,7 +2355,7 @@ const saveManualSend = async (): Promise<void> => {
       }
     }
 
-    // 403 已由请求拦截器统一提示，这里不再重复弹出
+    // 403 与已弹原文的业务错误（isPermissionDeniedError）已由请求层提示，这里跳过；其余错误按基线仍弹具体原因（未改为 shouldNotifyPageError）
     if (!isPermissionDeniedError(error)) message.error(errorMessage);
 
   } finally {
