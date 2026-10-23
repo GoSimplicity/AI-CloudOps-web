@@ -53,6 +53,11 @@ export function useRolePage() {
   const clusters = ref<K8sCluster[]>([]);
   const namespaces = ref<K8sNamespace[]>([]);
   const loading = ref(false);
+  const loadError = ref('');
+  const clustersError = ref('');
+  const namespacesError = ref('');
+  let namespaceRequestId = 0;
+  let resourceRequestId = 0;
   const clustersLoading = ref(false);
   const namespacesLoading = ref(false);
   const searchText = ref('');
@@ -237,6 +242,10 @@ export function useRolePage() {
 
   // cluster operations
   const clearRoles = () => {
+    resourceRequestId++;
+    loading.value = false;
+    total.value = 0;
+    loadError.value = '';
     roles.value = [];
     selectedRowKeys.value = [];
     selectedRows.value = [];
@@ -261,41 +270,41 @@ export function useRolePage() {
     if (reset) {
       resetClusters();
     }
-    
-    if (clustersLoading.value) return;
-
     try {
       clustersLoading.value = true;
+      clustersError.value = '';
       const params: ListClustersReq = {
         page: clustersPage.value,
         size: clustersSize.value,
       };
-
-      const response = await getClustersListApi(params);
-      const newClusters = response?.items || [];
-      
+      const res = await getClustersListApi(params);
       if (clustersPage.value === 1) {
-        clusters.value = newClusters;
+        clusters.value = res?.items || [];
       } else {
-        clusters.value = [...clusters.value, ...newClusters];
+        clusters.value = [...clusters.value, ...(res?.items || [])];
       }
-      
-      clustersTotal.value = response?.total || 0;
-      
+      clustersTotal.value = res?.total || 0;
+
       // 如果当前没有选择集群且有可用集群，自动选择第一个
       if (!filterClusterId.value && clusters.value.length > 0) {
         const firstCluster = clusters.value[0];
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
-          message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
           // 自动加载该集群的命名空间和Role数据
           await fetchNamespaces();
           await fetchRoles();
         }
       }
-    } catch (error: any) {
-
-      message.error('获取集群列表失败：' + (error.message || '未知错误'));
+    } catch (err) {
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearNamespaces();
+        clearRoles();
+      }
+      clustersError.value = '获取集群列表失败，请重试';
+      message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -310,40 +319,49 @@ export function useRolePage() {
   };
 
   const fetchNamespaces = async (reset = false) => {
-    if (!filterClusterId.value) {
-      namespaces.value = [];
-      namespacesTotal.value = 0;
+    const clusterId = filterClusterId.value;
+    if (!clusterId) {
+      clearNamespaces();
       return;
     }
+    const requestId = ++namespaceRequestId;
 
     if (reset) {
-      namespacesPage.value = 1;
-      namespaces.value = [];
+      resetNamespaces();
     }
-
-    if (namespacesLoading.value) return;
 
     try {
       namespacesLoading.value = true;
-      const response = await getNamespacesListApi(filterClusterId.value, {
-        cluster_id: filterClusterId.value,
+      namespacesError.value = '';
+      const params = {
+        cluster_id: clusterId,
         page: namespacesPage.value,
         size: namespacesSize.value,
-      });
-      const newNamespaces = response?.items || [];
-      
-      if (reset) {
-        namespaces.value = newNamespaces;
+      };
+      const res = await getNamespacesListApi(clusterId, params);
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      if (namespacesPage.value === 1) {
+        namespaces.value = res?.items || [];
       } else {
-        namespaces.value = [...namespaces.value, ...newNamespaces];
+        namespaces.value = [...namespaces.value, ...(res?.items || [])];
       }
-      
-      namespacesTotal.value = response?.total || 0;
-    } catch (error: any) {
-
-      message.error('获取命名空间列表失败：' + (error.message || '未知错误'));
+      namespacesTotal.value = res?.total || 0;
+    } catch (err) {
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      namespaces.value = [];
+      namespacesTotal.value = 0;
+      namespacesError.value = '获取命名空间列表失败，请重试';
+      message.error(namespacesError.value);
     } finally {
-      namespacesLoading.value = false;
+      if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
   };
 
@@ -356,38 +374,42 @@ export function useRolePage() {
   };
 
   const clearNamespaces = () => {
+    namespaceRequestId++;
+    namespacesLoading.value = false;
+    namespacesError.value = '';
     resetNamespaces();
     filterNamespace.value = undefined;
   };
 
   const fetchRoles = async () => {
-    if (!filterClusterId.value || filterClusterId.value === 0) {
-      message.warning('请先选择有效的集群');
-      roles.value = [];
-      total.value = 0;
-      return;
-    }
-
+    const clusterId = filterClusterId.value;
+    const namespace = filterNamespace.value;
+    if (!clusterId) { clearRoles(); return; }
+    const requestId = ++resourceRequestId;
     try {
       loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
       const params: GetRoleListReq = {
-        cluster_id: filterClusterId.value,
-        namespace: filterNamespace.value,
+        cluster_id: clusterId,
+        namespace: namespace,
         search: searchText.value || undefined,
         page: currentPage.value,
         size: pageSize.value,
       };
 
       const response = await getRoleListApi(params);
-      roles.value = response?.items || [];
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      roles.value = (response?.items || []).map((record: K8sRole) => ({ ...record, cluster_id: record.cluster_id || clusterId }));
       total.value = response?.total || 0;
-    } catch (error: any) {
-
-      message.error('获取 Role 列表失败：' + (error.message || '未知错误'));
-      roles.value = [];
-      total.value = 0;
+    } catch {
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      clearRoles();
+      loadError.value = '获取 Role 列表失败，请重试';
+      message.error(loadError.value);
     } finally {
-      loading.value = false;
+      if (requestId === resourceRequestId) loading.value = false;
     }
   };
 
@@ -1144,6 +1166,9 @@ export function useRolePage() {
     clusters,
     namespaces,
     loading,
+    loadError,
+    clustersError,
+    namespacesError,
     clustersLoading,
     namespacesLoading,
     searchText,

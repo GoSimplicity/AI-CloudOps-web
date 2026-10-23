@@ -1,53 +1,37 @@
 <template>
-  <div class="k8s-management-container">
-    <!-- 页面头部 -->
-    <div class="k8s-page-header">
-      <a-row class="k8s-header-content" :gutter="[24, 16]">
-        <a-col :xs="24" :sm="24" :md="16" :lg="16" :xl="18">
-          <div class="k8s-title-section">
-            <div class="k8s-page-title">
-              <TeamOutlined class="k8s-title-icon" />
-              <div>
-                <h1>RoleBinding 管理</h1>
-                <p class="k8s-page-subtitle">管理和监控集群中的所有 Kubernetes RoleBinding</p>
-              </div>
-            </div>
-          </div>
-        </a-col>
-        <a-col :xs="24" :sm="24" :md="8" :lg="8" :xl="6">
-          <div class="k8s-header-actions">
+  <OpsPage title="RoleBinding 管理" description="管理和监控集群中的所有 Kubernetes RoleBinding">
+    <template #actions>
             <a-button type="primary" @click="openCreateModal" :disabled="!filterClusterId">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><PlusOutlined aria-hidden="true"  /></template>
               创建 RoleBinding
             </a-button>
-            <a-button @click="fetchRoleBindings" :loading="loading">
-              <template #icon><ReloadOutlined /></template>
+            <a-button @click="fetchRoleBindings" :loading="loading" :disabled="!filterClusterId">
+              <template #icon><ReloadOutlined aria-hidden="true"  /></template>
               刷新数据
             </a-button>
-          </div>
-        </a-col>
-      </a-row>
-    </div>
+    </template>
 
     <!-- 工具栏 -->
-    <div class="k8s-toolbar">
+    <template #filters>
+    <div class="ops-filter-row">
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
           <a-select 
             v-model:value="filterClusterId" 
             placeholder="选择集群" 
-            class="k8s-cluster-selector" 
+            class="k8s-cluster-selector"
+            aria-label="选择集群"
             allow-clear 
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
             @popup-scroll="handleClusterDropdownScroll"
           >
-            <template #suffixIcon><DeploymentUnitOutlined /></template>
+            <template #suffixIcon><DeploymentUnitOutlined aria-hidden="true"  /></template>
             <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
               <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span>{{ cluster.name }}</span>
+                <span class="k8s-cluster-name" :title="cluster.name">{{ cluster.name }}</span>
                 <a-tag color="blue" size="small">{{ cluster.env ? getEnvText(cluster.env) : '未知' }}</a-tag>
               </div>
             </a-select-option>
@@ -55,7 +39,7 @@
               v-if="clusters.length > 0 && clusters.length < clustersTotal" 
               :value="'__load_more__'" 
               disabled
-              style="text-align: center; color: #999;"
+              style="text-align: center; color: var(--ops-muted);"
             >
               <a-spin size="small" :spinning="clustersLoading" />
               <span v-if="!clustersLoading">滚动加载更多...</span>
@@ -65,13 +49,14 @@
           <a-select 
             v-model:value="filterNamespace" 
             placeholder="选择命名空间" 
-            class="k8s-filter-select" 
+            class="k8s-filter-select k8s-namespace-selector"
+            aria-label="选择命名空间"
             allow-clear 
             @change="handleFilterChange"
             :disabled="!filterClusterId"
             :loading="namespacesLoading"
           >
-            <template #suffixIcon><AppstoreOutlined /></template>
+            <template #suffixIcon><AppstoreOutlined aria-hidden="true"  /></template>
             <a-select-option v-for="ns in namespaces" :key="ns.name" :value="ns.name">
               {{ ns.name }}
             </a-select-option>
@@ -79,7 +64,7 @@
               v-if="namespaces.length > 0 && namespaces.length < namespacesTotal" 
               :value="'__load_more_namespaces__'" 
               disabled
-              style="text-align: center; color: #999;"
+              style="text-align: center; color: var(--ops-muted);"
             >
               <a-button type="link" size="small" @click.stop="loadMoreNamespaces" :loading="namespacesLoading">
                 加载更多...
@@ -90,8 +75,8 @@
           <!-- 标签过滤器 -->
           <div class="rolebinding-labels-filter">
             <a-button type="dashed" @click="openLabelsFilter" class="k8s-toolbar-btn">
-              <template #icon><TagsOutlined /></template>
-              标签过滤 
+              <template #icon><TagsOutlined aria-hidden="true"  /></template>
+              标签过滤（本页）
               <a-tag v-if="Object.keys(filterLabels).length > 0" color="blue" size="small" style="margin-left: 8px;">
                 {{ Object.keys(filterLabels).length }}
               </a-tag>
@@ -122,7 +107,7 @@
             allow-clear 
           >
             <template #suffix>
-              <SearchOutlined class="k8s-search-icon" />
+              <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
             </template>
           </a-input>
         </div>
@@ -137,19 +122,10 @@
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
           >
-            <template #icon><DeleteOutlined /></template>
+            <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             重置筛选
           </a-button>
           
-          <a-button 
-            @click="fetchRoleBindings" 
-            :loading="loading"
-            class="k8s-toolbar-btn"
-            title="刷新数据"
-          >
-            <template #icon><ReloadOutlined /></template>
-            刷新
-          </a-button>
 
           <a-button 
             @click="openCreateYamlModal" 
@@ -157,7 +133,7 @@
             class="k8s-toolbar-btn"
             title="通过YAML创建RoleBinding"
           >
-            <template #icon><FileTextOutlined /></template>
+            <template #icon><FileTextOutlined aria-hidden="true"  /></template>
             YAML 创建
           </a-button>
           
@@ -170,12 +146,23 @@
             class="k8s-toolbar-btn"
             title="批量删除选中的 RoleBinding"
           >
-            <template #icon><DeleteOutlined /></template>
+            <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             删除 ({{ selectedRows.length }})
           </a-button>
         </div>
       </div>
     </div>
+
+    </template>
+    <a-alert v-if="clustersError" type="error" :message="clustersError" show-icon>
+      <template #action><a-button size="small" @click="fetchClusters(true)">重试集群</a-button></template>
+    </a-alert>
+    <a-alert v-if="namespacesError" type="error" :message="namespacesError" show-icon>
+      <template #action><a-button size="small" @click="fetchNamespaces(true)">重试命名空间</a-button></template>
+    </a-alert>
+    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+      <template #action><a-button size="small" @click="fetchRoleBindings">重试查询</a-button></template>
+    </a-alert>
 
     <!-- 数据展示区域 -->
     <div class="k8s-data-display">
@@ -184,14 +171,14 @@
         :data-source="filteredRoleBindings"
         :row-selection="rowSelection"
         :loading="loading"
-        :row-key="(record: K8sRoleBinding) => `${record.namespace}/${record.name}`"
+        :row-key="namespacedResourceKey"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,
           total: total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total: number, range: number[]) => `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
+          showTotal: (total: number) => `后端共 ${total} 条，本页匹配 ${filteredRoleBindings.length} 条`,
           pageSizeOptions: ['10', '20', '30', '50']
         }"
         @change="handleTableChange"
@@ -282,7 +269,7 @@
 
         <template #uid="{ text }">
           <a-tooltip v-if="text" :title="text">
-            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: #666;">
+            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
               {{ text.substring(0, 8) }}...
             </span>
           </a-tooltip>
@@ -290,9 +277,9 @@
         </template>
 
         <template #createdAt="{ text }">
-          <div v-if="text" style="font-size: 12px; color: #666;">
+          <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
             <div>{{ formatDateTime(text) }}</div>
-            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
           </div>
           <span v-else class="k8s-no-data">-</span>
         </template>
@@ -301,17 +288,17 @@
           <div class="k8s-action-column">
             <a-tooltip title="查看详情">
               <a-button title="查看详情" @click="showRoleBindingDetail(record)">
-                <template #icon><EyeOutlined /></template>
+                <template #icon><EyeOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="查看 YAML">
               <a-button title="查看 YAML" @click="showYamlModal(record)">
-                <template #icon><FileTextOutlined /></template>
+                <template #icon><FileTextOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="编辑">
               <a-button title="编辑" @click="openEditModal(record)">
-                <template #icon><EditOutlined /></template>
+                <template #icon><EditOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="删除">
@@ -320,7 +307,7 @@
                 danger 
                 @click="deleteRoleBinding(record)"
               >
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
           </div>
@@ -328,9 +315,10 @@
 
         <template #emptyText>
           <div class="k8s-empty-state">
-            <TeamOutlined />
+            <TeamOutlined aria-hidden="true"  />
             <p>暂无 RoleBinding 数据</p>
-            <p>请先选择集群</p>
+            <p v-if="!filterClusterId">请先选择集群</p>
+            <p v-else>请调整筛选条件或刷新数据</p>
           </div>
         </template>
       </a-table>
@@ -363,7 +351,7 @@
             class="k8s-form-input"
             :maxlength="63"
           />
-          <div style="color: #999; font-size: 12px; margin-top: 4px;">
+          <div style="color: var(--ops-muted); font-size: 12px; margin-top: 4px;">
             只能包含小写字母、数字和连字符，且不能以连字符开头或结尾
           </div>
         </a-form-item>
@@ -382,7 +370,7 @@
               v-if="namespaces.length > 0 && namespaces.length < namespacesTotal" 
               :value="'__load_more_namespaces_create__'" 
               disabled
-              style="text-align: center; color: #999;"
+              style="text-align: center; color: var(--ops-muted);"
             >
               <a-button type="link" size="small" @click.stop="loadMoreNamespaces" :loading="namespacesLoading">
                 加载更多...
@@ -446,11 +434,11 @@
                 :disabled="createFormModel.subjects.length <= 1"
                 size="small"
                class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <a-button type="dashed" @click="addSubjectField" style="margin-top: 8px;">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><PlusOutlined aria-hidden="true"  /></template>
               添加主体
             </a-button>
           </div>
@@ -458,7 +446,7 @@
 
         <a-form-item label="标签配置（可选）" name="labels">
           <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 16px;">
+            <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
               暂无标签，点击下方按钮添加
             </div>
             <div v-for="(_, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
@@ -475,7 +463,7 @@
                 :maxlength="200"
               />
               <a-button type="text" danger @click="removeLabelField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -486,7 +474,7 @@
                 @press-enter="addNewLabel"
               />
               <a-button type="primary" @click="addNewLabel" :disabled="!newLabelKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
             </div>
@@ -495,7 +483,7 @@
 
         <a-form-item label="注解配置（可选）" name="annotations">
           <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" style="text-align: center; color: #999; padding: 16px;">
+            <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
               暂无注解，点击下方按钮添加
             </div>
             <div v-for="(_, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
@@ -512,7 +500,7 @@
                 :maxlength="500"
               />
               <a-button type="text" danger @click="removeAnnotationField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -523,7 +511,7 @@
                 @press-enter="addNewAnnotation"
               />
               <a-button type="primary" @click="addNewAnnotation" :disabled="!newAnnotationKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
             </div>
@@ -638,11 +626,11 @@
                 :disabled="editFormModel.subjects.length <= 1"
                 size="small"
                class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <a-button type="dashed" @click="addEditSubjectField" style="margin-top: 8px;">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><PlusOutlined aria-hidden="true"  /></template>
               添加主体
             </a-button>
           </div>
@@ -650,7 +638,7 @@
 
         <a-form-item label="标签配置（可选）" name="labels">
           <div class="k8s-key-value-inputs">
-            <div v-if="!editFormModel.labels || Object.keys(editFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 16px;">
+            <div v-if="!editFormModel.labels || Object.keys(editFormModel.labels).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
               暂无标签，点击下方按钮添加
             </div>
             <div v-for="(_, key) in editFormModel.labels" :key="key" class="k8s-key-value-row">
@@ -667,7 +655,7 @@
                 :maxlength="200"
               />
               <a-button type="text" danger @click="removeEditLabelField(String(key))" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -678,7 +666,7 @@
                 @press-enter="addEditLabel"
               />
               <a-button type="primary" @click="addEditLabel" :disabled="!editLabelKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
             </div>
@@ -687,7 +675,7 @@
 
         <a-form-item label="注解配置（可选）" name="annotations">
           <div class="k8s-key-value-inputs">
-            <div v-if="!editFormModel.annotations || Object.keys(editFormModel.annotations).length === 0" style="text-align: center; color: #999; padding: 16px;">
+            <div v-if="!editFormModel.annotations || Object.keys(editFormModel.annotations).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
               暂无注解，点击下方按钮添加
             </div>
             <div v-for="(_, key) in editFormModel.annotations" :key="key" class="k8s-key-value-row">
@@ -704,7 +692,7 @@
                 :maxlength="500"
               />
               <a-button type="text" danger @click="removeEditAnnotationField(String(key))" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -715,7 +703,7 @@
                 @press-enter="addEditAnnotation"
               />
               <a-button type="primary" @click="addEditAnnotation" :disabled="!editAnnotationKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
             </div>
@@ -747,19 +735,19 @@
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
             <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
-              <template #icon><FileAddOutlined /></template>
+              <template #icon><FileAddOutlined aria-hidden="true"  /></template>
               插入模板
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
-              <template #icon><FormatPainterOutlined /></template>
+              <template #icon><FormatPainterOutlined aria-hidden="true"  /></template>
               格式化
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
-              <template #icon><CheckCircleOutlined /></template>
+              <template #icon><CheckCircleOutlined aria-hidden="true"  /></template>
               检查格式
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
-              <template #icon><ClearOutlined /></template>
+              <template #icon><ClearOutlined aria-hidden="true"  /></template>
               清空
             </a-button>
           </div>
@@ -927,11 +915,11 @@
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
             <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatEditYaml">
-              <template #icon><FormatPainterOutlined /></template>
+              <template #icon><FormatPainterOutlined aria-hidden="true"  /></template>
               格式化
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateEditYaml">
-              <template #icon><CheckCircleOutlined /></template>
+              <template #icon><CheckCircleOutlined aria-hidden="true"  /></template>
               检查格式
             </a-button>
           </div>
@@ -948,7 +936,7 @@
     <!-- 标签过滤模态框 -->
     <a-modal
       v-model:open="isLabelsFilterModalVisible"
-      title="标签过滤设置"
+      title="本页标签过滤设置"
       @ok="applyLabelsFilter"
       @cancel="closeLabelsFilterModal"
       width="550px"
@@ -991,22 +979,22 @@
               style="flex: 1;"
             />
             <a-button type="primary" @click="addNewFilterLabel" :disabled="!newFilterKey.trim()" size="small">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><PlusOutlined aria-hidden="true"  /></template>
             </a-button>
           </div>
         </div>
       </div>
     </a-modal>
 
-  </div>
+  </OpsPage>
 </template>
 
 <script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { namespacedResourceKey } from '../shared/utils';
 import { onMounted, ref } from 'vue';
-import { message } from 'ant-design-vue';
 import { useRoleBindingPage } from './RoleBinding';
 import { formatDateTime, getRelativeTime } from '../shared/utils';
-import type { K8sRoleBinding } from '#/api/core/k8s/k8s_rolebinding';
 import { 
   PlusOutlined, 
   ReloadOutlined, 
@@ -1030,6 +1018,9 @@ const {
   clusters,
   namespaces,
   loading,
+  loadError,
+  clustersError,
+  namespacesError,
   clustersLoading,
   namespacesLoading,
   searchText,
@@ -1196,14 +1187,9 @@ const handleClusterChange = () => {
   clearRoleBindings();
   
   if (filterClusterId.value) {
-    const selectedCluster = clusters.value.find(c => c.id === filterClusterId.value);
-    if (selectedCluster) {
-      message.info(`已切换到集群: ${selectedCluster.name}`);
-    }
     fetchNamespaces(true);
     fetchRoleBindings();
   } else {
-    message.info('已清空 RoleBinding 列表，请选择集群查看 RoleBinding');
   }
 };
 
@@ -1290,7 +1276,6 @@ const resetFilters = () => {
   currentPage.value = 1;
   clearRoleBindings();
   clearNamespaces();
-  message.success('已重置所有筛选条件');
 };
 
 onMounted(async () => {

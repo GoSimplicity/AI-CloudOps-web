@@ -61,6 +61,9 @@ export function useTemplatePage() {
   const templates = ref<K8sYamlTemplate[]>([]);
   const clusters = ref<K8sCluster[]>([]);
   const loading = ref(false);
+  const loadError = ref('');
+  const clustersError = ref('');
+  let resourceRequestId = 0;
   const clustersLoading = ref(false);
   const searchText = ref('');
   const filterClusterId = ref<number | undefined>(undefined);
@@ -119,7 +122,7 @@ export function useTemplatePage() {
     name: [
       { required: true, message: '请输入模板名称', trigger: 'blur' },
       { pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/, message: '模板名称只能包含中英文、数字、下划线和连字符', trigger: 'blur' },
-      { max: 100, message: '模板名称长度不能超过100个字符', trigger: 'blur' }
+      { max: 50, message: '模板名称长度不能超过50个字符', trigger: 'blur' }
     ],
     content: [
       { required: true, message: '请输入YAML内容', trigger: 'blur' },
@@ -131,7 +134,7 @@ export function useTemplatePage() {
     name: [
       { required: true, message: '请输入模板名称', trigger: 'blur' },
       { pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/, message: '模板名称只能包含中英文、数字、下划线和连字符', trigger: 'blur' },
-      { max: 100, message: '模板名称长度不能超过100个字符', trigger: 'blur' }
+      { max: 50, message: '模板名称长度不能超过50个字符', trigger: 'blur' }
     ],
     content: [
       { required: true, message: '请输入YAML内容', trigger: 'blur' },
@@ -192,6 +195,10 @@ export function useTemplatePage() {
 
   // cluster operations
   const clearTemplates = () => {
+    resourceRequestId++;
+    loading.value = false;
+    total.value = 0;
+    loadError.value = '';
     templates.value = [];
     selectedRowKeys.value = [];
     selectedRows.value = [];
@@ -203,6 +210,7 @@ export function useTemplatePage() {
     }
     try {
       clustersLoading.value = true;
+      clustersError.value = '';
       const params: ListClustersReq = {
         page: clustersPage.value,
         size: clustersSize.value,
@@ -220,13 +228,19 @@ export function useTemplatePage() {
         const firstCluster = clusters.value[0];
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
-          message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
-          // 自动加载该集群的模板数据
+          // 加载所选集群的资源目录
           await fetchTemplates();
         }
       }
-    } catch (err: any) {
-      message.error('获取集群列表失败：' + (err.message || '未知错误'));
+    } catch (err) {
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearTemplates();
+      }
+      clustersError.value = '获取集群列表失败，请重试';
+      message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -234,14 +248,14 @@ export function useTemplatePage() {
 
   // crud operations
   const fetchTemplates = async () => {
-    const clusterId = validateClusterId();
-    if (!clusterId) {
-      clearTemplates();
-      return;
-    }
-
+    const clusterId = filterClusterId.value;
+    if (!clusterId) { clearTemplates(); return; }
+    const requestId = ++resourceRequestId;
     try {
       loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
       const params: YamlTemplateListReq = {
         page: currentPage.value,
         size: pageSize.value,
@@ -249,12 +263,16 @@ export function useTemplatePage() {
         search: searchText.value || undefined,
       };
       const res = await getYamlTemplateList(params);
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
       templates.value = res?.items || [];
       total.value = res?.total || 0;
-    } catch (err: any) {
-      message.error('获取模板列表失败：' + (err.message || '未知错误'));
+    } catch {
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
+      clearTemplates();
+      loadError.value = '获取 YAML 模板列表失败，请重试';
+      message.error(loadError.value);
     } finally {
-      loading.value = false;
+      if (requestId === resourceRequestId) loading.value = false;
     }
   };
 
@@ -681,6 +699,8 @@ export function useTemplatePage() {
     templates,
     clusters,
     loading,
+    loadError,
+    clustersError,
     clustersLoading,
     searchText,
     filterClusterId,

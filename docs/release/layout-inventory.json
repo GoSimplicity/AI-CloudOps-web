@@ -1,6 +1,6 @@
 {
   "routes": 58,
-  "migratedShells": 25,
+  "migratedShells": 37,
   "entries": [
     {
       "route": "/assistant/info",
@@ -96,7 +96,7 @@
     {
       "route": "/k8s_clusterrolebinding",
       "view": "k8s/clusterrolebinding/ClusterRoleBinding.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 37,
       "scopedStyle": true
     },
@@ -110,7 +110,7 @@
     {
       "route": "/k8s_daemonset",
       "view": "k8s/daemonset/DaemonSet.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 38,
       "scopedStyle": true
     },
@@ -124,7 +124,7 @@
     {
       "route": "/k8s_ingress",
       "view": "k8s/ingress/Ingress.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 58,
       "scopedStyle": true
     },
@@ -138,7 +138,7 @@
     {
       "route": "/k8s_node",
       "view": "k8s/node/Node.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 36,
       "scopedStyle": true
     },
@@ -152,35 +152,35 @@
     {
       "route": "/k8s_pv",
       "view": "k8s/pv/PV.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 30,
       "scopedStyle": true
     },
     {
       "route": "/k8s_pvc",
       "view": "k8s/pvc/PVC.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 56,
       "scopedStyle": true
     },
     {
       "route": "/k8s_role",
       "view": "k8s/role/Role.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 42,
       "scopedStyle": true
     },
     {
       "route": "/k8s_rolebinding",
       "view": "k8s/rolebinding/RoleBinding.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 38,
       "scopedStyle": true
     },
     {
       "route": "/k8s_secret",
       "view": "k8s/secret/Secret.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 44,
       "scopedStyle": true
     },
@@ -194,21 +194,21 @@
     {
       "route": "/k8s_statefulset",
       "view": "k8s/statefulset/StatefulSet.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 45,
       "scopedStyle": true
     },
     {
       "route": "/k8s_yaml_task",
       "view": "k8s/task/Task.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 23,
       "scopedStyle": true
     },
     {
       "route": "/k8s_yaml_template",
       "view": "k8s/template/Template.vue",
-      "sharedPage": false,
+      "sharedPage": true,
       "inlineStyles": 11,
       "scopedStyle": true
     },

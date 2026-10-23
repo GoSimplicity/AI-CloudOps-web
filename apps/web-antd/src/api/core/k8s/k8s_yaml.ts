@@ -70,7 +70,7 @@ export interface YamlTaskListReq {
   cluster_id: number;
   template_id?: number;
   status?: string;
-  search?: string;
+  name?: string; // 后端按任务名称过滤
 }
 
 export interface YamlTaskExecuteReq {

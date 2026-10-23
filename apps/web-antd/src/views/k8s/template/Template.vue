@@ -1,53 +1,37 @@
 <template>
-  <div class="k8s-management-container">
-    <!-- 页面头部 -->
-    <div class="k8s-page-header">
-      <a-row class="k8s-header-content" :gutter="[24, 16]">
-        <a-col :xs="24" :sm="24" :md="16" :lg="16" :xl="18">
-          <div class="k8s-title-section">
-            <div class="k8s-page-title">
-              <FileTextOutlined class="k8s-title-icon" />
-              <div>
-                <h1>YAML 模板管理</h1>
-                <p class="k8s-page-subtitle">管理和维护 Kubernetes YAML 配置模板</p>
-              </div>
-            </div>
-          </div>
-        </a-col>
-        <a-col :xs="24" :sm="24" :md="8" :lg="8" :xl="6">
-          <div class="k8s-header-actions">
+  <OpsPage title="YAML 模板管理" description="管理和维护 Kubernetes YAML 配置模板">
+    <template #actions>
             <a-button type="primary" @click="openCreateModal" :disabled="!filterClusterId">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><PlusOutlined aria-hidden="true"  /></template>
               创建模板
             </a-button>
-            <a-button @click="fetchTemplates" :loading="loading">
-              <template #icon><ReloadOutlined /></template>
+            <a-button @click="fetchTemplates" :loading="loading" :disabled="!filterClusterId">
+              <template #icon><ReloadOutlined aria-hidden="true"  /></template>
               刷新数据
             </a-button>
-          </div>
-        </a-col>
-      </a-row>
-    </div>
+    </template>
 
     <!-- 工具栏 -->
-    <div class="k8s-toolbar">
+    <template #filters>
+    <div class="ops-filter-row">
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
           <a-select 
             v-model:value="filterClusterId" 
             placeholder="选择集群" 
-            class="k8s-cluster-selector" 
+            class="k8s-cluster-selector"
+            aria-label="选择集群"
             allow-clear 
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
             @popup-scroll="handleClusterDropdownScroll"
           >
-            <template #suffixIcon><DatabaseOutlined /></template>
+            <template #suffixIcon><DatabaseOutlined aria-hidden="true"  /></template>
             <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
               <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span>{{ cluster.name }}</span>
+                <span class="k8s-cluster-name" :title="cluster.name">{{ cluster.name }}</span>
                 <a-tag color="blue" size="small">{{ getEnvText(cluster.env) }}</a-tag>
               </div>
             </a-select-option>
@@ -73,7 +57,7 @@
             allow-clear 
           >
             <template #suffix>
-              <SearchOutlined class="k8s-search-icon" />
+              <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
             </template>
           </a-input>
         </div>
@@ -88,19 +72,10 @@
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
           >
-            <template #icon><DeleteOutlined /></template>
+            <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             重置筛选
           </a-button>
           
-          <a-button 
-            @click="fetchTemplates" 
-            :loading="loading"
-            class="k8s-toolbar-btn"
-            title="刷新数据"
-          >
-            <template #icon><ReloadOutlined /></template>
-            刷新
-          </a-button>
           
           <a-button 
             type="primary" 
@@ -111,12 +86,20 @@
             class="k8s-toolbar-btn"
             title="批量删除选中的模板"
           >
-            <template #icon><DeleteOutlined /></template>
+            <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             删除 ({{ selectedRows.length }})
           </a-button>
         </div>
       </div>
     </div>
+
+    </template>
+    <a-alert v-if="clustersError" type="error" :message="clustersError" show-icon>
+      <template #action><a-button size="small" @click="fetchClusters(true)">重试集群</a-button></template>
+    </a-alert>
+    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+      <template #action><a-button size="small" @click="fetchTemplates">重试查询</a-button></template>
+    </a-alert>
 
     <!-- 数据展示区域 -->
     <div class="k8s-data-display">
@@ -151,22 +134,22 @@
           <div class="k8s-action-column">
             <a-tooltip title="查看详情">
               <a-button title="查看详情" @click="showTemplateDetail(record)">
-                <template #icon><EyeOutlined /></template>
+                <template #icon><EyeOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="查看 YAML">
               <a-button title="查看 YAML" @click="showYamlModal(record)">
-                <template #icon><FileTextOutlined /></template>
+                <template #icon><FileTextOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="检查模板">
               <a-button title="检查模板" @click="checkTemplate(record.content)" :loading="checkLoading">
-                <template #icon><CheckCircleOutlined /></template>
+                <template #icon><CheckCircleOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="编辑">
               <a-button title="编辑" @click="openEditModal(record)">
-                <template #icon><EditOutlined /></template>
+                <template #icon><EditOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="删除">
@@ -175,7 +158,7 @@
                 danger 
                 @click="deleteTemplate(record)"
               >
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
           </div>
@@ -235,7 +218,7 @@
             v-model:value="createFormModel.name" 
             placeholder="请输入模板名称（例如：nginx-deployment-template）" 
             class="k8s-form-input"
-            :maxlength="100"
+            :maxlength="50"
           />
           <div style="color: #999; font-size: 12px; margin-top: 4px;">
             支持中英文、数字、下划线和连字符，用于标识和查找模板
@@ -245,19 +228,19 @@
         <a-form-item label="YAML 内容" name="content" :required="true">
           <div class="yaml-toolbar">
             <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
-              <template #icon><FileAddOutlined /></template>
+              <template #icon><FileAddOutlined aria-hidden="true"  /></template>
               插入模板
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
-              <template #icon><FormatPainterOutlined /></template>
+              <template #icon><FormatPainterOutlined aria-hidden="true"  /></template>
               格式化
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
-              <template #icon><CheckCircleOutlined /></template>
+              <template #icon><CheckCircleOutlined aria-hidden="true"  /></template>
               检查格式
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
-              <template #icon><ClearOutlined /></template>
+              <template #icon><ClearOutlined aria-hidden="true"  /></template>
               清空
             </a-button>
           </div>
@@ -299,18 +282,18 @@
             v-model:value="editFormModel.name" 
             placeholder="请输入模板名称" 
             class="k8s-form-input"
-            :maxlength="100"
+            :maxlength="50"
           />
         </a-form-item>
 
         <a-form-item label="YAML 内容" name="content" :required="true">
           <div class="yaml-toolbar">
             <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatEditYaml">
-              <template #icon><FormatPainterOutlined /></template>
+              <template #icon><FormatPainterOutlined aria-hidden="true"  /></template>
               格式化
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateEditYaml">
-              <template #icon><CheckCircleOutlined /></template>
+              <template #icon><CheckCircleOutlined aria-hidden="true"  /></template>
               检查格式
             </a-button>
           </div>
@@ -408,11 +391,11 @@
               :loading="checkLoading"
               :disabled="!yamlFormModel.content"
             >
-              <template #icon><CheckCircleOutlined /></template>
+              <template #icon><CheckCircleOutlined aria-hidden="true"  /></template>
               检查格式
             </a-button>
             <a-button @click="copyYamlContent">
-              <template #icon><CopyOutlined /></template>
+              <template #icon><CopyOutlined aria-hidden="true"  /></template>
               复制内容
             </a-button>
           </a-space>
@@ -426,10 +409,11 @@
       </div>
     </a-modal>
 
-  </div>
+  </OpsPage>
 </template>
 
 <script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { useTemplatePage } from './Template';
@@ -454,6 +438,8 @@ const {
   // state
   clusters,
   loading,
+  loadError,
+  clustersError,
   clustersLoading,
   searchText,
   filterClusterId,
@@ -552,13 +538,8 @@ const handleClusterChange = () => {
   clearTemplates();
   
   if (filterClusterId.value) {
-    const selectedCluster = clusters.value.find(c => c.id === filterClusterId.value);
-    if (selectedCluster) {
-      message.info(`已切换到集群: ${selectedCluster.name}`);
-    }
     fetchTemplates();
   } else {
-    message.info('已清空模板列表，请选择集群查看模板');
   }
 };
 
@@ -618,7 +599,6 @@ const resetFilters = () => {
   filterClusterId.value = undefined;
   currentPage.value = 1;
   clearTemplates();
-  message.success('已重置所有筛选条件');
 };
 
 onMounted(async () => {

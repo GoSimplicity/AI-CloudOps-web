@@ -44,6 +44,11 @@ export function useTaskPage() {
   const templates = ref<K8sYamlTemplate[]>([]);
   const clusters = ref<K8sCluster[]>([]);
   const loading = ref(false);
+  const loadError = ref('');
+  const clustersError = ref('');
+  const templatesError = ref('');
+  let templateRequestId = 0;
+  let resourceRequestId = 0;
   const clustersLoading = ref(false);
   const templatesLoading = ref(false);
   const searchText = ref('');
@@ -113,7 +118,7 @@ export function useTaskPage() {
     name: [
       { required: true, message: '请输入任务名称', trigger: 'blur' },
       { pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/, message: '任务名称只能包含中英文、数字、下划线和连字符', trigger: 'blur' },
-      { max: 100, message: '任务名称长度不能超过100个字符', trigger: 'blur' }
+      { max: 50, message: '任务名称长度不能超过50个字符', trigger: 'blur' }
     ],
     template_id: [
       { required: true, message: '请选择模板', trigger: 'change' }
@@ -124,7 +129,7 @@ export function useTaskPage() {
     name: [
       { required: true, message: '请输入任务名称', trigger: 'blur' },
       { pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/, message: '任务名称只能包含中英文、数字、下划线和连字符', trigger: 'blur' },
-      { max: 100, message: '任务名称长度不能超过100个字符', trigger: 'blur' }
+      { max: 255, message: '任务名称长度不能超过255个字符', trigger: 'blur' }
     ]
   };
 
@@ -194,12 +199,20 @@ export function useTaskPage() {
 
   // cluster operations
   const clearTasks = () => {
+    resourceRequestId++;
+    loading.value = false;
+    total.value = 0;
+    loadError.value = '';
     tasks.value = [];
     selectedRowKeys.value = [];
     selectedRows.value = [];
   };
 
   const clearTemplates = () => {
+    templateRequestId++;
+    templatesLoading.value = false;
+    templatesTotal.value = 0;
+    templatesError.value = '';
     templates.value = [];
     filterTemplateId.value = undefined;
   };
@@ -210,6 +223,7 @@ export function useTaskPage() {
     }
     try {
       clustersLoading.value = true;
+      clustersError.value = '';
       const params: ListClustersReq = {
         page: clustersPage.value,
         size: clustersSize.value,
@@ -221,85 +235,100 @@ export function useTaskPage() {
         clusters.value = [...clusters.value, ...(res?.items || [])];
       }
       clustersTotal.value = res?.total || 0;
-      
+
       // 如果当前没有选择集群且有可用集群，自动选择第一个
       if (!filterClusterId.value && clusters.value.length > 0) {
         const firstCluster = clusters.value[0];
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
-          message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
-          // 自动加载该集群的模板和任务数据
+          // 加载所选集群的资源目录
           await fetchTemplates();
           await fetchTasks();
         }
       }
     } catch (err) {
-      message.error('获取集群列表失败');
-
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearTasks();
+        clearTemplates();
+      }
+      clustersError.value = '获取集群列表失败，请重试';
+      message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
   };
 
   const fetchTemplates = async (reset = false) => {
-    const clusterId = validateClusterId();
+    const clusterId = filterClusterId.value;
     if (!clusterId) {
       clearTemplates();
       return;
     }
 
+    const requestId = ++templateRequestId;
     if (reset) {
       resetTemplates();
     }
 
     try {
       templatesLoading.value = true;
+      templatesError.value = '';
       const params: YamlTemplateListReq = {
         page: templatesPage.value,
         size: templatesSize.value,
         cluster_id: clusterId,
       };
       const res = await getYamlTemplateList(params);
+      if (requestId !== templateRequestId || filterClusterId.value !== clusterId) return;
       if (templatesPage.value === 1) {
         templates.value = res?.items || [];
       } else {
         templates.value = [...templates.value, ...(res?.items || [])];
       }
       templatesTotal.value = res?.total || 0;
-    } catch (err) {
-      message.error('获取模板列表失败');
-
+    } catch {
+      if (requestId !== templateRequestId || filterClusterId.value !== clusterId) return;
+      clearTemplates();
+      clearTasks();
+      templatesError.value = '获取模板目录失败，请重试';
+      message.error(templatesError.value);
     } finally {
-      templatesLoading.value = false;
+      if (requestId === templateRequestId) templatesLoading.value = false;
     }
   };
 
   // crud operations
   const fetchTasks = async () => {
-    const clusterId = validateClusterId();
-    if (!clusterId) {
-      clearTasks();
-      return;
-    }
-
+    const clusterId = filterClusterId.value;
+    if (!clusterId) { clearTasks(); return; }
+    const requestId = ++resourceRequestId;
     try {
       loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
       const params: YamlTaskListReq = {
         page: currentPage.value,
         size: pageSize.value,
         cluster_id: clusterId,
         template_id: filterTemplateId.value || undefined,
         status: filterStatus.value || undefined,
-        search: searchText.value || undefined,
+        name: searchText.value || undefined,
       };
       const res = await getYamlTaskList(params);
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
       tasks.value = res?.items || [];
       total.value = res?.total || 0;
-    } catch (err) {
-      message.error('获取任务列表失败');
-
+    } catch {
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
+      clearTasks();
+      loadError.value = '获取 YAML 任务列表失败，请重试';
+      message.error(loadError.value);
     } finally {
-      loading.value = false;
+      if (requestId === resourceRequestId) loading.value = false;
     }
   };
 
@@ -605,6 +634,9 @@ export function useTaskPage() {
     templates,
     clusters,
     loading,
+    loadError,
+    clustersError,
+    templatesError,
     clustersLoading,
     templatesLoading,
     searchText,

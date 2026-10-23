@@ -40,7 +40,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 3,
           icon: 'lucide:server',
-          title: 'node管理',
+          title: '节点管理',
         },
       },
       {
@@ -60,7 +60,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 7,
           icon: 'lucide:layers',
-          title: 'statefulset管理',
+          title: 'StatefulSet 管理',
         },
       },
       {
@@ -70,7 +70,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 8,
           icon: 'lucide:shield',
-          title: 'DaemonSet管理',
+          title: 'DaemonSet 管理',
         },
       },
       {
@@ -90,7 +90,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 10,
           icon: 'lucide:shield-check',
-          title: 'Ingress管理',
+          title: 'Ingress 管理',
         },
       },
       {
@@ -120,7 +120,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 13,
           icon: 'lucide:key',
-          title: 'Secret管理',
+          title: 'Secret 管理',
         },
       },
       {
@@ -130,7 +130,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 14,
           icon: 'lucide:hard-drive',
-          title: 'PV管理',
+          title: 'PV 管理',
         },
       },
       {
@@ -140,7 +140,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 15,
           icon: 'lucide:database',
-          title: 'PVC管理',
+          title: 'PVC 管理',
         },
       },
       {
@@ -150,7 +150,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 16,
           icon: 'lucide:shield',
-          title: 'Role管理',
+          title: 'Role 管理',
         },
       },
       {
@@ -160,7 +160,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 17,
           icon: 'lucide:key',
-          title: 'RoleBinding管理',
+          title: 'RoleBinding 管理',
         },
       },
       {
@@ -171,7 +171,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 19,
           icon: 'lucide:settings',
-          title: 'ClusterRoleBinding管理',
+          title: 'ClusterRoleBinding 管理',
         },
       },
       {
@@ -181,7 +181,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 20,
           icon: 'lucide:file-text',
-          title: 'YAML模板管理',
+          title: 'YAML 模板管理',
         },
       },
       {
@@ -191,7 +191,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           order: 21,
           icon: 'lucide:file',
-          title: 'YAML任务管理',
+          title: 'YAML 任务管理',
         },
       },
     ],

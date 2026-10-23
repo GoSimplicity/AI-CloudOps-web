@@ -893,3 +893,223 @@ test('kubernetes Service and ConfigMap preserve real queries and responsive acti
   }
   expect(errors).toEqual([]); expect(failures).toEqual([]);
 });
+
+test('Prometheus lists preserve real empty queries, cancellation and mobile controls', async ({ page }) => {
+  test.setTimeout(180_000);
+  page.setDefaultTimeout(15_000);
+  const errors: string[] = [];
+  const failures: string[] = [];
+  const writes: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('response', response => { if (new URL(response.url()).pathname.startsWith('/api/') && response.status() >= 400) failures.push(`${response.status()} ${new URL(response.url()).pathname}`); });
+  await acceptanceLogin(page);
+  page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/monitor/') && request.method() !== 'GET') writes.push(`${request.method()} ${new URL(request.url()).pathname}`); });
+  for (const [route, title, listPath] of [
+    ['/monitor_pool', '采集池', '/api/monitor/scrape_pools/list'],
+    ['/monitor_job', '采集任务', '/api/monitor/scrape_jobs/list'],
+    ['/monitor_send', '发送组', '/api/monitor/send_groups/list'],
+    ['/monitor_alert_pool', '告警实例池', '/api/monitor/alert_manager_pools/list'],
+    ['/monitor_alert_record', '记录规则', '/api/monitor/record_rules/list'],
+    ['/monitor_alert_event', '告警事件', '/api/monitor/alert_events/list'],
+    ['/monitor_config', '监控配置', '/api/monitor/configs/list'],
+    ['/monitor_alert_rule', '告警规则', '/api/monitor/alert_rules/list'],
+    ['/monitor_onduty_group', '值班组', '/api/monitor/onduty_groups/list'],
+  ]) {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const initial = page.waitForResponse(response => new URL(response.url()).pathname === listPath);
+    await page.goto(routePath(route!));
+    await expect(page.locator('.ops-page h1')).toHaveText(title!);
+    expect((await initial).status()).toBe(200);
+    const search = page.locator('.ops-page__filters input').first();
+    const searched = page.waitForResponse(response => new URL(response.url()).pathname === listPath && new URL(response.url()).searchParams.get('search') === 'ui-no-match');
+    await search.fill('ui-no-match'); await search.press('Enter'); expect((await searched).status()).toBe(200);
+    const reset = page.locator('.ops-page__filters').getByRole('button', { name: /^重\s*置$/ });
+    const resetResponse = page.waitForResponse(response => new URL(response.url()).pathname === listPath && !new URL(response.url()).searchParams.get('search'));
+    await reset.click(); expect((await resetResponse).status()).toBe(200); await expect(search).toHaveValue('');
+    const create = page.locator('.ops-page__actions .btn-create');
+    if (await create.count()) {
+      await create.click(); await expect(page.getByRole('dialog')).toBeVisible();
+      await page.getByRole('dialog').getByRole('button', { name: /^取\s*消$/ }).click();
+      await expect(page.getByRole('dialog')).not.toBeVisible();
+    }
+    if (route === '/monitor_pool') await page.screenshot({ path: '.cache/ui-verification/prometheus-pool-desktop.png', fullPage: true, animations: 'disabled' });
+    await page.getByLabel('深色', { exact: true }).click(); await page.setViewportSize({ width: 390, height: 844 });
+    await expectUncovered(search); await expectUncovered(reset);
+    await expectUncovered(page.getByLabel('深色', { exact: true }));
+    if (await create.count()) await expectUncovered(create);
+    const cardWidths = await page.locator('.ops-page__summary .ant-card').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().width));
+    if (cardWidths.length > 1) expect(Math.max(...cardWidths)).toBeLessThan(200);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (route === '/monitor_send') await page.screenshot({ path: '.cache/ui-verification/prometheus-send-mobile.png', fullPage: true, animations: 'disabled' });
+  }
+  expect(errors).toEqual([]); expect(failures).toEqual([]); expect(writes).toEqual([]);
+});
+
+test('cron default retry budget and responsive cancellation use real API', async ({ page }) => {
+  page.setDefaultTimeout(15_000);
+  const errors: string[] = []; const writes: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await acceptanceLogin(page);
+  page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/cron/') && request.method() !== 'GET') writes.push(`${request.method()} ${new URL(request.url()).pathname}`); });
+  const list = page.waitForResponse(response => new URL(response.url()).pathname === '/api/cron/job/list');
+  await page.goto(routePath('/cron/management'));
+  await expect(page.locator('.ops-page h1')).toHaveText('定时任务管理'); expect((await list).status()).toBe(200);
+  const create = page.locator('.ops-page__actions').getByRole('button', { name: /创建任务/ });
+  await create.click(); const dialog = page.getByRole('dialog'); await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('spinbutton', { name: /^自动重投次数/ })).toHaveValue('3');
+  await dialog.getByRole('button', { name: /^取\s*消$/ }).click(); await expect(dialog).not.toBeVisible();
+  await page.screenshot({ path: '.cache/ui-verification/cron-desktop.png', fullPage: true, animations: 'disabled' });
+  await page.getByLabel('深色', { exact: true }).click(); await page.setViewportSize({ width: 390, height: 844 });
+  await expectUncovered(create); await expectUncovered(page.getByPlaceholder('搜索任务名称或描述...'));
+  await expectUncovered(page.locator('.ops-page__actions').getByRole('button', { name: /刷新数据/ }));
+  await create.click(); await expect(dialog).toBeVisible(); await expect(dialog.getByRole('spinbutton', { name: /^自动重投次数/ })).toHaveValue('3');
+  await dialog.getByRole('button', { name: /^取\s*消$/ }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: '.cache/ui-verification/cron-mobile.png', fullPage: true, animations: 'disabled' });
+  expect(errors).toEqual([]); expect(writes).toEqual([]);
+});
+
+test('on-duty calendar reads an isolated real group and supports month navigation', async ({ page }) => {
+  test.setTimeout(90_000); page.setDefaultTimeout(15_000);
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  const login = page.waitForResponse(response => new URL(response.url()).pathname === '/api/user/login');
+  const profileResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/user/profile');
+  await acceptanceLogin(page);
+  const token = (await (await login).json()).data.accessToken;
+  const profile = (await (await profileResponse).json()).data;
+  const headers = { Authorization: `Bearer ${token}` };
+  const name = `ui-calendar-${Date.now()}`;
+  let groupId = 0;
+  try {
+    const created = await page.request.post('/api/monitor/onduty_groups/create', { headers, data: { name, user_ids: [profile.id], shift_days: 1, description: 'Isolated UI acceptance fixture' } });
+    expect(created.status()).toBe(200); expect((await created.json()).code).toBe(0);
+    const listed = await page.request.get('/api/monitor/onduty_groups/list', { headers, params: { page: 1, size: 10, search: name } });
+    const matches = (await listed.json()).data.items.filter((item: { name: string }) => item.name === name);
+    expect(matches.length).toBe(1); groupId = matches[0].id;
+    const future = page.waitForResponse(response => new URL(response.url()).pathname === `/api/monitor/onduty_groups/future_plan/${groupId}`);
+    await page.goto(routePath(`/monitor_onduty_group_table?id=${groupId}`));
+    await expect(page.locator('.ops-page h1')).toHaveText(name); expect((await future).status()).toBe(200);
+    await expect(page.locator('.calendar-day').first()).toBeVisible();
+    const title = page.locator('.calendar-title h2'); const initial = await title.textContent();
+    await page.getByRole('button', { name: '下个月', exact: true }).click(); await expect(title).not.toHaveText(initial!);
+    await expect(page.getByRole('button', { name: '上个月', exact: true })).toBeEnabled();
+    await page.getByRole('button', { name: '上个月', exact: true }).click(); await expect(title).toHaveText(initial!);
+    const history = page.waitForResponse(response => new URL(response.url()).pathname === `/api/monitor/onduty_groups/history/${groupId}` && new URL(response.url()).searchParams.get('search') === 'ui-no-history');
+    await page.getByPlaceholder('搜索值班历史...').fill('ui-no-history'); await page.getByPlaceholder('搜索值班历史...').press('Enter'); expect((await history).status()).toBe(200);
+    await page.getByLabel('深色', { exact: true }).click(); await page.setViewportSize({ width: 390, height: 844 });
+    await expectUncovered(page.getByRole('button', { name: '返回值班组', exact: true }));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: '.cache/ui-verification/prometheus-calendar-mobile.png', fullPage: true, animations: 'disabled' });
+    expect(errors).toEqual([]);
+  } finally {
+    if (groupId > 0) {
+      const deleted = await page.request.delete(`/api/monitor/onduty_groups/delete/${groupId}`, { headers });
+      expect(deleted.status()).toBe(200); expect((await deleted.json()).code).toBe(0);
+    }
+  }
+});
+
+test('remaining Kubernetes resource lists preserve real kind scopes and safe cancellation', async ({ page }) => {
+  test.setTimeout(180_000); page.setDefaultTimeout(15_000);
+  const namespace = process.env.CLOUDOPS_TEST_NAMESPACE;
+  const clusterName = process.env.CLOUDOPS_TEST_CLUSTER_NAME;
+  test.skip(!namespace || !clusterName, 'Requires isolated kind resources.');
+  const errors: string[] = []; const failures: string[] = []; const writes: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('response', response => { if (new URL(response.url()).pathname.startsWith('/api/k8s/') && response.status() >= 400) failures.push(`${response.status()} ${new URL(response.url()).pathname}`); });
+  await acceptanceLogin(page);
+  page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/k8s/') && request.method() !== 'GET') writes.push(`${request.method()} ${new URL(request.url()).pathname}`); });
+  for (const [kind, title, namespaced] of [
+    ['node', '节点管理', false], ['statefulset', 'StatefulSet 管理', true], ['daemonset', 'DaemonSet 管理', true],
+    ['ingress', 'Ingress 管理', true], ['secret', 'Secret 管理', true], ['pvc', 'PVC 管理', true],
+    ['role', 'Role 管理', true], ['rolebinding', 'RoleBinding 管理', true], ['pv', 'PV 管理', false], ['clusterrolebinding', 'ClusterRoleBinding 管理', false],
+  ] as const) {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const initial = page.waitForResponse(response => new URL(response.url()).pathname === `/api/k8s/${kind}/1/list`);
+    await page.goto(routePath(`/k8s_${kind}`)); await expect(page.locator('.ops-page h1')).toHaveText(title);
+    await expect(page.locator('.k8s-cluster-selector')).toContainText(clusterName!); expect((await initial).status()).toBe(200);
+    if (namespaced) await selectAcceptanceNamespace(page, namespace!);
+    await expect(page.locator('.ops-page .ant-alert-error')).toHaveCount(0);
+    const create = page.locator('.ops-page__actions').getByRole('button', { name: /创建/ });
+    if (await create.count()) {
+      await create.click(); await expect(page.getByRole('dialog')).toBeVisible();
+      await page.getByRole('dialog').getByRole('button', { name: /^取\s*消$/ }).click(); await expect(page.getByRole('dialog')).not.toBeVisible();
+    }
+    if (kind === 'node') {
+      await expect(page.locator('.ant-table-tbody tr[data-row-key]').first()).toBeVisible();
+      await page.screenshot({ path: '.cache/ui-verification/k8s-node-desktop.png', fullPage: true, animations: 'disabled' });
+    }
+    await page.getByLabel('深色', { exact: true }).click(); await page.setViewportSize({ width: 390, height: 844 });
+    await expectUncovered(page.locator('.ops-page__actions').getByRole('button', { name: '刷新数据', exact: true }));
+    await expectUncovered(page.locator('.k8s-cluster-selector'));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (kind === 'rolebinding') await page.screenshot({ path: '.cache/ui-verification/k8s-rolebinding-mobile.png', fullPage: true, animations: 'disabled' });
+  }
+  expect(errors).toEqual([]); expect(failures).toEqual([]); expect(writes).toEqual([]);
+});
+
+test('YAML templates and tasks complete a real isolated dry-run without creating a resource', async ({ page }) => {
+  test.setTimeout(120_000); page.setDefaultTimeout(15_000);
+  const namespace = process.env.CLOUDOPS_TEST_NAMESPACE;
+  const clusterName = process.env.CLOUDOPS_TEST_CLUSTER_NAME;
+  test.skip(!namespace || !clusterName, 'Requires isolated kind resources.');
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  const login = page.waitForResponse(response => new URL(response.url()).pathname === '/api/user/login');
+  await acceptanceLogin(page);
+  const token = (await (await login).json()).data.accessToken;
+  const headers = { Authorization: `Bearer ${token}` };
+  const resourceName = `ui-yaml-${Date.now()}`;
+  const templateName = `${resourceName}-template`; const taskName = `${resourceName}-task`;
+  const content = `apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: ${resourceName}\n  namespace: ${namespace}\ndata:\n  validation: safe-dry-run\n`;
+  let templateId = 0; let taskId = 0;
+  let templateCreated = false; let taskCreated = false;
+  const ownId = async (kind: string, name: string) => {
+    const response = await page.request.get(`/api/k8s/${kind}/1/list`, { headers, params: { page: 1, size: 10, cluster_id: 1, ...(kind === 'yaml_task' ? { name } : { search: name }) } });
+    expect(response.status()).toBe(200);
+    const data = await response.json(); expect(data.code).toBe(0);
+    const matches = data.data.items.filter((item: { name: string }) => item.name === name);
+    return matches[0]?.id || 0;
+  };
+  try {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(routePath('/k8s_yaml_template')); await expect(page.locator('.ops-page h1')).toHaveText('YAML 模板管理');
+    await expect(page.locator('.k8s-cluster-selector')).toContainText(clusterName!);
+    await page.locator('.ops-page__actions').getByRole('button', { name: /创建/ }).click();
+    const dialog = page.getByRole('dialog'); await expect(dialog).toBeVisible();
+    await dialog.getByRole('textbox', { name: /模板名称/ }).fill(templateName);
+    await dialog.getByRole('textbox', { name: /YAML 内容/ }).fill(content);
+    const createdTemplate = page.waitForResponse(response => new URL(response.url()).pathname === '/api/k8s/yaml_template/1/create');
+    await dialog.getByRole('button', { name: /^创\s*建$/ }).click(); const templateResponse = await createdTemplate; expect(templateResponse.status()).toBe(200); templateCreated = (await templateResponse.json()).code === 0; expect(templateCreated).toBe(true); await expect(dialog).not.toBeVisible();
+    templateId = await ownId('yaml_template', templateName); expect(templateId).toBeGreaterThan(0);
+    await expect(page.locator(`tr[data-row-key="${templateId}"]`)).toContainText(templateName);
+    await page.goto(routePath('/k8s_yaml_task')); await expect(page.locator('.ops-page h1')).toHaveText('YAML 任务管理');
+    await page.locator('.ops-page__actions').getByRole('button', { name: /创建/ }).click(); await expect(dialog).toBeVisible();
+    await dialog.getByRole('textbox', { name: /任务名称/ }).fill(taskName);
+    await dialog.locator('.ant-select').first().click();
+    await page.locator('.ant-select-dropdown:visible').getByText(templateName, { exact: true }).click();
+    const createdTask = page.waitForResponse(response => new URL(response.url()).pathname === '/api/k8s/yaml_task/1/create');
+    await dialog.getByRole('button', { name: /^创\s*建$/ }).click(); const taskResponse = await createdTask; expect(taskResponse.status()).toBe(200); taskCreated = (await taskResponse.json()).code === 0; expect(taskCreated).toBe(true); await expect(dialog).not.toBeVisible();
+    taskId = await ownId('yaml_task', taskName); expect(taskId).toBeGreaterThan(0);
+    const row = page.locator(`tr[data-row-key="${taskId}"]`); await expect(row).toContainText(taskName);
+    await row.getByRole('button', { name: '执行任务', exact: true }).click(); await expect(dialog).toBeVisible();
+    await dialog.getByRole('checkbox', { name: '预检查模式 (Dry Run)', exact: true }).check();
+    const applyRequest = page.waitForRequest(request => new URL(request.url()).pathname === `/api/k8s/yaml_task/1/${taskId}/apply`);
+    const applyResponse = page.waitForResponse(response => new URL(response.url()).pathname === `/api/k8s/yaml_task/1/${taskId}/apply`);
+    await dialog.getByRole('button', { name: /^执\s*行$/ }).click();
+    expect((await applyRequest).postDataJSON().dry_run).toBe(true); expect((await applyResponse).status()).toBe(200); await expect(dialog).not.toBeVisible();
+    const objects = await page.request.get('/api/k8s/configmap/1/list', { headers, params: { namespace, search: resourceName, page: 1, size: 10 } });
+    expect(objects.status()).toBe(200); expect((await objects.json()).data.items.filter((item: { name: string }) => item.name === resourceName)).toHaveLength(0);
+    await page.getByLabel('深色', { exact: true }).click(); await page.setViewportSize({ width: 390, height: 844 });
+    await expectUncovered(page.locator('.ops-page__actions').getByRole('button', { name: '刷新数据', exact: true }));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: '.cache/ui-verification/k8s-yaml-task-mobile.png', fullPage: true, animations: 'disabled' });
+    expect(errors).toEqual([]);
+  } finally {
+    if (taskCreated) taskId ||= await ownId('yaml_task', taskName);
+    if (templateCreated) templateId ||= await ownId('yaml_template', templateName);
+    if (taskId > 0) expect((await page.request.delete(`/api/k8s/yaml_task/1/${taskId}/delete`, { headers })).status()).toBe(200);
+    if (templateId > 0) expect((await page.request.delete(`/api/k8s/yaml_template/1/${templateId}/delete`, { headers })).status()).toBe(200);
+    const objects = await page.request.get('/api/k8s/configmap/1/list', { headers, params: { namespace, search: resourceName, page: 1, size: 10 } });
+    if (objects.ok()) for (const item of (await objects.json()).data.items) if (item.name === resourceName && item.namespace === namespace) expect((await page.request.delete(`/api/k8s/configmap/1/${namespace}/${resourceName}/delete`, { headers })).status()).toBe(200);
+  }
+});

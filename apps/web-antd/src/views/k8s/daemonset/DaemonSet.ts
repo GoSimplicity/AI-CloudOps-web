@@ -74,6 +74,11 @@ export function useDaemonSetPage() {
   const clusters = ref<K8sCluster[]>([]);
   const namespaces = ref<K8sNamespace[]>([]);
   const loading = ref(false);
+  const loadError = ref('');
+  const clustersError = ref('');
+  const namespacesError = ref('');
+  let namespaceRequestId = 0;
+  let resourceRequestId = 0;
   const clustersLoading = ref(false);
   const namespacesLoading = ref(false);
   const searchText = ref('');
@@ -275,12 +280,19 @@ export function useDaemonSetPage() {
 
   // cluster operations
   const clearDaemonSets = () => {
+    resourceRequestId++;
+    loading.value = false;
+    total.value = 0;
+    loadError.value = '';
     daemonSets.value = [];
     selectedRowKeys.value = [];
     selectedRows.value = [];
   };
 
   const clearNamespaces = () => {
+    namespaceRequestId++;
+    namespacesLoading.value = false;
+    namespacesError.value = '';
     resetNamespaces();
     filterNamespace.value = undefined;
   };
@@ -291,6 +303,7 @@ export function useDaemonSetPage() {
     }
     try {
       clustersLoading.value = true;
+      clustersError.value = '';
       const params: ListClustersReq = {
         page: clustersPage.value,
         size: clustersSize.value,
@@ -302,41 +315,58 @@ export function useDaemonSetPage() {
         clusters.value = [...clusters.value, ...(res?.items || [])];
       }
       clustersTotal.value = res?.total || 0;
-      
+
       // 如果当前没有选择集群且有可用集群，自动选择第一个
       if (!filterClusterId.value && clusters.value.length > 0) {
         const firstCluster = clusters.value[0];
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
-          message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
           // 自动加载该集群的命名空间和DaemonSet数据
           await fetchNamespaces();
           await fetchDaemonSets();
         }
       }
     } catch (err) {
-      message.error('获取集群列表失败');
-
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearNamespaces();
+        clearDaemonSets();
+      }
+      clustersError.value = '获取集群列表失败，请重试';
+      message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
   };
 
   const fetchNamespaces = async (reset = false) => {
-    if (!filterClusterId.value) return;
-    
+    const clusterId = filterClusterId.value;
+    if (!clusterId) {
+      clearNamespaces();
+      return;
+    }
+    const requestId = ++namespaceRequestId;
+
     if (reset) {
       resetNamespaces();
     }
-    
+
     try {
       namespacesLoading.value = true;
+      namespacesError.value = '';
       const params: K8sNamespaceListReq = {
-        cluster_id: filterClusterId.value,
+        cluster_id: clusterId,
         page: namespacesPage.value,
         size: namespacesSize.value,
       };
-      const res = await getNamespacesListApi(filterClusterId.value, params);
+      const res = await getNamespacesListApi(clusterId, params);
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       if (namespacesPage.value === 1) {
         namespaces.value = res?.items || [];
       } else {
@@ -344,48 +374,58 @@ export function useDaemonSetPage() {
       }
       namespacesTotal.value = res?.total || 0;
     } catch (err) {
-      message.error('获取命名空间列表失败');
-
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      namespaces.value = [];
+      namespacesTotal.value = 0;
+      namespacesError.value = '获取命名空间列表失败，请重试';
+      message.error(namespacesError.value);
     } finally {
-      namespacesLoading.value = false;
+      if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
   };
 
   // crud operations
   const fetchDaemonSets = async () => {
-    if (!filterClusterId.value || filterClusterId.value === 0) {
-      message.warning('请先选择有效的集群');
-      daemonSets.value = [];
-      total.value = 0;
-      return;
-    }
-
+    const clusterId = filterClusterId.value;
+    const namespace = filterNamespace.value;
+    if (!clusterId) { clearDaemonSets(); return; }
+    const requestId = ++resourceRequestId;
     try {
       loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
       const params: GetDaemonSetListReq = {
         page: currentPage.value,
         size: pageSize.value,
         search: searchText.value || undefined,
-        cluster_id: filterClusterId.value,
-        namespace: filterNamespace.value || undefined,
+        cluster_id: clusterId,
+        namespace: namespace || undefined,
         status: filterStatus.value?.toString() || undefined,
         labels: Object.keys(filterLabels.value).length > 0 
           ? filterLabels.value
           : undefined,
       };
-      const res = await getDaemonSetListApi(filterClusterId.value, params);
+      const res = await getDaemonSetListApi(clusterId, params);
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       // 确保每个daemonSet对象都有正确的cluster_id
       const daemonSetsWithClusterId = (res?.items || []).map((daemonSet: K8sDaemonSet) => ({
         ...daemonSet,
-        cluster_id: daemonSet.cluster_id || filterClusterId.value || 0
+        cluster_id: daemonSet.cluster_id || clusterId || 0
       }));
       daemonSets.value = daemonSetsWithClusterId;
       total.value = res?.total || 0;
-    } catch (err) {
-      message.error('获取 DaemonSet 列表失败');
-
+    } catch {
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      clearDaemonSets();
+      loadError.value = '获取 DaemonSet 列表失败，请重试';
+      message.error(loadError.value);
     } finally {
-      loading.value = false;
+      if (requestId === resourceRequestId) loading.value = false;
     }
   };
 
@@ -1157,6 +1197,9 @@ export function useDaemonSetPage() {
     clusters,
     namespaces,
     loading,
+    loadError,
+    clustersError,
+    namespacesError,
     clustersLoading,
     namespacesLoading,
     searchText,

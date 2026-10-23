@@ -44,6 +44,11 @@ export function useIngressPage() {
   const clusters = ref<K8sCluster[]>([]);
   const namespaces = ref<K8sNamespace[]>([]);
   const loading = ref(false);
+  const loadError = ref('');
+  const clustersError = ref('');
+  const namespacesError = ref('');
+  let namespaceRequestId = 0;
+  let resourceRequestId = 0;
   const clustersLoading = ref(false);
   const namespacesLoading = ref(false);
   const searchText = ref('');
@@ -313,12 +318,19 @@ export function useIngressPage() {
 
   // cluster operations
   const clearIngresses = () => {
+    resourceRequestId++;
+    loading.value = false;
+    total.value = 0;
+    loadError.value = '';
     ingresses.value = [];
     selectedRowKeys.value = [];
     selectedRows.value = [];
   };
 
   const clearNamespaces = () => {
+    namespaceRequestId++;
+    namespacesLoading.value = false;
+    namespacesError.value = '';
     resetNamespaces();
     filterNamespace.value = undefined;
   };
@@ -329,6 +341,7 @@ export function useIngressPage() {
     }
     try {
       clustersLoading.value = true;
+      clustersError.value = '';
       const params: ListClustersReq = {
         page: clustersPage.value,
         size: clustersSize.value,
@@ -340,41 +353,58 @@ export function useIngressPage() {
         clusters.value = [...clusters.value, ...(res?.items || [])];
       }
       clustersTotal.value = res?.total || 0;
-      
+
       // 如果当前没有选择集群且有可用集群，自动选择第一个
       if (!filterClusterId.value && clusters.value.length > 0) {
         const firstCluster = clusters.value[0];
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
-          message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
           // 自动加载该集群的命名空间和Ingress数据
           await fetchNamespaces();
           await fetchIngresses();
         }
       }
     } catch (err) {
-      message.error('获取集群列表失败');
-
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearNamespaces();
+        clearIngresses();
+      }
+      clustersError.value = '获取集群列表失败，请重试';
+      message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
   };
 
   const fetchNamespaces = async (reset = false) => {
-    if (!filterClusterId.value) return;
-    
+    const clusterId = filterClusterId.value;
+    if (!clusterId) {
+      clearNamespaces();
+      return;
+    }
+    const requestId = ++namespaceRequestId;
+
     if (reset) {
       resetNamespaces();
     }
-    
+
     try {
       namespacesLoading.value = true;
+      namespacesError.value = '';
       const params: K8sNamespaceListReq = {
-        cluster_id: filterClusterId.value,
+        cluster_id: clusterId,
         page: namespacesPage.value,
         size: namespacesSize.value,
       };
-      const res = await getNamespacesListApi(filterClusterId.value, params);
+      const res = await getNamespacesListApi(clusterId, params);
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       if (namespacesPage.value === 1) {
         namespaces.value = res?.items || [];
       } else {
@@ -382,27 +412,34 @@ export function useIngressPage() {
       }
       namespacesTotal.value = res?.total || 0;
     } catch (err) {
-      message.error('获取命名空间列表失败');
-
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      namespaces.value = [];
+      namespacesTotal.value = 0;
+      namespacesError.value = '获取命名空间列表失败，请重试';
+      message.error(namespacesError.value);
     } finally {
-      namespacesLoading.value = false;
+      if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
   };
 
   // crud operations
   const fetchIngresses = async () => {
-    if (!filterClusterId.value || filterClusterId.value === 0) {
-      message.warning('请先选择有效的集群');
-      ingresses.value = [];
-      total.value = 0;
-      return;
-    }
-
+    const clusterId = filterClusterId.value;
+    const namespace = filterNamespace.value;
+    if (!clusterId) { clearIngresses(); return; }
+    const requestId = ++resourceRequestId;
     try {
       loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
       const params: GetIngressListReq = {
-        cluster_id: filterClusterId.value,
-        namespace: filterNamespace.value || undefined,
+        cluster_id: clusterId,
+        namespace: namespace || undefined,
         search: searchText.value || undefined,
         status: filterStatus.value || undefined,
         labels: Object.keys(filterLabels.value).length > 0 ? filterLabels.value : undefined,
@@ -410,21 +447,24 @@ export function useIngressPage() {
         size: pageSize.value,
       };
       const res = await getK8sIngressList(params);
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       // 确保每个ingress对象都有正确的cluster_id
       const ingressesWithClusterId = (res?.items || []).map((ingress: K8sIngress) => ({
         ...ingress,
-        cluster_id: ingress.cluster_id || filterClusterId.value || 0,
+        cluster_id: ingress.cluster_id || clusterId || 0,
         // 计算前端使用的字段
         age: calculateAge(ingress.created_at),
         hosts: extractHosts(ingress.rules),
       }));
       ingresses.value = ingressesWithClusterId;
       total.value = res?.total || 0;
-    } catch (err) {
-      message.error('获取 Ingress 列表失败');
-
+    } catch {
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      clearIngresses();
+      loadError.value = '获取 Ingress 列表失败，请重试';
+      message.error(loadError.value);
     } finally {
-      loading.value = false;
+      if (requestId === resourceRequestId) loading.value = false;
     }
   };
 
@@ -999,6 +1039,9 @@ export function useIngressPage() {
     clusters,
     namespaces,
     loading,
+    loadError,
+    clustersError,
+    namespacesError,
     clustersLoading,
     namespacesLoading,
     searchText,

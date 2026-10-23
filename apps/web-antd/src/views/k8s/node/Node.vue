@@ -1,49 +1,33 @@
 <template>
-  <div class="k8s-management-container">
-    <!-- 页面头部 -->
-    <div class="k8s-page-header">
-      <a-row class="k8s-header-content" :gutter="[24, 16]">
-        <a-col :xs="24" :sm="24" :md="16" :lg="16" :xl="18">
-          <div class="k8s-title-section">
-            <div class="k8s-page-title">
-              <NodeIndexOutlined class="k8s-title-icon" />
-              <div>
-                <h1>节点管理</h1>
-                <p class="k8s-page-subtitle">管理和监控集群中的所有 Kubernetes 节点</p>
-              </div>
-            </div>
-          </div>
-        </a-col>
-        <a-col :xs="24" :sm="24" :md="8" :lg="8" :xl="6">
-          <div class="k8s-header-actions">
-            <a-button @click="fetchNodes" :loading="loading">
-              <template #icon><ReloadOutlined /></template>
+  <OpsPage title="节点管理" description="管理和监控集群中的所有 Kubernetes 节点">
+    <template #actions>
+            <a-button @click="fetchNodes" :loading="loading" :disabled="!filterClusterId">
+              <template #icon><ReloadOutlined aria-hidden="true"  /></template>
               刷新数据
             </a-button>
-          </div>
-        </a-col>
-      </a-row>
-    </div>
+    </template>
 
     <!-- 工具栏 -->
-    <div class="k8s-toolbar">
+    <template #filters>
+    <div class="ops-filter-row">
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
           <a-select 
             v-model:value="filterClusterId" 
             placeholder="选择集群" 
-            class="k8s-cluster-selector" 
+            class="k8s-cluster-selector"
+            aria-label="选择集群"
             allow-clear 
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
             @popup-scroll="handleClusterDropdownScroll"
           >
-            <template #suffixIcon><DeploymentUnitOutlined /></template>
+            <template #suffixIcon><DeploymentUnitOutlined aria-hidden="true"  /></template>
             <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
               <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span>{{ cluster.name }}</span>
+                <span class="k8s-cluster-name" :title="cluster.name">{{ cluster.name }}</span>
                 <a-tag color="blue" size="small">{{ getEnvText(cluster.env) }}</a-tag>
               </div>
             </a-select-option>
@@ -51,7 +35,7 @@
               v-if="clusters.length > 0 && clusters.length < clustersTotal" 
               :value="'__load_more__'" 
               disabled
-              style="text-align: center; color: #999;"
+              style="text-align: center; color: var(--ops-muted);"
             >
               <a-spin size="small" :spinning="clustersLoading" />
               <span v-if="!clustersLoading">滚动加载更多...</span>
@@ -65,7 +49,7 @@
             allow-clear 
             @change="handleFilterChange"
           >
-            <template #suffixIcon><FilterOutlined /></template>
+            <template #suffixIcon><FilterOutlined aria-hidden="true"  /></template>
             <a-select-option :value="NodeStatus.Ready">就绪</a-select-option>
             <a-select-option :value="NodeStatus.NotReady">未就绪</a-select-option>
             <a-select-option :value="NodeStatus.SchedulingDisabled">调度禁用</a-select-option>
@@ -84,7 +68,7 @@
             allow-clear 
           >
             <template #suffix>
-              <SearchOutlined class="k8s-search-icon" />
+              <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
             </template>
           </a-input>
         </div>
@@ -99,19 +83,10 @@
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
           >
-            <template #icon><DeleteOutlined /></template>
+            <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             重置筛选
           </a-button>
           
-          <a-button 
-            @click="fetchNodes" 
-            :loading="loading"
-            class="k8s-toolbar-btn"
-            title="刷新数据"
-          >
-            <template #icon><ReloadOutlined /></template>
-            刷新
-          </a-button>
           
           <a-button 
             type="primary" 
@@ -122,12 +97,20 @@
             class="k8s-toolbar-btn"
             title="批量禁用调度"
           >
-            <template #icon><StopOutlined /></template>
+            <template #icon><StopOutlined aria-hidden="true"  /></template>
             批量操作 ({{ selectedRows.length }})
           </a-button>
         </div>
       </div>
     </div>
+
+    </template>
+    <a-alert v-if="clustersError" type="error" :message="clustersError" show-icon>
+      <template #action><a-button size="small" @click="fetchClusters(true)">重试集群</a-button></template>
+    </a-alert>
+    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+      <template #action><a-button size="small" @click="fetchNodes">重试查询</a-button></template>
+    </a-alert>
 
     <!-- 数据展示区域 -->
     <div class="k8s-data-display">
@@ -136,7 +119,7 @@
         :data-source="filteredNodes"
         :row-selection="rowSelection"
         :loading="loading"
-        row-key="name"
+        :row-key="clusterResourceKey"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,
@@ -237,7 +220,7 @@
 
         <template #uid="{ text }">
           <a-tooltip v-if="text" :title="text">
-            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: #666;">
+            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
               {{ text.substring(0, 8) }}...
             </span>
           </a-tooltip>
@@ -245,9 +228,9 @@
         </template>
 
         <template #createdAt="{ text }">
-          <div v-if="text" style="font-size: 12px; color: #666;">
+          <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
             <div>{{ formatDateTime(text) }}</div>
-            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
           </div>
           <span v-else class="k8s-no-data">-</span>
         </template>
@@ -256,17 +239,17 @@
           <div class="k8s-action-column">
             <a-tooltip title="查看详情">
               <a-button title="查看详情" @click="showNodeDetail(record)">
-                <template #icon><EyeOutlined /></template>
+                <template #icon><EyeOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="管理标签">
               <a-button title="管理标签" @click="openEditLabelModal(record)">
-                <template #icon><TagsOutlined /></template>
+                <template #icon><TagsOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="管理污点">
               <a-button title="管理污点" @click="openTaintModal(record)">
-                <template #icon><WarningOutlined /></template>
+                <template #icon><WarningOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip :title="record.schedulable === 1 ? '禁用调度' : '启用调度'">
@@ -276,8 +259,8 @@
                 data-action="schedule"
               >
                 <template #icon>
-                  <StopOutlined v-if="record.schedulable === 1" />
-                  <PlayCircleOutlined v-else />
+                  <StopOutlined aria-hidden="true" v-if="record.schedulable === 1" />
+                  <PlayCircleOutlined aria-hidden="true" v-else />
                 </template>
               </a-button>
             </a-tooltip>
@@ -288,7 +271,7 @@
                 danger
                 data-action="drain"
               >
-                <template #icon><DisconnectOutlined /></template>
+                <template #icon><DisconnectOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
           </div>
@@ -296,9 +279,10 @@
 
         <template #emptyText>
           <div class="k8s-empty-state">
-            <NodeIndexOutlined />
+            <NodeIndexOutlined aria-hidden="true"  />
             <p>暂无节点数据</p>
-            <p>请先选择集群</p>
+            <p v-if="!filterClusterId">请先选择集群</p>
+            <p v-else>请调整筛选条件或刷新数据</p>
           </div>
         </template>
       </a-table>
@@ -339,7 +323,7 @@
         <a-form-item label="标签配置 (Key-Value)">
           <a-form-item-rest>
             <div class="k8s-key-value-inputs">
-              <div v-if="!labelFormModel.labels || Object.keys(labelFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 20px;">
+              <div v-if="!labelFormModel.labels || Object.keys(labelFormModel.labels).length === 0" style="text-align: center; color: var(--ops-muted); padding: 20px;">
                 暂无标签，点击下方"添加"按钮添加新标签
               </div>
               <div v-for="(_, key) in labelFormModel.labels" :key="key" class="k8s-key-value-row">
@@ -356,7 +340,7 @@
                   :maxlength="200"
                 />
                 <a-button type="text" danger @click="removeLabelField(key)" class="k8s-remove-btn">
-                  <template #icon><DeleteOutlined /></template>
+                  <template #icon><DeleteOutlined aria-hidden="true"  /></template>
                   删除
                 </a-button>
               </div>
@@ -368,7 +352,7 @@
                   @press-enter="addNewLabel"
                 />
                 <a-button type="primary" @click="addNewLabel" :disabled="!newLabelKey.trim()">
-                  <template #icon><PlusOutlined /></template>
+                  <template #icon><PlusOutlined aria-hidden="true"  /></template>
                   添加
                 </a-button>
               </div>
@@ -426,7 +410,7 @@
         <a-form-item label="污点配置 (Key, Value, Effect)">
           <a-form-item-rest>
             <div class="k8s-key-value-inputs">
-              <div v-if="!taintFormModel.taints || taintFormModel.taints.length === 0" style="text-align: center; color: #999; padding: 20px;">
+              <div v-if="!taintFormModel.taints || taintFormModel.taints.length === 0" style="text-align: center; color: var(--ops-muted); padding: 20px;">
                 暂无污点，点击下方"添加污点"按钮添加新污点
               </div>
               <div v-for="(taint, idx) in taintFormModel.taints" :key="idx" class="k8s-key-value-row">
@@ -453,12 +437,12 @@
                   <a-select-option value="NoExecute">NoExecute</a-select-option>
                 </a-select>
                 <a-button type="text" danger @click="removeTaint(idx)" class="k8s-remove-btn">
-                  <template #icon><DeleteOutlined /></template>
+                  <template #icon><DeleteOutlined aria-hidden="true"  /></template>
                   删除
                 </a-button>
               </div>
               <a-button type="dashed" @click="addTaint" block style="margin-top: 12px;">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加污点
               </a-button>
             </div>
@@ -486,7 +470,7 @@
               :loading="yamlValidating"
               :disabled="!taintYamlData || !taintYamlData.trim()"
             >
-              <template #icon><CheckOutlined /></template>
+              <template #icon><CheckOutlined aria-hidden="true"  /></template>
               验证 YAML
             </a-button>
           </a-form-item-rest>
@@ -548,7 +532,7 @@
                 <a-radio :value="1">是</a-radio>
                 <a-radio :value="2">否（推荐）</a-radio>
               </a-radio-group>
-              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+              <div style="color: var(--ops-muted); font-size: 12px; margin-top: 4px;">
                 强制驱逐将忽略 PodDisruptionBudget（PDB），可能影响服务可用性
               </div>
             </a-form-item>
@@ -562,7 +546,7 @@
                 <a-radio :value="1">是（推荐）</a-radio>
                 <a-radio :value="2">否</a-radio>
               </a-radio-group>
-              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+              <div style="color: var(--ops-muted); font-size: 12px; margin-top: 4px;">
                 DaemonSet Pod 会在每个节点上运行，通常应忽略
               </div>
             </a-form-item>
@@ -579,7 +563,7 @@
                 <a-radio :value="1">是</a-radio>
                 <a-radio :value="2">否（推荐）</a-radio>
               </a-radio-group>
-              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+              <div style="color: var(--ops-muted); font-size: 12px; margin-top: 4px;">
                 允许删除使用 emptyDir 卷的 Pod（本地数据会丢失）
               </div>
             </a-form-item>
@@ -595,7 +579,7 @@
                 placeholder="30"
                 style="width: 100%"
               />
-              <div style="color: #999; font-size: 12px; margin-top: 4px;">
+              <div style="color: var(--ops-muted); font-size: 12px; margin-top: 4px;">
                 Pod 优雅停止的等待时间（默认 30 秒）
               </div>
             </a-form-item>
@@ -612,7 +596,7 @@
             placeholder="300"
             style="width: 100%"
           />
-          <div style="color: #999; font-size: 12px; margin-top: 4px;">
+          <div style="color: var(--ops-muted); font-size: 12px; margin-top: 4px;">
             驱逐操作的最大等待时间（默认 300 秒），超时后操作将失败
           </div>
         </a-form-item>
@@ -702,7 +686,7 @@
                   <span class="k8s-detail-label">系统镜像:</span>
                   <span class="k8s-detail-value">{{ currentNodeDetail.os_image }}</span>
                 </div>
-                <div class="k8s-detail-item" v-if="!hasSystemInfo(currentNodeDetail)" style="text-align: center; color: #999; padding: 20px;">
+                <div class="k8s-detail-item" v-if="!hasSystemInfo(currentNodeDetail)" style="text-align: center; color: var(--ops-muted); padding: 20px;">
                   暂无系统信息
                 </div>
               </a-card>
@@ -724,7 +708,7 @@
                       <span class="k8s-kv-value">{{ value }}</span>
                     </div>
                   </template>
-                  <div v-else style="text-align: center; color: #999; padding: 20px;">
+                  <div v-else style="text-align: center; color: var(--ops-muted); padding: 20px;">
                     暂无标签
                   </div>
                 </div>
@@ -745,7 +729,7 @@
                       <div v-if="taint.value"><strong>值:</strong> {{ taint.value }}</div>
                     </div>
                   </template>
-                  <div v-else style="text-align: center; color: #999; padding: 20px;">
+                  <div v-else style="text-align: center; color: var(--ops-muted); padding: 20px;">
                     暂无污点
                   </div>
                 </div>
@@ -786,7 +770,7 @@
                     <a-badge :status="text === 'True' ? 'success' : (text === 'False' ? 'default' : 'error')" :text="text" />
                   </template>
                   <template #emptyText>
-                    <div style="text-align: center; color: #999; padding: 20px;">
+                    <div style="text-align: center; color: var(--ops-muted); padding: 20px;">
                       暂无节点状况信息
                     </div>
                   </template>
@@ -798,10 +782,12 @@
       </a-spin>
     </a-modal>
 
-  </div>
+  </OpsPage>
 </template>
 
 <script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { clusterResourceKey } from '../shared/utils';
 import { onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { useNodePage } from './Node';
@@ -827,6 +813,8 @@ const {
   // state
   clusters,
   loading,
+  loadError,
+  clustersError,
   clustersLoading,
   searchText,
   filterStatus,
@@ -980,21 +968,15 @@ const resetFilters = () => {
   currentPage.value = 1;
   // 清空节点列表
   clearNodes();
-  message.success('已重置所有筛选条件');
 };
 
 const handleClusterChange = () => {
   currentPage.value = 1;
   if (filterClusterId.value) {
-    const selectedCluster = clusters.value.find(c => c.id === filterClusterId.value);
-    if (selectedCluster) {
-      message.info(`已切换到集群: ${selectedCluster.name}`);
-    }
     fetchNodes();
   } else {
     // 清空节点列表和选择状态
     clearNodes();
-    message.info('已清空节点列表，请选择集群查看节点');
   }
 };
 

@@ -1,53 +1,37 @@
 <template>
-  <div class="k8s-management-container">
-    <!-- 页面头部 -->
-    <div class="k8s-page-header">
-      <a-row class="k8s-header-content" :gutter="[24, 16]">
-        <a-col :xs="24" :sm="24" :md="16" :lg="16" :xl="18">
-          <div class="k8s-title-section">
-            <div class="k8s-page-title">
-              <PlayCircleOutlined class="k8s-title-icon" />
-              <div>
-                <h1>YAML 任务管理</h1>
-                <p class="k8s-page-subtitle">基于模板创建和执行 Kubernetes YAML 部署任务</p>
-              </div>
-            </div>
-          </div>
-        </a-col>
-        <a-col :xs="24" :sm="24" :md="8" :lg="8" :xl="6">
-          <div class="k8s-header-actions">
+  <OpsPage title="YAML 任务管理" description="基于模板创建和执行 Kubernetes YAML 部署任务">
+    <template #actions>
             <a-button type="primary" @click="openCreateModal" :disabled="!filterClusterId || !templates.length">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><PlusOutlined aria-hidden="true"  /></template>
               创建任务
             </a-button>
-            <a-button @click="fetchTasks" :loading="loading">
-              <template #icon><ReloadOutlined /></template>
+            <a-button @click="fetchTasks" :loading="loading" :disabled="!filterClusterId">
+              <template #icon><ReloadOutlined aria-hidden="true"  /></template>
               刷新数据
             </a-button>
-          </div>
-        </a-col>
-      </a-row>
-    </div>
+    </template>
 
     <!-- 工具栏 -->
-    <div class="k8s-toolbar">
+    <template #filters>
+    <div class="ops-filter-row">
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
           <a-select 
             v-model:value="filterClusterId" 
             placeholder="选择集群" 
-            class="k8s-cluster-selector" 
+            class="k8s-cluster-selector"
+            aria-label="选择集群"
             allow-clear 
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
             @popup-scroll="handleClusterDropdownScroll"
           >
-            <template #suffixIcon><DatabaseOutlined /></template>
+            <template #suffixIcon><DatabaseOutlined aria-hidden="true"  /></template>
             <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
               <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span>{{ cluster.name }}</span>
+                <span class="k8s-cluster-name" :title="cluster.name">{{ cluster.name }}</span>
                 <a-tag color="blue" size="small">{{ getEnvText(cluster.env) }}</a-tag>
               </div>
             </a-select-option>
@@ -71,7 +55,7 @@
             :disabled="!filterClusterId"
             :loading="templatesLoading"
           >
-            <template #suffixIcon><FileTextOutlined /></template>
+            <template #suffixIcon><FileTextOutlined aria-hidden="true"  /></template>
             <a-select-option v-for="template in templates" :key="template.id" :value="template.id">
               {{ template.name }}
             </a-select-option>
@@ -94,7 +78,7 @@
             allow-clear 
             @change="handleFilterChange"
           >
-            <template #suffixIcon><FilterOutlined /></template>
+            <template #suffixIcon><FilterOutlined aria-hidden="true"  /></template>
             <a-select-option :value="TaskStatus.PENDING">等待中</a-select-option>
             <a-select-option :value="TaskStatus.RUNNING">运行中</a-select-option>
             <a-select-option :value="TaskStatus.SUCCESS">成功</a-select-option>
@@ -113,7 +97,7 @@
             allow-clear 
           >
             <template #suffix>
-              <SearchOutlined class="k8s-search-icon" />
+              <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
             </template>
           </a-input>
         </div>
@@ -128,19 +112,10 @@
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
           >
-            <template #icon><DeleteOutlined /></template>
+            <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             重置筛选
           </a-button>
 
-          <a-button 
-            @click="fetchTasks" 
-            :loading="loading"
-            class="k8s-toolbar-btn"
-            title="刷新数据"
-          >
-            <template #icon><ReloadOutlined /></template>
-            刷新
-          </a-button>
 
           <a-button 
             type="primary" 
@@ -150,7 +125,7 @@
             class="k8s-toolbar-btn"
             title="批量执行选中的任务"
           >
-            <template #icon><PlayCircleOutlined /></template>
+            <template #icon><PlayCircleOutlined aria-hidden="true"  /></template>
             执行 ({{ selectedRows.length }})
           </a-button>
 
@@ -163,12 +138,23 @@
             class="k8s-toolbar-btn"
             title="批量删除选中的任务"
           >
-            <template #icon><DeleteOutlined /></template>
+            <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             删除 ({{ selectedRows.length }})
           </a-button>
         </div>
       </div>
     </div>
+
+    </template>
+    <a-alert v-if="clustersError" type="error" :message="clustersError" show-icon>
+      <template #action><a-button size="small" @click="fetchClusters(true)">重试集群</a-button></template>
+    </a-alert>
+    <a-alert v-if="templatesError" type="error" :message="templatesError" show-icon>
+      <template #action><a-button size="small" @click="fetchTemplates(true)">重试模板目录</a-button></template>
+    </a-alert>
+    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+      <template #action><a-button size="small" @click="fetchTasks">重试查询</a-button></template>
+    </a-alert>
 
     <!-- 数据展示区域 -->
     <div class="k8s-data-display">
@@ -241,7 +227,7 @@
           <div class="k8s-action-column">
             <a-tooltip title="查看详情">
               <a-button title="查看详情" @click="showTaskDetail(record)">
-                <template #icon><EyeOutlined /></template>
+                <template #icon><EyeOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="执行任务">
@@ -250,7 +236,7 @@
                 @click="openExecuteModal(record)"
                 :disabled="record.status === TaskStatus.RUNNING"
               >
-                <template #icon><PlayCircleOutlined /></template>
+                <template #icon><PlayCircleOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="编辑">
@@ -259,7 +245,7 @@
                 @click="openEditModal(record)"
                 :disabled="record.status === TaskStatus.RUNNING"
               >
-                <template #icon><EditOutlined /></template>
+                <template #icon><EditOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="删除">
@@ -269,7 +255,7 @@
                 @click="deleteTask(record)"
                 :disabled="record.status === TaskStatus.RUNNING"
               >
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
           </div>
@@ -277,7 +263,7 @@
 
         <template #emptyText>
           <div class="k8s-empty-state">
-            <PlayCircleOutlined />
+            <PlayCircleOutlined aria-hidden="true"  />
             <p>暂无任务数据</p>
             <p>请先选择集群和模板</p>
           </div>
@@ -310,7 +296,7 @@
             v-model:value="createFormModel.name" 
             placeholder="请输入任务名称（例如：deploy-nginx-prod）" 
             class="k8s-form-input"
-            :maxlength="100"
+            :maxlength="50"
           />
           <div style="color: #999; font-size: 12px; margin-top: 4px;">
             支持中英文、数字、下划线和连字符，用于标识和查找任务
@@ -363,11 +349,11 @@
                 @click="removeVariableField(index)" 
                 size="small"
               >
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <a-button type="dashed" @click="addVariableField" style="margin-top: 8px; width: 100%;">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><PlusOutlined aria-hidden="true"  /></template>
               添加变量
             </a-button>
           </div>
@@ -400,7 +386,7 @@
             v-model:value="editFormModel.name" 
             placeholder="请输入任务名称" 
             class="k8s-form-input"
-            :maxlength="100"
+            :maxlength="255"
           />
         </a-form-item>
 
@@ -439,11 +425,11 @@
                 @click="removeEditVariableField(index)" 
                 size="small"
               >
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <a-button type="dashed" @click="addEditVariableField" style="margin-top: 8px; width: 100%;">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><PlusOutlined aria-hidden="true"  /></template>
               添加变量
             </a-button>
           </div>
@@ -589,12 +575,12 @@
       </div>
     </a-modal>
 
-  </div>
+  </OpsPage>
 </template>
 
 <script lang="ts" setup>
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted } from 'vue';
-import { message } from 'ant-design-vue';
 import { useTaskPage } from './Task';
 import { formatDateTime, getRelativeTime } from '../shared/utils';
 import { 
@@ -616,6 +602,9 @@ const {
   templates,
   clusters,
   loading,
+  loadError,
+  clustersError,
+  templatesError,
   clustersLoading,
   templatesLoading,
   searchText,
@@ -728,14 +717,9 @@ const handleClusterChange = () => {
   clearTasks();
 
   if (filterClusterId.value) {
-    const selectedCluster = clusters.value.find(c => c.id === filterClusterId.value);
-    if (selectedCluster) {
-      message.info(`已切换到集群: ${selectedCluster.name}`);
-    }
     fetchTemplates(true); // 重置模板分页
     fetchTasks();
   } else {
-    message.info('已清空任务列表，请选择集群查看任务');
   }
 };
 
@@ -796,7 +780,6 @@ const resetFilters = () => {
   currentPage.value = 1;
   clearTasks();
   clearTemplates();
-  message.success('已重置所有筛选条件');
 };
 
 onMounted(async () => {

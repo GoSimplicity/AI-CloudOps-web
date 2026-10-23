@@ -64,6 +64,11 @@ export function usePVCPage() {
   const namespaces = ref<K8sNamespace[]>([]);
   const availablePVs = ref<K8sPV[]>([]);
   const loading = ref(false);
+  const loadError = ref('');
+  const clustersError = ref('');
+  const namespacesError = ref('');
+  let namespaceRequestId = 0;
+  let resourceRequestId = 0;
   const clustersLoading = ref(false);
   const namespacesLoading = ref(false);
   const pvsLoading = ref(false);
@@ -296,12 +301,19 @@ export function usePVCPage() {
   };
 
   const clearPVCs = () => {
+    resourceRequestId++;
+    loading.value = false;
+    total.value = 0;
+    loadError.value = '';
     pvcs.value = [];
     selectedRowKeys.value = [];
     selectedRows.value = [];
   };
 
   const clearNamespaces = () => {
+    namespaceRequestId++;
+    namespacesLoading.value = false;
+    namespacesError.value = '';
     resetNamespaces();
     filterNamespace.value = undefined;
   };
@@ -323,73 +335,94 @@ export function usePVCPage() {
     pvsTotal.value = 0;
   };
 
-  const fetchClusters = async (reset: boolean = false) => {
+  const fetchClusters = async (reset = false) => {
     if (reset) {
       resetClusters();
     }
     try {
       clustersLoading.value = true;
-
+      clustersError.value = '';
       const params: ListClustersReq = {
         page: clustersPage.value,
         size: clustersSize.value,
       };
-
       const res = await getClustersListApi(params);
-      
       if (clustersPage.value === 1) {
         clusters.value = res?.items || [];
       } else {
         clusters.value = [...clusters.value, ...(res?.items || [])];
       }
       clustersTotal.value = res?.total || 0;
-      
+
+      // 如果当前没有选择集群且有可用集群，自动选择第一个
       if (!filterClusterId.value && clusters.value.length > 0) {
         const firstCluster = clusters.value[0];
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
-          message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
+          // 自动加载该集群的命名空间和PVC数据
           await fetchNamespaces();
           await fetchPVCs();
         }
       }
-    } catch (error: any) {
-
-      message.error(error?.message || '获取集群列表失败');
+    } catch (err) {
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearNamespaces();
+        clearPVCs();
+      }
+      clustersError.value = '获取集群列表失败，请重试';
+      message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
   };
 
-  const fetchNamespaces = async (reset: boolean = false) => {
-    if (!filterClusterId.value) return;
-    
+  const fetchNamespaces = async (reset = false) => {
+    const clusterId = filterClusterId.value;
+    if (!clusterId) {
+      clearNamespaces();
+      return;
+    }
+    const requestId = ++namespaceRequestId;
+
     if (reset) {
       resetNamespaces();
     }
-    
+
     try {
       namespacesLoading.value = true;
-
+      namespacesError.value = '';
       const params: K8sNamespaceListReq = {
-        cluster_id: filterClusterId.value,
+        cluster_id: clusterId,
         page: namespacesPage.value,
         size: namespacesSize.value,
       };
-
-      const res = await getNamespacesListApi(filterClusterId.value, params);
-      
+      const res = await getNamespacesListApi(clusterId, params);
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       if (namespacesPage.value === 1) {
         namespaces.value = res?.items || [];
       } else {
         namespaces.value = [...namespaces.value, ...(res?.items || [])];
       }
       namespacesTotal.value = res?.total || 0;
-    } catch (error: any) {
-
-      message.error(error?.message || '获取命名空间列表失败');
+    } catch (err) {
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      namespaces.value = [];
+      namespacesTotal.value = 0;
+      namespacesError.value = '获取命名空间列表失败，请重试';
+      message.error(namespacesError.value);
     } finally {
-      namespacesLoading.value = false;
+      if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
   };
 
@@ -437,18 +470,18 @@ export function usePVCPage() {
   };
 
   const fetchPVCs = async () => {
-    if (!filterClusterId.value || filterClusterId.value === 0) {
-      message.warning('请先选择有效的集群');
-      pvcs.value = [];
-      total.value = 0;
-      return;
-    }
-
+    const clusterId = filterClusterId.value;
+    const namespace = filterNamespace.value;
+    if (!clusterId) { clearPVCs(); return; }
+    const requestId = ++resourceRequestId;
     try {
       loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
       const params: GetPVCListReq = {
-        cluster_id: filterClusterId.value,
-        namespace: filterNamespace.value || undefined,
+        cluster_id: clusterId,
+        namespace: namespace || undefined,
         page: currentPage.value,
         size: pageSize.value,
         search: searchText.value || undefined,
@@ -457,20 +490,21 @@ export function usePVCPage() {
       };
 
       const res = await getK8sPVCList(params);
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       
       const pvcsWithClusterId = (res?.items || []).map((pvc: K8sPVC) => ({
         ...pvc,
-        cluster_id: pvc.cluster_id || filterClusterId.value || 0
+        cluster_id: pvc.cluster_id || clusterId || 0
       }));
       pvcs.value = pvcsWithClusterId;
       total.value = res?.total || 0;
-    } catch (error: any) {
-
-      message.error(error?.message || '获取PVC列表失败');
-      pvcs.value = [];
-      total.value = 0;
+    } catch {
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      clearPVCs();
+      loadError.value = '获取 PVC 列表失败，请重试';
+      message.error(loadError.value);
     } finally {
-      loading.value = false;
+      if (requestId === resourceRequestId) loading.value = false;
     }
   };
 
@@ -1262,6 +1296,9 @@ export function usePVCPage() {
     namespaces,
     availablePVs,
     loading,
+    loadError,
+    clustersError,
+    namespacesError,
     clustersLoading,
     namespacesLoading,
     pvsLoading,

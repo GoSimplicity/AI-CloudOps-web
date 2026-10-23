@@ -57,6 +57,11 @@ export function useSecretPage() {
   const clusters = ref<K8sCluster[]>([]);
   const namespaces = ref<K8sNamespace[]>([]);
   const loading = ref(false);
+  const loadError = ref('');
+  const clustersError = ref('');
+  const namespacesError = ref('');
+  let namespaceRequestId = 0;
+  let resourceRequestId = 0;
   const clustersLoading = ref(false);
   const namespacesLoading = ref(false);
   const searchText = ref('');
@@ -263,12 +268,19 @@ export function useSecretPage() {
 
   // cluster operations
   const clearSecrets = () => {
+    resourceRequestId++;
+    loading.value = false;
+    total.value = 0;
+    loadError.value = '';
     secrets.value = [];
     selectedRowKeys.value = [];
     selectedRows.value = [];
   };
 
   const clearNamespaces = () => {
+    namespaceRequestId++;
+    namespacesLoading.value = false;
+    namespacesError.value = '';
     resetNamespaces();
     filterNamespace.value = undefined;
   };
@@ -279,6 +291,7 @@ export function useSecretPage() {
     }
     try {
       clustersLoading.value = true;
+      clustersError.value = '';
       const params: ListClustersReq = {
         page: clustersPage.value,
         size: clustersSize.value,
@@ -290,41 +303,58 @@ export function useSecretPage() {
         clusters.value = [...clusters.value, ...(res?.items || [])];
       }
       clustersTotal.value = res?.total || 0;
-      
+
       // 如果当前没有选择集群且有可用集群，自动选择第一个
       if (!filterClusterId.value && clusters.value.length > 0) {
         const firstCluster = clusters.value[0];
         if (firstCluster?.id) {
           filterClusterId.value = firstCluster.id;
-          message.info(`已自动选择集群: ${firstCluster.name || '未知集群'}`);
           // 自动加载该集群的命名空间和Secret数据
           await fetchNamespaces();
           await fetchSecrets();
         }
       }
     } catch (err) {
-      message.error('获取集群列表失败');
-
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearNamespaces();
+        clearSecrets();
+      }
+      clustersError.value = '获取集群列表失败，请重试';
+      message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
   };
 
   const fetchNamespaces = async (reset = false) => {
-    if (!filterClusterId.value) return;
-    
+    const clusterId = filterClusterId.value;
+    if (!clusterId) {
+      clearNamespaces();
+      return;
+    }
+    const requestId = ++namespaceRequestId;
+
     if (reset) {
       resetNamespaces();
     }
-    
+
     try {
       namespacesLoading.value = true;
+      namespacesError.value = '';
       const params: K8sNamespaceListReq = {
-        cluster_id: filterClusterId.value,
+        cluster_id: clusterId,
         page: namespacesPage.value,
         size: namespacesSize.value,
       };
-      const res = await getNamespacesListApi(filterClusterId.value, params);
+      const res = await getNamespacesListApi(clusterId, params);
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       if (namespacesPage.value === 1) {
         namespaces.value = res?.items || [];
       } else {
@@ -332,40 +362,48 @@ export function useSecretPage() {
       }
       namespacesTotal.value = res?.total || 0;
     } catch (err) {
-      message.error('获取命名空间列表失败');
-
+      if (
+        requestId !== namespaceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      namespaces.value = [];
+      namespacesTotal.value = 0;
+      namespacesError.value = '获取命名空间列表失败，请重试';
+      message.error(namespacesError.value);
     } finally {
-      namespacesLoading.value = false;
+      if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
   };
 
   // crud operations
   const fetchSecrets = async () => {
-    if (!filterClusterId.value || filterClusterId.value === 0) {
-      message.warning('请先选择有效的集群');
-      secrets.value = [];
-      total.value = 0;
-      return;
-    }
-
+    const clusterId = filterClusterId.value;
+    const namespace = filterNamespace.value;
+    if (!clusterId) { clearSecrets(); return; }
+    const requestId = ++resourceRequestId;
     try {
       loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
       const params: GetSecretListReq = {
-        cluster_id: filterClusterId.value,
+        cluster_id: clusterId,
         page: currentPage.value,
         size: pageSize.value,
-        namespace: filterNamespace.value,
+        namespace: namespace,
         type: filterType.value,
         labels: Object.keys(filterLabels.value).length > 0 
           ? filterLabels.value 
           : undefined,
       };
       const res = await getSecretListApi(params);
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       
       // 确保每个secret对象都有正确的cluster_id和解析的JSON字段
       const secretsWithClusterId = (res?.items || []).map((secret: K8sSecret) => ({
         ...secret,
-        cluster_id: secret.cluster_id || filterClusterId.value || 0,
+        cluster_id: secret.cluster_id || clusterId || 0,
         // 解析JSON字段
         data: parseJsonField(secret.data, {}),
         string_data: parseJsonField(secret.string_data, {}),
@@ -375,11 +413,13 @@ export function useSecretPage() {
       
       secrets.value = secretsWithClusterId;
       total.value = res?.total || 0;
-    } catch (err) {
-      message.error('获取 Secret 列表失败');
-
+    } catch {
+      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      clearSecrets();
+      loadError.value = '获取 Secret 列表失败，请重试';
+      message.error(loadError.value);
     } finally {
-      loading.value = false;
+      if (requestId === resourceRequestId) loading.value = false;
     }
   };
 
@@ -1201,6 +1241,9 @@ export function useSecretPage() {
     clusters,
     namespaces,
     loading,
+    loadError,
+    clustersError,
+    namespacesError,
     clustersLoading,
     namespacesLoading,
     searchText,

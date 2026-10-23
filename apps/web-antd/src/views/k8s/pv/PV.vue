@@ -1,53 +1,37 @@
 <template>
-  <div class="k8s-management-container">
-    <!-- 页面头部 -->
-    <div class="k8s-page-header">
-      <a-row class="k8s-header-content" :gutter="[24, 16]">
-        <a-col :xs="24" :sm="24" :md="16" :lg="16" :xl="18">
-          <div class="k8s-title-section">
-            <div class="k8s-page-title">
-              <DatabaseOutlined class="k8s-title-icon" />
-              <div>
-                <h1>PersistentVolume 管理</h1>
-                <p class="k8s-page-subtitle">管理和监控集群中的所有 Kubernetes PersistentVolume 持久化存储卷</p>
-              </div>
-            </div>
-          </div>
-        </a-col>
-        <a-col :xs="24" :sm="24" :md="8" :lg="8" :xl="6">
-          <div class="k8s-header-actions">
+  <OpsPage title="PV 管理" description="管理和监控集群中的所有 Kubernetes PersistentVolume 持久化存储卷">
+    <template #actions>
             <a-button type="primary" @click="openCreateModal" :disabled="!filterClusterId">
-              <template #icon><PlusOutlined /></template>
+              <template #icon><PlusOutlined aria-hidden="true"  /></template>
               创建 PV
             </a-button>
-            <a-button @click="fetchPVs" :loading="loading">
-              <template #icon><ReloadOutlined /></template>
+            <a-button @click="fetchPVs" :loading="loading" :disabled="!filterClusterId">
+              <template #icon><ReloadOutlined aria-hidden="true"  /></template>
               刷新数据
             </a-button>
-          </div>
-        </a-col>
-      </a-row>
-    </div>
+    </template>
 
     <!-- 工具栏 -->
-    <div class="k8s-toolbar">
+    <template #filters>
+    <div class="ops-filter-row">
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
           <a-select 
             v-model:value="filterClusterId" 
             placeholder="选择集群" 
-            class="k8s-cluster-selector" 
+            class="k8s-cluster-selector"
+            aria-label="选择集群"
             allow-clear 
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
             @popup-scroll="handleClusterDropdownScroll"
           >
-            <template #suffixIcon><DatabaseOutlined /></template>
+            <template #suffixIcon><DatabaseOutlined aria-hidden="true"  /></template>
             <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
               <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span>{{ cluster.name }}</span>
+                <span class="k8s-cluster-name" :title="cluster.name">{{ cluster.name }}</span>
                 <a-tag color="blue" size="small">{{ getEnvText(cluster.env) }}</a-tag>
               </div>
             </a-select-option>
@@ -55,7 +39,7 @@
               v-if="clusters.length > 0 && clusters.length < clustersTotal" 
               :value="'__load_more__'" 
               disabled
-              style="text-align: center; color: #999;"
+              style="text-align: center; color: var(--ops-muted);"
             >
               <a-spin size="small" :spinning="clustersLoading" />
               <span v-if="!clustersLoading">滚动加载更多...</span>
@@ -69,7 +53,7 @@
             allow-clear 
             @change="handleFilterChange"
           >
-            <template #suffixIcon><KeyOutlined /></template>
+            <template #suffixIcon><KeyOutlined aria-hidden="true"  /></template>
             <a-select-option value="ReadWriteOnce">RWO</a-select-option>
             <a-select-option value="ReadOnlyMany">ROX</a-select-option>
             <a-select-option value="ReadWriteMany">RWX</a-select-option>
@@ -88,7 +72,7 @@
             allow-clear 
           >
             <template #suffix>
-              <SearchOutlined class="k8s-search-icon" />
+              <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
             </template>
           </a-input>
         </div>
@@ -103,19 +87,10 @@
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
           >
-            <template #icon><DeleteOutlined /></template>
+            <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             重置筛选
           </a-button>
           
-          <a-button 
-            @click="fetchPVs" 
-            :loading="loading"
-            class="k8s-toolbar-btn"
-            title="刷新数据"
-          >
-            <template #icon><ReloadOutlined /></template>
-            刷新
-          </a-button>
 
           <a-button 
             @click="openCreateYamlModal" 
@@ -123,7 +98,7 @@
             class="k8s-toolbar-btn"
             title="通过YAML创建PV"
           >
-            <template #icon><FileTextOutlined /></template>
+            <template #icon><FileTextOutlined aria-hidden="true"  /></template>
             YAML 创建
           </a-button>
           
@@ -136,12 +111,20 @@
             class="k8s-toolbar-btn"
             title="批量删除选中的 PV"
           >
-            <template #icon><DeleteOutlined /></template>
+            <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             删除 ({{ selectedRows.length }})
           </a-button>
         </div>
       </div>
     </div>
+
+    </template>
+    <a-alert v-if="clustersError" type="error" :message="clustersError" show-icon>
+      <template #action><a-button size="small" @click="fetchClusters(true)">重试集群</a-button></template>
+    </a-alert>
+    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+      <template #action><a-button size="small" @click="fetchPVs">重试查询</a-button></template>
+    </a-alert>
 
     <!-- 数据展示区域 -->
     <div class="k8s-data-display">
@@ -160,14 +143,14 @@
         }"
         :row-selection="rowSelection"
         :scroll="{ x: 1600 }"
-        row-key="name"
+        :row-key="clusterResourceKey"
         class="k8s-table pv-table"
         @change="handleTableChange"
       >
         <template #name="{ record }">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <DatabaseOutlined style="color: #1677ff; font-size: 16px;" />
-            <span style="font-weight: 500; color: #262626;">{{ record.name }}</span>
+            <DatabaseOutlined aria-hidden="true" style="color: #1677ff; font-size: 16px;" />
+            <span style="font-weight: 500; color: var(--ops-ink);">{{ record.name }}</span>
           </div>
         </template>
 
@@ -268,7 +251,7 @@
 
         <template #uid="{ text }">
           <a-tooltip v-if="text" :title="text">
-            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: #666;">
+            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
               {{ text.substring(0, 8) }}...
             </span>
           </a-tooltip>
@@ -276,9 +259,9 @@
         </template>
 
         <template #createdAt="{ text }">
-          <div v-if="text" style="font-size: 12px; color: #666;">
+          <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
             <div>{{ formatDateTime(text) }}</div>
-            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
           </div>
           <span v-else class="k8s-no-data">-</span>
         </template>
@@ -287,22 +270,22 @@
           <div class="k8s-action-column">
             <a-tooltip title="查看详情">
               <a-button title="查看详情" @click="openDetailModal(record)">
-                <template #icon><EyeOutlined /></template>
+                <template #icon><EyeOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="查看 YAML">
               <a-button title="查看 YAML" @click="openYamlModal(record)">
-                <template #icon><FileTextOutlined /></template>
+                <template #icon><FileTextOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="编辑">
               <a-button title="编辑" @click="openEditModal(record)">
-                <template #icon><EditOutlined /></template>
+                <template #icon><EditOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="回收PV" v-if="record.status === K8sPVStatus.Released">
               <a-button title="回收PV" @click="reclaimPV(record)">
-                <template #icon><UndoOutlined /></template>
+                <template #icon><UndoOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
             <a-tooltip title="删除">
@@ -311,7 +294,7 @@
                 danger 
                 @click="deletePV(record)"
               >
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
           </div>
@@ -319,9 +302,10 @@
 
         <template #emptyText>
           <div class="k8s-empty-state">
-            <DatabaseOutlined />
+            <DatabaseOutlined aria-hidden="true"  />
             <p>暂无 PV 数据</p>
-            <p>请先选择集群</p>
+            <p v-if="!filterClusterId">请先选择集群</p>
+            <p v-else>请调整筛选条件或刷新数据</p>
           </div>
         </template>
       </a-table>
@@ -443,7 +427,7 @@
                 :maxlength="200"
               />
               <a-button type="text" danger @click="removeVolumeSourceField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -460,7 +444,7 @@
                 @press-enter="addNewVolumeSource"
               />
               <a-button type="primary" @click="addNewVolumeSource" :disabled="!newVolumeSourceKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
             </div>
@@ -470,7 +454,7 @@
         <a-form-item label="标签配置（可选）">
           <a-form-item-rest>
             <div class="k8s-key-value-inputs">
-              <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 16px;">
+              <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
                 暂无标签，点击下方按钮添加
               </div>
             <div v-for="(_, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
@@ -487,7 +471,7 @@
                 :maxlength="200"
               />
               <a-button type="text" danger @click="removeLabelField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -498,7 +482,7 @@
                 @press-enter="addNewLabel"
               />
               <a-button type="primary" @click="addNewLabel" :disabled="!newLabelKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
             </div>
@@ -509,7 +493,7 @@
         <a-form-item label="注解配置（可选）">
           <a-form-item-rest>
             <div class="k8s-key-value-inputs">
-              <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" style="text-align: center; color: #999; padding: 16px;">
+              <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
                 暂无注解，点击下方按钮添加
               </div>
             <div v-for="(_, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
@@ -526,7 +510,7 @@
                 :maxlength="500"
               />
               <a-button type="text" danger @click="removeAnnotationField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -537,7 +521,7 @@
                 @press-enter="addNewAnnotation"
               />
               <a-button type="primary" @click="addNewAnnotation" :disabled="!newAnnotationKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
             </div>
@@ -570,19 +554,19 @@
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
             <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
-              <template #icon><FileAddOutlined /></template>
+              <template #icon><FileAddOutlined aria-hidden="true"  /></template>
               插入模板
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
-              <template #icon><FormatPainterOutlined /></template>
+              <template #icon><FormatPainterOutlined aria-hidden="true"  /></template>
               格式化
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
-              <template #icon><CheckCircleOutlined /></template>
+              <template #icon><CheckCircleOutlined aria-hidden="true"  /></template>
               检查格式
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
-              <template #icon><ClearOutlined /></template>
+              <template #icon><ClearOutlined aria-hidden="true"  /></template>
               清空
             </a-button>
           </div>
@@ -657,7 +641,7 @@
 
         <a-form-item label="卷源配置（可选）">
           <div class="k8s-key-value-inputs">
-            <div v-if="!editFormModel.volume_source || Object.keys(editFormModel.volume_source).length === 0" style="text-align: center; color: #999; padding: 16px;">
+            <div v-if="!editFormModel.volume_source || Object.keys(editFormModel.volume_source).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
               暂无配置，点击下方按钮添加
             </div>
             <div v-for="(_, key) in editFormModel.volume_source" :key="key" class="k8s-key-value-row">
@@ -674,7 +658,7 @@
                 :maxlength="200"
               />
               <a-button type="text" danger @click="removeEditVolumeSourceField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -691,7 +675,7 @@
                 @press-enter="addNewEditVolumeSource"
               />
               <a-button type="primary" @click="addNewEditVolumeSource" :disabled="!newEditVolumeSourceKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
             </div>
@@ -701,7 +685,7 @@
         <a-form-item label="标签配置（可选）">
           <a-form-item-rest>
             <div class="k8s-key-value-inputs">
-              <div v-if="!editFormModel.labels || Object.keys(editFormModel.labels).length === 0" style="text-align: center; color: #999; padding: 16px;">
+              <div v-if="!editFormModel.labels || Object.keys(editFormModel.labels).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
                 暂无标签，点击下方按钮添加
               </div>
             <div v-for="(_, key) in editFormModel.labels" :key="key" class="k8s-key-value-row">
@@ -718,7 +702,7 @@
                 :maxlength="200"
               />
               <a-button type="text" danger @click="removeEditLabelField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -729,7 +713,7 @@
                 @press-enter="addNewEditLabel"
               />
               <a-button type="primary" @click="addNewEditLabel" :disabled="!newEditLabelKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
             </div>
@@ -740,7 +724,7 @@
         <a-form-item label="注解配置（可选）">
           <a-form-item-rest>
             <div class="k8s-key-value-inputs">
-              <div v-if="!editFormModel.annotations || Object.keys(editFormModel.annotations).length === 0" style="text-align: center; color: #999; padding: 16px;">
+              <div v-if="!editFormModel.annotations || Object.keys(editFormModel.annotations).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
                 暂无注解，点击下方按钮添加
               </div>
             <div v-for="(_, key) in editFormModel.annotations" :key="key" class="k8s-key-value-row">
@@ -757,7 +741,7 @@
                 :maxlength="500"
               />
               <a-button type="text" danger @click="removeEditAnnotationField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
               </a-button>
             </div>
             <div class="add-input-row" style="margin-top: 8px;">
@@ -768,7 +752,7 @@
                 @press-enter="addNewEditAnnotation"
               />
               <a-button type="primary" @click="addNewEditAnnotation" :disabled="!newEditAnnotationKey.trim()">
-                <template #icon><PlusOutlined /></template>
+                <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加
               </a-button>
             </div>
@@ -884,7 +868,7 @@
       </div>
       <div v-else-if="detailLoading" style="text-align: center; padding: 50px;">
         <a-spin size="large" />
-        <p style="margin-top: 16px; color: #8c8c8c;">加载详情中...</p>
+        <p style="margin-top: 16px; color: var(--ops-muted);">加载详情中...</p>
       </div>
     </a-modal>
 
@@ -911,11 +895,11 @@
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
             <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatEditYaml">
-              <template #icon><FormatPainterOutlined /></template>
+              <template #icon><FormatPainterOutlined aria-hidden="true"  /></template>
               格式化
             </a-button>
             <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateEditYaml">
-              <template #icon><CheckCircleOutlined /></template>
+              <template #icon><CheckCircleOutlined aria-hidden="true"  /></template>
               检查格式
             </a-button>
           </div>
@@ -928,10 +912,12 @@
         </a-form-item>
       </a-form>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { clusterResourceKey } from '../shared/utils';
 import { onMounted } from 'vue';
 import {
   PlusOutlined,
@@ -956,6 +942,8 @@ const {
   // state
   clusters,
   loading,
+  loadError,
+  clustersError,
   clustersLoading,
   searchText,
   filterClusterId,
