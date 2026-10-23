@@ -127,7 +127,9 @@ const operations: [string, string, (page: ReturnType<typeof useSecretPage>) => P
     'Secret 更新失败',
     async (page) => {
       page.formRef.value = validForm;
-      page.openEditModal(record);
+      // 直接设当前操作对象，只测提交这一处 catch：sec26 的 openEditModal 会先拉详情，
+      // 合并后详情请求也走同一个失败 adapter，弹窗会被关掉、提交走不到
+      page.currentOperationSecret.value = record;
       await page.submitEditForm();
     },
   ],
