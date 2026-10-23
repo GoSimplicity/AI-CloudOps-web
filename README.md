@@ -1,5 +1,7 @@
 # AI+CloudOps 前端
 
+[English](README.en.md) | **简体中文**
+
 **AI+CloudOps-web** 是 **AI+CloudOps** 平台的用户界面部分，旨在通过用户友好的界面提升运维效率和智能化水平。本项目专注于前端开发，与独立的后端服务无缝集成。
 
 ## 目录
