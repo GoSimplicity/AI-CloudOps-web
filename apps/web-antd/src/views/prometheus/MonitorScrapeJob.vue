@@ -1,15 +1,16 @@
 <template>
-  <div class="scrape-job-container">
+  <OpsPage title="采集任务" description="维护采集目标、发现方式与任务状态">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button type="primary" @click="handleCreateScrapeJob" class="btn-create">
+    <template #actions>
+      <a-button type="primary" @click="handleCreateScrapeJob" class="btn-create">
           <template #icon>
             <PlusOutlined />
           </template>
           <span class="btn-text">创建采集任务</span>
         </a-button>
-        <div class="search-filters">
+    </template>
+    <template #filters>
+      <div class="search-filters">
           <a-input-search v-model:value="searchQuery" placeholder="搜索采集任务名称..." class="search-input"
             @search="handleSearch" @change="handleSearchChange" allow-clear />
           <a-select v-model:value="enableFilter" placeholder="启用状态" class="filter-select" @change="handleEnableChange"
@@ -29,15 +30,15 @@
             重置
           </a-button>
         </div>
-      </div>
-    </div>
+    </template>
 
     <!-- 统计卡片 -->
-    <div class="stats-row">
+    <template #summary>
+      <div class="stats-row">
       <a-row :gutter="[16, 16]">
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="总采集任务" :value="stats.total" :value-style="{ color: '#3f8600' }">
+            <a-statistic title="总采集任务" :value="loadError ? '未知' : stats.total" :value-style="{ color: '#3f8600' }">
               <template #prefix>
                 <Icon icon="carbon:task" />
               </template>
@@ -46,7 +47,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="已启用" :value="stats.enabled" :value-style="{ color: '#52c41a' }">
+            <a-statistic title="本页已启用" :value="loadError ? '未知' : stats.enabled" :value-style="{ color: '#52c41a' }">
               <template #prefix>
                 <Icon icon="carbon:checkmark" />
               </template>
@@ -55,7 +56,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="Kubernetes" :value="stats.k8sJobs" :value-style="{ color: '#faad14' }">
+            <a-statistic title="本页Kubernetes" :value="loadError ? '未知' : stats.k8sJobs" :value-style="{ color: '#faad14' }">
               <template #prefix>
                 <Icon icon="carbon:logo-kubernetes" />
               </template>
@@ -64,7 +65,7 @@
         </a-col>
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="HTTP任务" :value="stats.httpJobs" :value-style="{ color: '#cf1322' }">
+            <a-statistic title="本页HTTP任务" :value="loadError ? '未知' : stats.httpJobs" :value-style="{ color: '#cf1322' }">
               <template #prefix>
                 <Icon icon="carbon:http" />
               </template>
@@ -73,6 +74,11 @@
         </a-col>
       </a-row>
     </div>
+    </template>
+
+    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
+      <template #action><a-button size="small" :loading="loading" @click="loadScrapeJobList">重试</a-button></template>
+    </a-alert>
 
     <!-- 表格容器 -->
     <div class="table-container">
@@ -480,11 +486,13 @@
         </div>
       </a-spin>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useListRequest } from './useListRequest';
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
   PlusOutlined,
@@ -548,6 +556,7 @@ const columns = [
 
 // 状态数据
 const loading = ref(false);
+const { loadError, beginRequest } = useListRequest(loading);
 const searchQuery = ref('');
 const enableFilter = ref<1 | 2 | undefined>(undefined);
 const poolFilter = ref<number | undefined>(undefined);
@@ -571,7 +580,8 @@ const dialogPoolHasMore = ref(true);
 let poolSearchDebounce: any;
 
 // 防抖处理
-let searchTimeout: any = null;
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+onBeforeUnmount(() => { if (searchTimeout) clearTimeout(searchTimeout); });
 
 // 分页配置
 const paginationConfig = reactive({
@@ -803,25 +813,14 @@ const updateStats = () => {
   // 使用后端返回的总数
   stats.total = paginationConfig.total;
 
-  // 估算总体比例（基于当前页）
-  if (scrapeJobList.value.length > 0) {
-    const enabledRatio = currentPageEnabled / scrapeJobList.value.length;
-    const k8sRatio = currentPageK8sJobs / scrapeJobList.value.length;
-    const httpRatio = currentPageHttpJobs / scrapeJobList.value.length;
-
-    stats.enabled = Math.round(enabledRatio * paginationConfig.total);
-    stats.k8sJobs = Math.round(k8sRatio * paginationConfig.total);
-    stats.httpJobs = Math.round(httpRatio * paginationConfig.total);
-  } else {
-    stats.enabled = 0;
-    stats.k8sJobs = 0;
-    stats.httpJobs = 0;
-  }
+  stats.enabled = currentPageEnabled;
+  stats.k8sJobs = currentPageK8sJobs;
+  stats.httpJobs = currentPageHttpJobs;
 };
 
 // 数据加载
 const loadScrapeJobList = async (): Promise<void> => {
-  loading.value = true;
+  const request = beginRequest();
   try {
     const params: GetMonitorScrapeJobListReq = {
       page: paginationConfig.current,
@@ -832,6 +831,7 @@ const loadScrapeJobList = async (): Promise<void> => {
     };
 
     const response = await getMonitorScrapeJobListApi(params);
+    if (!request.isCurrent()) return;
     if (response && response.items) {
       scrapeJobList.value = response.items as MonitorScrapeJob[];
       paginationConfig.total = response.total || 0;
@@ -842,9 +842,13 @@ const loadScrapeJobList = async (): Promise<void> => {
     }
   } catch (error: any) {
 
-    message.error(error.message || '加载采集任务列表失败');
+    if (!request.fail(error, '加载采集任务列表失败')) return;
+    scrapeJobList.value = [];
+    paginationConfig.total = 0;
+    updateStats();
+    message.error(loadError.value);
   } finally {
-    loading.value = false;
+    request.finish();
   }
 };
 
@@ -1331,35 +1335,10 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 </script>
 
 <style scoped>
-.scrape-job-container {
-  padding: 12px;
-  min-height: 100vh;
-}
 
-.page-header {
-  margin-bottom: 20px;
-}
 
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
 
-.btn-create {
-  background: var(--ops-accent);
-  border: none;
-  flex-shrink: 0;
-}
 
-.search-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
 
 .search-input {
   width: 250px;
@@ -1578,18 +1557,8 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .scrape-job-container {
-    padding: 8px;
-  }
 
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
 
-  .search-filters {
-    width: 100%;
-  }
 
   .search-input {
     width: 100%;
@@ -1601,14 +1570,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
     min-width: auto;
   }
 
-  .btn-text {
-    display: none;
-  }
 
-  .btn-create {
-    padding: 4px 8px;
-    min-width: auto;
-  }
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
@@ -1638,9 +1600,6 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 }
 
 @media (max-width: 480px) {
-  .header-actions {
-    gap: 8px;
-  }
 
   .stats-card {
     text-align: center;

@@ -1,15 +1,16 @@
 <template>
-  <div class="send-group-container">
+  <OpsPage title="发送组" description="配置接收对象、通知方式与升级规则">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <div class="header-actions">
-        <a-button type="primary" @click="handleCreateSendGroup" class="btn-create">
+    <template #actions>
+      <a-button type="primary" @click="handleCreateSendGroup" class="btn-create">
           <template #icon>
             <PlusOutlined />
           </template>
           <span class="btn-text">创建发送组</span>
         </a-button>
-        <div class="search-filters">
+    </template>
+    <template #filters>
+      <div class="search-filters">
           <a-input-search 
             v-model:value="searchQuery" 
             placeholder="搜索发送组名称..." 
@@ -44,17 +45,17 @@
             重置
           </a-button>
         </div>
-      </div>
-    </div>
+    </template>
 
     <!-- 统计卡片 -->
-    <div class="stats-row">
+    <template #summary>
+      <div class="stats-row">
       <a-row :gutter="[16, 16]">
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic 
               title="总发送组" 
-              :value="stats.total" 
+              :value="loadError ? '未知' : stats.total"
               :value-style="{ color: '#3f8600' }"
             >
               <template #prefix>
@@ -66,8 +67,8 @@
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic 
-              title="启用中" 
-              :value="stats.enabled" 
+              title="本页启用中"
+              :value="loadError ? '未知' : stats.enabled"
               :value-style="{ color: '#52c41a' }"
             >
               <template #prefix>
@@ -79,8 +80,8 @@
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic 
-              title="配置升级" 
-              :value="stats.needUpgrade" 
+              title="本页配置升级"
+              :value="loadError ? '未知' : stats.needUpgrade"
               :value-style="{ color: '#faad14' }"
             >
               <template #prefix>
@@ -92,8 +93,8 @@
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic 
-              title="关联池数" 
-              :value="stats.associatedPools" 
+              title="本页关联池数"
+              :value="loadError ? '未知' : stats.associatedPools"
               :value-style="{ color: '#cf1322' }"
             >
               <template #prefix>
@@ -104,6 +105,11 @@
         </a-col>
       </a-row>
     </div>
+    </template>
+
+    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
+      <template #action><a-button size="small" :loading="loading" @click="loadSendGroupList">重试</a-button></template>
+    </a-alert>
 
     <!-- 表格容器 -->
     <div class="table-container">
@@ -533,11 +539,13 @@
         </div>
       </div>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useListRequest } from './useListRequest';
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
   PlusOutlined,
@@ -624,13 +632,20 @@ const columns = [
 
 // 状态数据
 const loading = ref(false);
+const { loadError, beginRequest } = useListRequest(loading);
 const searchQuery = ref('');
 const enableFilter = ref<1 | 2 | undefined>(undefined);
 const upgradeFilter = ref<1 | 2 | undefined>(undefined);
 const sendGroupList = ref<MonitorSendGroup[]>([]);
 
 // 防抖处理
-let searchTimeout: NodeJS.Timeout | null = null;
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+onBeforeUnmount(() => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+  clearTimeout(poolSearchDebounce);
+  clearTimeout(onDutyGroupSearchDebounce);
+  clearTimeout(userSearchDebounce);
+});
 
 // 分页配置
 const paginationConfig = reactive({
@@ -826,7 +841,7 @@ const updateStats = () => {
 
 // 数据加载
 const loadSendGroupList = async (): Promise<void> => {
-  loading.value = true;
+  const request = beginRequest();
   try {
     const params: GetMonitorSendGroupListReq = {
       page: paginationConfig.current,
@@ -836,6 +851,7 @@ const loadSendGroupList = async (): Promise<void> => {
     };
 
     const response = await getMonitorSendGroupListApi(params) as ApiListResponse<MonitorSendGroup>;
+    if (!request.isCurrent()) return;
     if (response) {
       let list = response.items || [];
 
@@ -881,9 +897,13 @@ const loadSendGroupList = async (): Promise<void> => {
     }
   } catch (error: any) {
 
-    message.error(error.message || '加载发送组列表失败');
+    if (!request.fail(error, '加载发送组列表失败')) return;
+    sendGroupList.value = [];
+    paginationConfig.total = 0;
+    updateStats();
+    message.error(loadError.value);
   } finally {
-    loading.value = false;
+    request.finish();
   }
 };
 
@@ -1490,35 +1510,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.send-group-container {
-  padding: 12px;
-  min-height: 100vh;
-}
 
-.page-header {
-  margin-bottom: 20px;
-}
 
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
 
-.btn-create {
-  background: var(--ops-accent);
-  border: none;
-  flex-shrink: 0;
-}
 
-.search-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
 
 .search-input {
   width: 250px;
@@ -1739,18 +1734,8 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .send-group-container {
-    padding: 8px;
-  }
 
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
 
-  .search-filters {
-    width: 100%;
-  }
 
   .search-input {
     width: 100%;
@@ -1762,14 +1747,7 @@ onMounted(() => {
     min-width: auto;
   }
 
-  .btn-text {
-    display: none;
-  }
 
-  .btn-create {
-    padding: 4px 8px;
-    min-width: auto;
-  }
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
@@ -1799,9 +1777,6 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-  .header-actions {
-    gap: 8px;
-  }
 
   .stats-card {
     text-align: center;
