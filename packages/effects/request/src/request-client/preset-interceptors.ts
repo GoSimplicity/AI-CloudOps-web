@@ -4,6 +4,10 @@ import type { MakeErrorMessageFn, ResponseInterceptorConfig } from './types';
 import { $t } from '@vben/locales';
 
 import axios from 'axios';
+import {
+  RequestOwnerChangedError,
+  type RequestOwnerScope,
+} from './owner-scope';
 
 export const authenticateResponseInterceptor = ({
   client,
@@ -11,68 +15,56 @@ export const authenticateResponseInterceptor = ({
   doRefreshToken,
   enableRefreshToken,
   formatToken,
+  ownerScope,
 }: {
   client: RequestClient;
   doReAuthenticate: () => Promise<void>;
   doRefreshToken: () => Promise<string>;
   enableRefreshToken: boolean;
   formatToken: (token: string) => null | string;
+  ownerScope?: RequestOwnerScope;
 }): ResponseInterceptorConfig => {
+  // 每个登录代际共享刷新，新账户不等待前账户的刷新请求
+  const refreshes = new Map<string, Promise<string>>();
   return {
     rejected: async (error) => {
       const { config, response } = error;
-      // 如果不是 401 错误，直接抛出异常
-      if (response?.status !== 401) {
-        throw error;
-      }
-      // 判断是否启用了 refreshToken 功能
-      // 如果没有启用或者已经是重试请求了，直接跳转到重新登录
+      if (response?.status !== 401) throw error;
+      ownerScope?.assertRequest(config);
+      if (ownerScope && !ownerScope.canRefresh(config)) throw error;
       if (!enableRefreshToken || config.__isRetryRequest) {
         await doReAuthenticate();
         throw error;
       }
-      // 所有重放请求均只允许重试一次，包括等待刷新完成的请求
       config.__isRetryRequest = true;
-
-      // 如果正在刷新 token，则将请求加入队列，等待刷新完成
-      if (client.isRefreshing) {
-        return new Promise((resolve, reject) => {
-          client.refreshTokenQueue.push((newToken, refreshError) => {
-            if (newToken === null) {
-              reject(refreshError);
-              return;
-            }
-            config.headers.Authorization = formatToken(newToken);
-            resolve(client.request(config.url, { ...config }));
+      const key = ownerScope?.refreshKey(config) ?? 'default';
+      let pending = refreshes.get(key);
+      if (!pending) {
+        const refresh = Promise.resolve()
+          .then(doRefreshToken)
+          .then((token) => {
+            ownerScope?.assertRequest(config);
+            if (typeof token !== 'string' || !token.trim())
+              throw new Error('刷新令牌为空');
+            return token;
+          })
+          .catch(async (refreshError) => {
+            // 过期刷新不得清除或重放新账户的凭证与请求
+            ownerScope?.assertRequest(config);
+            if (!(refreshError instanceof RequestOwnerChangedError))
+              await doReAuthenticate();
+            throw refreshError;
+          })
+          .finally(() => {
+            if (refreshes.get(key) === refresh) refreshes.delete(key);
           });
-        });
+        refreshes.set(key, refresh);
+        pending = refresh;
       }
-
-      // 标记开始刷新 token
-      client.isRefreshing = true;
-      try {
-        const newToken = await doRefreshToken();
-        // 更新请求头中的token
-        config.headers.Authorization = formatToken(newToken);
-        // 处理队列中的请求
-        client.refreshTokenQueue.forEach((callback) => callback(newToken));
-        // 清空队列
-        client.refreshTokenQueue = [];
-
-        return client.request(config.url, { ...config });
-      } catch (refreshError) {
-        // 如果刷新 token 失败，处理错误（如强制登出或跳转登录页面）
-        client.refreshTokenQueue.forEach((callback) =>
-          callback(null, refreshError),
-        );
-        client.refreshTokenQueue = [];
-        console.error('Refresh token failed, please login again.');
-        await doReAuthenticate();
-
-        throw refreshError;
-      } finally {
-        client.isRefreshing = false;
-      }
+      const token = await pending;
+      ownerScope?.assertRequest(config);
+      config.headers.Authorization = formatToken(token);
+      return client.request(config.url, { ...config });
     },
   };
 };
@@ -82,7 +74,7 @@ export const errorMessageResponseInterceptor = (
 ): ResponseInterceptorConfig => {
   return {
     rejected: (error: any) => {
-      if (axios.isCancel(error)) {
+      if (axios.isCancel(error) || error instanceof RequestOwnerChangedError) {
         return Promise.reject(error);
       }
 

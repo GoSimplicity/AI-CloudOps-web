@@ -19,7 +19,7 @@
 
 真实 Chrome 对隔离 kind 的前十页逐一验证 API 200、作用域选择、真实节点及其它资源的真实空态、创建表单取消、明暗主题与 390px 关键控件命中、无整页横向溢出，并断言零 Kubernetes 写入请求。截图位于 .cache/ui-verification/k8s-node-desktop.png 和 k8s-rolebinding-mobile.png
 
-YAML 模板/任务真实创建与 dry-run 验收首轮发现冷启动缺少 cl_k8s_yaml_template / cl_k8s_yaml_task，已交后端补迁移；页面真实显示错误和重试，尚不能把本批骨架验收当作该流程已经通过。未创建待清理记录，也未修改保留 kind 资源。配套修复就绪后运行 tests/e2e/console.spec.ts 的 YAML 专项完成闭环
+YAML 模板/任务首轮真实验收发现冷启动缺少 cl_k8s_yaml_template / cl_k8s_yaml_task，后端 35c9d65 补迁移后已重新完成真实 Chrome 闭环（6.8 秒）：通过页面创建唯一模板与任务、勾选 DryRun 并执行成功，查询实际 ConfigMap 确认资源未落地，最终精确清理测试模板与任务。没有修改保留 kind 资源。专项位于 tests/e2e/console.spec.ts
 
 ## 并行页面集中浏览器验收
 

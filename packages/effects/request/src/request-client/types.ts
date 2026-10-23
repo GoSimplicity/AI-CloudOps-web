@@ -10,7 +10,9 @@ type RequestContentType =
   | 'application/x-www-form-urlencoded;charset=utf-8'
   | 'multipart/form-data;charset=utf-8';
 
-type RequestClientOptions = CreateAxiosDefaults;
+type RequestClientOptions = CreateAxiosDefaults & {
+  requestOwnerScope?: import('./owner-scope').RequestOwnerScope;
+};
 
 interface RequestInterceptorConfig {
   fulfilled?: (

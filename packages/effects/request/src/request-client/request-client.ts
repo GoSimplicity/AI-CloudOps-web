@@ -13,21 +13,16 @@ import { FileDownloader } from './modules/downloader';
 import { InterceptorManager } from './modules/interceptor';
 import { FileUploader } from './modules/uploader';
 import { type RequestClientOptions } from './types';
+import type { RequestOwnerScope } from './owner-scope';
 
 class RequestClient {
   private readonly instance: AxiosInstance;
+  private readonly requestOwnerScope?: RequestOwnerScope;
 
   public addRequestInterceptor: InterceptorManager['addRequestInterceptor'];
   public addResponseInterceptor: InterceptorManager['addResponseInterceptor'];
 
   public download: FileDownloader['download'];
-  // 是否正在刷新token
-  public isRefreshing = false;
-  // 刷新token队列
-  public refreshTokenQueue: ((
-    token: null | string,
-    error?: unknown,
-  ) => void)[] = [];
   public upload: FileUploader['upload'];
 
   /**
@@ -43,7 +38,8 @@ class RequestClient {
       // 默认超时时间
       timeout: 120_000,
     };
-    const { ...axiosConfig } = options;
+    const { requestOwnerScope, ...axiosConfig } = options;
+    this.requestOwnerScope = requestOwnerScope;
     const requestConfig = merge(axiosConfig, defaultConfig);
     this.instance = axios.create(requestConfig);
 
@@ -120,6 +116,8 @@ class RequestClient {
    */
   public async request<T>(url: string, config: AxiosRequestConfig): Promise<T> {
     try {
+      // 在同步调用入口绑定归属，早于 Axios 异步拦截器和凭证读取
+      this.requestOwnerScope?.bindRequest(config);
       const response: AxiosResponse<T> = await this.instance({
         url,
         ...config,

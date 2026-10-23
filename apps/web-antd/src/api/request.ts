@@ -5,10 +5,12 @@ import { useAppConfig } from '@vben/hooks';
 import { preferences } from '@vben/preferences';
 import {
   authenticateResponseInterceptor,
+  createRequestOwnerScope,
+  isCancel,
   errorMessageResponseInterceptor,
   RequestClient,
 } from '@vben/request';
-import { useAccessStore } from '@vben/stores';
+import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { message } from 'ant-design-vue';
 
@@ -44,9 +46,12 @@ function resolveAiopsURL(aiopsURL: string) {
 const aiopsURL = resolveAiopsURL(configuredAiopsURL);
 
 function createRequestClient(baseURL: string) {
-  const client = new RequestClient({
-    baseURL,
-  });
+  const ownerScope = createRequestOwnerScope(() => ({
+    uid: useUserStore().userInfo?.userId || '',
+    generation: useAuthStore().getAuthGeneration(),
+    authenticated: !!useAccessStore().accessToken,
+  }));
+  const client = new RequestClient({ baseURL, requestOwnerScope: ownerScope });
 
   /**
    * 重新认证逻辑
@@ -66,7 +71,7 @@ function createRequestClient(baseURL: string) {
       accessStore.setLoginExpired(true);
     } else {
       // 执行登出，但不调用远程 API 避免循环认证问题
-      await authStore.logout(true, false); 
+      await authStore.logout(true, false);
     }
   }
 
@@ -78,6 +83,7 @@ function createRequestClient(baseURL: string) {
 
     // 检查 refreshToken 是否存在
     const refreshToken = accessStore.refreshToken;
+    const owner = ownerScope.capture();
     if (!refreshToken) {
       console.error('Refresh token is missing or null.');
       throw new Error('Refresh token is missing or null.'); // 抛出异常，确保不会返回 null
@@ -92,12 +98,13 @@ function createRequestClient(baseURL: string) {
         throw new Error('New token is null or undefined.');
       }
       // 更新 accessToken
+      ownerScope.assert(owner);
       accessStore.setAccessToken(newToken);
 
       // 返回新的 token
       return newToken;
     } catch (error) {
-      console.warn('Access token refresh failed');
+      if (!isCancel(error)) console.warn('Access token refresh failed');
       throw error;
     }
   }
@@ -108,7 +115,8 @@ function createRequestClient(baseURL: string) {
 
   // 请求头处理
   client.addRequestInterceptor({
-    fulfilled: async (config) => {
+    fulfilled: (config) => {
+      ownerScope.bindRequest(config);
       const accessStore = useAccessStore();
 
       const currentToken = accessStore.accessToken;
@@ -117,6 +125,8 @@ function createRequestClient(baseURL: string) {
       return config;
     },
   });
+
+  client.addResponseInterceptor(ownerScope.response);
 
   // response数据解构
   client.addResponseInterceptor({
@@ -141,6 +151,7 @@ function createRequestClient(baseURL: string) {
   client.addResponseInterceptor(
     authenticateResponseInterceptor({
       client,
+      ownerScope,
       doReAuthenticate,
       doRefreshToken,
       enableRefreshToken: preferences.app.enableRefreshToken,

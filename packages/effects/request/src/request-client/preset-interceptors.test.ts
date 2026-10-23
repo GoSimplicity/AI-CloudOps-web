@@ -52,7 +52,7 @@ describe('并发请求的令牌刷新', () => {
       client.get('/resource'),
       client.get('/resource'),
     ];
-    await vi.waitFor(() => expect(client.refreshTokenQueue).toHaveLength(2));
+    await vi.waitFor(() => expect(mock.history.get).toHaveLength(3));
     refresh.resolve('fresh');
 
     const responses = await Promise.all(requests);
@@ -73,7 +73,7 @@ describe('并发请求的令牌刷新', () => {
       client.get('/resource'),
       client.get('/resource'),
     ]);
-    await vi.waitFor(() => expect(client.refreshTokenQueue).toHaveLength(2));
+    await vi.waitFor(() => expect(mock.history.get).toHaveLength(3));
     const failure = new Error('refresh expired');
     refresh.reject(failure);
 
@@ -85,8 +85,6 @@ describe('并发请求的令牌刷新', () => {
     expect(doRefreshToken).toHaveBeenCalledTimes(1);
     expect(reAuthenticate).toHaveBeenCalledTimes(1);
     expect(mock.history.get).toHaveLength(3);
-    expect(client.refreshTokenQueue).toHaveLength(0);
-    expect(client.isRefreshing).toBe(false);
   });
 
   it('排队请求重试仍为 401 时不再次刷新', async () => {
@@ -98,7 +96,7 @@ describe('并发请求的令牌刷新', () => {
       client.get('/resource'),
       client.get('/resource'),
     ]);
-    await vi.waitFor(() => expect(client.refreshTokenQueue).toHaveLength(1));
+    await vi.waitFor(() => expect(mock.history.get).toHaveLength(2));
     refresh.resolve('fresh');
 
     expect(

@@ -4,17 +4,30 @@ import type {
   RouteLocationNormalizedLoadedGeneric,
 } from 'vue-router';
 
-import { type VNode } from 'vue';
+import { computed, ref, watch, type VNode } from 'vue';
 import { RouterView } from 'vue-router';
 
 import { preferences, usePreferences } from '@vben/preferences';
-import { storeToRefs, useTabbarStore } from '@vben/stores';
+import {
+  storeToRefs,
+  useTabbarStore,
+  useUserStore,
+  useAccessStore,
+} from '@vben/stores';
 
 import { IFrameRouterView } from '../../iframe';
 
 defineOptions({ name: 'LayoutContent' });
 
 const tabbarStore = useTabbarStore();
+const userStore = useUserStore();
+const accessStore = useAccessStore();
+const contentOwner = computed(() =>
+  accessStore.accessToken ? userStore.userInfo?.userId || '' : '',
+);
+const ownerEpoch = ref(0);
+// 同一tick退出再登录也销毁旧缓存，普通令牌刷新保持同UID页面
+watch(contentOwner, () => ownerEpoch.value++, { flush: 'sync' });
 const { keepAlive } = usePreferences();
 
 const { getCachedTabs, getExcludeCachedTabs, renderRouteView } =
@@ -81,27 +94,29 @@ function transformComponent(
 
 <template>
   <div class="relative h-full">
-    <IFrameRouterView />
-    <RouterView v-slot="{ Component, route }">
-      <Transition :name="getTransitionName(route)" appear mode="out-in">
-        <KeepAlive
-          v-if="keepAlive"
-          :exclude="getExcludeCachedTabs"
-          :include="getCachedTabs"
-        >
+    <div v-if="contentOwner" :key="`${contentOwner}:${ownerEpoch}`" class="h-full">
+      <IFrameRouterView />
+      <RouterView v-slot="{ Component, route }">
+        <Transition :name="getTransitionName(route)" appear mode="out-in">
+          <KeepAlive
+            v-if="keepAlive"
+            :exclude="getExcludeCachedTabs"
+            :include="getCachedTabs"
+          >
+            <component
+              :is="transformComponent(Component, route)"
+              v-if="renderRouteView"
+              v-show="!route.meta.iframeSrc"
+              :key="route.name"
+            />
+          </KeepAlive>
           <component
-            :is="transformComponent(Component, route)"
-            v-if="renderRouteView"
-            v-show="!route.meta.iframeSrc"
+            :is="Component"
+            v-else-if="renderRouteView"
             :key="route.name"
           />
-        </KeepAlive>
-        <component
-          :is="Component"
-          v-else-if="renderRouteView"
-          :key="route.name"
-        />
-      </Transition>
-    </RouterView>
+        </Transition>
+      </RouterView>
+    </div>
   </div>
 </template>

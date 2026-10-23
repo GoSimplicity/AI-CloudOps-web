@@ -35,6 +35,8 @@ export const useAuthStore = defineStore('auth', () => {
     let userInfo: null | UserInfo = null;
     const generation = ++authGeneration;
     userStore.setUserInfo(null);
+    accessStore.setAccessToken(null);
+    accessStore.setRefreshToken(null);
     try {
       loginLoading.value = true;
       const { accessToken, refreshToken } = await loginApi(params);
@@ -120,12 +122,12 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchUserInfo() {
     let userInfo: null | UserInfo = null;
     const generation = authGeneration;
-    const token = accessStore.accessToken;
+    const owner = userStore.userInfo?.userId;
     userInfo = await getUserInfoApi();
     if (
       generation !== authGeneration ||
-      token !== accessStore.accessToken ||
-      !token
+      (owner && owner !== userStore.userInfo?.userId) ||
+      !accessStore.accessToken
     ) {
       throw new Error('账户已变化，忽略过期资料');
     }
@@ -147,6 +149,7 @@ export const useAuthStore = defineStore('auth', () => {
     $reset,
     authLogin,
     fetchUserInfo,
+    getAuthGeneration: () => authGeneration,
     loginLoading,
     logout,
   };
