@@ -26,7 +26,9 @@ const notices = vi.hoisted(() => ({
 }));
 const refreshTokenApi = vi.hoisted(() => vi.fn());
 /** 可控的 XMLHttpRequest：锁定 axios xhr adapter 对浏览器中止请求的行为（incr3 P3-2） */
-const fakeXhr = vi.hoisted(() => ({ mode: 'abort' as 'abort' | 'loadend-status-0' }));
+const fakeXhr = vi.hoisted(() => ({
+  mode: 'abort' as 'abort' | 'loadend-status-0',
+}));
 
 vi.mock('ant-design-vue', () => ({ message: notices }));
 vi.mock('@vben/preferences', () => ({
@@ -141,13 +143,20 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
   });
 
   it('HTTP 429：只弹一条「请求过于频繁，请稍后重试」', async () => {
-    await call(adapterOf(429, { code: 429, data: null, message: 'rate limited' }));
+    await call(
+      adapterOf(429, { code: 429, data: null, message: 'rate limited' }),
+    );
     expectSingleHttpNotice('请求过于频繁，请稍后重试');
   });
 
   it('P3-C：浏览器中止请求（Request aborted / ECONNABORTED，无 response）：按网络异常提示一条', async () => {
     await call(async (config) => {
-      throw new AxiosError('Request aborted', AxiosError.ECONNABORTED, config, {});
+      throw new AxiosError(
+        'Request aborted',
+        AxiosError.ECONNABORTED,
+        config,
+        {},
+      );
     });
     const text = $t('fallback.http.networkError');
     expect(text).not.toBe('');
@@ -163,31 +172,48 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
     [503, 'fallback.http.internalServerError'],
     [404, 'fallback.http.notFound'],
     [401, 'fallback.http.unauthorized'],
-  ])('其它状态码不受影响：HTTP %s 仍是原文案，不透出后端原文', async (status, key) => {
-    await call(adapterOf(status, { code: status, data: null, message: '后端原文 x' }));
-    if (status === 401) {
-      // 401 走登录过期 / 刷新令牌流程，不弹通用错误
-      expect(JSON.stringify(notices.error.mock.calls)).not.toContain('后端原文 x');
-      return;
-    }
-    expectSingleHttpNotice($t(key));
-  });
+  ])(
+    '其它状态码不受影响：HTTP %s 仍是原文案，不透出后端原文',
+    async (status, key) => {
+      await call(
+        adapterOf(status, { code: status, data: null, message: '后端原文 x' }),
+      );
+      if (status === 401) {
+        // 401 走登录过期 / 刷新令牌流程，不弹通用错误
+        expect(JSON.stringify(notices.error.mock.calls)).not.toContain(
+          '后端原文 x',
+        );
+        return;
+      }
+      expectSingleHttpNotice($t(key));
+    },
+  );
 
   it('HTTP 403 不受影响：只有统一的无权限提示，不透出后端原文', async () => {
-    await call(adapterOf(403, { code: 403, data: null, message: '后端原文 403' }));
+    await call(
+      adapterOf(403, { code: 403, data: null, message: '后端原文 403' }),
+    );
     expect(notices.error).toHaveBeenCalledTimes(1);
-    expect(JSON.stringify(notices.error.mock.calls)).not.toContain('后端原文 403');
+    expect(JSON.stringify(notices.error.mock.calls)).not.toContain(
+      '后端原文 403',
+    );
   });
 
   describe('incr3 P2-2：HTTP 400 显示后端原文', () => {
     it('有原文：只弹一条后端原文（key 同样按文案区分）', async () => {
-      await call(adapterOf(400, { code: 400, data: null, message: '名称不能为空' }));
+      await call(
+        adapterOf(400, { code: 400, data: null, message: '名称不能为空' }),
+      );
       expectSingleHttpNotice('名称不能为空');
     });
 
     it('原文含换行：换成空格，首尾空白去掉', async () => {
       await call(
-        adapterOf(400, { code: 400, data: null, message: '  第一行\r\n第二行\n\n第三行  ' }),
+        adapterOf(400, {
+          code: 400,
+          data: null,
+          message: '  第一行\r\n第二行\n\n第三行  ',
+        }),
       );
       expectSingleHttpNotice('第一行 第二行 第三行');
     });
@@ -210,7 +236,10 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
       ['message 为空串', { code: 400, data: null, message: '' }],
       ['message 只有空白 / 换行', { code: 400, data: null, message: ' \n\r ' }],
       ['没有 message', { code: 400, data: null }],
-      ['message 不是字符串', { code: 400, data: null, message: { detail: 'x' } }],
+      [
+        'message 不是字符串',
+        { code: 400, data: null, message: { detail: 'x' } },
+      ],
       ['响应体是 HTML 字符串', '<html>Bad Request</html>'],
       ['响应体为空', undefined],
     ])('%s：用通用的请求错误文案', async (_label, data) => {
@@ -220,23 +249,81 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
   });
 
   describe('incr3 P2-2 例外：autofix 接口 400 不透出后端原文（以 SEC-26 规则 3 为准）', () => {
-    const BACKEND = { code: 400, data: null, message: '后端原文 WORKFLOW_APPROVAL_ERROR' };
+    const BACKEND = {
+      code: 400,
+      data: null,
+      message: '后端原文 WORKFLOW_APPROVAL_ERROR',
+    };
 
     it.each([
-      ['POST /autofix/workflow', () => requestClientAIOps.post('/autofix/workflow', {}, { adapter: adapterOf(400, BACKEND) })],
-      ['POST /autofix/workflow/confirm', () => requestClientAIOps.post('/autofix/workflow/confirm', {}, { adapter: adapterOf(400, BACKEND) })],
-      ['GET /autofix/info', () => requestClientAIOps.get('/autofix/info', { adapter: adapterOf(400, BACKEND) })],
-      ['GET autofix/ready?x=1（无前导斜杠、带查询串）', () => requestClientAIOps.get('autofix/ready?x=1', { adapter: adapterOf(400, BACKEND) })],
-      ['绝对地址 …/api/v1/autofix/workflow', () => requestClientAIOps.post('http://127.0.0.1:9/api/v1/autofix/workflow', {}, { adapter: adapterOf(400, BACKEND) })],
+      [
+        'POST /autofix/workflow',
+        () =>
+          requestClientAIOps.post(
+            '/autofix/workflow',
+            {},
+            { adapter: adapterOf(400, BACKEND) },
+          ),
+      ],
+      [
+        'POST /autofix/workflow/confirm',
+        () =>
+          requestClientAIOps.post(
+            '/autofix/workflow/confirm',
+            {},
+            { adapter: adapterOf(400, BACKEND) },
+          ),
+      ],
+      [
+        'GET /autofix/info',
+        () =>
+          requestClientAIOps.get('/autofix/info', {
+            adapter: adapterOf(400, BACKEND),
+          }),
+      ],
+      [
+        'GET autofix/ready?x=1（无前导斜杠、带查询串）',
+        () =>
+          requestClientAIOps.get('autofix/ready?x=1', {
+            adapter: adapterOf(400, BACKEND),
+          }),
+      ],
+      [
+        '绝对地址 …/api/v1/autofix/workflow',
+        () =>
+          requestClientAIOps.post(
+            'http://127.0.0.1:9/api/v1/autofix/workflow',
+            {},
+            { adapter: adapterOf(400, BACKEND) },
+          ),
+      ],
     ])('%s：只弹一条通用的请求错误文案，不含后端原文', async (_label, run) => {
       await run().catch((error) => error);
       expectSingleHttpNotice($t('fallback.http.badRequest'));
-      expect(JSON.stringify(notices.error.mock.calls)).not.toContain('WORKFLOW_APPROVAL_ERROR');
+      expect(JSON.stringify(notices.error.mock.calls)).not.toContain(
+        'WORKFLOW_APPROVAL_ERROR',
+      );
     });
 
     it.each([
-      ['aiops 其它接口 /rca/analyze', () => requestClientAIOps.post('/rca/analyze', {}, { adapter: adapterOf(400, BACKEND) })],
-      ['主站路径只是包含 autofix 字样 /k8s/autofixer', () => requestClient.post('/k8s/autofixer', {}, { adapter: adapterOf(400, BACKEND) })],
+      [
+        'aiops 其它接口 /rca/analyze',
+        () =>
+          requestClientAIOps.post(
+            '/rca/analyze',
+            {},
+            { adapter: adapterOf(400, BACKEND) },
+          ),
+      ],
+      [
+        '主站路径只是包含 autofix 字样 /k8s/autofixer',
+        () =>
+          requestClient.post(
+            '/k8s/autofixer',
+            {},
+            { adapter: adapterOf(400, BACKEND) },
+          ),
+      ],
     ])('对照：%s 仍显示后端原文', async (_label, run) => {
       await run().catch((error) => error);
       expectSingleHttpNotice(BACKEND.message);
@@ -246,13 +333,22 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
       [409, HTTP_CONFLICT_MESSAGE],
       [500, $t('fallback.http.internalServerError')],
       [503, $t('fallback.http.internalServerError')],
-    ])('autofix 接口的 409 / 5xx 不受影响（%s：仍是原有通用文案，不含后端原文）', async (status, text) => {
-      await requestClientAIOps
-        .post('/autofix/workflow/confirm', {}, { adapter: adapterOf(status, { ...BACKEND, code: status }) })
-        .catch((error) => error);
-      expectSingleHttpNotice(text);
-      expect(JSON.stringify(notices.error.mock.calls)).not.toContain('WORKFLOW_APPROVAL_ERROR');
-    });
+    ])(
+      'autofix 接口的 409 / 5xx 不受影响（%s：仍是原有通用文案，不含后端原文）',
+      async (status, text) => {
+        await requestClientAIOps
+          .post(
+            '/autofix/workflow/confirm',
+            {},
+            { adapter: adapterOf(status, { ...BACKEND, code: status }) },
+          )
+          .catch((error) => error);
+        expectSingleHttpNotice(text);
+        expect(JSON.stringify(notices.error.mock.calls)).not.toContain(
+          'WORKFLOW_APPROVAL_ERROR',
+        );
+      },
+    );
   });
 
   describe('incr4 P2-1 / P3-A / P3-B：敏感接口（autofix、Secret）400 一律通用文案', () => {
@@ -261,12 +357,18 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
     const BODY = { code: 400, data: null, message: RAW };
     const ERROR_ONLY_BODY = { error: { message: RAW } };
     const viaAiops = (url: string, body: unknown = BODY) =>
-      requestClientAIOps.post(url, {}, { adapter: adapterOf(400, body) }).catch((error) => error);
+      requestClientAIOps
+        .post(url, {}, { adapter: adapterOf(400, body) })
+        .catch((error) => error);
     const viaMain = (url: string, body: unknown = BODY) =>
-      requestClient.post(url, {}, { adapter: adapterOf(400, body) }).catch((error) => error);
+      requestClient
+        .post(url, {}, { adapter: adapterOf(400, body) })
+        .catch((error) => error);
     function expectGeneric400() {
       expectSingleHttpNotice($t('fallback.http.badRequest'));
-      expect(JSON.stringify(notices.error.mock.calls)).not.toContain('SENSITIVE-RAW');
+      expect(JSON.stringify(notices.error.mock.calls)).not.toContain(
+        'SENSITIVE-RAW',
+      );
     }
 
     it.each([
@@ -310,7 +412,10 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
       ['查询串', '/k8s/secret/1/list?page=1'],
       ['hash', '/k8s/secret#h'],
       ['绝对地址', 'http://127.0.0.1:9/api/k8s/secret/1/create'],
-      ['P3-B 编码 /api/k8s%2Fsecret%2F1%2Fcreate', '/api/k8s%2Fsecret%2F1%2Fcreate'],
+      [
+        'P3-B 编码 /api/k8s%2Fsecret%2F1%2Fcreate',
+        '/api/k8s%2Fsecret%2F1%2Fcreate',
+      ],
       ['P3-B .json 后缀', '/k8s/secret.json'],
       ['P3-B ; 参数', '/k8s/secret;v=1/1/list'],
       ['P3-B 尾随空格', '/k8s/secret '],
@@ -328,10 +433,13 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
       ['不完整的百分号编码', '/rca/analyze%'],
       ['非法 UTF-8 序列', '/k8s/pod/%E0%A4%A/logs'],
       ['非法转义', '/x/%ZZ'],
-    ])('P3-B 解码失败（%s）：fail closed，按敏感接口处理', async (_label, url) => {
-      await viaMain(url);
-      expectGeneric400();
-    });
+    ])(
+      'P3-B 解码失败（%s）：fail closed，按敏感接口处理',
+      async (_label, url) => {
+        await viaMain(url);
+        expectGeneric400();
+      },
+    );
 
     it.each([
       ['M01 /xautofix/', () => viaAiops('/xautofix/')],
@@ -340,9 +448,18 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
       ['/k8s/secretary/1/list', () => viaMain('/k8s/secretary/1/list')],
       ['/k8s/secret-store/1/list', () => viaMain('/k8s/secret-store/1/list')],
       ['/k8s/configmap/1/create', () => viaMain('/k8s/configmap/1/create')],
-      ['/k8s/ingress/1/create（body 里有 secret_name）', () => viaMain('/k8s/ingress/1/create')],
-      ['/k8s/serviceaccount/1/default/sa/update', () => viaMain('/k8s/serviceaccount/1/default/sa/update')],
-      ['编码后仍不是敏感段 /k8s%2Fconfigmap%2F1', () => viaMain('/k8s%2Fconfigmap%2F1')],
+      [
+        '/k8s/ingress/1/create（body 里有 secret_name）',
+        () => viaMain('/k8s/ingress/1/create'),
+      ],
+      [
+        '/k8s/serviceaccount/1/default/sa/update',
+        () => viaMain('/k8s/serviceaccount/1/default/sa/update'),
+      ],
+      [
+        '编码后仍不是敏感段 /k8s%2Fconfigmap%2F1',
+        () => viaMain('/k8s%2Fconfigmap%2F1'),
+      ],
     ])('对照：%s 仍显示后端原文（非敏感接口暂时保留）', async (_label, run) => {
       await run();
       expectSingleHttpNotice(RAW);
@@ -353,13 +470,22 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
     it.each([
       ['message', BODY],
       ['error.message', ERROR_ONLY_BODY],
-    ])('incr5 F2：非敏感接口 422（原文在 %s）只弹通用文案，不透出后端原文', async (_label, body) => {
-      await requestClient
-        .post('/k8s/configmap/1/create', {}, { adapter: adapterOf(422, body) })
-        .catch((error) => error);
-      expectSingleHttpNotice($t('fallback.http.internalServerError'));
-      expect(JSON.stringify(notices.error.mock.calls)).not.toContain('SENSITIVE-RAW');
-    });
+    ])(
+      'incr5 F2：非敏感接口 422（原文在 %s）只弹通用文案，不透出后端原文',
+      async (_label, body) => {
+        await requestClient
+          .post(
+            '/k8s/configmap/1/create',
+            {},
+            { adapter: adapterOf(422, body) },
+          )
+          .catch((error) => error);
+        expectSingleHttpNotice($t('fallback.http.internalServerError'));
+        expect(JSON.stringify(notices.error.mock.calls)).not.toContain(
+          'SENSITIVE-RAW',
+        );
+      },
+    );
 
     // incr5 F3（复审 D08）：路径只 decodeURIComponent 一次
     it('incr5 F3：只解码一次，%25ZZ 解一次得到 %ZZ 不算解码失败，非敏感接口仍显示后端原文', async () => {
@@ -376,7 +502,12 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
 
     it('nit：ECONNABORTED、无 response、message 为大写 Timeout…（packages 判不成超时）：按网络异常提示，不落到内部服务器错误', async () => {
       await call(async (config) => {
-        throw new AxiosError('Timeout of 1ms exceeded', AxiosError.ECONNABORTED, config, {});
+        throw new AxiosError(
+          'Timeout of 1ms exceeded',
+          AxiosError.ECONNABORTED,
+          config,
+          {},
+        );
       });
       expectSingleHttpNotice($t('fallback.http.networkError'));
     });
@@ -443,22 +574,36 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
   describe('incr3 P2-1 / P3-3：请求层标记与页面判断', () => {
     it('409 / 429 文案常量收口在 constants/http-error-messages.ts，request.ts 转出同一常量', () => {
       expect(HTTP_CONFLICT_MESSAGE).toBe(sharedMessages.HTTP_CONFLICT_MESSAGE);
-      expect(HTTP_TOO_MANY_REQUESTS_MESSAGE).toBe(sharedMessages.HTTP_TOO_MANY_REQUESTS_MESSAGE);
+      expect(HTTP_TOO_MANY_REQUESTS_MESSAGE).toBe(
+        sharedMessages.HTTP_TOO_MANY_REQUESTS_MESSAGE,
+      );
     });
 
     it.each([
       [409, HTTP_CONFLICT_MESSAGE],
       [429, HTTP_TOO_MANY_REQUESTS_MESSAGE],
       [500, $t('fallback.http.internalServerError')],
-    ])('HTTP %s：包装后的错误带 http-error key 标记，页面不再弹', async (status, text) => {
-      const error = await call(adapterOf(status, { code: status, data: null, message: 'x' }));
-      expect(getRequestLayerNoticeKey(error)).toBe(`${HTTP_ERROR_MESSAGE_KEY_PREFIX}${text}`);
-      expect(shouldNotifyPageError(error)).toBe(false);
-    });
+    ])(
+      'HTTP %s：包装后的错误带 http-error key 标记，页面不再弹',
+      async (status, text) => {
+        const error = await call(
+          adapterOf(status, { code: status, data: null, message: 'x' }),
+        );
+        expect(getRequestLayerNoticeKey(error)).toBe(
+          `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${text}`,
+        );
+        expect(shouldNotifyPageError(error)).toBe(false);
+      },
+    );
 
     it('网络错误（未包装的 AxiosError）同样带标记，页面不再弹', async () => {
       const error = await call(async (config) => {
-        throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, {});
+        throw new AxiosError(
+          'Network Error',
+          AxiosError.ERR_NETWORK,
+          config,
+          {},
+        );
       });
       expect(getRequestLayerNoticeKey(error)).toBe(
         `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${$t('fallback.http.networkError')}`,
@@ -472,7 +617,9 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
         call(adapterOf(409, { code: 409, data: null, message: 'b' })),
       ]);
       const keys = new Set(notices.error.mock.calls.map(([arg]) => arg.key));
-      expect([...keys]).toEqual([`${HTTP_ERROR_MESSAGE_KEY_PREFIX}${HTTP_CONFLICT_MESSAGE}`]);
+      expect([...keys]).toEqual([
+        `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${HTTP_CONFLICT_MESSAGE}`,
+      ]);
     });
 
     it.each([
@@ -480,22 +627,35 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
       [
         '网络错误',
         (config: any) => {
-          throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, {});
+          throw new AxiosError(
+            'Network Error',
+            AxiosError.ERR_NETWORK,
+            config,
+            {},
+          );
         },
       ],
-    ])('baseRequestClient（无拦截器）%s：请求层没弹，也没有标记，页面照常提示', async (_label, impl) => {
-      const error = await baseRequestClient
-        .get('/x', { adapter: async (config) => impl(config) })
-        .catch((error_: any) => error_);
-      expect(notices.error).not.toHaveBeenCalled();
-      expect(getRequestLayerNoticeKey(error)).toBeUndefined();
-      expect(shouldNotifyPageError(error)).toBe(true);
-    });
+    ])(
+      'baseRequestClient（无拦截器）%s：请求层没弹，也没有标记，页面照常提示',
+      async (_label, impl) => {
+        const error = await baseRequestClient
+          .get('/x', { adapter: async (config) => impl(config) })
+          .catch((error_: any) => error_);
+        expect(notices.error).not.toHaveBeenCalled();
+        expect(getRequestLayerNoticeKey(error)).toBeUndefined();
+        expect(shouldNotifyPageError(error)).toBe(true);
+      },
+    );
   });
 
   it('超时（timeout，ECONNABORTED）不受影响：仍是请求超时文案', async () => {
     await call(async (config) => {
-      throw new AxiosError('timeout of 1ms exceeded', AxiosError.ECONNABORTED, config, {});
+      throw new AxiosError(
+        'timeout of 1ms exceeded',
+        AxiosError.ECONNABORTED,
+        config,
+        {},
+      );
     });
     expectSingleHttpNotice($t('fallback.http.requestTimeout'));
   });
