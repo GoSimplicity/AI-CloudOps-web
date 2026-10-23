@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  *   autofix 接口（/autofix/…）例外，仍不透出后端原文（与 SEC-26 规则 3 重叠时以 SEC-26 为准，窝窝头 2026-10-24）
  * - incr4 P2-1：敏感接口（autofix 与 Secret 相关路径）的 400 一律用通用文案，其它接口暂时保留后端原文；
  *   路径先 decodeURIComponent（解码失败按敏感接口处理，fail closed），认 `.json` 后缀与 `;` 参数（P3-B）
+ * - incr5 F2 / F3：非敏感接口的 422 不透出后端原文（只有 400 透出）；路径只解码一次（双重编码不还原）
  * - P3-C / incr3 P3-2：浏览器中止请求（xhr onabort / onloadend status 0：ECONNABORTED，没有 response，不是超时）
  *   不再显示「内部服务器错误」，按网络异常提示；不依赖 'Request aborted' 原文，axios 行为由 xhr 用例锁定
  * - 401 / 403 / 5xx、业务错误（HTTP 200 + code≠0，含 code 409 / 429）、取消类不受影响
@@ -344,6 +345,32 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
       ['编码后仍不是敏感段 /k8s%2Fconfigmap%2F1', () => viaMain('/k8s%2Fconfigmap%2F1')],
     ])('对照：%s 仍显示后端原文（非敏感接口暂时保留）', async (_label, run) => {
       await run();
+      expectSingleHttpNotice(RAW);
+    });
+
+    // incr5 F2（复审 G05）：后端原文只在 400 透出；非敏感接口的 422 仍是请求层通用文案（packages 把 422 归到
+    // internalServerError），响应体里的 message / error.message 都不透出
+    it.each([
+      ['message', BODY],
+      ['error.message', ERROR_ONLY_BODY],
+    ])('incr5 F2：非敏感接口 422（原文在 %s）只弹通用文案，不透出后端原文', async (_label, body) => {
+      await requestClient
+        .post('/k8s/configmap/1/create', {}, { adapter: adapterOf(422, body) })
+        .catch((error) => error);
+      expectSingleHttpNotice($t('fallback.http.internalServerError'));
+      expect(JSON.stringify(notices.error.mock.calls)).not.toContain('SENSITIVE-RAW');
+    });
+
+    // incr5 F3（复审 D08）：路径只 decodeURIComponent 一次
+    it('incr5 F3：只解码一次，%25ZZ 解一次得到 %ZZ 不算解码失败，非敏感接口仍显示后端原文', async () => {
+      // 解两次会在第二次抛错、按 fail closed 改成通用文案
+      await viaMain('/k8s/pod/1/%25ZZ/logs');
+      expectSingleHttpNotice(RAW);
+    });
+
+    it('incr5 F3：只解码一次，双重编码 %252F 不还原成 /，secret 不是独立段（已知限制，见 pr-notes 8.2）', async () => {
+      // 锁住现状而不是认可它：要支持双重编码时，连同这条用例与 pr-notes 8.2 一起改
+      await viaMain('/k8s%252Fsecret%252F1%252Flist');
       expectSingleHttpNotice(RAW);
     });
 
