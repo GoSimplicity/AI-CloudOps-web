@@ -24,7 +24,11 @@ import {
 } from '#/api/core/system/audit';
 
 import { getUserDetailApi } from '#/api/core/system/user';
+import { usePermission } from '#/utils/permission';
 import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+// 清单 #4 / #5：待确认（SEC-13/D4 计划下线），FE-02 期间按临时码隐藏
+const { can } = usePermission();
 
 // 扩展审计日志类型，包含用户信息
 interface AuditLogWithUser extends AuditLog {
@@ -477,7 +481,7 @@ onMounted(() => {
         导出当前页
       </a-button>
       <a-button
-        v-if="selectedRowKeys.length > 0"
+        v-if="selectedRowKeys.length > 0 && can('system.audit.batchDelete')"
         type="primary"
         danger
         @click="handleBatchDelete"
@@ -664,6 +668,7 @@ onMounted(() => {
                 >查看</a-button
               >
               <a-popconfirm
+                v-if="can('system.audit.delete')"
                 title="确定要删除吗？"
                 @confirm="handleDelete(record)"
               >

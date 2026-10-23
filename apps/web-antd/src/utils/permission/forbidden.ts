@@ -70,13 +70,60 @@ export function isPermissionDeniedError(error: any) {
   );
 }
 
-/** 业务码为 403 的响应（HTTP 200）也统一视为无权限 */
+/** 后端 403 原文（仅供排查，不可枚举，不用于界面提示） */
+const FORBIDDEN_BACKEND_MESSAGE = Symbol.for(
+  'ai-cloudops.forbiddenBackendMessage',
+);
+
+/**
+ * 业务码为 403 的响应（HTTP 200）也统一视为无权限。
+ * 后端 body 为 `{code:403,message:"无权限访问该接口"}`（后端事实，不变）；
+ * 前端统一改写为 PERMISSION_DENIED_MESSAGE，error.message 不带后端原文，
+ * 避免页面按 error.message 取文案时透传后端 message（permission-codes.md v3 第 1 节）。
+ */
 export function createPermissionDeniedError(detail?: string) {
   const error = new Error(
-    `Error ${FORBIDDEN_STATUS}: ${detail || PERMISSION_DENIED_MESSAGE}`,
+    `Error ${FORBIDDEN_STATUS}: ${PERMISSION_DENIED_MESSAGE}`,
   );
   defineFlag(error, BUSINESS_FORBIDDEN_FLAG);
+  setBackendMessage(error, detail ?? '');
   return error;
+}
+
+/** 取后端 403 原文（排查用，不用于界面提示）；不是 403 错误时返回空串 */
+export function getForbiddenBackendMessage(error: any): string {
+  return typeof error?.[FORBIDDEN_BACKEND_MESSAGE] === 'string'
+    ? error[FORBIDDEN_BACKEND_MESSAGE]
+    : '';
+}
+
+function setBackendMessage(target: object, detail: string) {
+  Object.defineProperty(target, FORBIDDEN_BACKEND_MESSAGE, {
+    configurable: true,
+    enumerable: false,
+    value: detail,
+  });
+}
+
+/**
+ * HTTP 403：把响应体里的后端 message 改写为统一文案（原文另存，排查用）。
+ * RequestClient 会用 response.data 构造抛给页面的错误对象，
+ * 不改写的话页面拿到的 error.message / response.data.message 就是后端原文。
+ */
+function maskForbiddenResponseBody(error: any) {
+  const response = error?.response;
+  if (!response || typeof response !== 'object') return;
+  const data = response.data;
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    if (typeof data.message === 'string') {
+      if (data.message === PERMISSION_DENIED_MESSAGE) return;
+      setBackendMessage(error, data.message);
+      data.message = PERMISSION_DENIED_MESSAGE;
+    }
+  } else if (typeof data === 'string' && data !== PERMISSION_DENIED_MESSAGE) {
+    setBackendMessage(error, data);
+    response.data = PERMISSION_DENIED_MESSAGE;
+  }
 }
 
 export type PermissionDeniedNotifier = (content: string, key: string) => void;
@@ -95,6 +142,7 @@ export function createForbiddenResponseInterceptor(
         defineFlag(error, PERMISSION_DENIED_FLAG);
         // 同时标记响应体，使 RequestClient 包装后抛给页面的错误对象也带上标记
         defineFlag(error?.response?.data, PERMISSION_DENIED_FLAG, true);
+        maskForbiddenResponseBody(error);
         notify(PERMISSION_DENIED_MESSAGE, PERMISSION_DENIED_MESSAGE_KEY);
       }
       return Promise.reject(error);

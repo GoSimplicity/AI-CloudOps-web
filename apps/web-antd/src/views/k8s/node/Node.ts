@@ -33,13 +33,40 @@ import {
   Env,
 } from '#/api/core/k8s/k8s_cluster';
 import { usePermission } from '#/utils/permission';
+import { clusterResourceKey } from '../shared/utils';
 import {
   isPermissionDeniedError,
+  PERMISSION_DENIED_MESSAGE,
   PERMISSION_DENIED_MESSAGE_KEY,
 } from '#/utils/permission/forbidden';
 
-/** 污点「保存更改」越权兜底提示（fe02-scope-decisions.md c-6 指定文案） */
-export const TAINT_NO_PERMISSION_MESSAGE = '无权限访问该接口';
+/** 批量禁用调度的最大并发请求数（复审 P2-1：避免一次性打出 N 个请求） */
+export const BATCH_CORDON_CONCURRENCY = 5;
+
+/**
+ * 小型并发池：按顺序取任务，同时最多 limit 个在跑；结果按输入顺序返回，语义同 Promise.allSettled。
+ */
+export async function runWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = new Array(items.length);
+  let next = 0;
+  const runner = async () => {
+    while (next < items.length) {
+      const index = next++;
+      try {
+        results[index] = { status: 'fulfilled', value: await worker(items[index] as T, index) };
+      } catch (reason) {
+        results[index] = { status: 'rejected', reason };
+      }
+    }
+  };
+  const size = Math.max(1, Math.min(limit, items.length));
+  await Promise.all(Array.from({ length: size }, runner));
+  return results;
+}
 
 export function useNodePage() {
   // state
@@ -434,10 +461,16 @@ export function useNodePage() {
     taintFormModel.value.taints.splice(index, 1);
   };
 
+  // 是否为本次弹窗里新增、尚未保存的行（不在原始污点里）：删除它只改本地表单，不调删除接口
+  const isNewTaint = (taint: CoreTaint) =>
+    !taintFormModel.value.originalTaints.some((t) => t.key === taint.key);
+
   // 要添加或更新的污点（只发送新的或修改过的污点）
   const getTaintsToAdd = (): CoreTaint[] =>
     taintFormModel.value.taints.filter((taint) => {
       if (!taint.key) return false; // 忽略没有key的污点
+      // 先删后加同一个 key（复审 P3-4）：提交时先删除再添加，必须重新添加，否则最终被删掉
+      if (taintFormModel.value.taintsToDelete.includes(taint.key)) return true;
 
       // 检查是否是新污点或者是否发生了变化
       const originalTaint = taintFormModel.value.originalTaints.find(
@@ -473,7 +506,7 @@ export function useNodePage() {
       (taintsToAdd.length > 0 && !can('k8s.node.taintAdd'))
     ) {
       message.error({
-        content: TAINT_NO_PERMISSION_MESSAGE,
+        content: PERMISSION_DENIED_MESSAGE,
         key: PERMISSION_DENIED_MESSAGE_KEY,
       });
       return;
@@ -668,9 +701,23 @@ export function useNodePage() {
           message.error(`暂不支持批量${operation}`);
           return;
         }
-        const targets = [...selectedRows.value];
-        const results = await Promise.allSettled(
-          targets.map((record) => {
+        const selected = [...selectedRows.value];
+        // 只对可调度（schedulable === 1，与行内按钮判断一致）的节点发 cordon；
+        // 已禁用调度的节点跳过，不发请求，在汇总里列出（复审 P3-5）
+        const targets = selected.filter((record) => record.schedulable === 1);
+        const skipped = selected.filter((record) => record.schedulable !== 1);
+        const skippedText = skipped.length
+          ? `，跳过 ${skipped.length} 个已禁用调度的节点（${skipped.map((record) => record.name).join('、')}）`
+          : '';
+        if (targets.length === 0) {
+          message.info(`选中的 ${selected.length} 个节点均已禁用调度，无需操作`);
+          return;
+        }
+        // 每个节点一个请求，最多 BATCH_CORDON_CONCURRENCY 个同时进行
+        const results = await runWithConcurrency(
+          targets,
+          BATCH_CORDON_CONCURRENCY,
+          (record) => {
             const clusterId = record.cluster_id || filterClusterId.value;
             if (!clusterId) return Promise.reject(new Error('无效的集群ID'));
             const params: K8sNodeCordonReq = {
@@ -678,17 +725,17 @@ export function useNodePage() {
               node_name: record.name,
             };
             return cordonK8sNode(params);
-          }),
+          },
         );
         const failed = targets.filter((_, index) => results[index]?.status === 'rejected');
         const failedNames = failed.map((record) => record.name).join('、');
         const successCount = targets.length - failed.length;
 
         if (failed.length === 0) {
-          message.success(`批量${operation}完成：${successCount} 个节点已${operation}`);
+          message.success(`批量${operation}完成：${successCount} 个节点已${operation}${skippedText}`);
         } else if (successCount > 0) {
           message.warning(
-            `批量${operation}部分成功：成功 ${successCount} 个，失败 ${failed.length} 个（${failedNames}）`,
+            `批量${operation}部分成功：成功 ${successCount} 个，失败 ${failed.length} 个（${failedNames}）${skippedText}`,
           );
         } else {
           // 全部失败且每个失败都已有统一提示（403 / 业务错误原文）时不再叠加
@@ -696,18 +743,23 @@ export function useNodePage() {
             (result) => result.status === 'rejected' && isPermissionDeniedError(result.reason),
           );
           if (!allNotified) {
-            message.error(`批量${operation}失败：${failed.length} 个节点均未成功（${failedNames}）`);
+            message.error(`批量${operation}失败：${failed.length} 个节点均未成功（${failedNames}）${skippedText}`);
           }
         }
 
         if (successCount > 0) {
-          selectedRowKeys.value = [];
-          selectedRows.value = [];
           try {
             await fetchNodes();
           } catch {
             // fetchNodes 自己处理加载失败状态
           }
+          // 部分失败时保留失败节点的勾选，方便重试；全部成功则清空（复审 P3-5）
+          const failedKeys = failed.map((record) => clusterResourceKey(record));
+          selectedRowKeys.value = failedKeys;
+          selectedRows.value = failed.map(
+            (record) =>
+              nodes.value.find((node) => clusterResourceKey(node) === clusterResourceKey(record)) ?? record,
+          );
         }
       },
     });
@@ -812,6 +864,7 @@ export function useNodePage() {
     closeTaintModal,
     addTaint,
     removeTaint,
+    isNewTaint,
     submitTaintForm,
     hasTaintChanges,
     validateTaintYaml,
