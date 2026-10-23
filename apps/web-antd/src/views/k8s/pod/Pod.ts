@@ -106,6 +106,12 @@ export type StreamCloseReason = 'login-expired';
 /** 日志 SSE / 终端 WS 连续重连上限（连上后清零） */
 export const STREAM_MAX_RECONNECT_ATTEMPTS = 5;
 
+/**
+ * 复审 P3-A：终端 WS 因连上后 4401 刷新令牌并重连后，连接稳定保持这么久（5 分钟）
+ * 才允许下一次 4401 再刷新一次；不到这个时长再次 4401 仍直接停止并提示登录过期
+ */
+export const STREAM_UNAUTHORIZED_REFRESH_RESET_MS = 5 * 60 * 1000;
+
 /** 指数退避：1s、2s、4s…，最长 30s */
 export function streamReconnectDelay(attempt: number) {
   return Math.min(1000 * 2 ** Math.max(attempt - 1, 0), 30_000);
@@ -1897,13 +1903,25 @@ export function usePodPage() {
     let tokenRefreshed = false;
     // 复审 v4 P2-C：连上之后收到 4401 是否已刷新过令牌。单独计数，不在 onopen 里清零，
     // 否则「连上 → 4401 → 刷新 → 连上（清零）→ 4401」会无限刷新重连
+    // 复审 P3-A：重连后连接稳定保持满 STREAM_UNAUTHORIZED_REFRESH_RESET_MS 才清零（见 onopen）
     let unauthorizedAfterOpenRefreshed = false;
+    // 复审 P3-A：「稳定满 5 分钟后清零」计时器；断开 / onclose、stopReconnect、close、重新 connect 前都会清掉
+    let unauthorizedRefreshResetTimeoutId: null | ReturnType<
+      typeof setTimeout
+    > = null;
+    const clearUnauthorizedRefreshResetTimer = () => {
+      if (unauthorizedRefreshResetTimeoutId) {
+        clearTimeout(unauthorizedRefreshResetTimeoutId);
+        unauthorizedRefreshResetTimeoutId = null;
+      }
+    };
     // 握手阶段的 onerror 先暂存，等刷新结果出来再决定要不要报给调用方（刷新失败只提示登录过期）
     let pendingHandshakeError: Event | null = null;
 
     const stopReconnect = (reason?: StreamCloseReason) => {
       isManualClose = true;
       pendingHandshakeError = null;
+      clearUnauthorizedRefreshResetTimer();
       if (reconnectTimeoutId) {
         clearTimeout(reconnectTimeoutId);
         reconnectTimeoutId = null;
@@ -1966,6 +1984,7 @@ export function usePodPage() {
 
     // 复审 v4 P2-C：连上之后收到 4401（令牌在会话中失效）：只刷新一次并重连；
     // 重连后再次收到 4401 就停止重连并提示重新登录（这个标记不随 onopen 清零）
+    // 复审 P3-A：重连后连接稳定满 5 分钟会清零，之后的 4401 可以再刷新一次
     const recoverFromUnauthorizedAfterOpen = async () => {
       if (unauthorizedAfterOpenRefreshed) {
         stopReconnect('login-expired');
@@ -1990,6 +2009,7 @@ export function usePodPage() {
     };
 
     const connect = () => {
+      clearUnauthorizedRefreshResetTimer();
       try {
         // 清理之前的连接
         if (socket) {
@@ -2015,6 +2035,16 @@ export function usePodPage() {
           opened = true;
           reconnectAttempts = 0; // 重置重连计数
           tokenRefreshed = false;
+          // 复审 P3-A：4401 刷新后重连上：稳定满 5 分钟才清零，期间断开会清掉计时器
+          clearUnauthorizedRefreshResetTimer();
+          if (unauthorizedAfterOpenRefreshed) {
+            unauthorizedRefreshResetTimeoutId = setTimeout(() => {
+              unauthorizedRefreshResetTimeoutId = null;
+              if (socket === ownedSocket && !isManualClose) {
+                unauthorizedAfterOpenRefreshed = false;
+              }
+            }, STREAM_UNAUTHORIZED_REFRESH_RESET_MS);
+          }
 
           const sendResize = (cols: number, rows: number) => {
             if (
@@ -2074,6 +2104,7 @@ export function usePodPage() {
 
         socket.onclose = (event) => {
           if (socket !== ownedSocket) return;
+          clearUnauthorizedRefreshResetTimer();
           resizeSubscription?.dispose();
           resizeSubscription = undefined;
           socket = null;
@@ -2119,6 +2150,7 @@ export function usePodPage() {
     // 手动关闭连接
     const close = () => {
       isManualClose = true;
+      clearUnauthorizedRefreshResetTimer();
       resizeSubscription?.dispose();
       resizeSubscription = undefined;
 

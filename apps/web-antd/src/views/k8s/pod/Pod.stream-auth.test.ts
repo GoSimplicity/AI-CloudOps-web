@@ -63,7 +63,13 @@ import {
   requestClient,
 } from '#/api/request';
 
-import { STREAM_MAX_RECONNECT_ATTEMPTS, usePodPage } from './Pod';
+import { effectScope } from 'vue';
+
+import {
+  STREAM_MAX_RECONNECT_ATTEMPTS,
+  STREAM_UNAUTHORIZED_REFRESH_RESET_MS,
+  usePodPage,
+} from './Pod';
 
 const LOG_PARAMS = {
   cluster_id: 1,
@@ -455,6 +461,114 @@ describe('Pod 终端 exec WS：令牌刷新与重连', () => {
     expect(cb.onClose).toHaveBeenCalledTimes(1);
     expect(cb.onClose).toHaveBeenCalledWith('login-expired');
     expectSingleLoginExpiredNotice();
+  });
+
+  describe('复审 P3-A：4401 刷新后连接稳定 5 分钟才允许再次刷新', () => {
+    /** 连上 → 4401 → 刷新并重连上（第 2 条连接已 open） */
+    async function openThen4401ThenReconnect() {
+      const cb = callbacks();
+      const page = usePodPage();
+      const conn = page.execK8sPodWebSocket(
+        EXEC_PARAMS,
+        cb.onMessage,
+        cb.onError,
+        cb.onOpen,
+        cb.onClose,
+      );
+      lastSocket().open();
+      lastSocket().onclose?.({ code: 4401, wasClean: true });
+      await flush();
+      expect(refreshTokenApi).toHaveBeenCalledTimes(1);
+      expect(FakeWebSocket.instances).toHaveLength(2);
+      lastSocket().open();
+      return { cb, conn };
+    }
+
+    it('门槛为 5 分钟常量', () => {
+      expect(STREAM_UNAUTHORIZED_REFRESH_RESET_MS).toBe(5 * 60 * 1000);
+    });
+
+    it('a) 重连后保持 2 小时再收到 4401：再刷新一次（共 2 次），不提示登录过期', async () => {
+      const { cb, conn } = await openThen4401ThenReconnect();
+      await flush(2 * 60 * 60 * 1000);
+      lastSocket().onclose?.({ code: 4401, wasClean: true });
+      await flush();
+
+      expect(refreshTokenApi).toHaveBeenCalledTimes(2);
+      expect(FakeWebSocket.instances).toHaveLength(3);
+      expect(lastSocket().protocols).toContain('cloudops-auth.new-token');
+      lastSocket().open();
+      expect(cb.onOpen).toHaveBeenCalledTimes(3);
+      expect(cb.onClose).not.toHaveBeenCalled();
+      expect(notices.warning).not.toHaveBeenCalled();
+      expect(access.setLoginExpired).not.toHaveBeenCalled();
+      conn.close();
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('b) 重连后不到 5 分钟（4 分 59 秒）又收到 4401：停止，刷新只 1 次，登录过期提示 1 条', async () => {
+      const { cb } = await openThen4401ThenReconnect();
+      await flush(STREAM_UNAUTHORIZED_REFRESH_RESET_MS - 1000);
+      lastSocket().onclose?.({ code: 4401, wasClean: true });
+      await flush(60_000);
+
+      expect(refreshTokenApi).toHaveBeenCalledTimes(1);
+      expect(FakeWebSocket.instances).toHaveLength(2);
+      expect(cb.onClose).toHaveBeenCalledTimes(1);
+      expect(cb.onClose).toHaveBeenCalledWith('login-expired');
+      expectSingleLoginExpiredNotice();
+      // stopReconnect 已清掉计时器
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('b2) 「稳定」要求连续：4 分钟时断开重连，再过 4 分钟收到 4401 仍停止', async () => {
+      const { cb } = await openThen4401ThenReconnect();
+      await flush(4 * 60 * 1000);
+      lastSocket().onclose?.({ code: 1006, wasClean: false });
+      await flush(1000);
+      expect(FakeWebSocket.instances).toHaveLength(3);
+      lastSocket().open();
+      await flush(4 * 60 * 1000);
+      lastSocket().onclose?.({ code: 4401, wasClean: true });
+      await flush(60_000);
+
+      expect(refreshTokenApi).toHaveBeenCalledTimes(1);
+      expect(cb.onClose).toHaveBeenCalledWith('login-expired');
+      expectSingleLoginExpiredNotice();
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('c) 主动断开（close）后没有残留计时器', async () => {
+      const { conn } = await openThen4401ThenReconnect();
+      expect(vi.getTimerCount()).toBe(1);
+      conn.close();
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('c) 服务端正常关闭（onclose）后没有残留计时器', async () => {
+      const { cb } = await openThen4401ThenReconnect();
+      expect(vi.getTimerCount()).toBe(1);
+      lastSocket().onclose?.({ code: 1000, wasClean: true });
+      expect(cb.onClose).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('c) 组件卸载后没有残留计时器', async () => {
+      const scope = effectScope();
+      const page = scope.run(() => usePodPage())!;
+      page.terminalConnection.value = page.execK8sPodWebSocket(
+        EXEC_PARAMS,
+        vi.fn(),
+      );
+      lastSocket().open();
+      lastSocket().onclose?.({ code: 4401, wasClean: true });
+      await flush();
+      expect(refreshTokenApi).toHaveBeenCalledTimes(1);
+      lastSocket().open();
+      expect(vi.getTimerCount()).toBe(1);
+      scope.stop();
+      expect(vi.getTimerCount()).toBe(0);
+    });
   });
 
   it(`重连有上限：刷新后握手仍失败，最多重连 ${STREAM_MAX_RECONNECT_ATTEMPTS} 次`, async () => {
