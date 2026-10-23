@@ -11,6 +11,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * - 业务错误（HTTP 200 + code≠0）经请求层弹后端原文一条，页面不叠加；
  * - 请求层没提示过的业务错误（未经 notifyBusinessError）：页面照常弹自己的文案；
  * - 取消：零提示。
+ * incr4（复审 P3-D / P2-1）：补 YAML 创建（Secret.ts:794）、表单更新（:846）两处写操作，共 6 处；
+ * 每处补 400 / 422：恰好一条请求层通用文案，任何提示都不含后端原文（Secret 是敏感接口，400 不透出原文）。
  */
 const notices = vi.hoisted(() => ({
   error: vi.fn(),
@@ -49,20 +51,28 @@ vi.mock('#/api/core/k8s/k8s_secret', async (importOriginal) => {
   return {
     ...real,
     createSecretApi: wrap(real.createSecretApi),
+    createSecretByYamlApi: wrap(real.createSecretByYamlApi),
     deleteSecretApi: wrap(real.deleteSecretApi),
+    updateSecretApi: wrap(real.updateSecretApi),
     updateSecretByYamlApi: wrap(real.updateSecretByYamlApi),
   };
 });
 
-type Mode = 'business' | 'canceled' | 'network' | 'server';
+type Mode = 'badRequest' | 'business' | 'canceled' | 'network' | 'server' | 'unprocessable';
 let mode: Mode = 'server';
+// 假值：模拟后端 4xx 回显用户提交的 Secret 数据，不是真实密钥
+const RAW_ECHO = 'BACKEND-RAW data.password=fake-password-for-test';
 const adapter: AxiosAdapter = async (config) => {
   if (mode === 'network') throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, {});
   if (mode === 'canceled') throw new axios.CanceledError(undefined, config, {});
   const [status, data] =
     mode === 'server'
       ? [502, { code: 502, data: null, message: 'upstream 原文' }]
-      : [200, { code: 1, data: null, message: 'Secret 已存在（后端原文）' }];
+      : mode === 'badRequest'
+        ? [400, { code: 400, data: null, message: RAW_ECHO, error: { message: RAW_ECHO } }]
+        : mode === 'unprocessable'
+          ? [422, { code: 422, data: null, message: RAW_ECHO, error: { message: RAW_ECHO } }]
+          : [200, { code: 1, data: null, message: 'Secret 已存在（后端原文）' }];
   const response = { config, data, headers: {}, status, statusText: String(status) };
   if (status >= 400)
     throw new AxiosError(`Request failed with status code ${status}`, AxiosError.ERR_BAD_RESPONSE, config, null, response);
@@ -79,7 +89,7 @@ const { BUSINESS_ERROR_MESSAGE_KEY_PREFIX, createBusinessError } = await import(
 const record = { cluster_id: 1, name: 's1', namespace: 'default' } as any;
 const validForm = { validate: async () => ({}) } as any;
 
-/** 四处写操作：返回执行入口与页面文案 */
+/** 六处写操作：返回执行入口与页面文案 */
 const operations: [string, string, (page: ReturnType<typeof useSecretPage>) => Promise<unknown>][] = [
   [
     'YAML 更新',
@@ -100,6 +110,25 @@ const operations: [string, string, (page: ReturnType<typeof useSecretPage>) => P
       page.createFormModel.value.name = 's1';
       page.createFormModel.value.namespace = 'default';
       await page.submitCreateForm();
+    },
+  ],
+  [
+    'YAML 创建',
+    'Secret YAML 创建失败',
+    async (page) => {
+      page.createYamlFormRef.value = validForm;
+      page.filterClusterId.value = 1;
+      page.createYamlFormModel.value.yaml = 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: s1\n';
+      await page.submitCreateYamlForm();
+    },
+  ],
+  [
+    '表单更新',
+    'Secret 更新失败',
+    async (page) => {
+      page.formRef.value = validForm;
+      page.openEditModal(record);
+      await page.submitEditForm();
     },
   ],
   [
@@ -156,6 +185,25 @@ describe.each(operations)('Secret %s 失败提示（incr3 / SEC-26 遗留 21）'
     await run(useSecretPage());
     expect(notices.error).toHaveBeenCalledTimes(1);
     expect(notices.error).toHaveBeenCalledWith(pageText);
+  });
+
+  it.each([
+    ['badRequest', 400, 'fallback.http.badRequest'],
+    ['unprocessable', 422, 'fallback.http.internalServerError'],
+  ] as const)('HTTP %s（%s）：恰好一条请求层通用文案，任何提示都不含后端原文', async (m, _status, textKey) => {
+    mode = m;
+    await run(useSecretPage());
+    const text = $t(textKey);
+    expect(notices.error).toHaveBeenCalledTimes(1);
+    expect(notices.error).toHaveBeenCalledWith({ content: text, key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${text}` });
+    const everything = JSON.stringify([
+      notices.error.mock.calls,
+      notices.warning.mock.calls,
+      notices.info.mock.calls,
+      notices.success.mock.calls,
+    ]);
+    expect(everything).not.toContain('BACKEND-RAW');
+    expect(everything).not.toContain('fake-password-for-test');
   });
 
   it('取消：零提示', async () => {
