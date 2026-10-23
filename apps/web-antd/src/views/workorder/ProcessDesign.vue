@@ -1,25 +1,65 @@
 <template>
-  <div class="process-design-engine">
-    <div class="edit-mode-tabs">
+  <OpsPage
+    title="流程设计"
+    description="关联已发布表单，配置步骤与连接后保存为草稿或发布"
+    class="process-design-engine"
+  >
+    <template #actions>
+      <a-button
+        type="primary"
+        aria-label="保存流程"
+        @click="saveProcess"
+        :loading="saving"
+        :disabled="formsLoading || !!formLoadError"
+        ><SaveOutlined /> 保存流程</a-button
+      >
+      <a-button @click="copyProcessJson"><CopyOutlined /> 复制JSON</a-button>
+    </template>
+    <a-alert v-if="saveError" :message="saveError" type="error" show-icon />
+    <a-alert
+      v-if="formLoadError"
+      :message="formLoadError"
+      type="error"
+      show-icon
+      ><template #action
+        ><a-button :loading="formsLoading" @click="loadFormDesigns"
+          >重试表单</a-button
+        ></template
+      ></a-alert
+    >
+    <a-alert
+      v-if="categoryLoadError"
+      :message="categoryLoadError"
+      type="error"
+      show-icon
+      ><template #action
+        ><a-button :loading="categoriesLoading" @click="loadCategories"
+          >重试分类</a-button
+        ></template
+      ></a-alert
+    >
+    <div class="edit-mode-tabs" :inert="saving || undefined">
       <a-tabs v-model:activeKey="editMode" type="card">
         <a-tab-pane key="basic" tab="基本信息">
           <div class="basic-info-form">
             <a-form layout="vertical" :model="processBasicInfo">
               <a-row :gutter="16">
-                <a-col :span="12">
+                <a-col :xs="24" :sm="12">
                   <a-form-item label="流程名称" required>
                     <a-input
                       v-model:value="processBasicInfo.name"
                       placeholder="请输入流程名称"
+                      :maxlength="200"
                     />
                   </a-form-item>
                 </a-col>
-                <a-col :span="12">
+                <a-col :xs="24" :sm="12">
                   <a-form-item label="关联表单" required>
                     <a-select
+                      id="process-design-form"
                       v-model:value="processBasicInfo.form_design_id"
                       placeholder="选择关联表单"
-                      :loading="loading"
+                      :loading="formsLoading"
                     >
                       <a-select-option
                         v-for="form in formDesigns"
@@ -37,13 +77,13 @@
               </a-row>
 
               <a-row :gutter="16">
-                <a-col :span="12">
+                <a-col :xs="24" :sm="12">
                   <a-form-item label="分类">
                     <a-select
                       v-model:value="processBasicInfo.category_id"
                       placeholder="选择分类"
                       allow-clear
-                      :loading="loading"
+                      :loading="categoriesLoading"
                     >
                       <a-select-option
                         v-for="category in categories"
@@ -55,9 +95,10 @@
                     </a-select>
                   </a-form-item>
                 </a-col>
-                <a-col :span="12">
+                <a-col :xs="24" :sm="12">
                   <a-form-item label="状态">
                     <a-select
+                      id="process-design-status"
                       v-model:value="processBasicInfo.status"
                       placeholder="选择状态"
                     >
@@ -76,6 +117,7 @@
                 <a-textarea
                   v-model:value="processBasicInfo.description"
                   placeholder="请输入流程描述"
+                  :maxlength="1000"
                   :rows="3"
                 />
               </a-form-item>
@@ -95,21 +137,6 @@
                   <a-radio :value="2">否</a-radio>
                 </a-radio-group>
               </a-form-item>
-
-              <div class="form-actions">
-                <a-space>
-                  <a-button
-                    type="primary"
-                    @click="saveProcess"
-                    :loading="loading"
-                  >
-                    <SaveOutlined /> 保存流程
-                  </a-button>
-                  <a-button @click="copyProcessJson">
-                    <CopyOutlined /> 复制JSON
-                  </a-button>
-                </a-space>
-              </div>
             </a-form>
           </div>
         </a-tab-pane>
@@ -130,7 +157,7 @@
               </a-space>
             </div>
 
-            <div class="-canvas">
+            <div class="process-canvas">
               <div v-if="processSteps.length === 0" class="empty-canvas">
                 <a-empty description="暂无流程步骤" :image="emptyImage">
                   <a-button type="primary" @click="addProcessStep">
@@ -139,15 +166,19 @@
                 </a-empty>
               </div>
 
-              <div v-else class="steps-">
+              <div v-else class="process-steps">
                 <div
                   v-for="(step, index) in sortedProcessSteps"
                   :key="step.id"
                   class="step-container"
                 >
                   <div
-                    class="-step"
+                    class="process-step"
                     :class="{ active: selectedStep?.id === step.id }"
+                    role="button"
+                    tabindex="0"
+                    @keydown.enter="selectStepById(step.id)"
+                    @keydown.space.prevent="selectStepById(step.id)"
                     @click="selectStepById(step.id)"
                   >
                     <div class="step-header">
@@ -238,7 +269,7 @@
 
                 <a-form layout="vertical" :model="selectedStep">
                   <a-row :gutter="16">
-                    <a-col :span="12">
+                    <a-col :xs="24" :sm="12">
                       <a-form-item label="步骤名称">
                         <a-input
                           v-model:value="selectedStep.name"
@@ -246,7 +277,7 @@
                         />
                       </a-form-item>
                     </a-col>
-                    <a-col :span="12">
+                    <a-col :xs="24" :sm="12">
                       <a-form-item label="步骤类型">
                         <a-select
                           v-model:value="selectedStep.type"
@@ -270,7 +301,7 @@
                   </a-row>
 
                   <a-row :gutter="16">
-                    <a-col :span="12">
+                    <a-col :xs="24" :sm="12">
                       <a-form-item label="受理人类型">
                         <a-select
                           v-model:value="selectedStep.assignee_type"
@@ -286,7 +317,7 @@
                         </a-select>
                       </a-form-item>
                     </a-col>
-                    <a-col :span="12">
+                    <a-col :xs="24" :sm="12">
                       <a-form-item label="排序(仅影响显示顺序)">
                         <a-input-number
                           v-model:value="selectedStep.sort_order"
@@ -315,14 +346,27 @@
 
                   <a-divider />
 
+                  <a-alert
+                    v-if="userLoadError"
+                    :message="userLoadError"
+                    type="error"
+                    show-icon
+                    ><template #action
+                      ><a-button @click="fetchUserList(false)"
+                        >重试用户</a-button
+                      ></template
+                    ></a-alert
+                  >
                   <a-form-item label="受理人ID列表">
                     <a-select
+                      id="process-assignees"
                       v-model:value="selectedStep.assignee_ids"
                       mode="multiple"
                       placeholder="搜索并选择受理人"
                       style="width: 100%"
                       :options="userOptions"
                       :loading="userLoading"
+                      show-search
                       :filter-option="false"
                       @search="handleUserSearch"
                       @popupScroll="handleUserScroll"
@@ -390,8 +434,8 @@
     </div>
 
     <a-modal
-      v-model:visible="isPreviewModalVisible"
-      title="流程动画预览"
+      v-model:open="isPreviewModalVisible"
+      title="流程预览"
       :footer="null"
       width="800px"
       @cancel="handlePreviewCancel"
@@ -402,14 +446,11 @@
         </div>
         <div v-else class="preview-steps-wrapper">
           <div
-            v-for="(step, index) in sortedProcessSteps"
+            v-for="step in sortedProcessSteps"
             :key="`preview-${step.id}`"
             class="preview-step-container"
           >
-            <div
-              class="preview-step"
-              :style="{ animationDelay: `${index * 0.2}s` }"
-            >
+            <div class="preview-step">
               <div
                 class="preview-step-icon"
                 :class="getStepTypeClass(step.type)"
@@ -426,7 +467,6 @@
             <div
               v-if="getOutgoingConnections(step.id).length > 0"
               class="preview-connections"
-              :style="{ animationDelay: `${index * 0.2 + 0.1}s` }"
             >
               <div
                 v-for="conn in getOutgoingConnections(step.id)"
@@ -441,11 +481,12 @@
         </div>
       </div>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, h, onMounted } from 'vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { ref, watch, computed, h, onMounted, onBeforeUnmount } from 'vue';
 import { message, Modal, Empty, Spin as ASpin } from 'ant-design-vue';
 import {
   PlusOutlined,
@@ -543,7 +584,19 @@ const processBasicInfo = ref({
 // 数据列表
 const categories = ref<WorkorderCategoryItem[]>([]);
 const formDesigns = ref<WorkorderFormDesignItem[]>([]);
-const loading = ref(false);
+const saving = ref(false);
+const saveError = ref<string | null>(null);
+const formsLoading = ref(false);
+const categoriesLoading = ref(false);
+const formLoadError = ref<string | null>(null);
+const categoryLoadError = ref<string | null>(null);
+const userLoadError = ref<string | null>(null);
+let formsRequest = 0;
+let categoriesRequest = 0;
+let userRequest = 0;
+let saveRequest = 0;
+let stepSequence = 0;
+let validationDialog: ReturnType<typeof Modal.error> | undefined;
 
 // === 受理人选择器相关状态 ===
 const userList = ref<UserInfo[]>([]);
@@ -629,6 +682,13 @@ watch(
     });
     if (internalDef === JSON.stringify(newValue)) return;
 
+    if (
+      !Array.isArray(newValue.steps) ||
+      !Array.isArray(newValue.connections) ||
+      newValue.steps.some((step) => !step)
+    )
+      return;
+    selectedStepIndex.value = null;
     processSteps.value = JSON.parse(JSON.stringify(newValue.steps || []));
     connections.value = JSON.parse(JSON.stringify(newValue.connections || []));
 
@@ -645,7 +705,7 @@ watch(
       connections: connections.value,
     };
     if (JSON.stringify(definition) !== JSON.stringify(props.modelValue)) {
-      emit('update:modelValue', definition);
+      emit('update:modelValue', JSON.parse(JSON.stringify(definition)));
     }
     definitionJsonString.value = JSON.stringify(definition, null, 2);
   },
@@ -657,6 +717,8 @@ watch(selectedStep, (newStep) => {
     userSearchKeyword.value = '';
     fetchUserList(false);
   } else {
+    userRequest++;
+    searchUsers.cancel();
     userList.value = [];
     userPagination.value = { page: 1, pageSize: 20, total: 0 };
   }
@@ -666,41 +728,56 @@ watch(selectedStep, (newStep) => {
 
 // === 获取用户列表方法 ===
 const fetchUserList = async (loadMore = false) => {
-  if (userLoading.value) return;
+  if (!selectedStep.value || (loadMore && userLoading.value)) return;
+  const ticket = ++userRequest;
+  const owner = selectedStep.value.id;
+  const keyword = userSearchKeyword.value;
+  const currentPage = loadMore ? userPagination.value.page + 1 : 1;
   userLoading.value = true;
-
+  userLoadError.value = null;
+  if (!loadMore) {
+    userList.value = [];
+    userPagination.value.page = 1;
+    userPagination.value.total = 0;
+  }
   try {
-    const currentPage = loadMore ? userPagination.value.page + 1 : 1;
     const params: GetUserListReq = {
       page: currentPage,
-      size: userPagination.value.pageSize, // 使用 size 作为分页大小参数
-      search: userSearchKeyword.value, // 使用 search 作为搜索关键词参数
+      size: userPagination.value.pageSize,
+      search: keyword,
     };
-
-    // 假设 API 返回 { items: UserInfo[], total: number }
     const res = await getUserList(params);
-
-    // 【修改点 3】: 修正 "加载更多" 的逻辑
-    if (loadMore) {
-      userList.value.push(...(res.items || []));
-    } else {
-      userList.value = res.items || [];
-    }
-
+    if (
+      ticket !== userRequest ||
+      selectedStep.value?.id !== owner ||
+      keyword !== userSearchKeyword.value
+    )
+      return;
+    const items = res.items || [];
+    userList.value = loadMore
+      ? [
+          ...new Map(
+            [...userList.value, ...items].map((user) => [user.id, user]),
+          ).values(),
+        ]
+      : items;
     userPagination.value.page = currentPage;
     userPagination.value.total = res.total || 0;
-  } catch (error) {
-    message.error('获取用户列表失败');
+  } catch {
+    if (ticket === userRequest && selectedStep.value?.id === owner)
+      userLoadError.value = '读取用户失败，请重试';
   } finally {
-    userLoading.value = false;
+    if (ticket === userRequest) userLoading.value = false;
   }
 };
-
-// === 用户搜索处理器 (带防抖) ===
-const handleUserSearch = debounce((keyword: string) => {
-  userSearchKeyword.value = keyword;
-  fetchUserList(false);
+const searchUsers = debounce(() => {
+  void fetchUserList(false);
 }, 300);
+const handleUserSearch = (keyword: string) => {
+  userSearchKeyword.value = keyword;
+  userRequest++;
+  searchUsers();
+};
 
 // === 下拉列表滚动到底部处理器 ===
 const handleUserScroll = (e: Event) => {
@@ -713,7 +790,10 @@ const handleUserScroll = (e: Event) => {
 };
 
 const addProcessStep = (): void => {
-  const tempId = `temp_${Date.now()}`;
+  let tempId: string;
+  do {
+    tempId = `step_${Date.now()}_${++stepSequence}`;
+  } while (processSteps.value.some((step) => step.id === tempId));
   const isFirstStep = processSteps.value.length === 0;
   const newStep: ProcessStep = {
     id: tempId,
@@ -735,14 +815,16 @@ const removeStepById = (stepIdToRemove: string): void => {
   const index = processSteps.value.findIndex((s) => s.id === stepIdToRemove);
   if (index === -1) return;
 
+  const selectedId = selectedStep.value?.id;
   processSteps.value.splice(index, 1);
   connections.value = connections.value.filter(
     (c) => c.from !== stepIdToRemove && c.to !== stepIdToRemove,
   );
 
-  if (selectedStep.value?.id === stepIdToRemove) {
-    selectedStepIndex.value = null;
-  }
+  const selectedIndex = processSteps.value.findIndex(
+    (step) => step.id === selectedId,
+  );
+  selectedStepIndex.value = selectedIndex === -1 ? null : selectedIndex;
 };
 
 const selectStepById = (stepId: string): void => {
@@ -764,45 +846,92 @@ const handlePreviewCancel = () => {
   isPreviewModalVisible.value = false;
 };
 
-const validateFlow = (): void => {
+function definitionErrors(value: unknown): string[] {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('steps' in value) ||
+    !Array.isArray(value.steps) ||
+    !('connections' in value) ||
+    !Array.isArray(value.connections)
+  )
+    return ['流程结构需要 steps 和 connections 数组'];
+  const definition = value as ProcessDefinition;
   const errors: string[] = [];
-  if (processSteps.value.length === 0) {
-    errors.push('流程至少需要一个步骤');
-  } else {
-    const startSteps = processSteps.value.filter(
-      (s) => s.type === ProcessStepType.Start,
-    );
-    if (startSteps.length === 0)
-      errors.push('流程必须有一个“开始”类型的步骤。');
-    if (startSteps.length > 1) errors.push('流程只能有一个“开始”类型的步骤。');
+  const ids = new Set<string>();
+  if (!definition.steps.length) errors.push('流程至少需要一个步骤');
+  for (const step of definition.steps) {
+    if (
+      !step ||
+      typeof step.id !== 'string' ||
+      !step.id.trim() ||
+      ids.has(step.id) ||
+      typeof step.name !== 'string' ||
+      !step.name.trim() ||
+      !Object.values(ProcessStepType).includes(
+        step.type as typeof ProcessStepType.Start,
+      )
+    )
+      return ['流程结构包含无效或重复的步骤'];
+    if (
+      step.assignee_ids &&
+      (!Array.isArray(step.assignee_ids) ||
+        step.assignee_ids.some((id) => !Number.isSafeInteger(id) || id <= 0))
+    )
+      return ['流程结构的受理人 ID 必须为正整数'];
+    if (
+      step.actions &&
+      (!Array.isArray(step.actions) ||
+        step.actions.some((action) => typeof action !== 'string'))
+    )
+      return ['流程结构的动作必须为字符串数组'];
+    ids.add(step.id);
   }
-
-  const stepIds = new Set(processSteps.value.map((s) => s.id));
-  connections.value.forEach((conn) => {
-    if (!stepIds.has(conn.from) || !stepIds.has(conn.to)) {
-      errors.push(`发现无效连接: ${conn.from} -> ${conn.to}`);
-    }
-  });
-
-  processSteps.value.forEach((step) => {
-    if (!step.name?.trim()) errors.push(`步骤 (${step.id}) 缺少名称`);
+  if (
+    definition.steps.filter((step) => step.type === ProcessStepType.Start)
+      .length !== 1
+  )
+    errors.push('流程必须有且仅有一个开始步骤');
+  if (!definition.steps.some((step) => step.type === ProcessStepType.End))
+    errors.push('流程必须包含结束步骤');
+  for (const connection of definition.connections) {
+    if (!connection || !ids.has(connection.from) || !ids.has(connection.to))
+      return ['流程结构包含无效连接'];
+  }
+  for (const step of definition.steps) {
     if (
       step.type !== ProcessStepType.End &&
-      !connections.value.some((c) => c.from === step.id)
-    ) {
-      errors.push(`非结束步骤 "${step.name}" 必须至少有一个后续连接。`);
-    }
+      !definition.connections.some((connection) => connection.from === step.id)
+    )
+      errors.push(`非结束步骤“${step.name}”需要后续连接`);
+  }
+  return errors;
+}
+const validateFlow = (): void => {
+  const errors = definitionErrors({
+    steps: processSteps.value,
+    connections: connections.value,
   });
-
-  if (errors.length > 0) {
-    Modal.error({
+  if (errors.length)
+    validationDialog = Modal.error({
       title: '流程验证失败',
       content: h('pre', errors.join('\n')),
     });
-  } else {
-    message.success('流程验证通过！');
-  }
+  else message.success('流程验证通过');
 };
+const hasUnappliedJson = computed(() => {
+  try {
+    return (
+      JSON.stringify(JSON.parse(definitionJsonString.value)) !==
+      JSON.stringify({
+        steps: processSteps.value,
+        connections: connections.value,
+      })
+    );
+  } catch {
+    return true;
+  }
+});
 
 const formatJson = (): void => {
   try {
@@ -816,32 +945,30 @@ const formatJson = (): void => {
 
 const validateJson = (): void => {
   try {
-    const parsed = JSON.parse(definitionJsonString.value);
-    if (!parsed.steps || !Array.isArray(parsed.steps)) {
-      message.error('JSON缺少有效的steps数组');
+    const errors = definitionErrors(JSON.parse(definitionJsonString.value));
+    if (errors.length) {
+      message.error(errors[0]);
       return;
     }
-    if (!parsed.connections || !Array.isArray(parsed.connections)) {
-      message.warning('JSON缺少connections数组');
-    }
-    message.success('JSON格式验证通过');
-  } catch (e) {
+    message.success('JSON结构验证通过');
+  } catch {
     message.error('JSON格式错误');
   }
 };
-
 const syncToVisual = (): void => {
   try {
     const definition = JSON.parse(definitionJsonString.value);
-    if (definition.steps && Array.isArray(definition.steps)) {
-      processSteps.value = definition.steps;
-      connections.value = definition.connections || [];
-      message.success('已从JSON同步到可视化设计');
-    } else {
-      message.error('JSON中没有有效的steps数据');
+    const errors = definitionErrors(definition);
+    if (errors.length) {
+      message.error(errors[0]);
+      return;
     }
-  } catch (e) {
-    message.error('JSON格式错误，无法同步');
+    processSteps.value = definition.steps;
+    connections.value = definition.connections;
+    selectedStepIndex.value = null;
+    message.success('已从JSON应用到可视化设计');
+  } catch {
+    message.error('JSON格式错误，无法应用');
   }
 };
 
@@ -890,6 +1017,9 @@ const getActionText = (action: string): string => {
  * 加载分类数据
  */
 const loadCategories = async (): Promise<void> => {
+  const ticket = ++categoriesRequest;
+  categoryLoadError.value = null;
+  categoriesLoading.value = true;
   try {
     let allCategories: any[] = [];
     let currentPage = 1;
@@ -904,6 +1034,7 @@ const loadCategories = async (): Promise<void> => {
       };
 
       const res = (await listWorkorderCategory(params)) as any;
+      if (ticket !== categoriesRequest) return;
       if (res && res.items && res.items.length > 0) {
         allCategories = [...allCategories, ...res.items];
 
@@ -920,9 +1051,14 @@ const loadCategories = async (): Promise<void> => {
       }
     }
 
-    categories.value = allCategories;
-  } catch (error: any) {
-    categories.value = [];
+    if (ticket === categoriesRequest) categories.value = allCategories;
+  } catch {
+    if (ticket === categoriesRequest) {
+      categories.value = [];
+      categoryLoadError.value = '读取分类失败，请重试';
+    }
+  } finally {
+    if (ticket === categoriesRequest) categoriesLoading.value = false;
   }
 };
 
@@ -930,6 +1066,9 @@ const loadCategories = async (): Promise<void> => {
  * 加载表单设计数据
  */
 const loadFormDesigns = async (): Promise<void> => {
+  const ticket = ++formsRequest;
+  formLoadError.value = null;
+  formsLoading.value = true;
   try {
     let allForms: any[] = [];
     let currentPage = 1;
@@ -945,6 +1084,7 @@ const loadFormDesigns = async (): Promise<void> => {
       };
 
       const res = (await listWorkorderFormDesign(params)) as any;
+      if (ticket !== formsRequest) return;
       if (res && res.items && res.items.length > 0) {
         allForms = [...allForms, ...res.items];
 
@@ -961,14 +1101,33 @@ const loadFormDesigns = async (): Promise<void> => {
       }
     }
 
-    formDesigns.value = allForms;
-  } catch (error: any) {
-    formDesigns.value = [];
+    if (ticket === formsRequest) formDesigns.value = allForms;
+  } catch {
+    if (ticket === formsRequest) {
+      formDesigns.value = [];
+      formLoadError.value = '读取已发布表单失败，请重试';
+    }
+  } finally {
+    if (ticket === formsRequest) formsLoading.value = false;
   }
 };
 
 // === 保存流程函数 ===
 const saveProcess = async (): Promise<void> => {
+  if (saving.value || formsLoading.value || formLoadError.value) return;
+  if (hasUnappliedJson.value) {
+    message.error('JSON修改尚未应用，请先应用到可视化');
+    return;
+  }
+  const errors = definitionErrors({
+    steps: processSteps.value,
+    connections: connections.value,
+  });
+  if (errors.length) {
+    message.error(errors[0]);
+    return;
+  }
+  const ticket = ++saveRequest;
   try {
     // 验证基本信息
     if (!processBasicInfo.value.name.trim()) {
@@ -1000,24 +1159,26 @@ const saveProcess = async (): Promise<void> => {
       return;
     }
 
-    loading.value = true;
+    saving.value = true;
+    saveError.value = null;
 
     const createData: CreateWorkorderProcessReq = {
-      name: processBasicInfo.value.name,
+      name: processBasicInfo.value.name.trim(),
       description: processBasicInfo.value.description || '',
       form_design_id: processBasicInfo.value.form_design_id,
       definition: {
-        steps: processSteps.value,
-        connections: connections.value,
+        steps: JSON.parse(JSON.stringify(processSteps.value)),
+        connections: JSON.parse(JSON.stringify(connections.value)),
       },
       category_id: processBasicInfo.value.category_id,
       status: processBasicInfo.value.status,
-      tags: processBasicInfo.value.tags,
+      tags: [...processBasicInfo.value.tags],
       is_default: processBasicInfo.value.is_default,
     };
 
     await createWorkorderProcess(createData);
-    message.success(`流程 "${processBasicInfo.value.name}" 创建成功！`);
+    if (ticket !== saveRequest) return;
+    message.success('流程设计保存成功');
 
     // 重置表单
     processBasicInfo.value = {
@@ -1032,10 +1193,11 @@ const saveProcess = async (): Promise<void> => {
     processSteps.value = [];
     connections.value = [];
     selectedStepIndex.value = null;
-  } catch (error: any) {
-    message.error(`创建流程失败: ${error.message || '未知错误'}`);
+  } catch {
+    if (ticket === saveRequest)
+      saveError.value = '保存失败，请重试，当前流程设计已保留';
   } finally {
-    loading.value = false;
+    if (ticket === saveRequest) saving.value = false;
   }
 };
 
@@ -1066,22 +1228,23 @@ const copyProcessJson = async (): Promise<void> => {
     textArea.value = JSON.stringify(processData, null, 2);
     document.body.appendChild(textArea);
     textArea.select();
-    document.execCommand('copy');
+    const copied = document.execCommand('copy');
     document.body.removeChild(textArea);
-    message.success('流程JSON已复制到剪贴板！');
+    if (copied) message.success('流程JSON已复制到剪贴板');
+    else message.error('复制失败，请手动复制JSON');
   }
 };
 
-// === 组件初始化 ===
-onMounted(async () => {
-  loading.value = true;
-  try {
-    await Promise.all([loadCategories(), loadFormDesigns()]);
-  } catch (error: any) {
-    message.error(`初始化数据加载失败: ${error.message || '未知错误'}`);
-  } finally {
-    loading.value = false;
-  }
+onMounted(() => {
+  void Promise.all([loadCategories(), loadFormDesigns()]);
+});
+onBeforeUnmount(() => {
+  formsRequest++;
+  categoriesRequest++;
+  userRequest++;
+  saveRequest++;
+  searchUsers.cancel();
+  validationDialog?.destroy();
 });
 </script>
 
@@ -1110,8 +1273,7 @@ onMounted(async () => {
 }
 
 .edit-mode-tabs :deep(.ant-tabs-content-holder) {
-  max-height: 70vh;
-  overflow-y: auto;
+  min-width: 0;
 }
 
 .visual-designer {
@@ -1121,12 +1283,12 @@ onMounted(async () => {
 .designer-toolbar {
   margin-bottom: 20px;
   padding: 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
 }
 
-.-canvas {
-  border: 2px dashed var(--ops-border);
+.process-canvas {
+  border: 1px dashed var(--ops-border);
   border-radius: var(--ops-radius);
   min-height: 400px;
   background: var(--ops-ground);
@@ -1141,7 +1303,7 @@ onMounted(async () => {
   height: 400px;
 }
 
-.steps- {
+.process-steps {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1156,26 +1318,28 @@ onMounted(async () => {
   align-items: center;
 }
 
-.-step {
+.process-step {
   background: var(--ops-surface);
-  border: 2px solid #e6f7ff;
+  border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
   padding: 16px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
   position: relative;
   width: 100%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
 }
 
-.-step:hover {
-  border-color: #1890ff;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+.process-step:hover {
+  border-color: var(--ops-accent);
+  box-shadow: none;
 }
 
-.-step.active {
-  border-color: #1890ff;
-  background: #e6f7ff;
+.process-step.active {
+  border-color: var(--ops-accent);
+  background: var(--ops-ground);
 }
 
 .step-header {
@@ -1201,7 +1365,7 @@ onMounted(async () => {
 }
 
 .step-approval {
-  background: #1890ff;
+  background: var(--ops-accent);
 }
 
 .step-task {
@@ -1287,8 +1451,8 @@ onMounted(async () => {
 .json-toolbar {
   margin-bottom: 16px;
   padding: 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
+  background: var(--ops-ground);
+  border-radius: var(--ops-radius);
 }
 
 .json-textarea {
@@ -1303,7 +1467,7 @@ onMounted(async () => {
 
 /* 动画预览模态框样式 */
 .preview-container {
-  background-color: #f0f2f5;
+  background-color: var(--ops-ground);
   padding: 24px;
   border-radius: var(--ops-radius);
   min-height: 400px;
@@ -1316,18 +1480,6 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   gap: 16px;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .preview-step-container {
@@ -1345,9 +1497,7 @@ onMounted(async () => {
   border-radius: var(--ops-radius);
   padding: 16px;
   width: 100%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  opacity: 0;
-  animation: fadeInUp 0.5s ease-out forwards;
+  box-shadow: none;
 }
 
 .preview-step-icon {
@@ -1383,8 +1533,7 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  opacity: 0;
-  animation: fadeInUp 0.5s ease-out forwards;
+
   margin-top: 16px;
 }
 
@@ -1396,7 +1545,7 @@ onMounted(async () => {
 
 .preview-arrow {
   font-size: 20px;
-  color: #888;
+  color: var(--ops-muted);
   margin-bottom: 4px;
 }
 
@@ -1405,5 +1554,62 @@ onMounted(async () => {
   color: var(--ops-muted);
   margin-top: 4px;
   line-height: 1.4;
+}
+
+.process-design-engine :deep(.ant-space) {
+  flex-wrap: wrap;
+}
+.edit-mode-tabs {
+  min-width: 0;
+  background: var(--ops-surface);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
+  padding: var(--ops-space-lg);
+}
+.basic-info-form {
+  background: var(--ops-surface);
+  padding: var(--ops-space-sm);
+}
+.process-step {
+  text-align: left;
+}
+.step-info,
+.preview-step-info {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.json-textarea {
+  font-family: SFMono-Regular, Consolas, monospace;
+}
+@media (max-width: 640px) {
+  .edit-mode-tabs,
+  .process-canvas,
+  .preview-container {
+    padding: var(--ops-space-sm);
+  }
+  .visual-designer,
+  .process-canvas,
+  .empty-canvas,
+  .json-editor {
+    min-height: 240px;
+    height: auto;
+  }
+  .designer-toolbar,
+  .json-toolbar {
+    padding: var(--ops-space-sm);
+  }
+  .step-title {
+    font-size: 14px;
+  }
+  .step-detail-panel {
+    margin-top: var(--ops-space-lg);
+    padding-top: var(--ops-space-lg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .process-design-engine :deep(*) {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 </style>

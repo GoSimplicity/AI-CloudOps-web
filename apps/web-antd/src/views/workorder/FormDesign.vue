@@ -1,38 +1,62 @@
 <template>
-  <div class="dynamic-form-container">
+  <OpsPage
+    title="表单设计"
+    description="配置字段并校验预览，保存为草稿、已发布表单或模板"
+    class="dynamic-form-container"
+    ><template #actions
+      ><template v-if="showDesigner">
+        <a-space>
+          <a-button
+            @click="saveFormDesign"
+            :loading="saving"
+            aria-label="保存设计"
+            type="primary"
+            class="btn-primary"
+          >
+            <template #icon>
+              <SaveOutlined />
+            </template>
+            保存设计
+          </a-button>
+          <a-button @click="togglePreview" :disabled="saving" type="default">
+            <template #icon>
+              <EyeOutlined />
+            </template>
+            预览表单
+          </a-button>
+          <a-button @click="clearForm" :disabled="saving" type="default">
+            <template #icon>
+              <DeleteOutlined />
+            </template>
+            清空表单
+          </a-button>
+        </a-space> </template
+      ><template v-else>
+        <a-space>
+          <a-button @click="togglePreview" :disabled="saving" type="default">
+            <template #icon>
+              <EditOutlined />
+            </template>
+            返回设计
+          </a-button>
+          <a-button @click="resetForm" type="default"> 重置数据 </a-button>
+          <a-button @click="submitForm" type="primary" class="btn-primary">
+            校验预览
+          </a-button>
+        </a-space>
+      </template></template
+    >
+    <a-alert
+      v-if="saveError"
+      :message="saveError"
+      type="error"
+      show-icon
+      class="designer-error"
+    />
     <!-- 表单设计器 -->
     <div class="form-designer" v-if="showDesigner">
       <a-card class="designer-card">
-        <template #title>
-          <div class="card-title">
-            <FormOutlined />
-            <span>表单设计器</span>
-          </div>
-        </template>
-        <template #extra>
-          <a-space>
-            <a-button @click="saveFormDesign" type="primary" class="btn-primary">
-              <template #icon>
-                <SaveOutlined />
-              </template>
-              保存设计
-            </a-button>
-            <a-button @click="togglePreview" type="default" class="btn-primary">
-              <template #icon>
-                <EyeOutlined />
-              </template>
-              预览表单
-            </a-button>
-            <a-button @click="clearForm" type="default">
-              <template #icon>
-                <DeleteOutlined />
-              </template>
-              清空表单
-            </a-button>
-          </a-space>
-        </template>
-
-        <div class="designer-content">
+        <div class="designer-content" :inert="saving || undefined">
           <!-- 表单基础信息配置 -->
           <div class="form-meta-config">
             <div class="config-header">
@@ -41,44 +65,55 @@
             <a-row :gutter="16">
               <a-col :span="24" :md="8">
                 <a-form-item label="表单名称" class="form-item">
-                  <a-input 
-                    v-model:value="formMeta.name" 
-                    placeholder="请输入表单名称" 
+                  <a-input
+                    v-model:value="formMeta.name"
+                    placeholder="请输入表单名称"
+                    :maxlength="200"
+                    :disabled="saving"
                     class="config-input"
                   />
                 </a-form-item>
               </a-col>
               <a-col :span="24" :md="8">
                 <a-form-item label="表单分类" class="form-item">
-                  <a-select 
-                    v-model:value="formMeta.category_id" 
-                    placeholder="请选择分类" 
-                    class="config-input"
-                    allow-clear
-                    :loading="categoryLoading"
-                    :dropdown-render="dropdownRender"
-                    @dropdown-visible-change="onCategoryDropdownVisibleChange"
+                  <a-button
+                    class="category-trigger"
+                    @click="showCategoryModal = true"
+                    :disabled="saving"
+                    block
                   >
-                    <a-select-option 
-                      v-for="category in categories" 
-                      :key="category.id" 
-                      :value="category.id"
-                    >
-                      {{ category.name }}
-                    </a-select-option>
-                  </a-select>
+                    {{ selectedCategory?.name ?? '选择分类' }}
+                  </a-button>
+                  <a-button
+                    v-if="formMeta.category_id"
+                    type="link"
+                    :disabled="saving"
+                    @click="
+                      formMeta.category_id = undefined;
+                      selectedCategory = null;
+                    "
+                    >清除分类</a-button
+                  >
                 </a-form-item>
               </a-col>
               <a-col :span="24" :md="8">
                 <a-form-item label="表单状态" class="form-item">
-                  <a-select 
-                    v-model:value="formMeta.status" 
-                    placeholder="请选择状态" 
+                  <a-select
+                    id="form-design-status"
+                    v-model:value="formMeta.status"
+                    placeholder="请选择状态"
+                    :disabled="saving"
                     class="config-input"
                   >
-                    <a-select-option :value="FormDesignStatus.Draft">草稿</a-select-option>
-                    <a-select-option :value="FormDesignStatus.Published">已发布</a-select-option>
-                    <a-select-option :value="FormDesignStatus.Archived">已归档</a-select-option>
+                    <a-select-option :value="FormDesignStatus.Draft"
+                      >草稿</a-select-option
+                    >
+                    <a-select-option :value="FormDesignStatus.Published"
+                      >已发布</a-select-option
+                    >
+                    <a-select-option :value="FormDesignStatus.Archived"
+                      >已归档</a-select-option
+                    >
                   </a-select>
                 </a-form-item>
               </a-col>
@@ -86,20 +121,23 @@
             <a-row :gutter="16">
               <a-col :span="24" :md="16">
                 <a-form-item label="表单描述" class="form-item">
-                  <a-textarea 
-                    v-model:value="formMeta.description" 
-                    placeholder="请输入表单描述" 
+                  <a-textarea
+                    v-model:value="formMeta.description"
+                    placeholder="请输入表单描述"
+                    :maxlength="1000"
                     :rows="2"
+                    :disabled="saving"
                     class="config-input"
                   />
                 </a-form-item>
               </a-col>
               <a-col :span="24" :md="8">
                 <a-form-item label="标签" class="form-item">
-                  <a-select 
-                    v-model:value="formMeta.tags" 
-                    mode="tags" 
-                    placeholder="输入标签后按回车" 
+                  <a-select
+                    v-model:value="formMeta.tags"
+                    mode="tags"
+                    placeholder="输入标签后按回车"
+                    :disabled="saving"
                     class="config-input"
                   />
                 </a-form-item>
@@ -108,8 +146,9 @@
             <a-row :gutter="16">
               <a-col :span="24" :md="12">
                 <a-form-item label="是否为模板" class="form-item switch-item">
-                  <a-switch 
-                    v-model:checked="isTemplate" 
+                  <a-switch
+                    v-model:checked="isTemplate"
+                    :disabled="saving"
                     checked-children="是"
                     un-checked-children="否"
                   />
@@ -125,39 +164,75 @@
               <span class="controls-desc">点击下方按钮添加表单字段</span>
             </div>
             <div class="field-buttons">
-              <a-button @click="addFieldType('text')" class="field-btn">
+              <a-button
+                @click="addFieldType('text')"
+                class="field-btn"
+                :disabled="saving"
+              >
                 <PlusOutlined />
                 <span>文本框</span>
               </a-button>
-              <a-button @click="addFieldType('number')" class="field-btn">
+              <a-button
+                @click="addFieldType('number')"
+                class="field-btn"
+                :disabled="saving"
+              >
                 <PlusOutlined />
                 <span>数字</span>
               </a-button>
-              <a-button @click="addFieldType('password')" class="field-btn">
+              <a-button
+                @click="addFieldType('password')"
+                class="field-btn"
+                :disabled="saving"
+              >
                 <PlusOutlined />
                 <span>密码</span>
               </a-button>
-              <a-button @click="addFieldType('textarea')" class="field-btn">
+              <a-button
+                @click="addFieldType('textarea')"
+                class="field-btn"
+                :disabled="saving"
+              >
                 <PlusOutlined />
                 <span>多行文本</span>
               </a-button>
-              <a-button @click="addFieldType('date')" class="field-btn">
+              <a-button
+                @click="addFieldType('date')"
+                class="field-btn"
+                :disabled="saving"
+              >
                 <PlusOutlined />
                 <span>日期</span>
               </a-button>
-              <a-button @click="addFieldType('select')" class="field-btn">
+              <a-button
+                @click="addFieldType('select')"
+                class="field-btn"
+                :disabled="saving"
+              >
                 <PlusOutlined />
                 <span>下拉选项</span>
               </a-button>
-              <a-button @click="addFieldType('radio')" class="field-btn">
+              <a-button
+                @click="addFieldType('radio')"
+                class="field-btn"
+                :disabled="saving"
+              >
                 <PlusOutlined />
                 <span>单选框</span>
               </a-button>
-              <a-button @click="addFieldType('checkbox')" class="field-btn">
+              <a-button
+                @click="addFieldType('checkbox')"
+                class="field-btn"
+                :disabled="saving"
+              >
                 <PlusOutlined />
                 <span>复选框</span>
               </a-button>
-              <a-button @click="addFieldType('switch')" class="field-btn">
+              <a-button
+                @click="addFieldType('switch')"
+                class="field-btn"
+                :disabled="saving"
+              >
                 <PlusOutlined />
                 <span>开关</span>
               </a-button>
@@ -189,7 +264,7 @@
                 </template>
                 <span>导出文件</span>
               </a-button>
-              <a-upload 
+              <a-upload
                 :show-upload-list="false"
                 :before-upload="importConfig"
                 accept=".json"
@@ -209,11 +284,13 @@
           <div class="field-list" v-if="formSchema.fields.length > 0">
             <div class="list-header">
               <h4>表单字段配置</h4>
-              <span class="field-count">共 {{ formSchema.fields.length }} 个字段</span>
+              <span class="field-count"
+                >共 {{ formSchema.fields.length }} 个字段</span
+              >
             </div>
             <a-collapse>
-              <a-collapse-panel 
-                v-for="(field, index) in formSchema.fields" 
+              <a-collapse-panel
+                v-for="(field, index) in formSchema.fields"
                 :key="index"
                 :header="getFieldDisplayName(field)"
                 class="field-panel"
@@ -221,9 +298,9 @@
                 <template #extra>
                   <div class="field-actions" @click.stop>
                     <a-tooltip title="上移">
-                      <a-button 
-                        type="text" 
-                        size="small" 
+                      <a-button
+                        type="text"
+                        size="small"
                         @click="moveField(index, -1)"
                         :disabled="index === 0"
                         class="action-btn-small"
@@ -232,9 +309,9 @@
                       </a-button>
                     </a-tooltip>
                     <a-tooltip title="下移">
-                      <a-button 
-                        type="text" 
-                        size="small" 
+                      <a-button
+                        type="text"
+                        size="small"
                         @click="moveField(index, 1)"
                         :disabled="index === formSchema.fields.length - 1"
                         class="action-btn-small"
@@ -243,11 +320,13 @@
                       </a-button>
                     </a-tooltip>
                     <a-tooltip title="删除">
-                      <a-button 
-                        type="text" 
-                        danger 
-                        size="small" 
+                      <a-button
+                        type="text"
+                        danger
+                        size="small"
                         @click="removeField(index)"
+                        aria-label="删除字段"
+                        :disabled="saving"
                         class="action-btn-small"
                       >
                         <DeleteOutlined />
@@ -256,8 +335,9 @@
                   </div>
                 </template>
 
-                <FieldConfig 
-                  :field="field" 
+                <FieldConfig
+                  :field="field"
+                  :class="{ 'field-saving': saving }"
                   @update="updateField(index, $event)"
                 />
               </a-collapse-panel>
@@ -267,7 +347,7 @@
           <div v-else class="empty-form">
             <a-empty description="暂无表单字段">
               <template #image>
-                <FormOutlined style="font-size: 48px; color: #d9d9d9;" />
+                <FormOutlined style="font-size: 48px; color: #d9d9d9" />
               </template>
               <div class="empty-desc">
                 <p>请在上方选择字段类型开始设计表单</p>
@@ -284,29 +364,6 @@
     <!-- 表单预览 -->
     <div class="form-preview" v-if="!showDesigner">
       <a-card class="preview-card">
-        <template #title>
-          <div class="card-title">
-            <EyeOutlined />
-            <span>表单预览</span>
-          </div>
-        </template>
-        <template #extra>
-          <a-space>
-            <a-button @click="togglePreview" type="default">
-              <template #icon>
-                <EditOutlined />
-              </template>
-              返回设计
-            </a-button>
-            <a-button @click="resetForm" type="default">
-              重置数据
-            </a-button>
-            <a-button @click="submitForm" type="primary" class="btn-primary">
-              提交表单
-            </a-button>
-          </a-space>
-        </template>
-
         <div class="preview-content">
           <div class="preview-header">
             <h3>{{ formMeta.name || '动态表单' }}</h3>
@@ -315,7 +372,7 @@
             </p>
             <a-alert
               message="预览模式"
-              description="您可以查看和填写表单字段，点击提交按钮查看表单数据。"
+              description="此处仅校验字段与填写体验，不会创建或提交真实工单。"
               type="info"
               show-icon
               banner
@@ -323,8 +380,9 @@
             />
           </div>
 
-          <DynamicForm 
-            :fields="formSchema.fields" 
+          <DynamicForm
+            :fields="formSchema.fields"
+            :show-actions="false"
             v-model:data="formData"
             :rules="formRules"
             @submit="handleSubmit"
@@ -335,11 +393,11 @@
     </div>
 
     <!-- JSON 配置查看 -->
-    <a-modal 
-      :open="showJsonViewer" 
-      title="表单配置 JSON" 
+    <a-modal
+      :open="showJsonViewer"
+      title="表单配置 JSON"
       :width="800"
-      :footer="null" 
+      :footer="null"
       @cancel="toggleJsonViewer"
       class="json-modal"
     >
@@ -354,14 +412,16 @@
             </a-button>
           </a-space>
         </div>
-        <pre class="json-content">{{ JSON.stringify(formSchema, null, 2) }}</pre>
+        <pre class="json-content">{{
+          JSON.stringify(formSchema, null, 2)
+        }}</pre>
       </div>
     </a-modal>
 
     <!-- 分类选择弹窗 -->
-    <a-modal 
-      :open="showCategoryModal" 
-      title="选择表单分类" 
+    <a-modal
+      :open="showCategoryModal"
+      title="选择表单分类"
       :width="600"
       @cancel="closeCategoryModal"
       :footer="null"
@@ -379,18 +439,30 @@
           />
         </div>
 
+        <a-alert
+          v-if="categoryError"
+          :message="categoryError"
+          type="error"
+          show-icon
+        >
+          <template #action
+            ><a-button @click="loadCategories()">重试</a-button></template
+          >
+        </a-alert>
         <div class="category-list">
           <a-spin :spinning="categoryLoading">
             <div v-if="categories.length > 0" class="category-items">
-              <div 
-                v-for="category in categories" 
+              <div
+                v-for="category in categories"
                 :key="category.id"
                 class="category-item"
                 :class="{ active: formMeta.category_id === category.id }"
                 @click="selectCategory(category)"
               >
                 <div class="category-name">{{ category.name }}</div>
-                <div class="category-desc" v-if="category.description">{{ category.description }}</div>
+                <div class="category-desc" v-if="category.description">
+                  {{ category.description }}
+                </div>
               </div>
             </div>
             <a-empty v-else description="暂无分类数据" />
@@ -404,19 +476,22 @@
             :total="categoryPagination.total"
             :show-size-changer="true"
             :show-quick-jumper="true"
-            :show-total="(total: number, range: [number, number]) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`"
+            :show-total="
+              (total: number, range: [number, number]) =>
+                `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
+            "
             @change="onCategoryPageChange"
-            @show-size-change="onCategorySizeChange"
           />
         </div>
       </div>
     </a-modal>
-  </div>
+  </OpsPage>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue';
-import { message } from 'ant-design-vue';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { ref, reactive, computed, onBeforeUnmount, watch } from 'vue';
+import { message, Modal } from 'ant-design-vue';
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -429,23 +504,34 @@ import {
   DownloadOutlined,
   UploadOutlined,
   CopyOutlined,
-  SaveOutlined
+  SaveOutlined,
 } from '@ant-design/icons-vue';
 import FieldConfig from './components/FieldConfig.vue';
 import DynamicForm from './components/DynamicForm.vue';
-import { 
-  FormDesignStatus, 
+import {
+  FormDesignStatus,
   FormFieldType,
-  type FormField, 
+  type FormField,
   type FormSchema,
   type CreateWorkorderFormDesignReq,
   createWorkorderFormDesign,
 } from '#/api/core/workorder/workorder_form_design';
-import type { WorkorderCategoryItem, ListWorkorderCategoryReq } from '#/api/core/workorder/workorder_category';
+import type {
+  WorkorderCategoryItem,
+  ListWorkorderCategoryReq,
+} from '#/api/core/workorder/workorder_category';
 import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
 
 // 响应式数据
 const showDesigner = ref(true);
+const saving = ref(false);
+const saveError = ref<string | null>(null);
+let saveRequest = 0;
+let categoryRequest = 0;
+let importRequest = 0;
+let clearDialog: ReturnType<typeof Modal.confirm> | undefined;
+const categoryError = ref<string | null>(null);
+const selectedCategory = ref<WorkorderCategoryItem | null>(null);
 const showJsonViewer = ref(false);
 const showCategoryModal = ref(false);
 const dynamicFormRef = ref();
@@ -457,7 +543,7 @@ const categorySearch = ref('');
 const categoryPagination = reactive({
   page: 1,
   size: 10,
-  total: 0
+  total: 0,
 });
 
 // 表单元数据
@@ -473,16 +559,16 @@ const isTemplate = ref(false);
 
 // 表单结构
 const formSchema = reactive<FormSchema>({
-  fields: []
+  fields: [],
 });
 
 const formData = ref<Record<string, any>>({});
 const formRules = computed(() => {
   const rules: Record<string, any[]> = {};
-  formSchema.fields.forEach(field => {
+  formSchema.fields.forEach((field) => {
     if (field.required) {
       rules[field.name] = [
-        { required: true, message: `请输入${field.label}`, trigger: 'blur' }
+        { required: true, message: `请输入${field.label}`, trigger: 'blur' },
       ];
     }
   });
@@ -499,13 +585,15 @@ const fieldTypeMap: Record<string, string> = {
   [FormFieldType.Radio]: '单选框',
   [FormFieldType.Checkbox]: '复选框',
   [FormFieldType.Date]: '日期',
-  [FormFieldType.Switch]: '开关'
+  [FormFieldType.Switch]: '开关',
 };
 
 /**
  * 加载分类数据（支持分页和搜索）
  */
 const loadCategories = async (resetPage = false) => {
+  const ticket = ++categoryRequest;
+  categoryError.value = null;
   if (resetPage) {
     categoryPagination.page = 1;
   }
@@ -515,26 +603,20 @@ const loadCategories = async (resetPage = false) => {
     const params: ListWorkorderCategoryReq = {
       page: categoryPagination.page,
       size: categoryPagination.size,
-      search: categorySearch.value
+      search: categorySearch.value,
     };
 
     const response = await listWorkorderCategory(params);
+    if (ticket !== categoryRequest || !showCategoryModal.value) return;
     categories.value = response.items || [];
     categoryPagination.total = response.total || 0;
-  } catch (error) {
-
-    message.error('加载分类数据失败');
+  } catch {
+    if (ticket !== categoryRequest || !showCategoryModal.value) return;
+    categories.value = [];
+    categoryPagination.total = 0;
+    categoryError.value = '读取分类失败，请重试';
   } finally {
-    categoryLoading.value = false;
-  }
-};
-
-/**
- * 分类下拉框显示状态变化
- */
-const onCategoryDropdownVisibleChange = (visible: boolean) => {
-  if (visible) {
-    showCategoryModal.value = true;
+    if (ticket === categoryRequest) categoryLoading.value = false;
   }
 };
 
@@ -542,6 +624,9 @@ const onCategoryDropdownVisibleChange = (visible: boolean) => {
  * 关闭分类选择弹窗
  */
 const closeCategoryModal = () => {
+  categoryRequest++;
+  if (searchTimer) clearTimeout(searchTimer);
+  categoryLoading.value = false;
   showCategoryModal.value = false;
   categorySearch.value = '';
   categoryPagination.page = 1;
@@ -553,6 +638,7 @@ const closeCategoryModal = () => {
  */
 const selectCategory = (category: WorkorderCategoryItem) => {
   formMeta.category_id = category.id;
+  selectedCategory.value = category;
   closeCategoryModal();
   message.success(`已选择分类：${category.name}`);
 };
@@ -561,6 +647,7 @@ const selectCategory = (category: WorkorderCategoryItem) => {
  * 搜索分类
  */
 const searchCategories = () => {
+  if (searchTimer) clearTimeout(searchTimer);
   loadCategories(true);
 };
 
@@ -569,6 +656,7 @@ const searchCategories = () => {
  */
 let searchTimer: NodeJS.Timeout | null = null;
 const onCategorySearchInput = () => {
+  categoryRequest++;
   if (searchTimer) clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
     loadCategories(true);
@@ -578,6 +666,10 @@ const onCategorySearchInput = () => {
 // 清理定时器
 onBeforeUnmount(() => {
   if (searchTimer) clearTimeout(searchTimer);
+  categoryRequest++;
+  saveRequest++;
+  importRequest++;
+  clearDialog?.destroy();
 });
 
 /**
@@ -589,23 +681,6 @@ const onCategoryPageChange = (page: number, size: number) => {
   loadCategories();
 };
 
-/**
- * 分类每页条数改变
- */
-const onCategorySizeChange = (_current: number, size: number) => {
-  categoryPagination.page = 1;
-  categoryPagination.size = size;
-  loadCategories();
-};
-
-/**
- * 自定义下拉框渲染（用于触发弹窗）
- */
-const dropdownRender = () => {
-  // 这个函数不会被调用，因为我们通过 dropdown-visible-change 事件来处理
-  return null;
-};
-
 // 监听分类弹窗显示状态，初始化数据
 watch(showCategoryModal, (visible) => {
   if (visible) {
@@ -615,7 +690,9 @@ watch(showCategoryModal, (visible) => {
 
 // 生成唯一字段名
 const generateFieldName = (type: string) => {
-  const count = formSchema.fields.length + 1;
+  let count = formSchema.fields.length + 1;
+  const names = new Set(formSchema.fields.map((field) => field.name));
+  while (names.has(`${type}_field_${count}`)) count++;
   return `${type}_field_${count}`;
 };
 
@@ -629,6 +706,8 @@ const getFieldDisplayName = (field: FormField) => {
 
 // 添加字段
 const addFieldType = (type: string) => {
+  if (saving.value) return;
+  importRequest++;
   const fieldNumber = formSchema.fields.length + 1;
   const field: FormField = {
     name: generateFieldName(type),
@@ -637,7 +716,7 @@ const addFieldType = (type: string) => {
     required: 0,
     placeholder: `请输入${fieldTypeMap[type]}`,
     default: getDefaultValue(type),
-    options: needsOptions(type) ? ['选项1', '选项2'] : undefined
+    options: needsOptions(type) ? ['选项1', '选项2'] : undefined,
   };
 
   formSchema.fields.push(field);
@@ -660,16 +739,24 @@ const getDefaultValue = (type: string) => {
 
 // 判断是否需要选项
 const needsOptions = (type: string) => {
-  return [FormFieldType.Select, FormFieldType.Radio, FormFieldType.Checkbox].includes(type as any);
+  return [
+    FormFieldType.Select,
+    FormFieldType.Radio,
+    FormFieldType.Checkbox,
+  ].includes(type as any);
 };
 
 // 更新字段
 const updateField = (index: number, updatedField: FormField) => {
+  if (saving.value) return;
+  importRequest++;
   formSchema.fields[index] = JSON.parse(JSON.stringify(updatedField));
 };
 
 // 移除字段
 const removeField = (index: number) => {
+  if (saving.value) return;
+  importRequest++;
   const field = formSchema.fields[index];
   formSchema.fields.splice(index, 1);
 
@@ -682,6 +769,8 @@ const removeField = (index: number) => {
 
 // 移动字段
 const moveField = (index: number, direction: number) => {
+  if (saving.value) return;
+  importRequest++;
   const newIndex = index + direction;
   if (newIndex >= 0 && newIndex < formSchema.fields.length) {
     const temp = formSchema.fields[index];
@@ -707,7 +796,7 @@ const togglePreview = () => {
 // 初始化表单数据
 const initFormData = () => {
   const data: Record<string, any> = {};
-  formSchema.fields.forEach(field => {
+  formSchema.fields.forEach((field) => {
     if (field.default !== undefined) {
       data[field.name] = field.default;
     } else {
@@ -728,19 +817,30 @@ const resetForm = () => {
 
 // 清空表单配置
 const clearForm = () => {
+  if (saving.value) return;
   if (formSchema.fields.length === 0) {
     message.info('表单已为空');
     return;
   }
 
-  formSchema.fields = [];
-  formData.value = {};
-  message.success('表单配置已清空');
+  clearDialog = Modal.confirm({
+    title: '清空表单字段',
+    content: '将移除当前所有字段，基础信息保留。未保存的字段无法恢复。',
+    okText: '清空字段',
+    cancelText: '取消',
+    okType: 'danger',
+    onOk: () => {
+      formSchema.fields = [];
+      formData.value = {};
+      importRequest++;
+    },
+  });
 };
 
 // 保存表单设计
 const saveFormDesign = async () => {
-  if (!formMeta.name) {
+  if (saving.value) return;
+  if (!formMeta.name.trim()) {
     message.error('请输入表单名称');
     return;
   }
@@ -750,21 +850,31 @@ const saveFormDesign = async () => {
     return;
   }
 
+  if (!isValidSchema(formSchema)) {
+    message.error('字段名称、标签或类型无效，名称必须唯一');
+    return;
+  }
+  const ticket = ++saveRequest;
+  saving.value = true;
+  saveError.value = null;
   try {
     const data: CreateWorkorderFormDesignReq = {
-      name: formMeta.name,
+      name: formMeta.name.trim(),
       description: formMeta.description,
-      schema: formSchema,
+      schema: JSON.parse(JSON.stringify(formSchema)),
       status: formMeta.status,
       category_id: formMeta.category_id,
-      tags: formMeta.tags,
-      is_template: isTemplate.value ? 1 : 2
+      tags: [...formMeta.tags],
+      is_template: isTemplate.value ? 1 : 2,
     };
 
     await createWorkorderFormDesign(data);
-    message.success('表单设计保存成功');
-  } catch (error) {
-    message.error('保存失败，请重试');
+    if (ticket === saveRequest) message.success('表单设计保存成功');
+  } catch {
+    if (ticket === saveRequest)
+      saveError.value = '保存失败，请重试，当前设计已保留';
+  } finally {
+    if (ticket === saveRequest) saving.value = false;
   }
 };
 
@@ -782,7 +892,7 @@ const submitForm = async () => {
 
 // 处理表单提交
 const handleSubmit = (_data: Record<string, any>) => {
-  message.success('表单提交成功！');
+  message.success('预览校验通过，未创建工单');
 };
 
 // 切换JSON查看器
@@ -827,14 +937,61 @@ const exportConfig = () => {
   message.success('表单设计导出成功');
 };
 
+const isValidSchema = (value: unknown): value is FormSchema => {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('fields' in value) ||
+    !Array.isArray(value.fields)
+  )
+    return false;
+  const names = new Set<string>();
+  return value.fields.every((field: FormField) => {
+    if (
+      !field ||
+      typeof field.name !== 'string' ||
+      !field.name.trim() ||
+      names.has(field.name) ||
+      typeof field.label !== 'string' ||
+      !field.label.trim() ||
+      !Object.values(FormFieldType).includes(
+        field.type as typeof FormFieldType.Text,
+      )
+    )
+      return false;
+    if (
+      field.options !== undefined &&
+      (!Array.isArray(field.options) ||
+        !field.options.every((option) => typeof option === 'string'))
+    )
+      return false;
+    if (
+      field.required !== undefined &&
+      field.required !== 0 &&
+      field.required !== 1
+    )
+      return false;
+    names.add(field.name);
+    return true;
+  });
+};
+
 // 导入配置
 const importConfig = (file: File) => {
+  if (saving.value) return false;
+  if (file.size > 1024 * 1024) {
+    message.error('配置文件不能超过1MiB');
+    return false;
+  }
+  const ticket = ++importRequest;
   const reader = new FileReader();
   reader.onload = (e) => {
+    if (ticket !== importRequest) return;
     try {
       const config = JSON.parse(e.target?.result as string);
-      if (config.fields && Array.isArray(config.fields)) {
+      if (isValidSchema(config)) {
         formSchema.fields = config.fields;
+        formData.value = {};
         message.success('表单设计导入成功');
       } else {
         message.error('文件格式不正确');
@@ -843,27 +1000,24 @@ const importConfig = (file: File) => {
       message.error('文件解析失败');
     }
   };
+  reader.onerror = () => {
+    if (ticket === importRequest) message.error('读取配置文件失败');
+  };
   reader.readAsText(file);
   return false;
 };
-
-// 组件挂载时加载数据
-onMounted(() => {
-  // 初始化时不加载分类数据，只在用户点击下拉框时加载
-});
 </script>
 
 <style scoped>
 .dynamic-form-container {
-  padding: 20px;
   background-color: var(--ops-ground);
-  min-height: 100vh;
+  min-width: 0;
 }
 
 .designer-card,
 .preview-card {
   border-radius: var(--ops-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   border: 1px solid var(--ops-border);
   margin-bottom: 20px;
 }
@@ -879,12 +1033,12 @@ onMounted(() => {
 .btn-primary {
   background: var(--ops-accent);
   border: none;
-  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+  box-shadow: none;
 }
 
 .btn-primary:hover {
   background: var(--ops-accent);
-  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
+  box-shadow: none;
 }
 
 .designer-content {
@@ -894,15 +1048,15 @@ onMounted(() => {
 .form-meta-config {
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
-  padding: 24px;
-  margin-bottom: 24px;
+  padding: var(--ops-space-lg);
+  margin-bottom: var(--ops-space-lg);
   border: 1px solid var(--ops-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
 }
 
 .config-header {
   margin-bottom: 20px;
-  text-align: center;
+  text-align: left;
 }
 
 .config-header h4 {
@@ -915,15 +1069,15 @@ onMounted(() => {
 .field-controls {
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
-  padding: 24px;
-  margin-bottom: 24px;
+  padding: var(--ops-space-lg);
+  margin-bottom: var(--ops-space-lg);
   border: 1px solid var(--ops-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
 }
 
 .controls-header {
   margin-bottom: 20px;
-  text-align: center;
+  text-align: left;
 }
 
 .controls-header h4 {
@@ -945,24 +1099,24 @@ onMounted(() => {
 }
 
 .field-btn {
-  height: 48px;
+  min-height: 36px;
   border: 2px dashed var(--ops-border);
   border-radius: var(--ops-radius);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  transition: all 0.3s ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
   background: var(--ops-ground);
 }
 
 .field-btn:hover {
-  border-color: #1890ff;
-  color: #1890ff;
-  background: #f0f8ff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.15);
+  border-color: var(--ops-accent);
+  color: var(--ops-accent);
+  background: var(--ops-ground);
+  box-shadow: none;
 }
 
 .field-btn span {
@@ -973,15 +1127,15 @@ onMounted(() => {
 .config-actions {
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
-  padding: 24px;
-  margin-bottom: 24px;
+  padding: var(--ops-space-lg);
+  margin-bottom: var(--ops-space-lg);
   border: 1px solid var(--ops-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
 }
 
 .actions-header {
   margin-bottom: 20px;
-  text-align: center;
+  text-align: left;
 }
 
 .actions-header h4 {
@@ -1003,25 +1157,25 @@ onMounted(() => {
 }
 
 .action-btn {
-  height: 48px;
+  min-height: 36px;
   border: 1px solid var(--ops-border);
   border-radius: var(--ops-radius);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  transition: all 0.3s ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
   background: var(--ops-ground);
   width: 100%;
 }
 
 .action-btn:hover {
-  border-color: #40a9ff;
-  color: #40a9ff;
-  background: #f0f8ff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(64, 169, 255, 0.15);
+  border-color: var(--ops-accent);
+  color: var(--ops-accent);
+  background: var(--ops-ground);
+  box-shadow: none;
 }
 
 .action-btn span {
@@ -1041,9 +1195,9 @@ onMounted(() => {
 .field-list {
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
-  padding: 24px;
+  padding: var(--ops-space-lg);
   border: 1px solid var(--ops-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
 }
 
 .list-header {
@@ -1082,7 +1236,7 @@ onMounted(() => {
 .field-panel :deep(.ant-collapse-content) {
   border: 1px solid var(--ops-border);
   border-top: none;
-  border-radius: 0 0 8px 8px;
+  border-radius: var(--ops-radius);
   margin-bottom: 8px;
 }
 
@@ -1098,8 +1252,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  border-radius: var(--ops-radius);
+  transition: background-color 120ms ease;
 }
 
 .action-btn-small:hover {
@@ -1124,7 +1278,7 @@ onMounted(() => {
 }
 
 .preview-content {
-  padding: 24px;
+  padding: var(--ops-space-lg);
   background: var(--ops-ground);
   border-radius: var(--ops-radius);
   margin: 16px;
@@ -1133,7 +1287,7 @@ onMounted(() => {
 .preview-header {
   text-align: center;
   margin-bottom: 32px;
-  padding: 24px;
+  padding: var(--ops-space-lg);
   background: var(--ops-surface);
   border-radius: var(--ops-radius);
   border: 1px solid var(--ops-border);
@@ -1175,16 +1329,16 @@ onMounted(() => {
 }
 
 .json-content {
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
+  background-color: var(--ops-ground);
+  border: 1px solid var(--ops-border);
+  border-radius: var(--ops-radius);
   padding: 16px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.5;
   overflow: auto;
   max-height: 50vh;
-  color: #495057;
+  color: var(--ops-ink);
 }
 
 .form-item {
@@ -1193,7 +1347,7 @@ onMounted(() => {
 
 .form-item :deep(.ant-form-item-label) {
   font-weight: 500;
-  color: #374151;
+  color: var(--ops-ink);
 }
 
 .switch-item {
@@ -1203,14 +1357,16 @@ onMounted(() => {
 }
 
 .config-input {
-  border-radius: 6px;
-  transition: all 0.3s ease;
+  border-radius: var(--ops-radius);
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
 }
 
 .config-input:focus,
 .config-input:hover {
-  border-color: #1890ff;
-  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.1);
+  border-color: var(--ops-accent);
+  box-shadow: none;
 }
 
 /* 分类选择弹窗样式 */
@@ -1249,21 +1405,22 @@ onMounted(() => {
   border-radius: var(--ops-radius);
   margin-bottom: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
   background: var(--ops-ground);
 }
 
 .category-item:hover {
-  border-color: #1890ff;
-  background: #f0f8ff;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+  border-color: var(--ops-accent);
+  background: var(--ops-ground);
+  box-shadow: none;
 }
 
 .category-item.active {
-  border-color: #1890ff;
-  background: #e6f7ff;
-  color: #1890ff;
+  border-color: var(--ops-accent);
+  background: var(--ops-ground);
+  color: var(--ops-accent);
 }
 
 .category-name {
@@ -1279,7 +1436,7 @@ onMounted(() => {
 .category-pagination {
   border-top: 1px solid var(--ops-border);
   padding-top: 16px;
-  text-align: center;
+  text-align: left;
 }
 
 .category-items::-webkit-scrollbar {
@@ -1287,22 +1444,26 @@ onMounted(() => {
 }
 
 .category-items::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--ops-ground);
   border-radius: 3px;
 }
 
 .category-items::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
 .category-items::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--ops-muted);
 }
 
 @media (max-width: 768px) {
-  .dynamic-form-container {
-    padding: 12px;
+  .designer-content,
+  .form-meta-config,
+  .field-controls,
+  .config-actions,
+  .field-list {
+    padding: var(--ops-space-sm);
   }
 
   .field-buttons,
@@ -1356,7 +1517,7 @@ onMounted(() => {
 @media (max-width: 480px) {
   .field-buttons,
   .action-buttons {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .controls-header,
@@ -1374,17 +1535,18 @@ onMounted(() => {
   }
 
   .category-modal-content {
-    max-height: 40vh;
+    max-height: 65dvh;
   }
 }
 
 .field-panel {
-  transition: all 0.3s ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
 }
 
 .field-panel:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
 }
 
 .json-content::-webkit-scrollbar {
@@ -1393,16 +1555,80 @@ onMounted(() => {
 }
 
 .json-content::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--ops-ground);
   border-radius: 3px;
 }
 
 .json-content::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--ops-border);
   border-radius: 3px;
 }
 
 .json-content::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--ops-muted);
+}
+
+.designer-error {
+  margin-bottom: var(--ops-space-lg);
+}
+.category-trigger {
+  text-align: left;
+}
+.field-saving {
+  pointer-events: none;
+  opacity: 0.75;
+}
+.dynamic-form-container :deep(.ant-space) {
+  flex-wrap: wrap;
+}
+.dynamic-form-container :deep(.ant-card-head) {
+  min-height: 0;
+}
+.dynamic-form-container :deep(.field-config .config-section),
+.dynamic-form-container :deep(.dynamic-form .form-container) {
+  background: var(--ops-surface);
+  border-color: var(--ops-border);
+  box-shadow: none;
+}
+.dynamic-form-container :deep(.field-config .section-title) {
+  color: var(--ops-ink);
+  background: var(--ops-ground);
+}
+.dynamic-form-container :deep(.field-config .option-item) {
+  background: var(--ops-ground);
+  border-color: var(--ops-border);
+  box-shadow: none;
+}
+.dynamic-form-container :deep(.field-config .option-index),
+.dynamic-form-container :deep(.field-config .ant-form-item-label label) {
+  color: var(--ops-ink);
+}
+.dynamic-form-container :deep(.field-config .checkbox-item:hover) {
+  background: var(--ops-ground);
+  border-color: var(--ops-accent);
+}
+.dynamic-form-container :deep(.field-config .config-input),
+.dynamic-form-container :deep(.field-config .field-select),
+.dynamic-form-container :deep(.field-config .option-input) {
+  border-radius: var(--ops-radius);
+  box-shadow: none;
+}
+.dynamic-form-container :deep(.ant-collapse-extra) {
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .field-actions {
+    flex-wrap: nowrap;
+  }
+  .field-panel :deep(.ant-collapse-header) {
+    gap: 4px;
+    align-items: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dynamic-form-container :deep(*) {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 </style>
