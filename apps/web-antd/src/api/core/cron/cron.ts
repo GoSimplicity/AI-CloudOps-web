@@ -109,6 +109,13 @@ export interface CronJob {
   created_by_name: string;
 }
 
+// 获取定时任务列表响应（allow_local_exec 与 items/total 同级；旧版后端不返回该字段）
+export interface GetCronJobListResp {
+  items: CronJob[];
+  total: number;
+  allow_local_exec?: boolean; // 是否允许命令行(2)/脚本(4)任务，对应后端 cron.allow_local_exec
+}
+
 // 获取定时任务列表请求参数
 export interface GetCronJobListReq {
   page?: number;
