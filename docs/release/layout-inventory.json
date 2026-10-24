@@ -181,7 +181,7 @@
       "route": "/k8s_secret",
       "view": "k8s/secret/Secret.vue",
       "sharedPage": true,
-      "inlineStyles": 44,
+      "inlineStyles": 48,
       "scopedStyle": true
     },
     {

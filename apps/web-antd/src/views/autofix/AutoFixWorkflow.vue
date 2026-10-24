@@ -233,7 +233,7 @@
                   :type="reviewApproved ? 'success' : 'warning'"
                   show-icon
                 />
-                <ApprovalPanel v-if="normalizedResult.status === 'needs_human_confirmation'" :actions="confirmableBlockedActions" :selected="selectedBlockedActionIds" :busy="busy" :can-confirm="canConfirmWorkflow" :issue="approvalIssue" :expires-at="workflowResult?.approval?.expires_at" @toggle="toggleBlockedAction" @confirm="confirmWorkflowExecution" />
+                <ApprovalPanel v-if="normalizedResult.status === 'needs_human_confirmation'" :actions="confirmableBlockedActions" :selected="selectedBlockedActionIds" :busy="busy" :can-confirm="canConfirmWorkflow" :can-confirm-all="canConfirmAll" :issue="approvalIssue" :expires-at="workflowResult?.approval?.expires_at" @toggle="toggleBlockedAction" @confirm="confirmWorkflowExecution" @confirm-one="confirmSingleAction" @confirm-all="confirmAllActions" />
               </template>
               <a-empty v-else description="执行工作流后展示风险复核结论" />
             </a-card>
@@ -287,7 +287,7 @@ const workflowAgents = [
   { description: '执行允许动作', icon: 'lucide:terminal', name: 'Executor', title: 'Executor' },
 ];
 
-const { templateKey, running, infoLoading, showRawDrawer, serviceInfo, readyInfo, workflowResult, selectedBlockedActionIds, workflowError, infoError, formData, busy, isFormValid, confirmableBlockedActions, approvalIssue, canConfirmWorkflow, applyTemplate, resetForm, toggleBlockedAction, loadServiceInfo, runWorkflow, confirmWorkflowExecution } = useAutoFixWorkflow();
+const { templateKey, running, infoLoading, showRawDrawer, serviceInfo, readyInfo, workflowResult, selectedBlockedActionIds, workflowError, infoError, formData, busy, isFormValid, confirmableBlockedActions, approvalIssue, canConfirmWorkflow, canConfirmAll, applyTemplate, resetForm, toggleBlockedAction, loadServiceInfo, runWorkflow, confirmWorkflowExecution, confirmSingleAction, confirmAllActions } = useAutoFixWorkflow();
 const normalizedResult = computed(() => (workflowResult.value ? normalizeWorkflowResult(workflowResult.value) : null));
 const candidateActions = computed<AutoFixAction[]>(() => normalizedResult.value?.candidate_actions || []);
 const blockedActions = computed<AutoFixAction[]>(() => normalizedResult.value?.blocked_actions || []);

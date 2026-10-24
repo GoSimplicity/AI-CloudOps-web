@@ -37,6 +37,7 @@ import {
 } from '#/utils/permission/request-notice';
 
 import { refreshTokenApi } from './core';
+import { markHttpErrorNotified } from './http-error-notice';
 
 /** 通用错误提示的 message key 前缀，key 按文案区分 */
 export const HTTP_ERROR_MESSAGE_KEY_PREFIX = 'http-error:';
@@ -386,9 +387,10 @@ function createRequestClient(baseURL: string) {
       const content = resolveHttpErrorMessage(msg, error);
       // 固定 key：同一文案的并发错误（如批量操作碰上 500 / 网络错误）合并为一条
       const key = `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${content}`;
-      message.error({ content, key });
-      // 记下 key：页面据此判断已提示，或用同一 key 换成带引导的文案（与 SEC-26 同一标记）
+      const handle = message.error({ content, key });
       markRequestLayerNotice(error, key);
+      // Preserve notice ownership so Secret/autofix can replace only their own message.
+      markHttpErrorNotified(error, key, handle);
     }),
   );
 
