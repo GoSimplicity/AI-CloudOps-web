@@ -32,7 +32,10 @@ import {
   type K8sNamespace,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // YAML 模板常量
 const ROLE_YAML_TEMPLATE = `apiVersion: rbac.authorization.k8s.io/v1
@@ -304,8 +307,8 @@ export function useRolePage() {
         clearNamespaces();
         clearRoles();
       }
-      clustersError.value = '获取集群列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -359,8 +362,8 @@ export function useRolePage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      namespacesError.value = '获取命名空间列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(namespacesError.value);
+      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -407,8 +410,8 @@ export function useRolePage() {
     } catch (error) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       clearRoles();
-      loadError.value = '获取 Role 列表失败，请重试';
-      if (!isPermissionDeniedError(error)) message.error(loadError.value);
+      if (shouldRecordPageError(error)) loadError.value = '获取 Role 列表失败，请重试';
+      if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -434,7 +437,7 @@ export function useRolePage() {
       currentRoleDetail.value = response || role;
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error('获取 Role 详情失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('获取 Role 详情失败：' + (error.message || '未知错误'));
       currentRoleDetail.value = role;
     } finally {
       detailLoading.value = false;
@@ -468,7 +471,7 @@ export function useRolePage() {
       isYamlModalVisible.value = true;
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error('获取 Role YAML 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('获取 Role YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -505,7 +508,7 @@ export function useRolePage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (!isPermissionDeniedError(error)) message.error('更新 Role YAML 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('更新 Role YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -598,7 +601,7 @@ export function useRolePage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (!isPermissionDeniedError(error)) message.error('创建 Role 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('创建 Role 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -637,7 +640,7 @@ export function useRolePage() {
       
       isEditModalVisible.value = true;
     } catch (error: any) {
-      if (!isPermissionDeniedError(error)) message.error('获取 Role 详情失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('获取 Role 详情失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -711,7 +714,7 @@ export function useRolePage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (!isPermissionDeniedError(error)) message.error('更新 Role 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('更新 Role 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -751,7 +754,7 @@ export function useRolePage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (!isPermissionDeniedError(error)) message.error('通过 YAML 创建 Role 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error)) message.error('通过 YAML 创建 Role 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -782,7 +785,7 @@ export function useRolePage() {
           await fetchRoles();
         } catch (error: any) {
 
-          if (!isPermissionDeniedError(error)) message.error('删除 Role 失败：' + (error.message || '未知错误'));
+          if (shouldNotifyPageError(error)) message.error('删除 Role 失败：' + (error.message || '未知错误'));
         }
       },
     });
@@ -845,7 +848,7 @@ export function useRolePage() {
             await fetchRoles();
           } catch (error: any) {
 
-            if (!isPermissionDeniedError(error)) message.error('批量删除部分 Role 失败：' + (error.message || '未知错误'));
+            if (shouldNotifyPageError(error)) message.error('批量删除部分 Role 失败：' + (error.message || '未知错误'));
             await fetchRoles();
           }
         },

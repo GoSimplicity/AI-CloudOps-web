@@ -33,7 +33,10 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // YAML 模板常量
 const CONFIGMAP_YAML_TEMPLATE = `apiVersion: v1
@@ -305,8 +308,8 @@ export function useConfigMapPage() {
         clearNamespaces();
         clearConfigMaps();
       }
-      clustersError.value = '获取集群列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -352,8 +355,8 @@ export function useConfigMapPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      namespacesError.value = '获取命名空间列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(namespacesError.value);
+      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -401,8 +404,8 @@ export function useConfigMapPage() {
     } catch (err) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       clearConfigMaps();
-      loadError.value = '获取 ConfigMap 列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(loadError.value);
+      if (shouldRecordPageError(err)) loadError.value = '获取 ConfigMap 列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(loadError.value);
 
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
@@ -442,7 +445,7 @@ export function useConfigMapPage() {
       
       currentConfigMapDetail.value = processedDetail;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 ConfigMap 详情失败');
+      if (shouldNotifyPageError(err)) message.error('获取 ConfigMap 详情失败');
 
       try {
         const fallbackDetail = { 
@@ -493,7 +496,7 @@ export function useConfigMapPage() {
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 ConfigMap YAML 失败');
+      if (shouldNotifyPageError(err)) message.error('获取 ConfigMap YAML 失败');
 
     } finally {
       submitLoading.value = false;
@@ -526,10 +529,10 @@ export function useConfigMapPage() {
       await fetchConfigMaps();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查 YAML 格式是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('ConfigMap YAML 更新失败');
+      if (shouldNotifyPageError(err)) message.error('ConfigMap YAML 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -647,10 +650,10 @@ export function useConfigMapPage() {
       await fetchConfigMaps();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('ConfigMap 创建失败');
+      if (shouldNotifyPageError(err)) message.error('ConfigMap 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -675,10 +678,10 @@ export function useConfigMapPage() {
       await fetchConfigMaps();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查 YAML 格式是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('ConfigMap YAML 创建失败');
+      if (shouldNotifyPageError(err)) message.error('ConfigMap YAML 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -730,10 +733,10 @@ export function useConfigMapPage() {
       await fetchConfigMaps();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('ConfigMap 更新失败');
+      if (shouldNotifyPageError(err)) message.error('ConfigMap 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -763,7 +766,7 @@ export function useConfigMapPage() {
           message.success('ConfigMap 删除成功');
           await fetchConfigMaps();
         } catch (err) {
-          if (!isPermissionDeniedError(err)) message.error('ConfigMap 删除失败');
+          if (shouldNotifyPageError(err)) message.error('ConfigMap 删除失败');
 
         }
       },
@@ -826,7 +829,7 @@ export function useConfigMapPage() {
           selectedRows.value = [];
           await fetchConfigMaps();
         } catch (err) {
-          if (!isPermissionDeniedError(err)) message.error(`批量${operation}失败`);
+          if (shouldNotifyPageError(err)) message.error(`批量${operation}失败`);
 
         }
       },

@@ -3,6 +3,9 @@ import Antd, { message } from 'ant-design-vue';
 import { nextTick, reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { HTTP_CONFLICT_MESSAGE } from '#/constants/http-error-messages';
+import { PERMISSION_DENIED_MESSAGE } from '#/utils/permission/forbidden';
+
 import AutoFixWorkflow from './AutoFixWorkflow.vue';
 
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
@@ -61,6 +64,8 @@ function plan(reason = '账户1私有审批结论') {
       state: 'pending',
       expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
       retry_safe: false,
+      // 复审 P3-1：缺 pending_action_ids 时不允许确认，夹具按契约带上
+      pending_action_ids: [item.action_id],
     },
   };
 }
@@ -69,6 +74,7 @@ beforeEach(() => {
   account.user = reactive({ userInfo: { userId: '1' } });
   account.access = reactive({ accessToken: 'offline-credential' });
   vi.spyOn(message, 'success');
+  vi.spyOn(message, 'error').mockImplementation((() => {}) as any);
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
@@ -177,12 +183,19 @@ describe('自动修复页面的显式调用和审批状态', () => {
     await flushPromises();
     expect(wrapper!.text()).not.toContain('账户1私有审批结论');
   });
-  it.each([403, 404, 409])(
-    '确认返回%s后清除可重试计划与选择',
-    async (status) => {
+  it.each([
+    [403, PERMISSION_DENIED_MESSAGE],
+    [404, '计划已失效，请重新生成'],
+    [409, HTTP_CONFLICT_MESSAGE],
+    [502, '服务暂时不可用，请稍后重试'],
+    [400, '请求参数错误，请检查后重试'],
+    [500, '自动修复请求失败，请人工核对实际状态'],
+  ])(
+    '确认返回%s后清除可重试计划与选择，按状态显示「%s」（不透出后端原文）',
+    async (status, text) => {
       api.confirmAutoFixWorkflow.mockRejectedValueOnce(
-        Object.assign(new Error('请人工核对实际状态，不能盲目重试'), {
-          response: { status },
+        Object.assign(new Error('后端原文 WORKFLOW_APPROVAL_ERROR'), {
+          response: { status, data: { error_code: 'WORKFLOW_APPROVAL_ERROR' } },
         }),
       );
       await start();
@@ -190,10 +203,22 @@ describe('自动修复页面的显式调用和审批状态', () => {
       await selectAndConfirm();
       expect(api.confirmAutoFixWorkflow).toHaveBeenCalledTimes(1);
       expect(wrapper!.find('.confirm-panel').exists()).toBe(false);
-      expect(wrapper!.find('[role="alert"]').text()).toContain('不能盲目重试');
+      const alert = wrapper!.find('[role="alert"]').text();
+      expect(alert).toContain(text);
+      expect(alert).not.toContain('WORKFLOW_APPROVAL_ERROR');
       expect(message.success).not.toHaveBeenCalled();
     },
   );
+  it('执行工作流 409：显示 409 通用文案（HTTP_CONFLICT_MESSAGE）', async () => {
+    api.executeAutoFixWorkflow.mockRejectedValueOnce(
+      Object.assign(new Error('后端原文'), { response: { status: 409 } }),
+    );
+    await start();
+    await fillAndRun();
+    expect(wrapper!.find('[role="alert"]').text()).toContain(
+      HTTP_CONFLICT_MESSAGE,
+    );
+  });
   it('硬权限失败的动作不提供可选审批框', async () => {
     const result = plan();
     result.blocked_actions[0]!.risk_assessment.permission_allowed = false;

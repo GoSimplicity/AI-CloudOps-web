@@ -38,7 +38,8 @@ export interface K8sCluster {
   env?: Env; // 集群环境
   version?: string; // 集群版本
   api_server_addr?: string; // API Server 地址
-  kube_config_content?: string; // kubeConfig 内容
+  // 读接口（列表/详情）不再返回 kubeconfig 原文，只返回是否已配置
+  has_kube_config?: boolean; // 是否已配置 kubeConfig
   action_timeout_seconds?: number; // 操作超时时间（秒）
   create_user_name?: string; // 创建者用户名
   create_user_id?: number; // 创建者用户ID
@@ -58,7 +59,7 @@ export interface CreateClusterReq {
   env?: Env; // 集群环境
   version?: string; // 集群版本
   api_server_addr?: string; // API Server 地址
-  kube_config_content?: string; // kubeConfig 内容
+  kube_config_content: string; // kubeConfig 内容（必填）
   action_timeout_seconds?: number; // 操作超时时间（秒）
   tags?: KeyValueList; // 标签
 }
@@ -75,6 +76,7 @@ export interface UpdateClusterReq {
   env?: Env; // 集群环境
   version?: string; // 集群版本
   api_server_addr?: string; // API Server 地址
+  // 选填：不传或传空字符串表示保留原值，非空则整段替换
   kube_config_content?: string; // kubeConfig 内容
   action_timeout_seconds?: number; // 操作超时时间（秒）
   tags?: KeyValueList; // 标签

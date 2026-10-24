@@ -8,6 +8,7 @@ import Antd, { message, Modal } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CloudResourceManager from './CloudResourceManager.vue';
 import { getTreeNodeCloudResourcesApi } from '#/api/core/tree/tree_cloud';
+import { markRequestLayerNotice } from '#/utils/permission/request-notice';
 
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
@@ -298,6 +299,40 @@ describe('云资源真实控件合同', () => {
       '北京',
     );
     await button('取消', '.ant-modal-footer button');
+  });
+  it.each([
+    ['HTTP 500', 'http-error:内部服务器错误'],
+    ['HTTP 409', 'http-error:数据已变化，请刷新后重试'],
+  ])('incr3 P3-4：%s 请求层已提示时，用同一 key 换成带「检查同步历史」引导的文案，只一条', async (_label, key) => {
+    const error = Object.assign(new Error('Request failed'), { response: { status: 500 } });
+    markRequestLayerNotice(error, key);
+    client.post.mockRejectedValue(error);
+    await open();
+    await select('cloud-sync-regions', '北京');
+    const spy = vi.spyOn(message, 'error');
+    await button('开始同步', '.ant-modal-footer button');
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith({
+      content: '同步失败，请检查同步历史后重试',
+      key,
+    });
+  });
+  it('incr3 P3-4：403 不覆盖请求层提示；取消不提示；非请求错误照常弹带引导文案', async () => {
+    await open();
+    await select('cloud-sync-regions', '北京');
+    const spy = vi.spyOn(message, 'error');
+    for (const error of [
+      Object.assign(new Error('Error 403'), { [Symbol.for('ai-cloudops.permissionDenied')]: true }),
+      Object.assign(new Error('canceled'), { code: 'ERR_CANCELED' }),
+    ]) {
+      client.post.mockRejectedValueOnce(error);
+      await button('开始同步', '.ant-modal-footer button');
+    }
+    expect(spy).not.toHaveBeenCalled();
+    client.post.mockRejectedValueOnce(new Error('fixture'));
+    await button('开始同步', '.ant-modal-footer button');
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith('同步失败，请检查同步历史后重试');
   });
   it('非阿里云及非ECS存量只读，不开放不支持的同步账户', async () => {
     const original = client.get.getMockImplementation()!;

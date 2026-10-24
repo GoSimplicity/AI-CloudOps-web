@@ -1,3 +1,7 @@
+import { RequestOwnerChangedError } from '@vben/request';
+
+import axios from 'axios';
+import { message } from 'ant-design-vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useDeploymentPage } from '../deployment/Deployment';
@@ -131,6 +135,92 @@ for (const testCase of cases) {
       client.get.mockResolvedValueOnce({ items: [], total: 0 });
       await page.fetch();
       expect(page.state.loadError.value).toBe('');
+    });
+
+    it.each([
+      ['CanceledError', () => new axios.CanceledError(undefined, {} as any, {})],
+      ['RequestOwnerChangedError', () => new RequestOwnerChangedError()],
+    ])('FE-02b 拍板 3：列表请求被取消（%s）不写 loadError、不提示；真实失败照常写', async (_label, make) => {
+      const page = testCase.create();
+      page.state.filterClusterId.value = 1;
+      client.get.mockRejectedValueOnce(make());
+      await page.fetch();
+      expect(page.state.loadError.value).toBe('');
+      expect(message.error).not.toHaveBeenCalled();
+
+      client.get.mockRejectedValueOnce(new Error('unavailable'));
+      await page.fetch();
+      expect(page.state.loadError.value).not.toBe('');
+    });
+
+    it.each([
+      ['CanceledError', () => new axios.CanceledError(undefined, {} as any, {})],
+      ['RequestOwnerChangedError', () => new RequestOwnerChangedError()],
+      ['AbortError', () => new DOMException('aborted', 'AbortError')],
+    ])('incr3 P3-8：已有数据后列表请求被取消（%s）：清空旧列表与分页、loading 复位、不写错误、不提示', async (_label, make) => {
+      const page = testCase.create();
+      page.state.filterClusterId.value = 1;
+      client.get.mockResolvedValueOnce({
+        items: [{ name: 'old', namespace: 'alpha', cluster_id: 1 }],
+        total: 1,
+      });
+      await page.fetch();
+      expect(page.items.value).toHaveLength(1);
+      page.state.selectedRowKeys.value = ['old'];
+
+      const pending = Promise.withResolvers<Result>();
+      client.get.mockReturnValueOnce(pending.promise);
+      const request = page.fetch();
+      expect(page.state.loading.value).toBe(true);
+      pending.reject(make());
+      await request;
+      expect(page.items.value).toEqual([]);
+      expect(page.state.total.value).toBe(0);
+      expect(page.state.selectedRowKeys.value).toEqual([]);
+      expect(page.state.loading.value).toBe(false);
+      expect(page.state.loadError.value).toBe('');
+      expect(message.error).not.toHaveBeenCalled();
+    });
+  });
+}
+
+const selectorCases = [
+  { name: 'Deployment', create: () => useDeploymentPage() },
+  { name: 'Pod', create: () => usePodPage() },
+];
+for (const testCase of selectorCases) {
+  describe(`FE-02b 拍板 3：${testCase.name} 集群 / 命名空间下拉被取消不写错误状态`, () => {
+    it.each([
+      ['CanceledError', () => new axios.CanceledError(undefined, {} as any, {})],
+      ['RequestOwnerChangedError', () => new RequestOwnerChangedError()],
+    ])('集群列表取消（%s）：clustersError 保持初始值；真实失败照常写', async (_label, make) => {
+      const page = testCase.create();
+      client.get.mockRejectedValueOnce(make());
+      await page.fetchClusters();
+      expect(page.clustersError.value).toBe('');
+      expect(page.clustersLoading.value).toBe(false);
+      expect(message.error).not.toHaveBeenCalled();
+
+      client.get.mockRejectedValueOnce(new Error('unavailable'));
+      await page.fetchClusters();
+      expect(page.clustersError.value).toBe('获取集群列表失败，请重试');
+    });
+
+    it.each([
+      ['CanceledError', () => new axios.CanceledError(undefined, {} as any, {})],
+      ['RequestOwnerChangedError', () => new RequestOwnerChangedError()],
+    ])('命名空间列表取消（%s）：namespacesError 保持初始值；真实失败照常写', async (_label, make) => {
+      const page = testCase.create();
+      page.filterClusterId.value = 1;
+      client.get.mockRejectedValueOnce(make());
+      await page.fetchNamespaces();
+      expect(page.namespacesError.value).toBe('');
+      expect(page.namespacesLoading.value).toBe(false);
+      expect(message.error).not.toHaveBeenCalled();
+
+      client.get.mockRejectedValueOnce(new Error('unavailable'));
+      await page.fetchNamespaces();
+      expect(page.namespacesError.value).toBe('获取命名空间列表失败，请重试');
     });
   });
 }

@@ -569,6 +569,105 @@ describe('Pod 终端 exec WS：令牌刷新与重连', () => {
       scope.stop();
       expect(vi.getTimerCount()).toBe(0);
     });
+
+    describe('FE-02b：5 分钟边界与多轮重置', () => {
+      /** 当前连接收到 4401 后等刷新、重连完成 */
+      async function receive4401() {
+        lastSocket().onclose?.({ code: 4401, wasClean: true });
+        await flush();
+      }
+
+      it('d1) 恰好稳定 5:00（门槛整点）后收到 4401：允许再刷新一次，不提示登录过期', async () => {
+        const { cb, conn } = await openThen4401ThenReconnect();
+        await flush(STREAM_UNAUTHORIZED_REFRESH_RESET_MS);
+        // 门槛整点计时器已触发并清掉标记，不再残留
+        expect(vi.getTimerCount()).toBe(0);
+        await receive4401();
+
+        expect(refreshTokenApi).toHaveBeenCalledTimes(2);
+        expect(FakeWebSocket.instances).toHaveLength(3);
+        expect(cb.onClose).not.toHaveBeenCalled();
+        expect(notices.warning).not.toHaveBeenCalled();
+        expect(access.setLoginExpired).not.toHaveBeenCalled();
+        conn.close();
+        expect(vi.getTimerCount()).toBe(0);
+      });
+
+      it('d2) 差 1 毫秒到 5:00（4:59.999）收到 4401：停止，刷新只 1 次，登录过期提示 1 条', async () => {
+        const { cb } = await openThen4401ThenReconnect();
+        await flush(STREAM_UNAUTHORIZED_REFRESH_RESET_MS - 1);
+        expect(vi.getTimerCount()).toBe(1);
+        lastSocket().onclose?.({ code: 4401, wasClean: true });
+        await flush(60_000);
+
+        expect(refreshTokenApi).toHaveBeenCalledTimes(1);
+        expect(FakeWebSocket.instances).toHaveLength(2);
+        expect(cb.onClose).toHaveBeenCalledTimes(1);
+        expect(cb.onClose).toHaveBeenCalledWith('login-expired');
+        expectSingleLoginExpiredNotice();
+        expect(vi.getTimerCount()).toBe(0);
+      });
+
+      it('d3) 多轮：每轮都稳定满 5:00 再收到 4401，连续 3 轮都能刷新；每轮重连后重新计时', async () => {
+        const { cb, conn } = await openThen4401ThenReconnect();
+        for (let round = 1; round <= 3; round++) {
+          // 每条新连接 open 后都重新挂上 1 个计时器
+          expect(vi.getTimerCount()).toBe(1);
+          await flush(STREAM_UNAUTHORIZED_REFRESH_RESET_MS);
+          await receive4401();
+          expect(refreshTokenApi).toHaveBeenCalledTimes(1 + round);
+          expect(FakeWebSocket.instances).toHaveLength(2 + round);
+          lastSocket().open();
+        }
+
+        expect(cb.onOpen).toHaveBeenCalledTimes(5);
+        expect(cb.onClose).not.toHaveBeenCalled();
+        expect(notices.warning).not.toHaveBeenCalled();
+        expect(access.setLoginExpired).not.toHaveBeenCalled();
+        conn.close();
+        expect(vi.getTimerCount()).toBe(0);
+      });
+
+      it('d4) 重置后标记会重新武装：第 2 轮刷新重连后不到 5:00 又收到 4401，停止并只提示一条', async () => {
+        const { cb } = await openThen4401ThenReconnect();
+        await flush(STREAM_UNAUTHORIZED_REFRESH_RESET_MS);
+        await receive4401();
+        expect(refreshTokenApi).toHaveBeenCalledTimes(2);
+        lastSocket().open();
+        await flush(STREAM_UNAUTHORIZED_REFRESH_RESET_MS - 1);
+        lastSocket().onclose?.({ code: 4401, wasClean: true });
+        await flush(60_000);
+
+        expect(refreshTokenApi).toHaveBeenCalledTimes(2);
+        expect(FakeWebSocket.instances).toHaveLength(3);
+        expect(cb.onClose).toHaveBeenCalledTimes(1);
+        expect(cb.onClose).toHaveBeenCalledWith('login-expired');
+        expectSingleLoginExpiredNotice();
+        expect(vi.getTimerCount()).toBe(0);
+      });
+
+      it('d5) 多轮中途断线：满 5:00 前断线重连，计时从新连接 open 重新算；新连接满 5:00 后 4401 仍可刷新', async () => {
+        const { cb, conn } = await openThen4401ThenReconnect();
+        await flush(STREAM_UNAUTHORIZED_REFRESH_RESET_MS - 1);
+        lastSocket().onclose?.({ code: 1006, wasClean: false });
+        await flush(1000);
+        expect(FakeWebSocket.instances).toHaveLength(3);
+        lastSocket().open();
+        // 新连接只过 4:59.999：仍未满门槛
+        await flush(STREAM_UNAUTHORIZED_REFRESH_RESET_MS - 1);
+        expect(vi.getTimerCount()).toBe(1);
+        await flush(1);
+        expect(vi.getTimerCount()).toBe(0);
+        await receive4401();
+
+        expect(refreshTokenApi).toHaveBeenCalledTimes(2);
+        expect(FakeWebSocket.instances).toHaveLength(4);
+        expect(cb.onClose).not.toHaveBeenCalled();
+        expect(notices.warning).not.toHaveBeenCalled();
+        conn.close();
+        expect(vi.getTimerCount()).toBe(0);
+      });
+    });
   });
 
   it(`重连有上限：刷新后握手仍失败，最多重连 ${STREAM_MAX_RECONNECT_ATTEMPTS} 次`, async () => {

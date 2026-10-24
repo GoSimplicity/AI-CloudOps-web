@@ -40,7 +40,10 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // YAML 模板常量
 const STATEFULSET_YAML_TEMPLATE = `apiVersion: apps/v1
@@ -422,8 +425,8 @@ export function useStatefulSetPage() {
         clearNamespaces();
         clearStatefulSets();
       }
-      clustersError.value = '获取集群列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -469,8 +472,8 @@ export function useStatefulSetPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      namespacesError.value = '获取命名空间列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(namespacesError.value);
+      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -509,8 +512,8 @@ export function useStatefulSetPage() {
     } catch (error) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       clearStatefulSets();
-      loadError.value = '获取 StatefulSet 列表失败，请重试';
-      if (!isPermissionDeniedError(error)) message.error(loadError.value);
+      if (shouldRecordPageError(error)) loadError.value = '获取 StatefulSet 列表失败，请重试';
+      if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -541,7 +544,7 @@ export function useStatefulSetPage() {
       
       currentStatefulSetDetail.value = processedDetail;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 StatefulSet 详情失败');
+      if (shouldNotifyPageError(err)) message.error('获取 StatefulSet 详情失败');
 
       // 错误时也要处理格式转换
       const fallbackDetail = { 
@@ -574,7 +577,7 @@ export function useStatefulSetPage() {
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 StatefulSet YAML 失败');
+      if (shouldNotifyPageError(err)) message.error('获取 StatefulSet YAML 失败');
 
     } finally {
       submitLoading.value = false;
@@ -613,10 +616,10 @@ export function useStatefulSetPage() {
       await fetchStatefulSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查 YAML 格式是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('StatefulSet YAML 更新失败');
+      if (shouldNotifyPageError(err)) message.error('StatefulSet YAML 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -680,10 +683,10 @@ export function useStatefulSetPage() {
       await fetchStatefulSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('StatefulSet 创建失败');
+      if (shouldNotifyPageError(err)) message.error('StatefulSet 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -708,10 +711,10 @@ export function useStatefulSetPage() {
       await fetchStatefulSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查 YAML 格式是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('StatefulSet YAML 创建失败');
+      if (shouldNotifyPageError(err)) message.error('StatefulSet YAML 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -736,7 +739,7 @@ export function useStatefulSetPage() {
           message.success('StatefulSet 删除成功');
           await fetchStatefulSets();
         } catch (err) {
-          if (!isPermissionDeniedError(err)) message.error('StatefulSet 删除失败');
+          if (shouldNotifyPageError(err)) message.error('StatefulSet 删除失败');
 
         }
       },
@@ -766,7 +769,7 @@ export function useStatefulSetPage() {
           message.success('StatefulSet 重启成功');
           await fetchStatefulSets();
         } catch (err) {
-          if (!isPermissionDeniedError(err)) message.error('StatefulSet 重启失败');
+          if (shouldNotifyPageError(err)) message.error('StatefulSet 重启失败');
 
         }
       },
@@ -836,10 +839,10 @@ export function useStatefulSetPage() {
       await fetchStatefulSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('StatefulSet 更新失败');
+      if (shouldNotifyPageError(err)) message.error('StatefulSet 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -886,10 +889,10 @@ export function useStatefulSetPage() {
       await fetchStatefulSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('StatefulSet 伸缩失败');
+      if (shouldNotifyPageError(err)) message.error('StatefulSet 伸缩失败');
 
     } finally {
       submitLoading.value = false;
@@ -936,10 +939,10 @@ export function useStatefulSetPage() {
       await fetchStatefulSets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('StatefulSet 回滚失败');
+      if (shouldNotifyPageError(err)) message.error('StatefulSet 回滚失败');
 
     } finally {
       submitLoading.value = false;
@@ -958,7 +961,7 @@ export function useStatefulSetPage() {
       statefulSetPods.value = res?.items || [];
       isPodModalVisible.value = true;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 Pod 列表失败');
+      if (shouldNotifyPageError(err)) message.error('获取 Pod 列表失败');
 
     } finally {
       submitLoading.value = false;
@@ -983,7 +986,7 @@ export function useStatefulSetPage() {
       statefulSetHistory.value = res?.items || [];
       isHistoryModalVisible.value = true;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取版本历史失败');
+      if (shouldNotifyPageError(err)) message.error('获取版本历史失败');
 
     } finally {
       submitLoading.value = false;
@@ -1053,7 +1056,7 @@ export function useStatefulSetPage() {
           selectedRows.value = [];
           await fetchStatefulSets();
         } catch (err) {
-          if (!isPermissionDeniedError(err)) message.error(`批量${operation}失败`);
+          if (shouldNotifyPageError(err)) message.error(`批量${operation}失败`);
 
         }
       },

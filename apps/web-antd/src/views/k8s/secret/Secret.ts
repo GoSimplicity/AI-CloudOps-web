@@ -21,6 +21,7 @@ import {
   updateSecretApi,
   updateSecretByYamlApi,
   deleteSecretApi,
+  revealSecretApi,
 } from '#/api/core/k8s/k8s_secret';
 import {
   type K8sCluster,
@@ -34,7 +35,29 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
+import { isNotifiedByRequestLayer } from '#/api/http-error-notice';
+import {
+  type SecretDataRow,
+  buildSecretDataPayload,
+  createDataRows,
+  createNewDataRow,
+  encodeSecretYamlForSubmission,
+  findRedactedPlaceholder,
+  getDataRowError,
+  getSecretDataKeys,
+  getYamlDataFormatError,
+  getYamlDataPayloadError,
+  getYamlRedactedError,
+  isDataEdited,
+  processSecretYaml,
+  readRevealedValue,
+  REDACTED_VALUE_MESSAGE,
+  validateDataRows,
+} from './secret-data';
 
 // YAML 模板常量
 const SECRET_YAML_TEMPLATE = `apiVersion: v1
@@ -99,6 +122,23 @@ export function useSecretPage() {
   // current operation target
   const currentOperationSecret = ref<K8sSecret | null>(null);
   const currentSecretDetail = ref<any | null>(null);
+
+  // SEC-25/26 规则 1：reveal 得到的明文只放在这个页面局部 ref 里（不进 pinia / storage / 日志），
+  // 关闭详情、打开另一个 Secret、页面卸载时清空；revealGeneration 防止迟到的响应写回。
+  const revealedValues = ref<Record<string, string>>({});
+  const revealingKeys = ref<Record<string, boolean>>({});
+  let revealGeneration = 0;
+
+  // SEC-25/26 规则 2：编辑弹窗的 data 行（原有键不回填值，输入框为空 = 保留原值）
+  const editDataRows = ref<SecretDataRow[]>([]);
+  const editDataOriginalKeys = ref<string[]>([]);
+  // 复审 P2/P3-2：打开编辑时重新拉详情取最新键列表；editOpenSeq 防止关闭 / 切换行后迟到的响应写回
+  const editDataLoading = ref(false);
+  let editOpenSeq = 0;
+  // incr8 P3-5：YAML 弹窗的打开序号（打开 / 关闭都 +1），提交在 validate 前取快照，与编辑表单一致
+  let yamlOpenSeq = 0;
+  // incr9 P3-D：「查看 YAML」加载中（按钮禁用）；迟到的响应按 yamlOpenSeq 丢弃
+  const isYamlLoading = ref(false);
 
   // form models
   const createFormModel = ref<{
@@ -323,8 +363,8 @@ export function useSecretPage() {
         clearNamespaces();
         clearSecrets();
       }
-      clustersError.value = '获取集群列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -370,8 +410,8 @@ export function useSecretPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      namespacesError.value = '获取命名空间列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(namespacesError.value);
+      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -417,17 +457,90 @@ export function useSecretPage() {
     } catch (error) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       clearSecrets();
-      loadError.value = '获取 Secret 列表失败，请重试';
-      if (!isPermissionDeniedError(error)) message.error(loadError.value);
+      if (shouldRecordPageError(error)) loadError.value = '获取 Secret 列表失败，请重试';
+      if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
+  };
+
+  const clearRevealedValues = () => {
+    revealGeneration += 1;
+    revealedValues.value = {};
+    revealingKeys.value = {};
+  };
+
+  /** 详情里的 data 键（脱敏后只有键名与字节数） */
+  const secretDetailDataKeys = computed<Array<{ key: string; size?: number }>>(() => {
+    const detail = currentSecretDetail.value;
+    if (!detail) return [];
+    if (Array.isArray(detail.data_keys)) {
+      return detail.data_keys.map((item: { key: string; size?: number }) => ({
+        key: item.key,
+        size: item.size,
+      }));
+    }
+    return getSecretDataKeys(detail).map((key) => ({ key }));
+  });
+
+  /** 调 reveal 取单个键的明文；失败或已过期（详情已关闭 / 已切换）返回 undefined */
+  const fetchRevealedValue = async (key: string): Promise<string | undefined> => {
+    const detail = currentSecretDetail.value;
+    if (!detail) return undefined;
+    const generation = revealGeneration;
+    try {
+      const res = await revealSecretApi({
+        cluster_id: detail.cluster_id,
+        namespace: detail.namespace,
+        name: detail.name,
+        keys: [key],
+      });
+      if (generation !== revealGeneration) return undefined;
+      const value = readRevealedValue(res, key);
+      if (value === undefined) message.error('未获取到该键的明文');
+      return value;
+    } catch (err) {
+      // 复审 P3-3：请求层已弹过（403 / 业务错误 / 通用 http-error 含网络错误）就不再弹第二条
+      if (generation === revealGeneration && !isNotifiedByRequestLayer(err)) {
+        message.error('获取明文失败');
+      }
+      return undefined;
+    }
+  };
+
+  const revealSecretKey = async (key: string) => {
+    const generation = revealGeneration;
+    revealingKeys.value = { ...revealingKeys.value, [key]: true };
+    try {
+      const value = await fetchRevealedValue(key);
+      if (value !== undefined && generation === revealGeneration) {
+        revealedValues.value = { ...revealedValues.value, [key]: value };
+      }
+      return value;
+    } finally {
+      if (generation === revealGeneration) {
+        const { [key]: _done, ...rest } = revealingKeys.value;
+        revealingKeys.value = rest;
+      }
+    }
+  };
+
+  const hideRevealedKey = (key: string) => {
+    const { [key]: _hidden, ...rest } = revealedValues.value;
+    revealedValues.value = rest;
+  };
+
+  /** 复制用：已查看过的直接复用，否则调 reveal 取值但不留在页面上 */
+  const getPlainValueForCopy = async (key: string) => {
+    if (key in revealedValues.value) return revealedValues.value[key];
+    return fetchRevealedValue(key);
   };
 
   // 查看详情
   const showSecretDetail = async (record: K8sSecret) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
+    clearRevealedValues();
     
     try {
       detailLoading.value = true;
@@ -458,7 +571,7 @@ export function useSecretPage() {
       
       currentSecretDetail.value = processedDetail;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 Secret 详情失败');
+      if (shouldNotifyPageError(err)) message.error('获取 Secret 详情失败');
 
       // 错误时也要处理格式转换
       try {
@@ -490,72 +603,19 @@ export function useSecretPage() {
   const closeDetailModal = () => {
     isDetailModalVisible.value = false;
     currentSecretDetail.value = null;
-  };
-
-  // Base64 解码辅助函数
-  const decodeBase64ToUtf8 = (base64Str: string): string => {
-    try {
-      // 使用 atob 解码 base64，然后转换为 UTF-8
-      const binaryStr = atob(base64Str);
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i = 0; i < binaryStr.length; i++) {
-        bytes[i] = binaryStr.charCodeAt(i);
-      }
-      // 使用 TextDecoder 正确处理 UTF-8 编码
-      const decoder = new TextDecoder('utf-8');
-      return decoder.decode(bytes);
-    } catch (error) {
-      return base64Str; // 如果解码失败，返回原始字符串
-    }
-  };
-
-  // 处理 Secret YAML 中的 base64 编码数据
-  const processSecretYaml = (yamlContent: string): string => {
-    if (!yamlContent) return yamlContent;
-    
-    try {
-      // 使用正则表达式匹配 data 字段下的 base64 编码值
-      const processedYaml = yamlContent.replace(
-        /^(\s*)([\w\-\.]+):\s*([A-Za-z0-9+/]+=*)$/gm,
-        (match, indent, key, value) => {
-          // 检查是否在 data 字段下且值看起来像 base64
-          if (value && value.length > 0 && /^[A-Za-z0-9+/]+=*$/.test(value)) {
-            // 检查前面的内容中是否有 data: 字段
-            const beforeMatch = yamlContent.substring(0, yamlContent.indexOf(match));
-            const dataFieldPattern = /\ndata:\s*\n/;
-            const stringDataFieldPattern = /\nstringData:\s*\n/;
-            
-            if (dataFieldPattern.test(beforeMatch) && !stringDataFieldPattern.test(beforeMatch.substring(beforeMatch.lastIndexOf('\ndata:')))) {
-              const decodedValue = decodeBase64ToUtf8(value);
-              // 如果解码后的内容包含换行符，使用多行 YAML 格式
-              if (decodedValue.includes('\n')) {
-                const indentedContent = decodedValue
-                  .split('\n')
-                  .map((line, index) => index === 0 ? line : `${indent}  ${line}`)
-                  .join('\n');
-                return `${indent}${key}: |\n${indent}  ${indentedContent}`;
-              } else {
-                return `${indent}${key}: "${decodedValue.replace(/"/g, '\\"')}"`;
-              }
-            }
-          }
-          return match;
-        }
-      );
-      
-      return processedYaml;
-    } catch (error) {
-      return yamlContent; // 如果处理失败，返回原始内容
-    }
+    clearRevealedValues();
   };
 
   // YAML 操作
   const showYamlModal = async (record: K8sSecret) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
+    yamlOpenSeq += 1;
+    const seq = yamlOpenSeq;
     
     try {
       submitLoading.value = true;
+      isYamlLoading.value = true;
       currentOperationSecret.value = { ...record, cluster_id: clusterId };
       const params: GetSecretYamlReq = {
         cluster_id: clusterId,
@@ -563,6 +623,8 @@ export function useSecretPage() {
         name: record.name
       };
       const res = await getSecretYamlApi(params);
+      // incr9 P3-D：等待期间关闭了弹窗或打开了别的 Secret，这次的响应作废
+      if (seq !== yamlOpenSeq) return;
       
       let originalYaml = '';
       
@@ -583,119 +645,82 @@ export function useSecretPage() {
       
       isYamlModalVisible.value = true;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 Secret YAML 失败');
+      if (seq !== yamlOpenSeq) return;
+      if (shouldNotifyPageError(err)) message.error('获取 Secret YAML 失败');
     } finally {
-      submitLoading.value = false;
+      // 迟到的响应不动加载状态（后打开的那次还在加载）
+      if (seq === yamlOpenSeq) {
+        submitLoading.value = false;
+        isYamlLoading.value = false;
+      }
     }
   };
 
   const closeYamlModal = () => {
+    yamlOpenSeq += 1;
+    // incr9 P3-D：加载中关闭，复位加载状态（迟到的响应不再复位）
+    if (isYamlLoading.value) {
+      isYamlLoading.value = false;
+      submitLoading.value = false;
+    }
     isYamlModalVisible.value = false;
     currentOperationSecret.value = null;
     yamlFormModel.value.yaml = '';
   };
 
-  // Base64 编码辅助函数
-  const encodeUtf8ToBase64 = (str: string): string => {
-    try {
-      // 使用 TextEncoder 将字符串转换为 UTF-8 字节
-      const encoder = new TextEncoder();
-      const bytes = encoder.encode(str);
-      
-      // 将字节数组转换为二进制字符串
-      let binaryStr = '';
-      for (let i = 0; i < bytes.length; i++) {
-        binaryStr += String.fromCharCode(bytes[i] as number);
-      }
-      
-      // 使用 btoa 进行 base64 编码
-      return btoa(binaryStr);
-    } catch (error) {
-      return str; // 如果编码失败，返回原始字符串
-    }
-  };
-
-  // 处理提交时的 YAML，将明文数据重新编码为 base64
-  const encodeSecretYamlForSubmission = (yamlContent: string): string => {
-    if (!yamlContent) return yamlContent;
-    
-    try {
-      // 处理多行字符串（| 格式）
-      let processedYaml = yamlContent.replace(
-        /^(\s*)([\w\-\.]+):\s*\|\s*\n((?:\s{2,}.*\n?)*)/gm,
-        (match, indent, key, content) => {
-          // 检查是否在 data 字段下
-          const beforeMatch = yamlContent.substring(0, yamlContent.indexOf(match));
-          const dataFieldPattern = /\ndata:\s*\n/;
-          const stringDataFieldPattern = /\nstringData:\s*\n/;
-          
-          if (dataFieldPattern.test(beforeMatch) && !stringDataFieldPattern.test(beforeMatch.substring(beforeMatch.lastIndexOf('\ndata:')))) {
-            // 移除缩进并合并内容
-            const cleanContent = content
-              .split('\n')
-              .map((line: string) => line.replace(new RegExp(`^${indent}  `), ''))
-              .filter((line: string) => line.length > 0)
-              .join('\n');
-            
-            const encodedValue = encodeUtf8ToBase64(cleanContent);
-            return `${indent}${key}: ${encodedValue}`;
-          }
-          return match;
-        }
-      );
-      
-      // 处理带引号的字符串
-      processedYaml = processedYaml.replace(
-        /^(\s*)([\w\-\.]+):\s*"([^"]*(?:\\.[^"]*)*)"/gm,
-        (match, indent, key, value) => {
-          // 检查是否在 data 字段下
-          const beforeMatch = processedYaml.substring(0, processedYaml.indexOf(match));
-          const dataFieldPattern = /\ndata:\s*\n/;
-          const stringDataFieldPattern = /\nstringData:\s*\n/;
-          
-          if (dataFieldPattern.test(beforeMatch) && !stringDataFieldPattern.test(beforeMatch.substring(beforeMatch.lastIndexOf('\ndata:')))) {
-            // 处理转义字符
-            const unescapedValue = value.replace(/\\"/g, '"');
-            const encodedValue = encodeUtf8ToBase64(unescapedValue);
-            return `${indent}${key}: ${encodedValue}`;
-          }
-          return match;
-        }
-      );
-      
-      return processedYaml;
-    } catch (error) {
-      return yamlContent; // 如果处理失败，返回原始内容
-    }
-  };
-
   const submitYamlForm = async () => {
     if (!yamlFormRef.value || !currentOperationSecret.value) return;
+    // incr8 P3-5：validate 前取快照；validate 期间关闭 / 打开了别的 Secret，就放弃这次提交
+    const seq = yamlOpenSeq;
+    const target = currentOperationSecret.value;
     
     try {
       await yamlFormRef.value.validate();
-      submitLoading.value = true;
+      if (seq !== yamlOpenSeq) return;
+      // SEC-25/26 P2-1：裸 <redacted> 由后端还原为集群原值，原样放行；
+      // 带引号的会被下面的编码逻辑当明文 base64，后端不再识别，拦截；
+      // 第四轮：块标量（| / >）里单独一行的 <redacted> 后端按字面保存、不还原，同样拦截
+      const yamlRedactedError = getYamlRedactedError(yamlFormModel.value.yaml);
+      if (yamlRedactedError) {
+        message.warning(yamlRedactedError);
+        return;
+      }
+      // incr7 P2-A / P3-C：data 下编码器不处理的写法（`token:|` 无空格、值写在下一行、单引号等）
+      // 明文会原样发出，先拦下并提示改写
+      const yamlFormatError = getYamlDataFormatError(yamlFormModel.value.yaml);
+      if (yamlFormatError) {
+        message.warning(yamlFormatError);
+        return;
+      }
       
       // 处理 YAML 中的明文数据，重新编码为 base64
       const encodedYaml = encodeSecretYamlForSubmission(yamlFormModel.value.yaml);
+      // incr7 P2-A 兜底：编码后、发请求前，data 里任何值（含空白 / 换行变体）解码为占位符、或不是 base64 都不发
+      const payloadError = getYamlDataPayloadError(encodedYaml);
+      if (payloadError) {
+        message.warning(payloadError);
+        return;
+      }
+      submitLoading.value = true;
       
       const params: UpdateSecretByYamlReq = {
-        cluster_id: currentOperationSecret.value.cluster_id,
-        namespace: currentOperationSecret.value.namespace,
-        name: currentOperationSecret.value.name,
+        cluster_id: target.cluster_id,
+        namespace: target.namespace,
+        name: target.name,
         yaml: encodedYaml,
       };
       
       await updateSecretByYamlApi(params);
       message.success('Secret YAML 更新成功');
-      isYamlModalVisible.value = false;
+      // 请求期间已关闭 / 换成别的 Secret：不去关后来打开的弹窗
+      if (seq === yamlOpenSeq) isYamlModalVisible.value = false;
       await fetchSecrets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('Secret YAML 更新失败');
+      if (shouldNotifyPageError(err)) message.error('Secret YAML 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -737,6 +762,16 @@ export function useSecretPage() {
     
     try {
       await formRef.value.validate();
+      // incr7 兜底：新建表单同样不发脱敏占位符（原文或其 base64）
+      if (
+        findRedactedPlaceholder({
+          data: createFormModel.value.data,
+          string_data: createFormModel.value.string_data,
+        })
+      ) {
+        message.warning(REDACTED_VALUE_MESSAGE);
+        return;
+      }
       submitLoading.value = true;
       
       const params: CreateSecretReq = {
@@ -760,7 +795,7 @@ export function useSecretPage() {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('Secret 创建失败');
+      if (shouldNotifyPageError(err)) message.error('Secret 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -772,6 +807,14 @@ export function useSecretPage() {
     
     try {
       await createYamlFormRef.value.validate();
+      // incr7 兜底：新建 YAML 不做编码、原文发出；data 里的值解码为占位符或不是 base64 时不发
+      const payloadError = getYamlDataPayloadError(
+        createYamlFormModel.value.yaml,
+      );
+      if (payloadError) {
+        message.warning(payloadError);
+        return;
+      }
       submitLoading.value = true;
       
       const params: CreateSecretByYamlReq = {
@@ -788,59 +831,161 @@ export function useSecretPage() {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('Secret YAML 创建失败');
+      if (shouldNotifyPageError(err)) message.error('Secret YAML 创建失败');
 
     } finally {
       submitLoading.value = false;
     }
   };
 
+  const resetEditData = () => {
+    editDataOriginalKeys.value = [];
+    editDataRows.value = [];
+    editDataLoading.value = false;
+  };
+
   // 编辑 Secret
-  const openEditModal = (record: K8sSecret) => {
+  const openEditModal = async (record: K8sSecret) => {
+    const clusterId = validateClusterId(record);
+    if (!clusterId) return;
+    const seq = ++editOpenSeq;
     currentOperationSecret.value = record;
     editFormModel.value = {
       name: record.name,
       namespace: record.namespace,
-      data: parseJsonField(record.data, {}),
-      string_data: parseJsonField(record.string_data, {}),
-      labels: parseJsonField(record.labels, {}),
-      annotations: parseJsonField(record.annotations, {}),
+      // data 改由 editDataRows 管理（列表返回的是脱敏空值，不能回填）
+      data: {},
+      // incr5：string_data 同理，先置空，等详情返回后整体用详情的值
+      string_data: {},
+      // 第四轮：labels / annotations 提交时是整体覆盖，列表行里的可能已过期（会冲掉别人刚改的），
+      // 先置空，等详情返回后整体用详情的值
+      labels: {},
+      annotations: {},
     };
+    // 列表行里的 data_keys 可能已过期，先清空，等详情返回后再填
+    resetEditData();
+    editDataLoading.value = true;
     isEditModalVisible.value = true;
+    try {
+      const detail = await getSecretDetailsApi({
+        cluster_id: clusterId,
+        namespace: record.namespace,
+        name: record.name,
+      });
+      if (seq !== editOpenSeq) return;
+      editFormModel.value.labels = { ...parseJsonField(detail?.labels, {}) };
+      editFormModel.value.string_data = {
+        ...parseJsonField(detail?.string_data, {}),
+      };
+      editFormModel.value.annotations = {
+        ...parseJsonField(detail?.annotations, {}),
+      };
+      editDataOriginalKeys.value = getSecretDataKeys(detail);
+      editDataRows.value = createDataRows(editDataOriginalKeys.value);
+      editDataLoading.value = false;
+    } catch (err) {
+      if (seq !== editOpenSeq) return;
+      closeEditModal();
+      if (!isNotifiedByRequestLayer(err)) message.error('获取 Secret 详情失败');
+    }
   };
 
-  const closeEditModal = () => {
+  const findEditDataRow = (row: SecretDataRow) =>
+    editDataRows.value.find((item) => item.id === row.id);
+
+  const setEditDataValue = (row: SecretDataRow, value: string) => {
+    const target = findEditDataRow(row);
+    if (!target) return;
+    target.value = value;
+    target.modified = true;
+  };
+
+  /** 撤销对原有键的修改（恢复为保留原值） */
+  const resetEditDataRow = (row: SecretDataRow) => {
+    const target = findEditDataRow(row);
+    if (!target || !target.original) return;
+    target.value = '';
+    target.modified = false;
+  };
+
+  const removeEditDataRow = (row: SecretDataRow) => {
+    editDataRows.value = editDataRows.value.filter((item) => item.id !== row.id);
+  };
+
+  const addEditDataRow = (key = '') => {
+    editDataRows.value.push(createNewDataRow(key.trim()));
+    return editDataRows.value[editDataRows.value.length - 1]!;
+  };
+
+  const getEditDataRowError = (row: SecretDataRow) => getDataRowError(row);
+
+  function closeEditModal() {
+    editOpenSeq += 1;
     isEditModalVisible.value = false;
     currentOperationSecret.value = null;
-  };
+    // 复审 P3-2：关闭时清掉 data 行（含用户已输入的值）
+    resetEditData();
+  }
 
   const submitEditForm = async () => {
     if (!formRef.value || !currentOperationSecret.value) return;
+    // 键列表还没拿到最新的，不能按旧键组 payload
+    if (editDataLoading.value) return;
+    // incr6 P3-4：记下提交时是哪一次打开的编辑；返回前若已关闭 / 换成别的 Secret，成功后不去关别人的弹窗
+    const seq = editOpenSeq;
+    // incr7 P3-B：提交开始时的快照，请求参数只取它（提交期间 currentOperationSecret 被关闭 / 换成别的也不串）
+    const target = currentOperationSecret.value;
     
     try {
       await formRef.value.validate();
+      // incr7 P3-B：validate 期间弹窗已关闭或换成了别的 Secret：静默放弃，不发请求、不提示
+      if (seq !== editOpenSeq) return;
+
+      // SEC-25/26 规则 2：data 没动发 null；改了发全部键（未改 ""，删除的不发）；空值 / <redacted> 在表单拦截
+      if (isDataEdited(editDataOriginalKeys.value, editDataRows.value)) {
+        const dataError = validateDataRows(editDataRows.value);
+        if (dataError) {
+          message.warning(dataError);
+          return;
+        }
+      }
+      const data = buildSecretDataPayload(
+        editDataOriginalKeys.value,
+        editDataRows.value,
+      );
+      const stringData =
+        Object.keys(editFormModel.value.string_data).length > 0
+          ? editFormModel.value.string_data
+          : undefined;
+      // 最终防线：任何字段都不发送脱敏占位符
+      if (findRedactedPlaceholder({ data, string_data: stringData })) {
+        message.warning(REDACTED_VALUE_MESSAGE);
+        return;
+      }
       submitLoading.value = true;
       
+      // 冲突时后端返回 HTTP 200 + code=1（该接口没有 409）：由请求层按业务错误弹后端原文，
+      // 下面 catch 里 isNotifiedByRequestLayer 跳过页面自身提示，弹窗保留供用户刷新后重试
       const params: UpdateSecretReq = {
-        cluster_id: currentOperationSecret.value.cluster_id,
-        namespace: currentOperationSecret.value.namespace,
-        name: currentOperationSecret.value.name,
-        data: Object.keys(editFormModel.value.data).length > 0 ? editFormModel.value.data : undefined,
-        string_data: Object.keys(editFormModel.value.string_data).length > 0 ? editFormModel.value.string_data : undefined,
+        cluster_id: target.cluster_id,
+        namespace: target.namespace,
+        name: target.name,
+        data,
+        string_data: stringData,
         labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
         annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
       };
       
       await updateSecretApi(params);
       message.success('Secret 更新成功');
-      isEditModalVisible.value = false;
+      if (seq === editOpenSeq) closeEditModal();
       await fetchSecrets();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('Secret 更新失败');
+      if (shouldNotifyPageError(err)) message.error('Secret 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -870,7 +1015,7 @@ export function useSecretPage() {
           message.success('Secret 删除成功');
           await fetchSecrets();
         } catch (err) {
-          if (!isPermissionDeniedError(err)) message.error('Secret 删除失败');
+          if (shouldNotifyPageError(err)) message.error('Secret 删除失败');
 
         }
       },
@@ -933,7 +1078,7 @@ export function useSecretPage() {
           selectedRows.value = [];
           await fetchSecrets();
         } catch (err) {
-          if (!isPermissionDeniedError(err)) message.error(`批量${operation}失败`);
+          if (shouldNotifyPageError(err)) message.error(`批量${operation}失败`);
 
         }
       },
@@ -1237,6 +1382,22 @@ export function useSecretPage() {
   };
 
   return {
+    // SEC-25/26 reveal / data 编辑
+    revealedValues,
+    revealingKeys,
+    secretDetailDataKeys,
+    revealSecretKey,
+    hideRevealedKey,
+    getPlainValueForCopy,
+    clearRevealedValues,
+    editDataRows,
+    editDataLoading,
+    setEditDataValue,
+    resetEditDataRow,
+    removeEditDataRow,
+    addEditDataRow,
+    getEditDataRowError,
+
     // state
     secrets,
     clusters,
@@ -1277,6 +1438,7 @@ export function useSecretPage() {
     isYamlModalVisible,
     submitLoading,
     detailLoading,
+    isYamlLoading,
     
     // operation targets
     currentOperationSecret,

@@ -20,7 +20,10 @@ import {
   getClustersListApi,
   Env,
 } from '#/api/core/k8s/k8s_cluster';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // 命名空间状态枚举
 export enum NamespaceStatus {
@@ -315,8 +318,8 @@ export function useNamespacePage() {
         filterClusterId.value = undefined;
         clearNamespaces();
       }
-      clustersError.value = '获取集群列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -369,8 +372,8 @@ export function useNamespacePage() {
       )
         return;
       clearNamespaces();
-      loadError.value = '获取命名空间列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(loadError.value);
+      if (shouldRecordPageError(err)) loadError.value = '获取命名空间列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(loadError.value);
     } finally {
       if (requestId === namespaceRequestId) loading.value = false;
     }
@@ -390,7 +393,7 @@ export function useNamespacePage() {
         cluster_id: clusterId,
       };
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取命名空间详情失败');
+      if (shouldNotifyPageError(err)) message.error('获取命名空间详情失败');
 
       currentNamespaceDetail.value = { ...record, cluster_id: clusterId };
     } finally {
@@ -443,11 +446,11 @@ export function useNamespacePage() {
       await fetchNamespaces();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err))
+        if (shouldNotifyPageError(err))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('命名空间创建失败');
+      if (shouldNotifyPageError(err)) message.error('命名空间创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -496,7 +499,7 @@ export function useNamespacePage() {
       isLabelModalVisible.value = false;
       await fetchNamespaces();
     } catch (err: unknown) {
-      if (!isPermissionDeniedError(err)) message.error('标签/注解更新失败');
+      if (shouldNotifyPageError(err)) message.error('标签/注解更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -539,7 +542,7 @@ export function useNamespacePage() {
       isDeleteModalVisible.value = false;
       await fetchNamespaces();
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('命名空间删除失败');
+      if (shouldNotifyPageError(err)) message.error('命名空间删除失败');
     } finally {
       submitLoading.value = false;
     }
@@ -571,7 +574,7 @@ export function useNamespacePage() {
           message.success('命名空间强制删除成功');
           await fetchNamespaces();
         } catch (err) {
-          if (!isPermissionDeniedError(err))
+          if (shouldNotifyPageError(err))
             message.error('命名空间强制删除失败');
         }
       },
@@ -644,7 +647,7 @@ export function useNamespacePage() {
           selectedRows.value = [];
           await fetchNamespaces();
         } catch (err) {
-          if (!isPermissionDeniedError(err))
+          if (shouldNotifyPageError(err))
             message.error(`批量${operation}失败`);
         }
       },

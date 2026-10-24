@@ -379,7 +379,7 @@ import {
   getInstanceCommentsTree,
 } from '#/api/core/workorder/workorder_instance_comment';
 import type { WorkorderInstanceItem } from '#/api/core/workorder/workorder_instance';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // 图标组件
 const IconComponent = ({ icon }: { icon: string }) => {
@@ -582,7 +582,7 @@ const submitQuickComment = async () => {
     await refreshComments();
     emit('commentAdded');
   } catch (error: any) {
-    if (!isPermissionDeniedError(error)) message.error(`发布评论失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error)) message.error(`发布评论失败: ${error.message || '未知错误'}`);
   } finally {
     quickCommenting.value = false;
   }
@@ -640,7 +640,7 @@ const submitReply = async (commentId: number) => {
     // 触发父组件的评论添加事件
     emit('commentAdded');
   } catch (error: any) {
-    if (!isPermissionDeniedError(error)) message.error(`回复失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error)) message.error(`回复失败: ${error.message || '未知错误'}`);
   } finally {
     replySubmitting.value[commentId] = false;
   }
@@ -805,7 +805,7 @@ const loadComments = async (instanceId: number) => {
       commentsList.value = [];
     }
   } catch (error: any) {
-    if (!isPermissionDeniedError(error)) message.error(`加载评论失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error)) message.error(`加载评论失败: ${error.message || '未知错误'}`);
     commentsList.value = [];
   } finally {
     loading.value = false;
@@ -826,7 +826,7 @@ const saveComment = async () => {
     commentDialog.visible = false;
     emit('commentAdded');
   } catch (error: any) {
-    if (!isPermissionDeniedError(error)) message.error(`添加评论失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error)) message.error(`添加评论失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }

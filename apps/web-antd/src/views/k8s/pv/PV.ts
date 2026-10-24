@@ -30,7 +30,10 @@ import {
   getClustersListApi,
   Env,
 } from '#/api/core/k8s/k8s_cluster';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // PV YAML 模板
 const PV_YAML_TEMPLATE = `apiVersion: v1
@@ -306,8 +309,8 @@ export function usePVPage() {
         filterClusterId.value = undefined;
         clearPVs();
       }
-      clustersError.value = '获取集群列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -345,8 +348,8 @@ export function usePVPage() {
     } catch (error) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
       clearPVs();
-      loadError.value = '获取 PV 列表失败，请重试';
-      if (!isPermissionDeniedError(error)) message.error(loadError.value);
+      if (shouldRecordPageError(error)) loadError.value = '获取 PV 列表失败，请重试';
+      if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -378,7 +381,7 @@ export function usePVPage() {
       }
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '获取PV详情失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '获取PV详情失败');
     } finally {
       detailLoading.value = false;
     }
@@ -401,7 +404,7 @@ export function usePVPage() {
       }
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '获取PV YAML失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '获取PV YAML失败');
     }
   };
 
@@ -487,7 +490,7 @@ export function usePVPage() {
       await fetchPVs();
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '创建PV失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '创建PV失败');
     } finally {
       submitLoading.value = false;
     }
@@ -515,7 +518,7 @@ export function usePVPage() {
       await fetchPVs();
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '通过YAML创建PV失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '通过YAML创建PV失败');
     } finally {
       submitLoading.value = false;
     }
@@ -552,7 +555,7 @@ export function usePVPage() {
       await fetchPVs();
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '更新PV失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '更新PV失败');
     } finally {
       submitLoading.value = false;
     }
@@ -581,7 +584,7 @@ export function usePVPage() {
       await fetchPVs();
     } catch (error: any) {
 
-      if (!isPermissionDeniedError(error)) message.error(error?.message || '通过YAML更新PV失败');
+      if (shouldNotifyPageError(error)) message.error(error?.message || '通过YAML更新PV失败');
     } finally {
       submitLoading.value = false;
     }
@@ -619,7 +622,7 @@ export function usePVPage() {
           
           await fetchPVs();
         } catch (error: any) {
-          if (!isPermissionDeniedError(error)) message.error(error?.message || '删除PV失败');
+          if (shouldNotifyPageError(error)) message.error(error?.message || '删除PV失败');
         }
       },
     });
@@ -647,7 +650,7 @@ export function usePVPage() {
           // 刷新数据
           await fetchPVs();
         } catch (error: any) {
-          if (!isPermissionDeniedError(error)) message.error(error?.message || '回收PV失败');
+          if (shouldNotifyPageError(error)) message.error(error?.message || '回收PV失败');
         }
       },
     });
@@ -696,7 +699,7 @@ export function usePVPage() {
           // 刷新数据
           await fetchPVs();
         } catch (error: any) {
-          if (!isPermissionDeniedError(error)) message.error(error?.message || '批量删除PV失败');
+          if (shouldNotifyPageError(error)) message.error(error?.message || '批量删除PV失败');
           // 即使失败也刷新一次，因为可能部分删除成功
           await fetchPVs();
         }

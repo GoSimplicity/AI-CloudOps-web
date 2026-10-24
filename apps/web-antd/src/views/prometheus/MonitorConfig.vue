@@ -555,7 +555,7 @@ import {
 } from '#/api/core/prometheus/prometheus_scrape_pool';
 
 import { usePermission } from '#/utils/permission';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -800,7 +800,7 @@ const fetchConfigs = async (): Promise<void> => {
     data.value = [];
     paginationConfig.total = 0;
     updateStats();
-    if (!isPermissionDeniedError(error)) message.error(loadError.value);
+    if (shouldNotifyPageError(error)) message.error(loadError.value);
   } finally {
     request.finish();
   }
@@ -904,7 +904,7 @@ const confirmDelete = (record: MonitorConfigItem): void => {
         fetchConfigs();
       } catch (error: any) {
 
-        if (!isPermissionDeniedError(error)) message.error(error.message || '删除配置失败');
+        if (shouldNotifyPageError(error)) message.error(error.message || '删除配置失败');
       }
     }
   });
@@ -947,7 +947,7 @@ const handleAdd = async (): Promise<void> => {
     fetchConfigs();
     message.success('新增配置成功');
   } catch (error: any) {
-    if (!isPermissionDeniedError(error)) message.error('新增配置失败: ' + (error.message || '未知错误'));
+    if (shouldNotifyPageError(error)) message.error('新增配置失败: ' + (error.message || '未知错误'));
   }
 };
 
@@ -988,7 +988,7 @@ const handleEdit = async (): Promise<void> => {
     fetchConfigs();
     message.success('更新配置成功');
   } catch (error: any) {
-    if (!isPermissionDeniedError(error)) message.error('更新配置失败: ' + (error.message || '未知错误'));
+    if (shouldNotifyPageError(error)) message.error('更新配置失败: ' + (error.message || '未知错误'));
   }
 };
 
@@ -999,7 +999,7 @@ const handleViewDetail = async (record: MonitorConfigItem): Promise<void> => {
     isDetailModalVisible.value = true;
   } catch (error: any) {
 
-    if (!isPermissionDeniedError(error)) message.error('获取配置详情失败: ' + (error.message || '未知错误'));
+    if (shouldNotifyPageError(error)) message.error('获取配置详情失败: ' + (error.message || '未知错误'));
   }
 };
 

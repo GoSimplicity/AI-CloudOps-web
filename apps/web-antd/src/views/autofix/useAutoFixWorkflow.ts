@@ -10,6 +10,7 @@ import {
   type AutoFixWorkflowResponse,
 } from '#/api/core/aiops/autofix';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
+import { reportAutoFixError } from './autofix-errors';
 
 const templates = {
   crashloop: {
@@ -64,11 +65,18 @@ export function useAutoFixWorkflow() {
       !!formData.namespace.trim() &&
       !!formData.problem_description.trim(),
   );
+  // SEC-25/26：只允许确认 pending_action_ids 里的动作（confirm 只接受当前待确认项）；
+  // 复审 P3-1：缺这个字段时一律视为没有可确认的动作，不发请求
+  const pendingActionIds = computed(() => {
+    const ids = workflowResult.value?.approval?.pending_action_ids;
+    return new Set(Array.isArray(ids) ? ids : []);
+  });
   const confirmableBlockedActions = computed(() =>
     (workflowResult.value?.blocked_actions || []).filter((action) => {
       const risk = action.risk_assessment;
       return (
         !!action.action_id &&
+        pendingActionIds.value.has(action.action_id) &&
         action.executable === true &&
         risk?.namespace_allowed === true &&
         risk.permission_allowed === true &&
@@ -81,24 +89,38 @@ export function useAutoFixWorkflow() {
     const approval = workflowResult.value.approval;
     if (resultOwner.value !== scope.owner.value)
       return '此结果不属于当前账户，请重新诊断';
-    if (!approval || approval.state !== 'pending')
+    // pending 由 status + approval 字段共同决定（规则 3）
+    if (
+      !approval ||
+      approval.state !== 'pending' ||
+      approval.confirmation_required === false
+    )
       return '当前结果没有有效的待审批元数据，请核对后重新诊断';
     const expiry = Date.parse(approval.expires_at);
     if (!Number.isFinite(expiry) || now.value >= expiry)
       return '审批已过期，请先核对目标实际状态，再重新诊断';
     return '';
   });
-  const canConfirmWorkflow = computed(
-    () =>
+  function canConfirmActions(ids: string[]) {
+    return (
       workflowResult.value?.status === 'needs_human_confirmation' &&
       !approvalIssue.value &&
       !busy.value &&
-      selectedBlockedActionIds.value.length > 0 &&
-      selectedBlockedActionIds.value.every((id) =>
+      ids.length > 0 &&
+      ids.every((id) =>
         confirmableBlockedActions.value.some(
           (action) => action.action_id === id,
         ),
-      ),
+      )
+    );
+  }
+  const canConfirmWorkflow = computed(() =>
+    canConfirmActions(selectedBlockedActionIds.value),
+  );
+  const canConfirmAll = computed(() =>
+    canConfirmActions(
+      confirmableBlockedActions.value.map((action) => action.action_id!),
+    ),
   );
 
   function clearResult() {
@@ -202,21 +224,23 @@ export function useAutoFixWorkflow() {
     } catch (error) {
       if (!workflowLane.current(ticket)) return;
       clearResult();
-      workflowError.value =
-        error instanceof Error
-          ? error.message
-          : '执行状态未确认，请先人工核对，勿盲目重试';
+      // 规则 3：按 HTTP 状态映射文案，不透出后端原文 / error_code
+      workflowError.value = reportAutoFixError(error);
     } finally {
       if (workflowLane.current(ticket)) running.value = false;
     }
   }
-  async function confirmWorkflowExecution() {
+  /**
+   * 规则 4：逐项 / 批量确认共用。没有拒绝接口（后端未提供），不选的动作保持待确认直到过期。
+   * 部分确认后后端仍返回 needs_human_confirmation + 新的 pending_action_ids。
+   */
+  async function confirmActions(ids: string[]) {
     now.value = Date.now();
-    if (!canConfirmWorkflow.value) return;
+    if (!canConfirmActions(ids)) return;
     const planId = workflowResult.value?.plan?.plan_id;
     if (!planId) return;
     const ticket = workflowLane.begin();
-    const actionIds = [...selectedBlockedActionIds.value];
+    const actionIds = [...ids];
     confirmLoading.value = true;
     workflowError.value = '';
     try {
@@ -240,14 +264,24 @@ export function useAutoFixWorkflow() {
       }
     } catch (error) {
       if (!workflowLane.current(ticket)) return;
+      // 任何失败都清掉计划与选择：404 = 计划已失效（含服务重启），409 = 状态已变，
+      // 进入执行后的异常会作废整份计划，不能在旧计划上重试
       clearResult();
-      workflowError.value =
-        error instanceof Error
-          ? error.message
-          : '审批执行状态未确认，请人工核对，勿盲目重试';
+      workflowError.value = reportAutoFixError(error);
     } finally {
       if (workflowLane.current(ticket)) confirmLoading.value = false;
     }
+  }
+  function confirmWorkflowExecution() {
+    return confirmActions(selectedBlockedActionIds.value);
+  }
+  function confirmSingleAction(id: string) {
+    return confirmActions([id]);
+  }
+  function confirmAllActions() {
+    return confirmActions(
+      confirmableBlockedActions.value.map((action) => action.action_id!),
+    );
   }
   let timer: ReturnType<typeof setInterval> | undefined;
   onMounted(() => {
@@ -277,11 +311,15 @@ export function useAutoFixWorkflow() {
     confirmableBlockedActions,
     approvalIssue,
     canConfirmWorkflow,
+    canConfirmAll,
     applyTemplate,
     resetForm,
     toggleBlockedAction,
     loadServiceInfo,
     runWorkflow,
     confirmWorkflowExecution,
+    confirmActions,
+    confirmSingleAction,
+    confirmAllActions,
   };
 }

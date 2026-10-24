@@ -94,7 +94,11 @@ import { getTreeList } from '#/api/core/tree/tree_node';
 import type { TreeNode } from '#/api/core/tree/tree_local';
 
 import { usePermission } from '#/utils/permission';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import {
+  getRequestLayerNoticeKey,
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -104,6 +108,8 @@ let detailRequest = 0;
 let syncRegionRequest = 0;
 let accountListRequest = 0;
 let syncOperationRequest = 0;
+/** 同步失败提示（带「检查同步历史」引导，incr3 P3-4） */
+const SYNC_FAILURE_MESSAGE = '同步失败，请检查同步历史后重试';
 const syncRegions = ref<CloudAccountRegion[]>([]);
 const syncRegionsLoading = ref(false);
 const syncRegionError = ref<string | null>(null);
@@ -484,7 +490,7 @@ const fetchCloudAccounts = async (): Promise<void> => {
   } catch (error) {
     if (ticket === accountListRequest) {
       cloudAccounts.value = [];
-      accountLoadError.value = '读取云账户失败，请重试';
+      if (shouldRecordPageError(error)) accountLoadError.value = '读取云账户失败，请重试';
     }
   } finally {
     if (ticket === accountListRequest) accountsLoading.value = false;
@@ -518,8 +524,8 @@ const fetchResources = async (): Promise<void> => {
     pagination.total = data.total || 0;
   } catch (error) {
     if (ticket !== listRequest) return;
-    loadError.value = '获取云资源列表失败，请重试';
-    if (!isPermissionDeniedError(error)) message.error('获取资源列表失败');
+    if (shouldRecordPageError(error)) loadError.value = '获取云资源列表失败，请重试';
+    if (shouldNotifyPageError(error)) message.error('获取资源列表失败');
     resources.value = [];
     pagination.total = 0;
   } finally {
@@ -539,7 +545,7 @@ const fetchSyncHistory = async (): Promise<void> => {
     syncHistoryList.value = data.items || [];
     syncHistoryPagination.total = data.total || 0;
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('获取同步历史失败');
+    if (shouldNotifyPageError(error)) message.error('获取同步历史失败');
   } finally {
     syncHistoryLoading.value = false;
   }
@@ -557,7 +563,7 @@ const fetchChangeLog = async (): Promise<void> => {
     changeLogList.value = data.items || [];
     changeLogPagination.total = data.total || 0;
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('获取变更日志失败');
+    if (shouldNotifyPageError(error)) message.error('获取变更日志失败');
   } finally {
     changeLogLoading.value = false;
   }
@@ -619,8 +625,8 @@ const loadSyncRegions = async (id: number): Promise<void> => {
     }
     syncRegions.value = (account.regions ?? []).filter((region) => region.status === 1);
     if (!syncRegions.value.length) syncRegionError.value = '此账户没有已启用的授权地域，请先在云账户中配置';
-  } catch {
-    if (ticket === syncRegionRequest && syncModalVisible.value) syncRegionError.value = '读取账户地域失败，请重试';
+  } catch (error) {
+    if (ticket === syncRegionRequest && syncModalVisible.value && shouldRecordPageError(error)) syncRegionError.value = '读取账户地域失败，请重试';
   } finally {
     if (ticket === syncRegionRequest) syncRegionsLoading.value = false;
   }
@@ -702,7 +708,7 @@ const handleViewDetail = async (record: TreeCloudResource): Promise<void> => {
     };
   } catch (error) {
     if (ticket !== detailRequest) return;
-    if (!isPermissionDeniedError(error)) message.error('获取资源详情失败');
+    if (shouldNotifyPageError(error)) message.error('获取资源详情失败');
   } finally {
     if (ticket === detailRequest) detailLoading.value = false;
   }
@@ -756,7 +762,7 @@ const handleUpdate = async (): Promise<void> => {
       currentDetail.value = (response as any).data || response;
     }
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('更新失败');
+    if (shouldNotifyPageError(error)) message.error('更新失败');
   } finally {
     submitLoading.value = false;
   }
@@ -803,7 +809,13 @@ const handleSync = async (): Promise<void> => {
     syncRegionRequest++;
     await fetchResources();
   } catch (error) {
-    if (ticket === syncOperationRequest && !isPermissionDeniedError(error)) message.error('同步失败，请检查同步历史后重试');
+    if (ticket === syncOperationRequest) {
+      // incr3 P3-4：保留「检查同步历史」的引导——请求层已弹过通用错误（http-error），用同一个 key 换成带引导的文案，
+      // 仍只有一条；403 / 已提示的业务错误不覆盖；其余（非请求错误等）照常弹
+      const noticeKey = getRequestLayerNoticeKey(error);
+      if (noticeKey) message.error({ content: SYNC_FAILURE_MESSAGE, key: noticeKey });
+      else if (shouldNotifyPageError(error)) message.error(SYNC_FAILURE_MESSAGE);
+    }
   } finally {
     if (ticket === syncOperationRequest) syncLoading.value = false;
   }
@@ -854,7 +866,7 @@ const handleBind = async (): Promise<void> => {
       currentDetail.value = (response as any).data || response;
     }
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('绑定失败');
+    if (shouldNotifyPageError(error)) message.error('绑定失败');
   } finally {
     bindLoading.value = false;
   }
@@ -894,7 +906,7 @@ const handleUnbind = async (): Promise<void> => {
       currentDetail.value = (response as any).data || response;
     }
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('解绑失败');
+    if (shouldNotifyPageError(error)) message.error('解绑失败');
   } finally {
     unbindLoading.value = false;
   }
@@ -916,7 +928,7 @@ const handleUpdateStatus = async (
       currentDetail.value = (response as any).data || response;
     }
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('状态更新失败');
+    if (shouldNotifyPageError(error)) message.error('状态更新失败');
   }
 };
 
@@ -960,7 +972,7 @@ const handleDelete = async (record: TreeCloudResource): Promise<void> => {
 
         await fetchResources();
       } catch (error) {
-        if (!isPermissionDeniedError(error)) message.error('删除失败');
+        if (shouldNotifyPageError(error)) message.error('删除失败');
       }
     },
   });
@@ -1023,7 +1035,7 @@ onMounted(async () => {
       fetchResources(),
     ]);
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('页面加载失败');
+    if (shouldNotifyPageError(error)) message.error('页面加载失败');
   }
 });
 onBeforeUnmount(() => { listRequest++; detailRequest++; syncRegionRequest++; accountListRequest++; syncOperationRequest++; });

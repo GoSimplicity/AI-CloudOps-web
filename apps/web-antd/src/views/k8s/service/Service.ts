@@ -33,7 +33,10 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 export function useServicePage() {
   // state
@@ -335,8 +338,8 @@ export function useServicePage() {
         clearNamespaces();
         clearServices();
       }
-      clustersError.value = '获取集群列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -382,8 +385,8 @@ export function useServicePage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      namespacesError.value = '获取命名空间列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(namespacesError.value);
+      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -425,8 +428,8 @@ export function useServicePage() {
     } catch (err) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
       clearServices();
-      loadError.value = '获取 Service 列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(loadError.value);
+      if (shouldRecordPageError(err)) loadError.value = '获取 Service 列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(loadError.value);
 
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
@@ -454,7 +457,7 @@ export function useServicePage() {
       
       currentServiceDetail.value = processedDetail;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 Service 详情失败');
+      if (shouldNotifyPageError(err)) message.error('获取 Service 详情失败');
 
       // 错误时使用原始记录数据
       const fallbackDetail = { 
@@ -485,7 +488,7 @@ export function useServicePage() {
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 Service YAML 失败');
+      if (shouldNotifyPageError(err)) message.error('获取 Service YAML 失败');
 
     } finally {
       submitLoading.value = false;
@@ -524,10 +527,10 @@ export function useServicePage() {
       await fetchServices();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查 YAML 格式是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('❌ Service YAML 更新失败');
+      if (shouldNotifyPageError(err)) message.error('❌ Service YAML 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -587,10 +590,10 @@ export function useServicePage() {
       await fetchServices();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('❌ Service 创建失败');
+      if (shouldNotifyPageError(err)) message.error('❌ Service 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -615,10 +618,10 @@ export function useServicePage() {
       await fetchServices();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查 YAML 格式是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('❌ Service YAML 创建失败');
+      if (shouldNotifyPageError(err)) message.error('❌ Service YAML 创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -677,10 +680,10 @@ export function useServicePage() {
       await fetchServices();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('❌ Service 更新失败');
+      if (shouldNotifyPageError(err)) message.error('❌ Service 更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -705,7 +708,7 @@ export function useServicePage() {
           message.success('✅ Service 删除成功');
           await fetchServices();
         } catch (err) {
-          if (!isPermissionDeniedError(err)) message.error('❌ Service 删除失败');
+          if (shouldNotifyPageError(err)) message.error('❌ Service 删除失败');
 
         }
       },
@@ -724,7 +727,7 @@ export function useServicePage() {
       serviceEndpoints.value = res || [];
       isEndpointsModalVisible.value = true;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 Service 端点失败');
+      if (shouldNotifyPageError(err)) message.error('获取 Service 端点失败');
 
     } finally {
       submitLoading.value = false;
@@ -787,7 +790,7 @@ export function useServicePage() {
           selectedRows.value = [];
           await fetchServices();
         } catch (err) {
-          if (!isPermissionDeniedError(err)) message.error(`❌ 批量${operation}失败`);
+          if (shouldNotifyPageError(err)) message.error(`❌ 批量${operation}失败`);
 
         }
       },

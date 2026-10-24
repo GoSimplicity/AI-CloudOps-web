@@ -143,7 +143,10 @@ import {
   type ServiceInfoResponse,
   type ServiceConfigResponse
 } from '#/api/core/aiops/assistant';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // 响应式数据
 const loading = ref(false);
@@ -208,7 +211,7 @@ const copyToClipboard = async (text: string) => {
     await navigator.clipboard.writeText(text);
     message.success('复制成功');
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('复制失败');
+    if (shouldNotifyPageError(error)) message.error('复制失败');
   }
 };
 
@@ -227,7 +230,7 @@ const fetchServiceInfo = async () => {
   } catch (error: any) {
     if (disposed || request !== infoRequest) return;
     serviceInfo.value = {};
-    infoError.value = error instanceof Error ? error.message : '获取服务信息失败';
+    if (shouldRecordPageError(error)) infoError.value = error instanceof Error ? error.message : '获取服务信息失败';
   } finally {
     if (!disposed && request === infoRequest) loading.value = false;
   }
@@ -249,7 +252,7 @@ const fetchConfigInfo = async () => {
     if (disposed || request !== configRequest) return;
     configInfo.value = {};
     activeConfigKeys.value = [];
-    configError.value = error instanceof Error ? error.message : '获取配置信息失败';
+    if (shouldRecordPageError(error)) configError.value = error instanceof Error ? error.message : '获取配置信息失败';
   } finally {
     if (!disposed && request === configRequest) configLoading.value = false;
   }

@@ -4,6 +4,7 @@ import {
   createForbiddenResponseInterceptor,
   createPermissionDeniedError,
 } from '#/utils/permission/forbidden';
+import { markRequestLayerTrace } from '#/utils/permission/request-notice';
 import { useNamespacePage } from './Namespace';
 
 const client = vi.hoisted(() => ({ get: vi.fn() }));
@@ -90,6 +91,32 @@ describe('命名空间查询作用域', () => {
     client.get.mockRejectedValueOnce(new Error('unavailable'));
     await page.fetchNamespaces();
     expect(message.error).toHaveBeenCalledWith('获取命名空间列表失败，请重试');
+  });
+
+  it('FE-02b：HTTP 错误、网络错误已由请求层提示，页面只保留错误状态；取消类静默且不写错误状态', async () => {
+    const axios = (await import('axios')).default;
+    const { AxiosError } = await import('axios');
+    const { message } = await import('ant-design-vue');
+    const page = useNamespacePage();
+    page.filterClusterId.value = 1;
+    // RequestClient 把 HTTP 错误包成带 response 的普通对象再抛给页面；
+    // incr3 P3-3：带请求层痕迹（经过 requestClient 拦截器）才算请求层已提示
+    client.get.mockRejectedValueOnce(markRequestLayerTrace({ response: { status: 500 } }));
+    await page.fetchNamespaces();
+    client.get.mockRejectedValueOnce(
+      markRequestLayerTrace(
+        new AxiosError('Network Error', AxiosError.ERR_NETWORK, {} as any, {}),
+      ),
+    );
+    await page.fetchNamespaces();
+    expect(page.loadError.value).toContain('获取命名空间列表失败');
+    // 拍板 3：取消不写 loadError（重新请求时已清空，保持空）
+    client.get.mockRejectedValueOnce(
+      new axios.CanceledError(undefined, {} as any, {}),
+    );
+    await page.fetchNamespaces();
+    expect(page.loadError.value).toBe('');
+    expect(message.error).not.toHaveBeenCalled();
   });
 });
 

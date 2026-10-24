@@ -1029,7 +1029,11 @@ import { listWorkorderTemplate, type WorkorderTemplateItem } from '#/api/core/wo
 import { listWorkorderCategory, type WorkorderCategoryItem } from '#/api/core/workorder/workorder_category';
 import { getUserList, type User } from '#/api/core/system/user';
 
-import { isPermissionDeniedError, usePermission } from '#/utils/permission';
+import { usePermission } from '#/utils/permission';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -1725,12 +1729,12 @@ const loadNotifications = async (): Promise<void> => {
       // 计算统计数据
       calculateStats();
     }
-  } catch {
+  } catch (error) {
     if (request !== listRequest) return;
     notifications.value = [];
     paginationConfig.total = 0;
     calculateStats();
-    loadError.value = '加载通知配置失败，请重试';
+    if (shouldRecordPageError(error)) loadError.value = '加载通知配置失败，请重试';
   } finally {
     if (request === listRequest) loading.value = false;
   }
@@ -1769,9 +1773,9 @@ const loadSendLogs = async (notificationId: number): Promise<void> => {
       sendLogs.value = res.items || [];
       logsPagination.total = res.total || 0;
     }
-  } catch {
+  } catch (error) {
     if (request !== logsRequest) return;
-    logsError.value = '加载发送记录失败，请重试';
+    if (shouldRecordPageError(error)) logsError.value = '加载发送记录失败，请重试';
   } finally {
     if (request === logsRequest) logsLoading.value = false;
   }
@@ -1865,7 +1869,7 @@ const handleViewNotification = async (record: Notification): Promise<void> => {
     }
   } catch (error) {
     if (request !== detailRequest) return;
-    if (!isPermissionDeniedError(error)) message.error('获取通知配置详情失败');
+    if (shouldNotifyPageError(error)) message.error('获取通知配置详情失败');
 
   }
 };
@@ -1886,7 +1890,7 @@ const handleStatusToggle = async (record: Notification & { statusLoading?: boole
     const statusText = newStatus === NotificationStatus.Enabled ? '启用' : '禁用';
     message.success(`通知配置已${statusText}`);
   } catch (error) {
-    if (!isPermissionDeniedError(error)) message.error('更新状态失败');
+    if (shouldNotifyPageError(error)) message.error('更新状态失败');
 
   } finally {
     record.statusLoading = false;
@@ -1943,8 +1947,8 @@ const confirmTestSend = async () => {
     message.success('测试通知发送成功');
     testSendDialog.visible = false;
     testSendDialog.recipient = '';
-  } catch {
-    testSendDialog.error = '测试发送失败，请核对渠道配置与接收地址';
+  } catch (error) {
+    if (shouldRecordPageError(error)) testSendDialog.error = '测试发送失败，请核对渠道配置与接收地址';
   } finally {
     testSendDialog.sending = false;
   }
@@ -2032,8 +2036,8 @@ const handleDeleteNotification = (record: Notification): void => {
           }
         }
 
-        // 403 已由请求拦截器统一提示，这里不再重复弹出
-        if (!isPermissionDeniedError(error)) message.error(errorMessage);
+        // 请求层已提示（403、已弹原文的业务错误、HTTP / 网络错误）与取消类不再弹；其余错误弹上面拼出的具体原因（incr3：基线写法收口到 shouldNotifyPageError）
+        if (shouldNotifyPageError(error)) message.error(errorMessage);
 
       }
     }
@@ -2248,7 +2252,7 @@ const saveNotification = async (): Promise<void> => {
       }
     }
 
-    if (!isPermissionDeniedError(error)) message.error(errorMessage);
+    if (shouldNotifyPageError(error)) message.error(errorMessage);
   } finally {
     if (epoch === formEpoch) notificationDialog.saving = false;
   }
@@ -2351,8 +2355,8 @@ const saveManualSend = async (): Promise<void> => {
       }
     }
 
-    // 403 已由请求拦截器统一提示，这里不再重复弹出
-    if (!isPermissionDeniedError(error)) message.error(errorMessage);
+    // 请求层已提示（403、已弹原文的业务错误、HTTP / 网络错误）与取消类不再弹；其余错误弹上面拼出的具体原因（incr3：基线写法收口到 shouldNotifyPageError）
+    if (shouldNotifyPageError(error)) message.error(errorMessage);
 
   } finally {
     manualSendDialog.saving = false;

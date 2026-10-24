@@ -231,7 +231,7 @@ import {
   type EventAlertUnSilenceReq,
   MonitorAlertEventStatus,
 } from '#/api/core/prometheus/prometheus_alert_event';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // 响应式对话框宽度
 const previewDialogWidth = computed(() => {
@@ -397,7 +397,7 @@ const fetchResources = async (): Promise<void> => {
     data.value = [];
     paginationConfig.total = 0;
     updateStats();
-    if (!isPermissionDeniedError(error)) message.error(loadError.value);
+    if (shouldNotifyPageError(error)) message.error(loadError.value);
   } finally {
     request.finish();
   }
@@ -481,7 +481,7 @@ const handleSilence = async (record: MonitorAlertEvent) => {
         fetchResources();
         detailDialogVisible.value = false;
       } catch (error: any) {
-        if (!isPermissionDeniedError(error)) message.error(error.message || `屏蔽告警 "${record.alert_name}" 失败`);
+        if (shouldNotifyPageError(error)) message.error(error.message || `屏蔽告警 "${record.alert_name}" 失败`);
 
       } finally {
         loading.value = false;
@@ -511,7 +511,7 @@ const handleClaim = async (record: MonitorAlertEvent) => {
         fetchResources();
         detailDialogVisible.value = false;
       } catch (error: any) {
-        if (!isPermissionDeniedError(error)) message.error(error.message || `认领告警 "${record.alert_name}" 失败`);
+        if (shouldNotifyPageError(error)) message.error(error.message || `认领告警 "${record.alert_name}" 失败`);
 
       } finally {
         loading.value = false;
@@ -540,7 +540,7 @@ const handleCancelSilence = async (record: MonitorAlertEvent) => {
         message.success(`取消屏蔽告警 "${record.alert_name}" 成功`);
         fetchResources();
       } catch (error: any) {
-        if (!isPermissionDeniedError(error)) message.error(error.message || `取消屏蔽告警 "${record.alert_name}" 失败`);
+        if (shouldNotifyPageError(error)) message.error(error.message || `取消屏蔽告警 "${record.alert_name}" 失败`);
 
       } finally {
         loading.value = false;

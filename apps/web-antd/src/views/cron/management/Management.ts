@@ -3,7 +3,6 @@ import { message, Modal } from 'ant-design-vue';
 // import { useRouter } from 'vue-router'; // 暂时未使用
 import type { FormInstance } from 'ant-design-vue';
 import axios from 'axios';
-import { RequestOwnerChangedError } from '@vben/request';
 import {
   getCronJobList,
   getCronJobDetail,
@@ -22,7 +21,11 @@ import {
   CronJobType,
 } from '#/api/core/cron/cron';
 import { getTreeLocalList } from '#/api/core/tree/tree_local';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import {
+  isCanceledRequest,
+  looksNotifiedByRequestLayer,
+  shouldNotifyPageError,
+} from '#/utils/permission/request-notice';
 
 // 页面状态接口
 interface CronJobPageState {
@@ -81,27 +84,16 @@ export const resolveAllowLocalExec = (data: any): boolean =>
   typeof data?.allow_local_exec === 'boolean' ? data.allow_local_exec : true;
 
 // 取后端返回的原始提示：业务码非 0 时响应解构抛出 `Error <HTTP状态>: <message>`。
-// 不读 HTTP 错误的响应体 message：带 response 的 HTTP 错误已由请求层提示过，页面不再展示原文（见 isNotifiedByRequestLayer）
+// 不读 HTTP 错误的响应体 message：带 response 的 HTTP 错误已由请求层提示过，页面不再展示原文（见 shouldNotifyPageError）
 export const getBackendErrorMessage = (error: any, fallback: string): string => {
   const raw = error?.message;
   if (typeof raw !== 'string' || !raw.trim()) return fallback;
   return raw.replace(/^Error \d{3}: /, '') || fallback;
 };
 
-// 请求层已提示过的错误，页面 catch 不再弹：403 / 已提示的业务错误（isPermissionDeniedError），
-// 带 response 的 HTTP 错误（4xx/5xx 由通用错误拦截器按固定 key 弹过一条），
-// 以及发出了请求但没有响应的 axios 错误（复审 v4 P3-3：网络错误 / 超时，通用错误拦截器
-// packages/effects/request preset-interceptors.ts errorMessageResponseInterceptor 已按固定 key 弹过一条）；
-// 取消的请求（isCancel）请求层不提示，这里也不算已提示
-export const isNotifiedByRequestLayer = (error: any): boolean =>
-  isPermissionDeniedError(error) ||
-  !!error?.response ||
-  (axios.isAxiosError(error) && !!error.request && !axios.isCancel(error));
-
-// 取消的请求：axios 取消（CanceledError / isCancel）与账户切换取消旧请求（RequestOwnerChangedError，
-// 继承 CanceledError）。请求层对它们不提示（preset-interceptors errorMessageResponseInterceptor），页面也静默
-const isCanceledRequest = (error: any): boolean =>
-  axios.isCancel(error) || error instanceof RequestOwnerChangedError;
+// 请求层已提示 / 取消类的判断移到 utils/permission/request-notice.ts（FE-02b 全页面共用），
+// 形状判断 looksNotifiedByRequestLayer（incr3 由 isNotifiedByRequestLayer 改名）在这里转导出，供本页用例使用
+export { looksNotifiedByRequestLayer };
 
 // 列表类请求（任务列表 / SSH 资源列表）各类失败对应的页面文案
 interface ListFailureTexts {
@@ -133,12 +125,12 @@ const resolveListFailureText = (error: any, texts: ListFailureTexts): string => 
 };
 
 // 列表类请求失败的统一处理：取消类静默（返回 null，不写错误状态）；
-// 请求层已提示（HTTP 错误、网络错误 / 超时、已弹后端原文的业务错误，见 isNotifiedByRequestLayer）页面不再弹；
+// 请求层已提示（HTTP 错误、网络错误 / 超时、已弹后端原文的业务错误，见 shouldNotifyPageError）页面不再弹；
 // 其余由页面弹一条（401 用 warning），返回页面错误文案
 const handleListFailure = (error: any, texts: ListFailureTexts): string | null => {
   if (isCanceledRequest(error)) return null;
   const text = resolveListFailureText(error, texts);
-  if (!isNotifiedByRequestLayer(error)) {
+  if (shouldNotifyPageError(error)) {
     if (error?.response?.status === 401) message.warning(text);
     else message.error(text);
   }
@@ -612,7 +604,7 @@ export function useCronJobPage() {
       const response = await getCronJobDetail({ id: job.id });
       if (ticket === detailRequest) state.currentJobDetail = response;
     } catch (error) {
-      if (ticket === detailRequest && !isPermissionDeniedError(error)) message.error('获取任务详情失败');
+      if (ticket === detailRequest && shouldNotifyPageError(error)) message.error('获取任务详情失败');
 
     } finally {
       if (ticket === detailRequest) state.detailLoading = false;
@@ -659,9 +651,9 @@ export function useCronJobPage() {
     } catch (error: any) {
       if (generation !== pageGeneration || ticket !== createRequest) return;
       if (error?.errorFields) {
-        if (!isPermissionDeniedError(error)) message.error('请检查表单输入');
+        if (shouldNotifyPageError(error)) message.error('请检查表单输入');
       } else {
-        if (!isNotifiedByRequestLayer(error)) message.error(getBackendErrorMessage(error, '定时任务创建失败'));
+        if (shouldNotifyPageError(error)) message.error(getBackendErrorMessage(error, '定时任务创建失败'));
 
       }
     } finally {
@@ -705,7 +697,7 @@ export function useCronJobPage() {
 
       state.isEditModalVisible = true;
     } catch (error) {
-      if (ticket === editRequest && !isPermissionDeniedError(error)) message.error('获取任务详情失败');
+      if (ticket === editRequest && shouldNotifyPageError(error)) message.error('获取任务详情失败');
 
     } finally {
       if (ticket === editRequest) state.submitLoading = false;
@@ -737,9 +729,9 @@ export function useCronJobPage() {
     } catch (error: any) {
       if (generation !== pageGeneration || ticket !== editRequest) return;
       if (error?.errorFields) {
-        if (!isPermissionDeniedError(error)) message.error('请检查表单输入');
+        if (shouldNotifyPageError(error)) message.error('请检查表单输入');
       } else {
-        if (!isNotifiedByRequestLayer(error)) message.error(getBackendErrorMessage(error, '定时任务更新失败'));
+        if (shouldNotifyPageError(error)) message.error(getBackendErrorMessage(error, '定时任务更新失败'));
 
       }
     } finally {
@@ -762,7 +754,7 @@ export function useCronJobPage() {
           message.success(`定时任务 "${job.name}" 删除成功`);
           await fetchCronJobs();
         } catch (error) {
-          if (!isPermissionDeniedError(error)) message.error(`定时任务删除失败`);
+          if (shouldNotifyPageError(error)) message.error(`定时任务删除失败`);
 
         }
       },
@@ -775,7 +767,7 @@ export function useCronJobPage() {
       message.success(`定时任务 "${job.name}" 启用成功`);
       await fetchCronJobs();
     } catch (error) {
-      if (!isPermissionDeniedError(error)) message.error(`定时任务启用失败`);
+      if (shouldNotifyPageError(error)) message.error(`定时任务启用失败`);
 
     }
   };
@@ -786,7 +778,7 @@ export function useCronJobPage() {
       message.success(`定时任务 "${job.name}" 禁用成功`);
       await fetchCronJobs();
     } catch (error) {
-      if (!isPermissionDeniedError(error)) message.error(`定时任务禁用失败`);
+      if (shouldNotifyPageError(error)) message.error(`定时任务禁用失败`);
 
     }
   };
@@ -806,7 +798,7 @@ export function useCronJobPage() {
           message.success(`定时任务 "${job.name}" 触发成功`);
           await fetchCronJobs();
         } catch (error) {
-          if (!isNotifiedByRequestLayer(error)) message.error(getBackendErrorMessage(error, '定时任务触发失败'));
+          if (shouldNotifyPageError(error)) message.error(getBackendErrorMessage(error, '定时任务触发失败'));
 
         }
       },
@@ -860,7 +852,7 @@ export function useCronJobPage() {
 
           await fetchCronJobs();
         } catch (error) {
-          if (!isPermissionDeniedError(error)) message.error(`批量${operation}失败`);
+          if (shouldNotifyPageError(error)) message.error(`批量${operation}失败`);
 
         }
       },
@@ -895,7 +887,7 @@ export function useCronJobPage() {
         }
       }
     } catch (error) {
-      if (!isPermissionDeniedError(error)) message.error('调度表达式验证失败');
+      if (shouldNotifyPageError(error)) message.error('调度表达式验证失败');
 
     }
   };

@@ -10,13 +10,17 @@ defineProps<{
   selected: string[];
   busy: boolean;
   canConfirm: boolean;
+  canConfirmAll?: boolean;
   issue: string;
   expiresAt?: string;
 }>();
 const emit = defineEmits<{
   toggle: [id: string, checked: boolean];
   confirm: [];
+  confirmOne: [id: string];
+  confirmAll: [];
 }>();
+// SEC-25/26 规则 4：逐项「确认此项」+ 批量「全部确认」；后端没有拒绝接口，不提供拒绝按钮
 </script>
 <template>
   <section class="confirm-panel" aria-label="原计划动作审批">
@@ -64,6 +68,14 @@ const emit = defineEmits<{
             {{ action.risk_assessment.reasons.join(' / ') }}
           </div>
         </div>
+        <a-button
+          v-if="can('aiops.autofix.confirm')"
+          size="small"
+          class="confirm-action-one"
+          :disabled="busy || !!issue"
+          @click.prevent.stop="emit('confirmOne', action.action_id || '')"
+          >确认此项</a-button
+        >
       </label>
     </div>
     <a-button v-if="can('aiops.autofix.confirm')"
@@ -72,6 +84,13 @@ const emit = defineEmits<{
       :disabled="!canConfirm"
       @click="emit('confirm')"
       >确认并继续执行</a-button
+    >
+    <a-button
+      v-if="can('aiops.autofix.confirm') && actions.length > 0"
+      :loading="busy"
+      :disabled="!canConfirmAll"
+      @click="emit('confirmAll')"
+      >全部确认</a-button
     >
   </section>
 </template>

@@ -340,7 +340,10 @@ import {
   refreshKnowledgeBase
 } from '#/api/core/aiops/assistant';
 import { usePermission } from '#/utils/permission';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
@@ -527,6 +530,8 @@ const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
 
 // 错误分类处理
 const handleApiError = (error, context = '') => {
+  // 取消类（停止生成、账户切换取消旧请求）不写错误横幅，也不提示（FE-02b 拍板 3）
+  if (!shouldRecordPageError(error)) return 'canceled';
   const status = error?.response?.status;
   const errorData = error?.response?.data;
   const errorMsg = errorData?.message || error?.message || '未知错误';
@@ -869,7 +874,8 @@ const sendMessage = async (value) => {
     }
   } catch (error) {
     if (!accountScope.current(ticket)) return;
-    lastFailedQuestion.value = trimmedValue;
+    // 取消类（停止生成、账户切换）不留「重试」入口，并清掉上一次失败留下的问题（incr3 P3-6）
+    lastFailedQuestion.value = shouldRecordPageError(error) ? trimmedValue : '';
 
     if (chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.type === 'ai' && !chatMessages[chatMessages.length - 1]?.content) {
       chatMessages.pop();
@@ -977,7 +983,7 @@ const clearChat = async () => {
     chatHistory.value = [];
     isConnected.value = false;
     initChatMessages();
-    if (!isPermissionDeniedError(error)) message.warning('清空完成，但可能存在部分错误');
+    if (shouldNotifyPageError(error)) message.warning('清空完成，但可能存在部分错误');
     persistState();
   }
 };
@@ -1117,7 +1123,7 @@ const copyMessage = async (content) => {
     await navigator.clipboard.writeText(content);
     message.success('已复制到剪贴板');
   } catch (err) {
-    if (!isPermissionDeniedError(err)) message.error('复制失败');
+    if (shouldNotifyPageError(err)) message.error('复制失败');
   }
 };
 // 重新生成 AI 回答（基于上一条用户消息）

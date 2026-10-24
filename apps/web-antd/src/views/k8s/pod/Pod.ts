@@ -70,7 +70,10 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
-import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+import {
+  shouldNotifyPageError,
+  shouldRecordPageError,
+} from '#/utils/permission/request-notice';
 
 // YAML 模板常量
 const POD_YAML_TEMPLATE = `apiVersion: v1
@@ -509,8 +512,8 @@ export function usePodPage() {
         clearNamespaces();
         clearPods();
       }
-      clustersError.value = '获取集群列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
+      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -556,8 +559,8 @@ export function usePodPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      namespacesError.value = '获取命名空间列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(namespacesError.value);
+      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -621,8 +624,8 @@ export function usePodPage() {
       )
         return;
       clearPods();
-      loadError.value = '获取 Pod 列表失败，请重试';
-      if (!isPermissionDeniedError(err)) message.error(loadError.value);
+      if (shouldRecordPageError(err)) loadError.value = '获取 Pod 列表失败，请重试';
+      if (shouldNotifyPageError(err)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -670,7 +673,7 @@ export function usePodPage() {
 
       currentPodDetail.value = processedDetail;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 Pod 详情失败');
+      if (shouldNotifyPageError(err)) message.error('获取 Pod 详情失败');
 
       // 错误时也要处理格式转换
       try {
@@ -721,7 +724,7 @@ export function usePodPage() {
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 Pod YAML 失败');
+      if (shouldNotifyPageError(err)) message.error('获取 Pod YAML 失败');
     } finally {
       submitLoading.value = false;
     }
@@ -754,11 +757,11 @@ export function usePodPage() {
       await fetchPods();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err))
+        if (shouldNotifyPageError(err))
           message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('Pod YAML 更新失败');
+      if (shouldNotifyPageError(err)) message.error('Pod YAML 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -866,11 +869,11 @@ export function usePodPage() {
       await fetchPods();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err))
+        if (shouldNotifyPageError(err))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('Pod 创建失败');
+      if (shouldNotifyPageError(err)) message.error('Pod 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -894,11 +897,11 @@ export function usePodPage() {
       await fetchPods();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err))
+        if (shouldNotifyPageError(err))
           message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('Pod YAML 创建失败');
+      if (shouldNotifyPageError(err)) message.error('Pod YAML 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -1223,11 +1226,11 @@ export function usePodPage() {
       await fetchPods();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err))
+        if (shouldNotifyPageError(err))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('Pod 更新失败');
+      if (shouldNotifyPageError(err)) message.error('Pod 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -1256,7 +1259,7 @@ export function usePodPage() {
           message.success('Pod 删除成功');
           await fetchPods();
         } catch (err) {
-          if (!isPermissionDeniedError(err)) message.error('Pod 删除失败');
+          if (shouldNotifyPageError(err)) message.error('Pod 删除失败');
         }
       },
     });
@@ -1286,7 +1289,7 @@ export function usePodPage() {
 
       isLogsModalVisible.value = true;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 Pod 容器列表失败');
+      if (shouldNotifyPageError(err)) message.error('获取 Pod 容器列表失败');
     }
   };
 
@@ -1726,7 +1729,7 @@ export function usePodPage() {
       };
       isExecModalVisible.value = true;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取 Pod 容器列表失败');
+      if (shouldNotifyPageError(err)) message.error('获取 Pod 容器列表失败');
     }
   };
 
@@ -1847,7 +1850,7 @@ export function usePodPage() {
 
       return true;
     } catch (error) {
-      if (!isPermissionDeniedError(error)) message.error('初始化终端失败');
+      if (shouldNotifyPageError(error)) message.error('初始化终端失败');
       return false;
     }
   };
@@ -2266,11 +2269,11 @@ export function usePodPage() {
       );
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err))
+        if (shouldNotifyPageError(err))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('建立终端连接失败');
+      if (shouldNotifyPageError(err)) message.error('建立终端连接失败');
 
       isTerminalConnected.value = false;
     } finally {
@@ -2351,11 +2354,11 @@ export function usePodPage() {
       isExecModalVisible.value = false;
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (!isPermissionDeniedError(err))
+        if (shouldNotifyPageError(err))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (!isPermissionDeniedError(err)) message.error('命令执行失败');
+      if (shouldNotifyPageError(err)) message.error('命令执行失败');
     } finally {
       submitLoading.value = false;
     }
@@ -2395,7 +2398,7 @@ export function usePodPage() {
       message.success('端口转发设置成功');
       isPortForwardModalVisible.value = false;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('端口转发设置失败');
+      if (shouldNotifyPageError(err)) message.error('端口转发设置失败');
     } finally {
       submitLoading.value = false;
     }
@@ -2420,7 +2423,7 @@ export function usePodPage() {
 
       isFileManagerModalVisible.value = true;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取容器信息失败');
+      if (shouldNotifyPageError(err)) message.error('获取容器信息失败');
     }
   };
 
@@ -2448,7 +2451,7 @@ export function usePodPage() {
       await uploadK8sPodFile(params, file);
       message.success('文件上传成功');
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('文件上传失败');
+      if (shouldNotifyPageError(err)) message.error('文件上传失败');
     }
   };
 
@@ -2546,7 +2549,7 @@ export function usePodPage() {
         errorMessage = `下载失败: ${err}`;
       }
 
-      if (!isPermissionDeniedError(err)) message.error(errorMessage);
+      if (shouldNotifyPageError(err)) message.error(errorMessage);
     }
   };
 
@@ -2564,7 +2567,7 @@ export function usePodPage() {
       pods.value = res?.items || [];
       total.value = res?.total || 0;
     } catch (err) {
-      if (!isPermissionDeniedError(err)) message.error('获取节点Pod失败');
+      if (shouldNotifyPageError(err)) message.error('获取节点Pod失败');
     } finally {
       loading.value = false;
     }
@@ -2626,7 +2629,7 @@ export function usePodPage() {
           selectedRows.value = [];
           await fetchPods();
         } catch (err) {
-          if (!isPermissionDeniedError(err))
+          if (shouldNotifyPageError(err))
             message.error(`批量${operation}失败`);
         }
       },

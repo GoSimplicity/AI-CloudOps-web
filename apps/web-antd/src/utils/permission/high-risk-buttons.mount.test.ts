@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ALL_PERMISSION_CODES,
   type PermissionKey,
+  SECRET_DETAIL_PERMISSION_CODE,
 } from '#/constants/permission-codes';
 
 /**
@@ -73,9 +74,18 @@ const pages = {
 
 let wrapper: undefined | VueWrapper<any>;
 
-function setSubject(keys: PermissionKey[]) {
+/** 不属于清单按钮 key 的路由码（SEC-25/26 第 4 条：Secret 详情码），直接以码字符串参与 */
+type Gate = PermissionKey | typeof SECRET_DETAIL_PERMISSION_CODE;
+
+function codeOf(gate: Gate): string {
+  return gate === SECRET_DETAIL_PERMISSION_CODE
+    ? gate
+    : ALL_PERMISSION_CODES[gate];
+}
+
+function setSubject(keys: Gate[]) {
   useUserStore().setUserInfo({ roles: ['ops'], username: 'ops' } as any);
-  useAccessStore().setAccessCodes(keys.map((key) => ALL_PERMISSION_CODES[key]));
+  useAccessStore().setAccessCodes(keys.map((key) => codeOf(key)));
 }
 
 async function mountPage(page: keyof typeof pages) {
@@ -110,14 +120,36 @@ async function selectFirstRow() {
   await flushPromises();
 }
 
+/** 打开 Secret 详情弹窗并填入脱敏详情（值为空，只有 data_keys） */
+async function openRedactedSecretDetail() {
+  const vm = wrapper!.vm as any;
+  vm.currentSecretDetail = {
+    cluster_id: 1,
+    namespace: 'ns-a',
+    name: 'secret-a',
+    type: 1,
+    labels: [],
+    annotations: [],
+    data: { token: '' },
+    data_keys: [{ key: 'token', size: 16 }],
+    redacted: true,
+    string_data: {},
+  };
+  vm.isDetailModalVisible = true;
+  for (let i = 0; i < 3; i += 1) await flushPromises();
+  expect(document.body.textContent).toContain('加密数据内容');
+  expect(document.body.textContent).toContain('token');
+  expect(document.body.textContent).toContain('16 bytes');
+}
+
 type Case = {
   /** 用例名 */
   name: string;
   page: keyof typeof pages;
-  /** 被测按钮 key */
-  key: PermissionKey;
+  /** 被测按钮 key（或非清单路由码） */
+  key: Gate;
   /** 打开按钮所在界面所需的其它码（不含被测 key） */
-  prerequisite?: PermissionKey[];
+  prerequisite?: Gate[];
   /** 挂载后到达按钮所在界面的操作（勾选行、打开详情） */
   prepare?: () => Promise<void>;
   /** 返回被测按钮的渲染结果 */
@@ -171,9 +203,10 @@ const CASES: Case[] = [
     find: () => all('button[title="批量删除选中的命名空间"]'),
   },
   {
-    name: 'Secret 查看明文（查看详情）',
+    // SEC-25/26 第 4 条：详情入口改由详情码控制（不再用 viewPlain/reveal 码）
+    name: 'Secret 查看详情（详情码）',
     page: 'Secret',
-    key: 'k8s.secret.viewPlain',
+    key: SECRET_DETAIL_PERMISSION_CODE,
     find: () => rowButtons('查看详情'),
   },
   {
@@ -186,33 +219,17 @@ const CASES: Case[] = [
     name: 'Secret 复制明文（详情弹窗内）',
     page: 'Secret',
     key: 'k8s.secret.copyPlain',
-    // copyPlain 与 viewPlain 是同一个码（清单 v4 4.2 节 .../detail），不能靠「只给 viewPlain 码」
-    // 打开详情；这里直接把详情弹窗置为打开并填入明文，只验证复制按钮本身的门禁。
-    prepare: async () => {
-      const vm = wrapper!.vm as any;
-      vm.currentSecretDetail = {
-        cluster_id: 1,
-        namespace: 'ns-a',
-        name: 'secret-a',
-        type: 1,
-        labels: [],
-        annotations: [],
-        data: { token: btoa('plain-text-value') },
-        string_data: {},
-      };
-      vm.isDetailModalVisible = true;
-      for (let i = 0; i < 3; i += 1) await flushPromises();
-      expect(document.body.textContent).toContain('加密数据内容');
-      // 展开加密数据面板（复制按钮在面板内容里），确认已展示解码后的明文
-      const header = all('.secret-data-collapse .ant-collapse-header').find(
-        (element) => (element.textContent ?? '').includes('token'),
-      );
-      expect(header).toBeDefined();
-      header!.click();
-      for (let i = 0; i < 3; i += 1) await flushPromises();
-      expect(document.body.textContent).toContain('plain-text-value');
-    },
-    find: () => buttonsByText('复制内容'),
+    // SEC-25/26：copyPlain 与 viewPlain 同为 reveal 码，这里直接把详情弹窗置为打开并填入脱敏详情
+    // （只有键名与字节数），只验证复制按钮本身的门禁；详情里不应出现任何明文。
+    prepare: openRedactedSecretDetail,
+    find: () => buttonsByText('复制内容', '.secret-data-keys'),
+  },
+  {
+    name: 'Secret 按键查看明文（详情弹窗内，调 reveal）',
+    page: 'Secret',
+    key: 'k8s.secret.viewPlain',
+    prepare: openRedactedSecretDetail,
+    find: () => all('.secret-data-keys button.secret-view-plain'),
   },
   {
     name: '审计行内删除',
@@ -271,7 +288,9 @@ beforeEach(() => {
     namespace: 'ns-a',
     name: 'secret-a',
     type: 1,
-    data: { token: btoa('plain-text-value') },
+    data: { token: '' },
+    data_keys: [{ key: 'token', size: 16 }],
+    redacted: true,
   });
   api.auditLogs.mockResolvedValue({
     items: [{ id: 11, user_id: 1, method: 'DELETE', endpoint: '/api/x' }],
@@ -302,5 +321,22 @@ describe('高危按钮挂载级门禁（非 admin 账号）', () => {
       await item.prepare?.();
       expect(item.find().length).toBeGreaterThan(0);
     });
+  });
+});
+
+describe('Secret 查看详情与明文分层（SEC-25/26 第 4 条）', () => {
+  it('只有 reveal 码（viewPlain/copyPlain）：不渲染「查看详情」', async () => {
+    setSubject(['k8s.secret.viewPlain', 'k8s.secret.copyPlain']);
+    await mountPage('Secret');
+    expect(rowButtons('查看详情')).toHaveLength(0);
+  });
+
+  it('只有详情码：渲染「查看详情」，详情内没有查看 / 复制明文按钮', async () => {
+    setSubject([SECRET_DETAIL_PERMISSION_CODE]);
+    await mountPage('Secret');
+    expect(rowButtons('查看详情')).toHaveLength(1);
+    await openRedactedSecretDetail();
+    expect(all('.secret-data-keys button.secret-view-plain')).toHaveLength(0);
+    expect(buttonsByText('复制内容', '.secret-data-keys')).toHaveLength(0);
   });
 });
