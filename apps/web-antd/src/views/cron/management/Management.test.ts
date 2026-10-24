@@ -133,3 +133,81 @@ describe('定时任务请求与操作边界', () => {
     expect(notices.error).toHaveBeenCalledWith(expect.stringContaining('1 项成功，1 项失败'));
   });
 });
+
+describe('SEC-03A 本地执行开关与错误提示', () => {
+  const disabledMsg = '本地命令/脚本任务已停用（cron.allow_local_exec=false），请改用 HTTP 或 SSH 任务';
+  const passValidation = (page: ReturnType<typeof useCronJobPage>) => {
+    page.formRef.value = { validate: () => Promise.resolve({}) } as unknown as FormInstance;
+  };
+
+  it('新建与编辑默认任务类型为 HTTP，创建和更新请求显式携带 job_type', async () => {
+    const page = useCronJobPage();
+    expect(page.editFormModel.value.job_type).toBe(3);
+    page.openCreateModal();
+    expect(page.createFormModel.value.job_type).toBe(3);
+    passValidation(page);
+    await page.submitCreateForm();
+    expect(client.post).toHaveBeenCalledWith('/cron/job/create', expect.objectContaining({ job_type: 3 }));
+    client.get.mockResolvedValueOnce({ ...job(8), job_type: 5 });
+    await page.openEditModal({ ...job(8), job_type: 5 });
+    passValidation(page);
+    await page.submitEditForm();
+    expect(client.put).toHaveBeenCalledWith('/cron/job/8/update', expect.objectContaining({ job_type: 5 }));
+  });
+
+  it('列表 allow_local_exec 缺省按允许处理，显式 false 时锁定命令行/脚本任务', async () => {
+    const page = useCronJobPage();
+    await page.fetchCronJobs();
+    expect(page.allowLocalExec.value).toBe(true);
+    client.get.mockResolvedValueOnce({ items: [], total: 0, allow_local_exec: false });
+    await page.fetchCronJobs();
+    expect(page.allowLocalExec.value).toBe(false);
+    expect(page.isLocalExecLocked({ job_type: 2 })).toBe(true);
+    expect(page.isLocalExecLocked({ job_type: 4 })).toBe(true);
+    expect(page.isLocalExecLocked({ job_type: 3 })).toBe(false);
+    expect(page.isLocalExecLocked({ job_type: 5 })).toBe(false);
+    page.triggerJob(job(1));
+    await page.openEditModal(job(1));
+    expect(confirm).not.toHaveBeenCalled();
+    expect(client.get).toHaveBeenCalledTimes(2);
+    expect(page.isEditModalVisible.value).toBe(false);
+  });
+
+  it('创建 / 更新 / 触发返回 code≠0 时原样展示后端 message', async () => {
+    const page = useCronJobPage();
+    page.openCreateModal();
+    passValidation(page);
+    // 响应解构对 HTTP 200 + code≠0 抛出 `Error 200: <message>`
+    client.post.mockRejectedValueOnce(new Error(`Error 200: ${disabledMsg}`));
+    await page.submitCreateForm();
+    expect(notices.error).toHaveBeenLastCalledWith(disabledMsg);
+
+    client.get.mockResolvedValueOnce({ ...job(9), job_type: 3 });
+    await page.openEditModal({ ...job(9), job_type: 3 });
+    passValidation(page);
+    client.put.mockRejectedValueOnce(new Error('Error 200: 任务名称已存在'));
+    await page.submitEditForm();
+    expect(notices.error).toHaveBeenLastCalledWith('任务名称已存在');
+
+    page.triggerJob({ ...job(10), job_type: 3 });
+    client.post.mockRejectedValueOnce(new Error(`Error 200: ${disabledMsg}`));
+    await confirm.mock.calls[0]?.[0].onOk();
+    expect(notices.error).toHaveBeenLastCalledWith(disabledMsg);
+  });
+
+  it('带 response 的 HTTP 错误不展示响应体原文、页面不再弹（请求层已弹过一条）；无 response 时回退原提示', async () => {
+    const page = useCronJobPage();
+    page.triggerJob({ ...job(11), job_type: 3 });
+    const failure = Object.assign(new Error('Request failed with status code 400'), {
+      response: { status: 400, data: { code: 1, message: '绑定数据失败' } },
+    });
+    client.post.mockRejectedValueOnce(failure);
+    await confirm.mock.calls[0]?.[0].onOk();
+    expect(notices.error).not.toHaveBeenCalled();
+    page.triggerJob({ ...job(12), job_type: 3 });
+    client.post.mockRejectedValueOnce({});
+    await confirm.mock.calls[1]?.[0].onOk();
+    expect(notices.error).toHaveBeenCalledTimes(1);
+    expect(notices.error).toHaveBeenLastCalledWith('定时任务触发失败');
+  });
+});

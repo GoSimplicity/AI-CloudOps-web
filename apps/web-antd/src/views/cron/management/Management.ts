@@ -2,6 +2,8 @@ import { computed, reactive, ref, toRefs } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 // import { useRouter } from 'vue-router'; // 暂时未使用
 import type { FormInstance } from 'ant-design-vue';
+import axios from 'axios';
+import { RequestOwnerChangedError } from '@vben/request';
 import {
   getCronJobList,
   getCronJobDetail,
@@ -63,13 +65,109 @@ interface CronJobPageState {
   // 表单数据
   createFormModel: CreateCronJobReq;
   editFormModel: UpdateCronJobReq;
+
+  // 后端是否允许本地命令/脚本任务（列表接口 allow_local_exec）
+  allowLocalExec: boolean;
 }
+
+// 本地执行类任务：命令行(2)、脚本(4)，受后端 cron.allow_local_exec 开关控制
+const LOCAL_EXEC_JOB_TYPES: CronJobType[] = [CronJobType.COMMAND, CronJobType.SCRIPT];
+export const isLocalExecJobType = (jobType?: CronJobType) =>
+  jobType !== undefined && LOCAL_EXEC_JOB_TYPES.includes(jobType);
+
+// 列表接口未返回 allow_local_exec（旧版后端没有该开关）时按允许处理：
+// 旧后端本来就能执行本地任务，前端不应凭空禁用；新后端在开关关闭时会显式返回 false，且写入/触发由后端兜底拒绝
+export const resolveAllowLocalExec = (data: any): boolean =>
+  typeof data?.allow_local_exec === 'boolean' ? data.allow_local_exec : true;
+
+// 取后端返回的原始提示：业务码非 0 时响应解构抛出 `Error <HTTP状态>: <message>`。
+// 不读 HTTP 错误的响应体 message：带 response 的 HTTP 错误已由请求层提示过，页面不再展示原文（见 isNotifiedByRequestLayer）
+export const getBackendErrorMessage = (error: any, fallback: string): string => {
+  const raw = error?.message;
+  if (typeof raw !== 'string' || !raw.trim()) return fallback;
+  return raw.replace(/^Error \d{3}: /, '') || fallback;
+};
+
+// 请求层已提示过的错误，页面 catch 不再弹：403 / 已提示的业务错误（isPermissionDeniedError），
+// 带 response 的 HTTP 错误（4xx/5xx 由通用错误拦截器按固定 key 弹过一条），
+// 以及发出了请求但没有响应的 axios 错误（复审 v4 P3-3：网络错误 / 超时，通用错误拦截器
+// packages/effects/request preset-interceptors.ts errorMessageResponseInterceptor 已按固定 key 弹过一条）；
+// 取消的请求（isCancel）请求层不提示，这里也不算已提示
+export const isNotifiedByRequestLayer = (error: any): boolean =>
+  isPermissionDeniedError(error) ||
+  !!error?.response ||
+  (axios.isAxiosError(error) && !!error.request && !axios.isCancel(error));
+
+// 取消的请求：axios 取消（CanceledError / isCancel）与账户切换取消旧请求（RequestOwnerChangedError，
+// 继承 CanceledError）。请求层对它们不提示（preset-interceptors errorMessageResponseInterceptor），页面也静默
+const isCanceledRequest = (error: any): boolean =>
+  axios.isCancel(error) || error instanceof RequestOwnerChangedError;
+
+// 列表类请求（任务列表 / SSH 资源列表）各类失败对应的页面文案
+interface ListFailureTexts {
+  unauthorized: string;
+  forbidden: string;
+  badRequest: string;
+  server: string;
+  network: string;
+  fallback: string;
+}
+
+// 按错误类型取页面文案；网络错误 / 超时含 ECONNABORTED、ETIMEDOUT 以及发出请求但没有响应的 axios 错误
+const resolveListFailureText = (error: any, texts: ListFailureTexts): string => {
+  const status = error?.response?.status;
+  if (status === 401) return texts.unauthorized;
+  if (status === 403) return texts.forbidden;
+  if (status === 400) return texts.badRequest;
+  if (status >= 500) return texts.server;
+  if (
+    !error?.response &&
+    (error?.code === 'ECONNABORTED' ||
+      error?.code === 'ETIMEDOUT' ||
+      error?.message?.includes?.('Network Error') ||
+      (axios.isAxiosError(error) && !!error.request))
+  ) {
+    return texts.network;
+  }
+  return texts.fallback;
+};
+
+// 列表类请求失败的统一处理：取消类静默（返回 null，不写错误状态）；
+// 请求层已提示（HTTP 错误、网络错误 / 超时、已弹后端原文的业务错误，见 isNotifiedByRequestLayer）页面不再弹；
+// 其余由页面弹一条（401 用 warning），返回页面错误文案
+const handleListFailure = (error: any, texts: ListFailureTexts): string | null => {
+  if (isCanceledRequest(error)) return null;
+  const text = resolveListFailureText(error, texts);
+  if (!isNotifiedByRequestLayer(error)) {
+    if (error?.response?.status === 401) message.warning(text);
+    else message.error(text);
+  }
+  return text;
+};
+
+const CRON_LIST_FAILURE_TEXTS: ListFailureTexts = {
+  unauthorized: '登录已过期，请重新登录',
+  forbidden: '没有权限访问定时任务功能',
+  badRequest: '请求参数错误，请检查筛选条件',
+  server: '服务器内部错误，请稍后重试',
+  network: '网络连接失败，请检查网络后重试',
+  fallback: '获取定时任务列表失败，请刷新重试',
+};
+
+const SSH_LIST_FAILURE_TEXTS: ListFailureTexts = {
+  unauthorized: '获取SSH资源失败：登录已过期',
+  forbidden: '没有权限获取SSH资源',
+  badRequest: '获取SSH资源列表失败，请稍后重试',
+  server: '获取SSH资源列表失败，请稍后重试',
+  network: '获取SSH资源列表失败，请稍后重试',
+  fallback: '获取SSH资源列表失败，请稍后重试',
+};
 
 // 创建表单初始数据
 const createInitialFormModel = (): CreateCronJobReq => ({
   name: '',
   description: '',
-  job_type: CronJobType.COMMAND,
+  job_type: CronJobType.HTTP,
   schedule: '',
   timeout: 300,
   max_retry: 3,
@@ -94,7 +192,7 @@ const createInitialEditFormModel = (): UpdateCronJobReq => ({
   id: 0,
   name: '',
   description: '',
-  job_type: CronJobType.COMMAND,
+  job_type: CronJobType.HTTP,
   schedule: '',
   timeout: 300,
   max_retry: 3,
@@ -162,6 +260,8 @@ export function useCronJobPage() {
     // 表单数据
     createFormModel: createInitialFormModel(),
     editFormModel: createInitialEditFormModel(),
+
+    allowLocalExec: true,
   });
 
   // 计算属性
@@ -201,7 +301,12 @@ export function useCronJobPage() {
     state.filteredSshResources = [];
     state.loading = state.detailLoading = state.submitLoading = state.sshResourcesLoading = false;
     state.error = null;
+    state.allowLocalExec = true;
   };
+
+  // 开关关闭时，已有的命令行/脚本任务不可编辑、不可触发（后端会拒绝）
+  const isLocalExecLocked = (job?: Pick<CronJob, 'job_type'> | null) =>
+    !state.allowLocalExec && isLocalExecJobType(job?.job_type);
 
   // 创建表单验证规则
   const createFormRules = {
@@ -444,32 +549,12 @@ export function useCronJobPage() {
       // 根据实际API返回结构处理数据
       state.cronJobs = response.data?.items || response.items || [];
       state.total = response.data?.total || response.total || 0;
+      state.allowLocalExec = resolveAllowLocalExec(response.data ?? response);
     } catch (error: any) {
       if (ticket !== listRequest) return;
-
-
-      // 根据错误类型提供不同的处理
-      if (error?.response?.status === 401) {
-        state.error = '登录已过期，请重新登录';
-        if (!isPermissionDeniedError(error)) message.warning('登录已过期，请重新登录');
-      } else if (error?.response?.status === 403) {
-        state.error = '没有权限访问定时任务功能';
-        // 403 已由请求拦截器统一提示，这里只保留页面错误状态
-        if (!isPermissionDeniedError(error)) message.error('没有权限访问定时任务功能');
-      } else if (error?.response?.status === 400) {
-        state.error = '请求参数错误，请检查筛选条件';
-        if (!isPermissionDeniedError(error)) message.error('请求参数错误，请检查筛选条件');
-      } else if (error?.response?.status >= 500) {
-        state.error = '服务器内部错误，请稍后重试';
-        if (!isPermissionDeniedError(error)) message.error('服务器内部错误，请稍后重试');
-      } else if (error?.message?.includes('Network Error') || error?.code === 'ECONNABORTED') {
-        state.error = '网络连接失败，请检查网络后重试';
-        if (!isPermissionDeniedError(error)) message.error('网络连接失败，请检查网络后重试');
-      } else {
-        state.error = '获取定时任务列表失败，请刷新重试';
-        if (!isPermissionDeniedError(error)) message.error('获取定时任务列表失败，请刷新重试');
-      }
-
+      // 列表加载双提示修复：取消类静默；请求层已提示（任意 HTTP 4xx/5xx、网络错误 / 超时含 ETIMEDOUT）
+      // 页面只保留错误状态；业务错误（HTTP 200 + code≠0）由请求层弹后端原文一条，处理不变
+      state.error = handleListFailure(error, CRON_LIST_FAILURE_TEXTS);
       state.cronJobs = [];
       state.total = 0;
     } finally {
@@ -493,14 +578,8 @@ export function useCronJobPage() {
       state.filteredSshResources = items;
     } catch (error: any) {
       if (ticket !== sshRequest) return;
-
-      if (error?.response?.status === 401) {
-        if (!isPermissionDeniedError(error)) message.warning('获取SSH资源失败：登录已过期');
-      } else if (error?.response?.status === 403) {
-        if (!isPermissionDeniedError(error)) message.error('没有权限获取SSH资源');
-      } else {
-        if (!isPermissionDeniedError(error)) message.error('获取SSH资源列表失败，请稍后重试');
-      }
+      // 与任务列表同一口径：取消类静默，请求层已提示的不再叠加
+      handleListFailure(error, SSH_LIST_FAILURE_TEXTS);
       state.sshResources = [];
       state.filteredSshResources = [];
     } finally {
@@ -570,7 +649,8 @@ export function useCronJobPage() {
       await formRef.value?.validate();
       if (!state.isCreateModalVisible || generation !== pageGeneration || ticket !== createRequest) return;
 
-      await createCronJob(state.createFormModel);
+      // job_type 显式随请求发送，后端为必填
+      await createCronJob({ ...state.createFormModel, job_type: state.createFormModel.job_type });
       if (generation !== pageGeneration || ticket !== createRequest) return;
       message.success('定时任务创建成功');
 
@@ -581,7 +661,7 @@ export function useCronJobPage() {
       if (error?.errorFields) {
         if (!isPermissionDeniedError(error)) message.error('请检查表单输入');
       } else {
-        if (!isPermissionDeniedError(error)) message.error('定时任务创建失败');
+        if (!isNotifiedByRequestLayer(error)) message.error(getBackendErrorMessage(error, '定时任务创建失败'));
 
       }
     } finally {
@@ -591,6 +671,7 @@ export function useCronJobPage() {
 
   // 编辑操作
   const openEditModal = async (job: CronJob) => {
+    if (isLocalExecLocked(job)) return;
     const ticket = ++editRequest;
     try {
       state.submitLoading = true;
@@ -647,7 +728,7 @@ export function useCronJobPage() {
       await formRef.value?.validate();
       if (!state.isEditModalVisible || generation !== pageGeneration || ticket !== editRequest) return;
 
-      await updateCronJob(state.editFormModel);
+      await updateCronJob({ ...state.editFormModel, job_type: state.editFormModel.job_type });
       if (generation !== pageGeneration || ticket !== editRequest) return;
       message.success('定时任务更新成功');
 
@@ -658,7 +739,7 @@ export function useCronJobPage() {
       if (error?.errorFields) {
         if (!isPermissionDeniedError(error)) message.error('请检查表单输入');
       } else {
-        if (!isPermissionDeniedError(error)) message.error('定时任务更新失败');
+        if (!isNotifiedByRequestLayer(error)) message.error(getBackendErrorMessage(error, '定时任务更新失败'));
 
       }
     } finally {
@@ -711,6 +792,7 @@ export function useCronJobPage() {
   };
 
   const triggerJob = (job: CronJob) => {
+    if (isLocalExecLocked(job)) return;
     Modal.confirm({
       title: '执行确认',
       content: `确定要立即执行定时任务 "${job.name}" 吗？`,
@@ -724,7 +806,7 @@ export function useCronJobPage() {
           message.success(`定时任务 "${job.name}" 触发成功`);
           await fetchCronJobs();
         } catch (error) {
-          if (!isPermissionDeniedError(error)) message.error(`定时任务触发失败`);
+          if (!isNotifiedByRequestLayer(error)) message.error(getBackendErrorMessage(error, '定时任务触发失败'));
 
         }
       },
@@ -952,6 +1034,9 @@ export function useCronJobPage() {
     // 表单操作
     validateScheduleExpression,
     handleJobTypeChange,
+
+    // 本地执行开关
+    isLocalExecLocked,
 
     // HTTP头部管理
     addHttpHeader,

@@ -1,0 +1,623 @@
+import type { FormInstance } from 'ant-design-vue';
+
+import { $t } from '@vben/locales';
+
+import axios, { AxiosError, type AxiosAdapter } from 'axios';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';
+
+/**
+ * SEC-03A × Commit 0：cron.allow_local_exec=false 时后端返回 HTTP 200 + code 1 + 原文
+ * （后端 sched/rel01-cron-ddl internal/cron/api/local_exec_contract_test.go），
+ * 走真实 requestClient 拦截器链（只替换网络层 adapter），页面用 getBackendErrorMessage 写法，
+ * 创建 / 更新 / 立即执行各自恰好弹一条后端原文。
+ */
+const notices = vi.hoisted(() => ({
+  error: vi.fn(),
+  warning: vi.fn(),
+  success: vi.fn(),
+  info: vi.fn(),
+}));
+const confirm = vi.hoisted(() => vi.fn());
+vi.mock('ant-design-vue', () => ({ message: notices, Modal: { confirm } }));
+vi.mock('@vben/preferences', () => ({
+  preferences: {
+    app: {
+      enableRefreshToken: false,
+      locale: 'zh-CN',
+      loginExpiredMode: 'modal',
+    },
+  },
+}));
+vi.mock('@vben/stores', () => ({
+  useAccessStore: () => ({
+    accessToken: 'token',
+    isAccessChecked: true,
+    setAccessToken: () => {},
+    setLoginExpired: () => {},
+  }),
+  useUserStore: () => ({ userInfo: { userId: '1' } }),
+}));
+// 登录代际可变：用例里在响应返回前切换账户，触发真实链路上的 RequestOwnerChangedError
+const owner = vi.hoisted(() => ({ generation: 1 }));
+vi.mock('#/store', () => ({
+  useAuthStore: () => ({
+    getAuthGeneration: () => owner.generation,
+    logout: vi.fn(),
+  }),
+}));
+vi.mock('#/api/core', () => ({ refreshTokenApi: vi.fn() }));
+
+const DISABLED_MESSAGE =
+  '本地命令/脚本任务已停用（cron.allow_local_exec=false），请改用 HTTP 或 SSH 任务';
+
+type Route = (config: any) => { data: unknown; status: number };
+let route: Route = () => ({ status: 200, data: { code: 0, data: null } });
+const requests: string[] = [];
+// 写请求在传输层失败（没有 response）：网络错误 / 超时
+let transportError: ((config: any) => AxiosError) | null = null;
+// 列表加载（GET /cron/job/list）在传输层失败
+let listTransportError: ((config: any) => AxiosError) | null = null;
+// SSH 资源列表（GET /tree/local/list）在传输层失败
+let sshTransportError: ((config: any) => AxiosError) | null = null;
+const adapter: AxiosAdapter = async (config) => {
+  requests.push(`${config.method?.toUpperCase()} ${config.url}`);
+  if (transportError && config.method !== 'get') throw transportError(config);
+  if (listTransportError && config.url === '/cron/job/list')
+    throw listTransportError(config);
+  if (sshTransportError && config.url === '/tree/local/list')
+    throw sshTransportError(config);
+  const { status, data } = route(config);
+  const response = {
+    config,
+    data,
+    headers: {},
+    status,
+    statusText: String(status),
+  };
+  // 与真实 adapter 一致：非 2xx 以 AxiosError（带 response）拒绝
+  if (status >= 400) {
+    throw new AxiosError(
+      `Request failed with status code ${status}`,
+      AxiosError.ERR_BAD_RESPONSE,
+      config,
+      null,
+      response,
+    );
+  }
+  return response;
+};
+// requestClient 在 axios.create 时合并 defaults，必须在导入页面（进而导入 request.ts）之前设置
+axios.defaults.adapter = adapter;
+const { isNotifiedByRequestLayer, useCronJobPage } =
+  await import('./Management');
+const { HTTP_ERROR_MESSAGE_KEY_PREFIX } = await import('#/api/request');
+
+const job = (id: number, job_type: number) =>
+  ({
+    id,
+    name: `job-${id}`,
+    max_retry: 0,
+    status: 1,
+    job_type,
+    schedule: '@every 1h',
+  }) as any;
+
+function passValidation(page: ReturnType<typeof useCronJobPage>) {
+  page.formRef.value = {
+    validate: () => Promise.resolve({}),
+  } as unknown as FormInstance;
+}
+
+function rejectWrites(text = DISABLED_MESSAGE) {
+  route = (config) => {
+    if (config.method === 'get') {
+      const url: string = config.url ?? '';
+      if (/\/cron\/job\/\d+\/detail/.test(url) || /\/cron\/job\/\d+$/.test(url))
+        return { status: 200, data: { code: 0, data: job(9, 3) } };
+      return {
+        status: 200,
+        data: {
+          code: 0,
+          data: { items: [], total: 0, allow_local_exec: false },
+        },
+      };
+    }
+    return { status: 200, data: { code: 1, data: null, message: text } };
+  };
+}
+
+function failWritesWithHttp(status: number, text: string) {
+  rejectWrites();
+  const base = route;
+  route = (config) =>
+    config.method === 'get'
+      ? base(config)
+      : { status, data: { code: status, data: null, message: text } };
+}
+
+function expectSingleBackendNotice(text = DISABLED_MESSAGE) {
+  expect(notices.error).toHaveBeenCalledTimes(1);
+  expect(notices.error).toHaveBeenCalledWith({
+    content: text,
+    key: `${BUSINESS_ERROR_MESSAGE_KEY_PREFIX}${text}`,
+  });
+  expect(notices.success).not.toHaveBeenCalled();
+}
+
+describe('cron 开关关闭 × 业务错误只提示一次（真实请求链路）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requests.length = 0;
+    rejectWrites();
+  });
+
+  it('开关关闭：创建命令行任务返回 code 1，全程只弹一条后端原文', async () => {
+    const page = useCronJobPage();
+    page.openCreateModal();
+    page.createFormModel.value.job_type = 2;
+    passValidation(page);
+    await page.submitCreateForm();
+    expect(requests).toContain('POST /cron/job/create');
+    expectSingleBackendNotice();
+    // 失败时创建弹窗保持打开
+    expect(page.isCreateModalVisible.value).toBe(true);
+  });
+
+  it('开关关闭：更新任务返回 code 1，全程只弹一条后端原文', async () => {
+    const page = useCronJobPage();
+    await page.openEditModal(job(9, 3));
+    expect(page.isEditModalVisible.value).toBe(true);
+    page.editFormModel.value.job_type = 4;
+    passValidation(page);
+    await page.submitEditForm();
+    expect(requests).toContain('PUT /cron/job/9/update');
+    expectSingleBackendNotice();
+  });
+
+  it('开关关闭：立即执行返回 code 1，全程只弹一条后端原文', async () => {
+    const page = useCronJobPage();
+    page.triggerJob(job(10, 3));
+    await confirm.mock.calls[0]?.[0].onOk();
+    expect(requests.some((r) => r.startsWith('POST /cron/job/10/'))).toBe(true);
+    expectSingleBackendNotice();
+  });
+
+  it('后端 message 为空：回退通用提示一条，不静默', async () => {
+    rejectWrites('');
+    const page = useCronJobPage();
+    page.triggerJob(job(11, 3));
+    await confirm.mock.calls[0]?.[0].onOk();
+    expect(notices.error).toHaveBeenCalledTimes(1);
+    // 回退文案来自请求层通用错误拦截器（packages/effects/request 的 HTTP 500 默认文案），
+    // 不是空串，也不是页面自己的「定时任务触发失败」
+    const fallback = $t('fallback.http.internalServerError');
+    expect(fallback).not.toBe('');
+    expect(notices.error).toHaveBeenCalledWith({
+      content: fallback,
+      key: `${BUSINESS_ERROR_MESSAGE_KEY_PREFIX}${fallback}`,
+    });
+    expect(notices.error).not.toHaveBeenCalledWith(
+      expect.objectContaining({ content: '定时任务触发失败' }),
+    );
+    expect(notices.success).not.toHaveBeenCalled();
+  });
+});
+
+describe('HTTP 错误（带 response）只提示一次、不展示响应体原文（真实请求链路）', () => {
+  const BODY_MESSAGE = 'dial tcp 10.0.0.8:3306: connect: connection refused';
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requests.length = 0;
+    failWritesWithHttp(500, BODY_MESSAGE);
+  });
+
+  const expectSingleHttpNotice = () => {
+    const fallback = $t('fallback.http.internalServerError');
+    expect(fallback).not.toBe('');
+    expect(notices.error).toHaveBeenCalledTimes(1);
+    expect(notices.error).toHaveBeenCalledWith({
+      content: fallback,
+      key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${fallback}`,
+    });
+    // 页面不再叠加响应体原文或自己的失败文案
+    expect(notices.error).not.toHaveBeenCalledWith(BODY_MESSAGE);
+    expect(JSON.stringify(notices.error.mock.calls)).not.toContain(
+      BODY_MESSAGE,
+    );
+    expect(notices.success).not.toHaveBeenCalled();
+  };
+
+  it('创建返回 HTTP 500：只弹请求层通用文案一条', async () => {
+    const page = useCronJobPage();
+    page.openCreateModal();
+    page.createFormModel.value.job_type = 3;
+    passValidation(page);
+    await page.submitCreateForm();
+    expect(requests).toContain('POST /cron/job/create');
+    expectSingleHttpNotice();
+    expect(page.isCreateModalVisible.value).toBe(true);
+  });
+
+  it('更新返回 HTTP 500：只弹请求层通用文案一条', async () => {
+    const page = useCronJobPage();
+    await page.openEditModal(job(9, 3));
+    passValidation(page);
+    await page.submitEditForm();
+    expect(requests).toContain('PUT /cron/job/9/update');
+    expectSingleHttpNotice();
+  });
+
+  it('立即执行返回 HTTP 500：只弹请求层通用文案一条', async () => {
+    const page = useCronJobPage();
+    page.triggerJob(job(10, 3));
+    await confirm.mock.calls[0]?.[0].onOk();
+    expect(requests.some((r) => r.startsWith('POST /cron/job/10/'))).toBe(true);
+    expectSingleHttpNotice();
+  });
+});
+
+/**
+ * 复审 v4 P3-3：发出了请求但没有响应的 axios 错误（网络错误 / 超时），请求层通用错误拦截器
+ * （packages/effects/request preset-interceptors.ts errorMessageResponseInterceptor）已按固定 key
+ * 弹过一条，页面不再叠加「定时任务创建失败」等提示
+ */
+describe('网络错误 / 超时（有 request 无 response）只提示一次（真实请求链路）', () => {
+  // 与浏览器 xhr adapter 一致：带 request、不带 response
+  const networkError = (config: any) =>
+    new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, {});
+  const timeoutError = (config: any) =>
+    new AxiosError(
+      `timeout of ${config.timeout ?? 0}ms exceeded`,
+      AxiosError.ECONNABORTED,
+      config,
+      {},
+    );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requests.length = 0;
+    rejectWrites();
+  });
+  afterEach(() => {
+    transportError = null;
+  });
+
+  const expectSingleTransportNotice = (key: string) => {
+    const text = $t(key);
+    expect(text).not.toBe('');
+    expect(notices.error).toHaveBeenCalledTimes(1);
+    expect(notices.error).toHaveBeenCalledWith({
+      content: text,
+      key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${text}`,
+    });
+    expect(notices.success).not.toHaveBeenCalled();
+  };
+
+  describe.each([
+    ['网络错误', networkError, 'fallback.http.networkError'],
+    ['超时', timeoutError, 'fallback.http.requestTimeout'],
+  ])('%s', (_label, makeError, key) => {
+    beforeEach(() => {
+      transportError = makeError;
+    });
+
+    it('创建：只弹请求层一条', async () => {
+      const page = useCronJobPage();
+      page.openCreateModal();
+      page.createFormModel.value.job_type = 3;
+      passValidation(page);
+      await page.submitCreateForm();
+      expect(requests).toContain('POST /cron/job/create');
+      expectSingleTransportNotice(key);
+      expect(page.isCreateModalVisible.value).toBe(true);
+    });
+
+    it('更新：只弹请求层一条', async () => {
+      const page = useCronJobPage();
+      await page.openEditModal(job(9, 3));
+      passValidation(page);
+      await page.submitEditForm();
+      expect(requests).toContain('PUT /cron/job/9/update');
+      expectSingleTransportNotice(key);
+    });
+
+    it('立即执行：只弹请求层一条', async () => {
+      const page = useCronJobPage();
+      page.triggerJob(job(10, 3));
+      await confirm.mock.calls[0]?.[0].onOk();
+      expect(requests.some((r) => r.startsWith('POST /cron/job/10/'))).toBe(
+        true,
+      );
+      expectSingleTransportNotice(key);
+    });
+  });
+
+  it('判定边界：取消的请求、没有发出请求的错误不算已提示', () => {
+    expect(
+      isNotifiedByRequestLayer(
+        new AxiosError('Network Error', AxiosError.ERR_NETWORK, {} as any, {}),
+      ),
+    ).toBe(true);
+    expect(
+      isNotifiedByRequestLayer(
+        new axios.CanceledError(undefined, {} as any, {}),
+      ),
+    ).toBe(false);
+    expect(
+      isNotifiedByRequestLayer(
+        new AxiosError('bad option', AxiosError.ERR_BAD_OPTION),
+      ),
+    ).toBe(false);
+    expect(isNotifiedByRequestLayer(new Error('Network Error'))).toBe(false);
+  });
+});
+
+/**
+ * 列表加载双提示：网络错误 / 超时、HTTP 4xx/5xx 由请求层按固定 key 弹过一条，
+ * fetchCronJobs 只保留页面错误状态（isNotifiedByRequestLayer），不再叠加「网络连接失败」等提示；
+ * 业务错误（HTTP 200 + code≠0）处理不变
+ */
+describe('列表加载失败只提示一次（真实请求链路）', () => {
+  const networkError = (config: any) =>
+    new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, {});
+  const timeoutError = (config: any) =>
+    new AxiosError(
+      `timeout of ${config.timeout ?? 0}ms exceeded`,
+      AxiosError.ECONNABORTED,
+      config,
+      {},
+    );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requests.length = 0;
+    rejectWrites();
+  });
+  afterEach(() => {
+    listTransportError = null;
+  });
+
+  const expectSingleRequestLayerNotice = (key: string) => {
+    const text = $t(key);
+    expect(text).not.toBe('');
+    expect(notices.error).toHaveBeenCalledTimes(1);
+    expect(notices.error).toHaveBeenCalledWith({
+      content: text,
+      key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${text}`,
+    });
+    expect(notices.warning).not.toHaveBeenCalled();
+    expect(notices.success).not.toHaveBeenCalled();
+  };
+
+  it.each([
+    ['网络错误', networkError, 'fallback.http.networkError'],
+    ['超时', timeoutError, 'fallback.http.requestTimeout'],
+  ])(
+    '列表加载遇到%s：只弹请求层一条，页面保留错误状态',
+    async (_label, makeError, key) => {
+      listTransportError = makeError;
+      const page = useCronJobPage();
+      await page.fetchCronJobs();
+      expect(requests).toContain('GET /cron/job/list');
+      expectSingleRequestLayerNotice(key);
+      expect(notices.error).not.toHaveBeenCalledWith(
+        '网络连接失败，请检查网络后重试',
+      );
+      expect(page.error.value).toBe('网络连接失败，请检查网络后重试');
+      expect(page.cronJobs.value).toEqual([]);
+      expect(page.loading.value).toBe(false);
+    },
+  );
+
+  it.each([
+    [500, 'fallback.http.internalServerError', '服务器内部错误，请稍后重试'],
+    [400, 'fallback.http.badRequest', '请求参数错误，请检查筛选条件'],
+  ])(
+    '列表加载返回 HTTP %s：只弹请求层一条，页面保留错误状态',
+    async (status, key, pageError) => {
+      route = () => ({
+        status,
+        data: { code: status, data: null, message: 'x' },
+      });
+      const page = useCronJobPage();
+      await page.fetchCronJobs();
+      expectSingleRequestLayerNotice(key);
+      expect(page.error.value).toBe(pageError);
+    },
+  );
+
+  it('列表加载返回 HTTP 401：页面不再叠加「登录已过期」警告', async () => {
+    route = () => ({
+      status: 401,
+      data: { code: 401, data: null, message: 'x' },
+    });
+    const page = useCronJobPage();
+    await page.fetchCronJobs();
+    expectSingleRequestLayerNotice('fallback.http.unauthorized');
+    expect(page.error.value).toBe('登录已过期，请重新登录');
+  });
+
+  it('业务错误（HTTP 200 + code≠0）处理不变：只弹后端原文一条，页面保留错误状态', async () => {
+    const text = '列表查询失败：参数非法';
+    route = () => ({
+      status: 200,
+      data: { code: 1, data: null, message: text },
+    });
+    const page = useCronJobPage();
+    await page.fetchCronJobs();
+    expectSingleBackendNotice(text);
+    expect(page.error.value).toBe('获取定时任务列表失败，请刷新重试');
+  });
+});
+
+/**
+ * 列表加载 incr5：其他 4xx（404 / 409 / 429）、ETIMEDOUT 只由请求层提示一次；
+ * 取消的请求、账户切换（RequestOwnerChangedError）页面静默，零条提示
+ */
+describe('列表加载：其他 4xx、ETIMEDOUT 只提示一次，取消类静默（真实请求链路）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requests.length = 0;
+    owner.generation = 1;
+    rejectWrites();
+  });
+  afterEach(() => {
+    listTransportError = null;
+    owner.generation = 1;
+  });
+
+  const expectSingleRequestLayerNotice = (key: string) => {
+    const text = $t(key);
+    expect(text).not.toBe('');
+    expect(notices.error).toHaveBeenCalledTimes(1);
+    expect(notices.error).toHaveBeenCalledWith({
+      content: text,
+      key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${text}`,
+    });
+    expect(notices.warning).not.toHaveBeenCalled();
+    expect(notices.success).not.toHaveBeenCalled();
+  };
+  const expectSilent = () => {
+    expect(notices.error).not.toHaveBeenCalled();
+    expect(notices.warning).not.toHaveBeenCalled();
+    expect(notices.info).not.toHaveBeenCalled();
+    expect(notices.success).not.toHaveBeenCalled();
+  };
+
+  it.each([
+    [404, 'fallback.http.notFound'],
+    [409, 'fallback.http.internalServerError'],
+    [429, 'fallback.http.internalServerError'],
+  ])(
+    '列表加载返回 HTTP %s：只弹请求层一条，页面保留错误状态',
+    async (status, key) => {
+      route = () => ({
+        status,
+        data: { code: status, data: null, message: 'x' },
+      });
+      const page = useCronJobPage();
+      await page.fetchCronJobs();
+      expect(requests).toContain('GET /cron/job/list');
+      expectSingleRequestLayerNotice(key);
+      expect(notices.error).not.toHaveBeenCalledWith(
+        '获取定时任务列表失败，请刷新重试',
+      );
+      expect(page.error.value).toBe('获取定时任务列表失败，请刷新重试');
+      expect(page.loading.value).toBe(false);
+    },
+  );
+
+  it('列表加载超时（ETIMEDOUT）：只弹请求层一条，页面错误状态为网络错误', async () => {
+    listTransportError = (config) =>
+      new AxiosError(
+        `timeout of ${config.timeout ?? 0}ms exceeded`,
+        AxiosError.ETIMEDOUT,
+        config,
+        {},
+      );
+    const page = useCronJobPage();
+    await page.fetchCronJobs();
+    expect(requests).toContain('GET /cron/job/list');
+    expectSingleRequestLayerNotice('fallback.http.requestTimeout');
+    expect(page.error.value).toBe('网络连接失败，请检查网络后重试');
+    expect(page.cronJobs.value).toEqual([]);
+    expect(page.loading.value).toBe(false);
+  });
+
+  it('列表请求被取消（CanceledError）：零条提示，不写错误状态', async () => {
+    listTransportError = (config) =>
+      new axios.CanceledError(undefined, config, {});
+    const page = useCronJobPage();
+    await page.fetchCronJobs();
+    expect(requests).toContain('GET /cron/job/list');
+    expectSilent();
+    expect(page.error.value).toBeNull();
+    expect(page.cronJobs.value).toEqual([]);
+    expect(page.loading.value).toBe(false);
+  });
+
+  it('响应返回前切换账户（RequestOwnerChangedError）：零条提示，不写错误状态', async () => {
+    route = () => {
+      // 请求发出后账户切换：响应拦截器 ownerScope.response 抛 RequestOwnerChangedError
+      owner.generation = 2;
+      return {
+        status: 200,
+        data: { code: 0, data: { items: [job(1, 3)], total: 1 } },
+      };
+    };
+    const page = useCronJobPage();
+    await page.fetchCronJobs();
+    expect(requests).toContain('GET /cron/job/list');
+    expectSilent();
+    expect(page.error.value).toBeNull();
+    expect(page.cronJobs.value).toEqual([]);
+    expect(page.loading.value).toBe(false);
+  });
+});
+
+/**
+ * SSH 资源列表（fetchSshResources）与任务列表同一口径：5xx、网络错误只由请求层提示一次，
+ * 业务错误只弹后端原文一条
+ */
+describe('SSH 资源列表加载失败只提示一次（真实请求链路）', () => {
+  const SSH_PAGE_TEXT = '获取SSH资源列表失败，请稍后重试';
+  beforeEach(() => {
+    vi.clearAllMocks();
+    requests.length = 0;
+    rejectWrites();
+  });
+  afterEach(() => {
+    sshTransportError = null;
+  });
+
+  const expectSingleRequestLayerNotice = (key: string) => {
+    const text = $t(key);
+    expect(text).not.toBe('');
+    expect(notices.error).toHaveBeenCalledTimes(1);
+    expect(notices.error).toHaveBeenCalledWith({
+      content: text,
+      key: `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${text}`,
+    });
+    expect(notices.error).not.toHaveBeenCalledWith(SSH_PAGE_TEXT);
+    expect(notices.warning).not.toHaveBeenCalled();
+  };
+
+  it('SSH 资源列表返回 HTTP 500：只弹请求层一条', async () => {
+    route = () => ({
+      status: 500,
+      data: { code: 500, data: null, message: 'x' },
+    });
+    const page = useCronJobPage();
+    await page.fetchSshResources();
+    expect(requests).toContain('GET /tree/local/list');
+    expectSingleRequestLayerNotice('fallback.http.internalServerError');
+    expect(page.sshResources.value).toEqual([]);
+    expect(page.sshResourcesLoading.value).toBe(false);
+  });
+
+  it('SSH 资源列表网络错误：只弹请求层一条', async () => {
+    sshTransportError = (config) =>
+      new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, {});
+    const page = useCronJobPage();
+    await page.fetchSshResources();
+    expect(requests).toContain('GET /tree/local/list');
+    expectSingleRequestLayerNotice('fallback.http.networkError');
+    expect(page.sshResources.value).toEqual([]);
+  });
+
+  it('SSH 资源列表业务错误（HTTP 200 + code≠0）：只弹后端原文一条', async () => {
+    const text = 'SSH 资源查询失败：树节点不存在';
+    route = () => ({
+      status: 200,
+      data: { code: 1, data: null, message: text },
+    });
+    const page = useCronJobPage();
+    await page.fetchSshResources();
+    expect(requests).toContain('GET /tree/local/list');
+    expectSingleBackendNotice(text);
+    expect(notices.warning).not.toHaveBeenCalled();
+    expect(page.sshResources.value).toEqual([]);
+  });
+});
