@@ -90,7 +90,7 @@
       "route": "/k8s_cluster",
       "view": "k8s/cluster/Cluster.vue",
       "sharedPage": true,
-      "inlineStyles": 27,
+      "inlineStyles": 25,
       "scopedStyle": true
     },
     {
