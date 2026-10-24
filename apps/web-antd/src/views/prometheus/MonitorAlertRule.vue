@@ -316,7 +316,7 @@
                 >
                   编辑
                 </a-button>
-                <a-dropdown>
+                <a-dropdown v-if="can('monitor.alertRule.delete')">
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
                       <a-menu-divider />
@@ -883,6 +883,11 @@ import {
   type MonitorSendGroup,
 } from '#/api/core/prometheus/prometheus_send_group';
 
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
+
 const ENABLE_STATUS = {
   ENABLED: 1,
   DISABLED: 2,
@@ -932,6 +937,8 @@ const createInitialForm = () => ({
 const handleApiError = (error: any, defaultMessage: string) => {
   const errorMessage =
     error?.response?.data?.message || error.message || defaultMessage;
+  // 403 已由请求拦截器统一提示
+  if (isPermissionDeniedError(error)) return;
   message.error(errorMessage);
 };
 
@@ -1121,7 +1128,7 @@ const fetchAlertRules = async () => {
     if (!request.fail(error, '加载告警规则列表失败')) return;
     data.value = [];
     paginationConfig.total = 0;
-    message.error(loadError.value);
+    if (!isPermissionDeniedError(error)) message.error(loadError.value);
   } finally {
     request.finish();
   }

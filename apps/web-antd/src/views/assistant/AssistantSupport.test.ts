@@ -1,5 +1,6 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd from 'ant-design-vue';
+import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Component } from 'vue';
 
@@ -17,6 +18,7 @@ vi.mock('#/api/core/aiops/assistant', () => api);
 let wrapper: VueWrapper | undefined;
 beforeEach(() => {
   vi.clearAllMocks();
+  setActivePinia(createPinia());
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({

@@ -30,6 +30,11 @@ import {
 import type { WorkorderCategoryItem } from '#/api/core/workorder/workorder_category';
 import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
 
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
+
 const formDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
     const width = window.innerWidth;
@@ -457,7 +462,8 @@ const loadFormDialogCategories = async (
     }
   } catch (error: any) {
     if (reset) {
-      message.error(error.message || '加载分类列表失败');
+      if (!isPermissionDeniedError(error))
+        message.error(error.message || '加载分类列表失败');
       formDialogCategories.value = [];
       categoryPagination.current = 1;
       categoryPagination.total = 0;
@@ -659,7 +665,7 @@ const loadFormDesigns = async (): Promise<void> => {
     paginationConfig.total = 0;
     updateStats([]);
     loadError.value = '加载表单列表失败';
-    message.error(loadError.value);
+    if (!isPermissionDeniedError(error)) message.error(loadError.value);
   } finally {
     loading.value = false;
   }
@@ -697,7 +703,7 @@ const loadCategories = async (): Promise<void> => {
 
     categories.value = allCategories;
   } catch (error) {
-    message.error('加载分类列表失败');
+    if (!isPermissionDeniedError(error)) message.error('加载分类列表失败');
     categories.value = [];
   }
 };
@@ -789,7 +795,7 @@ const handleEditForm = async (
       await loadCategoryForEdit(response);
     }
   } catch (error) {
-    message.error('加载表单详情失败');
+    if (!isPermissionDeniedError(error)) message.error('加载表单详情失败');
   }
 };
 
@@ -866,7 +872,7 @@ const handleViewForm = async (
       detailDialogVisible.value = true;
     }
   } catch (error) {
-    message.error('加载表单详情失败');
+    if (!isPermissionDeniedError(error)) message.error('加载表单详情失败');
   }
 };
 
@@ -906,7 +912,7 @@ const handlePreviewForm = async (
       initPreviewFormData(response.schema);
     }
   } catch (error) {
-    message.error('加载预览数据失败');
+    if (!isPermissionDeniedError(error)) message.error('加载预览数据失败');
   } finally {
     previewLoading.value = false;
   }
@@ -928,7 +934,7 @@ const publishForm = async (record: WorkorderFormDesignItem): Promise<void> => {
     message.success(`表单 "${record.name}" 已发布`);
     loadFormDesigns();
   } catch (error) {
-    message.error('发布表单失败');
+    if (!isPermissionDeniedError(error)) message.error('发布表单失败');
   }
 };
 
@@ -948,7 +954,7 @@ const archiveForm = async (record: WorkorderFormDesignItem): Promise<void> => {
     message.success(`表单 "${record.name}" 已归档`);
     loadFormDesigns();
   } catch (error) {
-    message.error('归档表单失败');
+    if (!isPermissionDeniedError(error)) message.error('归档表单失败');
   }
 };
 
@@ -970,7 +976,7 @@ const unarchiveForm = async (
     message.success(`表单 "${record.name}" 已取消归档`);
     loadFormDesigns();
   } catch (error) {
-    message.error('取消归档表单失败');
+    if (!isPermissionDeniedError(error)) message.error('取消归档表单失败');
   }
 };
 
@@ -987,7 +993,7 @@ const confirmDelete = (record: WorkorderFormDesignItem): void => {
         message.success(`表单 "${record.name}" 已删除`);
         loadFormDesigns();
       } catch (error) {
-        message.error('删除表单失败');
+        if (!isPermissionDeniedError(error)) message.error('删除表单失败');
       }
     },
   });
@@ -1048,7 +1054,7 @@ const saveForm = async (): Promise<void> => {
     formDialogVisible.value = false;
     loadFormDesigns();
   } catch (error) {
-    message.error('保存表单失败');
+    if (!isPermissionDeniedError(error)) message.error('保存表单失败');
   }
 };
 
@@ -1387,8 +1393,15 @@ onMounted(() => {
                       <a-menu-item key="unarchive" v-if="record.status === 3"
                         >取消归档</a-menu-item
                       >
-                      <a-menu-divider />
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                      <a-menu-divider
+                        v-if="can('workorder.formDesign.delete')"
+                      />
+                      <a-menu-item
+                        v-if="can('workorder.formDesign.delete')"
+                        key="delete"
+                        danger
+                        >删除</a-menu-item
+                      >
                     </a-menu>
                   </template>
                   <a-button size="small">

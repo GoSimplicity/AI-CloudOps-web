@@ -8,7 +8,7 @@
             <a-button class="tool-button" @click="showRawDrawer = true" :disabled="!workflowResult">
               原始结果
             </a-button>
-            <a-button
+            <a-button v-if="can('aiops.autofix.run')"
               class="tool-button tool-button-primary"
               type="primary"
               @click="runWorkflow"
@@ -273,6 +273,10 @@ import {
   getStatusTagColor,
   normalizeWorkflowResult,
 } from './autofix-format';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 const workflowAgents = [
   { description: '识别任务类型', icon: 'lucide:route', name: 'Coordinator', title: 'Coordinator' },

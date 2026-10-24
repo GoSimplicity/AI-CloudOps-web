@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import type { AutoFixTemplateKey } from './useAutoFixWorkflow';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 const namespace = defineModel<string>('namespace', { required: true });
 const deployment = defineModel<string>('deployment', { required: true });
 const event = defineModel<string>('event', { required: true });
@@ -55,6 +59,7 @@ const emit = defineEmits<{ run: []; reset: []; templateChange: [] }>();
     <a-space wrap>
       <a-button :disabled="busy" @click="emit('reset')">重置</a-button>
       <a-button
+        v-if="can('aiops.autofix.run')"
         type="primary"
         :loading="busy"
         :disabled="!valid || busy"

@@ -17,6 +17,10 @@ import { message } from 'ant-design-vue';
 import { useCronJobPage } from './Management';
 import { useAccessStore } from '@vben/stores';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 // 使用组合式函数
 const {
   // 响应式状态
@@ -320,7 +324,7 @@ onUnmounted(clearPage);
           danger
           @click="batchOperation('删除')"
           :disabled="!selectedRows.length"
-          v-if="selectedRows.length > 0"
+          v-if="can('cron.job.batchDelete') && (selectedRows.length > 0)"
           class="k8s-toolbar-btn"
           title="批量删除选中的任务"
         >
@@ -445,7 +449,7 @@ onUnmounted(clearPage);
               </a-button>
             </a-tooltip>
 
-            <a-tooltip title="立即执行">
+            <a-tooltip v-if="can('cron.job.trigger')" title="立即执行">
               <a-button
                 type="text"
                 size="small"
@@ -456,7 +460,7 @@ onUnmounted(clearPage);
               </a-button>
             </a-tooltip>
 
-            <a-tooltip title="删除任务">
+            <a-tooltip v-if="can('cron.job.delete')" title="删除任务">
               <a-button
                 type="text"
                 size="small"

@@ -21,6 +21,11 @@ import {
 
 import { listApisApi } from '#/api/core/system/api';
 
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
+
 // 表单引用
 const formRef = ref<FormInstance>();
 
@@ -252,7 +257,8 @@ const selectAllSearchedApis = async () => {
     updateFormApiIds();
     message.success(`已添加 ${addedCount} 个API到选择列表`);
   } catch (error: any) {
-    message.error(error.message || '获取API列表失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取API列表失败');
   } finally {
     selectAllLoading.value = false;
   }
@@ -275,7 +281,8 @@ const fetchRoleList = async () => {
     roleList.value = response.items || [];
     paginationConfig.total = response.total || 0;
   } catch (error: any) {
-    message.error(error.message || '获取角色列表失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取角色列表失败');
     roleList.value = [];
     paginationConfig.total = 0;
   } finally {
@@ -321,7 +328,8 @@ const fetchApiList = async () => {
 
     apiList.value = safeApiList;
   } catch (error: any) {
-    message.error(error.message || '获取API列表失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取API列表失败');
   }
 };
 
@@ -344,7 +352,8 @@ const fetchModalApiList = async () => {
     modalApiList.value = safeApiList;
     apiPagination.total = response.total || 0;
   } catch (error: any) {
-    message.error(error.message || '获取API列表失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取API列表失败');
     modalApiList.value = [];
     apiPagination.total = 0;
   } finally {
@@ -365,7 +374,8 @@ const fetchRoleApis = async (roleId: number) => {
 
     assignedApis.value = safeAssignedApis;
   } catch (error: any) {
-    message.error(error.message || '获取角色权限失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取角色权限失败');
   }
 };
 
@@ -457,7 +467,8 @@ const handleEdit = async (role: Role) => {
     fetchModalApiList();
     modalVisible.value = true;
   } catch (error: any) {
-    message.error(error.message || '获取角色详情失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取角色详情失败');
   }
 };
 
@@ -467,7 +478,8 @@ const handleView = async (role: Role) => {
     viewRoleData.value = response;
     viewModalVisible.value = true;
   } catch (error: any) {
-    message.error(error.message || '获取角色详情失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取角色详情失败');
   }
 };
 
@@ -486,7 +498,8 @@ const handleDelete = async (role: Role) => {
     }
     await fetchRoleList();
   } catch (error: any) {
-    message.error(error.message || '删除失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '删除失败');
   }
 };
 
@@ -507,7 +520,8 @@ const handleStatusChange = async (role: Role, newStatus: 0 | 1) => {
     message.success('状态更新成功');
   } catch (error: any) {
     role.status = originalStatus;
-    message.error(error.message || '状态更新失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '状态更新失败');
   }
 };
 
@@ -541,7 +555,8 @@ const handleSubmit = async () => {
     await fetchRoleList();
   } catch (error: any) {
     if (!error.errorFields) {
-      message.error(error.message || '操作失败');
+      if (!isPermissionDeniedError(error))
+        message.error(error.message || '操作失败');
     }
   } finally {
     submitLoading.value = false;
@@ -560,7 +575,8 @@ const handleAssignApi = async (api: any) => {
     await fetchRoleApis(currentRole.value.id);
     await fetchRoleList();
   } catch (error: any) {
-    message.error(error.message || '权限分配失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '权限分配失败');
   }
 };
 
@@ -576,7 +592,8 @@ const handleRevokeApi = async (api: any) => {
     await fetchRoleApis(currentRole.value.id);
     await fetchRoleList();
   } catch (error: any) {
-    message.error(error.message || '权限移除失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '权限移除失败');
   }
 };
 
@@ -772,6 +789,7 @@ onMounted(() => {
                 >权限</a-button
               >
               <a-popconfirm
+                v-if="can('system.role.delete')"
                 title="确定要删除吗？"
                 @confirm="handleDelete(record)"
                 :disabled="record.is_system === 1"

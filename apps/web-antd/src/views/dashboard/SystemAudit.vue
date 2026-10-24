@@ -24,6 +24,11 @@ import {
 } from '#/api/core/system/audit';
 
 import { getUserDetailApi } from '#/api/core/system/user';
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+// 清单 #4 / #5：待确认（SEC-13/D4 计划下线），FE-02 期间按临时码隐藏
+const { can } = usePermission();
 
 // 扩展审计日志类型，包含用户信息
 interface AuditLogWithUser extends AuditLog {
@@ -245,7 +250,8 @@ const fetchAuditLogs = async () => {
     auditLogList.value = logsWithUserInfo;
     paginationConfig.total = response.total || 0;
   } catch (error: any) {
-    message.error(error.message || '获取审计日志失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取审计日志失败');
     auditLogList.value = [];
     paginationConfig.total = 0;
   } finally {
@@ -258,7 +264,8 @@ const fetchAuditStatistics = async () => {
     const response = await getAuditStatisticsApi();
     auditStatistics.value = response;
   } catch (error: any) {
-    message.error(error.message || '获取统计数据失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取统计数据失败');
   }
 };
 
@@ -284,7 +291,8 @@ const fetchLogDetail = async (id: number) => {
     viewLogData.value = logWithUserInfo;
     viewModalVisible.value = true;
   } catch (error: any) {
-    message.error(error.message || '获取日志详情失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取日志详情失败');
   }
 };
 
@@ -336,7 +344,8 @@ const performAdvancedSearch = async () => {
     auditLogList.value = logsWithUserInfo;
     paginationConfig.total = response.total || 0;
   } catch (error: any) {
-    message.error(error.message || '高级搜索失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '高级搜索失败');
     auditLogList.value = [];
     paginationConfig.total = 0;
   } finally {
@@ -424,7 +433,8 @@ const handleDelete = async (log: AuditLogWithUser) => {
     fetchAuditLogs();
     fetchAuditStatistics();
   } catch (error: any) {
-    message.error(error.message || '删除失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '删除失败');
   }
 };
 
@@ -441,7 +451,8 @@ const handleBatchDelete = async () => {
     fetchAuditLogs();
     fetchAuditStatistics();
   } catch (error: any) {
-    message.error(error.message || '批量删除失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '批量删除失败');
   }
 };
 
@@ -470,7 +481,7 @@ onMounted(() => {
         导出当前页
       </a-button>
       <a-button
-        v-if="selectedRowKeys.length > 0"
+        v-if="selectedRowKeys.length > 0 && can('system.audit.batchDelete')"
         type="primary"
         danger
         @click="handleBatchDelete"
@@ -657,6 +668,7 @@ onMounted(() => {
                 >查看</a-button
               >
               <a-popconfirm
+                v-if="can('system.audit.delete')"
                 title="确定要删除吗？"
                 @confirm="handleDelete(record)"
               >

@@ -38,6 +38,11 @@ import {
 } from '#/api/core/tree/tree_local';
 import { getTreeList } from '#/api/core/tree/tree_node';
 
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
+
 const loadError = ref<string | null>(null);
 let listRequest = 0;
 let detailRequest = 0;
@@ -268,7 +273,7 @@ const fetchTreeData = async (): Promise<void> => {
     treeData.value = response.items || [];
   } catch (error) {
 
-    message.error('获取服务树数据失败');
+    if (!isPermissionDeniedError(error)) message.error('获取服务树数据失败');
   }
 };
 
@@ -299,7 +304,7 @@ const fetchLocalResources = async (): Promise<void> => {
   } catch (error) {
     if (ticket !== listRequest) return;
     loadError.value = '获取本地资源列表失败，请重试';
-    message.error('获取本地资源列表失败');
+    if (!isPermissionDeniedError(error)) message.error('获取本地资源列表失败');
 
     localResources.value = [];
     pagination.total = 0;
@@ -416,7 +421,7 @@ const handleViewDetail = async (record: TreeLocalResource): Promise<void> => {
   } catch (error) {
     if (ticket !== detailRequest) return;
 
-    message.error('获取资源详情失败');
+    if (!isPermissionDeniedError(error)) message.error('获取资源详情失败');
   } finally {
     if (ticket === detailRequest) detailLoading.value = false;
   }
@@ -513,7 +518,7 @@ const handleBind = async (): Promise<void> => {
       };
     }
   } catch (error) {
-    message.error('绑定失败');
+    if (!isPermissionDeniedError(error)) message.error('绑定失败');
 
   } finally {
     bindLoading.value = false;
@@ -549,7 +554,7 @@ const handleUnbind = async (): Promise<void> => {
       };
     }
   } catch (error) {
-    message.error('解绑失败');
+    if (!isPermissionDeniedError(error)) message.error('解绑失败');
 
   } finally {
     unbindLoading.value = false;
@@ -583,8 +588,8 @@ const handleSubmit = async (): Promise<void> => {
     message.success(editing ? '服务器信息更新成功' : '服务器添加成功');
     modalVisible.value = false;
     await fetchLocalResources();
-  } catch {
-    if (ticket === formRequest) message.error(editing ? '更新服务器失败' : '添加服务器失败');
+  } catch (error) {
+    if (ticket === formRequest && !isPermissionDeniedError(error)) message.error(editing ? '更新服务器失败' : '添加服务器失败');
   } finally {
     if (ticket === formRequest) submitLoading.value = false;
   }
@@ -608,7 +613,7 @@ const handleDelete = (record: TreeLocalResource): void => {
 
         await fetchLocalResources();
       } catch (error) {
-        message.error('删除服务器失败');
+        if (!isPermissionDeniedError(error)) message.error('删除服务器失败');
 
       }
     }
@@ -623,7 +628,7 @@ onMounted(async () => {
     ]);
   } catch (error) {
 
-    message.error('页面数据加载失败，请刷新页面重试');
+    if (!isPermissionDeniedError(error)) message.error('页面数据加载失败，请刷新页面重试');
   }
 });
 onBeforeUnmount(() => { listRequest++; detailRequest++; formRequest++; });
@@ -852,11 +857,11 @@ const closeDetails = () => {
                       >
                         <deployment-unit-outlined /> 解绑服务树
                       </a-menu-item>
-                      <a-menu-item key="terminal" @click="handleConnectTerminal(record)">
+                      <a-menu-item v-if="can('tree.local.terminal')" key="terminal" @click="handleConnectTerminal(record)">
                         <code-outlined /> 连接终端
                       </a-menu-item>
-                      <a-menu-divider />
-                      <a-menu-item key="delete" @click="handleDelete(record)" danger>
+                      <a-menu-divider v-if="can('tree.local.delete')" />
+                      <a-menu-item v-if="can('tree.local.delete')" key="delete" @click="handleDelete(record)" danger>
                         <delete-outlined /> 删除
                       </a-menu-item>
                     </a-menu>
@@ -1201,7 +1206,7 @@ const closeDetails = () => {
                   <edit-outlined /> 编辑
                 </a-button>
               </a-button-group>
-              <a-button danger @click="handleDelete(currentDetail)">
+              <a-button v-if="can('tree.local.delete')" danger @click="handleDelete(currentDetail)">
                 <delete-outlined /> 删除
               </a-button>
             </div>

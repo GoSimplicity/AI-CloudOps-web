@@ -121,7 +121,7 @@
             type="primary" 
             @click="() => batchOperation('执行')" 
             :disabled="!selectedRows.length || selectedRows.some(row => row.status === TaskStatus.RUNNING)" 
-            v-if="selectedRows.length > 0"
+            v-if="can('k8s.task.batchApply') && (selectedRows.length > 0)"
             class="k8s-toolbar-btn"
             title="批量执行选中的任务"
           >
@@ -134,7 +134,7 @@
             danger 
             @click="() => batchOperation('删除')" 
             :disabled="!selectedRows.length" 
-            v-if="selectedRows.length > 0"
+            v-if="can('k8s.task.batchDelete') && (selectedRows.length > 0)"
             class="k8s-toolbar-btn"
             title="批量删除选中的任务"
           >
@@ -230,7 +230,7 @@
                 <template #icon><EyeOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="执行任务">
+            <a-tooltip v-if="can('k8s.task.apply')" title="执行任务">
               <a-button 
                 title="执行任务" 
                 @click="openExecuteModal(record)"
@@ -248,7 +248,7 @@
                 <template #icon><EditOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="删除">
+            <a-tooltip v-if="can('k8s.task.delete')" title="删除">
               <a-button 
                 title="删除" 
                 danger 
@@ -595,6 +595,10 @@ import {
   FileTextOutlined,
   DatabaseOutlined,
 } from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 const {
   // state

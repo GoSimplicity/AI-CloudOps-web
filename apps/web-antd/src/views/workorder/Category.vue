@@ -158,8 +158,8 @@
                           启用
                         </template>
                       </a-menu-item>
-                      <a-menu-divider />
-                      <a-menu-item key="delete" danger>
+                      <a-menu-divider v-if="can('workorder.category.delete')" />
+                      <a-menu-item v-if="can('workorder.category.delete')" key="delete" danger>
                         <DeleteOutlined />
                         删除
                       </a-menu-item>
@@ -303,6 +303,11 @@ import {
   listWorkorderCategory,
   detailWorkorderCategory,
 } from '#/api/core/workorder/workorder_category';
+
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
 
 /**
  * 表格列配置
@@ -463,7 +468,7 @@ const loadCategoryList = async (): Promise<void> => {
       total.value = 0;
     }
   } catch (error) {
-    message.error('加载分类列表失败');
+    if (!isPermissionDeniedError(error)) message.error('加载分类列表失败');
     categoryList.value = [];
     total.value = 0;
   } finally {
@@ -548,7 +553,7 @@ const handleEdit = async (record: WorkorderCategoryItem): Promise<void> => {
       detailDialog.visible = false; // 如果是从详情对话框打开的，关闭详情对话框
     }
   } catch (error) {
-    message.error('加载分类详情失败');
+    if (!isPermissionDeniedError(error)) message.error('加载分类详情失败');
   }
 };
 
@@ -566,7 +571,7 @@ const handleView = async (record: WorkorderCategoryItem): Promise<void> => {
       detailDialog.visible = true;
     }
   } catch (error) {
-    message.error('加载分类详情失败');
+    if (!isPermissionDeniedError(error)) message.error('加载分类详情失败');
   }
 };
 
@@ -608,7 +613,7 @@ const handleToggleStatus = async (
     // 重新加载当前页数据
     await loadCategoryList();
   } catch (error) {
-    message.error('更新分类状态失败');
+    if (!isPermissionDeniedError(error)) message.error('更新分类状态失败');
   }
 };
 
@@ -636,7 +641,7 @@ const handleDelete = (record: WorkorderCategoryItem): void => {
 
         await loadCategoryList();
       } catch (error) {
-        message.error('删除分类失败');
+        if (!isPermissionDeniedError(error)) message.error('删除分类失败');
       }
     },
   });
@@ -685,7 +690,7 @@ const handleSubmit = async (): Promise<void> => {
     closeFormDialog();
     await loadCategoryList();
   } catch (error) {
-    message.error('保存分类失败');
+    if (!isPermissionDeniedError(error)) message.error('保存分类失败');
   } finally {
     submitLoading.value = false;
   }

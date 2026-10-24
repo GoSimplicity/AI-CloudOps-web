@@ -1,8 +1,18 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-import Antd from 'ant-design-vue';
+import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  createForbiddenResponseInterceptor,
+  createPermissionDeniedError,
+} from '#/utils/permission/forbidden';
 import Process from './Process.vue';
+
+// FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
+vi.mock('#/utils/permission', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#/utils/permission')>()),
+  usePermission: () => ({ can: () => true, hasPerm: () => true }),
+}));
 
 const client = vi.hoisted(() => ({
   get: vi.fn(),
@@ -105,4 +115,24 @@ describe('工单流程列表交互', () => {
     await flushPromises();
     expect(client.post).not.toHaveBeenCalled();
   });
+
+  it('列表 403 已由统一提示，页面保留错误区但不重复弹错', async () => {
+    await flushPromises();
+    const error = vi.spyOn(message, 'error');
+    client.get.mockRejectedValueOnce(await notifiedForbiddenError());
+    await wrapper.get('.ops-page__filters button').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('.ant-alert').text()).toContain('加载流程数据失败');
+    expect(error).not.toHaveBeenCalled();
+    client.get.mockRejectedValueOnce(new Error('unavailable'));
+    await wrapper.get('.ops-page__filters button').trigger('click');
+    await flushPromises();
+    expect(error).toHaveBeenCalledWith('加载流程数据失败');
+  });
 });
+
+/** 模拟请求拦截器链：业务 403 经统一提示拦截器后抛给页面的错误（已提示标记） */
+async function notifiedForbiddenError() {
+  const { rejected } = createForbiddenResponseInterceptor(() => {});
+  return rejected(createPermissionDeniedError()).catch((error) => error);
+}

@@ -193,8 +193,8 @@
                       <a-menu-item key="change">
                         <Icon icon="carbon:change-catalog" /> 调班记录
                       </a-menu-item>
-                      <a-menu-divider />
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                      <a-menu-divider v-if="can('monitor.onDutyGroup.delete')" />
+                      <a-menu-item v-if="can('monitor.onDutyGroup.delete')" key="delete" danger>删除</a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
@@ -865,6 +865,11 @@ import {
 import dayjs, { type Dayjs } from 'dayjs';
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
+
 const router = useRouter();
 
 // 用户接口类型
@@ -1254,7 +1259,7 @@ const fetchOnDutyGroups = async (): Promise<void> => {
     data.value = [];
     paginationConfig.total = 0;
     updateStats();
-    message.error(loadError.value);
+    if (!isPermissionDeniedError(error)) message.error(loadError.value);
   } finally {
     request.finish();
   }
@@ -1301,7 +1306,7 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
     userPaginationConfig.hasMore = page * userPaginationConfig.pageSize < total;
   } catch (error: any) {
 
-    message.error(error.message || '获取用户列表失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '获取用户列表失败');
   } finally {
     usersLoading.value = false;
   }
@@ -1356,7 +1361,7 @@ const fetchOnDutyGroupDetail = async (id: number): Promise<void> => {
     }
   } catch (error: any) {
 
-    message.error(error.message || '获取值班组详情失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '获取值班组详情失败');
   }
 };
 
@@ -1402,7 +1407,7 @@ const fetchOnDutyHistory = async (id: number, startDate?: string, endDate?: stri
     }
   } catch (error: any) {
 
-    message.error(error.message || '获取值班历史失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '获取值班历史失败');
     if (!append) {
       historyDialog.data = [];
     }
@@ -1440,7 +1445,7 @@ const fetchChangeRecords = async (page = 1, append = false): Promise<void> => {
     }
   } catch (error: any) {
 
-    message.error(error.message || '获取调班记录失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '获取调班记录失败');
     if (!append) {
       changeDialog.data = [];
     }
@@ -1522,7 +1527,7 @@ const handleEnableChange = async (record: MonitorOnDutyGroup & { statusLoading?:
     }
   } catch (error: any) {
 
-    message.error(error.message || '更新值班组状态失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '更新值班组状态失败');
   } finally {
     if (record) {
       record.statusLoading = false;
@@ -1703,7 +1708,7 @@ const exportHistory = async (): Promise<void> => {
     message.success(`值班历史已导出 (${exportData.length}条记录)`);
   } catch (error: any) {
 
-    message.error(error.message || '导出值班历史失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '导出值班历史失败');
   } finally {
     historyDialog.loading = false;
   }
@@ -1837,7 +1842,7 @@ const handleAdd = async (): Promise<void> => {
     }
   } catch (error: any) {
 
-    message.error(error.message || '新增值班组失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '新增值班组失败');
   } finally {
     loading.value = false;
   }
@@ -1868,7 +1873,7 @@ const handleUpdate = async (): Promise<void> => {
     }
   } catch (error: any) {
 
-    message.error(error.message || '更新值班组失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '更新值班组失败');
   } finally {
     loading.value = false;
   }
@@ -1901,7 +1906,7 @@ const handleCreateChange = async (): Promise<void> => {
     }
   } catch (error: any) {
 
-    message.error(error.message || '创建调班记录失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '创建调班记录失败');
   } finally {
     loading.value = false;
   }
@@ -1952,7 +1957,7 @@ const handleViewChange = async (record: MonitorOnDutyGroup): Promise<void> => {
     changeDialogVisible.value = true;
   } catch (error: any) {
 
-    message.error(error.message || '获取调班记录失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '获取调班记录失败');
     changeDialog.data = [];
   } finally {
     changeDialog.loading = false;
@@ -1983,7 +1988,7 @@ const confirmDelete = (record: MonitorOnDutyGroup): void => {
         }
       } catch (error: any) {
 
-        message.error(error.message || '删除值班组失败');
+        if (!isPermissionDeniedError(error)) message.error(error.message || '删除值班组失败');
       }
     }
   });

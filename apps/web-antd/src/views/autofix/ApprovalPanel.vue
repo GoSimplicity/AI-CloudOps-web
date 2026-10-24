@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { AutoFixAction } from '#/api/core/aiops/autofix';
 import { getActionLabel } from './autofix-format';
+
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 defineProps<{
   actions: AutoFixAction[];
   selected: string[];
@@ -62,7 +66,7 @@ const emit = defineEmits<{
         </div>
       </label>
     </div>
-    <a-button
+    <a-button v-if="can('aiops.autofix.confirm')"
       type="primary"
       :loading="busy"
       :disabled="!canConfirm"

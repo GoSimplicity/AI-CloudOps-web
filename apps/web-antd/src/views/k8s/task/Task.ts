@@ -26,6 +26,7 @@ import {
   getClustersListApi,
   Env,
 } from '#/api/core/k8s/k8s_cluster';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 // 任务状态枚举
 export const TaskStatus = {
@@ -255,7 +256,7 @@ export function useTaskPage() {
         clearTemplates();
       }
       clustersError.value = '获取集群列表失败，请重试';
-      message.error(clustersError.value);
+      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -289,12 +290,12 @@ export function useTaskPage() {
         templates.value = [...templates.value, ...(res?.items || [])];
       }
       templatesTotal.value = res?.total || 0;
-    } catch {
+    } catch (error) {
       if (requestId !== templateRequestId || filterClusterId.value !== clusterId) return;
       clearTemplates();
       clearTasks();
       templatesError.value = '获取模板目录失败，请重试';
-      message.error(templatesError.value);
+      if (!isPermissionDeniedError(error)) message.error(templatesError.value);
     } finally {
       if (requestId === templateRequestId) templatesLoading.value = false;
     }
@@ -322,11 +323,11 @@ export function useTaskPage() {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
       tasks.value = res?.items || [];
       total.value = res?.total || 0;
-    } catch {
+    } catch (error) {
       if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
       clearTasks();
       loadError.value = '获取 YAML 任务列表失败，请重试';
-      message.error(loadError.value);
+      if (!isPermissionDeniedError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -347,7 +348,7 @@ export function useTaskPage() {
       const res = await getYamlTaskDetail(params);
       currentTaskDetail.value = res || record;
     } catch (err) {
-      message.error('获取任务详情失败');
+      if (!isPermissionDeniedError(err)) message.error('获取任务详情失败');
 
       currentTaskDetail.value = record;
     } finally {
@@ -397,10 +398,10 @@ export function useTaskPage() {
       await fetchTasks();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
+        if (!isPermissionDeniedError(err)) message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('任务创建失败');
+      if (!isPermissionDeniedError(err)) message.error('任务创建失败');
 
     } finally {
       submitLoading.value = false;
@@ -447,10 +448,10 @@ export function useTaskPage() {
       await fetchTasks();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
+        if (!isPermissionDeniedError(err)) message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('任务更新失败');
+      if (!isPermissionDeniedError(err)) message.error('任务更新失败');
 
     } finally {
       submitLoading.value = false;
@@ -491,7 +492,7 @@ export function useTaskPage() {
       isExecuteModalVisible.value = false;
       await fetchTasks();
     } catch (err) {
-      message.error(executeFormModel.value.dry_run ? '任务预检查失败' : '任务执行失败');
+      if (!isPermissionDeniedError(err)) message.error(executeFormModel.value.dry_run ? '任务预检查失败' : '任务执行失败');
 
     } finally {
       executeLoading.value = false;
@@ -520,7 +521,7 @@ export function useTaskPage() {
           message.success('任务删除成功');
           await fetchTasks();
         } catch (err) {
-          message.error('任务删除失败');
+          if (!isPermissionDeniedError(err)) message.error('任务删除失败');
 
         }
       },
@@ -563,7 +564,7 @@ export function useTaskPage() {
           selectedRows.value = [];
           await fetchTasks();
         } catch (err) {
-          message.error(`批量${operation}失败`);
+          if (!isPermissionDeniedError(err)) message.error(`批量${operation}失败`);
 
         }
       },

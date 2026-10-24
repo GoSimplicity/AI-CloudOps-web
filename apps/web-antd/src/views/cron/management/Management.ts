@@ -20,6 +20,7 @@ import {
   CronJobType,
 } from '#/api/core/cron/cron';
 import { getTreeLocalList } from '#/api/core/tree/tree_local';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 // 页面状态接口
 interface CronJobPageState {
@@ -450,22 +451,23 @@ export function useCronJobPage() {
       // 根据错误类型提供不同的处理
       if (error?.response?.status === 401) {
         state.error = '登录已过期，请重新登录';
-        message.warning('登录已过期，请重新登录');
+        if (!isPermissionDeniedError(error)) message.warning('登录已过期，请重新登录');
       } else if (error?.response?.status === 403) {
         state.error = '没有权限访问定时任务功能';
-        message.error('没有权限访问定时任务功能');
+        // 403 已由请求拦截器统一提示，这里只保留页面错误状态
+        if (!isPermissionDeniedError(error)) message.error('没有权限访问定时任务功能');
       } else if (error?.response?.status === 400) {
         state.error = '请求参数错误，请检查筛选条件';
-        message.error('请求参数错误，请检查筛选条件');
+        if (!isPermissionDeniedError(error)) message.error('请求参数错误，请检查筛选条件');
       } else if (error?.response?.status >= 500) {
         state.error = '服务器内部错误，请稍后重试';
-        message.error('服务器内部错误，请稍后重试');
+        if (!isPermissionDeniedError(error)) message.error('服务器内部错误，请稍后重试');
       } else if (error?.message?.includes('Network Error') || error?.code === 'ECONNABORTED') {
         state.error = '网络连接失败，请检查网络后重试';
-        message.error('网络连接失败，请检查网络后重试');
+        if (!isPermissionDeniedError(error)) message.error('网络连接失败，请检查网络后重试');
       } else {
         state.error = '获取定时任务列表失败，请刷新重试';
-        message.error('获取定时任务列表失败，请刷新重试');
+        if (!isPermissionDeniedError(error)) message.error('获取定时任务列表失败，请刷新重试');
       }
 
       state.cronJobs = [];
@@ -493,11 +495,11 @@ export function useCronJobPage() {
       if (ticket !== sshRequest) return;
 
       if (error?.response?.status === 401) {
-        message.warning('获取SSH资源失败：登录已过期');
+        if (!isPermissionDeniedError(error)) message.warning('获取SSH资源失败：登录已过期');
       } else if (error?.response?.status === 403) {
-        message.error('没有权限获取SSH资源');
+        if (!isPermissionDeniedError(error)) message.error('没有权限获取SSH资源');
       } else {
-        message.error('获取SSH资源列表失败，请稍后重试');
+        if (!isPermissionDeniedError(error)) message.error('获取SSH资源列表失败，请稍后重试');
       }
       state.sshResources = [];
       state.filteredSshResources = [];
@@ -531,7 +533,7 @@ export function useCronJobPage() {
       const response = await getCronJobDetail({ id: job.id });
       if (ticket === detailRequest) state.currentJobDetail = response;
     } catch (error) {
-      if (ticket === detailRequest) message.error('获取任务详情失败');
+      if (ticket === detailRequest && !isPermissionDeniedError(error)) message.error('获取任务详情失败');
 
     } finally {
       if (ticket === detailRequest) state.detailLoading = false;
@@ -577,9 +579,9 @@ export function useCronJobPage() {
     } catch (error: any) {
       if (generation !== pageGeneration || ticket !== createRequest) return;
       if (error?.errorFields) {
-        message.error('请检查表单输入');
+        if (!isPermissionDeniedError(error)) message.error('请检查表单输入');
       } else {
-        message.error('定时任务创建失败');
+        if (!isPermissionDeniedError(error)) message.error('定时任务创建失败');
 
       }
     } finally {
@@ -622,7 +624,7 @@ export function useCronJobPage() {
 
       state.isEditModalVisible = true;
     } catch (error) {
-      if (ticket === editRequest) message.error('获取任务详情失败');
+      if (ticket === editRequest && !isPermissionDeniedError(error)) message.error('获取任务详情失败');
 
     } finally {
       if (ticket === editRequest) state.submitLoading = false;
@@ -654,9 +656,9 @@ export function useCronJobPage() {
     } catch (error: any) {
       if (generation !== pageGeneration || ticket !== editRequest) return;
       if (error?.errorFields) {
-        message.error('请检查表单输入');
+        if (!isPermissionDeniedError(error)) message.error('请检查表单输入');
       } else {
-        message.error('定时任务更新失败');
+        if (!isPermissionDeniedError(error)) message.error('定时任务更新失败');
 
       }
     } finally {
@@ -679,7 +681,7 @@ export function useCronJobPage() {
           message.success(`定时任务 "${job.name}" 删除成功`);
           await fetchCronJobs();
         } catch (error) {
-          message.error(`定时任务删除失败`);
+          if (!isPermissionDeniedError(error)) message.error(`定时任务删除失败`);
 
         }
       },
@@ -692,7 +694,7 @@ export function useCronJobPage() {
       message.success(`定时任务 "${job.name}" 启用成功`);
       await fetchCronJobs();
     } catch (error) {
-      message.error(`定时任务启用失败`);
+      if (!isPermissionDeniedError(error)) message.error(`定时任务启用失败`);
 
     }
   };
@@ -703,7 +705,7 @@ export function useCronJobPage() {
       message.success(`定时任务 "${job.name}" 禁用成功`);
       await fetchCronJobs();
     } catch (error) {
-      message.error(`定时任务禁用失败`);
+      if (!isPermissionDeniedError(error)) message.error(`定时任务禁用失败`);
 
     }
   };
@@ -722,7 +724,7 @@ export function useCronJobPage() {
           message.success(`定时任务 "${job.name}" 触发成功`);
           await fetchCronJobs();
         } catch (error) {
-          message.error(`定时任务触发失败`);
+          if (!isPermissionDeniedError(error)) message.error(`定时任务触发失败`);
 
         }
       },
@@ -776,7 +778,7 @@ export function useCronJobPage() {
 
           await fetchCronJobs();
         } catch (error) {
-          message.error(`批量${operation}失败`);
+          if (!isPermissionDeniedError(error)) message.error(`批量${operation}失败`);
 
         }
       },
@@ -811,7 +813,7 @@ export function useCronJobPage() {
         }
       }
     } catch (error) {
-      message.error('调度表达式验证失败');
+      if (!isPermissionDeniedError(error)) message.error('调度表达式验证失败');
 
     }
   };

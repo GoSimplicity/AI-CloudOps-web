@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  createForbiddenResponseInterceptor,
+  createPermissionDeniedError,
+} from '#/utils/permission/forbidden';
 import { useNamespacePage } from './Namespace';
 
 const client = vi.hoisted(() => ({ get: vi.fn() }));
@@ -74,4 +78,23 @@ describe('命名空间查询作用域', () => {
     expect(page.loadError.value).toBe('');
     expect(page.namespaces.value).toHaveLength(1);
   });
+
+  it('列表 403 已由统一提示，页面只保留错误状态不重复弹错', async () => {
+    const { message } = await import('ant-design-vue');
+    const page = useNamespacePage();
+    page.filterClusterId.value = 1;
+    client.get.mockRejectedValueOnce(await notifiedForbiddenError());
+    await page.fetchNamespaces();
+    expect(page.loadError.value).toContain('获取命名空间列表失败');
+    expect(message.error).not.toHaveBeenCalled();
+    client.get.mockRejectedValueOnce(new Error('unavailable'));
+    await page.fetchNamespaces();
+    expect(message.error).toHaveBeenCalledWith('获取命名空间列表失败，请重试');
+  });
 });
+
+/** 模拟请求拦截器链：业务 403 经统一提示拦截器后抛给页面的错误（已提示标记） */
+async function notifiedForbiddenError() {
+  const { rejected } = createForbiddenResponseInterceptor(() => {});
+  return rejected(createPermissionDeniedError()).catch((error) => error);
+}

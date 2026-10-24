@@ -2,7 +2,7 @@
   <OpsPage title="知识库管理" description="上传 UTF-8 文档并管理知识索引" class="knowledge-container">
     <!-- 页面头部 -->
     <template #actions>
-<a-button type="primary" @click="refreshKnowledge" :loading="refreshing">
+<a-button v-if="can('aiops.assistant.refreshKnowledge')" type="primary" @click="refreshKnowledge" :loading="refreshing">
             <template #icon><ReloadOutlined /></template>
             重建知识索引
           </a-button>
@@ -164,6 +164,11 @@ import {
   type UploadKnowledgeResponse,
   type AddDocumentResponse
 } from '#/api/core/aiops/assistant';
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
+
 
 // 响应式数据
 const refreshing = ref(false);
@@ -233,7 +238,7 @@ const refreshKnowledge = async () => {
     knowledgeStats.vector_count = 0;
     loadError.value = error instanceof Error ? error.message : '知识库重建失败';
     knowledgeStats.last_update = '重建失败';
-    message.error(`刷新知识库失败: ${loadError.value}`);
+    if (!isPermissionDeniedError(error)) message.error(`刷新知识库失败: ${loadError.value}`);
     addLog('error', `刷新知识库失败: ${error.message}`);
   } finally {
     refreshing.value = false;
@@ -273,7 +278,7 @@ const handleUpload: NonNullable<UploadProps['customRequest']> = async (options) 
   } catch (error) {
     const failure = error instanceof Error ? error : new Error('文件上传失败');
     options.onError?.(failure);
-    message.error(`文件上传失败: ${failure.message}`);
+    if (!isPermissionDeniedError(error)) message.error(`文件上传失败: ${failure.message}`);
     addLog('error', `文件上传失败: ${failure.message}`);
   }
 };
@@ -318,7 +323,7 @@ const addDocument = async () => {
       addLog('error', `文档添加失败: ${data.message}`);
     }
   } catch (error: any) {
-    message.error(`添加文档失败: ${error.message}`);
+    if (!isPermissionDeniedError(error)) message.error(`添加文档失败: ${error.message}`);
     addLog('error', `添加文档失败: ${error.message}`);
   } finally {
     adding.value = false;

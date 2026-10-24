@@ -195,7 +195,7 @@
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
                       <a-menu-item key="preview">预览配置</a-menu-item>
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                      <a-menu-item v-if="can('monitor.config.delete')" key="delete" danger>删除</a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
@@ -554,6 +554,11 @@ import {
   type MonitorScrapePool
 } from '#/api/core/prometheus/prometheus_scrape_pool';
 
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
+
 // 实例池接口
 type PoolOption = Pick<MonitorScrapePool, 'id' | 'name'>;
 
@@ -795,7 +800,7 @@ const fetchConfigs = async (): Promise<void> => {
     data.value = [];
     paginationConfig.total = 0;
     updateStats();
-    message.error(loadError.value);
+    if (!isPermissionDeniedError(error)) message.error(loadError.value);
   } finally {
     request.finish();
   }
@@ -899,7 +904,7 @@ const confirmDelete = (record: MonitorConfigItem): void => {
         fetchConfigs();
       } catch (error: any) {
 
-        message.error(error.message || '删除配置失败');
+        if (!isPermissionDeniedError(error)) message.error(error.message || '删除配置失败');
       }
     }
   });
@@ -942,7 +947,7 @@ const handleAdd = async (): Promise<void> => {
     fetchConfigs();
     message.success('新增配置成功');
   } catch (error: any) {
-    message.error('新增配置失败: ' + (error.message || '未知错误'));
+    if (!isPermissionDeniedError(error)) message.error('新增配置失败: ' + (error.message || '未知错误'));
   }
 };
 
@@ -983,7 +988,7 @@ const handleEdit = async (): Promise<void> => {
     fetchConfigs();
     message.success('更新配置成功');
   } catch (error: any) {
-    message.error('更新配置失败: ' + (error.message || '未知错误'));
+    if (!isPermissionDeniedError(error)) message.error('更新配置失败: ' + (error.message || '未知错误'));
   }
 };
 
@@ -994,7 +999,7 @@ const handleViewDetail = async (record: MonitorConfigItem): Promise<void> => {
     isDetailModalVisible.value = true;
   } catch (error: any) {
 
-    message.error('获取配置详情失败: ' + (error.message || '未知错误'));
+    if (!isPermissionDeniedError(error)) message.error('获取配置详情失败: ' + (error.message || '未知错误'));
   }
 };
 

@@ -7,6 +7,12 @@ import CloudResource from './CloudResourceManager.vue';
 import LocalResource from './LocalResourceManagement.vue';
 import TreeNodes from './TreeNodeManager.vue';
 
+// FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
+vi.mock('#/utils/permission', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#/utils/permission')>()),
+  usePermission: () => ({ can: () => true, hasPerm: () => true }),
+}));
+
 const client = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));

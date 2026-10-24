@@ -155,7 +155,7 @@
             danger 
             @click="() => batchOperation('删除')" 
             :disabled="!selectedRows.length" 
-            v-if="selectedRows.length > 0"
+            v-if="can('k8s.secret.batchDelete') && (selectedRows.length > 0)"
             class="k8s-toolbar-btn"
             title="批量删除选中的 Secret"
           >
@@ -304,12 +304,12 @@
 
         <template #actions="{ record }">
           <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
+            <a-tooltip v-if="can('k8s.secret.viewPlain')" title="查看详情">
               <a-button title="查看详情" @click="showSecretDetail(record)">
                 <template #icon><EyeOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="查看 YAML">
+            <a-tooltip v-if="can('k8s.secret.viewYaml')" title="查看 YAML">
               <a-button title="查看 YAML" @click="showYamlModal(record)">
                 <template #icon><FileTextOutlined aria-hidden="true"  /></template>
               </a-button>
@@ -319,7 +319,7 @@
                 <template #icon><EditOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="删除">
+            <a-tooltip v-if="can('k8s.secret.delete')" title="删除">
               <a-button 
                 title="删除" 
                 danger 
@@ -890,7 +890,7 @@
                     <div class="secret-data-content">
                       <pre style="background: var(--ops-ground); padding: 16px; border-radius: 4px; max-height: 400px; overflow-y: auto; font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 12px; line-height: 1.4;">{{ decodeBase64Data(value) }}</pre>
                       <div style="margin-top: 8px; text-align: right;">
-                        <a-button size="small" @click="copyToClipboard(decodeBase64Data(value))">
+                        <a-button v-if="can('k8s.secret.copyPlain')" size="small" @click="copyToClipboard(decodeBase64Data(value))">
                           <template #icon><CopyOutlined aria-hidden="true"  /></template>
                           复制内容
                         </a-button>
@@ -1065,6 +1065,11 @@ import {
   CheckCircleOutlined,
   ClearOutlined,
 } from '@ant-design/icons-vue';
+
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
 
 const {
   // state
@@ -1310,7 +1315,7 @@ const copyToClipboard = async (text: string) => {
     }
   } catch (error) {
 
-    message.error('复制失败，请手动复制');
+    if (!isPermissionDeniedError(error)) message.error('复制失败，请手动复制');
   }
 };
 

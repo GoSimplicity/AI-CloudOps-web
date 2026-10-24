@@ -278,6 +278,7 @@ import {
   TimelineAction,
   listWorkorderInstanceTimeline
 } from '#/api/core/workorder/workorder_instance_time_line'
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 // 图标组件
 const IconComponent = ({ icon }: { icon: string }) => {
@@ -615,7 +616,7 @@ const loadTimeline = async (instanceId: number) => {
       }
     });
   } catch (error: any) {
-    message.error('加载时间线失败');
+    if (!isPermissionDeniedError(error)) message.error('加载时间线失败');
 
     timelineList.value = [];
   } finally {

@@ -134,6 +134,17 @@ class RequestClient {
       Object.defineProperty(failure, 'response', {
         value: { data, status, statusText },
       });
+      // 保留拦截器打在原错误上的 Symbol 标记（如「403 已统一提示」），
+      // 否则响应体不是对象时包装成 new Error(data) 会丢掉标记
+      for (const key of Object.getOwnPropertySymbols(error)) {
+        if (!Object.prototype.hasOwnProperty.call(failure, key)) {
+          Object.defineProperty(
+            failure,
+            key,
+            Object.getOwnPropertyDescriptor(error, key)!,
+          );
+        }
+      }
       throw failure;
     }
   }

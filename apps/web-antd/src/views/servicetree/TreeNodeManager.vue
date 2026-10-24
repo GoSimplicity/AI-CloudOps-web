@@ -32,6 +32,11 @@ import {
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 import { getTreeLocalList, type GetTreeLocalResourceListReq, type TreeLocalResource, ResourceStatus } from '#/api/core/tree/tree_local';
 
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
+
 const loadError = ref<string | null>(null);
 let listRequest = 0;
 let detailRequest = 0;
@@ -264,7 +269,7 @@ const loadTreeData = async (): Promise<void> => {
     treeData.value = [];
     selectedNode.value = null;
     updateStats([]);
-    message.error(error.message || '加载树状数据失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '加载树状数据失败');
   } finally {
     if (ticket === listRequest) treeLoading.value = false;
   }
@@ -289,7 +294,7 @@ const loadUserList = async (): Promise<void> => {
     }
   } catch (error: any) {
 
-    message.error(error.message || '加载用户列表失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '加载用户列表失败');
   }
 };
 
@@ -321,7 +326,7 @@ const loadAvailableResources = async (): Promise<void> => {
     }
   } catch (error: any) {
 
-    message.error(error.message || '加载资源列表失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '加载资源列表失败');
   } finally {
     resourceLoading.value = false;
   }
@@ -340,7 +345,7 @@ const handleTreeSelect = async (selectedKeys: number[]): Promise<void> => {
     } catch (error: any) {
       if (ticket !== detailRequest) return;
 
-      message.error(error.message || '获取节点详情失败');
+      if (!isPermissionDeniedError(error)) message.error(error.message || '获取节点详情失败');
     } finally {
       if (ticket === detailRequest) detailLoading.value = false;
     }
@@ -475,7 +480,7 @@ const handleUnbindResource = async (resourceId: number): Promise<void> => {
     loadTreeData();
   } catch (error: any) {
 
-    message.error(error.message || '解绑资源失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '解绑资源失败');
   }
 };
 
@@ -495,7 +500,7 @@ const removeMember = async (userId: number, memberType: TreeNodeMemberType): Pro
     loadTreeData();
   } catch (error: any) {
 
-    message.error(error.message || '移除成员失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '移除成员失败');
   }
 };
 
@@ -515,7 +520,7 @@ const confirmDelete = (record: TreeNode): void => {
         loadTreeData();
       } catch (error: any) {
 
-        message.error(error.message || '删除节点失败');
+        if (!isPermissionDeniedError(error)) message.error(error.message || '删除节点失败');
       }
     }
   });
@@ -560,7 +565,7 @@ const saveNode = async (): Promise<void> => {
     }
   } catch (error: any) {
 
-    message.error(error.message || '保存节点失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '保存节点失败');
   }
 };
 
@@ -584,7 +589,7 @@ const handleMoveNode = async (): Promise<void> => {
     handleTreeSelect([moveDialog.nodeId]);
   } catch (error: any) {
 
-    message.error(error.message || '移动节点失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '移动节点失败');
   }
 };
 
@@ -613,7 +618,7 @@ const handleAddMemberConfirm = async (): Promise<void> => {
     loadTreeData();
   } catch (error: any) {
 
-    message.error(error.message || '添加成员失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '添加成员失败');
   }
 };
 
@@ -637,7 +642,7 @@ const handleBindResourceConfirm = async (): Promise<void> => {
     loadTreeData();
   } catch (error: any) {
 
-    message.error(error.message || '绑定资源失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '绑定资源失败');
   }
 };
 
@@ -872,7 +877,7 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
                       <a-menu @click="(e: any) => handleMenuClick(e.key, selectedNode!)">
                         <a-menu-item key="move">移动节点</a-menu-item>
                         <a-menu-item key="children">添加子节点</a-menu-item>
-                        <a-menu-item key="delete" danger>删除</a-menu-item>
+                        <a-menu-item v-if="can('tree.node.delete')" key="delete" danger>删除</a-menu-item>
                       </a-menu>
                     </template>
                     <a-button size="small">
@@ -943,6 +948,7 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
                         <div class="member-email">{{ admin.email }}</div>
                       </div>
                       <a-button
+                        v-if="can('tree.node.removeMember')"
                         type="text"
                         danger
                         size="small"
@@ -979,6 +985,7 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
                         <div class="member-email">{{ member.email }}</div>
                       </div>
                       <a-button
+                        v-if="can('tree.node.removeMember')"
                         type="text"
                         danger
                         size="small"

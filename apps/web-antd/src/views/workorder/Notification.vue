@@ -210,8 +210,8 @@
                       <a-menu-item key="duplicate">
                         <CopyOutlined /> 复制配置
                       </a-menu-item>
-                      <a-menu-divider />
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                      <a-menu-divider v-if="can('workorder.notification.delete')" />
+                      <a-menu-item v-if="can('workorder.notification.delete')" key="delete" danger>删除</a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small" aria-label="通知更多操作">
@@ -1028,6 +1028,10 @@ import { listWorkorderProcess, type WorkorderProcessItem } from '#/api/core/work
 import { listWorkorderTemplate, type WorkorderTemplateItem } from '#/api/core/workorder/workorder_template';
 import { listWorkorderCategory, type WorkorderCategoryItem } from '#/api/core/workorder/workorder_category';
 import { getUserList, type User } from '#/api/core/system/user';
+
+import { isPermissionDeniedError, usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
 
 // 表单ref
 const formRef = ref<FormInstance>();
@@ -1859,9 +1863,9 @@ const handleViewNotification = async (record: Notification): Promise<void> => {
         detailDialogVisible.value = true;
       }
     }
-  } catch {
+  } catch (error) {
     if (request !== detailRequest) return;
-    message.error('获取通知配置详情失败');
+    if (!isPermissionDeniedError(error)) message.error('获取通知配置详情失败');
 
   }
 };
@@ -1882,7 +1886,7 @@ const handleStatusToggle = async (record: Notification & { statusLoading?: boole
     const statusText = newStatus === NotificationStatus.Enabled ? '启用' : '禁用';
     message.success(`通知配置已${statusText}`);
   } catch (error) {
-    message.error('更新状态失败');
+    if (!isPermissionDeniedError(error)) message.error('更新状态失败');
 
   } finally {
     record.statusLoading = false;
@@ -2028,7 +2032,8 @@ const handleDeleteNotification = (record: Notification): void => {
           }
         }
 
-        message.error(errorMessage);
+        // 403 已由请求拦截器统一提示，这里不再重复弹出
+        if (!isPermissionDeniedError(error)) message.error(errorMessage);
 
       }
     }
@@ -2243,7 +2248,7 @@ const saveNotification = async (): Promise<void> => {
       }
     }
 
-    message.error(errorMessage);
+    if (!isPermissionDeniedError(error)) message.error(errorMessage);
   } finally {
     if (epoch === formEpoch) notificationDialog.saving = false;
   }
@@ -2346,7 +2351,8 @@ const saveManualSend = async (): Promise<void> => {
       }
     }
 
-    message.error(errorMessage);
+    // 403 已由请求拦截器统一提示，这里不再重复弹出
+    if (!isPermissionDeniedError(error)) message.error(errorMessage);
 
   } finally {
     manualSendDialog.saving = false;

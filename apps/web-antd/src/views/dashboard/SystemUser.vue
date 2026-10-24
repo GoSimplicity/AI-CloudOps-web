@@ -25,6 +25,11 @@ import {
   listRolesApi,
 } from '#/api/core/system/system';
 
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
+
 // 类型定义
 interface UserStatistics {
   admin_count: number;
@@ -326,7 +331,8 @@ const fetchUserList = async () => {
     userList.value = response.items || [];
     paginationConfig.total = response.total || 0;
   } catch (error: any) {
-    message.error(error.message || '获取用户列表失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取用户列表失败');
     userList.value = [];
     paginationConfig.total = 0;
   } finally {
@@ -365,7 +371,8 @@ const fetchRoleList = async () => {
 
     roleList.value = allRoles;
   } catch (error: any) {
-    message.error(error.message || '获取角色列表失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取角色列表失败');
     roleList.value = [];
   }
 };
@@ -375,7 +382,8 @@ const fetchUserRoles = async (userId: number) => {
     const response = await getUserRolesApi(userId);
     assignedRoles.value = response.items || [];
   } catch (error: any) {
-    message.error(error.message || '获取用户角色失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取用户角色失败');
   }
 };
 
@@ -384,7 +392,8 @@ const fetchUserStatistics = async () => {
     const response = await getUserStatistics();
     userStatistics.value = response;
   } catch (error: any) {
-    message.error(error.message || '获取用户统计失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取用户统计失败');
     // 设置默认值避免显示undefined
     userStatistics.value = {
       admin_count: 0,
@@ -434,7 +443,8 @@ const handleEPwd = async (user: UserInfo) => {
     });
     pwdModalVisible.value = true;
   } catch (error: any) {
-    message.error(error.message || '获取用户数据失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取用户数据失败');
   }
 };
 
@@ -457,7 +467,8 @@ const handleEdit = async (user: UserInfo) => {
     });
     modalVisible.value = true;
   } catch (error: any) {
-    message.error(error.message || '获取用户详情失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取用户详情失败');
   }
 };
 
@@ -467,7 +478,8 @@ const handleView = async (user: UserInfo) => {
     viewUserData.value = response;
     viewModalVisible.value = true;
   } catch (error: any) {
-    message.error(error.message || '获取用户详情失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '获取用户详情失败');
   }
 };
 
@@ -487,7 +499,8 @@ const handleDelete = async (user: UserInfo) => {
     await fetchUserList();
     await fetchUserStatistics(); // 删除后更新统计
   } catch (error: any) {
-    message.error(error.message || '删除失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '删除失败');
   }
 };
 
@@ -520,7 +533,8 @@ const handleStatusChange = async (user: UserInfo, newStatus: number) => {
   } catch (error: any) {
     // 发生错误时，恢复原来的状态
     user.enable = originalStatus;
-    message.error(error.message || '状态更新失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '状态更新失败');
   }
 };
 
@@ -542,7 +556,8 @@ const handleChangePasswordSubmit = async () => {
     pwdModalVisible.value = false;
   } catch (error: any) {
     if (!error.errorFields) {
-      message.error(error.message || '操作失败');
+      if (!isPermissionDeniedError(error))
+        message.error(error.message || '操作失败');
     }
   } finally {
     submitLoading.value = false;
@@ -605,7 +620,8 @@ const handleSubmit = async () => {
     await fetchUserStatistics(); // 更新统计数据
   } catch (error: any) {
     if (!error.errorFields) {
-      message.error(error.message || '操作失败');
+      if (!isPermissionDeniedError(error))
+        message.error(error.message || '操作失败');
     }
   } finally {
     submitLoading.value = false;
@@ -623,7 +639,8 @@ const handleAssignRole = async (role: UserRole) => {
     await fetchUserList();
     await fetchUserStatistics(); // 角色变更后更新统计
   } catch (error: any) {
-    message.error(error.message || '角色分配失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '角色分配失败');
   }
 };
 
@@ -638,7 +655,8 @@ const handleRevokeRole = async (role: UserRole) => {
     await fetchUserList();
     await fetchUserStatistics(); // 角色变更后更新统计
   } catch (error: any) {
-    message.error(error.message || '角色移除失败');
+    if (!isPermissionDeniedError(error))
+      message.error(error.message || '角色移除失败');
   }
 };
 
@@ -816,6 +834,7 @@ onMounted(() => {
                 >角色</a-button
               >
               <a-popconfirm
+                v-if="can('system.user.delete')"
                 title="确定要删除吗？"
                 @confirm="handleDelete(record)"
               >

@@ -35,10 +35,10 @@
             <Minimize2 v-if="isExpanded" :size="16" />
             <Maximize2 v-else :size="16" />
           </button>
-          <button class="action-button clear-btn" @mousedown.stop @click="clearChat" title="清空聊天">
+          <button v-if="can('aiops.assistant.clearCache')" class="action-button clear-btn" @mousedown.stop @click="clearChat" title="清空聊天">
             <Trash2 :size="16" />
           </button>
-          <button class="action-button refresh-btn" @mousedown.stop @click="refreshKnowledge" title="刷新知识库" :disabled="isRefreshing">
+          <button v-if="can('aiops.assistant.refreshKnowledge')" class="action-button refresh-btn" @mousedown.stop @click="refreshKnowledge" title="刷新知识库" :disabled="isRefreshing">
             <RefreshCw :size="16" :class="{ 'spinning': isRefreshing }" />
           </button>
           <button class="action-button close-btn" @mousedown.stop @click="closeWindow" title="关闭">
@@ -339,6 +339,11 @@ import {
   clearAssistantCache,
   refreshKnowledgeBase
 } from '#/api/core/aiops/assistant';
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
+
 
 // 状态管理
 const isFloatWindowVisible = ref(false);
@@ -972,7 +977,7 @@ const clearChat = async () => {
     chatHistory.value = [];
     isConnected.value = false;
     initChatMessages();
-    message.warning('清空完成，但可能存在部分错误');
+    if (!isPermissionDeniedError(error)) message.warning('清空完成，但可能存在部分错误');
     persistState();
   }
 };
@@ -1112,7 +1117,7 @@ const copyMessage = async (content) => {
     await navigator.clipboard.writeText(content);
     message.success('已复制到剪贴板');
   } catch (err) {
-    message.error('复制失败');
+    if (!isPermissionDeniedError(err)) message.error('复制失败');
   }
 };
 // 重新生成 AI 回答（基于上一条用户消息）

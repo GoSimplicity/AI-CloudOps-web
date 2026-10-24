@@ -93,7 +93,7 @@
             danger 
             @click="() => batchOperation('禁用调度')" 
             :disabled="!selectedRows.length" 
-            v-if="selectedRows.length > 0"
+            v-if="selectedRows.length > 0 && can('k8s.node.batchCordon')"
             class="k8s-toolbar-btn"
             title="批量禁用调度"
           >
@@ -247,12 +247,15 @@
                 <template #icon><TagsOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="管理污点">
+            <a-tooltip v-if="can('k8s.node.taintAdd') || can('k8s.node.taintDelete')" title="管理污点">
               <a-button title="管理污点" @click="openTaintModal(record)">
                 <template #icon><WarningOutlined aria-hidden="true"  /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip :title="record.schedulable === 1 ? '禁用调度' : '启用调度'">
+            <a-tooltip
+              v-if="record.schedulable === 1 ? can('k8s.node.cordon') : can('k8s.node.uncordon')"
+              :title="record.schedulable === 1 ? '禁用调度' : '启用调度'"
+            >
               <a-button 
                 :title="record.schedulable === 1 ? '禁用调度' : '启用调度'"
                 @click="toggleNodeSchedule(record)"
@@ -373,6 +376,7 @@
       :maskClosable="false"
       destroyOnClose
       okText="保存更改"
+      :okButtonProps="{ disabled: !hasTaintChanges }"
       cancelText="取消"
       :focusTriggerAfterClose="false"
       :autoFocus="false"
@@ -419,29 +423,33 @@
                   placeholder="污点键" 
                   class="k8s-form-input"
                   :maxlength="100"
+                  :disabled="!can('k8s.node.taintAdd')"
+                  :readonly="!isNewTaint(taint)"
                 />
                 <a-input 
                   v-model:value="taint.value" 
                   placeholder="污点值（可选）" 
                   class="k8s-form-input"
                   :maxlength="100"
+                  :disabled="!can('k8s.node.taintAdd')"
                 />
                 <a-select 
                   v-model:value="taint.effect" 
                   placeholder="污点效果" 
                   class="k8s-form-input"
                   style="width: 150px"
+                  :disabled="!can('k8s.node.taintAdd')"
                 >
                   <a-select-option value="NoSchedule">NoSchedule</a-select-option>
                   <a-select-option value="PreferNoSchedule">PreferNoSchedule</a-select-option>
                   <a-select-option value="NoExecute">NoExecute</a-select-option>
                 </a-select>
-                <a-button type="text" danger @click="removeTaint(idx)" class="k8s-remove-btn">
+                <a-button v-if="can('k8s.node.taintDelete') || isNewTaint(taint)" type="text" danger @click="removeTaint(idx)" class="k8s-remove-btn">
                   <template #icon><DeleteOutlined aria-hidden="true"  /></template>
                   删除
                 </a-button>
               </div>
-              <a-button type="dashed" @click="addTaint" block style="margin-top: 12px;">
+              <a-button v-if="can('k8s.node.taintAdd')" type="dashed" @click="addTaint" block style="margin-top: 12px;">
                 <template #icon><PlusOutlined aria-hidden="true"  /></template>
                 添加污点
               </a-button>
@@ -809,6 +817,10 @@ import {
   CheckOutlined,
 } from '@ant-design/icons-vue';
 
+import { usePermission } from '#/utils/permission';
+
+const { can } = usePermission();
+
 const {
   // state
   clusters,
@@ -878,7 +890,9 @@ const {
   closeTaintModal,
   addTaint,
   removeTaint,
+  isNewTaint,
   submitTaintForm,
+  hasTaintChanges,
   validateTaintYaml,
   
   // schedule operations

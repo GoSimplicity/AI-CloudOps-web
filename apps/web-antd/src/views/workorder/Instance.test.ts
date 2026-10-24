@@ -2,6 +2,12 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { Modal, Select } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Instance from './Instance.vue';
+
+// FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
+vi.mock('#/utils/permission', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#/utils/permission')>()),
+  usePermission: () => ({ can: () => true, hasPerm: () => true }),
+}));
 const client = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),

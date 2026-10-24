@@ -18,6 +18,10 @@ import { useAccessStore } from '@vben/stores';
 import { useAppConfig } from '@vben/hooks';
 import { websocketProtocols, websocketUrl } from '#/utils/websocket-url';
 import {
+  notifyStreamLoginExpired,
+  refreshAccessTokenForStream,
+} from '#/api/request';
+import {
   type K8sPod,
   type PodContainer,
   type GetPodListReq,
@@ -66,6 +70,7 @@ import {
   type K8sNamespaceListReq,
   getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
 
 // YAML 模板常量
 const POD_YAML_TEMPLATE = `apiVersion: v1
@@ -94,6 +99,23 @@ spec:
         cpu: 500m
         memory: 512Mi
 `;
+
+/** 流式连接结束原因：login-expired = 令牌刷新失败或刷新后仍未授权（已提示重新登录） */
+export type StreamCloseReason = 'login-expired';
+
+/** 日志 SSE / 终端 WS 连续重连上限（连上后清零） */
+export const STREAM_MAX_RECONNECT_ATTEMPTS = 5;
+
+/**
+ * 复审 P3-A：终端 WS 因连上后 4401 刷新令牌并重连后，连接稳定保持这么久（5 分钟）
+ * 才允许下一次 4401 再刷新一次；不到这个时长再次 4401 仍直接停止并提示登录过期
+ */
+export const STREAM_UNAUTHORIZED_REFRESH_RESET_MS = 5 * 60 * 1000;
+
+/** 指数退避：1s、2s、4s…，最长 30s */
+export function streamReconnectDelay(attempt: number) {
+  return Math.min(1000 * 2 ** Math.max(attempt - 1, 0), 30_000);
+}
 
 export function usePodPage() {
   // state
@@ -488,7 +510,7 @@ export function usePodPage() {
         clearPods();
       }
       clustersError.value = '获取集群列表失败，请重试';
-      message.error(clustersError.value);
+      if (!isPermissionDeniedError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -535,7 +557,7 @@ export function usePodPage() {
       namespaces.value = [];
       namespacesTotal.value = 0;
       namespacesError.value = '获取命名空间列表失败，请重试';
-      message.error(namespacesError.value);
+      if (!isPermissionDeniedError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -600,7 +622,7 @@ export function usePodPage() {
         return;
       clearPods();
       loadError.value = '获取 Pod 列表失败，请重试';
-      message.error(loadError.value);
+      if (!isPermissionDeniedError(err)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -648,7 +670,7 @@ export function usePodPage() {
 
       currentPodDetail.value = processedDetail;
     } catch (err) {
-      message.error('获取 Pod 详情失败');
+      if (!isPermissionDeniedError(err)) message.error('获取 Pod 详情失败');
 
       // 错误时也要处理格式转换
       try {
@@ -699,7 +721,7 @@ export function usePodPage() {
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (err) {
-      message.error('获取 Pod YAML 失败');
+      if (!isPermissionDeniedError(err)) message.error('获取 Pod YAML 失败');
     } finally {
       submitLoading.value = false;
     }
@@ -732,10 +754,11 @@ export function usePodPage() {
       await fetchPods();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查 YAML 格式是否正确');
+        if (!isPermissionDeniedError(err))
+          message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('Pod YAML 更新失败');
+      if (!isPermissionDeniedError(err)) message.error('Pod YAML 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -843,10 +866,11 @@ export function usePodPage() {
       await fetchPods();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
+        if (!isPermissionDeniedError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('Pod 创建失败');
+      if (!isPermissionDeniedError(err)) message.error('Pod 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -870,10 +894,11 @@ export function usePodPage() {
       await fetchPods();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查 YAML 格式是否正确');
+        if (!isPermissionDeniedError(err))
+          message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      message.error('Pod YAML 创建失败');
+      if (!isPermissionDeniedError(err)) message.error('Pod YAML 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -1198,10 +1223,11 @@ export function usePodPage() {
       await fetchPods();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
+        if (!isPermissionDeniedError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('Pod 更新失败');
+      if (!isPermissionDeniedError(err)) message.error('Pod 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -1230,7 +1256,7 @@ export function usePodPage() {
           message.success('Pod 删除成功');
           await fetchPods();
         } catch (err) {
-          message.error('Pod 删除失败');
+          if (!isPermissionDeniedError(err)) message.error('Pod 删除失败');
         }
       },
     });
@@ -1260,7 +1286,7 @@ export function usePodPage() {
 
       isLogsModalVisible.value = true;
     } catch (err) {
-      message.error('获取 Pod 容器列表失败');
+      if (!isPermissionDeniedError(err)) message.error('获取 Pod 容器列表失败');
     }
   };
 
@@ -1298,11 +1324,10 @@ export function usePodPage() {
     onMessage: (data: string) => void,
     onError?: (error: Event) => void,
     onOpen?: () => void,
-    onClose?: () => void,
+    onClose?: (reason?: StreamCloseReason) => void,
   ) => {
-    // 获取当前用户的访问令牌
+    // 每次连接前读最新的访问令牌（令牌可能已被刷新）
     const accessStore = useAccessStore();
-    const currentToken = accessStore.accessToken;
 
     // 获取应用配置中的API URL
     const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
@@ -1342,19 +1367,57 @@ export function usePodPage() {
     let isManualClose = false;
     let reconnectAttempts = 0;
     let reconnectTimeoutId: NodeJS.Timeout | null = null;
+    // 本轮断线（直到下次连上）是否已刷新过令牌：只刷新一次
+    let tokenRefreshed = false;
 
-    const scheduleReconnect = () => {
+    const clearReconnectTimer = () => {
       if (reconnectTimeoutId) {
         clearTimeout(reconnectTimeoutId);
         reconnectTimeoutId = null;
       }
+    };
+
+    // 停止重连并结束连接
+    const stopStream = (reason?: StreamCloseReason) => {
+      isManualClose = true;
+      clearReconnectTimer();
+      onClose?.(reason);
+    };
+
+    const scheduleReconnect = () => {
+      clearReconnectTimer();
+      if (isManualClose) return;
+      if (reconnectAttempts >= STREAM_MAX_RECONNECT_ATTEMPTS) {
+        stopStream();
+        return;
+      }
       reconnectAttempts++;
-      reconnectTimeoutId = setTimeout(
-        () => {
-          createFetchSSE();
-        },
-        Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 30000),
-      );
+      reconnectTimeoutId = setTimeout(() => {
+        createFetchSSE();
+      }, streamReconnectDelay(reconnectAttempts));
+    };
+
+    // 401：先走统一刷新（单飞），成功后用新令牌重连；失败或刷新后仍 401 则停止并提示重新登录
+    const recoverFromUnauthorized = async () => {
+      if (tokenRefreshed) {
+        stopStream('login-expired');
+        await notifyStreamLoginExpired();
+        return;
+      }
+      tokenRefreshed = true;
+      const token = await refreshAccessTokenForStream();
+      if (isManualClose) return;
+      if (!token) {
+        // 刷新失败已由 refreshAccessTokenForStream 提示「登录已过期，请重新登录」
+        stopStream('login-expired');
+        return;
+      }
+      if (reconnectAttempts >= STREAM_MAX_RECONNECT_ATTEMPTS) {
+        stopStream();
+        return;
+      }
+      reconnectAttempts++;
+      createFetchSSE();
     };
 
     // 使用fetch API替换EventSource以支持自定义headers
@@ -1367,6 +1430,7 @@ export function usePodPage() {
           'Cache-Control': 'no-cache',
         };
 
+        const currentToken = accessStore.accessToken;
         if (currentToken) {
           headers['Authorization'] = `Bearer ${currentToken}`;
         }
@@ -1376,6 +1440,12 @@ export function usePodPage() {
           headers,
           signal: abortController.signal,
         });
+
+        if (response.status === 401) {
+          await response.body?.cancel().catch(() => {});
+          await recoverFromUnauthorized();
+          return;
+        }
 
         if (!response.ok) {
           const errorText = await response.text().catch(() => 'Unknown error');
@@ -1389,6 +1459,7 @@ export function usePodPage() {
           throw new Error('Response body is null');
         }
         reconnectAttempts = 0;
+        tokenRefreshed = false;
         onOpen?.();
 
         reader = response.body.getReader();
@@ -1577,13 +1648,13 @@ export function usePodPage() {
           isLogsStreaming.value = true;
         },
         // onClose - 连接关闭（只有在真正结束时才调用）
-        () => {
+        (reason?: StreamCloseReason) => {
           isLogsStreaming.value = false;
           logsLoading.value = false;
           logsStreamConnection.value = null;
 
-          // 只有在模态框还开着时才提示最终关闭
-          if (isLogsModalVisible.value) {
+          // 只有在模态框还开着时才提示最终关闭；登录过期只保留「登录已过期，请重新登录」
+          if (isLogsModalVisible.value && reason !== 'login-expired') {
             message.info('📡 实时日志连接已停止');
           }
         },
@@ -1655,7 +1726,7 @@ export function usePodPage() {
       };
       isExecModalVisible.value = true;
     } catch (err) {
-      message.error('获取 Pod 容器列表失败');
+      if (!isPermissionDeniedError(err)) message.error('获取 Pod 容器列表失败');
     }
   };
 
@@ -1776,7 +1847,7 @@ export function usePodPage() {
 
       return true;
     } catch (error) {
-      message.error('初始化终端失败');
+      if (!isPermissionDeniedError(error)) message.error('初始化终端失败');
       return false;
     }
   };
@@ -1787,7 +1858,7 @@ export function usePodPage() {
     onMessage: (data: string) => void,
     onError?: (error: Event) => void,
     onOpen?: () => void,
-    onClose?: () => void,
+    onClose?: (reason?: StreamCloseReason) => void,
     onReconnect?: () => void,
   ) => {
     // 获取认证token
@@ -1828,12 +1899,45 @@ export function usePodPage() {
     let isManualClose = false;
     let reconnectAttempts = 0;
     let reconnectTimeoutId: NodeJS.Timeout | null = null;
-    const maxReconnectAttempts = 5;
-    const reconnectInterval = 3000; // 3秒重连间隔
+    // 本轮断线（直到下次连上）是否已刷新过令牌：只刷新一次
+    let tokenRefreshed = false;
+    // 复审 v4 P2-C：连上之后收到 4401 是否已刷新过令牌。单独计数，不在 onopen 里清零，
+    // 否则「连上 → 4401 → 刷新 → 连上（清零）→ 4401」会无限刷新重连
+    // 复审 P3-A：重连后连接稳定保持满 STREAM_UNAUTHORIZED_REFRESH_RESET_MS 才清零（见 onopen）
+    let unauthorizedAfterOpenRefreshed = false;
+    // 复审 P3-A：「稳定满 5 分钟后清零」计时器；断开 / onclose、stopReconnect、close、重新 connect 前都会清掉
+    let unauthorizedRefreshResetTimeoutId: null | ReturnType<
+      typeof setTimeout
+    > = null;
+    const clearUnauthorizedRefreshResetTimer = () => {
+      if (unauthorizedRefreshResetTimeoutId) {
+        clearTimeout(unauthorizedRefreshResetTimeoutId);
+        unauthorizedRefreshResetTimeoutId = null;
+      }
+    };
+    // 握手阶段的 onerror 先暂存，等刷新结果出来再决定要不要报给调用方（刷新失败只提示登录过期）
+    let pendingHandshakeError: Event | null = null;
+
+    const stopReconnect = (reason?: StreamCloseReason) => {
+      isManualClose = true;
+      pendingHandshakeError = null;
+      clearUnauthorizedRefreshResetTimer();
+      if (reconnectTimeoutId) {
+        clearTimeout(reconnectTimeoutId);
+        reconnectTimeoutId = null;
+      }
+      onClose?.(reason);
+    };
+
+    const flushHandshakeError = () => {
+      const error = pendingHandshakeError;
+      pendingHandshakeError = null;
+      if (error) onError?.(error);
+    };
 
     const scheduleReconnect = () => {
-      if (isManualClose || reconnectAttempts >= maxReconnectAttempts) {
-        onClose?.();
+      if (isManualClose || reconnectAttempts >= STREAM_MAX_RECONNECT_ATTEMPTS) {
+        stopReconnect();
         return;
       }
       onReconnect?.();
@@ -1841,10 +1945,71 @@ export function usePodPage() {
       reconnectAttempts++;
       reconnectTimeoutId = setTimeout(() => {
         connect();
-      }, reconnectInterval);
+      }, streamReconnectDelay(reconnectAttempts));
+    };
+
+    // 握手失败（浏览器拿不到 HTTP 状态）或 4401：先走统一刷新（单飞）再重连；
+    // 刷新失败则停止重连并提示重新登录；本轮已刷新过则按退避重连，4401 直接停止
+    // 复审 v4 P3-5：握手失败（!opened）不一定是令牌问题——浏览器拿不到握手的 HTTP 状态，
+    // 网络断开、网关/后端不可用、Pod 或容器不存在、403 等都会表现为同样的失败。这里先刷新一次令牌
+    // 只是兜底（刷新成功但仍失败时按退避重连，最多 STREAM_MAX_RECONNECT_ATTEMPTS 次），并不说明原因是令牌
+    const recoverFromHandshakeFailure = async (code: number) => {
+      if (tokenRefreshed) {
+        if (code === 4401) {
+          stopReconnect('login-expired');
+          await notifyStreamLoginExpired();
+          return;
+        }
+        flushHandshakeError();
+        scheduleReconnect();
+        return;
+      }
+      tokenRefreshed = true;
+      const token = await refreshAccessTokenForStream();
+      if (isManualClose) return;
+      if (!token) {
+        // 刷新失败已提示「登录已过期，请重新登录」，不再报连接错误
+        stopReconnect('login-expired');
+        return;
+      }
+      flushHandshakeError();
+      if (reconnectAttempts >= STREAM_MAX_RECONNECT_ATTEMPTS) {
+        stopReconnect();
+        return;
+      }
+      onReconnect?.();
+      reconnectAttempts++;
+      connect();
+    };
+
+    // 复审 v4 P2-C：连上之后收到 4401（令牌在会话中失效）：只刷新一次并重连；
+    // 重连后再次收到 4401 就停止重连并提示重新登录（这个标记不随 onopen 清零）
+    // 复审 P3-A：重连后连接稳定满 5 分钟会清零，之后的 4401 可以再刷新一次
+    const recoverFromUnauthorizedAfterOpen = async () => {
+      if (unauthorizedAfterOpenRefreshed) {
+        stopReconnect('login-expired');
+        await notifyStreamLoginExpired();
+        return;
+      }
+      unauthorizedAfterOpenRefreshed = true;
+      tokenRefreshed = true;
+      const token = await refreshAccessTokenForStream();
+      if (isManualClose) return;
+      if (!token) {
+        stopReconnect('login-expired');
+        return;
+      }
+      if (reconnectAttempts >= STREAM_MAX_RECONNECT_ATTEMPTS) {
+        stopReconnect();
+        return;
+      }
+      onReconnect?.();
+      reconnectAttempts++;
+      connect();
     };
 
     const connect = () => {
+      clearUnauthorizedRefreshResetTimer();
       try {
         // 清理之前的连接
         if (socket) {
@@ -1852,16 +2017,34 @@ export function usePodPage() {
           socket = null;
         }
 
-        // 创建WebSocket连接
+        // 创建WebSocket连接（每次重连都读最新的令牌）
+        const currentToken = accessStore.accessToken;
+        if (!currentToken) {
+          stopReconnect();
+          return;
+        }
         socket = new WebSocket(
           url.toString(),
-          websocketProtocols(accessStore.accessToken || ''),
+          websocketProtocols(currentToken),
         );
 
         const ownedSocket = socket;
+        let opened = false;
         socket.onopen = () => {
           if (socket !== ownedSocket) return;
+          opened = true;
           reconnectAttempts = 0; // 重置重连计数
+          tokenRefreshed = false;
+          // 复审 P3-A：4401 刷新后重连上：稳定满 5 分钟才清零，期间断开会清掉计时器
+          clearUnauthorizedRefreshResetTimer();
+          if (unauthorizedAfterOpenRefreshed) {
+            unauthorizedRefreshResetTimeoutId = setTimeout(() => {
+              unauthorizedRefreshResetTimeoutId = null;
+              if (socket === ownedSocket && !isManualClose) {
+                unauthorizedAfterOpenRefreshed = false;
+              }
+            }, STREAM_UNAUTHORIZED_REFRESH_RESET_MS);
+          }
 
           const sendResize = (cols: number, rows: number) => {
             if (
@@ -1911,11 +2094,17 @@ export function usePodPage() {
 
         socket.onerror = (error) => {
           if (socket !== ownedSocket) return;
+          if (!opened) {
+            // 握手失败：onclose 里先刷新令牌，再决定是否报错
+            pendingHandshakeError = error;
+            return;
+          }
           onError?.(error);
         };
 
         socket.onclose = (event) => {
           if (socket !== ownedSocket) return;
+          clearUnauthorizedRefreshResetTimer();
           resizeSubscription?.dispose();
           resizeSubscription = undefined;
           socket = null;
@@ -1927,7 +2116,16 @@ export function usePodPage() {
           } else if (event.code === 4401) {
           }
 
-          if (!isManualClose && !event.wasClean) {
+          if (isManualClose) {
+            pendingHandshakeError = null;
+            onClose?.();
+          } else if (!opened) {
+            // 握手失败（含握手阶段的 4401）：先刷新令牌再重连，见 recoverFromHandshakeFailure 的说明（P3-5）
+            void recoverFromHandshakeFailure(event.code);
+          } else if (event.code === 4401) {
+            // 连上之后令牌失效（P2-C）
+            void recoverFromUnauthorizedAfterOpen();
+          } else if (!event.wasClean) {
             // 非正常关闭且不是手动关闭，尝试重连
             scheduleReconnect();
           } else {
@@ -1952,6 +2150,7 @@ export function usePodPage() {
     // 手动关闭连接
     const close = () => {
       isManualClose = true;
+      clearUnauthorizedRefreshResetTimer();
       resizeSubscription?.dispose();
       resizeSubscription = undefined;
 
@@ -2003,6 +2202,9 @@ export function usePodPage() {
         shell: execFormModel.value.shell,
       };
 
+      // 「终端连接出现问题」每次连接流程（本次 connectToTerminal，含自动重连）只提示一次
+      let terminalErrorNotified = false;
+
       // 建立WebSocket连接
       terminalConnection.value = execK8sPodWebSocket(
         params,
@@ -2015,7 +2217,10 @@ export function usePodPage() {
         // onError - 连接错误
         (_error: Event) => {
           // Error occurred in terminal connection
-          message.error('终端连接出现问题');
+          if (!terminalErrorNotified) {
+            terminalErrorNotified = true;
+            message.error('终端连接出现问题');
+          }
           isTerminalConnected.value = false;
           terminalLoading.value = false;
         },
@@ -2044,13 +2249,14 @@ export function usePodPage() {
           }
         },
         // onClose - 连接关闭
-        () => {
+        (reason?: StreamCloseReason) => {
           isTerminalConnected.value = false;
           terminalLoading.value = false;
 
           if (terminal.value && isExecModalVisible.value) {
             terminal.value.writeln('\r\n\r\n连接已断开');
-            message.info('终端连接已断开');
+            // 登录过期只保留「登录已过期，请重新登录」
+            if (reason !== 'login-expired') message.info('终端连接已断开');
           }
         },
         () => {
@@ -2060,10 +2266,11 @@ export function usePodPage() {
       );
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
+        if (!isPermissionDeniedError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('建立终端连接失败');
+      if (!isPermissionDeniedError(err)) message.error('建立终端连接失败');
 
       isTerminalConnected.value = false;
     } finally {
@@ -2144,10 +2351,11 @@ export function usePodPage() {
       isExecModalVisible.value = false;
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        message.warning('请检查表单填写是否正确');
+        if (!isPermissionDeniedError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
-      message.error('命令执行失败');
+      if (!isPermissionDeniedError(err)) message.error('命令执行失败');
     } finally {
       submitLoading.value = false;
     }
@@ -2187,7 +2395,7 @@ export function usePodPage() {
       message.success('端口转发设置成功');
       isPortForwardModalVisible.value = false;
     } catch (err) {
-      message.error('端口转发设置失败');
+      if (!isPermissionDeniedError(err)) message.error('端口转发设置失败');
     } finally {
       submitLoading.value = false;
     }
@@ -2212,7 +2420,7 @@ export function usePodPage() {
 
       isFileManagerModalVisible.value = true;
     } catch (err) {
-      message.error('获取容器信息失败');
+      if (!isPermissionDeniedError(err)) message.error('获取容器信息失败');
     }
   };
 
@@ -2240,7 +2448,7 @@ export function usePodPage() {
       await uploadK8sPodFile(params, file);
       message.success('文件上传成功');
     } catch (err) {
-      message.error('文件上传失败');
+      if (!isPermissionDeniedError(err)) message.error('文件上传失败');
     }
   };
 
@@ -2338,7 +2546,7 @@ export function usePodPage() {
         errorMessage = `下载失败: ${err}`;
       }
 
-      message.error(errorMessage);
+      if (!isPermissionDeniedError(err)) message.error(errorMessage);
     }
   };
 
@@ -2356,7 +2564,7 @@ export function usePodPage() {
       pods.value = res?.items || [];
       total.value = res?.total || 0;
     } catch (err) {
-      message.error('获取节点Pod失败');
+      if (!isPermissionDeniedError(err)) message.error('获取节点Pod失败');
     } finally {
       loading.value = false;
     }
@@ -2418,7 +2626,8 @@ export function usePodPage() {
           selectedRows.value = [];
           await fetchPods();
         } catch (err) {
-          message.error(`批量${operation}失败`);
+          if (!isPermissionDeniedError(err))
+            message.error(`批量${operation}失败`);
         }
       },
     });
@@ -2624,6 +2833,9 @@ export function usePodPage() {
   }
 
   return {
+    // 日志 SSE / 终端 WS 连接（供令牌刷新重连测试使用）
+    execK8sPodWebSocket,
+    streamK8sPodLogs,
     // state
     loadError,
     clustersError,

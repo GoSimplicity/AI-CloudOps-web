@@ -181,7 +181,7 @@
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
                       <a-menu-item key="enable" v-if="record.enable === 2">启用</a-menu-item>
                       <a-menu-item key="disable" v-if="record.enable === 1">禁用</a-menu-item>
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                      <a-menu-item v-if="can('monitor.recordRule.delete')" key="delete" danger>删除</a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
@@ -525,6 +525,11 @@ import {
 import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_scrape_pool';
 import { promqlExprCheckApi } from '#/api/core/prometheus/prometheus_alert_rule';
 
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
+
 // 定义 Pool 类型
 interface Pool {
   id: number;
@@ -749,7 +754,7 @@ const fetchRecordRules = async (): Promise<void> => {
     data.value = [];
     paginationConfig.total = 0;
     updateStats();
-    message.error(loadError.value);
+    if (!isPermissionDeniedError(error)) message.error(loadError.value);
   } finally {
     request.finish();
   }
@@ -766,7 +771,7 @@ const loadPools = async () => {
     poolOptions.value = response.items;
     poolPagination.total = response.total;
   } catch (error: any) {
-    message.error(error.message || '获取实例池数据失败，请稍后重试');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '获取实例池数据失败，请稍后重试');
 
   }
 };
@@ -833,7 +838,7 @@ const handleViewRecord = async (record: MonitorRecordRule): Promise<void> => {
     detailDialogVisible.value = true;
   } catch (error: any) {
 
-    message.error(error.message || '获取记录详情失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '获取记录详情失败');
   }
 };
 
@@ -872,7 +877,7 @@ const handleEnableRecord = async (record: MonitorRecordRule): Promise<void> => {
     }
   } catch (error: any) {
 
-    message.error(error.message || '启用记录规则失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '启用记录规则失败');
   }
 };
 
@@ -893,7 +898,7 @@ const handleDisableRecord = async (record: MonitorRecordRule): Promise<void> => 
     fetchRecordRules();
   } catch (error: any) {
 
-    message.error(error.message || '禁用记录规则失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '禁用记录规则失败');
   }
 };
 
@@ -960,7 +965,7 @@ const handleAdd = async (): Promise<void> => {
     closeAddModal();
   } catch (error: any) {
 
-    message.error(error.message || '新增记录失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '新增记录失败');
   } finally {
     submitLoading.value = false;
   }
@@ -988,7 +993,7 @@ const handleUpdate = async (): Promise<void> => {
     closeEditModal();
   } catch (error: any) {
 
-    message.error(error.message || '更新记录规则失败');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '更新记录规则失败');
   } finally {
     submitLoading.value = false;
   }
@@ -1009,7 +1014,7 @@ const handleDelete = (record: MonitorRecordRule) => {
         fetchRecordRules();
       } catch (error: any) {
 
-        message.error(error.message || '删除记录规则失败');
+        if (!isPermissionDeniedError(error)) message.error(error.message || '删除记录规则失败');
       }
     },
   });
@@ -1027,7 +1032,7 @@ const validateAddExpression = async () => {
     await promqlExprCheckApi(payload);
     message.success('表达式验证成功');
   } catch (error: any) {
-    message.error(error.message || '表达式验证失败，请稍后重试');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '表达式验证失败，请稍后重试');
 
   } finally {
     validatingExpr.value = false;
@@ -1046,7 +1051,7 @@ const validateEditExpression = async () => {
     await promqlExprCheckApi(payload);
     message.success('表达式验证成功');
   } catch (error: any) {
-    message.error(error.message || '表达式验证失败，请稍后重试');
+    if (!isPermissionDeniedError(error)) message.error(error.message || '表达式验证失败，请稍后重试');
 
   } finally {
     validatingExpr.value = false;

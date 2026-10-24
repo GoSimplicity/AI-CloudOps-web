@@ -17,6 +17,11 @@ import {
   CopyOutlined,
 } from '@ant-design/icons-vue';
 
+import { usePermission } from '#/utils/permission';
+import { isPermissionDeniedError } from '#/utils/permission/forbidden';
+
+const { can } = usePermission();
+
 const {
   // state
   clusters,
@@ -322,7 +327,7 @@ const copyToClipboard = async (text: string) => {
     await navigator.clipboard.writeText(text);
     message.success('已复制到剪贴板');
   } catch (err) {
-    message.error('复制失败');
+    if (!isPermissionDeniedError(err)) message.error('复制失败');
   }
 };
 
@@ -503,7 +508,7 @@ onMounted(async () => {
             danger
             @click="() => batchOperation('删除')"
             :disabled="!selectedRows.length"
-            v-if="selectedRows.length > 0"
+            v-if="can('k8s.namespace.batchDelete') && selectedRows.length > 0"
             class="k8s-toolbar-btn"
             title="批量删除选中的命名空间"
           >
@@ -649,7 +654,7 @@ onMounted(async () => {
                 <template #icon><TagsOutlined aria-hidden="true" /></template>
               </a-button>
             </a-tooltip>
-            <a-tooltip title="删除命名空间">
+            <a-tooltip v-if="can('k8s.namespace.delete')" title="删除命名空间">
               <a-button
                 title="删除"
                 danger
@@ -666,7 +671,10 @@ onMounted(async () => {
             </a-tooltip>
             <a-tooltip
               title="强制删除"
-              v-if="record.status === NamespaceStatus.Terminating"
+              v-if="
+                can('k8s.namespace.forceDelete') &&
+                record.status === NamespaceStatus.Terminating
+              "
             >
               <a-button
                 title="强制删除"
