@@ -12,6 +12,7 @@
   - [快速开始](#快速开始)
     - [克隆项目](#克隆项目)
     - [安装依赖](#安装依赖)
+    - [启用提交前密钥扫描](#启用提交前密钥扫描)
     - [配置环境变量](#配置环境变量)
     - [运行前端项目](#运行前端项目)
   - [项目结构](#项目结构)
@@ -53,6 +54,24 @@ pnpm install --frozen-lockfile
 ```
 
 安装过程会生成内部工作区包的构建入口；移动目录后重新执行安装
+
+### 启用提交前密钥扫描
+
+`pnpm install` 会通过 husky 把 `core.hooksPath` 设为 `.husky/_`，提交时依次执行 `.husky/pre-commit` → `.githooks/pre-commit` → gitleaks。安装依赖后运行以下脚本确认钩子真正生效
+
+```bash
+bash scripts/setup-git-hooks.sh
+```
+
+脚本在以下情况返回非 0：找不到 husky、`core.hooksPath` 不是 `.husky/_`、`.husky/pre-commit` 缺失、不可执行或内容与脚本内嵌的预期内容不逐字节一致（修改该文件时须同步修改 `scripts/setup-git-hooks.sh`）、未安装 gitleaks（从 [官方发布页](https://github.com/gitleaks/gitleaks/releases) 下载并校验 sha256）或版本低于 8.25.0 / 版本无法解析（pre-commit 钩子同样会拒绝提交）
+
+依赖：gitleaks >= 8.25.0；**Python 3.11+**（提交 `.gitleaks.toml` 时 pre-commit 钩子用 `tomllib` 检查配置，缺少 python3 或版本低于 3.11 时拒绝提交）
+
+注意事项
+
+- 设置了 `HUSKY=0` 时 husky 不安装钩子，提交时若仍有 `HUSKY=0` 也会跳过全部钩子（包括 gitleaks），脚本会打印警告并失败；检查 shell 配置、IDE 环境和 `~/.config/husky/init.sh`
+- `git commit --no-verify` 同样会跳过本地钩子
+- 本地钩子只是第一道防线，**CI 的 gitleaks 工作流（`.github/workflows/gitleaks.yml`）是最终兜底**，任何 PR 和推送都会重新扫描；被 CI 拦下的密钥视为已泄露，必须轮换
 
 ### 配置环境变量
 

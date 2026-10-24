@@ -1,0 +1,8 @@
+# gitleaks 配置（SEC-01A）：在官方默认规则基础上扩展。
+# 当前 HEAD 与历史均无发现，因此无需任何 allowlist。
+# 若将来新增 allowlist：只允许确定的误报（公开样例/测试夹具/占位符），窄 path+regex，并逐条注释原因；
+# 绝不对真实密钥做 allowlist。
+title = "AI-CloudOps-web gitleaks config"
+
+[extend]
+useDefault = true

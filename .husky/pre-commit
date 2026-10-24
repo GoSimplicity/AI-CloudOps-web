@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# husky v9 pre-commit 钩子（由 .husky/_/h 以 `sh -e` 调用；core.hooksPath=.husky/_ 由 `pnpm install` 的 prepare 脚本设置）
+#
+# 1) SEC-01A: gitleaks 扫描暂存内容，发现密钥或未安装 gitleaks 即阻止提交。
+#    具体实现复用 .githooks/pre-commit（与后端 / aiops 仓库保持同一份逻辑）。
+"$(git rev-parse --show-toplevel)/.githooks/pre-commit" || exit 1
+
+# 2) 其余原有钩子命令：在加入本文件之前，仓库中没有任何已跟踪的 .husky 钩子
+#    （core.hooksPath 指向 .husky/_ 但没有 .husky/pre-commit），因此此前提交时不执行 lint。
+#    为保持原有行为，这里不追加命令；如需启用 lint-staged（.lintstagedrc.mjs），在此追加：
+#    pnpm exec lint-staged
