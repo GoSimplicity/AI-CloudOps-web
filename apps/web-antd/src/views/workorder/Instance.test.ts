@@ -1,12 +1,21 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { Modal, Select } from 'ant-design-vue';
+import { useAccessStore } from '@vben/stores';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Instance from './Instance.vue';
+
+const permissions = vi.hoisted(() => ({ edit: true }));
+vi.mock('@vben/stores', async (original) => {
+  const actual = await original<typeof import('@vben/stores')>();
+  const { reactive } = await import('vue');
+  const state = reactive({ accessToken: 'user-a' });
+  return { ...actual, useAccessStore: () => state };
+});
 
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
-  usePermission: () => ({ can: () => true, hasPerm: () => true }),
+  usePermission: () => ({ can: () => true, hasPerm: (code: string) => code === '/api/workorder/instance/update/:id' ? permissions.edit : true }),
 }));
 const client = vi.hoisted(() => ({
   get: vi.fn(),
@@ -54,6 +63,8 @@ const query = async (keyword = '') => {
   await flushPromises();
 };
 beforeEach(() => {
+  permissions.edit = true;
+  useAccessStore().accessToken = 'user-a';
   vi.clearAllMocks();
   client.get.mockImplementation(response);
   vi.stubGlobal(
@@ -240,13 +251,14 @@ describe('工单实例真实控件', () => {
       if (isMain(url, options))
         return Promise.resolve({ items: [{ ...row, status: 1 }], total: 1 });
       if (url === '/workorder/instance/detail/7') return pending.promise;
+      if (url === '/workorder/instance/actions/7') return Promise.resolve(['edit']);
       return response(url, options);
     });
     await query('draft');
-    await wrapper
-      .findAll('.action-buttons button')
-      .find((button) => button.text().replace(/\s/g, '') === '编辑')!
-      .trigger('click');
+    await wrapper.get('.ant-dropdown-trigger').trigger('click');
+    await flushPromises();
+    [...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item')]
+      .find((item) => item.textContent?.trim() === '编辑')!.click();
     await flushPromises();
     await wrapper
       .findAll('button')
@@ -321,9 +333,11 @@ describe('工单实例真实控件', () => {
     client.get.mockImplementation((url, options) => {
       if (isMain(url, options)) return Promise.resolve({ items: [{ ...row, status: 1, assignee_id: 1 }], total: 1 });
       if (url === '/workorder/instance/detail/7') return Promise.resolve({ ...row, status: 1, assignee_id: 1 });
+      if (url === '/workorder/instance/actions/7') return Promise.resolve(['edit']);
       return response(url, options);
     }); client.put.mockResolvedValueOnce({});
-    await query('draft'); await wrapper.findAll('.action-buttons button').find(button => button.text().replace(/\s/g, '') === '编辑')!.trigger('click'); await flushPromises();
+    await query('draft'); await wrapper.get('.ant-dropdown-trigger').trigger('click'); await flushPromises();
+    [...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item')].find(item => item.textContent?.trim() === '编辑')!.click(); await flushPromises();
     const assignee = wrapper.findAllComponents(Select).find(component => component.props('placeholder') === '请选择处理人')!;
     expect(assignee.props('disabled')).toBe(true);
     document.querySelector<HTMLButtonElement>('.instance-form-modal .ant-modal-footer .ant-btn-primary')!.click(); await flushPromises();
@@ -365,5 +379,159 @@ describe('工单实例真实控件', () => {
     expect(client.post).not.toHaveBeenCalled();
     expect(client.put).not.toHaveBeenCalled();
     expect(client.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe('列表按需读取当前用户可用动作', () => {
+  const currentMenu = () => document.querySelector<HTMLElement>('.ant-dropdown:not(.ant-dropdown-hidden) .ant-dropdown-menu');
+  const openMenu = async () => {
+    await wrapper.get('.ant-dropdown-trigger').trigger('click');
+    await flushPromises();
+  };
+  const closeMenu = async () => {
+    await wrapper.get('.ant-dropdown-trigger').trigger('click');
+    await flushPromises();
+  };
+
+  it('只在展开时请求该行；不同用户在列表和详情看到一致动作', async () => {
+    client.get.mockImplementation((url, options) => {
+      if (url === '/workorder/instance/actions/7') return Promise.resolve(useAccessStore().accessToken === 'user-a' ? ['approve', 'edit'] : ['reject']);
+      if (url === '/workorder/instance/detail/7') return Promise.resolve({ ...row });
+      return response(url, options);
+    });
+    await flushPromises();
+    expect(client.get.mock.calls.filter(([url]) => url.includes('/instance/actions/'))).toHaveLength(0);
+    await openMenu();
+    expect(currentMenu()?.textContent).toContain('审批通过');
+    expect(currentMenu()?.textContent).toContain('编辑');
+    expect(currentMenu()?.textContent).not.toContain('拒绝工单');
+    expect(client.get.mock.calls.filter(([url]) => url === '/workorder/instance/actions/7')).toHaveLength(1);
+    useAccessStore().accessToken = 'user-b';
+    await flushPromises();
+    expect(currentMenu()?.textContent).not.toContain('审批通过');
+    expect(currentMenu()?.textContent).not.toContain('编辑');
+    await closeMenu();
+    await openMenu();
+    expect(currentMenu()?.textContent).toContain('拒绝工单');
+    expect(currentMenu()?.textContent).not.toContain('审批通过');
+    await closeMenu();
+    await wrapper.findAll('.action-buttons button').find((button) => button.text().replace(/\s/g, '') === '查看')!.trigger('click');
+    await flushPromises();
+    const detail = document.querySelector('.detail-dialog');
+    expect(detail?.textContent?.replace(/\s/g, '')).toContain('拒绝');
+    expect(detail?.textContent?.replace(/\s/g, '')).not.toContain('审批通过');
+  });
+
+  it('身份切换后关闭已打开的旧用户详情和操作', async () => {
+    client.get.mockImplementation((url, options) => {
+      if (url === '/workorder/instance/actions/7') return Promise.resolve(['approve']);
+      if (url === '/workorder/instance/detail/7') return Promise.resolve({ ...row });
+      return response(url, options);
+    });
+    await flushPromises();
+    await wrapper.findAll('.action-buttons button').find((button) => button.text().replace(/\s/g, '') === '查看')!.trigger('click');
+    await flushPromises();
+    expect(document.querySelector('.detail-dialog')?.textContent?.replace(/\s/g, '')).toContain('审批通过');
+    useAccessStore().accessToken = 'user-b';
+    await flushPromises();
+    const dialog = document.querySelector<HTMLElement>('.detail-dialog');
+    expect(!dialog || dialog.style.display === 'none').toBe(true);
+  });
+
+  it('即使actions有edit，没有更新接口权限也不显示列表或详情编辑', async () => {
+    permissions.edit = false;
+    client.get.mockImplementation((url, options) => {
+      if (url === '/workorder/instance/actions/7') return Promise.resolve(['edit', 'submit']);
+      if (url === '/workorder/instance/detail/7') return Promise.resolve({ ...row });
+      return response(url, options);
+    });
+    await flushPromises();
+    await openMenu();
+    expect(currentMenu()?.textContent).toContain('提交工单');
+    expect(currentMenu()?.textContent).not.toContain('编辑');
+    await closeMenu();
+    await wrapper.findAll('.action-buttons button').find((button) => button.text().replace(/\s/g, '') === '查看')!.trigger('click');
+    await flushPromises();
+    expect(document.querySelector('.detail-dialog')?.textContent).not.toContain('编辑');
+  });
+
+  it('关闭菜单或换账号后迟到响应不能显示旧用户动作', async () => {
+    const pending = Promise.withResolvers<string[]>();
+    let callCount = 0;
+    client.get.mockImplementation((url, options) => {
+      if (url === '/workorder/instance/actions/7') return ++callCount === 1 ? pending.promise : Promise.resolve(['reject']);
+      return response(url, options);
+    });
+    await flushPromises();
+    await openMenu();
+    expect(currentMenu()?.textContent).toContain('正在读取');
+    await closeMenu();
+    useAccessStore().accessToken = 'user-b';
+    await openMenu();
+    expect(currentMenu()?.textContent).toContain('拒绝工单');
+    pending.resolve(['approve']);
+    await flushPromises();
+    expect(currentMenu()?.textContent).toContain('拒绝工单');
+    expect(currentMenu()?.textContent).not.toContain('审批通过');
+  });
+
+  it('同一工单关闭再打开，旧详情动作响应不能覆盖新结果', async () => {
+    const pending = Promise.withResolvers<string[]>();
+    let actionCalls = 0;
+    client.get.mockImplementation((url, options) => {
+      if (url === '/workorder/instance/actions/7') return ++actionCalls === 1 ? pending.promise : Promise.resolve(['reject']);
+      if (url === '/workorder/instance/detail/7') return Promise.resolve({ ...row });
+      return response(url, options);
+    });
+    await flushPromises();
+    const view = () => wrapper.findAll('.action-buttons button').find((button) => button.text().replace(/\s/g, '') === '查看')!;
+    await view().trigger('click');
+    await flushPromises();
+    const close = [...document.querySelectorAll<HTMLButtonElement>('.detail-dialog button')].find((button) => button.textContent?.replace(/\s/g, '') === '关闭');
+    expect(close).toBeTruthy();
+    close!.click();
+    await flushPromises();
+    await view().trigger('click');
+    await flushPromises();
+    pending.resolve(['approve']);
+    await flushPromises();
+    const content = document.querySelector('.detail-dialog')?.textContent?.replace(/\s/g, '');
+    expect(content).toContain('拒绝');
+    expect(content).not.toContain('审批通过');
+  });
+
+  it('点击审批后切换账号，迟到权限检查不能打开审批弹窗', async () => {
+    const pending = Promise.withResolvers<string[]>();
+    let callCount = 0;
+    client.get.mockImplementation((url, options) => {
+      if (url === '/workorder/instance/actions/7') return ++callCount === 1 ? Promise.resolve(['approve']) : pending.promise;
+      return response(url, options);
+    });
+    await flushPromises();
+    await openMenu();
+    const approval = [...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item')].find(item => item.textContent?.includes('审批通过'));
+    expect(approval).toBeTruthy();
+    approval!.click();
+    await flushPromises();
+    useAccessStore().accessToken = 'user-b';
+    pending.resolve(['approve']);
+    await flushPromises();
+    expect([...document.querySelectorAll('.ant-modal-title')].some(item => item.textContent?.includes('审批'))).toBe(false);
+    expect(client.post).not.toHaveBeenCalled();
+  });
+
+  it('读取失败不显示动作，关闭重开可以重试', async () => {
+    let callCount = 0;
+    client.get.mockImplementation((url, options) => {
+      if (url === '/workorder/instance/actions/7') return ++callCount === 1 ? Promise.reject(new Error('offline')) : Promise.resolve(['approve']);
+      return response(url, options);
+    });
+    await flushPromises();
+    await openMenu();
+    expect(currentMenu()?.textContent).toContain('操作读取失败');
+    expect(currentMenu()?.textContent).not.toContain('审批通过');
+    await closeMenu();
+    await openMenu();
+    expect(currentMenu()?.textContent).toContain('审批通过');
   });
 });

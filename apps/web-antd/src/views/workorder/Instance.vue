@@ -263,15 +263,7 @@
                 >
                   查看
                 </a-button>
-                <a-button
-                  type="default"
-                  size="small"
-                  @click="handleEditInstance(record)"
-                  v-if="record.status === InstanceStatus.Draft"
-                >
-                  编辑
-                </a-button>
-                <a-dropdown :trigger="['click']">
+                <a-dropdown :trigger="['click']" @open-change="(open: boolean) => handleRowMenuVisibility(open, record)">
                   <template #overlay>
                     <a-menu @click="(e: any) => handleCommand(e.key, record)">
                       <a-menu-item key="comment">
@@ -284,67 +276,19 @@
                         <PlayCircleOutlined /> 查看流转
                       </a-menu-item>
                       <a-menu-divider />
-                      <a-menu-item
-                        key="submit"
-                        v-if="record.status === InstanceStatus.Draft"
-                      >
-                        提交工单
-                      </a-menu-item>
-                      <a-menu-item
-                        key="assign"
-                        v-if="
-                          [
-                            InstanceStatus.Pending,
-                            InstanceStatus.Processing,
-                          ].includes(record.status)
-                        "
-                      >
-                        分配处理人
-                      </a-menu-item>
-                      <a-menu-item
-                        key="approve"
-                        v-if="
-                          [
-                            InstanceStatus.Pending,
-                            InstanceStatus.Processing,
-                          ].includes(record.status)
-                        "
-                      >
-                        审批通过
-                      </a-menu-item>
-                      <a-menu-item
-                        key="reject"
-                        v-if="
-                          [
-                            InstanceStatus.Pending,
-                            InstanceStatus.Processing,
-                          ].includes(record.status)
-                        "
-                      >
-                        拒绝工单
-                      </a-menu-item>
-                      <a-menu-item
-                        key="complete"
-                        v-if="
-                          [
-                            InstanceStatus.Pending,
-                            InstanceStatus.Processing,
-                          ].includes(record.status)
-                        "
-                      >
-                        完成工单
-                      </a-menu-item>
-                      <a-menu-item
-                        key="return"
-                        v-if="
-                          [
-                            InstanceStatus.Pending,
-                            InstanceStatus.Processing,
-                          ].includes(record.status)
-                        "
-                      >
-                        退回工单
-                      </a-menu-item>
+                      <a-menu-item v-if="rowActions.instanceId === record.id && rowActions.loading" key="actions_loading" disabled>正在读取可用操作</a-menu-item>
+                      <a-menu-item v-else-if="rowActions.instanceId === record.id && rowActions.error" key="actions_error" disabled>{{ rowActions.error }}</a-menu-item>
+                      <template v-else>
+                        <a-menu-item v-if="rowHasAction(record, 'edit') && canEditInstance()" key="edit">编辑</a-menu-item>
+                        <a-menu-item v-if="rowHasAction(record, 'submit')" key="submit">提交工单</a-menu-item>
+                        <a-menu-item v-if="rowHasAction(record, 'assign')" key="assign">分配处理人</a-menu-item>
+                        <a-menu-item v-if="rowHasAction(record, 'approve')" key="approve">审批通过</a-menu-item>
+                        <a-menu-item v-if="rowHasAction(record, 'reject')" key="reject">拒绝工单</a-menu-item>
+                        <a-menu-item v-if="rowHasAction(record, 'complete')" key="complete">完成工单</a-menu-item>
+                        <a-menu-item v-if="rowHasAction(record, 'return')" key="return">退回工单</a-menu-item>
+                        <a-menu-item v-if="rowHasAction(record, 'cancel')" key="cancel">取消工单</a-menu-item>
+                        <a-menu-item v-if="rowActions.instanceId === record.id && !rowActions.loading && !hasVisibleRowAction(record)" key="actions_empty" disabled>当前无可用流转操作</a-menu-item>
+                      </template>
                       <a-menu-item key="notification_logs"
                         >通知发送记录</a-menu-item
                       >
@@ -1301,8 +1245,8 @@
               <!-- 编辑 -->
               <a-button
                 type="default"
-                @click="handleEditInstance(detailDialog.instance)"
-                v-if="detailDialog.availableActions.includes('edit')"
+                @click="handleActionEdit(detailDialog.instance)"
+                v-if="detailDialog.availableActions.includes('edit') && canEditInstance()"
               >
                 编辑
               </a-button>
@@ -1782,7 +1726,8 @@
 
 <script setup lang="ts">
 import { downloadCsv } from '#/utils/export-csv';
-import { ref, reactive, onMounted, onBeforeUnmount, computed, h } from 'vue';
+import { ref, reactive, onMounted, onBeforeUnmount, onDeactivated, computed, watch, h } from 'vue';
+import { useAccessStore } from '@vben/stores';
 import { useWindowSize } from '@vueuse/core';
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { message, Modal } from 'ant-design-vue';
@@ -1889,7 +1834,9 @@ import {
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
+const accessStore = useAccessStore();
+const canEditInstance = () => hasPerm('/api/workorder/instance/update/:id');
 
 // 列定义
 const columns = [
@@ -1954,7 +1901,53 @@ const detailMetadataErrors = reactive({
 const detailTarget = ref<WorkorderInstanceItem | null>(null);
 const loadError = ref('');
 let listRequest = 0;
+// 只保留当前展开行的动作；关闭、换行、换账号及列表刷新均作废旧请求
+const rowActions = reactive({ instanceId: 0, loading: false, error: '', actions: [] as string[] });
+let rowActionsRequest = 0;
+let actionRequest = 0;
+const workflowActions = ['edit', 'submit', 'assign', 'approve', 'reject', 'complete', 'return', 'cancel'];
+const clearRowActions = () => {
+  ++rowActionsRequest;
+  rowActions.instanceId = 0;
+  rowActions.loading = false;
+  rowActions.error = '';
+  rowActions.actions = [];
+};
+const rowHasAction = (row: WorkorderInstanceItem, action: string) =>
+  rowActions.instanceId === row.id && !rowActions.loading && !rowActions.error &&
+  row.status !== InstanceStatus.Completed && row.status !== InstanceStatus.Rejected &&
+  rowActions.actions.includes(action);
+const hasVisibleRowAction = (row: WorkorderInstanceItem) =>
+  workflowActions.some((action) => rowHasAction(row, action) && (action !== 'edit' || canEditInstance()));
+const handleRowMenuVisibility = async (open: boolean, row: WorkorderInstanceItem) => {
+  if (!open) {
+    if (rowActions.instanceId === row.id) clearRowActions();
+    return;
+  }
+  const request = ++rowActionsRequest;
+  const listGeneration = listRequest;
+  const token = accessStore.accessToken;
+  rowActions.instanceId = row.id;
+  rowActions.actions = [];
+  rowActions.error = '';
+  rowActions.loading = true;
+  const isCurrent = () => request === rowActionsRequest && listGeneration === listRequest &&
+    rowActions.instanceId === row.id && token === accessStore.accessToken;
+  try {
+    const actions = await getAvailableActions(row.id);
+    if (!isCurrent()) return;
+    if (!Array.isArray(actions)) throw new Error('无效动作目录');
+    rowActions.actions = actions.map((action: unknown) => String(action).toLowerCase());
+  } catch {
+    if (isCurrent()) rowActions.error = '操作读取失败，请关闭后重新打开重试';
+  } finally {
+    if (isCurrent()) rowActions.loading = false;
+  }
+};
+
+
 let detailRequest = 0;
+let detailActionsRequest = 0;
 let formRequest = 0;
 let designRequest = 0;
 let processOptionsRequest = 0;
@@ -2109,6 +2102,7 @@ const isDetailCurrent = (id: number, request: number) =>
   detailDialog.instance?.id === id;
 const closeInstanceDetail = () => {
   ++detailRequest;
+  ++detailActionsRequest;
   detailDialog.visible = false;
   detailDialog.instance = null;
   detailDialog.availableActions = [];
@@ -2186,10 +2180,37 @@ const userPagination = reactive({
   hasMore: false,
 });
 
+// 身份变化时移除旧主体的动作和未完成对话框
+watch(() => accessStore.accessToken, () => {
+  clearRowActions();
+  ++actionRequest;
+  ++detailRequest;
+  ++detailActionsRequest;
+  ++formRequest;
+  ++designRequest;
+  detailDialog.visible = false;
+  detailDialog.instance = null;
+  detailDialog.availableActions = [];
+  detailDialog.actionsLoading = false;
+  detailTarget.value = null;
+  detailLoading.value = false;
+  instanceDialog.visible = false;
+  approvalDialog.visible = false;
+  assignDialog.visible = false;
+  actionDialog.visible = false;
+}, { flush: 'sync' });
+onDeactivated(() => {
+  clearRowActions();
+  ++actionRequest;
+});
+
 // 清理定时器
 onBeforeUnmount(() => {
+  clearRowActions();
+  ++actionRequest;
   ++listRequest;
   ++detailRequest;
+  ++detailActionsRequest;
   ++logsRequest;
   ++formRequest;
   ++designRequest;
@@ -2912,6 +2933,8 @@ const handleTableChange = (pagination: any): void => {
 
 // 数据加载
 const loadInstances = async () => {
+  clearRowActions();
+  ++actionRequest;
   const request = ++listRequest;
   listLoading.value = true;
   loadError.value = '';
@@ -3200,23 +3223,23 @@ const handleEditInstance = async (row: WorkorderInstanceItem) => {
 // 获取可用动作
 const loadAvailableActions = async (instanceId: number) => {
   const request = detailRequest;
-  if (!isDetailCurrent(instanceId, request)) return;
+  const ticket = ++detailActionsRequest;
+  const isCurrent = () => ticket === detailActionsRequest && isDetailCurrent(instanceId, request);
+  if (!isCurrent()) return;
   detailDialog.actionsLoading = true;
   detailMetadataErrors.actions = '';
   detailDialog.availableActions = [];
   try {
     const actions = await getAvailableActions(instanceId);
-    if (!isDetailCurrent(instanceId, request)) return;
+    if (!isCurrent()) return;
     if (!Array.isArray(actions)) throw new Error('无效动作目录');
     detailDialog.availableActions = actions.map((action) =>
       String(action).toLowerCase(),
     );
   } catch {
-    if (isDetailCurrent(instanceId, request))
-      detailMetadataErrors.actions = '获取可用操作失败';
+    if (isCurrent()) detailMetadataErrors.actions = '获取可用操作失败';
   } finally {
-    if (isDetailCurrent(instanceId, request))
-      detailDialog.actionsLoading = false;
+    if (isCurrent()) detailDialog.actionsLoading = false;
   }
 };
 
@@ -3393,6 +3416,7 @@ const loadNotificationLogs = async (instanceId?: number, resetPage = false) => {
 
 const handleViewInstance = async (row: WorkorderInstanceItem) => {
   const request = ++detailRequest;
+  ++detailActionsRequest;
   detailTarget.value = row;
   detailDialog.visible = true;
   detailDialog.instance = null;
@@ -3434,6 +3458,9 @@ const handleCommand = async (command: string, row: WorkorderInstanceItem) => {
       break;
     case 'flow':
       await handleViewFlow(row);
+      break;
+    case 'edit':
+      await handleActionEdit(row);
       break;
     case 'submit':
       await handleActionSubmit(row);
@@ -3540,11 +3567,18 @@ const handleActionWithPermission = async (
   action: string,
   callback: (instance: WorkorderInstanceItem) => void | Promise<void>,
 ) => {
+  const listGeneration = listRequest;
+  const ticket = ++actionRequest;
+  const token = accessStore.accessToken;
+  const detailGeneration = detailDialog.visible && detailDialog.instance?.id === instance.id ? detailRequest : null;
+  const isCurrent = () => ticket === actionRequest && listGeneration === listRequest && token === accessStore.accessToken &&
+    (detailGeneration === null || isDetailCurrent(instance.id, detailGeneration));
   try {
     const actions = await getAvailableActions(instance.id);
-    const normalizedActions = actions
-      ? actions.map((actionName: string) => actionName.toLowerCase())
-      : [];
+    if (!isCurrent()) return;
+    if (action === 'edit' && !canEditInstance()) return;
+    if (!Array.isArray(actions)) throw new Error('无效动作目录');
+    const normalizedActions = actions.map((actionName: string) => actionName.toLowerCase());
     if (!normalizedActions.includes(action)) {
       const actionMap: Record<string, string> = {
         submit: '提交',
@@ -3560,8 +3594,13 @@ const handleActionWithPermission = async (
     }
 
     await callback(instance);
-  } catch (error) {}
+  } catch (error) {
+    if (isCurrent() && shouldNotifyPageError(error)) message.error('获取可用操作失败，请重试');
+  }
 };
+
+const handleActionEdit = (instance: WorkorderInstanceItem) =>
+  handleActionWithPermission(instance, 'edit', handleEditInstance);
 
 const handleActionSubmit = (instance: WorkorderInstanceItem) =>
   handleActionWithPermission(instance, 'submit', handleSubmitInstance);
