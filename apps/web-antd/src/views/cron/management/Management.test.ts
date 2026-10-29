@@ -215,3 +215,55 @@ describe('SEC-03A 本地执行开关与错误提示', () => {
     expect(notices.error).toHaveBeenLastCalledWith('定时任务触发失败');
   });
 });
+
+
+describe('编辑任务配置', () => {
+  it('验证分别读取当前创建和编辑表达式', async () => {
+    const page = useCronJobPage();
+    page.createFormModel.value.schedule = '@every 1h';
+    page.editFormModel.value.schedule = '0 9 * * *';
+    client.post.mockResolvedValue({ valid: true, next_run_times: [] });
+    await page.validateScheduleExpression('edit');
+    await page.validateScheduleExpression('create');
+    expect(client.post.mock.calls.map((call) => call[1])).toEqual([
+      { schedule: '0 9 * * *' }, { schedule: '@every 1h' },
+    ]);
+  });
+
+  it('输入变化或弹窗关闭后忽略迟到的验证提示', async () => {
+    const page = useCronJobPage();
+    page.openCreateModal();
+    page.createFormModel.value.schedule = '@every 1h';
+    const pending = Promise.withResolvers<unknown>();
+    client.post.mockReturnValueOnce(pending.promise);
+    const request = page.validateScheduleExpression('create');
+    page.createFormModel.value.schedule = '@every 2h';
+    pending.resolve({ valid: true, next_run_times: [] });
+    await request;
+    expect(notices.success).not.toHaveBeenCalled();
+    page.closeCreateModal();
+  });
+
+  it('详情返回不再允许的命令类型时不会打开编辑', async () => {
+    const page = useCronJobPage();
+    client.get.mockResolvedValueOnce({ items: [], total: 0, allow_local_exec: false });
+    await page.fetchCronJobs();
+    client.get.mockResolvedValueOnce({ ...job(5), job_type: 2 });
+    await page.openEditModal({ ...job(5), job_type: 3 });
+    expect(page.isEditModalVisible.value).toBe(false);
+  });
+
+  it('编辑校验期间本地执行被关闭时不得提交', async () => {
+    const page = useCronJobPage();
+    client.get.mockResolvedValueOnce(job(8));
+    await page.openEditModal(job(8));
+    const validation = Promise.withResolvers<unknown>();
+    page.formRef.value = { validate: () => validation.promise } as unknown as FormInstance;
+    const request = page.submitEditForm();
+    client.get.mockResolvedValueOnce({ items: [], total: 0, allow_local_exec: false });
+    await page.fetchCronJobs();
+    validation.resolve({});
+    await request;
+    expect(client.put).not.toHaveBeenCalled();
+  });
+});

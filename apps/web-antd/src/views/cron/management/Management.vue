@@ -15,6 +15,7 @@ import { onMounted, onUnmounted, watch } from 'vue';
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { message } from 'ant-design-vue';
 import { useCronJobPage } from './Management';
+import CronEditFields from './CronEditFields.vue';
 import { useAccessStore } from '@vben/stores';
 
 import { usePermission } from '#/utils/permission';
@@ -507,7 +508,7 @@ onUnmounted(clearPage);
         class="k8s-form"
       >
         <a-form-item label="任务名称" name="name" has-feedback>
-          <a-input v-model:value="createFormModel.name" placeholder="请输入任务名称" maxlength="100" />
+          <a-input v-model:value="createFormModel.name" placeholder="请输入任务名称" :maxlength="100" />
         </a-form-item>
 
         <a-form-item label="任务描述" name="description">
@@ -515,7 +516,7 @@ onUnmounted(clearPage);
             v-model:value="createFormModel.description"
             placeholder="请输入任务描述"
             :rows="3"
-            maxlength="500"
+            :maxlength="500"
             show-count
           />
         </a-form-item>
@@ -538,16 +539,16 @@ onUnmounted(clearPage);
           <a-input
             v-model:value="createFormModel.schedule"
             placeholder="例：0 0 * * * (每天午夜执行)"
-            maxlength="100"
+            :maxlength="100"
           >
             <template #addonAfter>
-              <a-button type="link" @click="validateScheduleExpression" size="small">
+              <a-button type="link" @click="validateScheduleExpression('create')" size="small">
                 验证
               </a-button>
             </template>
           </a-input>
           <div class="cron-schedule-tip">
-            <small>格式：秒 分 时 日 月 周，例如：0 0 * * * 表示每天午夜执行</small>
+            <small>格式：分 时 日 月 周；默认按 UTC 执行，可使用 CRON_TZ 指定时区</small>
           </div>
         </a-form-item>
 
@@ -558,7 +559,7 @@ onUnmounted(clearPage);
               v-model:value="createFormModel.command"
               placeholder="请输入要执行的命令"
               :rows="3"
-              maxlength="1000"
+              :maxlength="1000"
             />
           </a-form-item>
 
@@ -599,7 +600,7 @@ onUnmounted(clearPage);
             <a-input
               v-model:value="createFormModel.work_dir"
               placeholder="命令执行的工作目录，留空使用默认目录"
-              maxlength="255"
+              :maxlength="255"
             />
           </a-form-item>
 
@@ -658,7 +659,7 @@ onUnmounted(clearPage);
             <a-input
               v-model:value="createFormModel.http_url"
               placeholder="https://example.com/api/endpoint"
-              maxlength="500"
+              :maxlength="500"
             />
           </a-form-item>
 
@@ -704,7 +705,7 @@ onUnmounted(clearPage);
               v-model:value="createFormModel.http_body"
               placeholder="POST/PUT请求的数据体，支持JSON格式"
               :rows="4"
-              maxlength="5000"
+              :maxlength="5000"
               show-count
             />
           </a-form-item>
@@ -727,7 +728,7 @@ onUnmounted(clearPage);
               v-model:value="createFormModel.script_content"
               placeholder="请输入脚本内容"
               :rows="10"
-              maxlength="10000"
+              :maxlength="10000"
               show-count
               class="k8s-config-textarea"
             />
@@ -762,7 +763,7 @@ onUnmounted(clearPage);
               v-model:value="createFormModel.ssh_command"
               placeholder="请输入要在远程服务器执行的命令"
               :rows="4"
-              maxlength="2000"
+              :maxlength="2000"
               show-count
               class="k8s-config-textarea"
             />
@@ -772,7 +773,7 @@ onUnmounted(clearPage);
             <a-input
               v-model:value="createFormModel.ssh_work_dir"
               placeholder="远程命令执行的工作目录，留空使用默认目录"
-              maxlength="500"
+              :maxlength="500"
             />
           </a-form-item>
 
@@ -862,7 +863,7 @@ onUnmounted(clearPage);
         class="k8s-form"
       >
         <a-form-item label="任务名称" name="name" has-feedback>
-          <a-input v-model:value="editFormModel.name" placeholder="请输入任务名称" maxlength="100" />
+          <a-input v-model:value="editFormModel.name" placeholder="请输入任务名称" :maxlength="100" />
         </a-form-item>
 
         <a-form-item label="任务描述" name="description">
@@ -870,7 +871,7 @@ onUnmounted(clearPage);
             v-model:value="editFormModel.description"
             placeholder="请输入任务描述"
             :rows="3"
-            maxlength="500"
+            :maxlength="500"
             show-count
           />
         </a-form-item>
@@ -879,15 +880,17 @@ onUnmounted(clearPage);
           <a-input
             v-model:value="editFormModel.schedule"
             placeholder="例：0 0 * * * (每天午夜执行)"
-            maxlength="100"
+            :maxlength="100"
           >
             <template #addonAfter>
-              <a-button type="link" @click="validateScheduleExpression" size="small">
+              <a-button type="link" @click="validateScheduleExpression('edit')" size="small">
                 验证
               </a-button>
             </template>
           </a-input>
         </a-form-item>
+
+        <CronEditFields v-model="editFormModel" :resources="filteredSshResources" :loading="sshResourcesLoading" @search="searchSshResources" @open-resources="fetchSshResources" />
 
         <a-form-item label="超时时间" name="timeout">
           <a-input-number

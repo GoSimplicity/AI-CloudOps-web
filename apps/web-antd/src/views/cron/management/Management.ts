@@ -272,6 +272,7 @@ export function useCronJobPage() {
   let detailRequest = 0;
   let editRequest = 0;
   let sshRequest = 0;
+  let scheduleValidationRequest = 0;
   const clearPage = () => {
     pageGeneration++;
     createRequest++;
@@ -670,6 +671,10 @@ export function useCronJobPage() {
       const response = await getCronJobDetail({ id: job.id });
       if (ticket !== editRequest) return;
       const jobDetail = response;
+      if (isLocalExecLocked(jobDetail)) {
+        message.warning('本地命令/脚本任务已停用，无法编辑');
+        return;
+      }
 
       state.editFormModel = {
         id: jobDetail.id,
@@ -680,19 +685,19 @@ export function useCronJobPage() {
         timeout: jobDetail.timeout,
         max_retry: jobDetail.max_retry,
         command: jobDetail.command,
-        args: jobDetail.args,
+        args: jobDetail.args?.slice(),
         work_dir: jobDetail.work_dir,
-        environment: jobDetail.environment,
+        environment: jobDetail.environment?.map((item) => ({ ...item })),
         http_method: jobDetail.http_method,
         http_url: jobDetail.http_url,
-        http_headers: jobDetail.http_headers,
+        http_headers: jobDetail.http_headers?.map((item) => ({ ...item })),
         http_body: jobDetail.http_body,
         script_type: jobDetail.script_type,
         script_content: jobDetail.script_content,
         ssh_resource_id: jobDetail.ssh_resource_id,
         ssh_command: jobDetail.ssh_command,
         ssh_work_dir: jobDetail.ssh_work_dir,
-        ssh_environment: jobDetail.ssh_environment,
+        ssh_environment: jobDetail.ssh_environment?.map((item) => ({ ...item })),
       };
 
       state.isEditModalVisible = true;
@@ -715,10 +720,18 @@ export function useCronJobPage() {
     const generation = pageGeneration;
     const ticket = editRequest;
     if (state.submitLoading || !state.isEditModalVisible) return;
+    if (isLocalExecLocked(state.editFormModel)) {
+      message.warning('本地命令/脚本任务已停用，无法编辑');
+      return;
+    }
     state.submitLoading = true;
     try {
       await formRef.value?.validate();
       if (!state.isEditModalVisible || generation !== pageGeneration || ticket !== editRequest) return;
+      if (isLocalExecLocked(state.editFormModel)) {
+        message.warning('本地命令/脚本任务已停用，无法编辑');
+        return;
+      }
 
       await updateCronJob({ ...state.editFormModel, job_type: state.editFormModel.job_type });
       if (generation !== pageGeneration || ticket !== editRequest) return;
@@ -871,11 +884,19 @@ export function useCronJobPage() {
   // 日志分页操作
 
   // 表单操作
-  const validateScheduleExpression = async () => {
-    if (!state.createFormModel.schedule) return;
+  const validateScheduleExpression = async (mode: 'create' | 'edit' = 'create') => {
+    const schedule = mode === 'edit' ? state.editFormModel.schedule : state.createFormModel.schedule;
+    if (!schedule) return;
+    const ticket = ++scheduleValidationRequest;
+    const generation = pageGeneration;
+    const formTicket = mode === 'edit' ? editRequest : createRequest;
+    const isCurrent = () => ticket === scheduleValidationRequest && generation === pageGeneration &&
+      formTicket === (mode === 'edit' ? editRequest : createRequest) &&
+      schedule === (mode === 'edit' ? state.editFormModel.schedule : state.createFormModel.schedule);
 
     try {
-      const response = await validateSchedule({ schedule: state.createFormModel.schedule });
+      const response = await validateSchedule({ schedule });
+      if (!isCurrent()) return;
       const result = response;
 
       if (!result.valid) {
@@ -887,7 +908,7 @@ export function useCronJobPage() {
         }
       }
     } catch (error) {
-      if (shouldNotifyPageError(error)) message.error('调度表达式验证失败');
+      if (isCurrent() && shouldNotifyPageError(error)) message.error('调度表达式验证失败');
 
     }
   };
