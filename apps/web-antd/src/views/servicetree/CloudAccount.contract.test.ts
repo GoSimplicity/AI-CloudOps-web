@@ -7,11 +7,13 @@ import {
 import Antd, { message, Modal } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CloudAccountManagement from './CloudAccountManagement.vue';
+import AccountRegionsEditor from './cloudaccountmanagement/AccountRegionsEditor.vue';
 
-// FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
+const permissions = vi.hoisted(() => ({ allowed: null as null | string[] }));
+// 验证按钮权限以及操作本身
 vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
-  usePermission: () => ({ can: () => true, hasPerm: () => true }),
+  usePermission: () => ({ can: (key: string) => permissions.allowed === null || permissions.allowed.includes(key), hasPerm: (code: string) => permissions.allowed === null || permissions.allowed.includes(code) }),
 }));
 
 const client = vi.hoisted(() => ({
@@ -22,10 +24,11 @@ const client = vi.hoisted(() => ({
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 let wrapper: VueWrapper | undefined;
+let selectedProvider = 1;
 const record = () => ({
   id: 7,
   name: '已有账户',
-  provider: 1,
+  provider: selectedProvider,
   status: 1,
   regions: [
     {
@@ -48,6 +51,8 @@ const record = () => ({
 });
 beforeEach(() => {
   vi.resetAllMocks();
+  permissions.allowed = null;
+  selectedProvider = 1;
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
@@ -281,20 +286,244 @@ it('重复点击提交只创建一次，错误保留表单便于重试', async (
   expect(client.delete).not.toHaveBeenCalled();
 });
 
-it('AWS使用Go枚举3且存量账户只读', async () => {
-  client.get.mockResolvedValue({
-    items: [{ ...record(), provider: 3 }],
-    total: 1,
+it.each([2, 3])('已支持的云厂商 %i 可读取并编辑账户', async (provider) => {
+  selectedProvider = provider;
+  await start();
+  expect(wrapper!.find('.account-table').text()).toContain(provider === 2 ? '腾讯云' : 'AWS');
+  const button = wrapper!.find('[aria-label="edit"]').element.closest('button') as HTMLButtonElement;
+  expect(button.disabled).toBe(false);
+  await edit();
+  await fill('请输入云账户名称', '已编辑');
+  await action('更新', '.ant-modal-footer button');
+  expect(client.put).toHaveBeenCalledWith('/tree/cloud/account/7/update', expect.not.objectContaining({ access_key: expect.anything(), secret_key: expect.anything() }));
+});
+
+it.each([4, 5, 6])('未实现的厂商 %i 账户保持只读', async (provider) => {
+  selectedProvider = provider;
+  await start();
+  const button = wrapper!.find('[aria-label="edit"]').element.closest('button') as HTMLButtonElement;
+  expect(button.disabled).toBe(true);
+  button.click();
+  expect(client.post).not.toHaveBeenCalled();
+});
+
+async function chooseProvider(name: string) {
+  const select = document.querySelector('.account-form .ant-select-selector');
+  expect(select).not.toBeNull();
+  await new DOMWrapper(select!).trigger('mousedown');
+  await flushPromises();
+  const option = [...document.querySelectorAll<HTMLElement>('.ant-select-item-option')].find(item => item.textContent?.trim() === name);
+  expect(option, `missing provider ${name}`).toBeDefined();
+  option!.click();
+  await flushPromises();
+}
+
+it.each([[1, '阿里云'], [2, '腾讯云'], [3, 'AWS']] as const)('新增 %s 账户不隐式请求云平台', async (provider, label) => {
+  await start();
+  await action('添加账户');
+  if (provider !== 1) await chooseProvider(label);
+  await fill('请输入云账户名称', '新账户');
+  await fill('请输入 Access Key', 'offline-access-key');
+  await fill('请输入 Secret Key', 'offline-secret-key');
+  await addRegion(provider === 3 ? 'us-east-1' : 'ap-beijing');
+  await action('添加', '.ant-modal-footer button');
+  expect(client.post).toHaveBeenCalledTimes(1);
+  expect(client.post).toHaveBeenCalledWith('/tree/cloud/account/create', expect.objectContaining({ provider }));
+  expect(client.get.mock.calls.some(([url]) => String(url).includes('available-regions'))).toBe(false);
+});
+
+it('AWS 临时凭据禁止提交', async () => {
+  await start();
+  await action('添加账户');
+  await chooseProvider('AWS');
+  await fill('请输入云账户名称', '临时凭据账户');
+  await fill('请输入 Access Key', 'ASIAEXAMPLE123456789');
+  await fill('请输入 Secret Key', 'offline-secret-key');
+  await addRegion('us-east-1');
+  await action('添加', '.ant-modal-footer button');
+  expect(client.post).not.toHaveBeenCalled();
+});
+
+it('缺少权限隐藏相关操作，禁用账户不验证', async () => {
+  permissions.allowed = ['/api/tree/cloud/account/:id/detail'];
+  selectedProvider = 3;
+  await start();
+  expect(document.body.textContent).not.toContain('添加账户');
+  expect(wrapper!.find('[aria-label="edit"]').exists()).toBe(false);
+  expect(wrapper!.find('[aria-label="safety-certificate"]').exists()).toBe(false);
+  expect((wrapper!.find('.ant-switch').element as HTMLButtonElement).disabled).toBe(true);
+});
+
+it('已禁用账户不允许发起真实凭据验证', async () => {
+  client.get.mockResolvedValue({ items: [{ ...record(), status: 2 }], total: 1 });
+  await start();
+  const button = wrapper!.find('[aria-label="safety-certificate"]').element.closest('button') as HTMLButtonElement;
+  expect(button.disabled).toBe(true);
+  button.click();
+  expect(client.post).not.toHaveBeenCalled();
+});
+
+it.each([[1, '阿里云'], [2, '腾讯云'], [3, 'AWS']] as const)('云厂商 %s 的验证需确认且支持状态/删除操作', async (provider, label) => {
+  selectedProvider = provider;
+  await start();
+  const verify = wrapper!.find('[aria-label="safety-certificate"]').element.closest('button') as HTMLButtonElement;
+  verify.click();
+  await flushPromises();
+  expect(document.body.textContent).toContain(`将向${label}验证`);
+  expect(client.post).not.toHaveBeenCalled();
+  await action('开始验证', '.ant-modal-confirm-btns button');
+  expect(client.post).toHaveBeenCalledWith('/tree/cloud/account/7/verify');
+  await wrapper!.find('.ant-switch').trigger('click');
+  await flushPromises();
+  expect(client.put).toHaveBeenCalledWith('/tree/cloud/account/7/status', { status: 2 });
+  (wrapper!.find('[aria-label="delete"]').element.closest('button') as HTMLButtonElement).click();
+  await flushPromises();
+  expect(client.delete).not.toHaveBeenCalled();
+  await action('确定删除', '.ant-modal-confirm-btns button');
+  expect(client.delete).toHaveBeenCalledWith('/tree/cloud/account/7/delete');
+});
+
+it('已保存账户云端地域查询需要确认且GET只携带账户ID', async () => {
+  selectedProvider = 3;
+  client.get.mockImplementation((url: string) => {
+    if (url.endsWith('/detail')) return Promise.resolve(record());
+    if (url.endsWith('/available-regions')) return Promise.resolve({ regions: [{ region: 'us-east-1', region_name: '美国东部', available: true }] });
+    return Promise.resolve({ items: [record()], total: 1 });
   });
   await start();
-  expect(wrapper!.find('.account-table').text()).toContain('AWS');
-  const edit = wrapper!
-    .find('[aria-label="edit"]')
-    .element.closest('button') as HTMLButtonElement;
-  expect(edit.disabled).toBe(true);
-  edit.click();
+  await edit();
+  await action('查询云端地域');
+  expect(client.get.mock.calls.filter(([url]) => String(url).includes('available-regions'))).toHaveLength(0);
+  await action('确认查询', '.ant-modal-confirm-btns button');
+  const calls = client.get.mock.calls.filter(([url]) => String(url).includes('available-regions'));
+  expect(calls).toEqual([['/tree/cloud/account/region/available-regions', { params: { cloud_account_id: 7 } }]]);
+  expect(JSON.stringify(calls)).not.toContain('access_key');
+  expect(JSON.stringify(calls)).not.toContain('secret_key');
+});
+
+it('关闭账户表单后，迟到的地域查询确认不会发起请求', async () => {
+  await start();
+  await edit();
+  await action('查询云端地域');
+  await action('取消', '.modern-modal .ant-modal-footer button');
+  await action('确认查询', '.ant-modal-confirm-btns button');
+  expect(client.get.mock.calls.some(([url]) => String(url).includes('available-regions'))).toBe(false);
+});
+
+it('未保存账户的地域参考只传厂商，无权限时隐藏入口', async () => {
+  client.get.mockImplementation((url: string) => url.endsWith('/available-regions')
+    ? Promise.resolve({ regions: [{ region: 'us-east-1', region_name: '美国东部', available: true }] })
+    : Promise.resolve({ items: [record()], total: 1 }));
+  await start();
+  await action('添加账户');
+  await chooseProvider('AWS');
+  await action('加载地域参考');
+  const call = client.get.mock.calls.find(([url]) => String(url).includes('available-regions'));
+  expect(call).toEqual(['/tree/cloud/account/region/available-regions', { params: { provider: 3 } }]);
+  expect(document.body.textContent).not.toContain('查询云端地域');
+});
+
+it('地域API运行时丢弃意外传入的密钥', async () => {
+  const { getAvailableRegions } = await import('#/api/core/tree/tree_account_region');
+  client.get.mockResolvedValue({ regions: [] });
+  await getAvailableRegions({ cloud_account_id: 7, access_key: 'test-access', secret_key: 'test-secret' } as never);
+  expect(client.get).toHaveBeenCalledWith('/tree/cloud/account/region/available-regions', { params: { cloud_account_id: 7 } });
+});
+
+it('缺少地域权限时不出现查询入口', async () => {
+  permissions.allowed = ['/api/tree/cloud/account/create'];
+  await start();
+  await action('添加账户');
+  expect(document.body.textContent).not.toContain('加载地域参考');
+  expect(client.get.mock.calls.some(([url]) => String(url).includes('available-regions'))).toBe(false);
+});
+
+it('删除确认期间撤销权限不会发送请求', async () => {
+  await start();
+  (wrapper!.find('[aria-label="delete"]').element.closest('button') as HTMLButtonElement).click();
+  await flushPromises();
+  permissions.allowed = [];
+  await action('确定删除', '.ant-modal-confirm-btns button');
+  expect(client.delete).not.toHaveBeenCalled();
+});
+
+it.each(['create', 'edit'])('异步表单校验期间撤销 %s 权限不会写入', async (operation) => {
+  await start();
+  if (operation === 'edit') {
+    await edit();
+  } else {
+    await action('添加账户');
+    await fill('请输入云账户名称', '测试账户');
+    await fill('请输入 Access Key', 'offline-access');
+    await fill('请输入 Secret Key', 'offline-secret');
+  }
+  const button = [...document.querySelectorAll<HTMLButtonElement>('.modern-modal .ant-modal-footer button')]
+    .find(item => item.textContent?.replace(/\s/g, '') === (operation === 'edit' ? '更新' : '添加'));
+  expect(button).toBeDefined();
+  button!.click();
+  permissions.allowed = [];
   await flushPromises();
   expect(client.post).not.toHaveBeenCalled();
   expect(client.put).not.toHaveBeenCalled();
-  expect(client.delete).not.toHaveBeenCalled();
+});
+
+it('详情读取期间撤销权限不展示迟到数据', async () => {
+  const pending = Promise.withResolvers<unknown>();
+  client.get.mockImplementation((url: string) => url.endsWith('/detail')
+    ? pending.promise : Promise.resolve({ items: [record()], total: 1 }));
+  await start();
+  const icon = wrapper!.find('[aria-label="edit"]');
+  (icon.element.closest('button') as HTMLButtonElement).click();
+  await flushPromises();
+  permissions.allowed = [];
+  pending.resolve({ ...record(), name: '敏感迟到内容' });
+  await flushPromises();
+  expect(document.body.textContent).not.toContain('敏感迟到内容');
+});
+
+it('地域读取期间撤销权限不展示迟到结果', async () => {
+  const pending = Promise.withResolvers<unknown>();
+  client.get.mockReturnValue(pending.promise);
+  wrapper = mount(AccountRegionsEditor, {
+    attachTo: document.body,
+    global: { plugins: [Antd] },
+    props: { modelValue: [], provider: 1, canRead: true, accountEnabled: true },
+  });
+  await action('加载地域参考');
+  await wrapper.setProps({ canRead: false });
+  pending.resolve({ regions: [{ region: 'cn-stale', region_name: '撤权迟到地域', available: true }] });
+  await flushPromises();
+  await new DOMWrapper(document.querySelector('#account-region-codes')!.closest('.ant-select')!).find('.ant-select-selector').trigger('mousedown');
+  await flushPromises();
+  expect(document.body.textContent).not.toContain('撤权迟到地域');
+});
+
+it('禁用账户不可查询云端地域', async () => {
+  client.get.mockImplementation((url: string) => url.endsWith('/detail')
+    ? Promise.resolve({ ...record(), status: 2 })
+    : Promise.resolve({ items: [record()], total: 1 }));
+  await start();
+  await edit();
+  const button = [...document.querySelectorAll<HTMLButtonElement>('button')]
+    .find(item => item.textContent?.trim() === '查询云端地域');
+  expect(button?.disabled).toBe(true);
+  button?.click();
+  expect(client.get.mock.calls.some(([url]) => String(url).includes('available-regions'))).toBe(false);
+});
+
+it('切换厂商后不采纳旧地域请求的迟到结果', async () => {
+  const pending = Promise.withResolvers<unknown>();
+  client.get.mockImplementation((url: string) => url.endsWith('/available-regions')
+    ? pending.promise
+    : Promise.resolve({ items: [record()], total: 1 }));
+  await start();
+  await action('添加账户');
+  await action('加载地域参考');
+  await chooseProvider('AWS');
+  pending.resolve({ regions: [{ region: 'cn-stale-region', region_name: '过期地域', available: true }] });
+  await flushPromises();
+  await new DOMWrapper(document.querySelector('#account-region-codes')!.closest('.ant-select')!).find('.ant-select-selector').trigger('mousedown');
+  await flushPromises();
+  expect(document.body.textContent).not.toContain('过期地域');
+  expect(client.post).not.toHaveBeenCalled();
 });

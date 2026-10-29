@@ -86,11 +86,9 @@ export interface CreateCloudAccountRegionItem {
 }
 
 // 获取可用区域列表请求参数
-export interface GetAvailableRegionsReq {
-  provider: CloudProvider;
-  access_key?: string;
-  secret_key?: string;
-}
+export type GetAvailableRegionsReq =
+  | { provider: number; cloud_account_id?: never }
+  | { cloud_account_id: number; provider?: never };
 
 // 可用区域信息
 export interface AvailableRegion {
@@ -141,5 +139,15 @@ export async function updateCloudAccountRegionStatus(id: number, status: CloudAc
 
 // 获取可用区域列表
 export async function getAvailableRegions(params: GetAvailableRegionsReq) {
-  return requestClient.get('/tree/cloud/account/region/available-regions', { params });
+  // 仅发送已保存账户ID或厂商枚举，绝不将密钥拼接进URL
+  const query = params.cloud_account_id !== undefined
+    ? { cloud_account_id: params.cloud_account_id }
+    : { provider: params.provider };
+  if ('cloud_account_id' in query && (!Number.isSafeInteger(query.cloud_account_id) || query.cloud_account_id! <= 0)) {
+    throw new Error('云账户ID无效');
+  }
+  if ('provider' in query && ![1, 2, 3].includes(query.provider!)) {
+    throw new Error('当前云厂商不可查询地域');
+  }
+  return requestClient.get<GetAvailableRegionsResp>('/tree/cloud/account/region/available-regions', { params: query });
 }

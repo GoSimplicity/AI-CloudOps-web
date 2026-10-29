@@ -2,7 +2,7 @@
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { onBeforeUnmount } from 'vue';
 
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { message, Empty, Modal } from 'ant-design-vue';
 import {
@@ -84,13 +84,13 @@ import {
 import {
   getCloudAccountListApi,
   getCloudAccountDetailApi,
-  CloudProvider,
   CloudAccountStatus,
   type CloudAccountRegion,
   type CloudAccount,
 } from '#/api/core/tree/tree_account';
 
 import { getTreeList } from '#/api/core/tree/tree_node';
+import { isSupportedComputeProvider } from './cloudaccountmanagement/provider';
 import type { TreeNode } from '#/api/core/tree/tree_local';
 
 import { usePermission } from '#/utils/permission';
@@ -100,7 +100,17 @@ import {
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
+const resourcePermissions = {
+  sync: '/api/tree/cloud/sync',
+  accountList: '/api/tree/cloud/account/list',
+  accountDetail: '/api/tree/cloud/account/:id/detail',
+  update: '/api/tree/cloud/:id/update',
+  bind: '/api/tree/cloud/:id/bind',
+  unbind: '/api/tree/cloud/:id/unbind',
+  status: '/api/tree/cloud/:id/status',
+} as const;
+const canSync = computed(() => hasPerm(resourcePermissions.sync) && hasPerm(resourcePermissions.accountList) && hasPerm(resourcePermissions.accountDetail));
 
 const loadError = ref<string | null>(null);
 let listRequest = 0;
@@ -171,6 +181,15 @@ const syncForm = reactive<SyncTreeCloudResourceReq>({
   sync_mode: SyncMode.INCREMENTAL,
   auto_bind: false,
   bind_node_id: undefined,
+});
+
+watch(canSync, (allowed) => {
+  if (allowed) return;
+  syncRegionRequest++;
+  syncRegions.value = [];
+  syncForm.cloud_account_region_ids = [];
+  syncRegionsLoading.value = false;
+  if (!syncLoading.value) syncModalVisible.value = false;
 });
 
 // 标签输入
@@ -461,6 +480,12 @@ const fetchTreeData = async (): Promise<void> => {
 
 const fetchCloudAccounts = async (): Promise<void> => {
   const ticket = ++accountListRequest;
+  if (!hasPerm(resourcePermissions.accountList)) {
+    cloudAccounts.value = [];
+    accountsLoading.value = false;
+    accountLoadError.value = null;
+    return;
+  }
   accountsLoading.value = true;
   accountLoadError.value = null;
   try {
@@ -601,32 +626,36 @@ const resetFilter = (): void => {
 
 const supportsResource = (record: TreeCloudResource): boolean => {
   const provider = record.cloud_account?.provider ?? cloudAccounts.value.find((account) => account.id === record.cloud_account_id)?.provider;
-  return provider === CloudProvider.AliCloud && record.resource_type === CloudResourceType.ECS;
+  return isSupportedComputeProvider(provider ?? 0) && record.resource_type === CloudResourceType.ECS;
 };
 const requireSupportedResource = (record: TreeCloudResource): boolean => {
   if (supportsResource(record)) return true;
-  message.warning('当前仅支持管理阿里云 ECS，其他存量资源可查看');
+  message.warning('当前仅支持管理阿里云、腾讯云和 AWS 的计算实例，其他存量资源可查看');
   return false;
 };
 const syncAccounts = computed(() => cloudAccounts.value.filter(
-  (account) => account.provider === CloudProvider.AliCloud && account.status === CloudAccountStatus.Enabled,
+  (account) => isSupportedComputeProvider(account.provider) && account.status === CloudAccountStatus.Enabled,
 ));
 const loadSyncRegions = async (id: number): Promise<void> => {
   const ticket = ++syncRegionRequest;
   syncRegions.value = [];
   syncForm.cloud_account_region_ids = [];
+  if (!canSync.value) {
+    syncRegionsLoading.value = false;
+    return;
+  }
   syncRegionsLoading.value = true;
   syncRegionError.value = null;
   try {
     const account = await getCloudAccountDetailApi(id);
-    if (ticket !== syncRegionRequest || !syncModalVisible.value) return;
-    if (account.id !== id || account.provider !== CloudProvider.AliCloud || account.status !== CloudAccountStatus.Enabled) {
+    if (ticket !== syncRegionRequest || !syncModalVisible.value || !canSync.value) return;
+    if (account.id !== id || !isSupportedComputeProvider(account.provider) || account.status !== CloudAccountStatus.Enabled) {
       throw new Error('Account unavailable');
     }
     syncRegions.value = (account.regions ?? []).filter((region) => region.status === 1);
     if (!syncRegions.value.length) syncRegionError.value = '此账户没有已启用的授权地域，请先在云账户中配置';
   } catch (error) {
-    if (ticket === syncRegionRequest && syncModalVisible.value && shouldRecordPageError(error)) syncRegionError.value = '读取账户地域失败，请重试';
+    if (ticket === syncRegionRequest && syncModalVisible.value && canSync.value && shouldRecordPageError(error)) syncRegionError.value = '读取账户地域失败，请重试';
   } finally {
     if (ticket === syncRegionRequest) syncRegionsLoading.value = false;
   }
@@ -639,6 +668,7 @@ const closeSyncModal = (): void => {
   syncRegions.value = [];
 };
 const showSyncModal = (): void => {
+  if (!canSync.value) return;
   if (accountsLoading.value) return;
   if (accountLoadError.value) {
     message.warning('请先重试读取云账户');
@@ -646,7 +676,7 @@ const showSyncModal = (): void => {
   }
   const account = syncAccounts.value[0];
   if (!account) {
-    message.warning('请先添加并启用阿里云账户');
+    message.warning('请先添加并启用受支持的云账户');
     return;
   }
   Object.assign(syncForm, {
@@ -672,6 +702,7 @@ const showChangeLogModal = async (): Promise<void> => {
 };
 
 const handleEdit = (record: TreeCloudResource): void => {
+  if (!hasPerm(resourcePermissions.update)) return;
   if (!requireSupportedResource(record)) return;
   currentResource.value = record;
   Object.assign(editForm, {
@@ -746,6 +777,7 @@ const removeTag = (index: number): void => {
 
 // 更新资源
 const handleUpdate = async (): Promise<void> => {
+  if (!hasPerm(resourcePermissions.update)) return;
   try {
     submitLoading.value = true;
     const { id, ...updateData } = editForm;
@@ -770,9 +802,10 @@ const handleUpdate = async (): Promise<void> => {
 
 // 同步资源
 const handleSync = async (): Promise<void> => {
+  if (!canSync.value) return;
   if (syncLoading.value || syncRegionsLoading.value) return;
   if (!syncAccounts.value.some((account) => account.id === syncForm.cloud_account_id) || syncRegionError.value || !syncRegions.value.length) {
-    message.warning('请选择已启用的阿里云账户并读取授权地域');
+    message.warning('请选择已启用的云账户并读取授权地域');
     return;
   }
   const regionIds = [...(syncForm.cloud_account_region_ids ?? [])];
@@ -835,6 +868,7 @@ const handleChangeLogTableChange = (pag: any): void => {
 
 // 绑定服务树
 const showBindModal = (record: TreeCloudResource): void => {
+  if (!hasPerm(resourcePermissions.bind)) return;
   if (!requireSupportedResource(record)) return;
   currentResource.value = record;
   selectedTreeNodeIds.value = record.tree_nodes?.map((n) => n.id) || [];
@@ -842,6 +876,7 @@ const showBindModal = (record: TreeCloudResource): void => {
 };
 
 const handleBind = async (): Promise<void> => {
+  if (!hasPerm(resourcePermissions.bind)) return;
   if (!currentResource.value || selectedTreeNodeIds.value.length === 0) {
     message.warning('请选择要绑定的服务树节点');
     return;
@@ -874,6 +909,7 @@ const handleBind = async (): Promise<void> => {
 
 // 解绑服务树
 const showUnbindModal = (record: TreeCloudResource): void => {
+  if (!hasPerm(resourcePermissions.unbind)) return;
   if (!requireSupportedResource(record)) return;
   currentResource.value = record;
   selectedUnbindNodeIds.value = [];
@@ -881,6 +917,7 @@ const showUnbindModal = (record: TreeCloudResource): void => {
 };
 
 const handleUnbind = async (): Promise<void> => {
+  if (!hasPerm(resourcePermissions.unbind)) return;
   if (!currentResource.value || selectedUnbindNodeIds.value.length === 0) {
     message.warning('请选择要解绑的节点');
     return;
@@ -917,7 +954,7 @@ const handleUpdateStatus = async (
   record: TreeCloudResource,
   newStatus: CloudResourceStatus,
 ): Promise<void> => {
-  if (!requireSupportedResource(record)) return;
+  if (!hasPerm(resourcePermissions.status) || !requireSupportedResource(record)) return;
   try {
     await updateCloudResourceStatusApi(record.id, { status: newStatus });
     message.success('状态更新成功');
@@ -954,7 +991,7 @@ const handleConnectTerminal = (record: TreeCloudResource): void => {
 
 // 删除资源
 const handleDelete = async (record: TreeCloudResource): Promise<void> => {
-  if (!requireSupportedResource(record)) return;
+  if (!can('tree.cloudResource.delete') || !requireSupportedResource(record)) return;
   Modal.confirm({
     title: '确认删除',
     content: `确定要删除资源 "${record.name}" 吗？此操作不可恢复。`,
@@ -962,6 +999,7 @@ const handleDelete = async (record: TreeCloudResource): Promise<void> => {
     okType: 'danger',
     cancelText: '取消',
     onOk: async () => {
+      if (!can('tree.cloudResource.delete')) return;
       try {
         await deleteTreeCloudResourceApi(record.id);
         message.success('删除成功');
@@ -1000,15 +1038,15 @@ const exportToExcel = (data: TreeCloudResource[]) => {
     环境: item.environment ? getEnvironmentText(item.environment) : '-',
     地域: item.region || '-',
     可用区: item.zone_id || '-',
-    CPU核数: item.cpu || 0,
-    '内存(GB)': item.memory || 0,
-    '磁盘(GB)': item.disk || 0,
+    CPU核数: item.cpu || '未知',
+    '内存(GB)': item.memory || '未知',
+    '磁盘(GB)': item.disk || '未知',
     公网IP: item.public_ip || '-',
     私网IP: item.private_ip || '-',
     操作系统: item.os_name || '-',
     计费方式:
-      item.charge_type === ChargeType.PRE_PAID ? '包年包月' : '按量付费',
-    月成本: `${item.monthly_cost || 0} ${item.currency || 'CNY'}`,
+      item.charge_type === ChargeType.PRE_PAID ? '包年包月' : item.charge_type === ChargeType.POST_PAID ? '按量付费' : '未知',
+    月成本: item.monthly_cost > 0 ? `${item.monthly_cost} ${item.currency || '币种未知'}` : '未知',
     到期时间: item.expire_time ? formatDateTime(item.expire_time) : '-',
     服务树节点: item.tree_nodes?.map((n) => n.name).join(', ') || '-',
     创建人: item.create_user_name || '-',
@@ -1048,7 +1086,7 @@ const closeDetails = () => {
 </script>
 
 <template>
-  <OpsPage title="云资源" description="管理阿里云 ECS 的同步与绑定，其他存量资源可查看" class="cmdb-console cloud-resource-manager">
+  <OpsPage title="云资源" description="管理阿里云、腾讯云和 AWS 计算实例，其他存量资源可查看" class="cmdb-console cloud-resource-manager">
     <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
       <template #action><a-button @click="fetchResources()">重试</a-button></template>
     </a-alert>
@@ -1056,7 +1094,7 @@ const closeDetails = () => {
       <template #action><a-button :loading="accountsLoading" @click="fetchCloudAccounts()">重试读取账户</a-button></template>
     </a-alert>
     <!-- 页面头部 -->
-    <template #actions><a-button type="primary" aria-label="同步资源" :loading="accountsLoading" :disabled="accountsLoading" @click="showSyncModal" class="btn-create">
+    <template #actions><a-button v-if="canSync" type="primary" aria-label="同步资源" :loading="accountsLoading" :disabled="accountsLoading" @click="showSyncModal" class="btn-create">
           <template #icon><sync-outlined /></template>
           <span class="btn-text">同步资源</span>
         </a-button><a-button @click="handleRefresh" class="btn-action">
@@ -1375,7 +1413,7 @@ const closeDetails = () => {
 
             <!-- 状态列 -->
             <template v-else-if="column.key === 'status'">
-              <a-dropdown :trigger="['click']" :disabled="!supportsResource(record)">
+              <a-dropdown :trigger="['click']" :disabled="!supportsResource(record) || !hasPerm(resourcePermissions.status)">
                 <a-badge
                   :status="getStatusBadgeType(record.status)"
                   :text="getStatusText(record.status)"
@@ -1448,13 +1486,13 @@ const closeDetails = () => {
             <!-- 费用列 -->
             <template v-else-if="column.key === 'cost'">
               <div v-if="record.monthly_cost" class="cost-cell">
-                <span class="cost-symbol">¥</span>
+                <span class="cost-symbol">{{ record.currency || '币种未知' }}</span>
                 <span class="cost-amount">{{
                   formatCost(record.monthly_cost)
                 }}</span>
                 <span class="cost-unit">/月</span>
               </div>
-              <span v-else class="empty-text">-</span>
+              <span v-else class="empty-text">未知</span>
             </template>
 
             <!-- 操作列 -->
@@ -1469,7 +1507,7 @@ const closeDetails = () => {
                     <eye-outlined />
                   </a-button>
                 </a-tooltip>
-                <a-tooltip title="编辑">
+                <a-tooltip v-if="hasPerm(resourcePermissions.update)" title="编辑">
                   <a-button
                     type="text"
                     size="small"
@@ -1479,7 +1517,7 @@ const closeDetails = () => {
                     <edit-outlined />
                   </a-button>
                 </a-tooltip>
-                <a-tooltip title="绑定服务树">
+                <a-tooltip v-if="hasPerm(resourcePermissions.bind)" title="绑定服务树">
                   <a-button
                     type="text"
                     size="small"
@@ -1510,6 +1548,7 @@ const closeDetails = () => {
                     <a-menu>
                       <a-menu-item
                         key="unbind"
+                        v-if="hasPerm(resourcePermissions.unbind)"
                         @click="showUnbindModal(record)"
                         :disabled="
                           !supportsResource(record) || !record.tree_nodes || record.tree_nodes.length === 0
@@ -1717,7 +1756,7 @@ const closeDetails = () => {
     >
       <a-alert
         message="同步说明"
-        description="当前支持阿里云 ECS。点击开始同步才会连接云平台；增量更新已有记录，全量替换所选地域的本地 ECS 记录。"
+        description="支持阿里云、腾讯云和 AWS 计算实例。点击开始同步才会连接云平台；增量更新已有记录，全量仅清理所选地域中不存在的本地实例。"
         type="info"
         show-icon
         style="margin-bottom: 24px"
@@ -1729,7 +1768,7 @@ const closeDetails = () => {
             v-model:value="syncForm.cloud_account_id"
             :disabled="syncLoading"
             @change="loadSyncRegions"
-            placeholder="请选择已启用的阿里云账户"
+            placeholder="请选择已启用的云账户"
             size="large"
           >
             <a-select-option
@@ -2196,15 +2235,15 @@ const closeDetails = () => {
                 {{
                   currentDetail.charge_type === ChargeType.PRE_PAID
                     ? '包年包月'
-                    : '按量付费'
+                    : currentDetail.charge_type === ChargeType.POST_PAID ? '按量付费' : '未知'
                 }}
               </a-descriptions-item>
               <a-descriptions-item label="月度费用" :span="1">
                 <span v-if="currentDetail.monthly_cost" class="cost-display">
-                  ¥{{ formatCost(currentDetail.monthly_cost) }}
-                  {{ currentDetail.currency }}
+                  {{ formatCost(currentDetail.monthly_cost) }}
+                  {{ currentDetail.currency || '币种未知' }}
                 </span>
-                <span v-else>-</span>
+                <span v-else>未知</span>
               </a-descriptions-item>
               <a-descriptions-item
                 label="到期时间"
@@ -2303,10 +2342,10 @@ const closeDetails = () => {
                 >
                   <code-outlined /> 连接终端
                 </a-button>
-                <a-button :disabled="!supportsResource(currentDetail)" @click="handleEdit(currentDetail)">
+                <a-button v-if="hasPerm(resourcePermissions.update)" :disabled="!supportsResource(currentDetail)" @click="handleEdit(currentDetail)">
                   <edit-outlined /> 编辑
                 </a-button>
-                <a-button :disabled="!supportsResource(currentDetail)" @click="showBindModal(currentDetail)">
+                <a-button v-if="hasPerm(resourcePermissions.bind)" :disabled="!supportsResource(currentDetail)" @click="showBindModal(currentDetail)">
                   <apartment-outlined /> 绑定节点
                 </a-button>
               </a-button-group>

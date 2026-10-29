@@ -6,14 +6,20 @@ import {
 } from '@vue/test-utils';
 import Antd, { message, Modal } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ref } from 'vue';
 import CloudResourceManager from './CloudResourceManager.vue';
 import { getTreeNodeCloudResourcesApi } from '#/api/core/tree/tree_cloud';
+import { downloadCsv } from '#/utils/export-csv';
 import { markRequestLayerNotice } from '#/utils/permission/request-notice';
 
-// FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
+vi.mock('#/utils/export-csv', () => ({ downloadCsv: vi.fn() }));
+
+const permissions = vi.hoisted(() => ({ check: vi.fn((_code: string) => true) }));
+
+// FE-02：权限匹配细节在 utils/permission/*.test.ts 中验证
 vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
-  usePermission: () => ({ can: () => true, hasPerm: () => true }),
+  usePermission: () => ({ can: permissions.check, hasPerm: permissions.check }),
 }));
 
 const client = vi.hoisted(() => ({
@@ -72,6 +78,7 @@ const resource = {
 let wrapper: VueWrapper | undefined;
 beforeEach(() => {
   vi.resetAllMocks();
+  permissions.check.mockReturnValue(true);
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
@@ -92,13 +99,18 @@ beforeEach(() => {
         items: [
           account(),
           account(10),
-          { ...account(8), name: '腾讯存量', provider: 2 },
+          { ...account(8), name: '腾讯账户', provider: 2 },
+          { ...account(11), name: 'AWS账户', provider: 3 },
+          { ...account(12), name: '华为账户', provider: 4 },
           { ...account(9), name: '已禁用账户', status: 2 },
         ],
-        total: 4,
+        total: 6,
       });
     if (path.startsWith('/tree/cloud/account/') && path.endsWith('/detail'))
-      return Promise.resolve(account(Number(path.split('/').at(-2))));
+      {
+      const id = Number(path.split('/').at(-2));
+      return Promise.resolve({ ...account(id), provider: id === 8 ? 2 : id === 11 ? 3 : id === 12 ? 4 : 1 });
+    }
     return Promise.resolve({ items: [], total: 0 });
   });
   client.post.mockResolvedValue({
@@ -157,6 +169,62 @@ async function select(id: string, label: string) {
   await flushPromises();
 }
 describe('云资源真实控件合同', () => {
+  it.each(['/api/tree/cloud/sync', '/api/tree/cloud/account/list', '/api/tree/cloud/account/:id/detail'])(
+    '缺少 %s 权限时不开放同步入口', async (missing) => {
+      permissions.check.mockImplementation((code: string) => code !== missing);
+      await start();
+      expect(wrapper!.find('[aria-label="同步资源"]').exists()).toBe(false);
+      if (missing === '/api/tree/cloud/account/list') {
+        expect(client.get.mock.calls.some((call) => call[0] === '/tree/cloud/account/list')).toBe(false);
+      }
+      expect(client.post).not.toHaveBeenCalled();
+    },
+  );
+  it('地域请求期间撤销权限会丢弃迟到结果并关闭同步入口', async () => {
+    const allowed = ref(true);
+    permissions.check.mockImplementation((code: string) =>
+      code !== '/api/tree/cloud/account/:id/detail' || allowed.value,
+    );
+    const late = Promise.withResolvers<unknown>();
+    const original = client.get.getMockImplementation()!;
+    client.get.mockImplementation((path: string, ...rest: unknown[]) =>
+      path === '/tree/cloud/account/7/detail' ? late.promise : original(path, ...rest),
+    );
+    await open();
+    allowed.value = false;
+    await flushPromises();
+    late.resolve(account());
+    await flushPromises();
+    expect(wrapper!.find('[aria-label="同步资源"]').exists()).toBe(false);
+    expect(document.querySelector('.cloud-sync-form')?.textContent ?? '').not.toContain('杭州');
+    expect(client.post).not.toHaveBeenCalled();
+  });
+  it('展示真实币种并将缺失费用标为未知', async () => {
+    const original = client.get.getMockImplementation()!;
+    client.get.mockImplementation((path: string, ...rest: unknown[]) =>
+      path === '/tree/cloud/list'
+        ? Promise.resolve({ items: [
+            { ...resource, name: '有费用', monthly_cost: 12.5, currency: 'USD' },
+            { ...resource, id: 2, name: '费用未知', monthly_cost: 0, currency: 'USD' },
+          ], total: 2 })
+        : original(path, ...rest),
+    );
+    await start();
+    const rows = wrapper!.findAll('tbody tr.ant-table-row');
+    expect(rows[0]!.text()).toContain('USD');
+    expect(rows[0]!.text()).not.toContain('¥');
+    expect(rows[1]!.text()).toContain('未知');
+  });
+  it('导出不将未知资源数据当成零成本', async () => {
+    await start();
+    const instance = wrapper!.vm as unknown as { $: { setupState: { handleExportCurrent: () => void } } };
+    instance.$.setupState.handleExportCurrent();
+    await flushPromises();
+    expect(downloadCsv).toHaveBeenCalledOnce();
+    const rows = vi.mocked(downloadCsv).mock.calls[0]![1];
+    const costIndex = rows[0]!.indexOf('月成本');
+    expect(rows[1]![costIndex]).toBe('未知');
+  });
   it('普通资源分页使用size，节点资源专用分页才使用page_size', async () => {
     await start();
     await wrapper!.find('.ant-pagination-item-2 a').trigger('click');
@@ -201,6 +269,19 @@ describe('云资源真实控件合同', () => {
       ),
     ).toBe(true);
   });
+  it.each([{ name: '腾讯账户', id: 8 }, { name: 'AWS账户', id: 11 }])(
+    '$name 可选择已授权地域并同步',
+    async ({ name, id }) => {
+      await open();
+      await select('cloud-sync-account', name);
+      expect(client.get).toHaveBeenCalledWith(`/tree/cloud/account/${id}/detail`);
+      await select('cloud-sync-regions', '深圳');
+      await button('开始同步', '.ant-modal-footer button');
+      expect(client.post).toHaveBeenCalledWith('/tree/cloud/sync', expect.objectContaining({
+        cloud_account_id: id, cloud_account_region_ids: [41], resource_types: [1], sync_mode: 'incremental',
+      }));
+    },
+  );
   it('同步取消不发送请求，迟到的旧账户地域不能污染新账户', async () => {
     const late = Promise.withResolvers<unknown>();
     const original = client.get.getMockImplementation()!;
@@ -334,7 +415,7 @@ describe('云资源真实控件合同', () => {
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledWith('同步失败，请检查同步历史后重试');
   });
-  it('非阿里云及非ECS存量只读，不开放不支持的同步账户', async () => {
+  it('不支持的云厂商及非ECS存量只读，开放腾讯和AWS同步账户', async () => {
     const original = client.get.getMockImplementation()!;
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
       path === '/tree/cloud/list'
@@ -342,9 +423,9 @@ describe('云资源真实控件合同', () => {
             items: [
               {
                 ...resource,
-                name: '腾讯存量资源',
-                cloud_account_id: 8,
-                cloud_account: { id: 8, provider: 2 },
+                name: '华为存量资源',
+                cloud_account_id: 12,
+                cloud_account: { id: 12, provider: 4 },
               },
               { ...resource, id: 2, name: '阿里存量RDS', resource_type: 2 },
             ],
@@ -354,7 +435,7 @@ describe('云资源真实控件合同', () => {
     );
     await open();
     const row = wrapper!.find('tbody tr.ant-table-row');
-    expect(row.text()).toContain('腾讯存量资源');
+    expect(row.text()).toContain('华为存量资源');
     expect(
       row
         .findAll('button')
@@ -378,7 +459,9 @@ describe('云资源真实控件合同', () => {
     const options = [
       ...document.querySelectorAll('.ant-select-item-option'),
     ].map((element) => element.textContent);
-    expect(options.some((label) => label?.includes('腾讯'))).toBe(false);
+    expect(options.some((label) => label?.includes('腾讯'))).toBe(true);
+    expect(options.some((label) => label?.includes('AWS'))).toBe(true);
+    expect(options.some((label) => label?.includes('华为'))).toBe(false);
     expect(options.some((label) => label?.includes('禁用'))).toBe(false);
     await button('取消', '.ant-modal-footer button');
     expect(client.post).not.toHaveBeenCalled();

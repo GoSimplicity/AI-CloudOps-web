@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import AccountRegionsEditor from './cloudaccountmanagement/AccountRegionsEditor.vue';
+import { CLOUD_ACCOUNT_PERMISSIONS, computeProviderName, isSupportedComputeProvider } from './cloudaccountmanagement/provider';
 import { onBeforeUnmount } from 'vue';
 
 import { ref, reactive, onMounted, computed } from 'vue';
@@ -51,7 +52,7 @@ import {
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
 
 const loadError = ref<string | null>(null);
 let listRequest = 0;
@@ -67,6 +68,7 @@ const submitLoading = ref(false);
 const modalVisible = ref(false);
 const detailVisible = ref(false);
 const isEdit = ref(false);
+const editAccountStatus = ref<CloudAccountStatus>(CloudAccountStatus.Enabled);
 const switchLoading = ref<Record<number, boolean>>({});
 
 const formRef = ref<FormInstance>();
@@ -114,10 +116,10 @@ const aliCloudCount = computed(
     ).length,
 );
 
-const tencentCloudCount = computed(
+const tencentAndAwsCount = computed(
   () =>
     cloudAccounts.value.filter(
-      (item) => item.provider === CloudProvider.TencentCloud,
+      (item) => item.provider === CloudProvider.TencentCloud || item.provider === CloudProvider.AWS,
     ).length,
 );
 
@@ -331,7 +333,9 @@ const showCreateModal = (): void => {
   formRequest++;
   formLoading.value = false;
   originalRegions = '';
+  if (!hasPerm(CLOUD_ACCOUNT_PERMISSIONS.create)) return;
   isEdit.value = false;
+  editAccountStatus.value = CloudAccountStatus.Enabled;
   formData.value = {
     name: '',
     provider: CloudProvider.AliCloud,
@@ -365,7 +369,7 @@ const closeForm = () => {
   formData.value.secret_key = '';
 };
 const handleEdit = async (record: CloudAccount): Promise<void> => {
-  if (record.provider !== CloudProvider.AliCloud) return;
+  if (!isSupportedComputeProvider(record.provider) || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)) return;
   const ticket = ++formRequest;
   formData.value = {
     name: '',
@@ -381,6 +385,8 @@ const handleEdit = async (record: CloudAccount): Promise<void> => {
   try {
     const current = await getCloudAccountDetailApi(record.id);
     if (ticket !== formRequest || !modalVisible.value) return;
+    if (!hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)) { closeForm(); return; }
+    editAccountStatus.value = current.status;
     const regions = normalizeRegions(current.regions);
     originalRegions = regionSignature(regions);
     formData.value = {
@@ -405,18 +411,19 @@ const handleEdit = async (record: CloudAccount): Promise<void> => {
 };
 
 const handleSubmit = async (): Promise<void> => {
-  if (submitLoading.value || formLoading.value || !formRef.value) return;
+  if (submitLoading.value || formLoading.value || !formRef.value || !hasPerm(isEdit.value ? CLOUD_ACCOUNT_PERMISSIONS.edit : CLOUD_ACCOUNT_PERMISSIONS.create)) return;
   const ticket = formRequest;
   const editing = isEdit.value;
   submitLoading.value = true;
   try {
     await formRef.value?.validate();
-    if (ticket !== formRequest || !modalVisible.value) return;
+    if (ticket !== formRequest || !modalVisible.value || !hasPerm(editing ? CLOUD_ACCOUNT_PERMISSIONS.edit : CLOUD_ACCOUNT_PERMISSIONS.create)) return;
     const draft = {
       ...formData.value,
       regions: normalizeRegions(formData.value.regions),
     };
-    if (draft.provider !== CloudProvider.AliCloud) { message.error('当前仅支持阿里云账户配置'); return; }
+    if (!isSupportedComputeProvider(draft.provider)) { message.error('当前不支持该云厂商'); return; }
+    if (draft.provider === CloudProvider.AWS && draft.access_key.startsWith('ASIA')) { message.error('当前不支持 AWS 临时凭据，请使用长期凭据'); return; }
     if (editing && draft.id) {
       const updateData: Omit<UpdateCloudAccountReq, 'id'> = {
         name: draft.name,
@@ -451,7 +458,7 @@ const handleSubmit = async (): Promise<void> => {
 };
 
 const handleDelete = (record: CloudAccount): void => {
-  if (record.provider !== CloudProvider.AliCloud) return;
+  if (!isSupportedComputeProvider(record.provider) || !can('tree.cloudAccount.delete')) return;
   Modal.confirm({
     title: '确认删除',
     content: `确定要删除云账户 "${record.name}" 吗？此操作不可恢复。`,
@@ -459,6 +466,7 @@ const handleDelete = (record: CloudAccount): void => {
     okType: 'danger',
     cancelText: '取消',
     onOk: async () => {
+      if (!can('tree.cloudAccount.delete')) return;
       try {
         await deleteCloudAccountApi(record.id);
         message.success('删除成功');
@@ -475,7 +483,7 @@ const handleStatusChange = async (
   record: CloudAccount,
   checked: boolean,
 ): Promise<void> => {
-  if (record.provider !== CloudProvider.AliCloud) return;
+  if (!isSupportedComputeProvider(record.provider) || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.status)) return;
   const newStatus = checked
     ? CloudAccountStatus.Enabled
     : CloudAccountStatus.Disabled;
@@ -503,13 +511,14 @@ const handleStatusChange = async (
 };
 
 const handleVerify = (record: CloudAccount): void => {
-  if (record.provider !== CloudProvider.AliCloud) return;
+  if (!isSupportedComputeProvider(record.provider) || record.status !== CloudAccountStatus.Enabled || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify)) return;
   Modal.confirm({
     title: '验证云账户凭据',
-    content: `将向阿里云验证账户“${record.name}”的凭据，验证失败不会删除账户`,
+    content: `将向${computeProviderName(record.provider)}验证账户“${record.name}”的凭据，验证失败不会删除账户`,
     okText: '开始验证',
     cancelText: '取消',
     onOk: async () => {
+      if (!hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify) || record.status !== CloudAccountStatus.Enabled || !isSupportedComputeProvider(record.provider)) return;
       const hide = message.loading('正在验证凭据...', 0);
       try {
         await verifyCloudAccountApi(record.id);
@@ -524,6 +533,7 @@ const handleVerify = (record: CloudAccount): void => {
 };
 
 const handleViewDetail = async (record: CloudAccount): Promise<void> => {
+  if (!hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)) return;
   const ticket = ++detailRequest;
   currentDetail.value = null;
   detailVisible.value = true;
@@ -532,6 +542,7 @@ const handleViewDetail = async (record: CloudAccount): Promise<void> => {
   try {
     const response = await getCloudAccountDetailApi(record.id);
     if (ticket !== detailRequest || !detailVisible.value) return;
+    if (!hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)) { detailVisible.value = false; return; }
     currentDetail.value = response;
   } catch (error) {
     if (ticket !== detailRequest) return;
@@ -593,13 +604,13 @@ const closeDetails = () => {
 </script>
 
 <template>
-  <OpsPage title="云账户" description="管理阿里云账户配置，其他云平台存量仅供查看" class="cmdb-console cloud-account-management">
+  <OpsPage title="云账户" description="管理阿里云、腾讯云和 AWS 账户配置，其他云平台存量仅供查看" class="cmdb-console cloud-account-management">
     <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
       <template #action><a-button @click="fetchCloudAccounts()">重试</a-button></template>
     </a-alert>
     <!-- 页面头部 -->
     <template #actions><a-space :size="12">
-          <a-button type="primary" aria-label="添加账户" @click="showCreateModal" class="btn-create">
+          <a-button v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.create)" type="primary" aria-label="添加账户" @click="showCreateModal" class="btn-create">
             <template #icon><plus-outlined /></template>
             <span class="btn-text">添加账户</span>
           </a-button>
@@ -648,8 +659,8 @@ const closeDetails = () => {
         <a-col :xs="12" :sm="6" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic
-              title="本页腾讯云"
-              :value="tencentCloudCount"
+              title="本页腾讯云 / AWS"
+              :value="tencentAndAwsCount"
             >
               <template #prefix>
                 <global-outlined />
@@ -732,9 +743,8 @@ const closeDetails = () => {
             <template v-if="column.key === 'name'">
               <div class="name-cell">
                 <a-badge :status="record.status === CloudAccountStatus.Enabled ? 'success' : 'error'" />
-                <a class="account-name" @click="handleViewDetail(record)">
-                  {{ record.name }}
-                </a>
+                <a v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)" class="account-name" @click="handleViewDetail(record)">{{ record.name }}</a>
+                <span v-else class="account-name">{{ record.name }}</span>
               </div>
             </template>
 
@@ -778,7 +788,7 @@ const closeDetails = () => {
             <!-- 状态列 -->
             <template v-else-if="column.key === 'status'">
               <a-switch
-                :disabled="record.provider !== CloudProvider.AliCloud" :checked="record.status === CloudAccountStatus.Enabled"
+                :disabled="!isSupportedComputeProvider(record.provider) || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.status)" :checked="record.status === CloudAccountStatus.Enabled"
                 :loading="switchLoading[record.id]"
                 @change="(checked: boolean) => handleStatusChange(record, checked)"
                 checked-children="启用"
@@ -810,33 +820,26 @@ const closeDetails = () => {
             <!-- 操作列 -->
             <template v-else-if="column.key === 'action'">
               <a-space :size="4" class="action-buttons">
-                <a-tooltip title="查看详情">
+                <a-tooltip v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)" title="查看详情">
                   <a-button type="text" size="small" @click="handleViewDetail(record)">
                     <eye-outlined />
                   </a-button>
                 </a-tooltip>
-                <a-tooltip title="编辑">
-                  <a-button type="text" size="small" :disabled="record.provider !== CloudProvider.AliCloud" @click="handleEdit(record)">
+                <a-tooltip v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) && hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)" title="编辑">
+                  <a-button type="text" size="small" :disabled="!isSupportedComputeProvider(record.provider)" @click="handleEdit(record)">
                     <edit-outlined />
                   </a-button>
                 </a-tooltip>
-                <a-tooltip title="验证凭证">
-                  <a-button type="text" size="small" :disabled="record.provider !== CloudProvider.AliCloud" @click="handleVerify(record)">
+                <a-tooltip v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify)" title="验证凭证">
+                  <a-button type="text" size="small" :disabled="!isSupportedComputeProvider(record.provider) || record.status !== CloudAccountStatus.Enabled" @click="handleVerify(record)">
                     <safety-certificate-outlined />
                   </a-button>
                 </a-tooltip>
-                <a-popconfirm v-if="can('tree.cloudAccount.delete')"
-                  title="确定删除此云账户吗？"
-                  ok-text="确定"
-                  cancel-text="取消"
-                  @confirm="handleDelete(record)"
-                >
-                  <a-tooltip title="删除">
-                    <a-button type="text" size="small" :disabled="record.provider !== CloudProvider.AliCloud" danger>
-                      <delete-outlined />
-                    </a-button>
-                  </a-tooltip>
-                </a-popconfirm>
+                <a-tooltip v-if="can('tree.cloudAccount.delete')" title="删除">
+                  <a-button type="text" size="small" :disabled="!isSupportedComputeProvider(record.provider)" danger @click="handleDelete(record)">
+                    <delete-outlined />
+                  </a-button>
+                </a-tooltip>
               </a-space>
             </template>
           </template>
@@ -889,19 +892,20 @@ const closeDetails = () => {
                 v-model:value="formData.provider"
                 placeholder="选择云厂商"
                 :disabled="isEdit"
+                @change="formData.regions = []"
                 size="large"
               >
                 <a-select-option :value="CloudProvider.AliCloud">
                   <cloud-outlined /> 阿里云
                 </a-select-option>
-                <a-select-option disabled :value="CloudProvider.TencentCloud">
-                  <cloud-outlined /> 腾讯云（暂不支持）
+                <a-select-option :value="CloudProvider.TencentCloud">
+                  <cloud-outlined /> 腾讯云
                 </a-select-option>
                 <a-select-option disabled :value="CloudProvider.HuaweiCloud">
                   <cloud-outlined /> 华为云（暂不支持）
                 </a-select-option>
-                <a-select-option disabled :value="CloudProvider.AWS">
-                  <cloud-outlined /> AWS（暂不支持）
+                <a-select-option :value="CloudProvider.AWS">
+                  <cloud-outlined /> AWS
                 </a-select-option>
                 <a-select-option disabled :value="CloudProvider.Azure">
                   <cloud-outlined /> Azure（暂不支持）
@@ -914,7 +918,7 @@ const closeDetails = () => {
           </a-col>
           <a-col :xs="24" :sm="12">
             <a-form-item label="授权地域" name="regions">
-              <AccountRegionsEditor v-model="formData.regions" :disabled="formLoading || submitLoading" />
+              <AccountRegionsEditor v-model="formData.regions" :disabled="formLoading || submitLoading || !modalVisible" :provider="formData.provider" :account-id="isEdit ? formData.id : undefined" :account-enabled="editAccountStatus === CloudAccountStatus.Enabled" :can-read="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.regions)" />
             </a-form-item>
           </a-col>
         </a-row>
@@ -922,6 +926,7 @@ const closeDetails = () => {
         <a-divider orientation="left">
           <safety-certificate-outlined /> 凭证配置
         </a-divider>
+        <a-alert v-if="formData.provider === CloudProvider.AWS || formData.provider === CloudProvider.TencentCloud" type="info" show-icon message="当前仅支持长期凭据，临时 STS 凭据暂不可用" />
         <a-row :gutter="16">
           <a-col :span="24">
             <a-form-item label="Access Key" name="access_key">
@@ -1067,7 +1072,7 @@ const closeDetails = () => {
               <a-descriptions-item label="状态" :span="2">
                 <a-switch
                   v-if="currentDetail"
-                  :disabled="currentDetail.provider !== CloudProvider.AliCloud" :checked="currentDetail.status === CloudAccountStatus.Enabled"
+                  :disabled="!isSupportedComputeProvider(currentDetail.provider) || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.status)" :checked="currentDetail.status === CloudAccountStatus.Enabled"
                   :loading="switchLoading[currentDetail.id]"
                   @change="(checked: boolean) => currentDetail && handleStatusChange(currentDetail, checked)"
                   checked-children="启用"
@@ -1094,14 +1099,14 @@ const closeDetails = () => {
             <!-- 操作按钮 -->
             <div class="drawer-actions">
               <a-button-group>
-                <a-button type="primary" :disabled="currentDetail.provider !== CloudProvider.AliCloud" @click="handleVerify(currentDetail)">
+                <a-button v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify)" type="primary" :disabled="!isSupportedComputeProvider(currentDetail.provider) || currentDetail.status !== CloudAccountStatus.Enabled" @click="handleVerify(currentDetail)">
                   <safety-certificate-outlined /> 验证凭证
                 </a-button>
-                <a-button :disabled="currentDetail.provider !== CloudProvider.AliCloud" @click="handleEdit(currentDetail)">
+                <a-button v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) && hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)" :disabled="!isSupportedComputeProvider(currentDetail.provider)" @click="handleEdit(currentDetail)">
                   <edit-outlined /> 编辑
                 </a-button>
               </a-button-group>
-              <a-button v-if="can('tree.cloudAccount.delete')" danger :disabled="currentDetail.provider !== CloudProvider.AliCloud" @click="handleDelete(currentDetail)">
+              <a-button v-if="can('tree.cloudAccount.delete')" danger :disabled="!isSupportedComputeProvider(currentDetail.provider)" @click="handleDelete(currentDetail)">
                 <delete-outlined /> 删除
               </a-button>
             </div>
