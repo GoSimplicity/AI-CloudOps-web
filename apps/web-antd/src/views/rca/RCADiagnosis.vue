@@ -58,27 +58,29 @@
       </div>
     </div>
 
+    <CollectionSummary v-if="quickDiagnosisResult && !loading" :status="quickDiagnosisResult.status" :collection="quickDiagnosisResult.collection" />
+
     <!-- 核心指标卡片 -->
     <div class="metrics-grid">
       <div class="metric-card critical">
         <div class="metric-icon"><Icon icon="mdi:alert-outline" /></div>
         <div class="metric-info">
-          <div class="metric-value">{{ quickDiagnosisResult ? getCriticalIssuesCount() : '待诊断' }}</div>
+          <div class="metric-value">{{ quickUsable ? getCriticalIssuesCount() : quickDiagnosisResult ? '未知' : '待诊断' }}</div>
           <div class="metric-label">关键问题</div>
         </div>
-        <div class="metric-trend" :class="!quickDiagnosisResult ? 'trend-unknown' : getCriticalIssuesCount() > 0 ? 'trend-up' : 'trend-stable'">
-          {{ !quickDiagnosisResult ? '暂无结果' : getCriticalIssuesCount() > 0 ? '需要关注' : '本次未见关键问题' }}
+        <div class="metric-trend" :class="!quickUsable ? 'trend-unknown' : getCriticalIssuesCount() > 0 ? 'trend-up' : 'trend-stable'">
+          {{ !quickUsable ? '结果不可用' : getCriticalIssuesCount() > 0 ? '需要关注' : '本次未见关键问题' }}
         </div>
       </div>
 
       <div class="metric-card warning">
         <div class="metric-icon"><Icon icon="mdi:alert-circle-outline" /></div>
         <div class="metric-info">
-          <div class="metric-value">{{ quickDiagnosisResult ? getWarningsCount() : '待诊断' }}</div>
+          <div class="metric-value">{{ quickUsable ? getWarningsCount() : quickDiagnosisResult ? '未知' : '待诊断' }}</div>
           <div class="metric-label">警告信息</div>
         </div>
-        <div class="metric-trend" :class="!quickDiagnosisResult ? 'trend-unknown' : getWarningsCount() > 0 ? 'trend-warning' : 'trend-stable'">
-          {{ !quickDiagnosisResult ? '暂无结果' : getWarningsCount() > 0 ? '存在警告' : '本次无警告' }}
+        <div class="metric-trend" :class="!quickUsable ? 'trend-unknown' : getWarningsCount() > 0 ? 'trend-warning' : 'trend-stable'">
+          {{ !quickUsable ? '结果不可用' : getWarningsCount() > 0 ? '存在警告' : '本次无警告' }}
         </div>
       </div>
 
@@ -96,7 +98,7 @@
       <div class="metric-card health">
         <div class="metric-icon"><Icon icon="mdi:clipboard-check-outline" /></div>
         <div class="metric-info">
-          <div class="metric-value">{{ quickDiagnosisResult?.status || '待诊断' }}</div>
+          <div class="metric-value">{{ quickDiagnosisResult ? analysisStatus(quickDiagnosisResult.status).label : '待诊断' }}</div>
           <div class="metric-label">诊断状态</div>
         </div>
         <div class="metric-trend">
@@ -111,12 +113,12 @@
       <div v-if="loading" class="loading-container"><a-spin /><p>正在等待服务返回实际结果，请稍候</p></div>
 
       <!-- 诊断结果 -->
-      <div v-else-if="quickDiagnosisResult" class="issues-container">
+      <div v-else-if="quickUsable" class="issues-container">
         <!-- 关键问题 -->
         <div class="issues-panel critical-panel">
           <div class="panel-header">
             <h3>关键问题</h3>
-            <span class="issue-count">{{ quickDiagnosisResult ? getCriticalIssuesCount() : '待诊断' }}</span>
+            <span class="issue-count">{{ quickUsable ? getCriticalIssuesCount() : quickDiagnosisResult ? '未知' : '待诊断' }}</span>
           </div>
           <div class="issues-list">
             <div 
@@ -153,7 +155,7 @@
           </div>
           <div class="recommendations-list">
             <div 
-              v-for="(rec, index) in quickDiagnosisResult.recommendations" 
+              v-for="(rec, index) in quickDiagnosisResult?.recommendations || []"
               :key="index"
               class="recommendation-item"
             >
@@ -195,12 +197,13 @@
     <div class="rca-section" v-if="rcaAnalysisResult">
       <div class="section-header">
         <h2>根因分析</h2>
-        <a-tag color="#6366f1">
-          置信度: {{ (rcaAnalysisResult.confidence_score * 100).toFixed(1) }}%
+        <a-tag v-if="rcaUsable" color="#6366f1">
+          置信度: {{ Number.isFinite(rcaAnalysisResult.confidence_score) ? (rcaAnalysisResult.confidence_score * 100).toFixed(1) + '%' : '未知' }}
         </a-tag>
       </div>
 
-      <div class="rca-content">
+      <CollectionSummary :status="rcaAnalysisResult.status" :collection="rcaAnalysisResult.collection" />
+      <div v-if="rcaUsable" class="rca-content">
         <div 
           v-for="(cause, index) in rcaAnalysisResult.root_causes" 
           :key="index"
@@ -250,7 +253,7 @@
         </div>
         <div class="summary-item">
           <span class="summary-label">诊断状态</span>
-          <span class="summary-value">{{ quickDiagnosisResult?.status || 'unknown' }}</span>
+          <span class="summary-value">{{ quickDiagnosisResult ? analysisStatus(quickDiagnosisResult.status).label : '未知' }}</span>
         </div>
         <div class="summary-item" v-if="quickDiagnosisResult?.analysis_duration">
           <span class="summary-label">分析耗时</span>
@@ -264,6 +267,8 @@
 
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+import CollectionSummary from './CollectionSummary.vue';
+import { analysisStatus } from './collection';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
 import { ref, computed, onMounted, nextTick, onUnmounted, watch } from 'vue';
@@ -312,6 +317,9 @@ const quickDiagnosisResult = ref<QuickDiagnosisResponse | null>(null);
 const eventPatternsResult = ref<EventPatternsResponse | null>(null);
 const errorSummaryResult = ref<ErrorSummaryResponse | null>(null);
 const rcaAnalysisResult = ref<RCAAnalysisResponse | null>(null);
+const usableStatus = (status?: string) => status === 'completed' || status === 'degraded';
+const quickUsable = computed(() => usableStatus(quickDiagnosisResult.value?.status));
+const rcaUsable = computed(() => usableStatus(rcaAnalysisResult.value?.status));
 
 // 图表引用
 const errorTrendsChartRef = ref<HTMLElement>();
@@ -489,7 +497,7 @@ const refreshAllDiagnosis = async () => {
     if (!diagnosisLane.current(ticket)) return;
 
     const labels = ['快速诊断', '事件模式', '错误汇总', '根因分析'];
-    diagnosisFailures.value = results.flatMap((result, index) => result === null ? [labels[index]!] : []);
+    diagnosisFailures.value = results.flatMap((result, index) => result === null || ((index === 0 || index === 3) && !usableStatus(result.status)) ? [labels[index]!] : []);
     if (results.every(result => result === null)) {
       diagnosisError.value = '全部诊断失败，请检查服务状态后重试';
       message.error(diagnosisError.value);
@@ -522,7 +530,9 @@ const refreshAllDiagnosis = async () => {
     initCharts();
 
     if (diagnosisFailures.value.length) {
-      message.warning('部分诊断完成，失败项目需重试');
+      message.warning('部分诊断未完成，请检查失败项目');
+    } else if (results[0]?.status === 'degraded' || results[3]?.status === 'degraded') {
+      message.warning('诊断结果已降级，请检查采集状态');
     } else {
       message.success('诊断完成，请查看各项检查结果');
     }

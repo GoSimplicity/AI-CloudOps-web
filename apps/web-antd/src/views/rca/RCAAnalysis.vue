@@ -69,6 +69,7 @@
 
         <!-- 分析状态卡片 -->
         <a-card v-if="analysisResult" title="分析概览" class="status-card">
+          <CollectionSummary :status="analysisResult.status" :collection="analysisResult.collection" />
           <a-statistic
             title="分析ID"
             :value="analysisResult?.analysis_id ? analysisResult.analysis_id.substring(0, 8) + '…' : '未知'"
@@ -82,6 +83,7 @@
           </a-statistic>
 
           <a-statistic
+            v-if="analysisResult.status === 'completed' || analysisResult.status === 'degraded'"
             title="置信度"
             :value="Number.isFinite(analysisResult?.confidence_score) ? (analysisResult.confidence_score * 100).toFixed(1) : '未知'"
             :suffix="Number.isFinite(analysisResult?.confidence_score) ? '%' : ''"
@@ -107,7 +109,7 @@
 
         <!-- 分析结果 -->
         <a-card 
-          v-else-if="analysisResult" 
+          v-else-if="analysisResult && (analysisResult.status === 'completed' || analysisResult.status === 'degraded')"
           class="result-card"
           :body-style="{ padding: 0 }"
         >
@@ -392,6 +394,10 @@
           </a-tabs>
         </a-card>
 
+        <a-card v-else-if="analysisResult" class="empty-card">
+          <a-empty description="无法展示分析结果，请检查采集状态后重试" />
+        </a-card>
+
         <!-- 空状态 -->
         <a-card v-else class="empty-card">
           <a-empty description="请配置参数并开始分析">
@@ -407,6 +413,7 @@
 
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+import CollectionSummary from './CollectionSummary.vue';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
 import { ref, reactive, computed, onMounted, nextTick, onUnmounted } from 'vue';
@@ -523,7 +530,7 @@ const criticalEventsColumns = [
 ];
 
 // 计算属性
-useChartAppearance(() => { if (analysisResult.value && activeResultTab.value === 'anomalies') initCharts(); });
+useChartAppearance(() => { if (['completed', 'degraded'].includes(analysisResult.value?.status ?? '') && activeResultTab.value === 'anomalies') initCharts(); });
 
 const isFormValid = computed(() => {
   return !!scope.owner.value && formData.namespace.trim() !== '';
@@ -603,14 +610,17 @@ const startAnalysis = async () => {
 
     await nextTick();
     if (!analysisLane.current(ticket)) return;
-    if (activeResultTab.value === 'anomalies') {
+    if ((response.status === 'completed' || response.status === 'degraded') && activeResultTab.value === 'anomalies') {
       initCharts();
     }
 
-    message.success('根因分析已返回，请按实际证据评估结果');
+    if (response.status === 'completed') message.success('根因分析已完成，请按实际证据评估结果');
+    else if (response.status === 'degraded') message.warning('根因分析已降级，请检查采集状态');
+    else if (response.status === 'failed') message.error('根因分析失败，请检查采集状态');
+    else message.warning('根因分析状态未知，请检查采集状态');
 
     // 如果有根因结果，显示摘要
-    if (response?.root_causes?.length > 0) {
+    if ((response.status === 'completed' || response.status === 'degraded') && response?.root_causes?.length > 0) {
       const criticalCount = response.root_causes.filter(cause => cause.confidence > 0.7).length;
       if (criticalCount > 0) {
         message.warning(`发现 ${criticalCount} 个高置信度根因，请及时查看`);

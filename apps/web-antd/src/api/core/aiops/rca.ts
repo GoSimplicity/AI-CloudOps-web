@@ -198,6 +198,20 @@ export interface RCAErrorSummaryRequest {
 /**
  * 根因分析响应模型
  */
+export interface RCACollectionSource {
+  status?: 'success' | 'empty' | 'partial' | 'failed';
+  count?: number;
+  succeeded?: number;
+  failed?: number;
+}
+
+export interface RCACollection {
+  status?: 'complete' | 'partial' | 'failed';
+  coverage?: number | null;
+  coverage_basis?: string;
+  sources?: Partial<Record<'metrics' | 'events' | 'logs', RCACollectionSource>>;
+}
+
 export interface RCAAnalysisResponse {
   namespace: string;
   analysis_id: string;
@@ -209,6 +223,7 @@ export interface RCAAnalysisResponse {
   recommendations: string[];
   confidence_score: number;
   status: string;
+  collection?: RCACollection;
 }
 
 /**
@@ -269,6 +284,7 @@ export interface RCAHealthResponse {
 export interface QuickDiagnosisResponse {
   namespace: string;
   status: string;
+  collection?: RCACollection;
   critical_issues: Record<string, any>[];
   warnings: Record<string, any>[];
   recommendations: string[];

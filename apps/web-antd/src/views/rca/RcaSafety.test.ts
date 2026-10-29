@@ -230,3 +230,60 @@ describe('RCA请求与账户边界', () => {
     );
   });
 });
+
+describe('RCA采集状态', () => {
+  const result = (status: string, coverage: number | null) => ({
+    status, namespace: 'default', analysis_id: 'fixture-id', timestamp: '2026-10-23T00:00:00Z', time_window_hours: 2,
+    confidence_score: 0.9, root_causes: [], anomalies: {}, correlations: [], recommendations: [],
+    collection: { coverage, sources: { metrics: { status: 'success', count: 3 }, events: { status: 'empty', count: 0 }, logs: { status: 'partial', count: 1 } } },
+  });
+  it('完成时呈现覆盖率及空数据，与采集失败区分', async () => {
+    api.analyzeRootCause.mockResolvedValueOnce(result('completed', 1));
+    render(RCAAnalysis, true);
+    await flushPromises();
+    await state().startAnalysis();
+    await flushPromises();
+    expect(wrapper!.text()).toContain('分析完成');
+    expect(wrapper!.text()).toContain('100.0%');
+    expect(wrapper!.text()).toContain('采集成功，数据为空');
+    expect(wrapper!.text()).toContain('部分采集失败');
+    expect(message.success).toHaveBeenCalled();
+  });
+  it('降级时空覆盖率显示未知，并保留可用结果', async () => {
+    api.analyzeRootCause.mockResolvedValueOnce(result('degraded', null));
+    render(RCAAnalysis, true);
+    await flushPromises();
+    await state().startAnalysis();
+    await flushPromises();
+    expect(wrapper!.text()).toContain('分析降级');
+    expect(wrapper!.text()).toContain('采集覆盖率：未知');
+    expect(wrapper!.text()).toContain('置信度');
+    expect(message.success).not.toHaveBeenCalled();
+  });
+  it('失败和未知状态不能显示置信度、根因或成功提示', async () => {
+    for (const status of ['failed', 'unexpected']) {
+      api.analyzeRootCause.mockResolvedValueOnce({ ...result(status, null), root_causes: [{ description: '不可用的根因' }] });
+      render(RCAAnalysis, true);
+      await flushPromises();
+      await state().startAnalysis();
+      await flushPromises();
+      expect(wrapper!.text()).toContain(status === 'failed' ? '分析失败' : '状态未知');
+      expect(wrapper!.text()).not.toContain('不可用的根因');
+      expect(wrapper!.text()).not.toContain('置信度');
+      expect(message.success).not.toHaveBeenCalled();
+      wrapper!.unmount();
+    }
+  });
+  it('快速诊断失败不能把空问题列表显示成无异常', async () => {
+    api.quickDiagnosis.mockResolvedValueOnce({ ...result('failed', 0), critical_issues: [], warnings: [] });
+    api.getEventPatterns.mockResolvedValueOnce({ patterns: [] });
+    render(RCADiagnosis, true);
+    await flushPromises();
+    await state().refreshAllDiagnosis();
+    await flushPromises();
+    expect(wrapper!.text()).toContain('分析失败');
+    expect(wrapper!.text()).toContain('结果不可用');
+    expect(wrapper!.text()).not.toContain('本次未见关键问题');
+    expect(message.success).not.toHaveBeenCalled();
+  });
+});
