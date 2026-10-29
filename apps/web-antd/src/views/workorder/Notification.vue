@@ -1,7 +1,8 @@
 <template>
   <OpsPage title="通知配置" description="管理工单触发渠道、接收范围与发送记录" class="notification-management-container">
     <template #actions>
-      <a-button aria-label="刷新通知配置" :loading="loading" @click="loadNotifications">刷新</a-button>
+        <a-button aria-label="刷新通知配置" :loading="loading" @click="loadNotifications">刷新</a-button>
+        <a-button aria-label="投递事件" @click="showEvents = !showEvents">{{ showEvents ? '关闭投递事件' : '投递事件' }}</a-button>
         <a-button type="primary" aria-label="创建通知配置" @click="handleCreateNotification" class="btn-create">
           <template #icon>
             <PlusOutlined />
@@ -176,6 +177,7 @@
             <template v-if="column.key === 'triggerType'">
               <div class="trigger-type-cell">
                 <span>{{ getTriggerTypeName(record.trigger_type) }}</span>
+                <a-tag v-if="isLegacyAdvancedTrigger(record)" color="warning">待重新验证</a-tag>
               </div>
             </template>
 
@@ -389,14 +391,15 @@
           </div>
         </a-form-item>
 
-        <a-alert v-if="notificationDialog.form.triggerType !== NotificationTrigger.IMMEDIATE || notificationDialog.form.scheduledTime || notificationDialog.form.repeatInterval != null || notificationDialog.form.triggerCondition"
-          type="warning" show-icon message="当前版本仅支持立即触发；历史高级设置仅供查看，不会透传为生效参数。历史高级规则可保留类型并禁用，启用前需明确选择立即触发。" />
+        <a-alert type="info" show-icon message="通知计划在事件发生后生成；更改配置不会修改已生成的计划。" />
+        <a-alert v-if="notificationDialog.isEdit && originalTriggerVersion !== 1 && (notificationDialog.form.triggerType !== NotificationTrigger.IMMEDIATE || notificationDialog.form.repeatInterval != null)"
+          type="warning" show-icon message="历史高级规则尚未验证，不会自动执行。请重新设置触发参数，或停用后重新启用。" />
         <a-form-item label="触发类型" name="triggerType">
           <a-radio-group v-model:value="notificationDialog.form.triggerType">
             <a-radio :value="NotificationTrigger.IMMEDIATE">立即触发</a-radio>
-            <a-radio :value="NotificationTrigger.DELAYED" disabled>延迟触发（未支持）</a-radio>
-            <a-radio :value="NotificationTrigger.SCHEDULED" disabled>定时触发（未支持）</a-radio>
-            <a-radio :value="NotificationTrigger.CONDITIONAL" disabled>条件触发（未支持）</a-radio>
+            <a-radio :value="NotificationTrigger.DELAYED">延迟触发</a-radio>
+            <a-radio :value="NotificationTrigger.SCHEDULED">定时触发</a-radio>
+            <a-radio :value="NotificationTrigger.CONDITIONAL">条件触发</a-radio>
           </a-radio-group>
         </a-form-item>
 
@@ -407,8 +410,7 @@
         >
           <a-textarea
             v-model:value="notificationDialog.form.triggerCondition"
-            disabled
-            placeholder="请输入触发条件（JSON格式）"
+            placeholder='例如 {"status":2,"priority":1}'
             :rows="4"
           />
         </a-form-item>
@@ -690,7 +692,6 @@
         >
           <a-date-picker
             v-model:value="notificationDialog.form.scheduledTime"
-            disabled
             show-time
             placeholder="请选择发送时间"
             style="width: 100%"
@@ -698,14 +699,14 @@
           />
         </a-form-item>
 
-        <a-form-item v-if="notificationDialog.isEdit && notificationDialog.form.repeatInterval != null" label="历史重复间隔（不生效）" name="repeatInterval">
-          <a-input-number
-            v-model:value="notificationDialog.form.repeatInterval"
-            disabled
-            placeholder="重复间隔（分钟）"
-            :min="0"
-            style="width: 100%"
-          />
+        <a-form-item v-if="notificationDialog.form.triggerType === NotificationTrigger.DELAYED" label="延迟时间（分钟）">
+          <a-input-number id="notification-delay-minutes" v-model:value="notificationDialog.form.delayMinutes" :min="1" :max="10080" style="width: 100%" />
+        </a-form-item>
+        <a-form-item label="重复间隔（分钟）">
+          <a-input-number id="notification-repeat-interval" v-model:value="notificationDialog.form.repeatInterval" :min="1" :max="10080" placeholder="不重复时留空" style="width: 100%" />
+        </a-form-item>
+        <a-form-item label="总发送次数（含首次）">
+          <a-input-number id="notification-repeat-count" v-model:value="notificationDialog.form.repeatCount" :min="2" :max="100" placeholder="不重复时留空" style="width: 100%" />
         </a-form-item>
 
         <a-form-item label="最大重试次数" name="maxRetries">
@@ -713,7 +714,7 @@
             v-model:value="notificationDialog.form.maxRetries"
             placeholder="最大重试次数"
             :min="0"
-            :max="10"
+            :max="100"
             style="width: 100%"
           />
         </a-form-item>
@@ -969,16 +970,19 @@
         </a-form-item>
       </a-form>
     </a-modal>
+    <NotificationEvents v-if="showEvents" />
   </OpsPage>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import OpsPage from '#/components/ops/OpsPage.vue';
+import NotificationEvents from './NotificationEvents.vue';
 import { useWindowSize } from '@vueuse/core';
 import { message, Modal } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
 import dayjs from 'dayjs';
+import { buildNotificationSchedule, notificationScheduleFingerprint, type NotificationSchedulePayload } from './notification-schedule';
 import type { FormInstance } from 'ant-design-vue';
 import {
   PlusOutlined,
@@ -1098,7 +1102,11 @@ const logsColumns = [
 const loading = ref(false);
 const loadError = ref('');
 const recipientError = ref('');
-const originalTriggerType = ref<string>(NotificationTrigger.IMMEDIATE);
+const originalTriggerFingerprint = ref('');
+const originalNotificationStatus = ref<number>(NotificationStatus.Disabled);
+const originalTriggerVersion = ref<number | undefined>();
+const isLegacyAdvancedTrigger = (record: Notification): boolean =>
+  record.trigger_version !== 1 && (record.trigger_type !== NotificationTrigger.IMMEDIATE || record.repeat_interval != null || record.repeat_count != null);
 let formEpoch = 0;
 const logsError = ref('');
 let listRequest = 0;
@@ -1181,6 +1189,7 @@ const logsPagination = reactive({
 
 // 对话框状态
 const notificationDialogVisible = ref(false);
+const showEvents = ref(false);
 const detailDialogVisible = ref(false);
 const logsDialogVisible = ref(false);
 const manualSendDialogVisible = ref(false);
@@ -1208,6 +1217,8 @@ const notificationDialog = reactive({
     messageTemplate: '您好 {recipient_name}！\n\n工单通知：{title}\n工单编号：{serial_number}\n优先级：{priority_text}\n状态：{status}\n\n详情请查看系统。\n\n通知时间：{notification_time}\n平台：{platform_name}',
     subjectTemplate: '',
     scheduledTime: undefined as any,
+    delayMinutes: undefined as number | undefined,
+    repeatCount: undefined as number | undefined,
     repeatInterval: undefined as number | undefined,
     maxRetries: 3,
     retryInterval: 5,
@@ -1294,7 +1305,7 @@ const notificationRules = {
     { required: true, message: '请输入消息模板', trigger: 'blur' }
   ],
   maxRetries: [
-    { required: true, type: 'number', min: 0, max: 10, message: '最大重试次数必须在0-10之间', trigger: 'blur' }
+    { required: true, type: 'number', min: 0, max: 100, message: '最大重试次数必须在0-100之间', trigger: 'blur' }
   ],
   retryInterval: [
     { required: true, type: 'number', min: 1, message: '重试间隔必须大于0', trigger: 'blur' }
@@ -1397,9 +1408,9 @@ const getPriorityColor = (priority: number): string => {
 const getTriggerTypeName = (type: string): string => {
   const typeMap: Record<string, string> = {
     [NotificationTrigger.IMMEDIATE]: '立即触发',
-    [NotificationTrigger.DELAYED]: '延迟触发（未支持）',
-    [NotificationTrigger.SCHEDULED]: '定时触发（未支持）',
-    [NotificationTrigger.CONDITIONAL]: '条件触发（未支持）'
+    [NotificationTrigger.DELAYED]: '延迟触发',
+    [NotificationTrigger.SCHEDULED]: '定时触发',
+    [NotificationTrigger.CONDITIONAL]: '条件触发'
   };
   return typeMap[type] || type;
 };
@@ -1785,7 +1796,9 @@ const loadSendLogs = async (notificationId: number): Promise<void> => {
 const handleCreateNotification = (): void => {
   ++formEpoch;
   recipientError.value = '';
-  originalTriggerType.value = NotificationTrigger.IMMEDIATE;
+  originalTriggerFingerprint.value = '';
+  originalNotificationStatus.value = NotificationStatus.Disabled;
+  originalTriggerVersion.value = undefined;
   notificationDialog.isEdit = false;
   notificationDialog.saving = false;
   notificationDialog.form = {
@@ -1807,6 +1820,8 @@ const handleCreateNotification = (): void => {
     messageTemplate: '您好 {recipient_name}！\n\n工单通知：{title}\n工单编号：{serial_number}\n优先级：{priority_text}\n状态：{status}\n\n详情请查看系统。\n\n通知时间：{notification_time}\n平台：{platform_name}',
     subjectTemplate: '',
     scheduledTime: undefined,
+    delayMinutes: undefined,
+    repeatCount: undefined,
     repeatInterval: undefined,
     maxRetries: 3,
     retryInterval: 5,
@@ -1821,7 +1836,7 @@ const handleCreateNotification = (): void => {
 const handleEditNotification = (record: Notification): void => {
   ++formEpoch;
   recipientError.value = '';
-  originalTriggerType.value = record.trigger_type;
+
   notificationDialog.isEdit = true;
   notificationDialog.saving = false;
   notificationDialog.form = {
@@ -1843,6 +1858,8 @@ const handleEditNotification = (record: Notification): void => {
     messageTemplate: record.message_template,
     subjectTemplate: record.subject_template || '',
     scheduledTime: record.scheduled_time ? dayjs(record.scheduled_time) : undefined,
+    delayMinutes: record.delay_minutes,
+    repeatCount: record.repeat_count,
     repeatInterval: record.repeat_interval,
     maxRetries: record.max_retries,
     retryInterval: record.retry_interval,
@@ -1853,6 +1870,9 @@ const handleEditNotification = (record: Notification): void => {
 
   // 关闭详情对话框并显示编辑对话框
   detailDialogVisible.value = false;
+  originalTriggerFingerprint.value = notificationScheduleFingerprint(notificationDialog.form);
+  originalNotificationStatus.value = record.status;
+  originalTriggerVersion.value = record.trigger_version;
   notificationDialogVisible.value = true;
 };
 
@@ -2064,20 +2084,15 @@ const saveNotification = async (): Promise<void> => {
     message.error('请先明确移除当前未支持的通知渠道');
     return;
   }
-  const preserveDisabledLegacy =
-    notificationDialog.isEdit &&
-    originalTriggerType.value !== NotificationTrigger.IMMEDIATE &&
-    formData.triggerType === originalTriggerType.value &&
-    formData.status === NotificationStatus.Disabled;
-  if (
-    formData.triggerType !== NotificationTrigger.IMMEDIATE &&
-    !preserveDisabledLegacy
-  ) {
-    message.error('当前仅支持立即触发，请明确调整类型或保留历史规则并禁用');
-    return;
+  // 未修改的历史配置只更新普通字段；明确修改时整体替换触发参数
+  const triggerChanged = !notificationDialog.isEdit ||
+    notificationScheduleFingerprint(formData) !== originalTriggerFingerprint.value;
+  let schedule: NotificationSchedulePayload | undefined;
+  if (triggerChanged) {
+    try { schedule = buildNotificationSchedule(formData); }
+    catch (error) { message.error(error instanceof Error ? error.message : '通知触发配置无效'); return; }
   }
 
-  // 验证接收人配置完整性
   if (
     formData.recipientTypes.includes('user') &&
     (!formData.recipientUsers ||
@@ -2163,9 +2178,7 @@ const saveNotification = async (): Promise<void> => {
         template_id: formData.templateId,
         category_id: formData.categoryId,
         event_types: formData.eventTypes,
-        ...(formData.triggerType === NotificationTrigger.IMMEDIATE
-          ? { trigger_type: NotificationTrigger.IMMEDIATE }
-          : {}),
+        ...(schedule ? { ...schedule, clear_trigger: true } : {}),
         channels: formData.channels,
         recipient_types: formData.recipientTypes,
         recipient_users: cleanRecipientUsers,
@@ -2176,7 +2189,7 @@ const saveNotification = async (): Promise<void> => {
         subject_template: formData.subjectTemplate,
         max_retries: formData.maxRetries,
         retry_interval: formData.retryInterval,
-        status: formData.status,
+        ...(formData.status !== originalNotificationStatus.value ? { status: formData.status } : {}),
         priority: formData.priority,
         is_default: formData.isDefault,
       };
@@ -2193,7 +2206,7 @@ const saveNotification = async (): Promise<void> => {
         template_id: formData.templateId,
         category_id: formData.categoryId,
         event_types: formData.eventTypes,
-        trigger_type: NotificationTrigger.IMMEDIATE,
+        ...schedule!,
         channels: formData.channels,
         recipient_types: formData.recipientTypes,
         recipient_users: cleanRecipientUsers,

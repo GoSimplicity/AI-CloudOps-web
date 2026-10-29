@@ -288,50 +288,39 @@ describe('通知接收范围与状态合同', () => {
       await flushPromises();
     }
   });
-  it('历史高级触发只能停用保留，不能冒充即时触发保存', async () => {
+  it('创建延迟通知将延迟与有限重复参数发送到后端', async () => {
     await flushPromises();
-    await edit({
-      ...fixture,
-      status: 1,
-      trigger_type: 'scheduled',
-      scheduled_time: '2030-01-01T00:00:00Z',
-    });
-    expect(
-      document.querySelector<HTMLInputElement>(
-        '.ant-modal input[type="radio"][value="scheduled"]',
-      )?.disabled,
-    ).toBe(true);
+    await copy();
+    const delayed = document.querySelector<HTMLInputElement>('.ant-modal input[type="radio"][value="delayed"]')!;
+    delayed.click();
+    await flushPromises();
+    await setInput('#notification-delay-minutes', '15');
+    await setInput('#notification-repeat-interval', '10');
+    await setInput('#notification-repeat-count', '3');
     await save();
-    expect(client.put).not.toHaveBeenCalled();
-    document
-      .querySelector<HTMLButtonElement>('[aria-label="通知启用状态"]')!
-      .click();
+    await vi.waitFor(() => expect(client.post).toHaveBeenCalledTimes(1));
+    expect(client.post.mock.calls[0]![1]).toEqual(expect.objectContaining({ trigger_type: 'delayed', delay_minutes: 15, repeat_interval: 10, repeat_count: 3 }));
+  });
+  it('历史高级配置未更改触发参数时不会偷偷重新提交排期或状态', async () => {
     await flushPromises();
+    await edit({ ...fixture, status: 1, trigger_type: 'scheduled', scheduled_time: '2030-01-01T00:00:00Z', trigger_version: 0 });
+    expect(document.querySelector<HTMLInputElement>('.ant-modal input[type="radio"][value="scheduled"]')?.disabled).toBe(false);
+    expect(document.querySelector('.ant-modal')?.textContent).toContain('历史高级规则尚未验证');
     await save();
     await vi.waitFor(() => expect(client.put).toHaveBeenCalledTimes(1));
     const payload = client.put.mock.calls[0]![1];
-    expect(payload.status).toBe(2);
+    expect(payload).not.toHaveProperty('status');
     expect(payload).not.toHaveProperty('trigger_type');
     expect(payload).not.toHaveProperty('scheduled_time');
+    expect(payload).not.toHaveProperty('clear_trigger');
   });
-  it('普通即时配置编辑不透传旧调度参数', async () => {
+  it('未修改旧触发参数时普通编辑不会悄悄清除历史字段', async () => {
     await flushPromises();
-    await edit({
-      ...fixture,
-      scheduled_time: '2030-01-01T00:00:00Z',
-      repeat_interval: 30,
-      trigger_condition: { previous: true },
-    });
+    await edit({ ...fixture, scheduled_time: '2030-01-01T00:00:00Z', repeat_interval: 30, trigger_condition: { previous: true } });
     await save();
     await vi.waitFor(() => expect(client.put).toHaveBeenCalledTimes(1));
     const payload = client.put.mock.calls[0]![1];
-    expect(payload.trigger_type).toBe('immediate');
-    for (const key of [
-      'scheduled_time',
-      'repeat_interval',
-      'trigger_condition',
-    ])
-      expect(payload).not.toHaveProperty(key);
+    for (const key of ['trigger_type', 'scheduled_time', 'repeat_interval', 'trigger_condition', 'clear_trigger']) expect(payload).not.toHaveProperty(key);
   });
   it('历史未支持渠道不能在编辑时被悄悄删除，需明确移除后保存', async () => {
     await flushPromises();

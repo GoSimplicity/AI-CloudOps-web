@@ -136,6 +136,9 @@ export interface WorkorderNotificationItem {
   subject_template?: string; // 主题模板
   scheduled_time?: string; // 定时发送时间
   repeat_interval?: number; // 重复间隔(分钟)
+  repeat_count?: number;
+  delay_minutes?: number;
+  trigger_version?: number;
   max_retries: number; // 最大重试次数
   retry_interval: number; // 重试间隔(分钟)
   status: number; // 状态
@@ -153,7 +156,12 @@ export interface CreateNotificationReq {
   template_id?: number; // 关联模板ID
   category_id?: number; // 关联分类ID
   event_types: string[]; // 触发事件类型
-  trigger_type: typeof NotificationTrigger.IMMEDIATE; // 触发类型
+  trigger_type: NotificationTriggerType; // 触发类型
+  scheduled_time?: string;
+  delay_minutes?: number;
+  repeat_interval?: number;
+  repeat_count?: number;
+  trigger_condition?: Record<string, number>;
   channels: string[]; // 通知渠道
   recipient_types: string[]; // 接收人类型
   recipient_users?: string[]; // 自定义接收人用户ID
@@ -179,7 +187,13 @@ export interface UpdateNotificationReq {
   template_id?: number; // 关联模板ID
   category_id?: number; // 关联分类ID
   event_types?: string[]; // 触发事件类型
-  trigger_type?: typeof NotificationTrigger.IMMEDIATE; // 触发类型
+  trigger_type?: NotificationTriggerType; // 触发类型
+  clear_trigger?: boolean;
+  scheduled_time?: string;
+  delay_minutes?: number;
+  repeat_interval?: number;
+  repeat_count?: number;
+  trigger_condition?: Record<string, number>;
   channels?: string[]; // 通知渠道
   recipient_types?: string[]; // 接收人类型
   recipient_users?: string[]; // 自定义接收人用户ID

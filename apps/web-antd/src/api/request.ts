@@ -93,6 +93,7 @@ const sensitiveSegmentPattern = (segment: string) =>
 const AUTOFIX_SEGMENT_PATTERN = sensitiveSegmentPattern('autofix');
 /** Secret 接口：独立的 secret / secrets 段（/k8s/secret/…，含 sec26 的 …/reveal；复数为 K8s 原生写法） */
 const SECRET_SEGMENT_PATTERN = sensitiveSegmentPattern('secrets?');
+const NOTIFICATION_ACCESS_PATTERN = /(?:^|\/)(?:workorder\/notification\/events|user\/permissions)(?=[/?#;]|$)/i;
 
 function matchesSensitivePath(error: any, pattern: RegExp): boolean {
   const path = readRequestPath(error);
@@ -108,8 +109,15 @@ export function isSecretRequest(error: any): boolean {
   return matchesSensitivePath(error, SECRET_SEGMENT_PATTERN);
 }
 
+function isNotificationAccessRequest(error: any): boolean {
+  const path = readRequestPath(error);
+  if (typeof path === 'string') return NOTIFICATION_ACCESS_PATTERN.test(path);
+  return path === URL_DECODE_FAILED && typeof error?.config?.url === 'string' &&
+    NOTIFICATION_ACCESS_PATTERN.test(error.config.url);
+}
+
 export function isSensitiveRequest(error: any): boolean {
-  return isAutofixRequest(error) || isSecretRequest(error);
+  return isAutofixRequest(error) || isSecretRequest(error) || isNotificationAccessRequest(error);
 }
 
 /**
@@ -338,12 +346,16 @@ function createRequestClient(baseURL: string) {
       if (status >= 200 && status < 400 && code === 0) {
         return data;
       }
+      const eventRequest = isNotificationAccessRequest({ config });
       // 业务码 403 同样按无权限处理，由下方统一提示
       if (code === FORBIDDEN_STATUS) {
-        throw createPermissionDeniedError(msg);
+        throw createPermissionDeniedError(eventRequest ? '没有权限执行此操作' : msg);
       }
       // 其它业务错误打上标记，由下方通用错误拦截器弹后端原文并标记已提示
-      throw createBusinessError(status, msg);
+      const safeMessage = eventRequest
+        ? '通知事件操作未完成，请先核对当前状态'
+        : msg;
+      throw createBusinessError(status, safeMessage);
     },
   });
 
@@ -383,6 +395,14 @@ function createRequestClient(baseURL: string) {
         return;
       }
       if (isPermissionDeniedError(error)) return;
+      if (isNotificationAccessRequest(error)) {
+        const content = '通知事件操作未完成，请先核对当前状态';
+        const key = `${HTTP_ERROR_MESSAGE_KEY_PREFIX}${content}`;
+        const handle = message.error({ content, key });
+        markRequestLayerNotice(error, key);
+        markHttpErrorNotified(error, key, handle);
+        return;
+      }
       // 400 / 409 / 429 / 浏览器中止请求改写文案（FE-02b，见 resolveHttpErrorMessage）
       const content = resolveHttpErrorMessage(msg, error);
       // 固定 key：同一文案的并发错误（如批量操作碰上 500 / 网络错误）合并为一条

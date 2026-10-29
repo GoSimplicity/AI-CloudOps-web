@@ -101,6 +101,23 @@ describe('业务错误（code≠0）统一提示 · 请求链路集成', () => {
     refreshTokenApi.mockResolvedValue('new-token');
   });
 
+  it.each(['/workorder/notification/events/1/resolve', '/user/permissions'])('%s 业务错误不展示或返回上游原文', async (path) => {
+    const error = await requestClient.post(path, {}, {
+      adapter: businessAdapter('private-event-canary'),
+    }).catch((value) => value);
+    expect(JSON.stringify(notices.error.mock.calls)).not.toContain('private-event-canary');
+    expect(String(error)).not.toContain('private-event-canary');
+    expect(JSON.stringify(notices.error.mock.calls)).toContain('通知事件操作未完成');
+  });
+
+  it('通知事件 HTTP 400 不展示上游原文', async () => {
+    await requestClient.post('/workorder/notification/events/1/cancel', {}, {
+      adapter: adapterOf(400, { code: 400, message: 'private-event-canary' }),
+    }).catch(() => {});
+    expect(JSON.stringify(notices.error.mock.calls)).not.toContain('private-event-canary');
+    expect(JSON.stringify(notices.error.mock.calls)).toContain('通知事件操作未完成');
+  });
+
   it('1. code≠0 且页面 catch 自己弹提示（按 isPermissionDeniedError 守卫）：全程只弹一条后端原文', async () => {
     try {
       await requestClient.post(
