@@ -201,12 +201,14 @@
         </a-card>
       </a-col>
     </a-row>
+    <PredictionBacktest />
   </OpsPage>
 </template>
 
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import PredictionProvenance from './PredictionProvenance.vue';
+import PredictionBacktest from './PredictionBacktest.vue';
 import { formatProbability } from './prediction-display';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
