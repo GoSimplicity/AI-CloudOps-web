@@ -149,6 +149,15 @@ it('确认送达采用 delivered 合同并识别短飞书脱敏标识', async ()
   expect(api.resolveNotificationDelivery).toHaveBeenCalledWith(10, 30, 'delivered', '渠道核对已经送达');
 });
 
+it('投递详情显示站内渠道及安全脱敏用户标识', async () => {
+  api.listNotificationEvents.mockResolvedValue({ items: [event('failed')], total: 1 });
+  api.getNotificationDeliveries.mockResolvedValue([{ ...delivery(), channel: 'in_app', recipient_masked: '用户***', status: 'success' }]);
+  await start(); await click('详情');
+  expect(document.body.textContent).toContain('站内消息');
+  expect(document.body.textContent).toContain('用户***');
+  expect(document.body.textContent).not.toContain('确认送达');
+});
+
 it('拒绝不安全的脱敏标识，并对事件失败提供重试', async () => {
   api.listNotificationEvents.mockResolvedValue({ items: [event('failed')], total: 1 });
   api.getNotificationDeliveries.mockResolvedValue([{ ...delivery(), recipient_masked: 'alice@example.test SECRET*', attempts: 'private-attempt-field' }]);
@@ -186,6 +195,7 @@ it('同一账户轮换令牌不会解除在途操作锁或重复提交', async (
   ok.click(); await flushPromises();
   expect(api.cancelNotificationEvent).toHaveBeenCalledTimes(1);
   account.access.accessToken = 'refreshed-token'; await flushPromises();
+  expect(document.body.textContent).toContain('取消待处理排期');
   ok.click(); await flushPromises();
   expect(api.cancelNotificationEvent).toHaveBeenCalledTimes(1);
   pending.resolve(undefined); await flushPromises();

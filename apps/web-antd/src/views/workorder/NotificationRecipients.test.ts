@@ -1,5 +1,5 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-import Antd, { Modal } from 'ant-design-vue';
+import { DOMWrapper, flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import Antd, { message, Modal } from 'ant-design-vue';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import Notification from './Notification.vue';
 
@@ -112,6 +112,28 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe('通知接收范围与状态合同', () => {
+  it('创建站内消息只提交 in_app 与系统用户范围，不触发外部发送', async () => {
+    await flushPromises();
+    await wrapper.get('[aria-label="创建通知配置"]').trigger('click');
+    await flushPromises();
+    await new DOMWrapper(document.querySelector<HTMLInputElement>('input[placeholder="请输入通知配置名称"]')!).setValue('站内测试');
+    checkbox('站内消息').querySelector('input')!.click(); await flushPromises();
+    await save();
+    await vi.waitFor(() => expect(client.post).toHaveBeenCalledTimes(1));
+    expect(client.post).toHaveBeenCalledWith('/workorder/notification/create', expect.objectContaining({ channels: ['in_app'], recipient_types: ['creator'], event_types: ['instance_created', 'instance_submitted'] }));
+    expect(client.post.mock.calls.some(([url]) => String(url).includes('/test/send') || String(url).endsWith('/notification/send'))).toBe(false);
+  });
+  it('站内消息不能仅选择自定义外部地址', async () => {
+    const notify = vi.spyOn(message, 'error');
+    await flushPromises();
+    await wrapper.get('[aria-label="创建通知配置"]').trigger('click'); await flushPromises();
+    await new DOMWrapper(document.querySelector<HTMLInputElement>('input[placeholder="请输入通知配置名称"]')!).setValue('站内测试');
+    checkbox('站内消息').querySelector('input')!.click(); await flushPromises();
+    checkbox('工单创建人').querySelector('input')!.click(); await flushPromises();
+    checkbox('自定义地址').querySelector('input')!.click(); await flushPromises(); await save();
+    expect(client.post).not.toHaveBeenCalled();
+    expect(notify).toHaveBeenCalledWith('站内消息必须选择系统用户、创建人、处理人、角色或部门');
+  });
   it('复制禁用配置后创建请求保留禁用状态', async () => {
     await flushPromises();
     await copy();

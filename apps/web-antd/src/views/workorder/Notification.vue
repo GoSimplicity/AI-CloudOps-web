@@ -415,16 +415,16 @@
           />
         </a-form-item>
 
-        <a-alert v-if="notificationDialog.form.channels.some(channel => !['email', 'feishu'].includes(channel))"
+        <a-alert v-if="notificationDialog.form.channels.some(channel => !['email', 'feishu', 'in_app'].includes(channel))"
           type="warning" message="此配置含当前服务未支持的渠道，保存前请确认移除" show-icon>
-          <template #action><a-button @click="notificationDialog.form.channels = notificationDialog.form.channels.filter(channel => ['email', 'feishu'].includes(channel))">移除不支持渠道</a-button></template>
+          <template #action><a-button @click="notificationDialog.form.channels = notificationDialog.form.channels.filter(channel => ['email', 'feishu', 'in_app'].includes(channel))">移除不支持渠道</a-button></template>
         </a-alert>
         <a-form-item label="通知渠道" name="channels">
           <a-checkbox-group v-model:value="notificationDialog.form.channels" style="width: 100%;">
             <a-row :gutter="[16, 16]">
               <a-col
                 :span="12"
-                v-for="channel in getAllNotificationChannels().filter(channel => ['email', 'feishu'].includes(channel))"
+                v-for="channel in getAllNotificationChannels().filter(channel => ['email', 'feishu', 'in_app'].includes(channel))"
                 :key="channel"
               >
                 <a-checkbox :value="channel">
@@ -473,6 +473,7 @@
               </a-col>
             </a-row>
           </a-checkbox-group>
+          <a-alert v-if="notificationDialog.form.channels.includes('in_app')" type="info" show-icon message="站内消息发送给系统用户；请至少选择创建人、处理人、用户、角色或部门。自定义外部地址不能接收站内消息。" />
         </a-form-item>
 
         <a-form-item label="自定义接收人用户ID" name="recipientUsers" v-if="notificationDialog.form.recipientTypes.includes('user')">
@@ -1417,6 +1418,7 @@ const getTriggerTypeName = (type: string): string => {
 
 const getChannelColor = (channel: string): string => {
   const colorMap: Record<string, string> = {
+    [NotificationChannel.IN_APP]: 'cyan',
     [NotificationChannel.FEISHU]: 'green',
     [NotificationChannel.EMAIL]: 'blue',
     [NotificationChannel.SMS]: 'orange',
@@ -1427,6 +1429,7 @@ const getChannelColor = (channel: string): string => {
 
 const getChannelIcon = (channel: string) => {
   const iconMap: Record<string, any> = {
+    [NotificationChannel.IN_APP]: BellOutlined,
     [NotificationChannel.FEISHU]: MessageOutlined,
     [NotificationChannel.EMAIL]: MailOutlined,
     [NotificationChannel.SMS]: PhoneOutlined,
@@ -1437,6 +1440,7 @@ const getChannelIcon = (channel: string) => {
 
 const getChannelIconColor = (channel: string): string => {
   const colorMap: Record<string, string> = {
+    [NotificationChannel.IN_APP]: '#08979c',
     [NotificationChannel.FEISHU]: '#00b96b',
     [NotificationChannel.EMAIL]: '#1890ff',
     [NotificationChannel.SMS]: '#fa8c16',
@@ -1942,6 +1946,10 @@ const testSendDialog = reactive({
   channels: [] as string[], channel: '', recipient: '', error: '',
 });
 const handleTestSend = (record: Notification): void => {
+  if (!record.channels.some(channel => ['email', 'feishu'].includes(channel))) {
+    message.info('站内消息通过工单事件投递，暂不支持试发');
+    return;
+  }
   testSendDialog.notificationId = record.id;
   testSendDialog.channels = record.channels.filter(channel => ['email', 'feishu'].includes(channel));
   testSendDialog.channel = testSendDialog.channels[0] || '';
@@ -2079,9 +2087,13 @@ const saveNotification = async (): Promise<void> => {
   const formData = notificationDialog.form;
 
   if (
-    formData.channels.some((channel) => !['email', 'feishu'].includes(channel))
+    formData.channels.some((channel) => !['email', 'feishu', 'in_app'].includes(channel))
   ) {
     message.error('请先明确移除当前未支持的通知渠道');
+    return;
+  }
+  if (formData.channels.includes('in_app') && !formData.recipientTypes.some((type) => ['creator', 'assignee', 'user', 'role', 'dept'].includes(type))) {
+    message.error('站内消息必须选择系统用户、创建人、处理人、角色或部门');
     return;
   }
   // 未修改的历史配置只更新普通字段；明确修改时整体替换触发参数

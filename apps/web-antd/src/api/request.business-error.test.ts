@@ -101,7 +101,7 @@ describe('业务错误（code≠0）统一提示 · 请求链路集成', () => {
     refreshTokenApi.mockResolvedValue('new-token');
   });
 
-  it.each(['/workorder/notification/events/1/resolve', '/user/permissions'])('%s 业务错误不展示或返回上游原文', async (path) => {
+  it.each(['/workorder/notification/events/1/resolve', '/workorder/notification/inbox', '/workorder/notification/inbox/1/read', '/user/permissions'])('%s 业务错误不展示或返回上游原文', async (path) => {
     const error = await requestClient.post(path, {}, {
       adapter: businessAdapter('private-event-canary'),
     }).catch((value) => value);

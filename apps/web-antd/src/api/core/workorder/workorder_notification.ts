@@ -36,6 +36,7 @@ export const IsDefault = {
 
 // 通知渠道常量
 export const NotificationChannel = {
+  IN_APP: 'in_app', // 站内消息
   EMAIL: 'email',       // 邮箱
   FEISHU: 'feishu',     // 飞书
   SMS: 'sms',           // 短信
@@ -345,6 +346,7 @@ export const getEventTypeName = (eventType: string): string => {
 
 export const getNotificationChannelName = (channel: string): string => {
   const channelNames: Record<string, string> = {
+    [NotificationChannel.IN_APP]: '站内消息',
     [NotificationChannel.EMAIL]: '邮件',
     [NotificationChannel.FEISHU]: '飞书',
     [NotificationChannel.SMS]: '短信',

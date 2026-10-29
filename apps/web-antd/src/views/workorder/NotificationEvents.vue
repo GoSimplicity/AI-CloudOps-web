@@ -71,6 +71,7 @@ const masked = (channel: unknown, value: unknown) => {
   if (typeof value !== 'string') return '暂无脱敏标识';
   if (channel === 'email' && /^(?:[\p{L}\p{N}]|\*)\*{3}@(?:[\p{L}\p{N}]|\*)\*{3}$/u.test(value)) return value;
   if (channel === 'feishu' && /^(ou_|on_|oc_)\*{3}(?:[a-zA-Z0-9]{4})?$/.test(value)) return value;
+  if (channel === 'in_app' && /^用户\*{3}(?:[0-9]{4})?$/.test(value)) return value;
   return '暂无脱敏标识';
 };
 const hashText = (value: unknown) => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value) ? value : '—';
@@ -214,7 +215,7 @@ async function submitAction() {
 function changePage(next: number) { page.value = next; void loadList(); }
 function changeFilter() { page.value = 1; closeDetails(); void loadList(); }
 
-watch(() => [identity.value.authenticated, identity.value.userId], () => {
+watch([() => identity.value.authenticated, () => identity.value.userId], () => {
   session++; listGeneration++; detailGeneration++; actionGeneration++;
   permissions.value = null; events.value = []; total.value = 0; selected.value = null;
   deliveries.value = []; resolutions.value = []; action.value = null; actionEvent.value = null;
@@ -262,7 +263,7 @@ onBeforeUnmount(() => { alive = false; session++; listGeneration++; detailGenera
       <a-alert v-if="detailFailure" type="error" :message="detailFailure" show-icon />
       <a-spin :spinning="detailLoading">
         <a-table :data-source="deliveries" :pagination="false" row-key="id" size="small" :scroll="{ x: 600 }">
-          <a-table-column key="channel" title="渠道"><template #default="{ record }">{{ record.channel === 'email' ? '邮件' : record.channel === 'feishu' ? '飞书' : '其他' }}</template></a-table-column>
+          <a-table-column key="channel" title="渠道"><template #default="{ record }">{{ record.channel === 'email' ? '邮件' : record.channel === 'feishu' ? '飞书' : record.channel === 'in_app' ? '站内消息' : '其他' }}</template></a-table-column>
           <a-table-column key="recipient" title="接收人"><template #default="{ record }"><div>{{ masked(record.channel, record.recipient_masked) }}</div><small class="hash">{{ hashText(record.recipient_hash) }}</small></template></a-table-column>
           <a-table-column key="status" title="状态"><template #default="{ record }">{{ states[record.status] ?? '未知状态' }}</template></a-table-column>
           <a-table-column key="attempts" title="次数"><template #default="{ record }">{{ safeCount(record.attempts) }}</template></a-table-column>

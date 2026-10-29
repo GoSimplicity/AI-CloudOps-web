@@ -1,14 +1,11 @@
 <script lang="ts" setup>
-import type { NotificationItem } from '@vben/layouts';
-
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 
 import { AuthenticationLoginExpiredModal } from '@vben/common-ui';
 import { BookOpenText, CircleHelp, MdiGithub } from '@vben/icons';
 import {
   BasicLayout,
   LockScreen,
-  Notification,
   UserDropdown,
 } from '@vben/layouts';
 import { storeToRefs, useAccessStore, useUserStore } from '@vben/stores';
@@ -18,17 +15,13 @@ import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
 
 import AI from '#/views/ai/ai.vue';
+import InboxNotification from './components/InboxNotification.vue';
 
-// 通知源接入前保持真实空态，不生成演示消息
-const notifications = ref<NotificationItem[]>([]);
 const projectURL = 'https://github.com/GoSimplicity/AI-CloudOps';
 
 const userStore = useUserStore();
 const authStore = useAuthStore();
 const accessStore = useAccessStore();
-const showDot = computed(() =>
-  notifications.value.some((item) => !item.isRead),
-);
 
 const menus = computed(() => [
   {
@@ -70,13 +63,6 @@ async function handleLogout() {
   await authStore.logout(false);
 }
 
-function handleNoticeClear() {
-  notifications.value = [];
-}
-
-function handleMakeAll() {
-  notifications.value.forEach((item) => (item.isRead = true));
-}
 </script>
 
 <template>
@@ -91,13 +77,7 @@ function handleMakeAll() {
       />
     </template>
     <template #notification>
-      <Notification
-        :dot="showDot"
-        :notifications="notifications"
-        empty-text="通知源尚未接入"
-        @clear="handleNoticeClear"
-        @make-all="handleMakeAll"
-      />
+      <InboxNotification />
     </template>
     <template #extra>
       <AuthenticationLoginExpiredModal
