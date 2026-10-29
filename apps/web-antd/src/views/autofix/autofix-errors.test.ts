@@ -16,6 +16,7 @@ import {
   AUTOFIX_ERROR_TEXT,
   describeAutoFixError,
   reportAutoFixError,
+  reportAutoFixOutcomeUncertain,
 } from './autofix-errors';
 
 /** SEC-25/26 规则 3/4：autofix 错误只按 HTTP 状态分类，不依赖 error_code */
@@ -161,5 +162,19 @@ describe('reportAutoFixError：共用 key 时不串改（第 6 条）', () => {
       content: AUTOFIX_ERROR_TEXT.conflict,
       key: 'http-error:通用提示',
     });
+  });
+});
+
+describe('结果未知提示', () => {
+  it('业务错误不伪装为权限拒绝，权限拒绝仍明确提示', () => {
+    const business = reportAutoFixOutcomeUncertain(
+      createBusinessError(200, 'private-canary'),
+    );
+    expect(business).toContain('操作结果尚未确认');
+    expect(business).not.toContain(PERMISSION_DENIED_MESSAGE);
+    expect(business).not.toContain('private-canary');
+    expect(reportAutoFixOutcomeUncertain(httpError(403))).toContain(
+      PERMISSION_DENIED_MESSAGE,
+    );
   });
 });

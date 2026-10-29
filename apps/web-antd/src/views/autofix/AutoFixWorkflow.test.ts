@@ -208,6 +208,7 @@ function createWrapper() {
 
 describe('AutoFixWorkflow.vue', () => {
   beforeEach(() => {
+  sessionStorage.clear();
     vi.clearAllMocks();
     account.user = reactive({ userInfo: { userId: '1' } });
     account.access = reactive({ accessToken: 'offline-token' });
@@ -310,6 +311,7 @@ describe('AutoFixWorkflow.vue', () => {
         },
       ],
       execution: {
+        status: 'completed',
         executed_actions: [
           {
             action_id: 'block-secret-check',
@@ -348,6 +350,7 @@ describe('AutoFixWorkflow.vue', () => {
 
     expect(autofixMocks.executeAutoFixWorkflow).toHaveBeenCalledWith({
       deployment: 'payment-service',
+      operation_id: expect.any(String),
       event:
         'ImagePullBackOff: failed to pull image，可能和镜像地址、Secret或网络连通性有关。',
       namespace: 'default',

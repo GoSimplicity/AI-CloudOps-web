@@ -24,6 +24,7 @@ vi.mock('@vben/stores', () => ({
   useAccessStore: () => account.access,
 }));
 vi.mock('#/api/core/aiops/autofix', () => api);
+vi.mock('#/utils/permission', () => ({ usePermission: () => ({ can: () => true, hasPerm: () => true }) }));
 
 const action = (id: string) => ({
   action_id: id,
@@ -90,6 +91,7 @@ async function setup(result: Record<string, any>) {
 }
 
 beforeEach(() => {
+  sessionStorage.clear();
   vi.clearAllMocks();
   account.user = reactive({ userInfo: { userId: '1' } });
   account.access = reactive({ accessToken: 'offline-credential' });

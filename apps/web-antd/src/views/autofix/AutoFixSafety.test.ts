@@ -3,15 +3,15 @@ import Antd, { message } from 'ant-design-vue';
 import { nextTick, reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { HTTP_CONFLICT_MESSAGE } from '#/constants/http-error-messages';
 import { PERMISSION_DENIED_MESSAGE } from '#/utils/permission/forbidden';
 
 import AutoFixWorkflow from './AutoFixWorkflow.vue';
 
+const recoveryPermission = vi.hoisted(() => ({ allowed: true }));
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
-  usePermission: () => ({ can: () => true, hasPerm: () => true }),
+  usePermission: () => ({ can: () => true, hasPerm: () => recoveryPermission.allowed }),
 }));
 
 const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
@@ -20,6 +20,9 @@ const api = vi.hoisted(() => ({
   getAutoFixReady: vi.fn(),
   executeAutoFixWorkflow: vi.fn(),
   confirmAutoFixWorkflow: vi.fn(),
+  getAutoFixHistory: vi.fn(),
+  getAutoFixOperation: vi.fn(),
+  getAutoFixPlan: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({
   useUserStore: () => account.user,
@@ -70,6 +73,8 @@ function plan(reason = '账户1私有审批结论') {
   };
 }
 beforeEach(() => {
+  sessionStorage.clear();
+  recoveryPermission.allowed = true;
   vi.clearAllMocks();
   account.user = reactive({ userInfo: { userId: '1' } });
   account.access = reactive({ accessToken: 'offline-credential' });
@@ -185,11 +190,11 @@ describe('自动修复页面的显式调用和审批状态', () => {
   });
   it.each([
     [403, PERMISSION_DENIED_MESSAGE],
-    [404, '计划已失效，请重新生成'],
-    [409, HTTP_CONFLICT_MESSAGE],
-    [502, '服务暂时不可用，请稍后重试'],
-    [400, '请求参数错误，请检查后重试'],
-    [500, '自动修复请求失败，请人工核对实际状态'],
+    [404, '操作结果尚未确认'],
+    [409, '操作结果尚未确认'],
+    [502, '操作结果尚未确认'],
+    [400, '操作结果尚未确认'],
+    [500, '操作结果尚未确认'],
   ])(
     '确认返回%s后清除可重试计划与选择，按状态显示「%s」（不透出后端原文）',
     async (status, text) => {
@@ -209,16 +214,36 @@ describe('自动修复页面的显式调用和审批状态', () => {
       expect(message.success).not.toHaveBeenCalled();
     },
   );
-  it('执行工作流 409：显示 409 通用文案（HTTP_CONFLICT_MESSAGE）', async () => {
+  it('执行工作流 409：提示先核对而非盲目重试', async () => {
     api.executeAutoFixWorkflow.mockRejectedValueOnce(
       Object.assign(new Error('后端原文'), { response: { status: 409 } }),
     );
     await start();
     await fillAndRun();
     expect(wrapper!.find('[role="alert"]').text()).toContain(
-      HTTP_CONFLICT_MESSAGE,
+      '操作结果尚未确认',
     );
   });
+  it('失败后显式查询同一操作，恢复原计划并禁止自动重发', async () => {
+    api.executeAutoFixWorkflow.mockRejectedValueOnce(new Error('offline'));
+    await start(); await fillAndRun();
+    const id = api.executeAutoFixWorkflow.mock.calls[0]![0].operation_id;
+    expect(wrapper!.text()).toContain('待核对');
+    expect(wrapper!.text()).toContain('不要重复执行');
+    api.getAutoFixOperation.mockResolvedValueOnce({ operation_id: id, plan_id: 'opaque-plan-one', state: 'pending', approval_state: 'pending', result: plan() });
+    await button('查询当前状态').trigger('click'); await flushPromises();
+    expect(wrapper!.text()).toContain('待审批');
+    expect(wrapper!.find('.confirm-panel').exists()).toBe(true);
+    expect(api.executeAutoFixWorkflow).toHaveBeenCalledTimes(1);
+  });
+  it('没有历史查询权限时明确提示，不发查询', async () => {
+    recoveryPermission.allowed = false;
+    await start();
+    expect(wrapper!.text()).toContain('没有操作历史查询权限');
+    expect(api.getAutoFixHistory).not.toHaveBeenCalled();
+    expect(api.getAutoFixOperation).not.toHaveBeenCalled();
+  });
+
   it('硬权限失败的动作不提供可选审批框', async () => {
     const result = plan();
     result.blocked_actions[0]!.risk_assessment.permission_allowed = false;

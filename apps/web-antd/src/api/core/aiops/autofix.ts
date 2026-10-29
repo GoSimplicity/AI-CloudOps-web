@@ -50,6 +50,7 @@ export interface AutoFixWorkflowMessage {
 }
 
 export interface AutoFixWorkflowRequest {
+  operation_id?: string;
   deployment?: string;
   diagnosis?: Record<string, any>;
   event?: string;
@@ -76,6 +77,7 @@ export interface AutoFixApproval {
 }
 
 export interface AutoFixWorkflowResponse {
+  operation_id?: string;
   approval?: AutoFixApproval;
   agents_used: string[];
   blocked_actions: AutoFixAction[];
@@ -118,11 +120,19 @@ export interface AutoFixReadyResponse {
 }
 
 export async function executeAutoFixWorkflow(data: AutoFixWorkflowRequest) {
-  return requestClientAIOps.post<AutoFixWorkflowResponse>('/autofix/workflow', data);
+  return requestClientAIOps.post<AutoFixWorkflowResponse>(
+    '/autofix/workflow',
+    data,
+  );
 }
 
-export async function confirmAutoFixWorkflow(data: AutoFixWorkflowConfirmRequest) {
-  return requestClientAIOps.post<AutoFixWorkflowResponse>('/autofix/workflow/confirm', data);
+export async function confirmAutoFixWorkflow(
+  data: AutoFixWorkflowConfirmRequest,
+) {
+  return requestClientAIOps.post<AutoFixWorkflowResponse>(
+    '/autofix/workflow/confirm',
+    data,
+  );
 }
 
 export async function getAutoFixInfo() {
@@ -131,4 +141,54 @@ export async function getAutoFixInfo() {
 
 export async function getAutoFixReady() {
   return requestClientAIOps.get<AutoFixReadyResponse>('/autofix/ready');
+}
+
+export interface AutoFixExecutionSummary {
+  status?: string | null;
+  audit_result_recorded?: boolean | null;
+  executed_actions?: Array<{
+    action_id?: string | null;
+    status?: string | null;
+  }>;
+}
+
+export interface AutoFixOperation {
+  plan_id: string;
+  operation_id?: string | null;
+  state:
+    | 'building'
+    | 'pending'
+    | 'executing'
+    | 'completed'
+    | 'uncertain'
+    | 'invalidated'
+    | string;
+  approval_state: 'pending' | 'consumed' | 'voided';
+  created_at?: string;
+  updated_at?: string;
+  expires_at?: string;
+  reason?: string | null;
+  retry_safe?: boolean;
+  claimed_action_ids?: string[];
+  result?: AutoFixWorkflowResponse | null;
+  execution_summary?: AutoFixExecutionSummary | null;
+}
+
+export async function getAutoFixHistory(limit = 50) {
+  return requestClientAIOps.get<{ items: AutoFixOperation[] }>(
+    '/autofix/workflow/history',
+    { params: { limit } },
+  );
+}
+
+export async function getAutoFixOperation(operationId: string) {
+  return requestClientAIOps.get<AutoFixOperation>(
+    `/autofix/workflow/operations/${encodeURIComponent(operationId)}`,
+  );
+}
+
+export async function getAutoFixPlan(planId: string) {
+  return requestClientAIOps.get<AutoFixOperation>(
+    `/autofix/workflow/plans/${encodeURIComponent(planId)}`,
+  );
 }

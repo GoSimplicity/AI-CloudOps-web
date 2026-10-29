@@ -72,6 +72,7 @@ function pending(ids: string[], approval: Record<string, unknown> = {}) {
 const completed = () => ({
   ...pending([]),
   status: 'completed',
+  execution: { status: 'completed' },
   next_action: 'finish',
   blocked_actions: [],
   approval: {
@@ -84,6 +85,7 @@ const completed = () => ({
 });
 
 beforeEach(() => {
+  sessionStorage.clear();
   vi.clearAllMocks();
   account.user = reactive({ userInfo: { userId: '1' } });
   account.access = reactive({ accessToken: 'offline-credential' });
@@ -181,7 +183,7 @@ describe('规则 4：逐项确认 / 批量确认', () => {
     expect(wrapper!.find('.confirm-panel').exists()).toBe(false);
   });
 
-  it('404（含服务重启后计划丢失）：显示「计划已失效，请重新生成」并清掉计划', async () => {
+  it('404：结果不确定时提示先核对并清掉计划', async () => {
     api.confirmAutoFixWorkflow.mockRejectedValueOnce(
       Object.assign(new Error('审批计划不存在'), { response: { status: 404 } }),
     );
@@ -189,7 +191,7 @@ describe('规则 4：逐项确认 / 批量确认', () => {
     await buttons('确认此项')[0]!.trigger('click');
     await flushPromises();
     expect(wrapper!.find('[role="alert"]').text()).toContain(
-      '计划已失效，请重新生成',
+      '操作结果尚未确认',
     );
     expect(wrapper!.find('.confirm-panel').exists()).toBe(false);
     expect(buttons('确认此项')).toHaveLength(0);

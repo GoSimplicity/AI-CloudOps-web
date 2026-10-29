@@ -1,16 +1,35 @@
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
+import { useAccessStore } from '@vben/stores';
+import { usePermission } from '#/utils/permission';
 import { message } from 'ant-design-vue';
 import {
   confirmAutoFixWorkflow,
   executeAutoFixWorkflow,
   getAutoFixInfo,
   getAutoFixReady,
+  getAutoFixHistory,
+  getAutoFixOperation,
+  getAutoFixPlan,
+  type AutoFixOperation,
+  type AutoFixWorkflowRequest,
   type AutoFixInfoResponse,
   type AutoFixReadyResponse,
   type AutoFixWorkflowResponse,
 } from '#/api/core/aiops/autofix';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
-import { reportAutoFixError } from './autofix-errors';
+import { reportAutoFixOutcomeUncertain } from './autofix-errors';
+import {
+  readOperationId,
+  removeOperationId,
+  saveOperationId,
+} from './operation-storage';
 
 const templates = {
   crashloop: {
@@ -36,6 +55,8 @@ export type AutoFixTemplateKey = keyof typeof templates;
 
 /** 请求只由明确操作触发，审批状态与当前可信账户共同决定可操作范围 */
 export function useAutoFixWorkflow() {
+  const { can, hasPerm } = usePermission();
+  const access = useAccessStore();
   const templateKey = ref<AutoFixTemplateKey>('custom');
   const running = ref(false);
   const confirmLoading = ref(false);
@@ -46,6 +67,27 @@ export function useAutoFixWorkflow() {
   const workflowResult = ref<AutoFixWorkflowResponse>();
   const selectedBlockedActionIds = ref<string[]>([]);
   const workflowError = ref('');
+  const recoveryError = ref('');
+  const historyError = ref('');
+  const currentOperationId = ref('');
+  const currentPlanId = ref('');
+  const operationState = ref<
+    | 'none'
+    | 'unverified'
+    | 'not_found'
+    | 'pending'
+    | 'running'
+    | 'completed'
+    | 'uncertain'
+    | 'invalidated'
+  >('none');
+  const operationDetail = ref<AutoFixOperation>();
+  const operationHistory = ref<AutoFixOperation[]>([]);
+  const historyLoading = ref(false);
+  const historyLoaded = ref(false);
+  const recoveryLoading = ref(false);
+  let retrySnapshot: AutoFixWorkflowRequest | undefined;
+  let resultSource: 'workflow' | 'confirm' | 'operation' | 'plan' | '' = '';
   const infoError = ref('');
   const resultOwner = ref('');
   const now = ref(Date.now());
@@ -58,7 +100,24 @@ export function useAutoFixWorkflow() {
   const scope = useAiRequestScope(resetForOwner);
   const workflowLane = scope.createLane();
   const infoLane = scope.createLane();
-  const busy = computed(() => running.value || confirmLoading.value);
+  const recoveryLane = scope.createLane();
+  const historyLane = scope.createLane();
+  const busy = computed(
+    () => running.value || confirmLoading.value || recoveryLoading.value,
+  );
+  const canStartWorkflow = computed(
+    () =>
+      !['unverified', 'running', 'uncertain'].includes(operationState.value),
+  );
+  const canReadHistory = computed(() =>
+    hasPerm('/api/v1/autofix/workflow/history'),
+  );
+  const canReadOperation = computed(() =>
+    hasPerm('/api/v1/autofix/workflow/operations/:operation_id'),
+  );
+  const canReadPlan = computed(() =>
+    hasPerm('/api/v1/autofix/workflow/plans/:plan_id'),
+  );
   const isFormValid = computed(
     () =>
       !!scope.owner.value &&
@@ -89,6 +148,8 @@ export function useAutoFixWorkflow() {
     const approval = workflowResult.value.approval;
     if (resultOwner.value !== scope.owner.value)
       return '此结果不属于当前账户，请重新诊断';
+    if (!workflowResult.value.plan?.plan_id)
+      return '计划标识缺失，无法确认动作';
     // pending 由 status + approval 字段共同决定（规则 3）
     if (
       !approval ||
@@ -106,6 +167,7 @@ export function useAutoFixWorkflow() {
       workflowResult.value?.status === 'needs_human_confirmation' &&
       !approvalIssue.value &&
       !busy.value &&
+      can('aiops.autofix.confirm') &&
       ids.length > 0 &&
       ids.every((id) =>
         confirmableBlockedActions.value.some(
@@ -126,13 +188,27 @@ export function useAutoFixWorkflow() {
   function clearResult() {
     workflowResult.value = undefined;
     resultOwner.value = '';
+    resultSource = '';
     selectedBlockedActionIds.value = [];
     showRawDrawer.value = false;
   }
   function resetForOwner() {
     workflowLane.invalidate();
     infoLane.invalidate();
+    recoveryLane.invalidate();
+    historyLane.invalidate();
     clearResult();
+    currentOperationId.value = '';
+    currentPlanId.value = '';
+    operationState.value = 'none';
+    operationDetail.value = undefined;
+    operationHistory.value = [];
+    retrySnapshot = undefined;
+    recoveryLoading.value = false;
+    historyLoading.value = false;
+    historyLoaded.value = false;
+    recoveryError.value = '';
+    historyError.value = '';
     running.value = false;
     confirmLoading.value = false;
     infoLoading.value = false;
@@ -148,6 +224,261 @@ export function useAutoFixWorkflow() {
       problem_description: '',
     });
   }
+  function restoreOperationId() {
+    const id = readOperationId(scope.owner.value);
+    if (id) {
+      currentOperationId.value = id;
+      operationState.value = 'unverified';
+    }
+  }
+  watch(() => scope.owner.value, restoreOperationId, { flush: 'sync' });
+  watch(
+    () => access.accessToken,
+    () => {
+      resetForOwner();
+      restoreOperationId();
+    },
+    { flush: 'sync' },
+  );
+  watch(
+    () => [
+      can('aiops.autofix.run'),
+      can('aiops.autofix.confirm'),
+      canReadHistory.value,
+      canReadOperation.value,
+      canReadPlan.value,
+    ],
+    (current, previous) => {
+      if (!previous) return;
+      if (
+        (previous[0] && !current[0] && running.value) ||
+        (previous[1] && !current[1] && confirmLoading.value)
+      ) {
+        workflowLane.invalidate();
+        running.value = false;
+        confirmLoading.value = false;
+        clearResult();
+        operationState.value = 'unverified';
+        recoveryError.value = '权限发生变化，请由有权限的人员核对操作状态。';
+      }
+      if (!current[1]) selectedBlockedActionIds.value = [];
+      if (
+        (resultSource === 'workflow' && previous[0] && !current[0]) ||
+        (resultSource === 'confirm' && previous[1] && !current[1]) ||
+        (resultSource === 'operation' && previous[3] && !current[3]) ||
+        (resultSource === 'plan' && previous[4] && !current[4])
+      ) {
+        clearResult();
+        operationState.value = 'unverified';
+        recoveryError.value = '权限发生变化，请由有权限的人员核对操作状态。';
+      }
+      if ((previous[3] && !current[3]) || (previous[4] && !current[4])) {
+        recoveryLane.invalidate();
+        recoveryLoading.value = false;
+        if (operationDetail.value) operationState.value = 'unverified';
+        operationDetail.value = undefined;
+      }
+      if (previous[2] && !current[2]) {
+        historyLane.invalidate();
+        historyLoading.value = false;
+        operationHistory.value = [];
+        historyLoaded.value = false;
+      }
+    },
+    { flush: 'sync' },
+  );
+
+  function applyOperation(
+    record: AutoFixOperation,
+    owner: string,
+    source: 'operation' | 'plan',
+  ) {
+    clearResult();
+    operationDetail.value = record;
+    currentPlanId.value = record.plan_id || '';
+    recoveryError.value = '';
+    if (record.state === 'pending') {
+      const result = record.result;
+      if (
+        record.approval_state !== 'pending' ||
+        !result ||
+        result.status !== 'needs_human_confirmation' ||
+        result.approval?.state !== 'pending' ||
+        result.plan?.plan_id !== record.plan_id
+      ) {
+        operationState.value = 'uncertain';
+        recoveryError.value = '待审批结果不完整，请人工核对，不要重复执行。';
+        return;
+      }
+      operationState.value = 'pending';
+      workflowResult.value = result;
+      resultOwner.value = owner;
+      resultSource = source;
+      now.value = Date.now();
+    } else if (record.state === 'building' || record.state === 'executing') {
+      operationState.value = 'running';
+      recoveryError.value = '操作仍在处理，不能再次提交或确认。';
+    } else if (
+      record.state === 'completed' &&
+      ['completed', 'planned'].includes(record.execution_summary?.status || '')
+    ) {
+      operationState.value = 'completed';
+    } else if (record.state === 'invalidated') {
+      operationState.value = 'invalidated';
+      recoveryError.value = '该计划已失效，请核对后重新诊断。';
+    } else {
+      operationState.value = 'uncertain';
+      recoveryError.value =
+        '执行结果不确定，请人工核对目标状态，不要重复执行。';
+    }
+  }
+  async function checkOperation() {
+    if (busy.value || !scope.owner.value) return;
+    const operationId = currentOperationId.value;
+    const planId = currentPlanId.value;
+    if (!operationId && !planId) return;
+    if (operationId ? !canReadOperation.value : !canReadPlan.value) {
+      recoveryError.value =
+        '没有查询此操作状态的权限，请联系管理员；不要重复执行。';
+      return;
+    }
+    const ticket = recoveryLane.begin();
+    recoveryLoading.value = true;
+    recoveryError.value = '';
+    try {
+      const record = operationId
+        ? await getAutoFixOperation(operationId)
+        : await getAutoFixPlan(planId);
+      if (!recoveryLane.current(ticket)) return;
+      if (
+        (operationId && record.operation_id !== operationId) ||
+        (planId && record.plan_id !== planId)
+      )
+        throw new Error('响应标识不匹配');
+      applyOperation(record, ticket.owner, operationId ? 'operation' : 'plan');
+    } catch (error: any) {
+      if (!recoveryLane.current(ticket)) return;
+      clearResult();
+      operationDetail.value = undefined;
+      if (
+        error?.response?.status === 404 &&
+        operationId &&
+        !planId &&
+        !['running', 'uncertain'].includes(operationState.value)
+      ) {
+        operationState.value = 'not_found';
+        recoveryError.value = retrySnapshot
+          ? '尚未找到该操作；可手动重试原请求，操作 ID 保持不变。'
+          : '尚未找到该操作。刷新后原输入未保存，请核对并重新填写，再手动重试同一操作 ID。';
+      } else if (error?.response?.status === 403) {
+        operationState.value = 'unverified';
+        recoveryError.value =
+          '没有查询此操作状态的权限，请联系管理员；不要重复执行。';
+      } else if (error?.response?.status === 404 && planId) {
+        operationState.value = 'uncertain';
+        recoveryError.value =
+          '已存在的计划无法查询，请人工核对目标状态，不要重复执行。';
+      } else {
+        operationState.value = 'unverified';
+        recoveryError.value =
+          '无法确认操作状态，请核对权限和服务，不要重复执行。';
+      }
+    } finally {
+      if (recoveryLane.current(ticket)) recoveryLoading.value = false;
+    }
+  }
+  async function loadHistory() {
+    if (!scope.owner.value || !canReadHistory.value) {
+      historyError.value = '没有查看操作历史的权限。';
+      return;
+    }
+    const ticket = historyLane.begin();
+    historyLoading.value = true;
+    historyError.value = '';
+    try {
+      const response = await getAutoFixHistory();
+      if (!historyLane.current(ticket)) return;
+      if (!Array.isArray(response?.items))
+        throw new Error('invalid history response');
+      operationHistory.value = response.items;
+      historyLoaded.value = true;
+    } catch (error: any) {
+      if (!historyLane.current(ticket)) return;
+      operationHistory.value = [];
+      historyLoaded.value = false;
+      historyError.value =
+        error?.response?.status === 403
+          ? '没有查看操作历史的权限，请联系管理员。'
+          : '操作历史读取失败，请稍后查询。';
+    } finally {
+      if (historyLane.current(ticket)) historyLoading.value = false;
+    }
+  }
+  function canOpenHistory(item: AutoFixOperation) {
+    if (!canReadPlan.value || busy.value) return false;
+    if (!['unverified', 'running', 'uncertain'].includes(operationState.value))
+      return true;
+    return !!(
+      (currentOperationId.value &&
+        item.operation_id === currentOperationId.value) ||
+      (currentPlanId.value && item.plan_id === currentPlanId.value)
+    );
+  }
+  async function openHistoryPlan(item: AutoFixOperation) {
+    if (busy.value || !scope.owner.value) return;
+    if (!canReadPlan.value) {
+      historyError.value = '没有查看计划详情的权限，请联系管理员。';
+      return;
+    }
+    if (!canOpenHistory(item)) {
+      historyError.value = '请先核对当前操作，再查看其他计划。';
+      return;
+    }
+    const ticket = recoveryLane.begin();
+    recoveryLoading.value = true;
+    historyError.value = '';
+    try {
+      const record = await getAutoFixPlan(item.plan_id);
+      if (!recoveryLane.current(ticket)) return;
+      if (record.plan_id !== item.plan_id) throw new Error('响应标识不匹配');
+      currentOperationId.value = record.operation_id || '';
+      if (record.operation_id)
+        saveOperationId(ticket.owner, record.operation_id);
+      retrySnapshot = undefined;
+      applyOperation(record, ticket.owner, 'plan');
+    } catch (error: any) {
+      if (!recoveryLane.current(ticket)) return;
+      historyError.value =
+        error?.response?.status === 403
+          ? '没有查看计划详情的权限，请联系管理员。'
+          : '计划详情读取失败，请稍后查询。';
+    } finally {
+      if (recoveryLane.current(ticket)) recoveryLoading.value = false;
+    }
+  }
+  function acknowledgeUncertain(
+    owner: string,
+    operationId: string,
+    planId: string,
+  ) {
+    if (
+      busy.value ||
+      operationState.value !== 'uncertain' ||
+      scope.owner.value !== owner ||
+      currentOperationId.value !== operationId ||
+      currentPlanId.value !== planId
+    )
+      return;
+    // This only clears the local pointer; the server retains its immutable record.
+    removeOperationId(scope.owner.value);
+    currentOperationId.value = '';
+    currentPlanId.value = '';
+    operationState.value = 'none';
+    operationDetail.value = undefined;
+    retrySnapshot = undefined;
+    recoveryError.value = '';
+  }
+
   function applyTemplate() {
     const template = templates[templateKey.value];
     formData.event = template.event;
@@ -197,22 +528,83 @@ export function useAutoFixWorkflow() {
     }
   }
   async function runWorkflow() {
-    if (!isFormValid.value || busy.value) return;
-    const ticket = workflowLane.begin();
+    if (
+      !isFormValid.value ||
+      busy.value ||
+      !canStartWorkflow.value ||
+      !can('aiops.autofix.run')
+    )
+      return;
     const request = {
       deployment: formData.deployment.trim() || undefined,
       event: formData.event || formData.problem_description,
       namespace: formData.namespace.trim(),
       problem_description: formData.problem_description.trim(),
     };
+    let operationId =
+      operationState.value === 'not_found' ? currentOperationId.value : '';
+    if (
+      operationId &&
+      retrySnapshot &&
+      JSON.stringify({ ...retrySnapshot, operation_id: undefined }) !==
+        JSON.stringify(request)
+    ) {
+      recoveryError.value =
+        '输入已变化；请恢复原输入后重试同一操作，或先核对后开始新操作。';
+      return;
+    }
+    if (!operationId) {
+      try {
+        operationId = crypto.randomUUID();
+      } catch {
+        recoveryError.value = '无法生成操作标识，本次未提交。';
+        return;
+      }
+    }
+    if (!saveOperationId(scope.owner.value, operationId)) {
+      recoveryError.value = '无法保存操作标识，本次未提交；请启用会话存储。';
+      return;
+    }
+    const ticket = workflowLane.begin();
+    currentOperationId.value = operationId;
+    currentPlanId.value = '';
+    operationState.value = 'unverified';
+    operationDetail.value = undefined;
+    retrySnapshot = { ...request, operation_id: operationId };
+    recoveryError.value = '';
     clearResult();
     workflowError.value = '';
     running.value = true;
     try {
-      const response = await executeAutoFixWorkflow(request);
+      const response = await executeAutoFixWorkflow({
+        ...request,
+        operation_id: operationId,
+      });
       if (!workflowLane.current(ticket)) return;
+      if (response.operation_id && response.operation_id !== operationId) {
+        operationState.value = 'uncertain';
+        recoveryError.value = '响应操作标识不一致，请人工核对。';
+        return;
+      }
+      if (
+        response.status === 'completed' &&
+        response.execution?.status &&
+        response.execution.status !== 'completed'
+      ) {
+        operationState.value = 'uncertain';
+        recoveryError.value = '执行状态不一致，请人工核对。';
+        return;
+      }
       workflowResult.value = response;
+      currentPlanId.value = response.plan?.plan_id || '';
+      operationState.value =
+        response.status === 'needs_human_confirmation'
+          ? 'pending'
+          : ['completed', 'planned'].includes(response.status)
+            ? 'completed'
+            : 'uncertain';
       resultOwner.value = ticket.owner;
+      resultSource = 'workflow';
       now.value = Date.now();
       if (response.status === 'needs_human_confirmation')
         message.warning('工作流已生成原计划，待执行动作需要明确审批');
@@ -225,7 +617,8 @@ export function useAutoFixWorkflow() {
       if (!workflowLane.current(ticket)) return;
       clearResult();
       // 规则 3：按 HTTP 状态映射文案，不透出后端原文 / error_code
-      workflowError.value = reportAutoFixError(error);
+      operationState.value = 'unverified';
+      workflowError.value = reportAutoFixOutcomeUncertain(error);
     } finally {
       if (workflowLane.current(ticket)) running.value = false;
     }
@@ -249,8 +642,26 @@ export function useAutoFixWorkflow() {
         plan_id: planId,
       });
       if (!workflowLane.current(ticket)) return;
+      if (
+        response.status === 'completed' &&
+        response.execution?.status !== 'completed'
+      ) {
+        clearResult();
+        currentPlanId.value = planId;
+        operationState.value = 'uncertain';
+        recoveryError.value = '审批执行状态不一致，请人工核对。';
+        return;
+      }
       workflowResult.value = response;
+      currentPlanId.value = response.plan?.plan_id || planId;
+      operationState.value =
+        response.status === 'needs_human_confirmation'
+          ? 'pending'
+          : response.status === 'completed'
+            ? 'completed'
+            : 'uncertain';
       resultOwner.value = ticket.owner;
+      resultSource = 'confirm';
       selectedBlockedActionIds.value = [];
       now.value = Date.now();
       if (response.status === 'needs_human_confirmation')
@@ -264,10 +675,12 @@ export function useAutoFixWorkflow() {
       }
     } catch (error) {
       if (!workflowLane.current(ticket)) return;
-      // 任何失败都清掉计划与选择：404 = 计划已失效（含服务重启），409 = 状态已变，
+      // 任何失败都清掉计划与选择：404 = 计划不存在或已失效，409 = 状态已变，
       // 进入执行后的异常会作废整份计划，不能在旧计划上重试
       clearResult();
-      workflowError.value = reportAutoFixError(error);
+      currentPlanId.value = planId;
+      operationState.value = 'unverified';
+      workflowError.value = reportAutoFixOutcomeUncertain(error);
     } finally {
       if (workflowLane.current(ticket)) confirmLoading.value = false;
     }
@@ -285,6 +698,7 @@ export function useAutoFixWorkflow() {
   }
   let timer: ReturnType<typeof setInterval> | undefined;
   onMounted(() => {
+    restoreOperationId();
     loadServiceInfo(false);
     timer = setInterval(() => {
       now.value = Date.now();
@@ -292,6 +706,14 @@ export function useAutoFixWorkflow() {
   });
   onBeforeUnmount(() => {
     if (timer) clearInterval(timer);
+    retrySnapshot = undefined;
+    clearResult();
+    Object.assign(formData, {
+      deployment: '',
+      event: '',
+      namespace: 'default',
+      problem_description: '',
+    });
   });
   return {
     templateKey,
@@ -299,6 +721,26 @@ export function useAutoFixWorkflow() {
     confirmLoading,
     infoLoading,
     showRawDrawer,
+    operationOwner: scope.owner,
+    currentOperationId,
+    currentPlanId,
+    operationState,
+    operationDetail,
+    operationHistory,
+    recoveryError,
+    historyError,
+    recoveryLoading,
+    historyLoading,
+    historyLoaded,
+    canStartWorkflow,
+    canReadHistory,
+    canReadOperation,
+    canReadPlan,
+    checkOperation,
+    loadHistory,
+    openHistoryPlan,
+    canOpenHistory,
+    acknowledgeUncertain,
     serviceInfo,
     readyInfo,
     workflowResult,

@@ -100,3 +100,24 @@ export function reportAutoFixError(error: unknown): string {
   }
   return text;
 }
+
+/** A dispatched mutation may have completed even when its response was lost. */
+export function reportAutoFixOutcomeUncertain(error: unknown): string {
+  const text = '操作结果尚未确认，请先查询状态并核对目标，不要重复执行';
+  if (isBusinessError(error)) return text;
+  if (isPermissionDeniedError(error) || statusOf(error) === 403) {
+    return `${PERMISSION_DENIED_MESSAGE}；${text}`;
+  }
+  const notice = getHttpErrorNoticeKey(error);
+  if (notice === undefined) {
+    message.error({
+      content: text,
+      key: `${FALLBACK_NOTICE_KEY_PREFIX}outcome`,
+    });
+  } else {
+    const key = claimHttpErrorNotice(error);
+    if (key !== undefined)
+      markHttpErrorNoticeReplaced(error, message.error({ content: text, key }));
+  }
+  return text;
+}

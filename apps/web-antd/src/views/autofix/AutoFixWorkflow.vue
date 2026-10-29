@@ -13,7 +13,7 @@
               type="primary"
               @click="runWorkflow"
               :loading="running"
-              :disabled="!isFormValid || busy"
+              :disabled="!isFormValid || !canStartWorkflow || busy"
             >
               执行工作流
             </a-button>
@@ -22,9 +22,37 @@
     <a-alert v-if="workflowError" :message="workflowError" type="error" show-icon role="alert" />
     <a-alert v-if="infoError" :message="infoError" type="warning" show-icon role="alert" />
 
+    <a-card class="operation-card" title="操作恢复与历史">
+      <p v-if="currentOperationId || currentPlanId" class="operation-id">当前{{ currentOperationId ? '操作' : '计划' }} ID：{{ currentOperationId || currentPlanId }}</p>
+      <p v-if="operationState !== 'none'">状态：<strong>{{ operationLabel(operationState) }}</strong></p>
+      <a-alert v-if="recoveryError" :message="recoveryError" type="warning" show-icon role="alert" />
+      <p v-if="currentOperationId && !canReadOperation" class="operation-hint">没有操作详情查询权限，请联系管理员；无法确认前不要重复执行。</p>
+      <p v-else-if="currentPlanId && !currentOperationId && !canReadPlan" class="operation-hint">没有计划详情查询权限，请联系管理员。</p>
+      <a-space wrap>
+        <a-button v-if="currentOperationId || currentPlanId" :disabled="busy || (currentOperationId ? !canReadOperation : !canReadPlan)" :loading="recoveryLoading" @click="checkOperation">查询当前状态</a-button>
+        <a-button v-if="operationState === 'uncertain'" :disabled="busy" @click="confirmAcknowledge">已核对，开始新操作</a-button>
+        <a-button v-if="canReadHistory" :disabled="busy" :loading="historyLoading" @click="loadHistory">读取操作历史</a-button>
+      </a-space>
+      <p v-if="!canReadHistory" class="operation-hint">没有操作历史查询权限。</p>
+      <p v-else class="operation-hint">每次显示最近 50 条记录，可通过记录查看计划状态。</p>
+      <p v-if="historyLoaded && !operationHistory.length" class="operation-hint">暂无操作记录。</p>
+      <p v-if="operationHistory.length && !canReadPlan" class="operation-hint">没有计划详情查询权限，请联系管理员。</p>
+      <a-alert v-if="historyError" :message="historyError" type="warning" show-icon role="alert" />
+      <div v-if="operationDetail?.execution_summary" class="operation-summary">
+        执行摘要：{{ operationDetail.execution_summary.status || '未知' }}
+        <span v-if="operationDetail.execution_summary.audit_result_recorded === false"> · 结果审计未确认</span>
+      </div>
+      <ul v-if="operationHistory.length" class="operation-history">
+        <li v-for="item in operationHistory" :key="item.plan_id">
+          <div><strong>{{ operationLabel(item.state) }}</strong><span> · {{ formatOperationTime(item.created_at) }}</span><br /><code>{{ item.operation_id || item.plan_id }}</code></div>
+          <a-button size="small" :disabled="!canOpenHistory(item)" @click="openHistoryPlan(item)">查看计划</a-button>
+        </li>
+      </ul>
+    </a-card>
+
     <a-row :gutter="[24, 24]">
       <a-col :xs="24" :lg="7">
-        <WorkflowInput v-model:namespace="formData.namespace" v-model:deployment="formData.deployment" v-model:event="formData.event" v-model:description="formData.problem_description" v-model:template-key="templateKey" :busy="busy" :valid="isFormValid" @run="runWorkflow" @reset="resetForm" @template-change="applyTemplate" />
+        <WorkflowInput v-model:namespace="formData.namespace" v-model:deployment="formData.deployment" v-model:event="formData.event" v-model:description="formData.problem_description" v-model:template-key="templateKey" :busy="busy" :valid="isFormValid && canStartWorkflow" @run="runWorkflow" @reset="resetForm" @template-change="applyTemplate" />
 
         <a-card title="服务状态" class="side-card">
           <a-skeleton v-if="infoLoading && !serviceInfo" active :paragraph="{ rows: 4 }" />
@@ -250,6 +278,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { Modal } from 'ant-design-vue';
 import OpsPage from '#/components/ops/OpsPage.vue';
 import WorkflowInput from './WorkflowInput.vue';
 import ApprovalPanel from './ApprovalPanel.vue';
@@ -287,7 +316,48 @@ const workflowAgents = [
   { description: '执行允许动作', icon: 'lucide:terminal', name: 'Executor', title: 'Executor' },
 ];
 
-const { templateKey, running, infoLoading, showRawDrawer, serviceInfo, readyInfo, workflowResult, selectedBlockedActionIds, workflowError, infoError, formData, busy, isFormValid, confirmableBlockedActions, approvalIssue, canConfirmWorkflow, canConfirmAll, applyTemplate, resetForm, toggleBlockedAction, loadServiceInfo, runWorkflow, confirmWorkflowExecution, confirmSingleAction, confirmAllActions } = useAutoFixWorkflow();
+const {
+  templateKey, running, infoLoading, showRawDrawer, serviceInfo, readyInfo,
+  workflowResult, selectedBlockedActionIds, workflowError, infoError, formData,
+  busy, isFormValid, confirmableBlockedActions, approvalIssue, canConfirmWorkflow,
+  canConfirmAll, applyTemplate, resetForm, toggleBlockedAction, loadServiceInfo,
+  runWorkflow, confirmWorkflowExecution, confirmSingleAction, confirmAllActions,
+  operationOwner, currentOperationId, currentPlanId, operationState, operationDetail,
+  operationHistory, recoveryError, historyError, recoveryLoading, historyLoading, historyLoaded,
+  canStartWorkflow, canReadHistory, canReadOperation, canReadPlan, checkOperation,
+  loadHistory, openHistoryPlan, canOpenHistory, acknowledgeUncertain,
+} = useAutoFixWorkflow();
+function operationLabel(state: string) {
+  const labels: Record<string, string> = {
+    none: '无',
+    unverified: '待核对',
+    not_found: '未找到',
+    building: '处理中',
+    running: '处理中',
+    executing: '处理中',
+    pending: '待审批',
+    completed: '已结束',
+    uncertain: '结果不确定',
+    invalidated: '已失效',
+  };
+  return labels[state] || '状态未知';
+}
+function formatOperationTime(value?: string) {
+  const time = value ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(time) ? new Date(time).toLocaleString() : '时间未知';
+}
+function confirmAcknowledge() {
+  const owner = operationOwner.value;
+  const operationId = currentOperationId.value;
+  const planId = currentPlanId.value;
+  Modal.confirm({
+    title: '确认已核对实际状态',
+    content: '原操作可能已经产生副作用。请先核对目标资源和操作历史；确认后才开始新的操作。',
+    okText: '已核对',
+    cancelText: '取消',
+    onOk: () => acknowledgeUncertain(owner, operationId, planId),
+  });
+}
 const normalizedResult = computed(() => (workflowResult.value ? normalizeWorkflowResult(workflowResult.value) : null));
 const candidateActions = computed<AutoFixAction[]>(() => normalizedResult.value?.candidate_actions || []);
 const blockedActions = computed<AutoFixAction[]>(() => normalizedResult.value?.blocked_actions || []);
@@ -323,6 +393,13 @@ const actionColumns = [
 </script>
 
 <style scoped>
+.operation-card { margin-bottom: var(--ops-space-lg); }
+.operation-card :deep(.ant-card-body) { display: grid; gap: var(--ops-space-sm); }
+.operation-id, .operation-hint { margin: 0; overflow-wrap: anywhere; color: var(--ops-muted); }
+.operation-summary { color: var(--ops-muted); }
+.operation-history { display: grid; gap: var(--ops-space-sm); padding: 0; margin: 0; list-style: none; }
+.operation-history li { display: flex; flex-wrap: wrap; gap: var(--ops-space-sm); align-items: center; justify-content: space-between; padding: var(--ops-space-sm); border: 1px solid var(--ops-border); border-radius: var(--ops-radius); }
+.operation-history code { overflow-wrap: anywhere; }
 
 
 
