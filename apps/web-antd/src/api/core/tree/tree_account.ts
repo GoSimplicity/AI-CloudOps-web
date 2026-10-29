@@ -16,11 +16,14 @@ export enum CloudAccountStatus {
   Disabled = 2, // 禁用
 }
 
+export type CloudCredentialType = 'long_term' | 'temporary';
+
 export interface CloudAccountRegionInput {
   region: string;
   region_name?: string;
   is_default?: boolean;
   description?: string;
+  project_id?: string;
 }
 
 export interface CloudAccountRegion extends CloudAccountRegionInput {
@@ -40,6 +43,8 @@ export interface CloudAccount {
   account_alias?: string;
   description?: string;
   status: CloudAccountStatus;
+  credential_type?: CloudCredentialType;
+  credential_expires_at?: string;
   create_user_id?: number;
   create_user_name?: string;
   created_at?: string;
@@ -61,12 +66,25 @@ export interface GetCloudAccountDetailReq {
 }
 
 // 创建云账户请求参数
+export interface ProviderCredentialInput {
+  tenant_id?: string;
+  client_id?: string;
+  client_secret?: string;
+  subscription_id?: string;
+  project_id?: string;
+  service_account_json?: string;
+}
+
 export interface CreateCloudAccountReq {
   name: string;
   provider: CloudProvider;
   regions: CloudAccountRegionInput[];
-  access_key: string;
-  secret_key: string;
+  access_key?: string;
+  secret_key?: string;
+  provider_credentials?: ProviderCredentialInput;
+  credential_type?: CloudCredentialType;
+  session_token?: string;
+  credential_expires_at?: string;
   account_id?: string;
   account_name?: string;
   account_alias?: string;
@@ -76,10 +94,14 @@ export interface CreateCloudAccountReq {
 // 更新云账户请求参数
 export interface UpdateCloudAccountReq {
   id: number;
+  provider_credentials?: ProviderCredentialInput;
   regions?: CloudAccountRegionInput[];
   name?: string;
   access_key?: string;
   secret_key?: string;
+  credential_type?: CloudCredentialType;
+  session_token?: string;
+  credential_expires_at?: string;
   account_id?: string;
   account_name?: string;
   account_alias?: string;

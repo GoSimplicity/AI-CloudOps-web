@@ -146,7 +146,7 @@ export async function getAvailableRegions(params: GetAvailableRegionsReq) {
   if ('cloud_account_id' in query && (!Number.isSafeInteger(query.cloud_account_id) || query.cloud_account_id! <= 0)) {
     throw new Error('云账户ID无效');
   }
-  if ('provider' in query && ![1, 2, 3].includes(query.provider!)) {
+  if ('provider' in query && ![1, 2, 3, 4].includes(query.provider!)) {
     throw new Error('当前云厂商不可查询地域');
   }
   return requestClient.get<GetAvailableRegionsResp>('/tree/cloud/account/region/available-regions', { params: query });

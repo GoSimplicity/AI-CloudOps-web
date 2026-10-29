@@ -5,11 +5,19 @@ export function isSupportedComputeProvider(provider: number): boolean {
   return provider === CloudProvider.AliCloud || provider === CloudProvider.TencentCloud || provider === CloudProvider.AWS;
 }
 
+/** 华为账户支持凭据验证，但资源同步有独立的范围限制。 */
+export function isSupportedAccountProvider(provider: number): boolean {
+  return isSupportedComputeProvider(provider) || provider === CloudProvider.HuaweiCloud || provider === CloudProvider.Azure || provider === CloudProvider.GCP;
+}
+
 export function computeProviderName(provider: number): string {
   switch (provider) {
     case CloudProvider.AliCloud: return '阿里云';
     case CloudProvider.TencentCloud: return '腾讯云';
     case CloudProvider.AWS: return 'AWS';
+    case CloudProvider.HuaweiCloud: return '华为云';
+    case CloudProvider.Azure: return 'Azure';
+    case CloudProvider.GCP: return 'GCP';
     default: return '不支持的云厂商';
   }
 }

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { CloudAccountRegionInput } from '#/api/core/tree/tree_account';
+import { CloudProvider, type CloudAccountRegionInput } from '#/api/core/tree/tree_account';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { FormItemRest, message, Modal } from 'ant-design-vue';
 import { getAvailableRegions, type AvailableRegion } from '#/api/core/tree/tree_account_region';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
-import { computeProviderName, isSupportedComputeProvider } from './provider';
+import { computeProviderName, isSupportedAccountProvider } from './provider';
 
 const regions = defineModel<CloudAccountRegionInput[]>({ required: true });
 const props = defineProps<{ disabled?: boolean; provider: number; accountId?: number; accountEnabled?: boolean; canRead?: boolean }>();
@@ -16,7 +16,7 @@ watch(() => [props.provider, props.accountId, props.canRead, props.accountEnable
 onBeforeUnmount(() => { alive = false; request++; });
 
 async function loadRegions(live: boolean) {
-  if (!alive || props.disabled || !props.canRead || !isSupportedComputeProvider(props.provider) || (live && (!props.accountId || !props.accountEnabled))) return;
+  if (!alive || props.disabled || !props.canRead || !isSupportedAccountProvider(props.provider) || (live && (!props.accountId || !props.accountEnabled))) return;
   const ticket = ++request;
   loading.value = true;
   try {
@@ -61,9 +61,13 @@ const codes = computed({
       region_name: existing.get(region)?.region_name || regionNames.get(region) || '',
       description: existing.get(region)?.description ?? '',
       is_default: region === nextDefault,
+      ...(existing.get(region)?.project_id !== undefined ? { project_id: existing.get(region)!.project_id } : {}),
     }));
   },
 });
+function updateProjectID(region: string, value: string) {
+  regions.value = regions.value.map((item) => item.region === region ? { ...item, project_id: value } : item);
+}
 const defaultRegion = computed({
   get: () =>
     regions.value.find((item) => item.is_default)?.region ??
@@ -97,13 +101,16 @@ const options = computed(() => {
       :token-separators="[',']"
       :disabled="disabled"
       :options="options"
-      placeholder="输入地域代码，回车添加，可选择多个"
+      :placeholder="provider === CloudProvider.GCP ? '输入可用区代码，如 us-central1-a' : provider === CloudProvider.Azure ? '输入 Azure 地域，如 eastus' : '输入地域代码，回车添加，可选择多个'"
       aria-label="授权地域代码"
     />
     <p class="region-hint">
       按账户授权范围手动填写；地域参考仅供参考，云端查询使用已保存凭据。
     </p>
-    <a-space v-if="canRead && isSupportedComputeProvider(provider)">
+    <p v-if="provider === CloudProvider.Azure" class="region-hint">填写 Azure 地域代码，例如 eastus；云端查询只核验已配置的启用地域。</p>
+    <p v-if="provider === CloudProvider.GCP" class="region-hint">每一项填写 GCP 可用区，例如 us-central1-a；这不是区域名称，项目 ID 在凭据中配置。</p>
+    <p v-if="provider === CloudProvider.HuaweiCloud" class="region-hint">华为云每个地域都需要对应的项目 ID；云端查询只核验已配置的启用地域，不代表完整地域目录。</p>
+    <a-space v-if="canRead && isSupportedAccountProvider(provider)">
       <a-button :disabled="disabled || loading" @click="loadRegions(false)">加载地域参考</a-button>
       <a-button v-if="accountId" :disabled="disabled || loading || !accountEnabled" @click="confirmLiveRegions">查询云端地域</a-button>
     </a-space>
@@ -116,6 +123,12 @@ const options = computed(() => {
         :options="options"
         placeholder="请选择默认地域"
       />
+    </FormItemRest>
+    <FormItemRest v-if="provider === CloudProvider.HuaweiCloud">
+      <div v-for="item in regions" :key="item.region" class="project-field">
+        <label :for="`project-${item.region}`">{{ item.region }} 项目 ID</label>
+        <a-input :id="`project-${item.region}`" :value="item.project_id ?? ''" :disabled="disabled" :maxlength="64" :aria-label="`${item.region} 项目 ID`" placeholder="请输入该地域的项目 ID" @update:value="(value: string) => updateProjectID(item.region, value)" />
+      </div>
     </FormItemRest>
   </div>
 </template>
@@ -130,4 +143,5 @@ const options = computed(() => {
   color: var(--ops-muted);
   font-size: 12px;
 }
+.project-field { display: grid; gap: var(--ops-space-xs); }
 </style>
