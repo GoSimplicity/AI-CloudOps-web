@@ -101,15 +101,20 @@ beforeEach(() => {
           account(10),
           { ...account(8), name: '腾讯账户', provider: 2 },
           { ...account(11), name: 'AWS账户', provider: 3 },
-          { ...account(12), name: '华为账户', provider: 4 },
+          { ...account(12), name: 'Azure账户', provider: 5 },
+          { ...account(13), name: '华为账户', provider: 4 },
+          { ...account(14), name: 'GCP账户', provider: 6 },
+          { ...account(15), name: 'AWS临时账户', provider: 3, credential_type: 'temporary' },
           { ...account(9), name: '已禁用账户', status: 2 },
         ],
-        total: 6,
+        total: 7,
       });
     if (path.startsWith('/tree/cloud/account/') && path.endsWith('/detail'))
       {
       const id = Number(path.split('/').at(-2));
-      return Promise.resolve({ ...account(id), provider: id === 8 ? 2 : id === 11 ? 3 : id === 12 ? 4 : 1 });
+      const value = account(id);
+      return Promise.resolve({ ...value, credential_type: id === 15 ? 'temporary' : 'long_term', provider: id === 8 ? 2 : id === 11 || id === 15 ? 3 : id === 12 ? 5 : id === 13 ? 4 : id === 14 ? 6 : 1,
+        regions: id === 13 ? value.regions.map((region) => ({ ...region, project_id: 'project-test' })) : value.regions });
     }
     return Promise.resolve({ items: [], total: 0 });
   });
@@ -282,6 +287,83 @@ describe('云资源真实控件合同', () => {
       }));
     },
   );
+  it('AWS 临时凭据可选择经过事务保护的全量同步', async () => {
+    await open();
+    await select('cloud-sync-account', 'AWS临时账户');
+    await select('cloud-sync-regions', '深圳');
+    const radio = document.querySelector<HTMLInputElement>('.cloud-sync-form input[type="radio"][value="full"]');
+    expect(radio?.disabled).toBe(false);
+    radio!.click();
+    await flushPromises();
+    await button('开始同步', '.ant-modal-footer button');
+    expect(client.post).toHaveBeenCalledWith('/tree/cloud/sync', expect.objectContaining({
+      cloud_account_id: 15, cloud_account_region_ids: [41], sync_mode: 'full',
+    }));
+  });
+  it('华为云仅允许指定一个地域和实例UUID的增量同步', async () => {
+    await open();
+    await select('cloud-sync-account', '华为账户');
+    await button('开始同步', '.ant-modal-footer button');
+    expect(client.post).not.toHaveBeenCalled();
+    await select('cloud-sync-regions', '深圳');
+    const input = document.querySelector<HTMLInputElement>('#cloud-sync-instance-ids')!;
+    expect(input).toBeTruthy();
+    await new DOMWrapper(input).setValue('12345678-1234-1234-1234-123456789abc');
+    await flushPromises();
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true });
+    Object.defineProperty(enter, 'which', { value: 13 });
+    input.dispatchEvent(enter);
+    await flushPromises();
+    await button('开始同步', '.ant-modal-footer button');
+    expect(client.post).toHaveBeenCalledWith('/tree/cloud/sync', expect.objectContaining({
+      cloud_account_id: 13, cloud_account_region_ids: [41], sync_mode: 'incremental',
+      instance_ids: ['12345678-1234-1234-1234-123456789abc'],
+    }));
+  });
+  it.each([
+    { name: 'Azure账户', id: 12, instance: '12345678-1234-1234-1234-123456789abc' },
+    { name: 'GCP账户', id: 14, instance: '1234567890123456789' },
+  ])('$name 仅允许指定地域和实例的增量同步', async ({ name, id, instance }) => {
+    await open();
+    await select('cloud-sync-account', name);
+    await button('开始同步', '.ant-modal-footer button');
+    expect(client.post).not.toHaveBeenCalled();
+    await select('cloud-sync-regions', '深圳');
+    const input = document.querySelector<HTMLInputElement>('#cloud-sync-instance-ids')!;
+    await new DOMWrapper(input).setValue(instance);
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true });
+    Object.defineProperty(enter, 'which', { value: 13 });
+    input.dispatchEvent(enter);
+    await flushPromises();
+    await button('开始同步', '.ant-modal-footer button');
+    expect(client.post).toHaveBeenCalledWith('/tree/cloud/sync', expect.objectContaining({
+      cloud_account_id: id, cloud_account_region_ids: [41], sync_mode: 'incremental', instance_ids: [instance],
+    }));
+  });
+  it('部分成功时保留地域结果和历史编号供核对', async () => {
+    client.post.mockResolvedValueOnce({ status: 'partial', total_count: 1, new_count: 1, update_count: 0, delete_count: 0, failed_count: 1,
+      regions: [{ region_id: 41, region: '深圳', status: 'failed', history_id: 22, retry_safe: true }] });
+    await open();
+    await button('开始同步', '.ant-modal-footer button');
+    expect(document.querySelector('[aria-label="地域同步结果"]')?.textContent).toContain('深圳：失败');
+    expect(document.querySelector('[aria-label="地域同步结果"]')?.textContent).toContain('22');
+  });
+  it('地域审计不可用时展示结果并阻止直接重试', async () => {
+    client.post.mockResolvedValueOnce({ status: 'failed', total_count: 0, new_count: 0, update_count: 0, delete_count: 0, failed_count: 1,
+      regions: [{ region_id: 41, region: '深圳', status: 'failed', error_category: 'audit_unavailable', retry_safe: false }] });
+    await open();
+    await button('开始同步', '.ant-modal-footer button');
+    expect(document.querySelector('[aria-label="地域同步结果"]')?.textContent).toContain('不可直接重试');
+    expect(document.querySelector<HTMLButtonElement>('.ant-modal-footer .ant-btn-primary')?.disabled).toBe(true);
+  });
+  it('结果未知时保留提示并禁止直接重复提交', async () => {
+    client.post.mockResolvedValueOnce({ status: 'unknown', total_count: 0, new_count: 0, update_count: 0, delete_count: 0, failed_count: 0 });
+    await open();
+    await button('开始同步', '.ant-modal-footer button');
+    expect(document.querySelector('.cloud-sync-form')?.textContent).toContain('结果不确定');
+    expect(document.querySelector<HTMLButtonElement>('.ant-modal-footer .ant-btn-primary')?.disabled).toBe(true);
+    expect(client.post).toHaveBeenCalledTimes(1);
+  });
   it('同步取消不发送请求，迟到的旧账户地域不能污染新账户', async () => {
     const late = Promise.withResolvers<unknown>();
     const original = client.get.getMockImplementation()!;
@@ -374,7 +456,7 @@ describe('云资源真实控件合同', () => {
     pending.reject(new Error('fixture'));
     await flushPromises();
     expect(document.querySelector('.ant-message-error')?.textContent).toContain(
-      '同步失败',
+      '同步结果不确定',
     );
     expect(document.querySelector('.cloud-sync-form')?.textContent).toContain(
       '北京',
@@ -394,26 +476,30 @@ describe('云资源真实控件合同', () => {
     await button('开始同步', '.ant-modal-footer button');
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledWith({
-      content: '同步失败，请检查同步历史后重试',
+      content: '同步结果不确定，请先核对资源和同步历史',
       key,
     });
   });
-  it('incr3 P3-4：403 不覆盖请求层提示；取消不提示；非请求错误照常弹带引导文案', async () => {
+  it.each([
+    Object.assign(new Error('Error 403'), { [Symbol.for('ai-cloudops.permissionDenied')]: true }),
+    Object.assign(new Error('canceled'), { code: 'ERR_CANCELED' }),
+  ])('权限或取消错误不覆盖请求提示，且中断后禁止直接重试', async (error) => {
     await open();
     await select('cloud-sync-regions', '北京');
     const spy = vi.spyOn(message, 'error');
-    for (const error of [
-      Object.assign(new Error('Error 403'), { [Symbol.for('ai-cloudops.permissionDenied')]: true }),
-      Object.assign(new Error('canceled'), { code: 'ERR_CANCELED' }),
-    ]) {
-      client.post.mockRejectedValueOnce(error);
-      await button('开始同步', '.ant-modal-footer button');
-    }
+    client.post.mockRejectedValueOnce(error);
+    await button('开始同步', '.ant-modal-footer button');
     expect(spy).not.toHaveBeenCalled();
+    expect(document.querySelector<HTMLButtonElement>('.ant-modal-footer .ant-btn-primary')?.disabled).toBe(true);
+  });
+  it('未知请求错误提示先核对，禁止直接重试', async () => {
+    await open();
+    await select('cloud-sync-regions', '北京');
+    const spy = vi.spyOn(message, 'error');
     client.post.mockRejectedValueOnce(new Error('fixture'));
     await button('开始同步', '.ant-modal-footer button');
-    expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toHaveBeenCalledWith('同步失败，请检查同步历史后重试');
+    expect(spy).toHaveBeenCalledWith('同步结果不确定，请先核对资源和同步历史');
+    expect(document.querySelector<HTMLButtonElement>('.ant-modal-footer .ant-btn-primary')?.disabled).toBe(true);
   });
   it('不支持的云厂商及非ECS存量只读，开放腾讯和AWS同步账户', async () => {
     const original = client.get.getMockImplementation()!;
@@ -423,9 +509,9 @@ describe('云资源真实控件合同', () => {
             items: [
               {
                 ...resource,
-                name: '华为存量资源',
-                cloud_account_id: 12,
-                cloud_account: { id: 12, provider: 4 },
+                name: '未知厂商存量资源',
+                cloud_account_id: 99,
+                cloud_account: { id: 99, provider: 99 },
               },
               { ...resource, id: 2, name: '阿里存量RDS', resource_type: 2 },
             ],
@@ -435,7 +521,7 @@ describe('云资源真实控件合同', () => {
     );
     await open();
     const row = wrapper!.find('tbody tr.ant-table-row');
-    expect(row.text()).toContain('华为存量资源');
+    expect(row.text()).toContain('未知厂商存量资源');
     expect(
       row
         .findAll('button')
@@ -461,7 +547,9 @@ describe('云资源真实控件合同', () => {
     ].map((element) => element.textContent);
     expect(options.some((label) => label?.includes('腾讯'))).toBe(true);
     expect(options.some((label) => label?.includes('AWS'))).toBe(true);
-    expect(options.some((label) => label?.includes('华为'))).toBe(false);
+    expect(options.some((label) => label?.includes('华为'))).toBe(true);
+    expect(options.some((label) => label?.includes('Azure'))).toBe(true);
+    expect(options.some((label) => label?.includes('GCP'))).toBe(true);
     expect(options.some((label) => label?.includes('禁用'))).toBe(false);
     await button('取消', '.ant-modal-footer button');
     expect(client.post).not.toHaveBeenCalled();

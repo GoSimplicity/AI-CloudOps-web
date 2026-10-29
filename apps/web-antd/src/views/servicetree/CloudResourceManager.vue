@@ -76,6 +76,7 @@ import {
   type GetTreeCloudResourceListReq,
   type UpdateTreeCloudResourceReq,
   type SyncTreeCloudResourceReq,
+  type SyncCloudResourceRegionResult,
   type KeyValue,
   type CloudResourceSyncHistory,
   type CloudResourceChangeLog,
@@ -85,12 +86,13 @@ import {
   getCloudAccountListApi,
   getCloudAccountDetailApi,
   CloudAccountStatus,
+  CloudProvider,
   type CloudAccountRegion,
   type CloudAccount,
 } from '#/api/core/tree/tree_account';
 
 import { getTreeList } from '#/api/core/tree/tree_node';
-import { isSupportedComputeProvider } from './cloudaccountmanagement/provider';
+import { isSupportedAccountProvider } from './cloudaccountmanagement/provider';
 import type { TreeNode } from '#/api/core/tree/tree_local';
 
 import { usePermission } from '#/utils/permission';
@@ -119,8 +121,11 @@ let syncRegionRequest = 0;
 let accountListRequest = 0;
 let syncOperationRequest = 0;
 /** 同步失败提示（带「检查同步历史」引导，incr3 P3-4） */
-const SYNC_FAILURE_MESSAGE = '同步失败，请检查同步历史后重试';
+const SYNC_FAILURE_MESSAGE = '同步结果不确定，请先核对资源和同步历史';
 const syncRegions = ref<CloudAccountRegion[]>([]);
+const syncAccount = ref<CloudAccount | null>(null);
+const syncOutcomeUnknown = ref(false);
+const syncRegionResults = ref<SyncCloudResourceRegionResult[]>([]);
 const syncRegionsLoading = ref(false);
 const syncRegionError = ref<string | null>(null);
 const accountsLoading = ref(false);
@@ -187,6 +192,7 @@ watch(canSync, (allowed) => {
   if (allowed) return;
   syncRegionRequest++;
   syncRegions.value = [];
+  syncAccount.value = null;
   syncForm.cloud_account_region_ids = [];
   syncRegionsLoading.value = false;
   if (!syncLoading.value) syncModalVisible.value = false;
@@ -304,6 +310,7 @@ const columns = [
 // 同步历史列
 const syncHistoryColumns = [
   { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
+  { title: '地域', dataIndex: 'region', key: 'region', width: 120 },
   { title: '同步状态', key: 'sync_status', width: 100 },
   { title: '同步模式', key: 'sync_mode', width: 100 },
   { title: '统计信息', key: 'stats', width: 350 },
@@ -626,20 +633,24 @@ const resetFilter = (): void => {
 
 const supportsResource = (record: TreeCloudResource): boolean => {
   const provider = record.cloud_account?.provider ?? cloudAccounts.value.find((account) => account.id === record.cloud_account_id)?.provider;
-  return isSupportedComputeProvider(provider ?? 0) && record.resource_type === CloudResourceType.ECS;
+  return isSupportedAccountProvider(provider ?? 0) && record.resource_type === CloudResourceType.ECS;
 };
 const requireSupportedResource = (record: TreeCloudResource): boolean => {
   if (supportsResource(record)) return true;
-  message.warning('当前仅支持管理阿里云、腾讯云和 AWS 的计算实例，其他存量资源可查看');
+  message.warning('当前仅支持管理已接入云厂商的计算实例，其他存量资源可查看');
   return false;
 };
+const requiresInstanceIds = (provider?: CloudProvider): boolean =>
+  provider === CloudProvider.HuaweiCloud || provider === CloudProvider.Azure || provider === CloudProvider.GCP;
 const syncAccounts = computed(() => cloudAccounts.value.filter(
-  (account) => isSupportedComputeProvider(account.provider) && account.status === CloudAccountStatus.Enabled,
+  (account) => isSupportedAccountProvider(account.provider) && account.status === CloudAccountStatus.Enabled,
 ));
 const loadSyncRegions = async (id: number): Promise<void> => {
   const ticket = ++syncRegionRequest;
   syncRegions.value = [];
+  syncAccount.value = null;
   syncForm.cloud_account_region_ids = [];
+  syncForm.instance_ids = [];
   if (!canSync.value) {
     syncRegionsLoading.value = false;
     return;
@@ -649,10 +660,14 @@ const loadSyncRegions = async (id: number): Promise<void> => {
   try {
     const account = await getCloudAccountDetailApi(id);
     if (ticket !== syncRegionRequest || !syncModalVisible.value || !canSync.value) return;
-    if (account.id !== id || !isSupportedComputeProvider(account.provider) || account.status !== CloudAccountStatus.Enabled) {
+    if (account.id !== id || !isSupportedAccountProvider(account.provider) || account.status !== CloudAccountStatus.Enabled) {
       throw new Error('Account unavailable');
     }
-    syncRegions.value = (account.regions ?? []).filter((region) => region.status === 1);
+    syncAccount.value = account;
+    if (requiresInstanceIds(account.provider)) syncForm.sync_mode = SyncMode.INCREMENTAL;
+    syncRegions.value = (account.regions ?? []).filter((region) =>
+      region.status === 1 && (account.provider !== CloudProvider.HuaweiCloud || !!region.project_id?.trim()),
+    );
     if (!syncRegions.value.length) syncRegionError.value = '此账户没有已启用的授权地域，请先在云账户中配置';
   } catch (error) {
     if (ticket === syncRegionRequest && syncModalVisible.value && canSync.value && shouldRecordPageError(error)) syncRegionError.value = '读取账户地域失败，请重试';
@@ -666,6 +681,9 @@ const closeSyncModal = (): void => {
   syncRegionRequest++;
   syncRegionsLoading.value = false;
   syncRegions.value = [];
+  syncAccount.value = null;
+  syncOutcomeUnknown.value = false;
+  syncRegionResults.value = [];
 };
 const showSyncModal = (): void => {
   if (!canSync.value) return;
@@ -684,6 +702,7 @@ const showSyncModal = (): void => {
     resource_types: [CloudResourceType.ECS],
     cloud_account_region_ids: [],
     sync_mode: SyncMode.INCREMENTAL,
+    instance_ids: [],
     auto_bind: false,
     bind_node_id: undefined,
   });
@@ -802,7 +821,7 @@ const handleUpdate = async (): Promise<void> => {
 
 // 同步资源
 const handleSync = async (): Promise<void> => {
-  if (!canSync.value) return;
+  if (!canSync.value || syncOutcomeUnknown.value) return;
   if (syncLoading.value || syncRegionsLoading.value) return;
   if (!syncAccounts.value.some((account) => account.id === syncForm.cloud_account_id) || syncRegionError.value || !syncRegions.value.length) {
     message.warning('请选择已启用的云账户并读取授权地域');
@@ -813,6 +832,21 @@ const handleSync = async (): Promise<void> => {
     message.warning('所选地域已失效，请重新选择');
     return;
   }
+  const account = syncAccount.value;
+  if (!account || account.id !== syncForm.cloud_account_id) { message.warning('请重新读取账户地域'); return; }
+  const ids = (syncForm.instance_ids ?? []).map((value) => value.trim()).filter(Boolean);
+  if (ids.length > 100 || new Set(ids).size !== ids.length) { message.warning('实例ID不能重复且最多100个'); return; }
+  if (requiresInstanceIds(account.provider)) {
+    const validId = (id: string): boolean => account.provider === CloudProvider.GCP
+      ? /^[1-9]\d{0,19}$/.test(id) && BigInt(id) <= 18446744073709551615n
+      : /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (syncForm.sync_mode === SyncMode.FULL || regionIds.length !== 1 || !ids.length || ids.some((id) => !validId(id))) {
+      message.warning('该云厂商仅支持选择一个地域并输入有效实例ID进行增量同步'); return;
+    }
+  }
+  if (syncForm.sync_mode === SyncMode.FULL && ids.length) {
+    message.warning('指定实例ID时不能进行全量同步'); return;
+  }
   if (syncForm.auto_bind && !syncForm.bind_node_id) {
     message.warning('请选择自动绑定的服务树节点');
     return;
@@ -822,27 +856,45 @@ const handleSync = async (): Promise<void> => {
     cloud_account_region_ids: regionIds,
     resource_types: [CloudResourceType.ECS],
     sync_mode: syncForm.sync_mode,
+    instance_ids: ids.length ? ids : undefined,
     auto_bind: syncForm.auto_bind,
     bind_node_id: syncForm.auto_bind ? syncForm.bind_node_id : undefined,
   };
   const ticket = ++syncOperationRequest;
+  syncRegionResults.value = [];
   syncLoading.value = true;
   try {
     const result = await syncTreeCloudResourceApi(payload);
     if (ticket !== syncOperationRequest) return;
     const counts = [result?.total_count, result?.new_count, result?.update_count, result?.delete_count, result?.failed_count];
     if (counts.some((count) => !Number.isSafeInteger(count) || count < 0)) {
-      message.error('同步结果格式异常，请检查同步历史后重试');
+      syncOutcomeUnknown.value = true;
+      message.error(SYNC_FAILURE_MESSAGE);
       return;
     }
     const summary = `新增${result.new_count}，更新${result.update_count}，删除${result.delete_count}，失败${result.failed_count}`;
-    if (result.failed_count > 0) message.warning(`同步部分完成：${summary}`);
-    else message.success(`同步完成：${summary}`);
+    syncRegionResults.value = result.regions ?? [];
+    if (result.status === 'unknown' || syncRegionResults.value.some((region) => region.retry_safe === false)) {
+      syncOutcomeUnknown.value = true;
+      message.warning('同步结果不确定，请先核对资源和同步历史，不要盲目重试');
+      await fetchResources();
+      return;
+    }
+    if (result.status === 'failed') message.error(`同步失败：${summary}`);
+    else if (result.status === 'partial' || result.failed_count > 0) message.warning(`同步部分完成：${summary}`);
+    else if (result.status === undefined || result.status === 'success') message.success(`同步完成：${summary}`);
+    else { syncOutcomeUnknown.value = true; message.error(SYNC_FAILURE_MESSAGE); return; }
+    if (result.status !== 'success' && syncRegionResults.value.length) {
+      await fetchResources();
+      return;
+    }
     syncModalVisible.value = false;
     syncRegionRequest++;
     await fetchResources();
   } catch (error) {
     if (ticket === syncOperationRequest) {
+      // 请求或响应中断时，服务端可能已提交，必须先核对再重试。
+      syncOutcomeUnknown.value = true;
       // incr3 P3-4：保留「检查同步历史」的引导——请求层已弹过通用错误（http-error），用同一个 key 换成带引导的文案，
       // 仍只有一条；403 / 已提示的业务错误不覆盖；其余（非请求错误等）照常弹
       const noticeKey = getRequestLayerNoticeKey(error);
@@ -1086,7 +1138,7 @@ const closeDetails = () => {
 </script>
 
 <template>
-  <OpsPage title="云资源" description="管理阿里云、腾讯云和 AWS 计算实例，其他存量资源可查看" class="cmdb-console cloud-resource-manager">
+  <OpsPage title="云资源" description="管理已接入云厂商的计算实例，其他存量资源可查看" class="cmdb-console cloud-resource-manager">
     <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
       <template #action><a-button @click="fetchResources()">重试</a-button></template>
     </a-alert>
@@ -1742,7 +1794,7 @@ const closeDetails = () => {
       @cancel="closeSyncModal"
       ok-text="开始同步"
       cancel-text="取消"
-      :ok-button-props="{ disabled: syncRegionsLoading || !!syncRegionError || !syncRegions.length }"
+      :ok-button-props="{ disabled: syncRegionsLoading || !!syncRegionError || !syncRegions.length || syncOutcomeUnknown }"
       :cancel-button-props="{ disabled: syncLoading }"
       :closable="!syncLoading"
       :mask-closable="!syncLoading"
@@ -1756,7 +1808,7 @@ const closeDetails = () => {
     >
       <a-alert
         message="同步说明"
-        description="支持阿里云、腾讯云和 AWS 计算实例。点击开始同步才会连接云平台；增量更新已有记录，全量仅清理所选地域中不存在的本地实例。"
+        description="支持已接入云厂商的计算实例。华为云、Azure 和 GCP 需指定一个地域和实例ID。"
         type="info"
         show-icon
         style="margin-bottom: 24px"
@@ -1833,9 +1885,19 @@ const closeDetails = () => {
           <div class="form-tip">当前仅支持 ECS，其他类型保留展示</div>
         </a-form-item>
 
+        <a-form-item v-if="requiresInstanceIds(syncAccount?.provider)" :label="syncAccount?.provider === CloudProvider.GCP ? 'GCP 实例数字 ID' : '实例 UUID'">
+          <a-select id="cloud-sync-instance-ids" v-model:value="syncForm.instance_ids" mode="tags" :disabled="syncLoading" :token-separators="[',', ' ']" placeholder="输入实例 ID，按回车添加" aria-label="实例ID" />
+          <div class="form-tip">必须选择一个授权地域并指定实例ID；不提供全量或无ID同步</div>
+        </a-form-item>
+        <a-alert v-if="syncOutcomeUnknown" type="warning" show-icon message="结果不确定或审计不可用，请先核对资源和同步历史，不能直接重试" />
+        <ul v-if="syncRegionResults.length" aria-label="地域同步结果">
+          <li v-for="region in syncRegionResults" :key="region.region_id">
+            {{ region.region }}：{{ region.status === 'success' ? '成功' : region.status === 'failed' ? '失败' : region.status === 'cancelled' ? '已取消' : '结果不确定' }}；历史记录 {{ region.history_id ?? '不可用' }}；{{ region.retry_safe === false ? '不可直接重试' : '请核对后重试' }}
+          </li>
+        </ul>
         <a-form-item label="同步模式">
           <a-radio-group v-model:value="syncForm.sync_mode" :disabled="syncLoading" size="large">
-            <a-radio :value="SyncMode.FULL" class="sync-mode-radio">
+            <a-radio :value="SyncMode.FULL" :disabled="requiresInstanceIds(syncAccount?.provider)" class="sync-mode-radio">
               <div class="radio-content">
                 <div class="radio-title"><sync-outlined /> 全量同步</div>
                 <div class="radio-desc">替换所选地域的本地 ECS 记录</div>
@@ -1990,7 +2052,7 @@ const closeDetails = () => {
           <template v-if="column.key === 'sync_status'">
             <a-badge
               :status="record.sync_status === 'success' ? 'success' : record.sync_status === 'running' ? 'processing' : record.sync_status === 'partial' ? 'warning' : 'error'"
-              :text="record.sync_status === 'success' ? '成功' : record.sync_status === 'running' ? '进行中' : record.sync_status === 'partial' ? '部分完成' : '失败'"
+              :text="record.sync_status === 'success' ? '成功' : record.sync_status === 'running' ? '进行中' : record.sync_status === 'partial' ? '部分完成' : record.sync_status === 'unknown' ? '结果不确定' : record.sync_status === 'cancelled' ? '已取消' : '失败'"
             />
           </template>
           <template v-else-if="column.key === 'stats'">

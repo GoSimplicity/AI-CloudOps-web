@@ -153,7 +153,22 @@ export interface SyncTreeCloudResourceReq {
 }
 
 // 同步云资源响应
+export interface SyncCloudResourceRegionResult {
+  region_id: number;
+  region: string;
+  status: 'success' | 'failed' | 'cancelled' | 'unknown';
+  total_count: number;
+  new_count: number;
+  update_count: number;
+  delete_count: number;
+  error_category?: string;
+  history_id?: number;
+  retry_safe?: boolean;
+}
+
 export interface SyncCloudResourceResp {
+  status?: 'success' | 'partial' | 'failed' | 'unknown';
+  regions?: SyncCloudResourceRegionResult[];
   total_count: number;
   new_count: number;
   update_count: number;
@@ -200,6 +215,9 @@ export interface UpdateCloudResourceStatusReq {
 // 云资源同步历史
 export interface CloudResourceSyncHistory {
   id: number;
+  region_id?: number;
+  region?: string;
+  retry_safe?: boolean;
   cloud_account_id: number;
   sync_mode: SyncMode;
   total_count: number;
