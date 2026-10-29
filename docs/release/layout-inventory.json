@@ -293,7 +293,7 @@
       "route": "/notification",
       "view": "workorder/Notification.vue",
       "sharedPage": true,
-      "inlineStyles": 26,
+      "inlineStyles": 28,
       "scopedStyle": true
     },
     {
