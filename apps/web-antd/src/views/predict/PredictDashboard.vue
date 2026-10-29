@@ -108,6 +108,7 @@
                 <div class="metric-value">{{ predictionCache[metric.type] ? metric.currentValue + metric.unit : '暂无预测' }}</div>
               </div>
             </div>
+            <PredictionProvenance v-if="predictionCache[metric.type]" :result="predictionCache[metric.type]!" :ai-requested="aiEnhanced" />
             <div class="metric-trend">
               <div class="trend-info">
                 <span class="trend-label">预测趋势:</span>
@@ -162,7 +163,7 @@
                 <a-tag :color="getActionColor(rec.action)">
                   {{ getActionText(rec.action) }}
                 </a-tag>
-                <span class="rec-confidence">置信度: {{ (rec.confidence * 100).toFixed(1) }}%</span>
+                <span class="rec-confidence">置信度: {{ formatProbability(rec.confidence) }}</span>
               </div>
               <div class="rec-content">
                 <div class="rec-time">触发时间: {{ formatTime(rec.trigger_time) }}</div>
@@ -217,6 +218,8 @@
 
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+import PredictionProvenance from './PredictionProvenance.vue';
+import { formatProbability } from './prediction-display';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
 import { alignForecasts, forecastPoints, formatPredictionTime } from './prediction-series';
@@ -378,6 +381,7 @@ const refreshAllPredictions = async () => {
     updateCharts();
     if (!hasInitialData.value) { predictionError.value = '全部预测失败或数据无效，请检查服务与历史数据后重试'; message.error(predictionError.value); }
     else if (predictionFailures.value.length) message.warning('部分预测完成，请重试失败项');
+    else if (Object.values(predictionCache.value).some(result => result.fallback_mode || result.method === 'rule_based' || result.ai_fallback_reason || (enhanced && result.ai_enhanced !== true) || result.analysis_failures?.length)) message.warning('预测已返回，部分功能降级，请查看各指标状态');
     else message.success('预测数据已更新');
   } catch (error) {
     if (!predictionLane.current(ticket)) return;
@@ -408,7 +412,7 @@ const updateMetricData = (type: string, response: PredictionResponse) => {
     scalingRecommendations.value.push(...response.scaling_recommendations.map(item => ({ ...item, source: metric?.name || type })));
   }
 
-  if (response.ai_insights) {
+  if (response.ai_enhanced === true && response.ai_insights) {
     aiInsights.value.push(...response.ai_insights.map(insight => `${metric?.name || type}：${insight}`));
   }
 

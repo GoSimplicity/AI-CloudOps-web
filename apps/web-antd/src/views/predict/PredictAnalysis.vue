@@ -133,7 +133,7 @@
           <template #extra>
             <a-space wrap>
               <a-tag :color="getAccuracyColor(predictionResult.model_accuracy)">
-                模型准确率: {{ Number.isFinite(predictionResult.model_accuracy) ? (predictionResult.model_accuracy! * 100).toFixed(1) + '%' : '未知' }}
+                模型准确率: {{ formatProbability(predictionResult.model_accuracy) }}
               </a-tag>
               <a-button size="small" @click="exportResult">
                 <DownloadOutlined />
@@ -142,11 +142,13 @@
             </a-space>
           </template>
 
+          <PredictionProvenance :result="predictionResult" :ai-requested="formData.enableAiInsights" />
           <a-tabs v-model:activeKey="activeChartTab" @change="onChartTabChange">
             <a-tab-pane key="trend" tab="趋势预测">
               <div ref="trendChartRef" class="chart-container"></div>
             </a-tab-pane>
             <a-tab-pane key="confidence" tab="置信区间" v-if="formData.includeConfidence">
+              <p v-if="!hasConfidenceBounds">当前响应未提供有效置信区间</p>
               <div ref="confidenceChartRef" class="chart-container"></div>
             </a-tab-pane>
           </a-tabs>
@@ -178,7 +180,7 @@
                   <a-tag :color="getActionColor(rec.action)">
                     {{ getActionText(rec.action) }}
                   </a-tag>
-                  <span class="rec-confidence">{{ (rec.confidence * 100).toFixed(1) }}%</span>
+                  <span class="rec-confidence">置信度: {{ formatProbability(rec.confidence) }}</span>
                 </div>
                 <div class="rec-details">
                   <div class="rec-time">{{ formatTime(rec.trigger_time) }}</div>
@@ -189,7 +191,7 @@
           </div>
         </a-card>
 
-        <a-card title="AI智能洞察" class="insights-card" v-if="predictionResult?.ai_insights?.length">
+        <a-card title="AI智能洞察" class="insights-card" v-if="predictionResult?.ai_enhanced && predictionResult?.ai_insights?.length">
           <div class="insights-list">
             <div v-for="(insight, index) in predictionResult.ai_insights" :key="index" class="insight-item">
               <BulbOutlined class="insight-icon" />
@@ -204,6 +206,8 @@
 
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+import PredictionProvenance from './PredictionProvenance.vue';
+import { formatProbability } from './prediction-display';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
 import { forecastPoints, confidenceValues, formatPredictionTime } from './prediction-series';
@@ -250,6 +254,10 @@ const predictionResult = ref<PredictionResponse | null>(null);
 
 const trendChartRef = ref<HTMLElement>();
 const confidenceChartRef = ref<HTMLElement>();
+const hasConfidenceBounds = computed(() => predictionResult.value?.predicted_data?.some(point =>
+  typeof point.confidence_lower === 'number' && Number.isFinite(point.confidence_lower) &&
+  typeof point.confidence_upper === 'number' && Number.isFinite(point.confidence_upper) && point.confidence_lower <= point.confidence_upper
+) ?? false);
 let trendChart: echarts.ECharts | null = null;
 let confidenceChart: echarts.ECharts | null = null;
 
@@ -382,7 +390,8 @@ const startAnalysis = async () => {
     await nextTick();
     if (!analysisLane.current(ticket)) return;
     initCharts();
-    message.success('预测分析完成');
+    if (response.fallback_mode || response.method === 'rule_based' || response.ai_fallback_reason || (formData.enableAiInsights && response.ai_enhanced !== true) || response.analysis_failures?.length) message.warning('预测已返回，部分功能降级，请查看来源和状态');
+    else message.success('预测分析完成');
   } catch (error) {
     if (!analysisLane.current(ticket)) return;
     predictionResult.value = null; disposeCharts();
@@ -548,8 +557,8 @@ const onChartTabChange = (key: string) => {
   });
 };
 
-const getAccuracyColor = (accuracy?: number) => {
-  if (!Number.isFinite(accuracy)) return 'default';
+const getAccuracyColor = (accuracy?: number | null) => {
+  if (formatProbability(accuracy) === '未知') return 'default';
   if (accuracy! > 0.9) return 'green';
   if (accuracy! > 0.7) return 'orange';
   return 'red';

@@ -71,9 +71,9 @@ export interface DiskPredictionRequest extends BasePredictionRequest {
 export interface PredictionDataPoint {
   timestamp: string;
   predicted_value: number;
-  confidence_lower?: number;
-  confidence_upper?: number;
-  confidence_level?: number;
+  confidence_lower?: number | null;
+  confidence_upper?: number | null;
+  confidence_level?: number | null;
 }
 
 // 资源利用率预测接口
@@ -89,7 +89,7 @@ export interface ResourceUtilization {
 export interface ScalingRecommendation {
   action: ScalingAction;
   trigger_time: string;
-  confidence: number;
+  confidence: number | null;
   reason: string;
   target_instances?: number;
   target_cpu_cores?: number;
@@ -141,8 +141,14 @@ export interface PredictionResponse {
   cost_analysis?: CostAnalysis;
   pattern_analysis: Record<string, any>;
   trend_insights: string[];
-  model_accuracy?: number;
+  model_accuracy?: number | null;
   prediction_summary: Record<string, any>;
+  method?: string | null;
+  model_version?: string | null;
+  fallback_mode?: boolean;
+  fallback_reason?: string | null;
+  ai_fallback_reason?: string | null;
+  analysis_failures?: string[];
   ai_enhanced?: boolean;
   ai_insights?: string[];
   ai_analysis_context?: Record<string, any>;
@@ -204,8 +210,12 @@ export interface AIEnhancedPredictionResponse {
   cost_analysis?: CostAnalysis;
   pattern_analysis: Record<string, any>;
   trend_insights: string[];
-  model_accuracy?: number;
+  model_accuracy?: number | null;
   prediction_summary: Record<string, any>;
+  method?: string | null;
+  model_version?: string | null;
+  ai_fallback_reason?: string | null;
+  analysis_failures?: string[];
   ai_enhanced: boolean;
   analysis_context?: AIAnalysisContext;
   prediction_interpretation?: AIPredictionInterpretation;
@@ -216,7 +226,7 @@ export interface AIEnhancedPredictionResponse {
   ai_processing_stages: Record<string, string>;
   data_quality_assessment: Record<string, any>;
   fallback_mode?: boolean;
-  fallback_reason?: string;
+  fallback_reason?: string | null;
   timestamp: string;
 }
 
@@ -226,6 +236,7 @@ export interface MultiDimensionPredictionResponse {
   prediction_results: Record<string, Record<string, any>>;
   correlation_analysis?: Record<string, any>;
   multi_dimension_insights: string[];
+  multi_dimension_reports: Record<string, Record<string, any>>;
   summary_statistics: Record<string, any>;
   processing_time_seconds: number;
   analyzed_dimensions: string[];
