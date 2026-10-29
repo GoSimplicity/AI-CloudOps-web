@@ -278,6 +278,7 @@
                       <a-menu-divider />
                       <a-menu-item v-if="rowActions.instanceId === record.id && rowActions.loading" key="actions_loading" disabled>正在读取可用操作</a-menu-item>
                       <a-menu-item v-else-if="rowActions.instanceId === record.id && rowActions.error" key="actions_error" disabled>{{ rowActions.error }}</a-menu-item>
+                      <a-menu-item v-else-if="rowActions.instanceId === record.id && !rowActions.loaded" key="actions_unavailable" disabled>操作未读取，请关闭后重新打开</a-menu-item>
                       <template v-else>
                         <a-menu-item v-if="rowHasAction(record, 'edit') && canEditInstance()" key="edit">编辑</a-menu-item>
                         <a-menu-item v-if="rowHasAction(record, 'submit')" key="submit">提交工单</a-menu-item>
@@ -1902,7 +1903,7 @@ const detailTarget = ref<WorkorderInstanceItem | null>(null);
 const loadError = ref('');
 let listRequest = 0;
 // 只保留当前展开行的动作；关闭、换行、换账号及列表刷新均作废旧请求
-const rowActions = reactive({ instanceId: 0, loading: false, error: '', actions: [] as string[] });
+const rowActions = reactive({ instanceId: 0, loading: false, loaded: false, error: '', actions: [] as string[] });
 let rowActionsRequest = 0;
 let actionRequest = 0;
 const workflowActions = ['edit', 'submit', 'assign', 'approve', 'reject', 'complete', 'return', 'cancel'];
@@ -1910,6 +1911,7 @@ const clearRowActions = () => {
   ++rowActionsRequest;
   rowActions.instanceId = 0;
   rowActions.loading = false;
+  rowActions.loaded = false;
   rowActions.error = '';
   rowActions.actions = [];
 };
@@ -1930,6 +1932,7 @@ const handleRowMenuVisibility = async (open: boolean, row: WorkorderInstanceItem
   rowActions.instanceId = row.id;
   rowActions.actions = [];
   rowActions.error = '';
+  rowActions.loaded = false;
   rowActions.loading = true;
   const isCurrent = () => request === rowActionsRequest && listGeneration === listRequest &&
     rowActions.instanceId === row.id && token === accessStore.accessToken;
@@ -1938,8 +1941,9 @@ const handleRowMenuVisibility = async (open: boolean, row: WorkorderInstanceItem
     if (!isCurrent()) return;
     if (!Array.isArray(actions)) throw new Error('无效动作目录');
     rowActions.actions = actions.map((action: unknown) => String(action).toLowerCase());
-  } catch {
-    if (isCurrent()) rowActions.error = '操作读取失败，请关闭后重新打开重试';
+    rowActions.loaded = true;
+  } catch (error) {
+    if (isCurrent() && shouldRecordPageError(error)) rowActions.error = '操作读取失败，请关闭后重新打开重试';
   } finally {
     if (isCurrent()) rowActions.loading = false;
   }

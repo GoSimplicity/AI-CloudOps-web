@@ -520,6 +520,23 @@ describe('列表按需读取当前用户可用动作', () => {
     expect(client.post).not.toHaveBeenCalled();
   });
 
+  it('取消请求不写错误且不误报无可用动作，关闭重开可重试', async () => {
+    let callCount = 0;
+    client.get.mockImplementation((url, options) => {
+      if (url === '/workorder/instance/actions/7') return ++callCount === 1 ? Promise.reject(Object.assign(new Error('cancelled'), { code: 'ERR_CANCELED' })) : Promise.resolve(['approve']);
+      return response(url, options);
+    });
+    await flushPromises();
+    await openMenu();
+    expect(currentMenu()?.textContent).toContain('操作未读取');
+    expect(currentMenu()?.textContent).not.toContain('操作读取失败');
+    expect(currentMenu()?.textContent).not.toContain('当前无可用流转操作');
+    expect(currentMenu()?.textContent).not.toContain('审批通过');
+    await closeMenu();
+    await openMenu();
+    expect(currentMenu()?.textContent).toContain('审批通过');
+  });
+
   it('读取失败不显示动作，关闭重开可以重试', async () => {
     let callCount = 0;
     client.get.mockImplementation((url, options) => {

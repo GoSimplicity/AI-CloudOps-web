@@ -271,7 +271,7 @@ const GUARDED_SNAPSHOT: Record<string, number> = {
   'servicetree/TreeNodeManager.vue': 1,
   'workorder/FormDesign.vue': 2,
   'workorder/FormManagement.vue': 1,
-  'workorder/Instance.vue': 4,
+  'workorder/Instance.vue': 5,
   'workorder/Notification.vue': 3,
   'workorder/Process.vue': 1,
   'workorder/ProcessDesign.vue': 4,
@@ -313,7 +313,7 @@ describe('FE-02b 拍板 3：取消类不写页面错误状态（静态扫描）'
     const summary = summarize(writes);
     expect(checkSummary(summary, GUARDED_SNAPSHOT, NOT_REQUEST_CATCH)).toEqual([]);
     // 快照本身不为空（防止扫描器失效变成空跑）
-    expect(Object.values(GUARDED_SNAPSHOT).reduce((a, b) => a + b, 0)).toBe(71);
+    expect(Object.values(GUARDED_SNAPSHOT).reduce((a, b) => a + b, 0)).toBe(72);
   });
 });
 
