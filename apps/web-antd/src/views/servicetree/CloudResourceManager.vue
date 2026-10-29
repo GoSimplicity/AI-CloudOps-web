@@ -838,7 +838,7 @@ const handleSync = async (): Promise<void> => {
   if (ids.length > 100 || new Set(ids).size !== ids.length) { message.warning('实例ID不能重复且最多100个'); return; }
   if (requiresInstanceIds(account.provider)) {
     const validId = (id: string): boolean => account.provider === CloudProvider.GCP
-      ? /^[1-9]\d{0,19}$/.test(id) && BigInt(id) <= 18446744073709551615n
+      ? /^[1-9]\d{0,19}$/.test(id) && (id.length < 20 || id <= '18446744073709551615')
       : /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     if (syncForm.sync_mode === SyncMode.FULL || regionIds.length !== 1 || !ids.length || ids.some((id) => !validId(id))) {
       message.warning('该云厂商仅支持选择一个地域并输入有效实例ID进行增量同步'); return;

@@ -340,6 +340,23 @@ describe('云资源真实控件合同', () => {
       cloud_account_id: id, cloud_account_region_ids: [41], sync_mode: 'incremental', instance_ids: [instance],
     }));
   });
+  it.each([
+    ['18446744073709551615', true],
+    ['18446744073709551616', false],
+    ['0', false],
+  ])('GCP 数字 ID %s 按 uint64 上限校验', async (instance, allowed) => {
+    await open();
+    await select('cloud-sync-account', 'GCP账户');
+    await select('cloud-sync-regions', '深圳');
+    const input = document.querySelector<HTMLInputElement>('#cloud-sync-instance-ids')!;
+    await new DOMWrapper(input).setValue(instance);
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true });
+    Object.defineProperty(enter, 'which', { value: 13 });
+    input.dispatchEvent(enter);
+    await flushPromises();
+    await button('开始同步', '.ant-modal-footer button');
+    expect(client.post.mock.calls.length > 0).toBe(allowed);
+  });
   it('部分成功时保留地域结果和历史编号供核对', async () => {
     client.post.mockResolvedValueOnce({ status: 'partial', total_count: 1, new_count: 1, update_count: 0, delete_count: 0, failed_count: 1,
       regions: [{ region_id: 41, region: '深圳', status: 'failed', history_id: 22, retry_safe: true }] });
