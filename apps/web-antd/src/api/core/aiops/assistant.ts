@@ -7,6 +7,7 @@ export interface AssistantRequest {
   chat_history?: Array<{ [key: string]: string }>; // 对话历史记录
   use_web_search?: boolean; // 是否使用网络搜索增强回答
   session_id?: string; // 会话ID，为空则创建新会话
+  turn_id?: string; // 同一次请求的稳定 UUID，用于安全恢复
 }
 
 // 添加文档请求模型
@@ -24,6 +25,7 @@ export interface AssistantResponse {
   recall_rate?: number; // 文档召回率
   follow_up_questions?: string[];
   session_id?: string;
+  turn_id?: string;
 }
 
 // 会话信息响应模型
@@ -34,6 +36,12 @@ export interface SessionInfoResponse {
   message_count: number;
   mode: number;
   status: string;
+  revision?: number;
+  active_turn_id?: null | string;
+  last_turn_id?: null | string;
+  active_question?: null | string;
+  active_mode?: null | number;
+  conversation_history?: Array<{ q: string; a: string; mode: number }>;
 }
 
 // 服务信息响应模型
@@ -114,6 +122,11 @@ export interface AddDocumentResponse {
 // 智能助手问答
 export async function assistantQuery(data: AssistantRequest, config?: any) {
   return requestClientAIOps.post('/assistant/query', data, config);
+}
+
+// 创建空会话，不会调用模型或工具。
+export async function createAssistantSession(config?: any) {
+  return requestClientAIOps.post<{ session_id: string }>('/assistant/session', {}, config);
 }
 
 // 获取会话信息

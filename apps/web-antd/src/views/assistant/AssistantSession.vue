@@ -1,5 +1,5 @@
 <template>
-  <OpsPage title="会话管理" description="查询本人会话，查看当前浏览器保存的本地历史" class="session-container">
+  <OpsPage title="会话管理" description="查询本人会话与服务端保存的对话；本地列表仅保存会话索引" class="session-container">
     <!-- 页面头部 -->
     <template #actions>
 <a-button type="primary" @click="clearAllHistory" :disabled="sessionHistory.length === 0">
@@ -54,6 +54,20 @@
             </a-tag>
           </a-descriptions-item>
         </a-descriptions>
+
+        <a-alert v-if="currentSession.status === 'unknown'" type="warning" show-icon message="上次请求结果未知，请核对下方问题与已有结果；不要盲目重新执行。" />
+        <a-alert v-else-if="currentSession.status === 'running'" type="info" show-icon message="会话正在处理请求，请稍后刷新状态。" />
+        <a-descriptions v-if="currentSession.active_turn_id" :column="1" bordered size="small" title="待核对请求">
+          <a-descriptions-item label="请求 ID">{{ currentSession.active_turn_id }}</a-descriptions-item>
+          <a-descriptions-item label="请求内容">{{ currentSession.active_question || '未知' }}</a-descriptions-item>
+        </a-descriptions>
+        <div v-if="currentSession.conversation_history?.length" class="durable-history">
+          <h3>服务端最近对话</h3>
+          <div v-for="(turn, index) in currentSession.conversation_history" :key="index" class="durable-turn">
+            <p><strong>问题：</strong>{{ turn.q }}</p>
+            <p><strong>回答：</strong>{{ turn.a }}</p>
+          </div>
+        </div>
 
         <div class="session-actions">
           <a-space wrap>
@@ -301,6 +315,9 @@ const sessionStats = computed(() => {
 // 获取状态颜色
 const getStatusColor = (status?: string) => {
   const colorMap: Record<string, string> = {
+    'idle': 'green',
+    'running': 'blue',
+    'unknown': 'orange',
     'active': 'green',
     'inactive': 'orange',
     'ended': 'red',
@@ -312,6 +329,9 @@ const getStatusColor = (status?: string) => {
 // 获取状态文本
 const getStatusText = (status?: string) => {
   const textMap: Record<string, string> = {
+    'idle': '可继续',
+    'running': '处理中',
+    'unknown': '结果未知',
     'active': '活跃',
     'inactive': '不活跃',
     'ended': '已结束',
@@ -398,7 +418,7 @@ const addToHistory = () => {
   }
 
   // 添加到历史记录
-  sessionHistory.value.unshift({ ...currentSession } as SessionInfoResponse);
+  sessionHistory.value.unshift(sessionMetadata(currentSession));
   saveHistoryToStorage();
   message.success('已添加到历史记录');
 };
@@ -481,14 +501,22 @@ const showStatistics = () => {
 
 // 保存历史记录到本地存储
 const saveHistoryToStorage = () => {
-  accountScope.write('history', sessionHistory.value);
+  accountScope.write('history', sessionHistory.value.map(sessionMetadata));
 };
+
+// 浏览器只缓存索引；对话与待核对问题只从已授权的服务端读取。
+const sessionMetadata = (session: Partial<SessionInfoResponse>): SessionInfoResponse => ({
+  session_id: session.session_id || '', created_time: session.created_time || '',
+  last_activity: session.last_activity || '', message_count: session.message_count || 0,
+  mode: session.mode || 1, status: session.status || '', revision: session.revision,
+});
 
 // 从本地存储加载历史记录
 const loadHistoryFromStorage = () => {
   try {
     const stored = accountScope.read<SessionInfoResponse[]>('history');
-    sessionHistory.value = Array.isArray(stored) ? stored : [];
+    sessionHistory.value = Array.isArray(stored) ? stored.map(sessionMetadata) : [];
+    if (Array.isArray(stored)) saveHistoryToStorage();
   } catch (error) {
 
   }

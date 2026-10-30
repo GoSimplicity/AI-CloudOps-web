@@ -1,5 +1,5 @@
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
-import { reactive, nextTick } from 'vue';
+import { reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AiAssistant from './ai.vue';
 import axios, { AxiosError } from 'axios';
@@ -9,6 +9,8 @@ import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
 const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const api = vi.hoisted(() => ({
   assistantQuery: vi.fn(),
+  createAssistantSession: vi.fn(),
+  getSessionInfo: vi.fn(),
   clearAssistantCache: vi.fn(),
   refreshKnowledgeBase: vi.fn(),
 }));
@@ -30,9 +32,11 @@ const deferred = () => {
 };
 beforeEach(() => {
   localStorage.clear();
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   state.user = reactive({ userInfo: { userId: '1' } });
   state.access = reactive({ accessToken: 'credential' });
+  api.createAssistantSession.mockImplementation(async () => ({ session_id: state.user.userInfo?.userId === '2' ? 'new-sid' : 'first-sid' }));
+  api.getSessionInfo.mockImplementation(async (session_id: string) => ({session_id, status:'idle', mode:1, conversation_history:[]}));
 });
 afterEach(() => {
   wrapper?.unmount();
@@ -58,9 +62,12 @@ describe('悬浮助手真实状态隔离', () => {
       sessionId: 'owner-one',
       chatMessages: [{ content: 'owner one private', type: 'user' }],
     });
+    api.getSessionInfo.mockResolvedValueOnce({session_id:'owner-one', status:'idle', mode:1, conversation_history:[{q:'owner one private',a:'owned answer',mode:1}]});
     wrapper = mount(AiAssistant);
+    await flushPromises();
     expect(setup().sessionId).toBe('owner-one');
     expect(JSON.stringify(setup().chatMessages)).toContain('owner one private');
+    expect(JSON.stringify(localStorage)).not.toContain('owner one private');
     setup().globalInputMessage = 'unsent secret';
     state.user.userInfo = { userId: '2' };
     expect(setup().sessionId).toBe('');
@@ -83,18 +90,20 @@ describe('悬浮助手真实状态隔离', () => {
       .mockReturnValueOnce(fresh.promise);
     wrapper = mount(AiAssistant);
     const oldTask = setup().sendMessage('first private question');
-    await nextTick();
+    await flushPromises();
     const oldSignal = api.assistantQuery.mock.calls[0]![1].signal;
     state.user.userInfo = { userId: '2' };
     expect(oldSignal.aborted).toBe(true);
     const freshTask = setup().sendMessage('second question');
-    await nextTick();
-    old.resolve({ answer: 'old private answer', session_id: 'old-sid' });
+    await flushPromises();
+    const oldParams = api.assistantQuery.mock.calls[0]![0];
+    const freshParams = api.assistantQuery.mock.calls[1]![0];
+    old.resolve({ answer: 'old private answer', session_id: oldParams.session_id, turn_id: oldParams.turn_id });
     await oldTask;
     expect(setup().sending).toBe(true);
-    expect(setup().sessionId).toBe('');
+    expect(setup().sessionId).toBe('new-sid');
     expect(JSON.stringify(setup().chatMessages)).not.toContain('old private');
-    fresh.resolve({ answer: 'ok', session_id: 'new-sid' });
+    fresh.resolve({ answer: 'ok', session_id: freshParams.session_id, turn_id: freshParams.turn_id });
     await freshTask;
     expect(setup().sessionId).toBe('new-sid');
     expect(JSON.stringify(localStorage)).not.toContain('old private answer');
@@ -136,7 +145,8 @@ describe('悬浮助手真实状态隔离', () => {
     async (status) => {
       api.assistantQuery
         .mockRejectedValueOnce({ response: { status } })
-        .mockResolvedValueOnce({ answer: 'ok', session_id: 'fresh' });
+        .mockImplementationOnce(async (params) => ({ answer: 'ok', session_id: params.session_id, turn_id: params.turn_id }));
+      api.createAssistantSession.mockResolvedValueOnce({session_id:'fresh'});
       wrapper = mount(AiAssistant);
       setup().sessionId = 'invalid-sid';
       await setup().sendMessage('question');
@@ -145,9 +155,7 @@ describe('悬浮助手真实状态隔离', () => {
       expect(setup().sending).toBe(false);
       expect(setup().chatHistory).toEqual([]);
       await setup().sendMessage('new question');
-      expect(api.assistantQuery.mock.calls[1]![0]).not.toHaveProperty(
-        'session_id',
-      );
+      expect(api.assistantQuery.mock.calls[1]![0].session_id).toBe('fresh');
       expect(setup().sessionId).toBe('fresh');
     },
   );
@@ -155,7 +163,7 @@ describe('悬浮助手真实状态隔离', () => {
   it.each([
     ['CanceledError（停止生成）', () => new axios.CanceledError()],
     ['RequestOwnerChangedError', () => new RequestOwnerChangedError()],
-  ])('FE-02b 拍板 3：提问被取消（%s）不写错误横幅；真实网络错误照常写', async (_label, make) => {
+  ])('请求取消（%s）及网络中断均保留待核对状态', async (_label, make) => {
     api.assistantQuery
       .mockRejectedValueOnce(make())
       .mockRejectedValueOnce(
@@ -166,15 +174,18 @@ describe('悬浮助手真实状态隔离', () => {
     await flushPromises();
     expect(setup().errorMessage).toBe('');
     expect(setup().sending).toBe(false);
+    expect(setup().pendingTurn).not.toBeNull();
+    expect(setup().sessionNotice).toContain('尚未确认');
+    setup().createNewSession(true);
     await setup().sendMessage('question again');
     await flushPromises();
-    expect(setup().errorMessage).toBe('网络连接错误，请检查网络状态');
+    expect(setup().sessionNotice).toContain('尚未确认');
   });
 
   it.each([
     ['CanceledError（停止生成）', () => new axios.CanceledError()],
     ['RequestOwnerChangedError', () => new RequestOwnerChangedError()],
-  ])('incr3 P3-6：提问被取消（%s）清空 lastFailedQuestion（重试按钮 v-if 依赖它），不留上一次失败的重试入口', async (_label, make) => {
+  ])('取消（%s）后不出现未经核对的重试入口', async (_label, make) => {
     api.assistantQuery
       .mockRejectedValueOnce(
         new AxiosError('Network Error', AxiosError.ERR_NETWORK, {} as any, {}),
@@ -184,14 +195,18 @@ describe('悬浮助手真实状态隔离', () => {
     wrapper = mount(AiAssistant);
     await setup().sendMessage('first');
     await flushPromises();
-    expect(setup().lastFailedQuestion).toBe('first');
+    expect(setup().lastFailedQuestion).toBe('');
+    expect(setup().pendingTurn).not.toBeNull();
 
+    setup().createNewSession(true);
     await setup().sendMessage('second');
     await flushPromises();
     expect(setup().lastFailedQuestion).toBe('');
     expect(setup().sending).toBe(false);
+    expect(setup().pendingTurn).not.toBeNull();
 
     // 首次即被取消：同样不记录
+    setup().createNewSession(true);
     await setup().sendMessage('third');
     await flushPromises();
     expect(setup().lastFailedQuestion).toBe('');

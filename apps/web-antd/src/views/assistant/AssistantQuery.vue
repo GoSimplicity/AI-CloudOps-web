@@ -109,8 +109,15 @@
 
               <!-- 输入区域 -->
               <div class="chat-input">
+                <a-alert v-if="sessionNotice && !pendingTurn" type="warning" show-icon :message="sessionNotice">
+                  <template #action><a-button size="small" :loading="isLoading" @click="restoreSession">重新查询</a-button></template>
+                </a-alert>
+                <a-alert v-if="pendingTurn" type="warning" show-icon message="本次回复尚未确认，请先查询并恢复已完成的回复，或清空会话。">
+                  <template #description>待核对问题：{{ pendingTurn.question }}</template>
+                  <template #action><a-button size="small" :loading="isLoading" @click="recoverTurn">查询并恢复</a-button></template>
+                </a-alert>
                 <a-input-search v-model:value="questionInput" placeholder="请输入您的问题..." enter-button="发送" size="large"
-                  :loading="isLoading" :disabled="isLoading" @search="sendMessage" @keydown.enter.prevent="sendMessage">
+                  :loading="isLoading" :disabled="isLoading || !!pendingTurn || !!sessionNotice" @search="sendMessage" @keydown.enter.prevent="sendMessage">
 
                 </a-input-search>
               </div>
@@ -137,7 +144,7 @@
 
               <div class="info-item">
                 <label class="form-label">助手模式</label>
-                <a-select v-model:value="assistantMode" class="form-control" :disabled="isLoading" @change="onModeChange">
+                <a-select v-model:value="assistantMode" class="form-control" :disabled="isLoading || !!pendingTurn" @change="onModeChange">
                   <a-select-option :value="1">RAG模式</a-select-option>
                   <a-select-option :value="2">MCP模式</a-select-option>
                 </a-select>
@@ -202,8 +209,8 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { useAccessStore, useUserStore } from '@vben/stores';
 import { assistantOwner, createAssistantAccountScope } from '#/utils/assistant-account-scope';
-import { assistantQuery } from '#/api/core/aiops/assistant';
-import type { AssistantRequest, AssistantResponse } from '#/api/core/aiops/assistant';
+import { assistantQuery, createAssistantSession, getSessionInfo } from '#/api/core/aiops/assistant';
+import type { AssistantRequest, AssistantResponse, SessionInfoResponse } from '#/api/core/aiops/assistant';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // 路由
@@ -219,6 +226,8 @@ const isLoading = ref(false);
 const currentSessionId = ref('');
 const assistantMode = ref(1);
 const chatHistoryRef = ref<HTMLElement>();
+const pendingTurn = ref<null | { question: string; mode: number; turnId: string; sessionId: string }>(null);
+const sessionNotice = ref('');
 
 // 聊天历史
 interface ChatMessage {
@@ -245,80 +254,90 @@ const quickQuestions = ref([
   '系统的技术架构是什么？'
 ]);
 
-// 发送消息
-const sendMessage = async () => {
-  if (!questionInput.value.trim() || isLoading.value) {
-    return;
-  }
+// 未确认的请求只能查询状态，已完成后才用同一 turn_id 读取结果。
+const appendAnswer = (data: AssistantResponse) => {
+  chatHistory.value.push({
+    role: 'assistant', content: data.answer, timestamp: new Date().toISOString(),
+    sourceDocuments: data.source_documents, followUpQuestions: data.follow_up_questions,
+    relevanceScore: data.relevance_score,
+  });
+  pendingTurn.value = null;
+};
 
-  if (!assistantOwner(userStore.userInfo, accessStore.accessToken)) return;
+const sendMessage = async () => {
+  const question = questionInput.value.trim();
+  if (!question || isLoading.value || pendingTurn.value || sessionNotice.value || !assistantOwner(userStore.userInfo, accessStore.accessToken)) return;
+  if (!globalThis.crypto?.randomUUID) { message.error('当前环境无法安全生成请求 ID'); return; }
   const ticket = accountScope.ticket();
+  const turnId = globalThis.crypto.randomUUID();
+  const mode = assistantMode.value;
   isLoading.value = true;
   abortController = new AbortController();
   const signal = abortController.signal;
-  const question = questionInput.value.trim();
-  questionInput.value = '';
-
-  // 添加用户消息到历史
-  const userMessage: ChatMessage = {
-    role: 'user',
-    content: question,
-    timestamp: new Date().toISOString()
-  };
-  chatHistory.value.push(userMessage);
-
-  // 滚动到底部
-  await nextTick();
-  if (!accountScope.current(ticket)) return;
-  scrollToBottom();
-
+  let sent = false;
   try {
-    isLoading.value = true;
-
-    // 构建请求参数
-    const request: AssistantRequest = {
-      question,
-      mode: assistantMode.value,
-      session_id: currentSessionId.value || undefined,
-      chat_history: chatHistory.value.slice(0, -1).map(msg => ({
-        role: msg.role, content: msg.content
-      }))
-    };
-
-    // 发送请求
-    const response = await assistantQuery(request, { signal });
-    if (!accountScope.current(ticket)) return;
-    const data = response as AssistantResponse;
-
-    // 更新会话ID
-    if (data.session_id) {
-      currentSessionId.value = data.session_id;
+    if (!currentSessionId.value) {
+      const session = await createAssistantSession({ signal });
+      if (!accountScope.current(ticket)) return;
+      if (!session?.session_id) throw new Error('会话创建失败');
+      currentSessionId.value = session.session_id;
+      accountScope.write('query-session', { sessionId: session.session_id });
     }
-
-    const assistantMessage: ChatMessage = {
-      role: 'assistant',
-      content: data.answer,
-      timestamp: new Date().toISOString(),
-      sourceDocuments: data.source_documents,
-      followUpQuestions: data.follow_up_questions,
-      relevanceScore: data.relevance_score
-    };
-    chatHistory.value.push(assistantMessage);
-
-    // 滚动到底部
+    const sessionId = currentSessionId.value;
+    pendingTurn.value = { question, mode, turnId, sessionId };
+    questionInput.value = '';
+    chatHistory.value.push({ role: 'user', content: question, timestamp: new Date().toISOString() });
+    await nextTick();
+    if (!accountScope.current(ticket)) return;
+    scrollToBottom();
+    const request: AssistantRequest = { question, mode, session_id: sessionId, turn_id: turnId };
+    sent = true;
+    const data = await assistantQuery(request, { signal }) as AssistantResponse;
+    if (!accountScope.current(ticket)) return;
+    if (typeof data?.answer !== 'string' || data.session_id !== sessionId || data.turn_id !== turnId) throw new Error('响应格式无效');
+    appendAnswer(data);
     await nextTick();
     scrollToBottom();
-
   } catch (error: any) {
     if (!accountScope.current(ticket)) return;
     if ([403, 404].includes(error?.response?.status)) {
       chatHistory.value = [];
       currentSessionId.value = '';
+      pendingTurn.value = null;
+      accountScope.write('query-session', null);
       selectedDocument.value = null;
       documentModalVisible.value = false;
+    } else if (!sent) {
+      pendingTurn.value = null;
     }
-    if (shouldNotifyPageError(error)) message.error(`发送失败: ${error.message}`);
+    if (shouldNotifyPageError(error)) message.error(sent ? '请求结果尚未确认，请查询会话状态' : '会话创建失败，请重试');
+  } finally {
+    if (accountScope.current(ticket)) { isLoading.value = false; abortController = undefined; }
+  }
+};
 
+const recoverTurn = async () => {
+  const pending = pendingTurn.value;
+  if (!pending || isLoading.value || !assistantOwner(userStore.userInfo, accessStore.accessToken)) return;
+  const ticket = accountScope.ticket();
+  isLoading.value = true;
+  abortController = new AbortController();
+  try {
+    const info = await getSessionInfo(pending.sessionId) as SessionInfoResponse;
+    if (!accountScope.current(ticket)) return;
+    if (info.status !== 'idle' || info.last_turn_id !== pending.turnId) {
+      message.warning('该请求尚未确认完成，请稍后查询或新建会话');
+      return;
+    }
+    const data = await assistantQuery({ question: pending.question, mode: pending.mode,
+      session_id: pending.sessionId, turn_id: pending.turnId }, { signal: abortController.signal }) as AssistantResponse;
+    if (!accountScope.current(ticket)) return;
+    if (typeof data?.answer !== 'string' || data.session_id !== pending.sessionId || data.turn_id !== pending.turnId) {
+      message.error('恢复结果格式异常，请核对会话'); return;
+    }
+    appendAnswer(data);
+  } catch (error) {
+    if (accountScope.current(ticket) && shouldNotifyPageError(error)) message.error('无法确认会话状态，请稍后重试');
   } finally {
     if (accountScope.current(ticket)) { isLoading.value = false; abortController = undefined; }
   }
@@ -350,6 +369,9 @@ const clearSession = () => {
   isLoading.value = false;
   chatHistory.value = [];
   currentSessionId.value = '';
+  pendingTurn.value = null;
+  sessionNotice.value = '';
+  accountScope.write('query-session', null);
   message.success('会话已清空');
 };
 
@@ -413,6 +435,48 @@ const scrollToBottom = () => {
   }
 };
 
+// 只在本地保存会话 ID，实际历史和未确认状态按当前用户从服务端读取。
+const restoreSession = async () => {
+  const pointer = accountScope.read<{ sessionId?: unknown }>('query-session');
+  if (typeof pointer?.sessionId !== 'string' || !pointer.sessionId) return;
+  const ticket = accountScope.ticket();
+  isLoading.value = true;
+  try {
+    const info = await getSessionInfo(pointer.sessionId) as SessionInfoResponse;
+    if (!accountScope.current(ticket)) return;
+    if (info.session_id !== pointer.sessionId || !['idle', 'running', 'unknown'].includes(info.status) || (info.mode !== 1 && info.mode !== 2)) throw new Error('invalid session');
+    if (info.conversation_history != null && (!Array.isArray(info.conversation_history) || info.conversation_history.length > 25 || info.conversation_history.some((entry) => typeof entry?.q !== 'string' || typeof entry?.a !== 'string'))) throw new Error('invalid history');
+    currentSessionId.value = info.session_id;
+    assistantMode.value = info.mode;
+    sessionNotice.value = '';
+    chatHistory.value = (info.conversation_history ?? []).flatMap((entry) => [
+      { role: 'user' as const, content: entry.q, timestamp: info.last_activity },
+      { role: 'assistant' as const, content: entry.a, timestamp: info.last_activity },
+    ]);
+    if (info.status !== 'idle') {
+      if (info.active_turn_id && info.active_question && (info.active_mode === 1 || info.active_mode === 2)) {
+        pendingTurn.value = { question: info.active_question, mode: info.active_mode, turnId: info.active_turn_id, sessionId: info.session_id };
+      } else {
+        sessionNotice.value = '会话有未确认的请求，请清空会话后继续';
+      }
+    }
+  } catch (error: any) {
+    if (accountScope.current(ticket)) {
+      if ([403, 404].includes(error?.response?.status)) {
+        accountScope.write('query-session', null);
+        currentSessionId.value = '';
+        sessionNotice.value = '';
+        message.warning('会话不可访问或已过期，请新建会话');
+      } else {
+        currentSessionId.value = pointer.sessionId;
+        sessionNotice.value = '无法读取会话状态，请重新查询或清空会话';
+      }
+    }
+  } finally {
+    if (accountScope.current(ticket)) isLoading.value = false;
+  }
+};
+
 watch(() => assistantOwner(userStore.userInfo, accessStore.accessToken), (owner) => {
   accountScope.setOwner(owner);
   abortController?.abort();
@@ -420,9 +484,12 @@ watch(() => assistantOwner(userStore.userInfo, accessStore.accessToken), (owner)
   isLoading.value = false;
   questionInput.value = '';
   currentSessionId.value = '';
+  pendingTurn.value = null;
+  sessionNotice.value = '';
   chatHistory.value = [];
   selectedDocument.value = null;
   documentModalVisible.value = false;
+  if (owner) void restoreSession();
 }, { immediate: true, flush: 'sync' });
 onBeforeUnmount(() => { accountScope.invalidate(); abortController?.abort(); });
 </script>

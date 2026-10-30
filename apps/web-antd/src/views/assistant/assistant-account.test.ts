@@ -9,6 +9,7 @@ import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
 const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const api = vi.hoisted(() => ({
   assistantQuery: vi.fn(),
+  createAssistantSession: vi.fn(),
   getSessionInfo: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({
@@ -36,6 +37,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.user = reactive({ userInfo: { userId: '1' } });
   state.access = reactive({ accessToken: 'credential' });
+  api.createAssistantSession.mockImplementation(async () => ({ session_id: state.user.userInfo?.userId === '2' ? 'fresh' : 'old' }));
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
@@ -158,19 +160,19 @@ describe('独立助手页面账户隔离', () => {
     mountScreen(AssistantQuery);
     setup().questionInput = 'one private';
     const oldTask = setup().sendMessage();
-    await nextTick();
+    await flushPromises();
     const signal = api.assistantQuery.mock.calls[0]![1].signal;
     state.user.userInfo = { userId: '2' };
     expect(signal.aborted).toBe(true);
     expect(setup().chatHistory).toEqual([]);
     setup().questionInput = 'two';
     const freshTask = setup().sendMessage();
-    await nextTick();
-    old.resolve({ answer: 'one private response', session_id: 'old' });
+    await flushPromises();
+    old.resolve({ answer: 'one private response', session_id: 'old', turn_id: api.assistantQuery.mock.calls[0]![0].turn_id });
     await oldTask;
     expect(setup().isLoading).toBe(true);
-    expect(setup().currentSessionId).toBe('');
-    fresh.resolve({ answer: 'two response', session_id: 'fresh' });
+    expect(setup().currentSessionId).toBe('fresh');
+    fresh.resolve({ answer: 'two response', session_id: 'fresh', turn_id: api.assistantQuery.mock.calls[1]![0].turn_id });
     await freshTask;
     expect(setup().currentSessionId).toBe('fresh');
     expect(JSON.stringify(setup().chatHistory)).not.toContain('one private');
@@ -183,7 +185,7 @@ describe('独立助手页面账户隔离', () => {
     async (status) => {
       api.assistantQuery
         .mockRejectedValueOnce({ response: { status }, message: 'invalid' })
-        .mockResolvedValueOnce({ answer: 'new', session_id: 'fresh' });
+        .mockImplementationOnce(async (req) => ({ answer: 'new', session_id: req.session_id, turn_id: req.turn_id }));
       mountScreen(AssistantQuery);
       setup().currentSessionId = 'invalid';
       setup().questionInput = 'old';
@@ -193,8 +195,64 @@ describe('独立助手页面账户隔离', () => {
       setup().questionInput = 'fresh';
       await setup().sendMessage();
       await flushPromises();
-      expect(api.assistantQuery.mock.calls[1]![0].session_id).toBeUndefined();
-      expect(setup().currentSessionId).toBe('fresh');
+      expect(api.createAssistantSession).toHaveBeenCalledTimes(1);
+      expect(api.assistantQuery.mock.calls[1]![0].session_id).toBe('old');
+      expect(setup().currentSessionId).toBe('old');
     },
   );
+  it('查询状态未知时不重发，确认完成后用同一 turn_id 读取结果', async () => {
+    api.assistantQuery.mockReset().mockRejectedValueOnce(new Error('interrupted'))
+      .mockImplementationOnce(async (req) => ({ answer: '已恢复', session_id: req.session_id, turn_id: req.turn_id }));
+    mountScreen(AssistantQuery);
+    setup().questionInput = '核对问题';
+    await setup().sendMessage();
+    const request = api.assistantQuery.mock.calls[0]![0];
+    expect(request.session_id).toBe('old');
+    expect(request.turn_id).toBeTruthy();
+    expect(setup().pendingTurn.turnId).toBe(request.turn_id);
+    api.getSessionInfo.mockResolvedValueOnce({ session_id: 'old', status: 'unknown' });
+    await setup().recoverTurn();
+    expect(api.assistantQuery).toHaveBeenCalledTimes(1);
+    api.getSessionInfo.mockResolvedValueOnce({ session_id: 'old', status: 'idle', last_turn_id: request.turn_id });
+    await setup().recoverTurn();
+    expect(api.assistantQuery).toHaveBeenCalledTimes(2);
+    expect(api.assistantQuery.mock.calls[1]![0].turn_id).toBe(request.turn_id);
+    expect(setup().pendingTurn).toBeNull();
+    expect(wrapper.text()).toContain('已恢复');
+  });
+  it('重新打开只按当前账户的会话 ID 恢复服务端历史和未知状态', async () => {
+    const scope = createAssistantAccountScope(localStorage);
+    scope.setOwner('1');
+    scope.write('query-session', { sessionId: 'owned-session' });
+    api.getSessionInfo.mockResolvedValueOnce({ session_id: 'owned-session', status: 'unknown', mode: 1, last_activity: '2026-01-01T00:00:00Z',
+      conversation_history: [{ q: '之前的问题', a: '之前的回答', mode: 1 }],
+      active_turn_id: 'turn-id', active_question: '未确认问题', active_mode: 1 });
+    mountScreen(AssistantQuery);
+    await flushPromises();
+    expect(wrapper.text()).toContain('之前的回答');
+    expect(wrapper.text()).toContain('未确认问题');
+    expect(setup().pendingTurn.turnId).toBe('turn-id');
+    expect(api.assistantQuery).not.toHaveBeenCalled();
+    state.user.userInfo = { userId: '2' };
+    await flushPromises();
+    expect(wrapper.text()).not.toContain('之前的回答');
+    expect(setup().pendingTurn).toBeNull();
+  });
+
+  it('恢复会话时网络故障保留会话 ID 并允许重新查询', async () => {
+    const scope = createAssistantAccountScope(localStorage);
+    scope.setOwner('1');
+    scope.write('query-session', { sessionId: 'retry-session' });
+    api.getSessionInfo.mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ session_id: 'retry-session', status: 'idle', mode: 1, conversation_history: [] });
+    mountScreen(AssistantQuery);
+    await flushPromises();
+    expect(setup().currentSessionId).toBe('retry-session');
+    expect(scope.read('query-session')).toEqual({ sessionId: 'retry-session' });
+    expect(wrapper.text()).toContain('无法读取会话状态');
+    await setup().restoreSession();
+    expect(setup().sessionNotice).toBe('');
+    expect(api.assistantQuery).not.toHaveBeenCalled();
+  });
+
 });

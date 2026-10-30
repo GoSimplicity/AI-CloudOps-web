@@ -35,7 +35,7 @@
             <Minimize2 v-if="isExpanded" :size="16" />
             <Maximize2 v-else :size="16" />
           </button>
-          <button v-if="can('aiops.assistant.clearCache')" class="action-button clear-btn" @mousedown.stop @click="clearChat" title="清空聊天">
+          <button class="action-button clear-btn" @mousedown.stop @click="clearChat" title="新建会话">
             <Trash2 :size="16" />
           </button>
           <button v-if="can('aiops.assistant.refreshKnowledge')" class="action-button refresh-btn" @mousedown.stop @click="refreshKnowledge" title="刷新知识库" :disabled="isRefreshing">
@@ -61,6 +61,7 @@
           <div class="mode-switcher">
             <button 
               class="mode-button" 
+              :disabled="sending || !!pendingTurn || !!sessionNotice"
               :class="{ 'active': currentMode === 1 }"
               @click="switchMode('rag')"
               title="RAG模式 - 基于知识库回答"
@@ -70,6 +71,7 @@
             </button>
             <button 
               class="mode-button" 
+              :disabled="sending || !!pendingTurn || !!sessionNotice"
               :class="{ 'active': currentMode === 2 }"
               @click="switchMode('mcp')"
               title="MCP模式 - 工具调用模式"
@@ -117,10 +119,16 @@
       <div v-if="errorMessage" class="error-banner">
         <AlertCircle :size="16" />
         <span>{{ errorMessage }}</span>
-        <button v-if="lastFailedQuestion && !sending" @click="retryLast" class="error-retry">重试</button>
+        <button v-if="lastFailedQuestion && !sending && !pendingTurn" @click="retryLast" class="error-retry">重试</button>
         <button @click="errorMessage = ''" class="error-close">
           <X :size="14" />
         </button>
+      </div>
+      <div v-if="pendingTurn || sessionNotice" class="error-banner" role="alert">
+        <AlertCircle :size="16" />
+        <span>{{ sessionNotice || '本次请求结果尚未确认，请查询会话状态。' }}</span>
+        <button v-if="!sending && pendingTurn" @click="recoverTurn" class="error-retry">查询并恢复</button>
+        <button v-else-if="!sending && sessionNotice && sessionId" @click="restoreCurrentSession" class="error-retry">重新查询</button>
       </div>
 
       <!-- 消息内容区域 -->
@@ -235,7 +243,7 @@
       <div class="chat-input" v-if="!isMinimized">
         <div class="textarea-container">
           <div class="input-wrapper">
-            <textarea v-model="globalInputMessage" placeholder="请输入您的问题...（Enter发送，Shift+Enter换行）" :disabled="sending"
+            <textarea v-model="globalInputMessage" placeholder="请输入您的问题...（Enter发送，Shift+Enter换行）" :disabled="sending || !!pendingTurn || !!sessionNotice"
               @keydown="handleEnterKey" @input="onInputChange" @compositionstart="onCompositionStart" @compositionend="onCompositionEnd" class="message-input" rows="1" ref="messageInput"></textarea>
 
             <div class="input-actions">
@@ -249,7 +257,7 @@
                 <Square :size="16" />
               </button>
 
-              <button class="send-button" :disabled="!globalInputMessage.trim() || sending" @click="handleSearch"
+              <button class="send-button" :disabled="!globalInputMessage.trim() || sending || !!pendingTurn || !!sessionNotice" @click="handleSearch"
                 :class="{ 'loading': sending }">
                 <Send :size="16" v-if="!sending" />
                 <div v-else class="loading-spinner"></div>
@@ -336,7 +344,8 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 import { assistantOwner, createAssistantAccountScope } from '#/utils/assistant-account-scope';
 import {
   assistantQuery,
-  clearAssistantCache,
+  createAssistantSession,
+  getSessionInfo,
   refreshKnowledgeBase
 } from '#/api/core/aiops/assistant';
 import { usePermission } from '#/utils/permission';
@@ -365,6 +374,8 @@ const floatWindow = ref(null);
 const messageInput = ref(null);
 const sessionId = ref('');
 const lastFailedQuestion = ref('');
+const pendingTurn = ref(null);
+const sessionNotice = ref('');
 const abortController = ref(null);
 const showSessionsPanel = ref(false);
 const currentLocalSessionId = ref('');
@@ -396,22 +407,11 @@ const persistState = () => {
     };
     localStorage.setItem(UI_STATE_KEY, JSON.stringify(uiState));
 
-    const MAX_MSG = 50;
     const chatState = {
       sessionId: sessionId.value,
-      isConnected: isConnected.value,
-      chatHistory: Array.isArray(chatHistory.value) ? chatHistory.value.slice(-MAX_MSG) : [],
-      chatMessages: (() => {
-        try {
-          const plain = JSON.parse(JSON.stringify(chatMessages));
-          return plain.slice(-MAX_MSG);
-        } catch {
-          return [];
-        }
-      })()
     };
     accountScope.write('chat', chatState);
-    accountScope.write('sessions', { sessions: sessions.value, currentLocalSessionId: currentLocalSessionId.value });
+    accountScope.write('sessions', { sessions: sessions.value.map(s => ({ localId: s.localId, name: s.name, createdAt: s.createdAt, serverId: s.serverId || '' })), currentLocalSessionId: currentLocalSessionId.value });
   } catch (e) {
 
   }
@@ -437,20 +437,10 @@ const loadState = () => {
     }
 
     const chat = accountScope.read('chat');
-    if (chat) {
-      sessionId.value = chat?.sessionId || '';
-      isConnected.value = !!chat?.isConnected;
-      chatHistory.value = Array.isArray(chat?.chatHistory) ? chat.chatHistory : [];
-      const msgs = Array.isArray(chat?.chatMessages) ? chat.chatMessages : [];
-      if (msgs.length > 0) {
-        chatMessages.length = 0;
-        msgs.forEach(m => chatMessages.push(m));
-      } else {
-        initChatMessages();
-      }
-    } else {
-      initChatMessages();
-    }
+    sessionId.value = chat?.sessionId || '';
+    isConnected.value = false;
+    chatHistory.value = [];
+    initChatMessages();
 
     const ses = accountScope.read('sessions');
     if (ses) {
@@ -459,7 +449,15 @@ const loadState = () => {
     }
     if (!sessions.value.length) {
       createNewSession(true);
+    } else {
+      const selected = sessions.value.find(s => s.localId === currentLocalSessionId.value) || sessions.value[0];
+      currentLocalSessionId.value = selected.localId;
+      if (selected && !selected.serverId && sessionId.value) selected.serverId = sessionId.value;
+      sessionId.value = selected?.serverId || '';
+      if (sessionId.value) void restoreCurrentSession();
     }
+    // 覆盖旧版本本地对话副本，仅保留服务端会话指针。
+    persistState();
   } catch (e) {
 
     initChatMessages();
@@ -484,16 +482,13 @@ const connectionStatus = computed(() => {
 
 // 模式切换函数
 const switchMode = (mode) => {
+  if (sending.value || pendingTurn.value || sessionNotice.value) return;
   const modeNum = mode === 'rag' ? 1 : 2;
   if (currentMode.value === modeNum) return;
 
   currentMode.value = modeNum;
   message.info(`已切换到${mode === 'rag' ? 'RAG' : 'MCP'}模式`);
 
-  // 清空聊天历史，重新开始会话
-  sessionId.value = '';
-  chatHistory.value = [];
-  isConnected.value = false;
 };
 
 // 消息提示
@@ -767,136 +762,154 @@ const simulateStreamResponse = async (messageObj, fullText, ticket) => {
   }
 };
 
-// 发送消息
-const sendMessage = async (value) => {
-  if (!assistantOwner(userStore.userInfo, accessStore.accessToken) || sending.value) return;
-  const ticket = accountScope.ticket();
-  const trimmedValue = value.trim();
-  if (!trimmedValue) {
-    showError('请输入消息内容');
-    return;
+function applySessionHistory(info) {
+  if (!info || info.session_id !== sessionId.value || !['idle', 'running', 'unknown'].includes(info.status) || (info.mode !== 1 && info.mode !== 2)) throw new Error('会话状态无效');
+  const history = info.conversation_history ?? [];
+  if (!Array.isArray(history) || history.length > 25 || history.some(turn => typeof turn?.q !== 'string' || typeof turn?.a !== 'string')) throw new Error('会话历史无效');
+  chatHistory.value = history.flatMap(turn => [{ role: 'user', content: turn.q }, { role: 'assistant', content: turn.a }]);
+  initChatMessages();
+  for (const turn of history) {
+    chatMessages.push({ type: 'user', content: turn.q, time: formatTime(new Date()) });
+    chatMessages.push({ type: 'ai', content: turn.a, time: formatTime(new Date()), sources: [], followUpQuestions: [] });
   }
-
-  globalInputMessage.value = '';
-  lastFailedQuestion.value = '';
-
-  // 添加用户消息到聊天记录
-  const userMessage = {
-    content: trimmedValue,
-    type: 'user',
-    time: formatTime(new Date())
-  };
-  chatMessages.push(userMessage);
-
-  // 添加用户消息到聊天历史
-  chatHistory.value.push({
-    role: 'user',
-    content: trimmedValue
-  });
-
-  const aiMessagePlaceholder = {
-    content: '',
-    type: 'ai',
-    time: formatTime(new Date()),
-    sources: [],
-    followUpQuestions: []
-  };
-  chatMessages.push(aiMessagePlaceholder);
-
-  sending.value = true;
-  await nextTick();
-  if (!accountScope.current(ticket)) return;
-  scrollToBottom();
-
-  try {
-    // 构建查询参数 - 使用新的接口结构
-    const queryParams = {
-      question: trimmedValue,
-      mode: currentMode.value,
-      chat_history: chatHistory.value.slice(-10), // 只保留最近10轮对话
-      use_web_search: useWebSearch.value
-    };
-
-    // 如果有session_id，则传递给后端
-    if (sessionId.value) {
-      queryParams.session_id = sessionId.value;
-    }
-
-    // 支持取消
-    if (abortController.value) {
-      try { abortController.value.abort(); } catch {}
-    }
-    abortController.value = new AbortController();
-    const signal = abortController.value.signal;
-    const response = await assistantQuery(queryParams, { signal });
-    if (!accountScope.current(ticket)) return;
-
-    if (response?.answer) {
-
-      const lastMessage = chatMessages[chatMessages.length - 1];
-      if (lastMessage) {
-        if (response.source_documents && response.source_documents.length > 0) {
-          lastMessage.sources = response.source_documents;
-        }
-        if (response.follow_up_questions && response.follow_up_questions.length > 0) {
-          lastMessage.followUpQuestions = response.follow_up_questions;
-        }
-        if (response.relevance_score !== undefined && response.relevance_score !== null) {
-          lastMessage.relevanceScore = response.relevance_score;
-        }
-        if (response.recall_rate !== undefined && response.recall_rate !== null) {
-          lastMessage.recallRate = response.recall_rate;
-        }
-
-        await simulateStreamResponse(lastMessage, response.answer, ticket);
-        if (!accountScope.current(ticket)) return;
-      }
-
-      // 保存/更新会话ID
-      if (response.session_id) {
-        if (!sessionId.value) {
-
-          showSuccess('会话已建立');
-        }
-        sessionId.value = response.session_id;
-        isConnected.value = true;
-      }
-
-      chatHistory.value.push({
-        role: 'assistant',
-        content: chatMessages[chatMessages.length - 1]?.content || response.answer
-      });
-      errorMessage.value = '';
-      lastFailedQuestion.value = '';
-
+  currentMode.value = info.mode;
+  isConnected.value = true;
+  if (info.status !== 'idle') {
+    if (info.active_turn_id && info.active_question && (info.active_mode === 1 || info.active_mode === 2)) {
+      pendingTurn.value = { question: info.active_question, mode: info.active_mode, turnId: info.active_turn_id, sessionId: info.session_id };
+      sessionNotice.value = info.status === 'unknown' ? '上次请求结果未知，请先核对会话，不要盲目重试。' : '请求仍在处理，请稍后查询状态。';
     } else {
-      throw new Error('AI响应格式不正确');
+      pendingTurn.value = null;
+      sessionNotice.value = '会话存在未确认的请求，请新建会话。';
     }
+  } else if (pendingTurn.value && info.last_turn_id !== pendingTurn.value.turnId) {
+    sessionNotice.value = '请求尚未确认，请核对会话或新建会话。';
+  } else {
+    pendingTurn.value = null;
+    sessionNotice.value = '';
+  }
+}
+
+const restoreCurrentSession = async () => {
+  if (!sessionId.value || sending.value || !assistantOwner(userStore.userInfo, accessStore.accessToken)) return;
+  const ticket = accountScope.ticket();
+  const requested = sessionId.value;
+  sending.value = true;
+  try {
+    const info = await getSessionInfo(requested);
+    if (!accountScope.current(ticket) || sessionId.value !== requested) return;
+    applySessionHistory(info);
   } catch (error) {
     if (!accountScope.current(ticket)) return;
-    // 取消类（停止生成、账户切换）不留「重试」入口，并清掉上一次失败留下的问题（incr3 P3-6）
-    lastFailedQuestion.value = shouldRecordPageError(error) ? trimmedValue : '';
+    if ([403, 404].includes(error?.response?.status)) {
+      const selected = sessions.value.find(s => s.localId === currentLocalSessionId.value);
+      if (selected) selected.serverId = '';
+      sessionId.value = '';
+      pendingTurn.value = null;
+      sessionNotice.value = '';
+      initChatMessages();
+      showError('会话不可访问或已过期，请新建会话');
+    } else sessionNotice.value = '无法读取会话状态，请重新查询或新建会话。';
+  } finally {
+    if (accountScope.current(ticket)) { sending.value = false; persistState(); }
+  }
+};
 
-    if (chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.type === 'ai' && !chatMessages[chatMessages.length - 1]?.content) {
-      chatMessages.pop();
+const recoverTurn = async () => {
+  const pending = pendingTurn.value;
+  if (!pending || sending.value || !assistantOwner(userStore.userInfo, accessStore.accessToken)) return;
+  const ticket = accountScope.ticket();
+  sending.value = true;
+  abortController.value = new AbortController();
+  try {
+    const info = await getSessionInfo(pending.sessionId);
+    if (!accountScope.current(ticket)) return;
+    if (info.status !== 'idle' || info.last_turn_id !== pending.turnId) {
+      sessionNotice.value = info.status === 'unknown' ? '上次请求结果未知，请先核查，不要盲目重试。' : '请求尚未确认完成，请稍后查询或新建会话。';
+      return;
     }
+    const response = await assistantQuery({ question: pending.question, mode: pending.mode, session_id: pending.sessionId, turn_id: pending.turnId }, { signal: abortController.value.signal });
+    if (!accountScope.current(ticket)) return;
+    if (typeof response?.answer !== 'string' || response.session_id !== pending.sessionId || response.turn_id !== pending.turnId) throw new Error('恢复结果无效');
+    applySessionHistory(info);
+    pendingTurn.value = null;
+    sessionNotice.value = '';
+  } catch (error) {
+    if (accountScope.current(ticket) && shouldNotifyPageError(error)) sessionNotice.value = '无法确认会话状态，请稍后重试。';
+  } finally {
+    if (accountScope.current(ticket)) { sending.value = false; abortController.value = null; persistState(); }
+  }
+};
 
-    // 移除用户消息从聊天历史
-    if (chatHistory.value.length > 0 && chatHistory.value[chatHistory.value.length - 1]?.role === 'user') {
-      chatHistory.value.pop();
+// 发送消息
+const sendMessage = async (value) => {
+  if (!assistantOwner(userStore.userInfo, accessStore.accessToken) || sending.value || pendingTurn.value || sessionNotice.value) return;
+  const question = value.trim();
+  if (!question) { showError('请输入消息内容'); return; }
+  if (!globalThis.crypto?.randomUUID) { showError('当前环境无法安全生成请求 ID'); return; }
+  const ticket = accountScope.ticket();
+  const turnId = globalThis.crypto.randomUUID();
+  const mode = currentMode.value;
+  let sent = false;
+  sending.value = true;
+  abortController.value = new AbortController();
+  const signal = abortController.value.signal;
+  try {
+    if (!sessionId.value) {
+      const created = await createAssistantSession({ signal });
+      if (!accountScope.current(ticket)) return;
+      if (!created?.session_id) throw new Error('会话创建失败');
+      sessionId.value = created.session_id;
+      const selected = sessions.value.find(s => s.localId === currentLocalSessionId.value);
+      if (selected) selected.serverId = created.session_id;
+      persistState();
     }
-
-    // 使用新的错误处理机制
-    handleApiError(error, 'AI查询');
+    const sid = sessionId.value;
+    pendingTurn.value = { question, mode, turnId, sessionId: sid };
+    globalInputMessage.value = '';
+    lastFailedQuestion.value = '';
+    chatMessages.push({ content: question, type: 'user', time: formatTime(new Date()) });
+    chatHistory.value.push({ role: 'user', content: question });
+    const placeholder = { content: '', type: 'ai', time: formatTime(new Date()), sources: [], followUpQuestions: [] };
+    chatMessages.push(placeholder);
+    await nextTick();
+    if (!accountScope.current(ticket)) return;
+    sent = true;
+    const response = await assistantQuery({ question, mode, session_id: sid, turn_id: turnId }, { signal });
+    if (!accountScope.current(ticket)) return;
+    if (typeof response?.answer !== 'string' || response.session_id !== sid || response.turn_id !== turnId) throw new Error('响应格式无效');
+    const displayed = chatMessages.at(-1);
+    displayed.sources = response.source_documents || [];
+    displayed.followUpQuestions = response.follow_up_questions || [];
+    await simulateStreamResponse(displayed, response.answer, ticket);
+    if (!accountScope.current(ticket)) return;
+    chatHistory.value.push({ role: 'assistant', content: response.answer });
+    pendingTurn.value = null;
+    sessionNotice.value = '';
+    errorMessage.value = '';
+    isConnected.value = true;
+  } catch (error) {
+    if (!accountScope.current(ticket)) return;
+    if ([403, 404].includes(error?.response?.status)) {
+      const selected = sessions.value.find(s => s.localId === currentLocalSessionId.value);
+      if (selected) selected.serverId = '';
+      pendingTurn.value = null;
+      sessionNotice.value = '';
+      handleApiError(error, 'AI查询');
+    } else if (sent) {
+      sessionNotice.value = '本次请求结果尚未确认，请先查询会话状态。';
+      if (chatMessages.at(-1)?.type === 'ai' && !chatMessages.at(-1)?.content) chatMessages.pop();
+    } else {
+      pendingTurn.value = null;
+      lastFailedQuestion.value = shouldRecordPageError(error) ? question : '';
+      handleApiError(error, 'AI查询');
+    }
   } finally {
     if (accountScope.current(ticket)) {
       sending.value = false;
       abortController.value = null;
       await nextTick();
-      if (accountScope.current(ticket)) {
-        scrollToBottom();
-        persistState();
-      }
+      if (accountScope.current(ticket)) { scrollToBottom(); persistState(); }
     }
   }
 };
@@ -940,52 +953,10 @@ const refreshKnowledge = async () => {
 };
 
 // 清空聊天
-const clearChat = async () => {
-  if (chatMessages.length <= 1) {
-    message.error('暂无聊天记录');
-    return;
-  }
-
-  if (!confirm('确定要清空所有聊天记录和缓存吗？此操作不可恢复。')) {
-    return;
-  }
-
-  cancelGeneration();
-  const identity = accountScope.identity();
-  try {
-    // 清除服务器缓存（如果有会话）
-    if (sessionId.value) {
-      try {
-        const response = await clearAssistantCache();
-
-        if (!accountScope.sameOwner(identity)) return;
-        showSuccess('服务器缓存已清除');
-      } catch (error) {
-
-        // 继续清空本地记录
-      }
-    }
-
-    if (!accountScope.sameOwner(identity)) return;
-    // 清空本地状态
-    sessionId.value = '';
-    chatHistory.value = [];
-    isConnected.value = false;
-    initChatMessages();
-
-    message.success('聊天记录已清空');
-    persistState();
-  } catch (error) {
-
-    if (!accountScope.sameOwner(identity)) return;
-    // 即使出错也要清空本地记录
-    sessionId.value = '';
-    chatHistory.value = [];
-    isConnected.value = false;
-    initChatMessages();
-    if (shouldNotifyPageError(error)) message.warning('清空完成，但可能存在部分错误');
-    persistState();
-  }
+const clearChat = () => {
+  if (pendingTurn.value) { message.warning('请先核查未确认请求，再新建会话'); return; }
+  if (!confirm('新建会话会清空当前显示；旧服务端会话按保留期过期。继续？')) return;
+  createNewSession();
 };
 
 // 快捷消息发送
@@ -1156,8 +1127,10 @@ const cancelGeneration = () => {
     try { abortController.value.abort(); } catch {}
     abortController.value = null;
     sending.value = false;
-    message.info('已取消');
+    if (pendingTurn.value) sessionNotice.value = '已停止等待，请先查询请求结果。';
+    message.info('已停止等待');
   }
+  sending.value = false;
 };
 
 // 会话管理
@@ -1172,6 +1145,8 @@ const createNewSession = (silent = false) => {
   currentLocalSessionId.value = newSession.localId;
   // 重置服务端会话，但保留本地消息历史的第一条欢迎消息
   sessionId.value = '';
+  pendingTurn.value = null;
+  sessionNotice.value = '';
   chatHistory.value = [];
   isConnected.value = false;
   initChatMessages();
@@ -1181,14 +1156,17 @@ const createNewSession = (silent = false) => {
 
 const switchToSession = (localId) => {
   if (currentLocalSessionId.value === localId) return;
-  currentLocalSessionId.value = localId;
   cancelGeneration();
+  currentLocalSessionId.value = localId;
   chatHistory.value = [];
   initChatMessages();
-  sessionId.value = '';
+  sessionId.value = sessions.value.find(s => s.localId === localId)?.serverId || '';
+  pendingTurn.value = null;
+  sessionNotice.value = '';
   isConnected.value = false;
   message.success('已切换会话');
   persistState();
+  if (sessionId.value) void restoreCurrentSession();
 };
 
 const renameSession = (localId) => {
@@ -1204,13 +1182,15 @@ const renameSession = (localId) => {
 const deleteSession = (localId) => {
   const idx = sessions.value.findIndex(s => s.localId === localId);
   if (idx === -1) return;
-  if (!confirm('确认删除该会话？')) return;
+  if (currentLocalSessionId.value === localId && pendingTurn.value) { message.warning('请先核查未确认请求'); return; }
+  if (!confirm('仅移除本地会话索引，服务端会话将在保留期后过期。确认移除？')) return;
   sessions.value.splice(idx, 1);
   if (currentLocalSessionId.value === localId) {
     if (sessions.value.length === 0) {
       createNewSession(true);
     } else {
-      currentLocalSessionId.value = sessions.value[0].localId;
+      currentLocalSessionId.value = '';
+      switchToSession(sessions.value[0].localId);
     }
   }
   persistState();
@@ -1440,6 +1420,8 @@ watch(() => assistantOwner(userStore.userInfo, accessStore.accessToken), (owner)
   isRefreshing.value = false;
   globalInputMessage.value = '';
   lastFailedQuestion.value = '';
+  pendingTurn.value = null;
+  sessionNotice.value = '';
   errorMessage.value = '';
   sessionId.value = '';
   chatHistory.value = [];
