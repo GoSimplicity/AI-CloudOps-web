@@ -17,6 +17,13 @@ export async function unicorn(): Promise<Linter.Config[]> {
 
         'unicorn/consistent-destructuring': 'off',
         'unicorn/consistent-function-scoping': 'off',
+        // Unicorn 55 delegates to ESLint's core rule without its default options.
+        // Pass the unchanged default terms explicitly for ESLint >= 9.15.
+        // https://github.com/sindresorhus/eslint-plugin-unicorn/issues/2496
+        'unicorn/expiring-todo-comments': [
+          'error',
+          { terms: ['todo', 'fixme', 'xxx'] },
+        ],
         'unicorn/filename-case': 'off',
         'unicorn/import-style': 'off',
         'unicorn/no-array-for-each': 'off',
