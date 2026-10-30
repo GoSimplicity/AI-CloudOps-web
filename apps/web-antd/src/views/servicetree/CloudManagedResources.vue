@@ -5,7 +5,7 @@ import { message } from 'ant-design-vue';
 import { getCloudAccountDetailApi, getCloudAccountListApi, type CloudAccount, type CloudAccountRegion } from '#/api/core/tree/tree_account';
 import {
   getManagedPermissions, getManagedResourceDetail, getManagedResources, getManagedSyncHistory, managedPermissions as codes,
-  syncManagedResources, type ManagedCloudHistory, type ManagedCloudKind, type ManagedCloudResource,
+  syncManagedResources, resolveManagedHistory, type ManagedCloudHistory, type ManagedCloudKind, type ManagedCloudResource,
   type ManagedCloudScope, type ManagedCloudSyncResult, type ManagedPermissions,
 } from '#/api/core/tree/tree_cloud';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
@@ -30,6 +30,12 @@ const total = ref(0);
 const loading = ref(false);
 const regionLoading = ref(false);
 const syncing = ref(false);
+const reviewing = ref(false);
+const reviewEntry = ref<ManagedCloudHistory | null>(null);
+const reviewReason = ref('');
+const reviewVerified = ref(false);
+const reviewError = ref('');
+const reviewUncertain = ref(false);
 const historyLoading = ref(false);
 const error = ref('');
 const regionError = ref('');
@@ -52,7 +58,7 @@ const can = (code: string) => !!permissions.value && (permissions.value.super_ad
 const current = (epoch: number, scope?: number) => alive && epoch === session && authenticated() && (scope === undefined || scope === selection);
 const scope = computed<ManagedCloudScope | null>(() => safeId(accountId.value) && safeId(regionId.value) ? { cloud_account_id: accountId.value, cloud_account_region_id: regionId.value, kind: kind.value } : null);
 const scopeAllowed = computed(() => !!scope.value && can(codes.accountList) && can(codes.accountDetail) && accounts.value.some((a) => a.id === accountId.value) && regions.value.some((r) => r.id === regionId.value));
-const canSync = computed(() => scopeAllowed.value && can(codes.sync) && can(codes.history) && !historyLoading.value && !historyBlocked.value && !localBlocked.value && !syncing.value);
+const canSync = computed(() => scopeAllowed.value && can(codes.sync) && can(codes.history) && !historyLoading.value && !historyBlocked.value && !localBlocked.value && !syncing.value && !reviewing.value);
 const validPermissions = (value: ManagedPermissions) => value?.version === 2 && typeof value.super_admin === 'boolean' && Array.isArray(value.permissions) && value.permissions.every((item) => typeof item === 'string');
 const safeText = (value: unknown) => typeof value === 'string' && value.length <= 500 ? value : '—';
 const dateText = (value: unknown) => { if (typeof value !== 'string') return '—'; const d = new Date(value); return Number.isNaN(d.valueOf()) ? '—' : d.toLocaleString('zh-CN'); };
@@ -64,8 +70,8 @@ function readLocal(target: ManagedCloudScope): boolean {
   try { storageUnavailable.value = false; return localStorage.getItem(keyFor(target, owner.value.id!)) !== null; }
   catch { storageUnavailable.value = true; return true; }
 }
-function writeLocal(target: ManagedCloudScope, userId: string, pending: boolean): boolean {
-  try { const key = keyFor(target, userId); if (pending) localStorage.setItem(key, 'pending'); else localStorage.removeItem(key); return true; }
+function writeLocal(target: ManagedCloudScope, userId: string, pending: boolean, historyId?: number): boolean {
+  try { const key = keyFor(target, userId); if (pending) localStorage.setItem(key, safeId(historyId) ? `history:${historyId}` : 'pending'); else localStorage.removeItem(key); return true; }
   catch { return false; }
 }
 async function refreshPermissions(epoch: number) {
@@ -75,6 +81,7 @@ async function refreshPermissions(epoch: number) {
     if (!current(epoch) || ticket !== permissionTicket) return false;
     if (!validPermissions(next)) throw new Error('invalid permissions');
     permissions.value = next;
+    if (!can(codes.resolve)) { reviewEntry.value = null; reviewReason.value = ''; reviewVerified.value = false; }
     if (!can(codes.accountList) || !can(codes.accountDetail)) { accounts.value = []; regions.value = []; accountId.value = undefined; regionId.value = undefined; clearScope(); }
     if (!can(codes.list)) { listTicket++; records.value = []; total.value = 0; }
     if (!can(codes.detail)) { detailTicket++; selected.value = null; }
@@ -105,6 +112,7 @@ async function loadAccounts() {
   } catch { if (current(epoch)) { accounts.value = []; error.value = '读取账户失败或数量超过上限，请重试'; } }
 }
 function clearScope() {
+  reviewEntry.value = null; reviewReason.value = ''; reviewVerified.value = false; reviewError.value = '';
   selection++; listTicket++; detailTicket++; historyTicket++;
   records.value = []; history.value = []; selected.value = null; total.value = 0; page.value = 1;
   result.value = null; idsText.value = ''; historyBlocked.value = true; localBlocked.value = true;
@@ -137,6 +145,18 @@ async function loadRecords() {
   } catch { if (current(epoch, selectionAtStart) && ticket === listTicket) { records.value = []; total.value = 0; error.value = '资源列表读取失败，请重试'; } }
   finally { if (current(epoch, selectionAtStart) && ticket === listTicket) loading.value = false; }
 }
+function isReviewed(entry: ManagedCloudHistory): boolean {
+  return typeof entry.resolved_at === 'string' && !Number.isNaN(Date.parse(entry.resolved_at)) && safeId(entry.resolved_by) && typeof entry.resolution_reason === 'string' && entry.resolution_reason.trim().length >= 10 && entry.retry_safe === true;
+}
+function clearReviewedMarker(target: ManagedCloudScope, entries: ManagedCloudHistory[]) {
+  try {
+    const marker = localStorage.getItem(keyFor(target, owner.value.id!));
+    if (entries.some((item) => marker === `history:${item.id}` && isReviewed(item))) {
+      localStorage.removeItem(keyFor(target, owner.value.id!));
+    }
+    localBlocked.value = readLocal(target);
+  } catch { storageUnavailable.value = true; localBlocked.value = true; }
+}
 async function loadHistory() {
   const target = scope.value, epoch = session, selectedScope = selection, ticket = ++historyTicket;
   if (!target || !current(epoch, selectedScope) || !can(codes.history)) { historyBlocked.value = true; return false; }
@@ -152,7 +172,7 @@ async function loadHistory() {
       for (const item of data.items) { if (seen.has(item.id)) throw new Error('duplicate history'); seen.add(item.id); }
       all.push(...data.items);
       if (all.length > expected) throw new Error('history count inconsistent');
-      if (all.length === expected) { history.value = all.slice(0, 20); historyBlocked.value = all.some((item) => item.status === 'unknown' || item.status === 'running' || item.retry_safe === false || (['failed', 'cancelled'].includes(item.status) && item.retry_safe !== true)); return true; }
+      if (all.length === expected) { history.value = all.slice(0, 20); historyBlocked.value = all.some((item) => !isReviewed(item) && (item.status === 'unknown' || item.status === 'running' || item.retry_safe === false || (['failed', 'cancelled'].includes(item.status) && item.retry_safe !== true))); clearReviewedMarker(target, all); return true; }
       if (!data.items.length || all.length >= 1000) throw new Error('history incomplete');
     }
     throw new Error('history incomplete');
@@ -191,6 +211,7 @@ async function sync() {
     if (!current(epoch, selectionAtStart)) return;
     if (!response || !['success', 'failed', 'cancelled', 'unknown'].includes(response.status) || typeof response.retry_safe !== 'boolean' || !Number.isSafeInteger(response.count) || !Number.isSafeInteger(response.new_count) || !Number.isSafeInteger(response.update_count)) throw new Error('invalid result');
     result.value = response;
+    if (safeId(response.history_id) && response.retry_safe === false) writeLocal(target, userId, true, response.history_id);
     if (response.status !== 'unknown' && response.retry_safe === true && !['audit_unavailable', 'commit_unknown_audit_unavailable'].includes(response.error_category ?? '')) {
       localBlocked.value = !writeLocal(target, userId, false);
       storageUnavailable.value = localBlocked.value;
@@ -201,15 +222,40 @@ async function sync() {
     await Promise.all([loadRecords(), loadHistory()]);
   } catch (err) {
     if (current(epoch, selectionAtStart)) { localBlocked.value = true; error.value = '同步结果未确认，请先核对历史，不能直接重试'; if (shouldNotifyPageError(err)) message.error(error.value); }
-  } finally { if (current(epoch, selectionAtStart)) syncing.value = false; }
+  } finally { if (current(epoch)) syncing.value = false; }
 }
 function onStorage(event: StorageEvent) {
   const target = scope.value;
   if (target && owner.value.id && event.key === keyFor(target, owner.value.id)) localBlocked.value = readLocal(target);
 }
 window.addEventListener('storage', onStorage);
+function openReview(entry: ManagedCloudHistory) {
+  if (!can(codes.resolve) || syncing.value || reviewing.value || isReviewed(entry)) return;
+  reviewEntry.value = entry; reviewReason.value = ''; reviewVerified.value = false; reviewError.value = ''; reviewUncertain.value = false;
+}
+async function submitReview() {
+  const entry = reviewEntry.value, target = scope.value, epoch = session, selectedScope = selection;
+  if (!entry || !target || reviewing.value || reviewUncertain.value || !reviewVerified.value || !can(codes.resolve)) return;
+  const reason = reviewReason.value.trim();
+  if ([...reason].length < 10 || [...reason].length > 1000) { reviewError.value = '请填写10至1000字的核对理由'; return; }
+  reviewing.value = true; reviewError.value = '';
+  try {
+    if (!await refreshPermissions(epoch) || !current(epoch, selectedScope) || !can(codes.resolve) || !can(codes.history)) return;
+    await resolveManagedHistory(entry.id, { ...target, resources_verified: true, reason });
+    if (!current(epoch, selectedScope)) return;
+    if (!await loadHistory() || !current(epoch, selectedScope)) { if (current(epoch, selectedScope)) reviewUncertain.value = true; return; }
+    if (!history.value.some((item) => item.id === entry.id && isReviewed(item))) {
+      reviewUncertain.value = true; reviewError.value = '尚未读取到持久核对记录，请先刷新历史，不要重复提交'; return;
+    }
+    reviewEntry.value = null;
+    message.success('核对记录已保存，原同步结果保持不变');
+  } catch {
+    if (current(epoch, selectedScope)) { reviewUncertain.value = true; reviewError.value = '核对结果未确认，请先刷新历史；请勿盲目重复提交'; }
+  } finally { if (current(epoch)) reviewing.value = false; }
+}
 watch([() => owner.value.authenticated, () => owner.value.id], () => {
   session++; selection++; listTicket++; detailTicket++; permissionTicket++; historyTicket++;
+  reviewEntry.value = null; reviewReason.value = ''; reviewVerified.value = false; reviewError.value = ''; reviewing.value = false;
   permissions.value = null; accounts.value = []; regions.value = []; accountId.value = undefined; regionId.value = undefined; kind.value = 'rds';
   records.value = []; history.value = []; selected.value = null; total.value = 0; result.value = null; idsText.value = '';
   historyBlocked.value = true; localBlocked.value = true; storageUnavailable.value = false; syncing.value = false; loading.value = false;
@@ -226,9 +272,9 @@ onBeforeUnmount(() => { alive = false; session++; selection++; listTicket++; det
     <a-alert v-if="error" type="error" :message="error" show-icon />
     <a-alert v-if="!can(codes.accountList) || !can(codes.accountDetail)" type="warning" message="当前用户缺少账户或地域读取权限" show-icon />
     <div class="managed-filters">
-      <a-select v-model:value="accountId" aria-label="托管资源账户" placeholder="选择已启用的阿里云账户" :disabled="syncing || !can(codes.accountList) || !can(codes.accountDetail)" :options="accounts.map((a) => ({ value: a.id, label: a.name }))" @change="chooseAccount" />
-      <a-select v-model:value="regionId" aria-label="托管资源地域" placeholder="选择已启用地域" :disabled="syncing || regionLoading || !accountId" :loading="regionLoading" :options="regions.map((r) => ({ value: r.id, label: r.region_name || r.region }))" @change="chooseRegion" />
-      <a-select v-model:value="kind" aria-label="托管资源类型" :disabled="syncing" @change="chooseKind">
+      <a-select v-model:value="accountId" aria-label="托管资源账户" placeholder="选择已启用的阿里云账户" :disabled="syncing || reviewing || !can(codes.accountList) || !can(codes.accountDetail)" :options="accounts.map((a) => ({ value: a.id, label: a.name }))" @change="chooseAccount" />
+      <a-select v-model:value="regionId" aria-label="托管资源地域" placeholder="选择已启用地域" :disabled="syncing || reviewing || regionLoading || !accountId" :loading="regionLoading" :options="regions.map((r) => ({ value: r.id, label: r.region_name || r.region }))" @change="chooseRegion" />
+      <a-select v-model:value="kind" aria-label="托管资源类型" :disabled="syncing || reviewing" @change="chooseKind">
         <a-select-option value="rds">RDS 数据库</a-select-option><a-select-option value="clb">传统型负载均衡 CLB</a-select-option><a-select-option value="cache">缓存实例</a-select-option>
       </a-select>
     </div>
@@ -237,14 +283,14 @@ onBeforeUnmount(() => { alive = false; session++; selection++; listTicket++; det
     <template v-if="scope">
       <div class="managed-sync">
         <label for="managed-resource-ids">资源 ID（1–100 个，以换行或逗号分隔）</label>
-        <a-textarea id="managed-resource-ids" v-model:value="idsText" :disabled="syncing" :rows="3" placeholder="例如 rm-example" />
+        <a-textarea id="managed-resource-ids" v-model:value="idsText" :disabled="syncing || reviewing" :rows="3" placeholder="例如 rm-example" />
         <a-button type="primary" :loading="syncing" :disabled="!canSync" @click="sync">同步指定 ID</a-button>
       </div>
       <a-alert v-if="!can(codes.history)" type="warning" message="缺少同步历史权限，无法安全发起同步" show-icon />
       <a-alert v-else-if="historyError" type="warning" :message="historyError" show-icon />
       <a-alert v-else-if="historyBlocked || localBlocked" type="warning" show-icon :message="storageUnavailable ? '本机同步状态不可用，暂不能安全同步' : '该范围存在未确认操作，请先核对资源与历史；当前不能直接重试。'" />
       <a-alert v-if="result" :type="result.status === 'success' ? 'success' : 'warning'" show-icon :message="result.status === 'success' ? `已同步 ${result.count} 项` : '同步未完成或结果未知，请核对历史'" :description="result.history_id ? `历史记录 ${result.history_id}` : '没有可确认的持久历史记录'" />
-      <div class="managed-header"><h3>{{ kindName[kind] }}</h3><a-button :loading="loading || historyLoading" :disabled="syncing" @click="refreshScope">刷新资源与历史</a-button></div>
+      <div class="managed-header"><h3>{{ kindName[kind] }}</h3><a-button :loading="loading || historyLoading" :disabled="syncing || reviewing" @click="refreshScope">刷新资源与历史</a-button></div>
       <a-alert v-if="!can(codes.list)" type="info" message="当前用户无托管资源列表权限" show-icon />
       <a-table v-else :data-source="records" :loading="loading" :pagination="false" row-key="id" size="small" :scroll="{ x: 700 }">
         <a-table-column title="资源 ID" key="provider_id"><template #default="{ record }">{{ idPattern.test(record.provider_id ?? '') ? record.provider_id : '—' }}</template></a-table-column>
@@ -257,9 +303,22 @@ onBeforeUnmount(() => { alive = false; session++; selection++; listTicket++; det
       <a-alert v-if="detailError" type="error" :message="detailError" show-icon />
       <h3>最近同步历史</h3>
       <a-spin v-if="can(codes.history)" :spinning="historyLoading"><p v-if="!history.length && !historyLoading && !historyError">暂无历史</p>
-        <ul v-else class="managed-history"><li v-for="entry in history" :key="entry.id">{{ dateText(entry.started_at) }} · {{ stateName[entry.status] ?? '未知状态' }} · {{ Array.isArray(entry.resource_ids) ? entry.resource_ids.filter((id) => idPattern.test(id)).join(', ') : '—' }} · {{ entry.retry_safe === false ? '不可直接重试' : '请按结果核对' }}</li></ul>
+        <ul v-else class="managed-history"><li v-for="entry in history" :key="entry.id">{{ dateText(entry.started_at) }} · {{ stateName[entry.status] ?? '未知状态' }} · {{ Array.isArray(entry.resource_ids) ? entry.resource_ids.filter((id) => idPattern.test(id)).join(', ') : '—' }} · {{ isReviewed(entry) ? '已人工核对' : entry.retry_safe === false ? '不可直接重试' : '请按结果核对' }}
+          <template v-if="isReviewed(entry)"> · {{ dateText(entry.resolved_at) }} · 操作人 {{ entry.resolved_by }} · {{ entry.resolution_reason }}</template>
+          <a-button v-else-if="can(codes.resolve) && ['unknown', 'running', 'success'].includes(entry.status)" type="link" :disabled="syncing || reviewing" @click="openReview(entry)">记录人工核对</a-button>
+        </li></ul>
       </a-spin>
     </template>
+    <a-modal :open="!!reviewEntry" title="记录人工核对" ok-text="保存核对记录" :confirm-loading="reviewing" :closable="!reviewing" :mask-closable="false" :cancel-button-props="{ disabled: reviewing }" :ok-button-props="{ disabled: !reviewVerified || reviewUncertain || !can(codes.resolve) }" @ok="submitReview" @cancel="reviewEntry = null">
+      <template v-if="reviewEntry">
+      <p>请先核对云端实际资源与本地记录。此操作只保存核对依据，不会重新同步或将原结果改为成功。</p>
+      <p>历史 {{ reviewEntry?.id }}：{{ reviewEntry?.resource_ids?.join(', ') }}</p>
+      <label for="managed-review-reason">核对依据与结果</label>
+      <a-textarea id="managed-review-reason" v-model:value="reviewReason" :disabled="reviewing" :rows="4" :maxlength="1000" />
+      <a-checkbox v-model:checked="reviewVerified" :disabled="reviewing">已核对实际资源与本地状态</a-checkbox>
+      <a-alert v-if="reviewError" type="warning" :message="reviewError" show-icon />
+      </template>
+    </a-modal>
     <a-drawer :open="!!selected" title="托管资源详情" width="min(600px, 100vw)" @close="closeDetail">
       <template v-if="selected">
         <p>资源 ID：{{ idPattern.test(selected.provider_id ?? '') ? selected.provider_id : '—' }}</p>

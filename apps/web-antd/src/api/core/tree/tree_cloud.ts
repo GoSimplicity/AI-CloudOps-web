@@ -367,6 +367,7 @@ export interface ManagedCloudHistory {
   resource_ids: string[]; status: 'running' | 'success' | 'failed' | 'cancelled' | 'unknown';
   count: number; new_count: number; update_count: number; error_category?: string; retry_safe?: boolean;
   operator_id: number; started_at: string; finished_at?: string | null;
+  resolved_at?: string | null; resolved_by?: number; resolution_reason?: string;
 }
 export interface ManagedCloudScope { cloud_account_id: number; cloud_account_region_id: number; kind: ManagedCloudKind }
 export interface ManagedCloudSyncResult {
@@ -381,6 +382,7 @@ export const managedPermissions = {
   detail: 'GET /api/tree/cloud/managed/detail/:id',
   history: 'GET /api/tree/cloud/managed/history',
   sync: 'POST /api/tree/cloud/managed/sync',
+  resolve: 'POST /api/tree/cloud/managed/history/:id/resolve',
 } as const;
 export const getManagedPermissions = () => requestClient.get<ManagedPermissions>('/user/permissions');
 export const getManagedResources = (params: ManagedCloudScope & { page: number; size: number }) =>
@@ -391,3 +393,6 @@ export const getManagedSyncHistory = (params: ManagedCloudScope & { page: number
   requestClient.get<{ items: ManagedCloudHistory[]; total: number }>('/tree/cloud/managed/history', { params });
 export const syncManagedResources = (data: ManagedCloudScope & { resource_ids: string[] }) =>
   requestClient.post<ManagedCloudSyncResult>('/tree/cloud/managed/sync', data);
+
+export const resolveManagedHistory = (id: number, data: ManagedCloudScope & { resources_verified: true; reason: string }) =>
+  requestClient.post(`/tree/cloud/managed/history/${id}/resolve`, data);
