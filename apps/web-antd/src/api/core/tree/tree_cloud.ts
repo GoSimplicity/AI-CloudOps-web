@@ -364,6 +364,7 @@ export interface ManagedCloudResource {
 }
 export interface ManagedCloudHistory {
   id: number; cloud_account_id: number; cloud_account_region_id: number; kind: ManagedCloudKind;
+  operation_id?: string;
   resource_ids: string[]; status: 'running' | 'success' | 'failed' | 'cancelled' | 'unknown';
   count: number; new_count: number; update_count: number; error_category?: string; retry_safe?: boolean;
   operator_id: number; started_at: string; finished_at?: string | null;
@@ -371,6 +372,7 @@ export interface ManagedCloudHistory {
 }
 export interface ManagedCloudScope { cloud_account_id: number; cloud_account_region_id: number; kind: ManagedCloudKind }
 export interface ManagedCloudSyncResult {
+  operation_id?: string;
   status: 'success' | 'failed' | 'cancelled' | 'unknown'; history_id?: number;
   count: number; new_count: number; update_count: number; error_category?: string; retry_safe: boolean;
 }
@@ -381,6 +383,8 @@ export const managedPermissions = {
   list: 'GET /api/tree/cloud/managed/list',
   detail: 'GET /api/tree/cloud/managed/detail/:id',
   history: 'GET /api/tree/cloud/managed/history',
+  operationRead: 'GET /api/tree/cloud/managed/operations/:operation_id',
+  operationReview: 'POST /api/tree/cloud/managed/operations/:operation_id/resolve',
   sync: 'POST /api/tree/cloud/managed/sync',
   resolve: 'POST /api/tree/cloud/managed/history/:id/resolve',
 } as const;
@@ -391,8 +395,21 @@ export const getManagedResourceDetail = (id: number, params: ManagedCloudScope) 
   requestClient.get<ManagedCloudResource>(`/tree/cloud/managed/detail/${id}`, { params });
 export const getManagedSyncHistory = (params: ManagedCloudScope & { page: number; size: number }) =>
   requestClient.get<{ items: ManagedCloudHistory[]; total: number }>('/tree/cloud/managed/history', { params });
-export const syncManagedResources = (data: ManagedCloudScope & { resource_ids: string[] }) =>
+export const syncManagedResources = (data: ManagedCloudScope & { resource_ids: string[]; operation_id: string }) =>
   requestClient.post<ManagedCloudSyncResult>('/tree/cloud/managed/sync', data);
 
 export const resolveManagedHistory = (id: number, data: ManagedCloudScope & { resources_verified: true; reason: string }) =>
   requestClient.post(`/tree/cloud/managed/history/${id}/resolve`, data);
+
+export interface ManagedCloudOperation extends ManagedCloudScope {
+ operation_id: string;
+ resource_ids: string[];
+ state: 'running' | 'unknown' | 'completed' | 'reviewed';
+ result?: ManagedCloudSyncResult;
+ reviewed_at?: string;
+ reviewed_by?: number;
+ review_reason?: string;
+ previous_state?: string;
+}
+export const getManagedOperation = (operationID: string) => requestClient.get<ManagedCloudOperation>(`/tree/cloud/managed/operations/${operationID}`);
+export const reviewManagedOperation = (operationID: string, data: ManagedCloudScope & { resource_ids: string[]; resources_verified: true; reason: string }) => requestClient.post<ManagedCloudOperation>(`/tree/cloud/managed/operations/${operationID}/resolve`, data);

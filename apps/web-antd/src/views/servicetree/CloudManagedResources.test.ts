@@ -6,15 +6,15 @@ import CloudManagedResources from './CloudManagedResources.vue';
 
 const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const api = vi.hoisted(() => ({
-  getManagedPermissions: vi.fn(), getManagedResources: vi.fn(), getManagedResourceDetail: vi.fn(), getManagedSyncHistory: vi.fn(), syncManagedResources: vi.fn(), resolveManagedHistory: vi.fn(),
+  getManagedPermissions: vi.fn(), getManagedResources: vi.fn(), getManagedResourceDetail: vi.fn(), getManagedSyncHistory: vi.fn(), syncManagedResources: vi.fn(), resolveManagedHistory: vi.fn(), getManagedOperation: vi.fn(), reviewManagedOperation: vi.fn(),
   getCloudAccountListApi: vi.fn(), getCloudAccountDetailApi: vi.fn(),
 }));
 vi.mock('@vben/stores', () => ({ useUserStore: () => account.user, useAccessStore: () => account.access }));
 vi.mock('#/api/core/tree/tree_account', async (original) => ({ ...(await original<typeof import('#/api/core/tree/tree_account')>()), getCloudAccountListApi: api.getCloudAccountListApi, getCloudAccountDetailApi: api.getCloudAccountDetailApi }));
-vi.mock('#/api/core/tree/tree_cloud', async (original) => ({ ...(await original<typeof import('#/api/core/tree/tree_cloud')>()), getManagedPermissions: api.getManagedPermissions, getManagedResources: api.getManagedResources, getManagedResourceDetail: api.getManagedResourceDetail, getManagedSyncHistory: api.getManagedSyncHistory, syncManagedResources: api.syncManagedResources, resolveManagedHistory: api.resolveManagedHistory }));
+vi.mock('#/api/core/tree/tree_cloud', async (original) => ({ ...(await original<typeof import('#/api/core/tree/tree_cloud')>()), getManagedPermissions: api.getManagedPermissions, getManagedResources: api.getManagedResources, getManagedResourceDetail: api.getManagedResourceDetail, getManagedSyncHistory: api.getManagedSyncHistory, syncManagedResources: api.syncManagedResources, resolveManagedHistory: api.resolveManagedHistory, getManagedOperation: api.getManagedOperation, reviewManagedOperation: api.reviewManagedOperation }));
 const http = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: http }));
-const codes = ['GET /api/tree/cloud/account/list', 'GET /api/tree/cloud/account/:id/detail', 'GET /api/tree/cloud/managed/list', 'GET /api/tree/cloud/managed/detail/:id', 'GET /api/tree/cloud/managed/history', 'POST /api/tree/cloud/managed/sync', 'POST /api/tree/cloud/managed/history/:id/resolve'];
+const codes = ['GET /api/tree/cloud/account/list', 'GET /api/tree/cloud/account/:id/detail', 'GET /api/tree/cloud/managed/list', 'GET /api/tree/cloud/managed/detail/:id', 'GET /api/tree/cloud/managed/history', 'POST /api/tree/cloud/managed/sync', 'POST /api/tree/cloud/managed/history/:id/resolve', 'GET /api/tree/cloud/managed/operations/:operation_id', 'POST /api/tree/cloud/managed/operations/:operation_id/resolve'];
 const perms = (permissions = codes, super_admin = false) => ({ version: 2, super_admin, permissions });
 const acct = { id: 7, name: '阿里账户', provider: 1, status: 1, regions: [{ id: 11, cloud_account_id: 7, region: 'cn-hangzhou', region_name: '杭州', status: 1 }, { id: 12, cloud_account_id: 7, region: 'cn-disabled', status: 2 }, { id: 13, cloud_account_id: 99, region: 'foreign', status: 1 }] };
 const row = () => ({ id: 5, cloud_account_id: 7, cloud_account_region_id: 11, kind: 'rds', provider_id: 'rm-one', rds: { instance_id: 'rm-one', name: '数据库', region: 'cn-hangzhou', zone: 'cn-hangzhou-a', status: 'Running', engine: 'MySQL', engine_version: '8', instance_class: 'db' }, local_description: '', last_sync_time: '2026-10-29T00:00:00Z', password: 'private-ssh-marker' });
@@ -38,15 +38,15 @@ beforeEach(() => {
   api.getCloudAccountListApi.mockResolvedValue({ items: [acct, { id: 8, name: '其他云', provider: 2, status: 1 }, { id: 9, name: '禁用阿里', provider: 1, status: 2 }], total: 3 });
   api.getCloudAccountDetailApi.mockResolvedValue(acct); api.getManagedResources.mockResolvedValue({ items: [row()], total: 1 });
   api.getManagedResourceDetail.mockResolvedValue(row()); api.getManagedSyncHistory.mockResolvedValue({ items: [], total: 0 });
-  api.syncManagedResources.mockResolvedValue({ status: 'success', history_id: 31, count: 1, new_count: 1, update_count: 0, retry_safe: true });
+  api.syncManagedResources.mockImplementation(async (request) => ({ operation_id: request.operation_id, status: 'success', history_id: 31, count: request.resource_ids.length, new_count: request.resource_ids.length, update_count: 0, retry_safe: true }));
   vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn() })));
   const getStyle = window.getComputedStyle; vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => getStyle(element));
 });
 afterEach(() => { wrapper?.unmount(); wrapper = undefined; localStorage.clear(); message.destroy(); document.body.innerHTML = ''; vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-it('仅提供启用阿里账户与本账户启用地域，展示独立 RDS 字段', async () => {
+it('仅提供阿里账户及本账户地域，展示独立 RDS 字段', async () => {
   await start(); await selectScope();
-  expect(api.getCloudAccountListApi).toHaveBeenCalledWith({ page: 1, size: 100, provider: 1, status: 1 });
+  expect(api.getCloudAccountListApi).toHaveBeenCalledWith({ page: 1, size: 100, provider: 1 });
   expect(api.getManagedResources).toHaveBeenCalledWith({ cloud_account_id: 7, cloud_account_region_id: 11, kind: 'rds', page: 1, size: 20 });
   expect(wrapper!.text()).toContain('数据库'); expect(wrapper!.text()).not.toContain('private-ssh-marker');
   await click('详情'); expect(document.body.textContent).toContain('数据库引擎：MySQL');
@@ -57,7 +57,7 @@ it('只同步指定ID并在提交前复核精确权限与历史', async () => {
   expect(syncButton().disabled).toBe(false); await click('同步指定ID');
   expect(api.getManagedPermissions.mock.calls.length).toBeGreaterThanOrEqual(2);
   expect(api.getManagedSyncHistory.mock.calls.length).toBeGreaterThanOrEqual(2);
-  expect(api.syncManagedResources).toHaveBeenCalledWith({ cloud_account_id: 7, cloud_account_region_id: 11, kind: 'rds', resource_ids: ['rm-one', 'rm-two'] });
+  expect(api.syncManagedResources).toHaveBeenCalledWith({ cloud_account_id: 7, cloud_account_region_id: 11, kind: 'rds', resource_ids: ['rm-one', 'rm-two'], operation_id: expect.stringMatching(/^[a-f0-9-]{36}$/) });
 });
 it('无精确授权和伪造通配符不得加载账户或同步', async () => {
   api.getManagedPermissions.mockResolvedValue(perms(['*', 'POST /api/tree/cloud/*'])); await start();
@@ -70,7 +70,7 @@ it('确认前撤销 POST 权限不会派发同步', async () => {
   expect(api.syncManagedResources).not.toHaveBeenCalled();
 });
 it('结果未知会跨关闭和重开持续阻止同范围盲重试', async () => {
-  api.syncManagedResources.mockResolvedValue({ status: 'unknown', history_id: 33, count: 0, new_count: 0, update_count: 0, retry_safe: false });
+  api.syncManagedResources.mockImplementation(async (req) => ({ operation_id: req.operation_id, status: 'unknown', history_id: 33, count: 0, new_count: 0, update_count: 0, retry_safe: false }));
   await start(); await selectScope(); await fillIDs('rm-one'); await click('同步指定ID');
   expect(syncButton().disabled).toBe(true); expect(wrapper!.text()).toContain('不能直接重试');
   wrapper!.unmount(); wrapper = undefined;
@@ -96,7 +96,7 @@ it('状态存储不可用时不会派发同步', async () => {
   expect(api.syncManagedResources).not.toHaveBeenCalled();
 });
 it('审计不可用结果会锁定范围并避免声称已保存历史', async () => {
-  api.syncManagedResources.mockResolvedValue({ status: 'failed', error_category: 'audit_unavailable', count: 0, new_count: 0, update_count: 0, retry_safe: false });
+  api.syncManagedResources.mockImplementation(async (req) => ({ operation_id: req.operation_id, status: 'failed', error_category: 'audit_unavailable', count: 0, new_count: 0, update_count: 0, retry_safe: false }));
   await start(); await selectScope(); await fillIDs('rm-one'); await click('同步指定ID');
   expect(syncButton().disabled).toBe(true); expect(wrapper!.text()).toContain('没有可确认的持久历史记录');
 });
@@ -142,9 +142,13 @@ it('API 方法与后端范围合同一致', async () => {
   const actual = await vi.importActual<typeof import('#/api/core/tree/tree_cloud')>('#/api/core/tree/tree_cloud');
   http.get.mockResolvedValue({}); http.post.mockResolvedValue({});
   const scope = { cloud_account_id: 7, cloud_account_region_id: 11, kind: 'rds' as const };
-  await actual.getManagedPermissions(); await actual.getManagedResources({ ...scope, page: 1, size: 20 }); await actual.getManagedResourceDetail(5, scope); await actual.getManagedSyncHistory({ ...scope, page: 1, size: 100 }); await actual.syncManagedResources({ ...scope, resource_ids: ['rm-one'] });
+  await actual.getManagedPermissions(); await actual.getManagedResources({ ...scope, page: 1, size: 20 }); await actual.getManagedResourceDetail(5, scope); await actual.getManagedSyncHistory({ ...scope, page: 1, size: 100 }); await actual.syncManagedResources({ ...scope, resource_ids: ['rm-one'], operation_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' });
   expect(http.get.mock.calls).toEqual([['/user/permissions'], ['/tree/cloud/managed/list', { params: { ...scope, page: 1, size: 20 } }], ['/tree/cloud/managed/detail/5', { params: scope }], ['/tree/cloud/managed/history', { params: { ...scope, page: 1, size: 100 } }]]);
-  expect(http.post).toHaveBeenCalledWith('/tree/cloud/managed/sync', { ...scope, resource_ids: ['rm-one'] });
+  expect(http.post).toHaveBeenCalledWith('/tree/cloud/managed/sync', { ...scope, resource_ids: ['rm-one'], operation_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' });
+  await actual.getManagedOperation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  await actual.reviewManagedOperation('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', { ...scope, resource_ids: ['rm-one'], resources_verified: true, reason: '已经核对云端资源与本地记录' });
+  expect(http.get).toHaveBeenLastCalledWith('/tree/cloud/managed/operations/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  expect(http.post).toHaveBeenLastCalledWith('/tree/cloud/managed/operations/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/resolve', { ...scope, resource_ids: ['rm-one'], resources_verified: true, reason: '已经核对云端资源与本地记录' });
 });
 
 async function fillReview(reason = '已经核对云端资源及本地记录的实际状态') {
@@ -229,4 +233,45 @@ it('核对前账户读取权限撤销后不会遗留在途锁', async () => {
   expect(api.resolveManagedHistory).not.toHaveBeenCalled();
   const state = (wrapper!.vm as unknown as { $: { setupState: { reviewing: boolean } } }).$.setupState;
   expect(state.reviewing).toBe(false);
+});
+it('重新打开按稳定操作ID读取持久结果，不重新同步', async () => {
+  const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  localStorage.setItem('cloudops-managed-unconfirmed:1:7:11:rds', JSON.stringify({ version: 2, operation_id: id, resource_ids: ['rm-one'] }));
+  api.getManagedOperation.mockResolvedValue({ cloud_account_id: 7, cloud_account_region_id: 11, kind: 'rds', operation_id: id, resource_ids: ['rm-one'], state: 'completed', result: { operation_id: id, history_id: 31, status: 'success', count: 1, new_count: 1, update_count: 0, retry_safe: true } });
+  await start(); await selectScope(); expect(syncButton().disabled).toBe(true); expect(api.getManagedOperation).not.toHaveBeenCalled();
+  await click('查询本次操作');
+  expect(api.getManagedOperation).toHaveBeenCalledWith(id); expect(api.syncManagedResources).not.toHaveBeenCalled();
+  expect(localStorage.getItem('cloudops-managed-unconfirmed:1:7:11:rds')).toBeNull(); expect(syncButton().disabled).toBe(false);
+});
+it('没有操作读取权限时不能创建新同步', async () => {
+  api.getManagedPermissions.mockResolvedValue(perms(codes.filter((code) => !code.includes('/operations/:operation_id'))));
+  await start(); await selectScope(); await fillIDs('rm-one'); expect(syncButton().disabled).toBe(true); expect(api.syncManagedResources).not.toHaveBeenCalled();
+});
+it('同步响应操作ID不匹配时保持原请求指针而不是伪造成功', async () => {
+  api.syncManagedResources.mockResolvedValue({ operation_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', history_id: 31, status: 'success', count: 1, new_count: 1, update_count: 0, retry_safe: true });
+  await start(); await selectScope(); await fillIDs('rm-one'); await click('同步指定ID');
+  expect(syncButton().disabled).toBe(true); expect(wrapper!.text()).toContain('同步结果未确认');
+  const marker = JSON.parse(localStorage.getItem('cloudops-managed-unconfirmed:1:7:11:rds')!);
+  expect(marker.operation_id).toBe(api.syncManagedResources.mock.calls[0]![0].operation_id);
+  expect(marker.operation_id).not.toBe('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+});
+it('迟到操作结果不能清除另一用户的指针', async () => {
+  const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const raw = JSON.stringify({ version: 2, operation_id: id, resource_ids: ['rm-one'] });
+  localStorage.setItem('cloudops-managed-unconfirmed:1:7:11:rds', raw);
+  const pending = deferred(); api.getManagedOperation.mockReturnValue(pending.promise);
+  await start(); await selectScope(); await click('查询本次操作');
+  account.user.userInfo = { userId: '2' }; await flushPromises(); pending.resolve({ operation_id: id, state: 'reviewed' }); await flushPromises();
+  expect(localStorage.getItem('cloudops-managed-unconfirmed:1:7:11:rds')).toBe(raw);
+  expect(wrapper!.text()).not.toContain('待核对操作');
+});
+it('停用地域可以查询历史但不能同步', async () => {
+  await start(); await choose('托管资源账户','阿里账户'); await choose('托管资源地域','cn-disabled（已停用）'); await fillIDs('rm-one');
+  expect(syncButton().disabled).toBe(true); expect(wrapper!.text()).toContain('该范围已停用');
+  expect(api.getManagedSyncHistory).toHaveBeenCalledWith(expect.objectContaining({ cloud_account_region_id: 12 })); expect(api.syncManagedResources).not.toHaveBeenCalled();
+});
+it('停用账户可以恢复其操作但不重新启用账户', async () => {
+  api.getCloudAccountDetailApi.mockResolvedValue({ ...acct, id: 9, status: 2, regions: acct.regions.filter(r => r.id === 11).map(r => ({ ...r,cloud_account_id: 9 })) });
+  await start(); await choose('托管资源账户','禁用阿里（已停用）'); await choose('托管资源地域','杭州');
+  expect(syncButton().disabled).toBe(true); expect(wrapper!.text()).toContain('该范围已停用'); expect(api.syncManagedResources).not.toHaveBeenCalled();
 });
