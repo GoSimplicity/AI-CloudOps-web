@@ -180,7 +180,7 @@ test('disabled HTTP cron persists create and execution-field edits without runni
       .getByPlaceholder('POST/PUT请求的数据体')
       .fill('{"fixture":true}');
     await dialog
-      .getByRole('spinbutton', { name: '超时时间', exact: true })
+      .getByRole('spinbutton', { name: /^超时时间/ })
       .fill('120');
     const updated = page.waitForResponse(
       (response) =>
