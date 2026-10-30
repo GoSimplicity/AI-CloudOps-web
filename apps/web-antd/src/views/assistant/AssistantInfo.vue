@@ -2,6 +2,13 @@
   <OpsPage title="服务信息" description="查看初始化状态、能力说明与服务配置" class="info-container">
     <!-- 页面头部 -->
     <template #actions>
+      <a-button
+        v-if="can('aiops.assistant.clearCache')"
+        :loading="clearingCache"
+        :disabled="clearingCache"
+        title="清除服务查询缓存，保留知识文档与会话记录"
+        @click="clearServiceCache"
+      >清除服务缓存</a-button>
 <a-button type="primary" @click="refreshInfo" :loading="loading || configLoading">
             <template #icon>
               <ReloadOutlined />
@@ -138,15 +145,43 @@ import {
   ClockCircleOutlined
 } from '@ant-design/icons-vue';
 import {
+  clearAssistantCache,
   getAssistantInfo,
   getAssistantConfig,
+  type ClearCacheResponse,
   type ServiceInfoResponse,
   type ServiceConfigResponse
 } from '#/api/core/aiops/assistant';
+import { usePermission } from '#/utils/permission';
+import { useAiRequestScope } from './useAiRequestScope';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
+
+const { can } = usePermission();
+const clearingCache = ref(false);
+const cacheScope = useAiRequestScope(() => { clearingCache.value = false; });
+const cacheLane = cacheScope.createLane();
+
+// 这是独立的服务缓存维护操作，不删除知识文档或持久化会话。
+const clearServiceCache = async () => {
+  if (!can('aiops.assistant.clearCache') || !cacheScope.owner.value || clearingCache.value) return;
+  const ticket = cacheLane.begin();
+  clearingCache.value = true;
+  try {
+    const result = await clearAssistantCache() as ClearCacheResponse;
+    if (!cacheLane.current(ticket)) return;
+    if (result?.cleared !== true) throw new Error('缓存清理未确认');
+    message.success('服务缓存已清除');
+  } catch (error) {
+    if (cacheLane.current(ticket) && shouldNotifyPageError(error)) {
+      message.error('未确认服务缓存清理成功，请核查服务状态后再操作');
+    }
+  } finally {
+    if (cacheLane.current(ticket)) clearingCache.value = false;
+  }
+};
 
 // 响应式数据
 const loading = ref(false);

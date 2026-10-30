@@ -310,3 +310,20 @@ it('超管核对其他owner同UUID操作不清除本人的本地指针', async (
  expect(api.reviewManagedOperation).toHaveBeenCalledWith(id, expect.objectContaining({ owner_id: 2 }));
  expect(localStorage.getItem('cloudops-managed-unconfirmed:1:7:11:rds')).toBe(raw); expect(syncButton().disabled).toBe(true);
 });
+
+it.each([
+  ['ERR_CANCELED', false],
+  ['NETWORK_ERROR', true],
+])('地域读取失败 %s 仅为实际请求错误显示提示', async (code, visible) => {
+  api.getCloudAccountDetailApi.mockRejectedValue({ code });
+  await start(); await choose('托管资源账户', '阿里账户');
+  expect(wrapper!.text().includes('读取账户地域失败，请重试')).toBe(visible);
+});
+it.each([
+  ['ERR_CANCELED', false],
+  ['NETWORK_ERROR', true],
+])('详情读取失败 %s 仅为实际请求错误显示提示', async (code, visible) => {
+  api.getManagedResourceDetail.mockRejectedValue({ code });
+  await start(); await selectScope(); await click('详情');
+  expect(wrapper!.text().includes('资源详情读取失败')).toBe(visible);
+});

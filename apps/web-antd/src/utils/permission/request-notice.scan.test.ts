@@ -266,6 +266,7 @@ const GUARDED_SNAPSHOT: Record<string, number> = {
   'k8s/task/Task.ts': 3,
   'k8s/template/Template.ts': 2,
   'servicetree/CloudAccountManagement.vue': 1,
+  'servicetree/CloudManagedResources.vue': 2,
   'servicetree/CloudResourceManager.vue': 3,
   'servicetree/LocalResourceManagement.vue': 1,
   'servicetree/TreeNodeManager.vue': 1,
@@ -313,7 +314,7 @@ describe('FE-02b 拍板 3：取消类不写页面错误状态（静态扫描）'
     const summary = summarize(writes);
     expect(checkSummary(summary, GUARDED_SNAPSHOT, NOT_REQUEST_CATCH)).toEqual([]);
     // 快照本身不为空（防止扫描器失效变成空跑）
-    expect(Object.values(GUARDED_SNAPSHOT).reduce((a, b) => a + b, 0)).toBe(72);
+    expect(Object.values(GUARDED_SNAPSHOT).reduce((a, b) => a + b, 0)).toBe(74);
   });
 });
 

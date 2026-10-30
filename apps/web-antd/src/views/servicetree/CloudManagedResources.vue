@@ -11,7 +11,7 @@ import {
 import CloudManagedOperationsList from './CloudManagedOperationsList.vue';
 import CloudManagedOperationRecovery from './CloudManagedOperationRecovery.vue';
 import { parseManagedMarker, saveManagedMarker, removeManagedMarker, type ManagedOperationMarker } from './managed-operation-marker';
-import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+import { shouldNotifyPageError, shouldRecordPageError } from '#/utils/permission/request-notice';
 
 const access = useAccessStore();
 const user = useUserStore();
@@ -137,7 +137,7 @@ async function chooseAccount(value?: number) {
     if (account.id !== value || account.provider !== 1 || (account.status !== 1 && account.status !== 2) || !Array.isArray(account.regions)) throw new Error('account unavailable');
     selectedAccountEnabled.value = account.status === 1;
     regions.value = account.regions.filter((region) => safeId(region.id) && region.cloud_account_id === value && (region.status === 1 || region.status === 2));
-  } catch { if (current(epoch, ticket)) regionError.value = '读取账户地域失败，请重试'; }
+  } catch (error) { if (shouldRecordPageError(error) && current(epoch, ticket)) regionError.value = '读取账户地域失败，请重试'; }
   finally { if (current(epoch, ticket)) regionLoading.value = false; }
 }
 async function loadRecords() {
@@ -201,7 +201,7 @@ async function showDetail(item: ManagedCloudResource) {
     if (!current(epoch, selectionAtStart) || ticket !== detailTicket || !can(codes.detail)) return;
     if (data.id !== item.id || data.cloud_account_id !== target.cloud_account_id || data.cloud_account_region_id !== target.cloud_account_region_id || data.kind !== target.kind) throw new Error('invalid scope');
     selected.value = data;
-  } catch { if (current(epoch, selectionAtStart) && ticket === detailTicket) detailError.value = '资源详情读取失败'; }
+  } catch (error) { if (shouldRecordPageError(error) && current(epoch, selectionAtStart) && ticket === detailTicket) detailError.value = '资源详情读取失败'; }
 }
 function closeDetail() { detailTicket++; selected.value = null; }
 async function sync() {
