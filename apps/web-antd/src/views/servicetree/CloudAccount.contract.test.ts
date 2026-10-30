@@ -131,6 +131,26 @@ async function addRegion(code: string) {
   await flushPromises();
 }
 describe('云账户真实表单合同', () => {
+  it('可创建停用账户，不触发验证或同步', async () => {
+    await start(); await action('添加账户');
+    const status = document.querySelector('#cloud-account-create-status')!.closest('.ant-select')!;
+    expect(status.textContent).toContain('启用');
+    await new DOMWrapper(status.querySelector('.ant-select-selector')!).trigger('mousedown');
+    await flushPromises();
+    [...document.querySelectorAll<HTMLElement>('.ant-select-item-option')].find((item) => item.textContent?.trim() === '停用（仅保存）')!.click();
+    await flushPromises();
+    await fill('请输入云账户名称', '先保存停用配置');
+    await fill('请输入 Access Key', 'offline-access-key');
+    await fill('请输入 Secret Key', 'offline-secret-key');
+    await addRegion('cn-hangzhou');
+    await action('添加', '.ant-modal-footer button');
+    expect(client.post).toHaveBeenCalledWith('/tree/cloud/account/create', expect.objectContaining({ status: 2 }));
+    expect(client.post).toHaveBeenCalledTimes(1);
+    expect(client.get.mock.calls.some(([path]) => /verify|sync|available-regions/.test(path))).toBe(false);
+    await action('添加账户');
+    expect(document.querySelector('#cloud-account-create-status')!.closest('.ant-select')!.textContent).toContain('启用');
+  });
+
   it('创建提交regions数组，接受空成功结果，不隐式验证或删除', async () => {
     await start();
     await action('添加账户');
@@ -144,6 +164,7 @@ describe('云账户真实表单合同', () => {
     expect(client.post.mock.calls[0]).toEqual([
       '/tree/cloud/account/create',
       expect.objectContaining({
+        status: 1,
         regions: [
           {
             region: 'cn-hangzhou',

@@ -82,6 +82,31 @@ function clickButton(text: string) {
 }
 
 describe('定时任务编辑完整交互', () => {
+  it('创建可先保存停用任务，重新打开仍保持默认启用', async () => {
+    wrapper = mount(Management, { attachTo: document.body, global: { plugins: [Antd] } });
+    await flushPromises();
+    const open = wrapper.findAll('button').find((button) => button.text().replace(/\s/g, '') === '创建任务')!;
+    await open.trigger('click');
+    await flushPromises();
+    const status = document.querySelector('#cron-create-status')!.closest('.ant-select')!;
+    expect(status.textContent).toContain('启用');
+    status.querySelector<HTMLElement>('.ant-select-selector')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    await flushPromises();
+    [...document.querySelectorAll<HTMLElement>('.ant-select-item-option')].find((item) => item.textContent?.trim() === '停用（仅保存）')!.click();
+    await flushPromises();
+    await changeInput('input[placeholder="请输入任务名称"]', '停用HTTP配置');
+    await changeInput('input[placeholder="例：0 0 * * * (每天午夜执行)"]', '@every 1h');
+    await changeInput('input[placeholder="https://example.com/api/endpoint"]', 'http://127.0.0.1:9/fixture');
+    clickButton('创建任务');
+    await flushPromises();
+    expect([...document.querySelectorAll('.ant-form-item-explain-error')].map((item) => item.textContent)).toEqual([]);
+    expect(client.post).toHaveBeenCalledWith('/cron/job/create', expect.objectContaining({ status: 2, job_type: 3, http_url: 'http://127.0.0.1:9/fixture' }));
+    expect(client.post.mock.calls.some(([path]) => /\/(run|enable)$/.test(path))).toBe(false);
+    await open.trigger('click');
+    await flushPromises();
+    expect(document.querySelector('#cron-create-status')!.closest('.ant-select')!.textContent).toContain('启用');
+  });
+
   it('编辑HTTP配置、验证当前表达式并保存，未改的敏感请求头保持原值', async () => {
     wrapper = mount(Management, {
       attachTo: document.body,

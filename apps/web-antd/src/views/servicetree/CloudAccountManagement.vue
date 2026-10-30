@@ -94,6 +94,7 @@ const filterForm = reactive<GetCloudAccountListReq>({
 });
 
 const formData = ref<CreateCloudAccountReq & { id?: number; access_key: string; secret_key: string }>({
+  status: CloudAccountStatus.Enabled,
   name: '',
   provider: CloudProvider.AliCloud,
   regions: [],
@@ -171,6 +172,7 @@ const formRules = computed(() => ({
     { min: 2, max: 100, message: '名称长度在2-100个字符之间', trigger: 'blur' },
   ],
   provider: [{ required: true, message: '请选择云厂商', trigger: 'change' }],
+  status: [{ required: true, type: 'enum' as const, enum: [CloudAccountStatus.Enabled, CloudAccountStatus.Disabled], message: '请选择初始状态' }],
   regions: [
     {
       validator: async (_: unknown, value: CloudAccountRegionInput[]) => {
@@ -379,6 +381,7 @@ const showCreateModal = (): void => {
   originalCredentialType.value = 'long_term';
   savedCredentialExpiry.value = undefined;
   formData.value = {
+    status: CloudAccountStatus.Enabled,
     name: '',
     provider: CloudProvider.AliCloud,
     regions: [],
@@ -1025,6 +1028,14 @@ const closeDetails = () => {
                 <a-select-option :value="CloudProvider.GCP">
                   <cloud-outlined /> GCP
                 </a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col v-if="!isEdit" :xs="24" :sm="12">
+            <a-form-item label="初始状态" name="status" extra="停用仅保存配置，可在核对后启用并显式同步。">
+              <a-select id="cloud-account-create-status" v-model:value="formData.status" aria-label="初始状态" size="large">
+                <a-select-option :value="CloudAccountStatus.Enabled">启用</a-select-option>
+                <a-select-option :value="CloudAccountStatus.Disabled">停用（仅保存）</a-select-option>
               </a-select>
             </a-form-item>
           </a-col>

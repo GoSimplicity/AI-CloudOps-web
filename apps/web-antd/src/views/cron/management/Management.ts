@@ -156,7 +156,25 @@ const SSH_LIST_FAILURE_TEXTS: ListFailureTexts = {
 };
 
 // 创建表单初始数据
+const validateHttpRequestURL = async (_rule: unknown, value?: string): Promise<void> => {
+  if (!value) return;
+  try {
+    const parsed = new URL(value);
+    const invalidCharacters = /[\u0000-\u0020\u007f\\]/.test(value);
+    const explicitAuthority = /^https?:\/\/[^/?#]+/i.test(value);
+    const invalidEscape = /%(?![0-9a-f]{2})/i.test(value);
+    const httpProtocol = ['http:', 'https:'].includes(parsed.protocol);
+    const validPort = !parsed.port || (Number(parsed.port) >= 1 && Number(parsed.port) <= 65535);
+    if (invalidCharacters || !explicitAuthority || invalidEscape || !httpProtocol || !parsed.hostname || !validPort) {
+      throw new Error('invalid HTTP URL');
+    }
+  } catch {
+    throw new Error('请输入有效的 HTTP 或 HTTPS URL');
+  }
+};
+
 const createInitialFormModel = (): CreateCronJobReq => ({
+  status: CronJobStatus.ENABLED,
   name: '',
   description: '',
   job_type: CronJobType.HTTP,
@@ -303,6 +321,7 @@ export function useCronJobPage() {
 
   // 创建表单验证规则
   const createFormRules = {
+    status: [{ required: true, type: 'enum' as const, enum: [CronJobStatus.ENABLED, CronJobStatus.DISABLED], message: '请选择初始状态' }],
     name: [
       { required: true, message: '请输入任务名称' },
       { min: 1, max: 100, message: '任务名称长度应在1-100个字符之间' },
@@ -324,7 +343,7 @@ export function useCronJobPage() {
         required: computed(() => state.createFormModel.job_type === CronJobType.HTTP),
         message: '请输入请求URL'
       },
-      { type: 'url', message: '请输入有效的URL' },
+      { validator: validateHttpRequestURL },
     ],
     http_method: [
       {
@@ -381,7 +400,7 @@ export function useCronJobPage() {
         required: computed(() => state.editFormModel.job_type === CronJobType.HTTP),
         message: '请输入请求URL'
       },
-      { type: 'url', message: '请输入有效的URL' },
+      { validator: validateHttpRequestURL },
     ],
     http_method: [
       {

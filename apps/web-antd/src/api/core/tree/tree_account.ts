@@ -76,6 +76,7 @@ export interface ProviderCredentialInput {
 }
 
 export interface CreateCloudAccountReq {
+  status?: CloudAccountStatus.Enabled | CloudAccountStatus.Disabled;
   name: string;
   provider: CloudProvider;
   regions: CloudAccountRegionInput[];

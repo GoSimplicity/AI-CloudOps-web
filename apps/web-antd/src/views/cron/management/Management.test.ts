@@ -19,6 +19,24 @@ beforeEach(() => {
 });
 
 describe('定时任务请求与操作边界', () => {
+  it.each([
+    ['http://127.0.0.1:9/fixture', true], ['https://example.invalid/path', true],
+    ['HTTP://localhost:9', true], ['http://[::1]:9', true],
+    ['ftp://example.invalid', false], ['http:///path', false], ['http:/path', false],
+    ['http://localhost:0', false], ['http://localhost:65536', false], ['http://localhost:abc', false],
+    ['http://local\nhost:9', false], ['http://local\thost:9', false], [' http://localhost:9', false],
+    ['http://localhost/a b', false], ['http:\\localhost:9', false], ['http://localhost/%zz', false],
+  ])('创建与编辑共用HTTP地址合同 %s', async (url, valid) => {
+    const page = useCronJobPage();
+    for (const rules of [page.createFormRules.http_url, page.editFormRules.http_url]) {
+      const rule = rules.find((item) => 'validator' in item)!;
+      if (!('validator' in rule) || typeof rule.validator !== 'function') throw new Error('URL validator missing');
+      const result = rule.validator({}, url as string);
+      if (valid) await expect(result).resolves.toBeUndefined();
+      else await expect(result).rejects.toThrow('请输入有效的 HTTP 或 HTTPS URL');
+    }
+  });
+
   it('服务端筛选结果与总数保持一致，迟到响应不能覆盖新查询', async () => {
     const page = useCronJobPage();
     const old = Promise.withResolvers<unknown>();

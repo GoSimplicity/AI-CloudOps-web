@@ -527,6 +527,13 @@ onUnmounted(clearPage);
           </a-select>
         </a-form-item>
 
+        <a-form-item label="初始状态" name="status" extra="停用仅保存配置，明确启用后才参与调度。">
+          <a-select id="cron-create-status" v-model:value="createFormModel.status" aria-label="初始状态">
+            <a-select-option :value="CronJobStatus.ENABLED">启用</a-select-option>
+            <a-select-option :value="CronJobStatus.DISABLED">停用（仅保存）</a-select-option>
+          </a-select>
+        </a-form-item>
+
         <a-form-item label="调度表达式" name="schedule" has-feedback>
           <a-input
             v-model:value="createFormModel.schedule"

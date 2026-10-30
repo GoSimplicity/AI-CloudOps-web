@@ -127,6 +127,7 @@ export interface GetCronJobListReq {
 
 // 创建定时任务请求参数
 export interface CreateCronJobReq {
+  status?: CronJobStatus.ENABLED | CronJobStatus.DISABLED;
   name: string;
   description?: string;
   job_type: CronJobType;
