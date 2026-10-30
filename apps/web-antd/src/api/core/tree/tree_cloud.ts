@@ -383,6 +383,7 @@ export const managedPermissions = {
   list: 'GET /api/tree/cloud/managed/list',
   detail: 'GET /api/tree/cloud/managed/detail/:id',
   history: 'GET /api/tree/cloud/managed/history',
+  operationList: 'GET /api/tree/cloud/managed/operations',
   operationRead: 'GET /api/tree/cloud/managed/operations/:operation_id',
   operationReview: 'POST /api/tree/cloud/managed/operations/:operation_id/resolve',
   sync: 'POST /api/tree/cloud/managed/sync',
@@ -402,14 +403,19 @@ export const resolveManagedHistory = (id: number, data: ManagedCloudScope & { re
   requestClient.post(`/tree/cloud/managed/history/${id}/resolve`, data);
 
 export interface ManagedCloudOperation extends ManagedCloudScope {
+ owner_id: number;
  operation_id: string;
  resource_ids: string[];
  state: 'running' | 'unknown' | 'completed' | 'reviewed';
+ created_at?: string; updated_at?: string;
  result?: ManagedCloudSyncResult;
  reviewed_at?: string;
  reviewed_by?: number;
  review_reason?: string;
  previous_state?: string;
 }
-export const getManagedOperation = (operationID: string) => requestClient.get<ManagedCloudOperation>(`/tree/cloud/managed/operations/${operationID}`);
-export const reviewManagedOperation = (operationID: string, data: ManagedCloudScope & { resource_ids: string[]; resources_verified: true; reason: string }) => requestClient.post<ManagedCloudOperation>(`/tree/cloud/managed/operations/${operationID}/resolve`, data);
+export const getManagedOperation = (operationID: string, ownerID?: number) => ownerID === undefined ? requestClient.get<ManagedCloudOperation>(`/tree/cloud/managed/operations/${operationID}`) : requestClient.get<ManagedCloudOperation>(`/tree/cloud/managed/operations/${operationID}`, { params: { owner_id: ownerID } });
+export const reviewManagedOperation = (operationID: string, data: ManagedCloudScope & { resource_ids: string[]; resources_verified: true; reason: string; owner_id?: number }) => requestClient.post<ManagedCloudOperation>(`/tree/cloud/managed/operations/${operationID}/resolve`, data);
+
+export interface ManagedCloudOperationList { items: ManagedCloudOperation[]; total: number; scope_blocked: boolean }
+export const listManagedOperations = (params: ManagedCloudScope & { page: number; size: number; unconfirmed_only: boolean; all_owners?: boolean }) => requestClient.get<ManagedCloudOperationList>('/tree/cloud/managed/operations', { params });

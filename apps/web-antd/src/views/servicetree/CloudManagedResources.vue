@@ -8,6 +8,7 @@ import {
   syncManagedResources, resolveManagedHistory, type ManagedCloudHistory, type ManagedCloudKind, type ManagedCloudResource,
   type ManagedCloudScope, type ManagedCloudSyncResult, type ManagedPermissions,
 } from '#/api/core/tree/tree_cloud';
+import CloudManagedOperationsList from './CloudManagedOperationsList.vue';
 import CloudManagedOperationRecovery from './CloudManagedOperationRecovery.vue';
 import { parseManagedMarker, saveManagedMarker, removeManagedMarker, type ManagedOperationMarker } from './managed-operation-marker';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
@@ -48,7 +49,12 @@ const result = ref<ManagedCloudSyncResult | null>(null);
 const historyBlocked = ref(true);
 const localBlocked = ref(true);
 const pendingOperation = ref<ManagedOperationMarker | null>(null);
-const operationBusy = ref(false);
+const operationPointerBusy = ref(false);
+const operationListBusy = ref(false);
+const operationBusy = computed(() => operationPointerBusy.value || operationListBusy.value);
+const scopeOperationsBlocked = ref(true);
+const operationRefresh = ref(0);
+watch(() => pendingOperation.value?.operation_id, () => { operationPointerBusy.value = false; }, { flush: 'sync' });
 const storageUnavailable = ref(false);
 let alive = true;
 let session = 0;
@@ -63,7 +69,7 @@ const can = (code: string) => !!permissions.value && (permissions.value.super_ad
 const current = (epoch: number, scope?: number) => alive && epoch === session && authenticated() && (scope === undefined || scope === selection);
 const scope = computed<ManagedCloudScope | null>(() => safeId(accountId.value) && safeId(regionId.value) ? { cloud_account_id: accountId.value, cloud_account_region_id: regionId.value, kind: kind.value } : null);
 const scopeAllowed = computed(() => !!scope.value && can(codes.accountList) && can(codes.accountDetail) && accounts.value.some((a) => a.id === accountId.value) && regions.value.some((r) => r.id === regionId.value));
-const canSync = computed(() => scopeAllowed.value && selectedAccountEnabled.value && regions.value.some(r => r.id === regionId.value && r.status === 1) && can(codes.sync) && can(codes.history) && can(codes.operationRead) && !operationBusy.value && !historyLoading.value && !historyBlocked.value && !localBlocked.value && !syncing.value && !reviewing.value);
+const canSync = computed(() => scopeAllowed.value && selectedAccountEnabled.value && regions.value.some(r => r.id === regionId.value && r.status === 1) && can(codes.sync) && can(codes.history) && can(codes.operationRead) && can(codes.operationList) && !scopeOperationsBlocked.value && !operationBusy.value && !historyLoading.value && !historyBlocked.value && !localBlocked.value && !syncing.value && !reviewing.value);
 const validPermissions = (value: ManagedPermissions) => value?.version === 2 && typeof value.super_admin === 'boolean' && Array.isArray(value.permissions) && value.permissions.every((item) => typeof item === 'string');
 const safeText = (value: unknown) => typeof value === 'string' && value.length <= 500 ? value : '—';
 const dateText = (value: unknown) => { if (typeof value !== 'string') return '—'; const d = new Date(value); return Number.isNaN(d.valueOf()) ? '—' : d.toLocaleString('zh-CN'); };
@@ -113,7 +119,7 @@ async function loadAccounts() {
   } catch { if (current(epoch)) { accounts.value = []; error.value = '读取账户失败或数量超过上限，请重试'; } }
 }
 function clearScope() {
-  pendingOperation.value = null; operationBusy.value = false;
+  pendingOperation.value = null; operationPointerBusy.value = false; operationListBusy.value = false; scopeOperationsBlocked.value = true;
   reviewEntry.value = null; reviewReason.value = ''; reviewVerified.value = false; reviewError.value = '';
   selection++; listTicket++; detailTicket++; historyTicket++;
   records.value = []; history.value = []; selected.value = null; total.value = 0; page.value = 1;
@@ -182,7 +188,7 @@ async function loadHistory() {
   } catch { if (current(epoch, selectedScope) && ticket === historyTicket) { history.value = []; historyBlocked.value = true; historyError.value = '无法完整核对同步历史，暂不能同步'; } return false; }
   finally { if (current(epoch, selectedScope) && ticket === historyTicket) historyLoading.value = false; }
 }
-function refreshScope() { const target = scope.value; if (!target) return; localBlocked.value = readLocal(target); void loadRecords(); void loadHistory(); }
+function refreshScope() { operationRefresh.value++; const target = scope.value; if (!target) return; localBlocked.value = readLocal(target); void loadRecords(); void loadHistory(); }
 function chooseRegion() { clearScope(); refreshScope(); }
 function chooseKind() { clearScope(); refreshScope(); }
 function changePage(next: number) { page.value = next; void loadRecords(); }
@@ -206,7 +212,7 @@ async function sync() {
   if (!ids.length || ids.length > 100 || ids.some((id) => !idPattern.test(id)) || new Set(ids).size !== ids.length) { message.warning('请输入1至100个不重复的有效资源 ID'); return; }
   syncing.value = true; result.value = null;
   try {
-    if (!await refreshPermissions(epoch) || !current(epoch, selectionAtStart) || !scopeAllowed.value || !can(codes.sync) || !can(codes.history) || !can(codes.operationRead)) return;
+    if (!await refreshPermissions(epoch) || !current(epoch, selectionAtStart) || !scopeAllowed.value || !can(codes.sync) || !can(codes.history) || !can(codes.operationRead) || !can(codes.operationList)) return;
     // Recheck history immediately before dispatch; a failed check always blocks.
     if (!await loadHistory() || !current(epoch, selectionAtStart) || historyBlocked.value || readLocal(target)) { if (current(epoch, selectionAtStart)) localBlocked.value = readLocal(target); return; }
     if (!globalThis.crypto?.randomUUID) { error.value = '当前环境无法安全生成操作 ID，本次未提交'; return; }
@@ -215,7 +221,7 @@ async function sync() {
     localBlocked.value = readLocal(target);
     const response = await syncManagedResources({ ...target, resource_ids: ids, operation_id: marker.operation_id });
     if (!current(epoch, selectionAtStart)) return;
-    if (!response || response.operation_id !== marker.operation_id || !['success', 'failed', 'cancelled', 'unknown'].includes(response.status) || typeof response.retry_safe !== 'boolean' || !Number.isSafeInteger(response.count) || !Number.isSafeInteger(response.new_count) || !Number.isSafeInteger(response.update_count) || response.count < 0 || response.new_count < 0 || response.update_count < 0 || response.new_count + response.update_count > response.count) throw new Error('invalid result');
+    if (!response || response.operation_id !== marker.operation_id || !['success', 'failed', 'cancelled', 'unknown'].includes(response.status) || typeof response.retry_safe !== 'boolean' || !Number.isSafeInteger(response.count) || !Number.isSafeInteger(response.new_count) || !Number.isSafeInteger(response.update_count) || response.count < 0 || response.count > 100 || response.new_count < 0 || response.update_count < 0 || response.new_count + response.update_count > response.count) throw new Error('invalid result');
     if (response.status === 'success' && (!response.retry_safe || !safeId(response.history_id) || !!response.error_category || response.count !== ids.length || response.new_count + response.update_count !== response.count)) throw new Error('inconsistent success');
     result.value = response;
     if (response.status !== 'unknown' && response.retry_safe === true && !['audit_unavailable', 'commit_unknown_audit_unavailable'].includes(response.error_category ?? '')) {
@@ -226,17 +232,22 @@ async function sync() {
     else if (response.status === 'unknown' || response.retry_safe === false) message.warning('同步结果未确认，请先核对历史，不能直接重试');
     else message.warning('同步未完成，请查看历史');
     await Promise.all([loadRecords(), loadHistory()]);
+    operationRefresh.value++;
   } catch (err) {
     if (current(epoch, selectionAtStart)) { localBlocked.value = true; error.value = '同步结果未确认，请先核对历史，不能直接重试'; if (shouldNotifyPageError(err)) message.error(error.value); }
   } finally { if (current(epoch)) syncing.value = false; }
 }
-async function acknowledgeOperation(operationID: string) {
+async function acknowledgeOperation(operationID: string, operationOwner: number) {
  const target = scope.value, epoch = session, selectedScope = selection, userId = owner.value.id;
- if (!target || !userId || pendingOperation.value?.operation_id !== operationID) return;
- if (!await loadHistory() || !current(epoch, selectedScope) || pendingOperation.value?.operation_id !== operationID) return;
- removeManagedMarker(localStorage, keyFor(target, userId), operationID);
- localBlocked.value = readLocal(target);
- if (!localBlocked.value) { error.value = ''; message.success('已核对持久操作记录；新的同步仍需明确发起'); }
+ if (!target || !userId) return;
+ if (!await loadHistory() || !current(epoch, selectedScope)) return;
+ if (operationOwner === Number(userId) && pendingOperation.value?.operation_id === operationID) {
+  removeManagedMarker(localStorage, keyFor(target, userId), operationID);
+  localBlocked.value = readLocal(target);
+  if (!localBlocked.value) { error.value = ''; message.success('已核对持久操作记录；新的同步仍需明确发起'); }
+ }
+ operationRefresh.value++;
+ void loadRecords();
 }
 function onStorage(event: StorageEvent) {
   const target = scope.value;
@@ -262,6 +273,7 @@ async function submitReview() {
       reviewUncertain.value = true; reviewError.value = '尚未读取到持久核对记录，请先刷新历史，不要重复提交'; return;
     }
     reviewEntry.value = null;
+    operationRefresh.value++;
     message.success('核对记录已保存，原同步结果保持不变');
   } catch {
     if (current(epoch, selectedScope)) { reviewUncertain.value = true; reviewError.value = '核对结果未确认，请先刷新历史；请勿盲目重复提交'; }
@@ -272,7 +284,7 @@ watch([() => owner.value.authenticated, () => owner.value.id], () => {
   reviewEntry.value = null; reviewReason.value = ''; reviewVerified.value = false; reviewError.value = ''; reviewing.value = false;
   permissions.value = null; accounts.value = []; regions.value = []; accountId.value = undefined; regionId.value = undefined; selectedAccountEnabled.value = false; kind.value = 'rds';
   records.value = []; history.value = []; selected.value = null; total.value = 0; result.value = null; idsText.value = '';
-  pendingOperation.value = null; operationBusy.value = false;
+  pendingOperation.value = null; operationPointerBusy.value = false; operationListBusy.value = false; scopeOperationsBlocked.value = true;
   historyBlocked.value = true; localBlocked.value = true; storageUnavailable.value = false; syncing.value = false; loading.value = false;
   historyLoading.value = false; regionLoading.value = false; error.value = ''; regionError.value = ''; historyError.value = ''; detailError.value = '';
   const epoch = session; if (authenticated()) void refreshPermissions(epoch).then((ok) => { if (ok && current(epoch)) void loadAccounts(); });
@@ -302,7 +314,8 @@ onBeforeUnmount(() => { alive = false; session++; selection++; listTicket++; det
         <a-textarea id="managed-resource-ids" v-model:value="idsText" :maxlength="12000" :disabled="syncing || reviewing || operationBusy" :rows="3" placeholder="例如 rm-example" />
         <a-button type="primary" :loading="syncing" :disabled="!canSync" @click="sync">同步指定 ID</a-button>
       </div>
-      <CloudManagedOperationRecovery v-if="pendingOperation" :key="`${owner.id}:${pendingOperation.operation_id}`" :marker="pendingOperation" :scope="scope" :owner="String(owner.id)" :can-read="can(codes.operationRead)" :can-review="can(codes.operationReview)" :authorize="async () => await refreshPermissions(session) && can(codes.operationRead) && can(codes.operationReview)" @acknowledged="acknowledgeOperation" @busy="operationBusy = $event" />
+      <CloudManagedOperationsList :scope="scope" :viewer="String(owner.id)" :super-admin="permissions?.super_admin === true" :can-list="can(codes.operationList)" :can-read="can(codes.operationRead)" :can-review="can(codes.operationReview)" :refresh-token="operationRefresh" :authorize="async () => await refreshPermissions(session) && can(codes.operationRead) && can(codes.operationReview)" @blocked="scopeOperationsBlocked = $event" @busy="operationListBusy = $event" @acknowledged="acknowledgeOperation" />
+      <CloudManagedOperationRecovery v-if="pendingOperation" :key="`${owner.id}:${pendingOperation.operation_id}`" :marker="pendingOperation" :scope="scope" :owner="String(owner.id)" :can-read="can(codes.operationRead)" :can-review="can(codes.operationReview)" :authorize="async () => await refreshPermissions(session) && can(codes.operationRead) && can(codes.operationReview)" @acknowledged="acknowledgeOperation" @busy="operationPointerBusy = $event" />
       <a-alert v-if="!can(codes.operationRead)" type="warning" message="缺少操作查询权限，无法安全发起同步" show-icon />
       <a-alert v-if="!can(codes.history)" type="warning" message="缺少同步历史权限，无法安全发起同步" show-icon />
       <a-alert v-else-if="historyError" type="warning" :message="historyError" show-icon />
