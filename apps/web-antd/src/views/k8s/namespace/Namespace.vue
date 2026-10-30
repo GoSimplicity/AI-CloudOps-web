@@ -227,7 +227,6 @@ const columns = [
     dataIndex: 'cluster_id',
     key: 'cluster_id',
     width: 130,
-    slots: { customRender: 'cluster' },
   },
   {
     title: '状态',
@@ -235,7 +234,6 @@ const columns = [
     key: 'status',
     width: 90,
     align: 'center',
-    slots: { customRender: 'status' },
   },
   {
     title: '阶段',
@@ -243,21 +241,18 @@ const columns = [
     key: 'phase',
     width: 90,
     align: 'center',
-    slots: { customRender: 'phase' },
   },
   {
     title: '标签',
     dataIndex: 'labels',
     key: 'labels',
     width: 150,
-    slots: { customRender: 'labels' },
   },
   {
     title: '注解',
     dataIndex: 'annotations',
     key: 'annotations',
     width: 120,
-    slots: { customRender: 'annotations' },
   },
   {
     title: 'UID',
@@ -265,7 +260,6 @@ const columns = [
     key: 'uid',
     width: 100,
     ellipsis: true,
-    slots: { customRender: 'uid' },
   },
   {
     title: '操作',
@@ -273,7 +267,6 @@ const columns = [
     width: 200,
     fixed: 'right',
     align: 'center',
-    slots: { customRender: 'actions' },
   },
 ];
 
@@ -560,137 +553,133 @@ onMounted(async () => {
         class="k8s-table namespace-table"
         :scroll="{ x: 1080 }"
       >
-        <template #status="{ text }">
-          <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
-        </template>
-
-        <template #phase="{ text }">
-          <a-badge :status="getPhaseColor(text)" :text="getPhaseText(text)" />
-        </template>
-
-        <template #cluster="{ text }">
-          <span class="k8s-cluster-name" :title="getClusterName(text)">{{
-            getClusterName(text)
-          }}</span>
-        </template>
-
-        <template #uid="{ text }">
-          <div class="k8s-uid-display">
-            <span class="uid-text" :title="text">{{ text }}</span>
-            <a-button
-              type="text"
-              size="small"
-              class="uid-copy-btn"
-              @click="() => copyToClipboard(text)"
-              :title="'复制 UID'"
-            >
-              <template #icon><CopyOutlined aria-hidden="true" /></template>
-            </a-button>
-          </div>
-        </template>
-
-        <template #labels="{ text }">
-          <div class="k8s-labels-display">
-            <template v-if="text && text.length > 0">
-              <a-tooltip
-                v-for="label in text.slice(0, 2)"
-                :key="label.key"
-                :title="`${label.key}: ${label.value}`"
-              >
-                <a-tag class="k8s-label-item" color="blue">
-                  <span class="label-key">{{
-                    label.key.split('/').pop()
-                  }}</span>
-                  <span class="label-separator">:</span>
-                  <span class="label-value">{{ label.value }}</span>
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip
-                v-if="text.length > 2"
-                :title="
-                  text
-                    .slice(2)
-                    .map((item: any) => `${item.key}: ${item.value}`)
-                    .join('\n')
-                "
-              >
-                <a-tag class="k8s-label-count" color="blue">
-                  +{{ text.length - 2 }} 更多
-                </a-tag>
-              </a-tooltip>
-            </template>
-            <span v-else class="k8s-no-data">无标签</span>
-          </div>
-        </template>
-
-        <template #annotations="{ text }">
-          <div class="k8s-annotations-display">
-            <template v-if="text && text.length > 0">
-              <a-tooltip
-                :title="
-                  text
-                    .map((item: any) => `${item.key}: ${item.value}`)
-                    .join('\n')
-                "
-              >
-                <a-tag class="k8s-annotation-count" color="purple">
-                  {{ text.length }} 个注解
-                </a-tag>
-              </a-tooltip>
-            </template>
-            <span v-else class="k8s-no-data">无注解</span>
-          </div>
-        </template>
-
-        <template #actions="{ record }">
-          <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
-              <a-button title="查看详情" @click="showNamespaceDetail(record)">
-                <template #icon><EyeOutlined aria-hidden="true" /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="管理标签/注解">
-              <a-button title="管理标签" @click="openEditLabelModal(record)">
-                <template #icon><TagsOutlined aria-hidden="true" /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="can('k8s.namespace.delete')" title="删除命名空间">
+        <template #bodyCell="{ column, text, record }">
+          <template v-if="column.key === 'status'">
+            <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
+          </template>
+          <template v-else-if="column.key === 'phase'">
+            <a-badge :status="getPhaseColor(text)" :text="getPhaseText(text)" />
+          </template>
+          <template v-else-if="column.key === 'cluster_id'">
+            <span class="k8s-cluster-name" :title="getClusterName(text)">{{
+              getClusterName(text)
+            }}</span>
+          </template>
+          <template v-else-if="column.key === 'uid'">
+            <div class="k8s-uid-display">
+              <span class="uid-text" :title="text">{{ text }}</span>
               <a-button
-                title="删除"
-                danger
-                @click="deleteNamespace(record)"
-                :disabled="
-                  record.name === 'default' ||
-                  record.name === 'kube-system' ||
-                  record.name === 'kube-public' ||
-                  record.name === 'kube-node-lease'
-                "
+                type="text"
+                size="small"
+                class="uid-copy-btn"
+                @click="() => copyToClipboard(text)"
+                :title="'复制 UID'"
               >
-                <template #icon><DeleteOutlined aria-hidden="true" /></template>
+                <template #icon><CopyOutlined aria-hidden="true" /></template>
               </a-button>
-            </a-tooltip>
-            <a-tooltip
-              title="强制删除"
-              v-if="
-                can('k8s.namespace.forceDelete') &&
-                record.status === NamespaceStatus.Terminating
-              "
-            >
-              <a-button
+            </div>
+          </template>
+          <template v-else-if="column.key === 'labels'">
+            <div class="k8s-labels-display">
+              <template v-if="text && text.length > 0">
+                <a-tooltip
+                  v-for="label in text.slice(0, 2)"
+                  :key="label.key"
+                  :title="`${label.key}: ${label.value}`"
+                >
+                  <a-tag class="k8s-label-item" color="blue">
+                    <span class="label-key">{{
+                      label.key.split('/').pop()
+                    }}</span>
+                    <span class="label-separator">:</span>
+                    <span class="label-value">{{ label.value }}</span>
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip
+                  v-if="text.length > 2"
+                  :title="
+                    text
+                      .slice(2)
+                      .map((item: any) => `${item.key}: ${item.value}`)
+                      .join('\n')
+                  "
+                >
+                  <a-tag class="k8s-label-count" color="blue">
+                    +{{ text.length - 2 }} 更多
+                  </a-tag>
+                </a-tooltip>
+              </template>
+              <span v-else class="k8s-no-data">无标签</span>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'annotations'">
+            <div class="k8s-annotations-display">
+              <template v-if="text && text.length > 0">
+                <a-tooltip
+                  :title="
+                    text
+                      .map((item: any) => `${item.key}: ${item.value}`)
+                      .join('\n')
+                  "
+                >
+                  <a-tag class="k8s-annotation-count" color="purple">
+                    {{ text.length }} 个注解
+                  </a-tag>
+                </a-tooltip>
+              </template>
+              <span v-else class="k8s-no-data">无注解</span>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <div class="k8s-action-column">
+              <a-tooltip title="查看详情">
+                <a-button title="查看详情" @click="showNamespaceDetail(record)">
+                  <template #icon><EyeOutlined aria-hidden="true" /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="管理标签/注解">
+                <a-button title="管理标签" @click="openEditLabelModal(record)">
+                  <template #icon><TagsOutlined aria-hidden="true" /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip v-if="can('k8s.namespace.delete')" title="删除命名空间">
+                <a-button
+                  title="删除"
+                  danger
+                  @click="deleteNamespace(record)"
+                  :disabled="
+                    record.name === 'default' ||
+                    record.name === 'kube-system' ||
+                    record.name === 'kube-public' ||
+                    record.name === 'kube-node-lease'
+                  "
+                >
+                  <template #icon><DeleteOutlined aria-hidden="true" /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip
                 title="强制删除"
-                danger
-                @click="forceDeleteNamespace(record)"
-                :disabled="
-                  record.name === 'default' ||
-                  record.name === 'kube-system' ||
-                  record.name === 'kube-public' ||
-                  record.name === 'kube-node-lease'
+                v-if="
+                  can('k8s.namespace.forceDelete') &&
+                  record.status === NamespaceStatus.Terminating
                 "
               >
-                <template #icon><FireOutlined aria-hidden="true" /></template>
-              </a-button>
-            </a-tooltip>
-          </div>
+                <a-button
+                  title="强制删除"
+                  danger
+                  @click="forceDeleteNamespace(record)"
+                  :disabled="
+                    record.name === 'default' ||
+                    record.name === 'kube-system' ||
+                    record.name === 'kube-public' ||
+                    record.name === 'kube-node-lease'
+                  "
+                >
+                  <template #icon><FireOutlined aria-hidden="true" /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+          </template>
         </template>
 
         <template #emptyText>

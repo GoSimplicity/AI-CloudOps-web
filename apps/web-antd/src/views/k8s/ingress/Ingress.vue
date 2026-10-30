@@ -17,12 +17,12 @@
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
-          <a-select 
-            v-model:value="filterClusterId" 
-            placeholder="选择集群" 
+          <a-select
+            v-model:value="filterClusterId"
+            placeholder="选择集群"
             class="k8s-cluster-selector"
             aria-label="选择集群"
-            allow-clear 
+            allow-clear
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
@@ -35,9 +35,9 @@
                 <a-tag color="blue" size="small">{{ getEnvText(cluster.env) }}</a-tag>
               </div>
             </a-select-option>
-            <a-select-option 
-              v-if="clusters.length > 0 && clusters.length < clustersTotal" 
-              :value="'__load_more__'" 
+            <a-select-option
+              v-if="clusters.length > 0 && clusters.length < clustersTotal"
+              :value="'__load_more__'"
               disabled
               style="text-align: center; color: var(--ops-muted);"
             >
@@ -46,12 +46,12 @@
             </a-select-option>
           </a-select>
 
-          <a-select 
-            v-model:value="filterNamespace" 
-            placeholder="选择命名空间" 
+          <a-select
+            v-model:value="filterNamespace"
+            placeholder="选择命名空间"
             class="k8s-filter-select k8s-namespace-selector"
             aria-label="选择命名空间"
-            allow-clear 
+            allow-clear
             @change="handleFilterChange"
             :disabled="!filterClusterId"
             :loading="namespacesLoading"
@@ -60,9 +60,9 @@
             <a-select-option v-for="ns in namespaces" :key="ns.name" :value="ns.name">
               {{ ns.name }}
             </a-select-option>
-            <a-select-option 
-              v-if="namespaces.length > 0 && namespaces.length < namespacesTotal" 
-              :value="'__load_more_namespaces__'" 
+            <a-select-option
+              v-if="namespaces.length > 0 && namespaces.length < namespacesTotal"
+              :value="'__load_more_namespaces__'"
               disabled
               style="text-align: center; color: var(--ops-muted);"
             >
@@ -71,12 +71,12 @@
               </a-button>
             </a-select-option>
           </a-select>
-          
-          <a-select 
-            v-model:value="filterStatus" 
-            placeholder="状态筛选" 
-            class="k8s-filter-select" 
-            allow-clear 
+
+          <a-select
+            v-model:value="filterStatus"
+            placeholder="状态筛选"
+            class="k8s-filter-select"
+            allow-clear
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined aria-hidden="true"  /></template>
@@ -84,19 +84,19 @@
             <a-select-option :value="K8sIngressStatus.PENDING">等待中</a-select-option>
             <a-select-option :value="K8sIngressStatus.FAILED">失败</a-select-option>
           </a-select>
-          
+
           <!-- 标签过滤器 -->
           <div class="k8s-labels-filter">
             <a-button type="dashed" @click="openLabelsFilter" class="k8s-toolbar-btn">
               <template #icon><TagsOutlined aria-hidden="true"  /></template>
-              标签过滤 
+              标签过滤
               <a-tag v-if="Object.keys(filterLabels).length > 0" color="blue" size="small" style="margin-left: 8px;">
                 {{ Object.keys(filterLabels).length }}
               </a-tag>
             </a-button>
             <div v-if="Object.keys(filterLabels).length > 0" class="active-filters" style="margin-top: 8px;">
-              <a-tag 
-                v-for="(value, key) in filterLabels" 
+              <a-tag
+                v-for="(value, key) in filterLabels"
                 :key="key"
                 closable
                 @close="removeFilterLabel(key)"
@@ -109,15 +109,15 @@
             </div>
           </div>
         </div>
-        
+
         <div class="k8s-search-group">
-          <a-input 
-            v-model:value="searchText" 
-            placeholder="搜索 Ingress 名称" 
-            class="k8s-search-input" 
+          <a-input
+            v-model:value="searchText"
+            placeholder="搜索 Ingress 名称"
+            class="k8s-search-input"
             @pressEnter="onSearch"
             @input="onSearch"
-            allow-clear 
+            allow-clear
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -125,12 +125,12 @@
           </a-input>
         </div>
       </div>
-      
+
       <!-- 操作区域 -->
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
-          <a-button 
-            @click="resetFilters" 
+          <a-button
+            @click="resetFilters"
             :disabled="!filterStatus && !searchText && !filterClusterId && !filterNamespace && Object.keys(filterLabels).length === 0"
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
@@ -138,10 +138,10 @@
             <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             重置筛选
           </a-button>
-          
 
-          <a-button 
-            @click="openCreateYamlModal" 
+
+          <a-button
+            @click="openCreateYamlModal"
             :disabled="!filterClusterId"
             class="k8s-toolbar-btn"
             title="通过YAML创建Ingress"
@@ -149,12 +149,12 @@
             <template #icon><FileTextOutlined aria-hidden="true"  /></template>
             YAML 创建
           </a-button>
-          
-          <a-button 
-            type="primary" 
-            danger 
-            @click="() => batchOperation('删除')" 
-            :disabled="!selectedRows.length" 
+
+          <a-button
+            type="primary"
+            danger
+            @click="() => batchOperation('删除')"
+            :disabled="!selectedRows.length"
             v-if="can('k8s.ingress.batchDelete') && (selectedRows.length > 0)"
             class="k8s-toolbar-btn"
             title="批量删除选中的 Ingress"
@@ -198,201 +198,193 @@
         class="k8s-table ingress-table"
         :scroll="{ x: 1640 }"
       >
-        <template #status="{ text }">
-          <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
-        </template>
-
-        <template #ingress_class_name="{ text }">
-          <span v-if="text" class="ingress-class">{{ text }}</span>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #hosts="{ text }">
-          <div class="ingress-hosts">
-            <a-tag 
-              v-for="(host, index) in (text || []).slice(0, 3)" 
-              :key="index" 
-              class="host-tag"
-              color="blue"
-              size="small"
-            >
-              {{ host }}
-            </a-tag>
-            <a-tooltip v-if="(text || []).length > 3" :title="(text || []).join('\n')">
-              <a-tag class="host-tag" color="blue" size="small">
-                +{{ (text || []).length - 3 }} 更多
-              </a-tag>
-            </a-tooltip>
-            <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
-          </div>
-        </template>
-
-        <template #load_balancer="{ text }">
-          <div class="ingress-load-balancer">
-            <div v-if="text && text.ingress && text.ingress.length > 0">
-              <a-tag 
-                v-for="(lb, index) in text.ingress.slice(0, 2)" 
-                :key="index" 
-                class="lb-tag"
-                color="orange"
+        <template #bodyCell="{ column, text, record }">
+          <template v-if="column.key === 'status'">
+            <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
+          </template>
+          <template v-else-if="column.key === 'ingress_class_name'">
+            <span v-if="text" class="ingress-class">{{ text }}</span>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'hosts'">
+            <div class="ingress-hosts">
+              <a-tag
+                v-for="(host, index) in (text || []).slice(0, 3)"
+                :key="index"
+                class="host-tag"
+                color="blue"
                 size="small"
               >
-                {{ lb.ip || lb.hostname || 'N/A' }}
+                {{ host }}
               </a-tag>
-              <a-tooltip v-if="text.ingress.length > 2" :title="text.ingress.map((lb: any) => lb.ip || lb.hostname || 'N/A').join('\n')">
-                <a-tag class="lb-tag" color="orange" size="small">
-                  +{{ text.ingress.length - 2 }} 更多
-                </a-tag>
-              </a-tooltip>
-            </div>
-            <span v-else class="k8s-no-data">-</span>
-          </div>
-        </template>
-
-        <template #rules="{ text }">
-          <div class="ingress-rules">
-            <a-tag 
-              v-for="(rule, index) in (text || []).slice(0, 2)" 
-              :key="index" 
-              class="rule-tag"
-              color="green"
-              size="small"
-            >
-              {{ rule.host || '*' }}
-            </a-tag>
-            <a-tooltip v-if="(text || []).length > 2" :title="(text || []).map((r: any) => r.host || '*').join('\n')">
-              <a-tag class="rule-tag" color="green" size="small">
-                +{{ (text || []).length - 2 }} 更多
-              </a-tag>
-            </a-tooltip>
-            <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
-          </div>
-        </template>
-
-        <template #tls="{ text }">
-          <div class="ingress-tls">
-            <a-tag 
-              v-for="(tls, index) in (text || []).slice(0, 2)" 
-              :key="index" 
-              class="tls-tag"
-              color="purple"
-              size="small"
-            >
-              🔒 {{ tls.secret_name || 'TLS' }}
-            </a-tag>
-            <a-tooltip v-if="(text || []).length > 2" :title="(text || []).map((t: any) => t.secret_name || 'TLS').join('\n')">
-              <a-tag class="tls-tag" color="purple" size="small">
-                +{{ (text || []).length - 2 }} 更多
-              </a-tag>
-            </a-tooltip>
-            <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
-          </div>
-        </template>
-
-        <template #labels="{ text }">
-          <div class="k8s-labels-display">
-            <template v-if="Array.isArray(text)">
-              <!-- 数组格式 -->
-              <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
-                <a-tag class="k8s-label-item" size="small">
-                  {{ label.key }}: {{ label.value }}
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="text && text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-                <a-tag class="k8s-label-item" size="small">
-                  {{ text.length }} 个标签
+              <a-tooltip v-if="(text || []).length > 3" :title="(text || []).join('\n')">
+                <a-tag class="host-tag" color="blue" size="small">
+                  +{{ (text || []).length - 3 }} 更多
                 </a-tag>
               </a-tooltip>
               <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
-            </template>
-            <template v-else-if="text && typeof text === 'object'">
-              <!-- 对象格式 -->
-              <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
-                <a-tag class="k8s-label-item" size="small">
-                  {{ key }}: {{ value }}
+            </div>
+          </template>
+          <template v-else-if="column.key === 'load_balancer'">
+            <div class="ingress-load-balancer">
+              <div v-if="text && text.ingress && text.ingress.length > 0">
+                <a-tag
+                  v-for="(lb, index) in text.ingress.slice(0, 2)"
+                  :key="index"
+                  class="lb-tag"
+                  color="orange"
+                  size="small"
+                >
+                  {{ lb.ip || lb.hostname || 'N/A' }}
                 </a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="text && Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
-                <a-tag class="k8s-label-item" size="small">
-                  {{ Object.keys(text).length }} 个标签
-                </a-tag>
-              </a-tooltip>
-              <span v-if="!text || Object.keys(text).length === 0" class="k8s-no-data">-</span>
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #annotations="{ text }">
-          <div class="k8s-annotations-display">
-            <template v-if="Array.isArray(text)">
-              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-                <a-tag class="k8s-annotation-item" color="purple">
-                  {{ text.length }} 个注解
-                </a-tag>
-              </a-tooltip>
+                <a-tooltip v-if="text.ingress.length > 2" :title="text.ingress.map((lb: any) => lb.ip || lb.hostname || 'N/A').join('\n')">
+                  <a-tag class="lb-tag" color="orange" size="small">
+                    +{{ text.ingress.length - 2 }} 更多
+                  </a-tag>
+                </a-tooltip>
+              </div>
               <span v-else class="k8s-no-data">-</span>
-            </template>
-            <template v-else-if="text && typeof text === 'object'">
-              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
-                <a-tag class="k8s-annotation-item" color="purple">
-                  {{ Object.keys(text).length }} 个注解
-                </a-tag>
-              </a-tooltip>
-              <span v-else class="k8s-no-data">-</span>
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #uid="{ text }">
-          <a-tooltip v-if="text" :title="text">
-            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
-              {{ text.substring(0, 8) }}...
-            </span>
-          </a-tooltip>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #createdAt="{ text }">
-          <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
-            <div>{{ formatDateTime(text) }}</div>
-            <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
-          </div>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #actions="{ record }">
-          <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
-              <a-button title="查看详情" @click="showIngressDetail(record)">
-                <template #icon><EyeOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="编辑">
-              <a-button title="编辑" @click="openEditModal(record)">
-                <template #icon><EditOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="查看 YAML">
-              <a-button title="查看 YAML" @click="showYamlModal(record)">
-                <template #icon><FileTextOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="can('k8s.ingress.delete')" title="删除">
-              <a-button 
-                title="删除" 
-                danger 
-                @click="deleteIngress(record)"
+            </div>
+          </template>
+          <template v-else-if="column.key === 'rules'">
+            <div class="ingress-rules">
+              <a-tag
+                v-for="(rule, index) in (text || []).slice(0, 2)"
+                :key="index"
+                class="rule-tag"
+                color="green"
+                size="small"
               >
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
-              </a-button>
+                {{ rule.host || '*' }}
+              </a-tag>
+              <a-tooltip v-if="(text || []).length > 2" :title="(text || []).map((r: any) => r.host || '*').join('\n')">
+                <a-tag class="rule-tag" color="green" size="small">
+                  +{{ (text || []).length - 2 }} 更多
+                </a-tag>
+              </a-tooltip>
+              <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'tls'">
+            <div class="ingress-tls">
+              <a-tag
+                v-for="(tls, index) in (text || []).slice(0, 2)"
+                :key="index"
+                class="tls-tag"
+                color="purple"
+                size="small"
+              >
+                🔒 {{ tls.secret_name || 'TLS' }}
+              </a-tag>
+              <a-tooltip v-if="(text || []).length > 2" :title="(text || []).map((t: any) => t.secret_name || 'TLS').join('\n')">
+                <a-tag class="tls-tag" color="purple" size="small">
+                  +{{ (text || []).length - 2 }} 更多
+                </a-tag>
+              </a-tooltip>
+              <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'labels'">
+            <div class="k8s-labels-display">
+              <template v-if="Array.isArray(text)">
+                <!-- 数组格式 -->
+                <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
+                  <a-tag class="k8s-label-item" size="small">
+                    {{ label.key }}: {{ label.value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip v-if="text && text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                  <a-tag class="k8s-label-item" size="small">
+                    {{ text.length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
+              </template>
+              <template v-else-if="text && typeof text === 'object'">
+                <!-- 对象格式 -->
+                <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
+                  <a-tag class="k8s-label-item" size="small">
+                    {{ key }}: {{ value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip v-if="text && Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                  <a-tag class="k8s-label-item" size="small">
+                    {{ Object.keys(text).length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="!text || Object.keys(text).length === 0" class="k8s-no-data">-</span>
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'annotations'">
+            <div class="k8s-annotations-display">
+              <template v-if="Array.isArray(text)">
+                <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                  <a-tag class="k8s-annotation-item" color="purple">
+                    {{ text.length }} 个注解
+                  </a-tag>
+                </a-tooltip>
+                <span v-else class="k8s-no-data">-</span>
+              </template>
+              <template v-else-if="text && typeof text === 'object'">
+                <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                  <a-tag class="k8s-annotation-item" color="purple">
+                    {{ Object.keys(text).length }} 个注解
+                  </a-tag>
+                </a-tooltip>
+                <span v-else class="k8s-no-data">-</span>
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'uid'">
+            <a-tooltip v-if="text" :title="text">
+              <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
+                {{ text.substring(0, 8) }}...
+              </span>
             </a-tooltip>
-          </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'created_at'">
+            <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
+              <div>{{ formatDateTime(text) }}</div>
+              <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <div class="k8s-action-column">
+              <a-tooltip title="查看详情">
+                <a-button title="查看详情" @click="showIngressDetail(record)">
+                  <template #icon><EyeOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="编辑">
+                <a-button title="编辑" @click="openEditModal(record)">
+                  <template #icon><EditOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="查看 YAML">
+                <a-button title="查看 YAML" @click="showYamlModal(record)">
+                  <template #icon><FileTextOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip v-if="can('k8s.ingress.delete')" title="删除">
+                <a-button
+                  title="删除"
+                  danger
+                  @click="deleteIngress(record)"
+                >
+                  <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+          </template>
         </template>
 
         <template #emptyText>
@@ -419,17 +411,17 @@
       okText="创建"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="formRef"
-        :model="createFormModel" 
-        layout="vertical" 
+        :model="createFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="createFormRules"
       >
         <a-form-item label="Ingress 名称" name="name" :required="true">
-          <a-input 
-            v-model:value="createFormModel.name" 
-            placeholder="请输入 Ingress 名称（例如：my-ingress）" 
+          <a-input
+            v-model:value="createFormModel.name"
+            placeholder="请输入 Ingress 名称（例如：my-ingress）"
             class="k8s-form-input"
             :maxlength="63"
           />
@@ -439,9 +431,9 @@
         </a-form-item>
 
         <a-form-item label="命名空间" name="namespace" :required="true">
-          <a-select 
-            v-model:value="createFormModel.namespace" 
-            placeholder="请选择命名空间" 
+          <a-select
+            v-model:value="createFormModel.namespace"
+            placeholder="请选择命名空间"
             class="k8s-form-input"
             :disabled="!filterClusterId"
           >
@@ -452,9 +444,9 @@
         </a-form-item>
 
         <a-form-item label="Ingress 类名（可选）" name="ingress_class_name">
-          <a-input 
-            v-model:value="createFormModel.ingress_class_name" 
-            placeholder="请输入 Ingress 类名（例如：nginx）" 
+          <a-input
+            v-model:value="createFormModel.ingress_class_name"
+            placeholder="请输入 Ingress 类名（例如：nginx）"
             class="k8s-form-input"
           />
         </a-form-item>
@@ -462,21 +454,21 @@
         <a-form-item label="Ingress 规则">
           <div class="k8s-key-value-inputs">
             <div v-for="(rule, index) in createFormModel.rules" :key="index" class="k8s-key-value-row">
-              <a-input 
-                v-model:value="rule.host" 
-                placeholder="主机名 (例如：example.com)" 
+              <a-input
+                v-model:value="rule.host"
+                placeholder="主机名 (例如：example.com)"
                 class="k8s-form-input"
                 style="flex: 1;"
               />
-              <a-input 
-                v-model:value="(rule.http.paths[0] as any).path" 
-                placeholder="路径 (例如：/api)" 
+              <a-input
+                v-model:value="(rule.http.paths[0] as any).path"
+                placeholder="路径 (例如：/api)"
                 class="k8s-form-input"
                 style="flex: 1;"
               />
-              <a-select 
-                v-model:value="(rule.http.paths[0] as any).path_type" 
-                placeholder="路径类型" 
+              <a-select
+                v-model:value="(rule.http.paths[0] as any).path_type"
+                placeholder="路径类型"
                 class="k8s-form-input"
                 style="width: 120px;"
               >
@@ -484,22 +476,22 @@
                 <a-select-option value="Prefix">Prefix</a-select-option>
                 <a-select-option value="ImplementationSpecific">Implementation</a-select-option>
               </a-select>
-              <a-input 
-                v-model:value="(rule as any).http.paths[0].backend.service.name" 
-                placeholder="服务名称" 
+              <a-input
+                v-model:value="(rule as any).http.paths[0].backend.service.name"
+                placeholder="服务名称"
                 class="k8s-form-input"
                 style="flex: 1;"
               />
-              <a-input-number 
-                v-model:value="(rule as any).http.paths[0].backend.service.port.number" 
-                placeholder="端口" 
+              <a-input-number
+                v-model:value="(rule as any).http.paths[0].backend.service.port.number"
+                placeholder="端口"
                 class="k8s-form-input"
                 style="width: 100px;"
                 :min="1"
                 :max="65535"
               />
-              <a-button type="text" danger 
-                @click="removeRuleField(index)" 
+              <a-button type="text" danger
+                @click="removeRuleField(index)"
                 :disabled="createFormModel.rules.length <= 1"
                 size="small"
                class="k8s-remove-btn">
@@ -519,14 +511,14 @@
               暂无 TLS 配置，点击下方按钮添加
             </div>
             <div v-for="(tls, index) in createFormModel.tls" :key="index" class="k8s-key-value-row">
-              <a-input 
-                v-model:value="tls.secret_name" 
-                placeholder="Secret 名称" 
+              <a-input
+                v-model:value="tls.secret_name"
+                placeholder="Secret 名称"
                 class="k8s-form-input"
                 style="flex: 1;"
               />
-              <a-select 
-                v-model:value="tls.hosts" 
+              <a-select
+                v-model:value="tls.hosts"
                 mode="tags"
                 placeholder="主机列表"
                 class="k8s-form-input"
@@ -550,15 +542,15 @@
               暂无标签，点击下方按钮添加
             </div>
             <div v-for="(_, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`标签键: ${key}`" 
+              <a-input
+                :value="key"
+                :placeholder="`标签键: ${key}`"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="createFormModel.labels[key]" 
-                placeholder="标签值" 
+              <a-input
+                v-model:value="createFormModel.labels[key]"
+                placeholder="标签值"
                 class="k8s-form-input"
                 :maxlength="200"
               />
@@ -587,15 +579,15 @@
               暂无注解，点击下方按钮添加
             </div>
             <div v-for="(_, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`注解键: ${key}`" 
+              <a-input
+                :value="key"
+                :placeholder="`注解键: ${key}`"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="createFormModel.annotations[key]" 
-                placeholder="注解值" 
+              <a-input
+                v-model:value="createFormModel.annotations[key]"
+                placeholder="注解值"
                 class="k8s-form-input"
                 :maxlength="500"
               />
@@ -633,17 +625,17 @@
       okText="更新"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="editFormRef"
-        :model="editFormModel" 
-        layout="vertical" 
+        :model="editFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="editFormRules"
       >
         <a-form-item label="Ingress 名称" name="name" :required="true">
-          <a-input 
-            v-model:value="editFormModel.name" 
-            placeholder="请输入 Ingress 名称（例如：my-ingress）" 
+          <a-input
+            v-model:value="editFormModel.name"
+            placeholder="请输入 Ingress 名称（例如：my-ingress）"
             class="k8s-form-input"
             :maxlength="63"
             disabled
@@ -654,9 +646,9 @@
         </a-form-item>
 
         <a-form-item label="命名空间" name="namespace" :required="true">
-          <a-input 
-            v-model:value="editFormModel.namespace" 
-            placeholder="命名空间" 
+          <a-input
+            v-model:value="editFormModel.namespace"
+            placeholder="命名空间"
             class="k8s-form-input"
             disabled
           />
@@ -666,9 +658,9 @@
         </a-form-item>
 
         <a-form-item label="Ingress 类名（可选）" name="ingress_class_name">
-          <a-input 
-            v-model:value="editFormModel.ingress_class_name" 
-            placeholder="请输入 Ingress 类名（例如：nginx）" 
+          <a-input
+            v-model:value="editFormModel.ingress_class_name"
+            placeholder="请输入 Ingress 类名（例如：nginx）"
             class="k8s-form-input"
           />
         </a-form-item>
@@ -676,21 +668,21 @@
         <a-form-item label="Ingress 规则">
           <div class="k8s-key-value-inputs">
             <div v-for="(rule, index) in editFormModel.rules" :key="index" class="k8s-key-value-row">
-              <a-input 
-                v-model:value="rule.host" 
-                placeholder="主机名 (例如：example.com)" 
+              <a-input
+                v-model:value="rule.host"
+                placeholder="主机名 (例如：example.com)"
                 class="k8s-form-input"
                 style="flex: 1;"
               />
-              <a-input 
-                v-model:value="(rule.http.paths[0] as any).path" 
-                placeholder="路径 (例如：/api)" 
+              <a-input
+                v-model:value="(rule.http.paths[0] as any).path"
+                placeholder="路径 (例如：/api)"
                 class="k8s-form-input"
                 style="flex: 1;"
               />
-              <a-select 
-                v-model:value="(rule.http.paths[0] as any).path_type" 
-                placeholder="路径类型" 
+              <a-select
+                v-model:value="(rule.http.paths[0] as any).path_type"
+                placeholder="路径类型"
                 class="k8s-form-input"
                 style="width: 120px;"
               >
@@ -698,22 +690,22 @@
                 <a-select-option value="Prefix">Prefix</a-select-option>
                 <a-select-option value="ImplementationSpecific">Implementation</a-select-option>
               </a-select>
-              <a-input 
-                v-model:value="(rule as any).http.paths[0].backend.service.name" 
-                placeholder="服务名称" 
+              <a-input
+                v-model:value="(rule as any).http.paths[0].backend.service.name"
+                placeholder="服务名称"
                 class="k8s-form-input"
                 style="flex: 1;"
               />
-              <a-input-number 
-                v-model:value="(rule as any).http.paths[0].backend.service.port.number" 
-                placeholder="端口" 
+              <a-input-number
+                v-model:value="(rule as any).http.paths[0].backend.service.port.number"
+                placeholder="端口"
                 class="k8s-form-input"
                 style="width: 100px;"
                 :min="1"
                 :max="65535"
               />
-              <a-button type="text" danger 
-                @click="removeEditRuleField(index)" 
+              <a-button type="text" danger
+                @click="removeEditRuleField(index)"
                 :disabled="editFormModel.rules.length <= 1"
                 size="small"
                class="k8s-remove-btn">
@@ -733,14 +725,14 @@
               暂无 TLS 配置，点击下方按钮添加
             </div>
             <div v-for="(tls, index) in editFormModel.tls" :key="index" class="k8s-key-value-row">
-              <a-input 
-                v-model:value="tls.secret_name" 
-                placeholder="Secret 名称" 
+              <a-input
+                v-model:value="tls.secret_name"
+                placeholder="Secret 名称"
                 class="k8s-form-input"
                 style="flex: 1;"
               />
-              <a-select 
-                v-model:value="tls.hosts" 
+              <a-select
+                v-model:value="tls.hosts"
                 mode="tags"
                 placeholder="主机列表"
                 class="k8s-form-input"
@@ -764,15 +756,15 @@
               暂无标签，点击下方按钮添加
             </div>
             <div v-for="(_, key) in editFormModel.labels" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`标签键: ${key}`" 
+              <a-input
+                :value="key"
+                :placeholder="`标签键: ${key}`"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="editFormModel.labels[key]" 
-                placeholder="标签值" 
+              <a-input
+                v-model:value="editFormModel.labels[key]"
+                placeholder="标签值"
                 class="k8s-form-input"
                 :maxlength="200"
               />
@@ -801,15 +793,15 @@
               暂无注解，点击下方按钮添加
             </div>
             <div v-for="(_, key) in editFormModel.annotations" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`注解键: ${key}`" 
+              <a-input
+                :value="key"
+                :placeholder="`注解键: ${key}`"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="editFormModel.annotations[key]" 
-                placeholder="注解值" 
+              <a-input
+                v-model:value="editFormModel.annotations[key]"
+                placeholder="注解值"
                 class="k8s-form-input"
                 :maxlength="500"
               />
@@ -847,10 +839,10 @@
       okText="创建"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="createYamlFormRef"
-        :model="createYamlFormModel" 
-        layout="vertical" 
+        :model="createYamlFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="createYamlFormRules"
       >
@@ -873,9 +865,9 @@
               清空
             </a-button>
           </div>
-          <a-textarea 
-            v-model:value="createYamlFormModel.yaml" 
-            placeholder="请输入 Ingress YAML 内容，或点击【插入模板】使用默认模板" 
+          <a-textarea
+            v-model:value="createYamlFormModel.yaml"
+            placeholder="请输入 Ingress YAML 内容，或点击【插入模板】使用默认模板"
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -928,7 +920,7 @@
                 </div>
               </a-card>
             </a-col>
-            
+
             <a-col :xs="24" :lg="12">
               <a-card title="主机信息" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
@@ -944,11 +936,11 @@
                   <span class="k8s-detail-label">负载均衡器:</span>
                   <div class="k8s-detail-value">
                     <div v-if="currentIngressDetail.load_balancer && currentIngressDetail.load_balancer.ingress && currentIngressDetail.load_balancer.ingress.length > 0">
-                      <a-tag 
-                        v-for="lb in currentIngressDetail.load_balancer.ingress" 
-                        :key="lb.ip || lb.hostname" 
-                        color="orange" 
-                        size="small" 
+                      <a-tag
+                        v-for="lb in currentIngressDetail.load_balancer.ingress"
+                        :key="lb.ip || lb.hostname"
+                        color="orange"
+                        size="small"
                         style="margin-right: 4px;"
                       >
                         {{ lb.ip || lb.hostname || 'N/A' }}
@@ -971,19 +963,21 @@
                   size="small"
                   class="k8s-table"
                 >
-                  <template #paths="{ text }">
-                    <div v-if="text && text.paths">
-                      <a-tag 
-                        v-for="(path, index) in text.paths" 
-                        :key="index" 
-                        color="green" 
-                        size="small"
-                        style="margin-bottom: 4px;"
-                      >
-                        {{ path.path }} ({{ path.path_type }})
-                      </a-tag>
-                    </div>
-                    <span v-else>-</span>
+                  <template #bodyCell="{ column, text }">
+                    <template v-if="column.key === 'http'">
+                      <div v-if="text && text.paths">
+                        <a-tag
+                          v-for="(path, index) in text.paths"
+                          :key="index"
+                          color="green"
+                          size="small"
+                          style="margin-bottom: 4px;"
+                        >
+                          {{ path.path }} ({{ path.path_type }})
+                        </a-tag>
+                      </div>
+                      <span v-else>-</span>
+                    </template>
                   </template>
                 </a-table>
               </a-card>
@@ -1000,19 +994,21 @@
                   size="small"
                   class="k8s-table"
                 >
-                  <template #hosts="{ text }">
-                    <div v-if="text && text.length > 0">
-                      <a-tag 
-                        v-for="host in text" 
-                        :key="host" 
-                        color="purple" 
-                        size="small"
-                        style="margin-right: 4px;"
-                      >
-                        {{ host }}
-                      </a-tag>
-                    </div>
-                    <span v-else>-</span>
+                  <template #bodyCell="{ column, text }">
+                    <template v-if="column.key === 'hosts'">
+                      <div v-if="text && text.length > 0">
+                        <a-tag
+                          v-for="host in text"
+                          :key="host"
+                          color="purple"
+                          size="small"
+                          style="margin-right: 4px;"
+                        >
+                          {{ host }}
+                        </a-tag>
+                      </div>
+                      <span v-else>-</span>
+                    </template>
                   </template>
                 </a-table>
               </a-card>
@@ -1067,17 +1063,17 @@
       okText="保存修改"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="yamlFormRef"
-        :model="yamlFormModel" 
-        layout="vertical" 
+        :model="yamlFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="yamlFormRules"
       >
         <a-form-item name="yaml">
-          <a-textarea 
-            v-model:value="yamlFormModel.yaml" 
-            placeholder="YAML 内容" 
+          <a-textarea
+            v-model:value="yamlFormModel.yaml"
+            placeholder="YAML 内容"
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -1101,8 +1097,8 @@
         <div class="current-filters" v-if="Object.keys(filterLabels).length > 0">
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
-            <a-tag 
-              v-for="(value, key) in filterLabels" 
+            <a-tag
+              v-for="(value, key) in filterLabels"
               :key="key"
               closable
               @close="removeFilterLabel(key)"
@@ -1149,11 +1145,11 @@ import { message, Modal } from 'ant-design-vue';
 import { useIngressPage } from './Ingress';
 import { formatDateTime, getRelativeTime } from '../shared/utils';
 import yaml from 'js-yaml';
-import { 
-  PlusOutlined, 
-  ReloadOutlined, 
-  FilterOutlined, 
-  DeleteOutlined, 
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  FilterOutlined,
+  DeleteOutlined,
   DeploymentUnitOutlined,
   AppstoreOutlined,
   EyeOutlined,
@@ -1193,7 +1189,7 @@ const {
   total,
   clustersTotal,
   namespacesTotal,
-  
+
   // modal state
   isCreateModalVisible,
   isCreateYamlModalVisible,
@@ -1202,38 +1198,38 @@ const {
   isYamlModalVisible,
   submitLoading,
   detailLoading,
-  
+
   // operation targets
   currentOperationIngress,
   currentIngressDetail,
-  
+
   // form models
   createFormModel,
   editFormModel,
   yamlFormModel,
   createYamlFormModel,
-  
+
   // form refs
   formRef,
   editFormRef,
   yamlFormRef,
   createYamlFormRef,
-  
+
   // form rules
   createFormRules,
   editFormRules,
   yamlFormRules,
   createYamlFormRules,
-  
+
   // computed
   filteredIngresses,
   rowSelection,
-  
+
   // helpers
   getEnvText,
   getStatusText,
   getStatusColor,
-  
+
   // operations
   fetchClusters,
   fetchNamespaces,
@@ -1242,16 +1238,16 @@ const {
   clearNamespaces,
   loadMoreClusters,
   loadMoreNamespaces,
-  
+
   // detail operations
   showIngressDetail,
   closeDetailModal,
-  
+
   // YAML operations
   showYamlModal,
   closeYamlModal,
   submitYamlForm,
-  
+
   // create operations
   openCreateModal,
   closeCreateModal,
@@ -1259,26 +1255,26 @@ const {
   openCreateYamlModal,
   closeCreateYamlModal,
   submitCreateYamlForm,
-  
+
   // edit operations
   openEditModal,
   closeEditModal,
   submitEditForm,
-  
+
   // ingress operations
   deleteIngress,
-  
+
   // filter operations
   addFilterLabel,
   removeFilterLabel,
   clearFilterLabels,
-  
+
   // batch operations
   batchOperation,
-  
+
   // pagination operations
   handlePageChange,
-  
+
   // form field operations
   addRuleField,
   removeRuleField,
@@ -1286,7 +1282,7 @@ const {
   removeTlsField,
   removeLabelField,
   removeAnnotationField,
-  
+
   // edit form field operations
   addEditRuleField,
   removeEditRuleField,
@@ -1296,11 +1292,11 @@ const {
   removeEditLabelField,
   addNewEditAnnotation,
   removeEditAnnotationField,
-  
+
   // edit form helper variables
   newEditLabelKey,
   newEditAnnotationKey,
-  
+
   // constants
   K8sIngressStatus,
 } = useIngressPage();
@@ -1337,7 +1333,7 @@ const handleClusterChange = () => {
   currentPage.value = 1;
   clearNamespaces();
   clearIngresses();
-  
+
   if (filterClusterId.value) {
     fetchNamespaces(true); // 重置命名空间分页
     fetchIngresses();
@@ -1365,27 +1361,27 @@ const handleClusterDropdownScroll = (e: Event) => {
 const columns = [
   { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
   { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center', slots: { customRender: 'status' } },
-  { title: 'Ingress类', dataIndex: 'ingress_class_name', key: 'ingress_class_name', width: 130, align: 'center', slots: { customRender: 'ingress_class_name' } },
-  { title: '主机', dataIndex: 'hosts', key: 'hosts', width: 180, slots: { customRender: 'hosts' } },
-  { title: '负载均衡器', dataIndex: 'load_balancer', key: 'load_balancer', width: 160, slots: { customRender: 'load_balancer' } },
-  { title: '规则', dataIndex: 'rules', key: 'rules', width: 90, align: 'center', slots: { customRender: 'rules' } },
-  { title: 'TLS', dataIndex: 'tls', key: 'tls', width: 80, align: 'center', slots: { customRender: 'tls' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
-  { title: '操作', key: 'actions', width: 230, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center' },
+  { title: 'Ingress类', dataIndex: 'ingress_class_name', key: 'ingress_class_name', width: 130, align: 'center' },
+  { title: '主机', dataIndex: 'hosts', key: 'hosts', width: 180 },
+  { title: '负载均衡器', dataIndex: 'load_balancer', key: 'load_balancer', width: 160 },
+  { title: '规则', dataIndex: 'rules', key: 'rules', width: 90, align: 'center' },
+  { title: 'TLS', dataIndex: 'tls', key: 'tls', width: 80, align: 'center' },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  { title: '操作', key: 'actions', width: 230, fixed: 'right', align: 'center' },
 ];
 
 const ruleColumns = [
   { title: '主机', dataIndex: 'host', key: 'host' },
-  { title: '路径', dataIndex: 'http', key: 'http', slots: { customRender: 'paths' } },
+  { title: '路径', dataIndex: 'http', key: 'http' },
 ];
 
 const tlsColumns = [
   { title: 'Secret 名称', dataIndex: 'secret_name', key: 'secret_name' },
-  { title: '主机列表', dataIndex: 'hosts', key: 'hosts', slots: { customRender: 'hosts' } },
+  { title: '主机列表', dataIndex: 'hosts', key: 'hosts' },
 ];
 
 // 标签过滤器状态
@@ -1501,7 +1497,7 @@ const validateYaml = () => {
 
   try {
     const parsed = yaml.load(yamlContent);
-    
+
     if (!parsed || typeof parsed !== 'object') {
       message.warning('YAML 内容无效：应为对象格式');
       return;

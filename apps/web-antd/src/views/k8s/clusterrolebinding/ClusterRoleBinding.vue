@@ -17,12 +17,12 @@
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
-          <a-select 
-            v-model:value="filterClusterId" 
-            placeholder="选择集群" 
+          <a-select
+            v-model:value="filterClusterId"
+            placeholder="选择集群"
             class="k8s-cluster-selector"
             aria-label="选择集群"
-            allow-clear 
+            allow-clear
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
@@ -35,9 +35,9 @@
                 <a-tag color="blue" size="small">{{ cluster.env ? getEnvText(cluster.env) : '未知' }}</a-tag>
               </div>
             </a-select-option>
-            <a-select-option 
-              v-if="clusters.length > 0 && clusters.length < clustersTotal" 
-              :value="'__load_more__'" 
+            <a-select-option
+              v-if="clusters.length > 0 && clusters.length < clustersTotal"
+              :value="'__load_more__'"
               disabled
               style="text-align: center; color: var(--ops-muted);"
             >
@@ -45,7 +45,7 @@
               <span v-if="!clustersLoading">滚动加载更多...</span>
             </a-select-option>
           </a-select>
-          
+
           <!-- 标签过滤器 -->
           <div class="clusterrolebinding-labels-filter">
             <a-button type="dashed" @click="openLabelsFilter" class="k8s-toolbar-btn">
@@ -56,8 +56,8 @@
               </a-tag>
             </a-button>
             <div v-if="Object.keys(filterLabels).length > 0" class="active-filters" style="margin-top: 8px;">
-              <a-tag 
-                v-for="(value, key) in filterLabels" 
+              <a-tag
+                v-for="(value, key) in filterLabels"
                 :key="key"
                 closable
                 @close="removeFilterLabel(key)"
@@ -70,15 +70,15 @@
             </div>
           </div>
         </div>
-        
+
         <div class="k8s-search-group">
-          <a-input 
-            v-model:value="searchText" 
-            placeholder="搜索 ClusterRoleBinding 名称" 
-            class="k8s-search-input" 
+          <a-input
+            v-model:value="searchText"
+            placeholder="搜索 ClusterRoleBinding 名称"
+            class="k8s-search-input"
             @pressEnter="onSearch"
             @input="onSearch"
-            allow-clear 
+            allow-clear
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -86,12 +86,12 @@
           </a-input>
         </div>
       </div>
-      
+
       <!-- 操作区域 -->
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
-          <a-button 
-            @click="resetFilters" 
+          <a-button
+            @click="resetFilters"
             :disabled="!searchText && !filterClusterId && Object.keys(filterLabels).length === 0"
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
@@ -99,10 +99,10 @@
             <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             重置筛选
           </a-button>
-          
 
-          <a-button 
-            @click="openCreateYamlModal" 
+
+          <a-button
+            @click="openCreateYamlModal"
             :disabled="!filterClusterId"
             class="k8s-toolbar-btn"
             title="通过YAML创建ClusterRoleBinding"
@@ -110,12 +110,12 @@
             <template #icon><FileTextOutlined aria-hidden="true"  /></template>
             YAML 创建
           </a-button>
-          
-          <a-button 
-            type="primary" 
-            danger 
-            @click="() => batchOperation('删除')" 
-            :disabled="!selectedRows.length" 
+
+          <a-button
+            type="primary"
+            danger
+            @click="() => batchOperation('删除')"
+            :disabled="!selectedRows.length"
             v-if="can('k8s.clusterrolebinding.batchDelete') && (selectedRows.length > 0)"
             class="k8s-toolbar-btn"
             title="批量删除选中的 ClusterRoleBinding"
@@ -156,126 +156,124 @@
         class="k8s-table clusterrolebinding-table"
         :scroll="{ x: 1600 }"
       >
-        <template #roleRef="{ record }">
-          <div class="clusterrolebinding-role-ref">
-            <template v-if="record.role_ref && (record.role_ref.kind || record.role_ref.name || record.role_ref.api_group)">
-              <a-tag color="green">{{ record.role_ref.kind || 'Unknown' }}</a-tag>
-              <span class="role-name">{{ record.role_ref.name || 'Unknown' }}</span>
-              <div v-if="record.role_ref.api_group" class="api-group" style="font-size: 12px; color: var(--ops-muted); margin-top: 2px;">
-                API Group: {{ record.role_ref.api_group }}
+        <template #bodyCell="{ column, record, text }">
+          <template v-if="column.key === 'roleRef'">
+            <div class="clusterrolebinding-role-ref">
+              <template v-if="record.role_ref && (record.role_ref.kind || record.role_ref.name || record.role_ref.api_group)">
+                <a-tag color="green">{{ record.role_ref.kind || 'Unknown' }}</a-tag>
+                <span class="role-name">{{ record.role_ref.name || 'Unknown' }}</span>
+                <div v-if="record.role_ref.api_group" class="api-group" style="font-size: 12px; color: var(--ops-muted); margin-top: 2px;">
+                  API Group: {{ record.role_ref.api_group }}
+                </div>
+              </template>
+              <template v-else>
+                <a-tag color="red">未配置</a-tag>
+                <span class="role-name">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'subjects'">
+            <div class="clusterrolebinding-subjects">
+              <template v-if="record.subjects && record.subjects.length > 0">
+                <a-tag
+                  v-for="(subject, index) in record.subjects.slice(0, 2)"
+                  :key="index"
+                  :color="getSubjectColor(subject?.kind)"
+                  class="subject-tag"
+                >
+                  {{ subject?.kind || 'Unknown' }}: {{ subject?.name || 'Unknown' }}
+                  <span v-if="subject?.namespace" style="font-size: 11px; opacity: 0.8;">
+                    @{{ subject.namespace }}
+                  </span>
+                </a-tag>
+                <a-tooltip v-if="record.subjects.length > 2" :title="record.subjects.map((s: any) => `${s.kind || 'Unknown'}: ${s.name || 'Unknown'}${s.namespace ? ' @' + s.namespace : ''}`).join('\n')">
+                  <a-tag class="subject-tag">
+                    +{{ record.subjects.length - 2 }} 更多
+                  </a-tag>
+                </a-tooltip>
+              </template>
+              <template v-else>
+                <a-tag color="orange">无主体</a-tag>
+                <span class="k8s-no-data">未绑定任何主体</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'labels'">
+            <div class="k8s-labels-display">
+              <template v-if="Array.isArray(text)">
+                <!-- 数组格式 -->
+                <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
+                  <a-tag class="k8s-label-item">
+                    {{ label.key }}: {{ label.value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip v-if="text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                  <a-tag class="k8s-label-item">
+                    {{ text.length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="text.length === 0" class="k8s-no-data">-</span>
+              </template>
+              <template v-else-if="text && typeof text === 'object'">
+                <!-- 对象格式 -->
+                <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
+                  <a-tag class="k8s-label-item">
+                    {{ key }}: {{ value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip v-if="Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                  <a-tag class="k8s-label-item">
+                    {{ Object.keys(text).length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'created_at'">
+            <div class="k8s-time-display">
+              <div class="creation-time" :title="record.created_at">
+                {{ formatCreationTime(record.created_at) }}
               </div>
-            </template>
-            <template v-else>
-              <a-tag color="red">未配置</a-tag>
-              <span class="role-name">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #subjects="{ record }">
-          <div class="clusterrolebinding-subjects">
-            <template v-if="record.subjects && record.subjects.length > 0">
-              <a-tag 
-                v-for="(subject, index) in record.subjects.slice(0, 2)" 
-                :key="index" 
-                :color="getSubjectColor(subject?.kind)"
-                class="subject-tag"
-              >
-                {{ subject?.kind || 'Unknown' }}: {{ subject?.name || 'Unknown' }}
-                <span v-if="subject?.namespace" style="font-size: 11px; opacity: 0.8;">
-                  @{{ subject.namespace }}
-                </span>
-              </a-tag>
-              <a-tooltip v-if="record.subjects.length > 2" :title="record.subjects.map((s: any) => `${s.kind || 'Unknown'}: ${s.name || 'Unknown'}${s.namespace ? ' @' + s.namespace : ''}`).join('\n')">
-                <a-tag class="subject-tag">
-                  +{{ record.subjects.length - 2 }} 更多
-                </a-tag>
-              </a-tooltip>
-            </template>
-            <template v-else>
-              <a-tag color="orange">无主体</a-tag>
-              <span class="k8s-no-data">未绑定任何主体</span>
-            </template>
-          </div>
-        </template>
-
-        <template #labels="{ text }">
-          <div class="k8s-labels-display">
-            <template v-if="Array.isArray(text)">
-              <!-- 数组格式 -->
-              <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
-                <a-tag class="k8s-label-item">
-                  {{ label.key }}: {{ label.value }}
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-                <a-tag class="k8s-label-item">
-                  {{ text.length }} 个标签
-                </a-tag>
-              </a-tooltip>
-              <span v-if="text.length === 0" class="k8s-no-data">-</span>
-            </template>
-            <template v-else-if="text && typeof text === 'object'">
-              <!-- 对象格式 -->
-              <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
-                <a-tag class="k8s-label-item">
-                  {{ key }}: {{ value }}
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
-                <a-tag class="k8s-label-item">
-                  {{ Object.keys(text).length }} 个标签
-                </a-tag>
-              </a-tooltip>
-              <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #creationTimestamp="{ record }">
-          <div class="k8s-time-display">
-            <div class="creation-time" :title="record.created_at">
-              {{ formatCreationTime(record.created_at) }}
+              <div class="age-display" style="font-size: 12px; color: var(--ops-muted);">
+                {{ formatAge(record.age, record.created_at) }}
+              </div>
+              <div v-if="record.resource_version" class="resource-version" style="font-size: 11px; color: var(--ops-muted);">
+                版本: {{ record.resource_version }}
+              </div>
             </div>
-            <div class="age-display" style="font-size: 12px; color: var(--ops-muted);">
-              {{ formatAge(record.age, record.created_at) }}
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <div class="k8s-action-column">
+              <a-tooltip title="查看详情">
+                <a-button title="查看详情" @click="showClusterRoleBindingDetail(record)">
+                  <template #icon><EyeOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="查看 YAML">
+                <a-button title="查看 YAML" @click="showYamlModal(record)">
+                  <template #icon><FileTextOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="编辑">
+                <a-button title="编辑" @click="openEditModal(record)">
+                  <template #icon><EditOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip v-if="can('k8s.clusterrolebinding.delete')" title="删除">
+                <a-button
+                  title="删除"
+                  danger
+                  @click="deleteClusterRoleBinding(record)"
+                >
+                  <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
             </div>
-            <div v-if="record.resource_version" class="resource-version" style="font-size: 11px; color: var(--ops-muted);">
-              版本: {{ record.resource_version }}
-            </div>
-          </div>
-        </template>
-
-        <template #actions="{ record }">
-          <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
-              <a-button title="查看详情" @click="showClusterRoleBindingDetail(record)">
-                <template #icon><EyeOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="查看 YAML">
-              <a-button title="查看 YAML" @click="showYamlModal(record)">
-                <template #icon><FileTextOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="编辑">
-              <a-button title="编辑" @click="openEditModal(record)">
-                <template #icon><EditOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="can('k8s.clusterrolebinding.delete')" title="删除">
-              <a-button 
-                title="删除" 
-                danger 
-                @click="deleteClusterRoleBinding(record)"
-              >
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-          </div>
+          </template>
         </template>
 
         <template #emptyText>
@@ -302,17 +300,17 @@
       okText="创建"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="formRef"
-        :model="createFormModel" 
-        layout="vertical" 
+        :model="createFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="createFormRules"
       >
         <a-form-item label="ClusterRoleBinding 名称" name="name" :required="true">
-          <a-input 
-            v-model:value="createFormModel.name" 
-            placeholder="请输入 ClusterRoleBinding 名称（例如：my-clusterrolebinding）" 
+          <a-input
+            v-model:value="createFormModel.name"
+            placeholder="请输入 ClusterRoleBinding 名称（例如：my-clusterrolebinding）"
             class="k8s-form-input"
             :maxlength="63"
           />
@@ -325,8 +323,8 @@
           <a-row :gutter="12">
             <a-col :span="8">
               <a-form-item :name="['role_ref', 'kind']" no-style>
-                <a-select 
-                  v-model:value="createFormModel.role_ref.kind" 
+                <a-select
+                  v-model:value="createFormModel.role_ref.kind"
                   placeholder="角色类型"
                   class="k8s-form-input"
                 >
@@ -337,9 +335,9 @@
             </a-col>
             <a-col :span="16">
               <a-form-item :name="['role_ref', 'name']" no-style :rules="[{ required: true, message: '请输入角色名称', trigger: 'blur' }]">
-                <a-input 
-                  v-model:value="createFormModel.role_ref.name" 
-                  placeholder="请输入角色名称（例如：cluster-admin）" 
+                <a-input
+                  v-model:value="createFormModel.role_ref.name"
+                  placeholder="请输入角色名称（例如：cluster-admin）"
                   class="k8s-form-input"
                 />
               </a-form-item>
@@ -350,8 +348,8 @@
         <a-form-item label="主体配置" :required="true">
           <div class="k8s-key-value-inputs">
             <div v-for="(subject, index) in createFormModel.subjects" :key="index" class="k8s-key-value-row">
-              <a-select 
-                v-model:value="subject.kind" 
+              <a-select
+                v-model:value="subject.kind"
                 placeholder="主体类型"
                 class="k8s-form-input"
                 style="width: 120px;"
@@ -360,19 +358,19 @@
                 <a-select-option value="Group">Group</a-select-option>
                 <a-select-option value="ServiceAccount">ServiceAccount</a-select-option>
               </a-select>
-              <a-input 
-                v-model:value="subject.name" 
-                placeholder="主体名称" 
+              <a-input
+                v-model:value="subject.name"
+                placeholder="主体名称"
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="subject.namespace" 
-                placeholder="命名空间（ServiceAccount需要）" 
+              <a-input
+                v-model:value="subject.namespace"
+                placeholder="命名空间（ServiceAccount需要）"
                 class="k8s-form-input"
                 :disabled="subject.kind !== 'ServiceAccount'"
               />
-              <a-button type="text" danger 
-                @click="removeSubjectField(index)" 
+              <a-button type="text" danger
+                @click="removeSubjectField(index)"
                 :disabled="createFormModel.subjects.length <= 1"
                 size="small"
                class="k8s-remove-btn">
@@ -392,15 +390,15 @@
               暂无标签，点击下方按钮添加
             </div>
             <div v-for="(_, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`标签键: ${key}`" 
+              <a-input
+                :value="key"
+                :placeholder="`标签键: ${key}`"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="createFormModel.labels[key]" 
-                placeholder="标签值" 
+              <a-input
+                v-model:value="createFormModel.labels[key]"
+                placeholder="标签值"
                 class="k8s-form-input"
                 :maxlength="200"
               />
@@ -429,15 +427,15 @@
               暂无注解，点击下方按钮添加
             </div>
             <div v-for="(_, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`注解键: ${key}`" 
+              <a-input
+                :value="key"
+                :placeholder="`注解键: ${key}`"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="createFormModel.annotations[key]" 
-                placeholder="注解值" 
+              <a-input
+                v-model:value="createFormModel.annotations[key]"
+                placeholder="注解值"
                 class="k8s-form-input"
                 :maxlength="500"
               />
@@ -475,10 +473,10 @@
       okText="保存"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="editFormRef"
-        :model="editFormModel" 
-        layout="vertical" 
+        :model="editFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="editFormRules"
       >
@@ -492,8 +490,8 @@
 
         <!-- 基础信息（只读） -->
         <a-form-item label="ClusterRoleBinding 名称">
-          <a-input 
-            :value="editFormModel.name" 
+          <a-input
+            :value="editFormModel.name"
             disabled
             class="k8s-form-input"
           />
@@ -502,8 +500,8 @@
         <a-form-item label="角色引用（不可修改）">
           <a-row :gutter="12">
             <a-col :span="8">
-              <a-select 
-                v-model:value="editFormModel.role_ref.kind" 
+              <a-select
+                v-model:value="editFormModel.role_ref.kind"
                 placeholder="角色类型"
                 class="k8s-form-input"
                 disabled
@@ -513,9 +511,9 @@
               </a-select>
             </a-col>
             <a-col :span="16">
-              <a-input 
-                v-model:value="editFormModel.role_ref.name" 
-                placeholder="角色名称" 
+              <a-input
+                v-model:value="editFormModel.role_ref.name"
+                placeholder="角色名称"
                 class="k8s-form-input"
                 disabled
               />
@@ -529,8 +527,8 @@
         <a-form-item label="主体配置" :required="true">
           <div class="k8s-key-value-inputs">
             <div v-for="(subject, index) in editFormModel.subjects" :key="index" class="k8s-key-value-row">
-              <a-select 
-                v-model:value="subject.kind" 
+              <a-select
+                v-model:value="subject.kind"
                 placeholder="主体类型"
                 class="k8s-form-input"
                 style="width: 120px;"
@@ -539,19 +537,19 @@
                 <a-select-option value="Group">Group</a-select-option>
                 <a-select-option value="ServiceAccount">ServiceAccount</a-select-option>
               </a-select>
-              <a-input 
-                v-model:value="subject.name" 
-                placeholder="主体名称" 
+              <a-input
+                v-model:value="subject.name"
+                placeholder="主体名称"
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="subject.namespace" 
-                placeholder="命名空间（ServiceAccount需要）" 
+              <a-input
+                v-model:value="subject.namespace"
+                placeholder="命名空间（ServiceAccount需要）"
                 class="k8s-form-input"
                 :disabled="subject.kind !== 'ServiceAccount'"
               />
-              <a-button type="text" danger 
-                @click="removeEditSubjectField(index)" 
+              <a-button type="text" danger
+                @click="removeEditSubjectField(index)"
                 :disabled="editFormModel.subjects.length <= 1"
                 size="small"
                class="k8s-remove-btn">
@@ -571,15 +569,15 @@
               暂无标签，点击下方按钮添加
             </div>
             <div v-for="(_, key) in editFormModel.labels" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`标签键: ${key}`" 
+              <a-input
+                :value="key"
+                :placeholder="`标签键: ${key}`"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="editFormModel.labels[key]" 
-                placeholder="标签值" 
+              <a-input
+                v-model:value="editFormModel.labels[key]"
+                placeholder="标签值"
                 class="k8s-form-input"
                 :maxlength="200"
               />
@@ -608,15 +606,15 @@
               暂无注解，点击下方按钮添加
             </div>
             <div v-for="(_, key) in editFormModel.annotations" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`注解键: ${key}`" 
+              <a-input
+                :value="key"
+                :placeholder="`注解键: ${key}`"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="editFormModel.annotations[key]" 
-                placeholder="注解值" 
+              <a-input
+                v-model:value="editFormModel.annotations[key]"
+                placeholder="注解值"
                 class="k8s-form-input"
                 :maxlength="500"
               />
@@ -654,10 +652,10 @@
       okText="创建"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="createYamlFormRef"
-        :model="createYamlFormModel" 
-        layout="vertical" 
+        :model="createYamlFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="createYamlFormRules"
       >
@@ -680,9 +678,9 @@
               清空
             </a-button>
           </div>
-          <a-textarea 
-            v-model:value="createYamlFormModel.yaml" 
-            placeholder="请输入 ClusterRoleBinding YAML 内容，或点击【插入模板】使用默认模板" 
+          <a-textarea
+            v-model:value="createYamlFormModel.yaml"
+            placeholder="请输入 ClusterRoleBinding YAML 内容，或点击【插入模板】使用默认模板"
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -731,7 +729,7 @@
                 </div>
               </a-card>
             </a-col>
-            
+
             <a-col :xs="24" :lg="12">
               <a-card title="角色引用" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
@@ -788,10 +786,10 @@
             <a-col :xs="24" :lg="12">
               <a-card title="标签信息" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display">
-                  <a-tooltip 
-                    v-for="[key, value] in Object.entries(currentClusterRoleBindingDetail?.labels || {})" 
-                    :key="key" 
-                    :title="`${key}: ${value || '-'}`" 
+                  <a-tooltip
+                    v-for="[key, value] in Object.entries(currentClusterRoleBindingDetail?.labels || {})"
+                    :key="key"
+                    :title="`${key}: ${value || '-'}`"
                     placement="top"
                   >
                     <a-tag class="k8s-label-item" style="margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -808,10 +806,10 @@
             <a-col :xs="24" :lg="12">
               <a-card title="注解信息" class="k8s-detail-card" size="small">
                 <div class="k8s-annotations-display">
-                  <a-tooltip 
-                    v-for="[key, value] in Object.entries(currentClusterRoleBindingDetail?.annotations || {})" 
-                    :key="key" 
-                    :title="`${key}: ${value || '-'}`" 
+                  <a-tooltip
+                    v-for="[key, value] in Object.entries(currentClusterRoleBindingDetail?.annotations || {})"
+                    :key="key"
+                    :title="`${key}: ${value || '-'}`"
                     placement="top"
                   >
                     <a-tag class="k8s-annotation-item" style="margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -842,10 +840,10 @@
       okText="保存修改"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="yamlFormRef"
-        :model="yamlFormModel" 
-        layout="vertical" 
+        :model="yamlFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="yamlFormRules"
       >
@@ -860,9 +858,9 @@
               检查格式
             </a-button>
           </div>
-          <a-textarea 
-            v-model:value="yamlFormModel.yaml" 
-            placeholder="YAML 内容" 
+          <a-textarea
+            v-model:value="yamlFormModel.yaml"
+            placeholder="YAML 内容"
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -886,8 +884,8 @@
         <div class="current-filters" v-if="Object.keys(filterLabels).length > 0">
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
-            <a-tag 
-              v-for="(value, key) in filterLabels" 
+            <a-tag
+              v-for="(value, key) in filterLabels"
               :key="key"
               closable
               @close="removeFilterLabel(key)"
@@ -932,10 +930,10 @@ import { clusterResourceKey } from '../shared/utils';
 import { onMounted, ref } from 'vue';
 import { formatK8sTime } from '../shared/utils';
 import { useClusterRoleBindingPage } from './ClusterRoleBinding';
-import { 
-  PlusOutlined, 
-  ReloadOutlined, 
-  DeleteOutlined, 
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  DeleteOutlined,
   UserSwitchOutlined,
   EyeOutlined,
   TagsOutlined,
@@ -968,7 +966,7 @@ const {
   pageSize,
   total,
   clustersTotal,
-  
+
   // modal state
   isCreateModalVisible,
   isCreateYamlModalVisible,
@@ -977,51 +975,51 @@ const {
   isYamlModalVisible,
   submitLoading,
   detailLoading,
-  
+
   // operation targets
   currentOperationClusterRoleBinding,
   currentClusterRoleBindingDetail,
-  
+
   // form models
   createFormModel,
   editFormModel,
   createYamlFormModel,
   yamlFormModel,
-  
+
   // form refs
   formRef,
   editFormRef,
   yamlFormRef,
   createYamlFormRef,
-  
+
   // form rules
   createFormRules,
   editFormRules,
   createYamlFormRules,
   yamlFormRules,
-  
+
   // computed
   filteredClusterRoleBindings,
   rowSelection,
-  
+
   // helpers
   getEnvText,
-  
+
   // operations
   fetchClusters,
   fetchClusterRoleBindings,
   clearClusterRoleBindings,
   loadMoreClusters,
-  
+
   // detail operations
   showClusterRoleBindingDetail,
   closeDetailModal,
-  
+
   // YAML operations
   showYamlModal,
   closeYamlModal,
   submitYamlForm,
-  
+
   // create operations
   openCreateModal,
   closeCreateModal,
@@ -1029,26 +1027,26 @@ const {
   openCreateYamlModal,
   closeCreateYamlModal,
   submitCreateYamlForm,
-  
+
   // edit operations
   openEditModal,
   closeEditModal,
   submitEditForm,
-  
+
   // clusterRoleBinding operations
   deleteClusterRoleBinding,
-  
+
   // filter operations
   addFilterLabel,
   removeFilterLabel,
   clearFilterLabels,
-  
+
   // batch operations
   batchOperation,
-  
+
   // pagination operations
   handlePageChange,
-  
+
   // form field operations
   addSubjectField,
   removeSubjectField,
@@ -1058,7 +1056,7 @@ const {
   removeEditSubjectField,
   removeEditLabelField,
   removeEditAnnotationField,
-  
+
   // YAML utility functions
   insertYamlTemplate,
   formatYaml,
@@ -1107,20 +1105,20 @@ const formatAge = (age: string, creationTimestamp?: string): string => {
   if (age && age.trim() !== '') {
     return age;
   }
-  
+
   if (!creationTimestamp) {
     return '-';
   }
-  
+
   try {
     const createTime = new Date(creationTimestamp);
     const now = new Date();
     const diff = now.getTime() - createTime.getTime();
-    
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (days > 365) {
       const years = Math.floor(days / 365);
       return `${years}年${days % 365}天`;
@@ -1153,7 +1151,7 @@ const onSearch = () => {
 const handleClusterChange = () => {
   currentPage.value = 1;
   clearClusterRoleBindings();
-  
+
   if (filterClusterId.value) {
     fetchClusterRoleBindings();
   } else {
@@ -1180,7 +1178,7 @@ const handleClusterDropdownScroll = (e: Event) => {
 // 获取主体类型对应的颜色
 const getSubjectColor = (kind?: string | null) => {
   if (!kind) return 'default';
-  
+
   switch (kind) {
     case 'User':
       return 'blue';
@@ -1194,53 +1192,48 @@ const getSubjectColor = (kind?: string | null) => {
 };
 
 const columns = [
-  { 
-    title: '名称', 
-    dataIndex: 'name', 
-    key: 'name', 
+  {
+    title: '名称',
+    dataIndex: 'name',
+    key: 'name',
     width: '18%',
     ellipsis: true,
     sorter: (a: any, b: any) => a.name.localeCompare(b.name)
   },
-  { 
-    title: '角色引用', 
-    key: 'roleRef', 
-    width: '22%', 
+  {
+    title: '角色引用',
+    key: 'roleRef',
+    width: '22%',
     ellipsis: true,
-    slots: { customRender: 'roleRef' }
   },
-  { 
-    title: '主体', 
-    key: 'subjects', 
-    width: '25%', 
+  {
+    title: '主体',
+    key: 'subjects',
+    width: '25%',
     ellipsis: true,
-    slots: { customRender: 'subjects' }
   },
-  { 
-    title: '标签', 
-    dataIndex: 'labels', 
-    key: 'labels', 
-    width: '15%', 
+  {
+    title: '标签',
+    dataIndex: 'labels',
+    key: 'labels',
+    width: '15%',
     ellipsis: true,
-    slots: { customRender: 'labels' }
   },
-  { 
-    title: '创建时间', 
-    key: 'created_at', 
-    width: '12%', 
+  {
+    title: '创建时间',
+    key: 'created_at',
+    width: '12%',
     sorter: (a: any, b: any) => {
       const timeA = new Date(a.created_at).getTime();
       const timeB = new Date(b.created_at).getTime();
       return timeA - timeB;
     },
-    slots: { customRender: 'creationTimestamp' }
   },
-  { 
-    title: '操作', 
-    key: 'actions', 
-    width: '8%', 
+  {
+    title: '操作',
+    key: 'actions',
+    width: '8%',
     fixed: 'right',
-    slots: { customRender: 'actions' }
   },
 ];
 

@@ -17,12 +17,12 @@
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
-          <a-select 
-            v-model:value="filterClusterId" 
-            placeholder="选择集群" 
+          <a-select
+            v-model:value="filterClusterId"
+            placeholder="选择集群"
             class="k8s-cluster-selector"
             aria-label="选择集群"
-            allow-clear 
+            allow-clear
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
@@ -35,9 +35,9 @@
                 <a-tag color="blue" size="small">{{ getEnvText(cluster.env) }}</a-tag>
               </div>
             </a-select-option>
-            <a-select-option 
-              v-if="clusters.length > 0 && clusters.length < clustersTotal" 
-              :value="'__load_more__'" 
+            <a-select-option
+              v-if="clusters.length > 0 && clusters.length < clustersTotal"
+              :value="'__load_more__'"
               disabled
               style="text-align: center; color: #999;"
             >
@@ -46,15 +46,15 @@
             </a-select-option>
           </a-select>
         </div>
-        
+
         <div class="k8s-search-group">
-          <a-input 
-            v-model:value="searchText" 
-            placeholder="🔍 搜索模板名称" 
-            class="k8s-search-input" 
+          <a-input
+            v-model:value="searchText"
+            placeholder="🔍 搜索模板名称"
+            class="k8s-search-input"
             @pressEnter="onSearch"
             @input="onSearch"
-            allow-clear 
+            allow-clear
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -62,12 +62,12 @@
           </a-input>
         </div>
       </div>
-      
+
       <!-- 操作区域 -->
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
-          <a-button 
-            @click="resetFilters" 
+          <a-button
+            @click="resetFilters"
             :disabled="!searchText && !filterClusterId"
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
@@ -75,13 +75,13 @@
             <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             重置筛选
           </a-button>
-          
-          
-          <a-button 
-            type="primary" 
-            danger 
-            @click="() => batchOperation('删除')" 
-            :disabled="!selectedRows.length" 
+
+
+          <a-button
+            type="primary"
+            danger
+            @click="() => batchOperation('删除')"
+            :disabled="!selectedRows.length"
             v-if="can('k8s.template.batchDelete') && (selectedRows.length > 0)"
             class="k8s-toolbar-btn"
             title="批量删除选中的模板"
@@ -122,68 +122,65 @@
         class="k8s-table template-table"
         :scroll="{ x: 1200 }"
       >
-        <template #clusterName="{ record }">
-          <a-tag color="blue">{{ getClusterName(record.cluster_id) }}</a-tag>
-        </template>
-
-        <template #userName="{ record }">
-          <a-tag color="green">{{ getUserDisplay(record.user_id, record.username) }}</a-tag>
-        </template>
-
-        <template #actions="{ record }">
-          <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
-              <a-button title="查看详情" @click="showTemplateDetail(record)">
-                <template #icon><EyeOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="查看 YAML">
-              <a-button title="查看 YAML" @click="showYamlModal(record)">
-                <template #icon><FileTextOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="检查模板">
-              <a-button title="检查模板" @click="checkTemplate(record.content)" :loading="checkLoading">
-                <template #icon><CheckCircleOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="编辑">
-              <a-button title="编辑" @click="openEditModal(record)">
-                <template #icon><EditOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="can('k8s.template.delete')" title="删除">
-              <a-button 
-                title="删除" 
-                danger 
-                @click="deleteTemplate(record)"
-              >
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-          </div>
-        </template>
-
-        <template #content="{ text }">
-          <div class="yaml-content-preview">
-            <code class="yaml-preview">{{ getYamlPreview(text) }}</code>
-          </div>
-        </template>
-
-        <template #createdAt="{ text }">
-          <div v-if="text" style="font-size: 13px; color: #595959;">
-            <div>{{ formatDateTime(text) }}</div>
-            <div style="color: #8c8c8c; font-size: 12px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
-          </div>
-          <span v-else style="color: #bfbfbf;">-</span>
-        </template>
-
-        <template #updatedAt="{ text }">
-          <div v-if="text" style="font-size: 13px; color: #595959;">
-            <div>{{ formatDateTime(text) }}</div>
-            <div style="color: #8c8c8c; font-size: 12px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
-          </div>
-          <span v-else style="color: #bfbfbf;">-</span>
+        <template #bodyCell="{ column, record, text }">
+          <template v-if="column.key === 'cluster_id'">
+            <a-tag color="blue">{{ getClusterName(record.cluster_id) }}</a-tag>
+          </template>
+          <template v-else-if="column.key === 'user_id'">
+            <a-tag color="green">{{ getUserDisplay(record.user_id, record.username) }}</a-tag>
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <div class="k8s-action-column">
+              <a-tooltip title="查看详情">
+                <a-button title="查看详情" @click="showTemplateDetail(record)">
+                  <template #icon><EyeOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="查看 YAML">
+                <a-button title="查看 YAML" @click="showYamlModal(record)">
+                  <template #icon><FileTextOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="检查模板">
+                <a-button title="检查模板" @click="checkTemplate(record.content)" :loading="checkLoading">
+                  <template #icon><CheckCircleOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="编辑">
+                <a-button title="编辑" @click="openEditModal(record)">
+                  <template #icon><EditOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip v-if="can('k8s.template.delete')" title="删除">
+                <a-button
+                  title="删除"
+                  danger
+                  @click="deleteTemplate(record)"
+                >
+                  <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'content'">
+            <div class="yaml-content-preview">
+              <code class="yaml-preview">{{ getYamlPreview(text) }}</code>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'created_at'">
+            <div v-if="text" style="font-size: 13px; color: #595959;">
+              <div>{{ formatDateTime(text) }}</div>
+              <div style="color: #8c8c8c; font-size: 12px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            </div>
+            <span v-else style="color: #bfbfbf;">-</span>
+          </template>
+          <template v-else-if="column.key === 'updated_at'">
+            <div v-if="text" style="font-size: 13px; color: #595959;">
+              <div>{{ formatDateTime(text) }}</div>
+              <div style="color: #8c8c8c; font-size: 12px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            </div>
+            <span v-else style="color: #bfbfbf;">-</span>
+          </template>
         </template>
 
         <template #emptyText>
@@ -206,17 +203,17 @@
       cancelText="取消"
       centered
     >
-      <a-form 
+      <a-form
         ref="formRef"
-        :model="createFormModel" 
-        layout="vertical" 
+        :model="createFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="createFormRules"
       >
         <a-form-item label="模板名称" name="name" :required="true">
-          <a-input 
-            v-model:value="createFormModel.name" 
-            placeholder="请输入模板名称（例如：nginx-deployment-template）" 
+          <a-input
+            v-model:value="createFormModel.name"
+            placeholder="请输入模板名称（例如：nginx-deployment-template）"
             class="k8s-form-input"
             :maxlength="50"
           />
@@ -244,9 +241,9 @@
               清空
             </a-button>
           </div>
-          <a-textarea 
-            v-model:value="createFormModel.content" 
-            placeholder="请输入 Kubernetes YAML 配置内容，或点击上方【插入模板】按钮使用默认模板" 
+          <a-textarea
+            v-model:value="createFormModel.content"
+            placeholder="请输入 Kubernetes YAML 配置内容，或点击上方【插入模板】按钮使用默认模板"
             :rows="16"
             class="k8s-config-textarea"
             show-count
@@ -270,17 +267,17 @@
       cancelText="取消"
       centered
     >
-      <a-form 
+      <a-form
         ref="editFormRef"
-        :model="editFormModel" 
-        layout="vertical" 
+        :model="editFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="editFormRules"
       >
         <a-form-item label="模板名称" name="name" :required="true">
-          <a-input 
-            v-model:value="editFormModel.name" 
-            placeholder="请输入模板名称" 
+          <a-input
+            v-model:value="editFormModel.name"
+            placeholder="请输入模板名称"
             class="k8s-form-input"
             :maxlength="50"
           />
@@ -297,9 +294,9 @@
               检查格式
             </a-button>
           </div>
-          <a-textarea 
-            v-model:value="editFormModel.content" 
-            placeholder="请输入 Kubernetes YAML 配置内容" 
+          <a-textarea
+            v-model:value="editFormModel.content"
+            placeholder="请输入 Kubernetes YAML 配置内容"
             :rows="16"
             class="k8s-config-textarea"
             show-count
@@ -346,7 +343,7 @@
                 </div>
               </a-card>
             </a-col>
-            
+
             <a-col :xs="24" :lg="12">
               <a-card title="时间信息" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
@@ -385,8 +382,8 @@
       <div class="yaml-view-modal">
         <div class="yaml-actions" style="margin-bottom: 16px;">
           <a-space>
-            <a-button 
-              type="primary" 
+            <a-button
+              type="primary"
               @click="() => checkTemplate(yamlFormModel.content)"
               :loading="checkLoading"
               :disabled="!yamlFormModel.content"
@@ -400,8 +397,8 @@
             </a-button>
           </a-space>
         </div>
-        <a-textarea 
-          v-model:value="yamlFormModel.content" 
+        <a-textarea
+          v-model:value="yamlFormModel.content"
           :rows="20"
           class="k8s-config-textarea"
           readonly
@@ -418,10 +415,10 @@ import { onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { useTemplatePage } from './Template';
 import { formatDateTime, getRelativeTime } from '../shared/utils';
-import { 
-  PlusOutlined, 
-  ReloadOutlined, 
-  DeleteOutlined, 
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  DeleteOutlined,
   FileTextOutlined,
   EyeOutlined,
   SearchOutlined,
@@ -452,7 +449,7 @@ const {
   pageSize,
   total,
   clustersTotal,
-  
+
   // modal state
   isCreateModalVisible,
   isEditModalVisible,
@@ -461,68 +458,68 @@ const {
   submitLoading,
   detailLoading,
   checkLoading,
-  
+
   // operation targets
   currentOperationTemplate,
   currentTemplateDetail,
-  
+
   // form models
   createFormModel,
   editFormModel,
   yamlFormModel,
-  
+
   // form refs
   formRef,
   editFormRef,
-  
+
   // form rules
   createFormRules,
   editFormRules,
-  
+
   // computed
   filteredTemplates,
   rowSelection,
-  
+
   // helpers
   getEnvText,
   getClusterName,
   getUserDisplay,
   formatK8sTime,
-  
+
   // operations
   fetchClusters,
   fetchTemplates,
   clearTemplates,
   loadMoreClusters,
-  
+
   // detail operations
   showTemplateDetail,
   closeDetailModal,
-  
+
   // YAML operations
   showYamlModal,
   closeYamlModal,
-  
+
   // create operations
   openCreateModal,
   closeCreateModal,
   submitCreateForm,
-  
+
   // edit operations
   openEditModal,
   closeEditModal,
   submitEditForm,
-  
+
   // template operations
   deleteTemplate,
   checkTemplate,
-  
+
   // batch operations
   batchOperation,
-  
+
   // pagination operations
   handlePageChange,
-  
+
   // YAML operations
   insertYamlTemplate,
   formatYaml,
@@ -540,7 +537,7 @@ const onSearch = () => {
 const handleClusterChange = () => {
   currentPage.value = 1;
   clearTemplates();
-  
+
   if (filterClusterId.value) {
     fetchTemplates();
   } else {
@@ -578,7 +575,7 @@ const copyYamlContent = () => {
     message.warning('暂无内容可复制');
     return;
   }
-  
+
   navigator.clipboard.writeText(yamlFormModel.value.content).then(() => {
     message.success('YAML 内容已复制到剪贴板');
   }).catch(() => {
@@ -589,12 +586,12 @@ const copyYamlContent = () => {
 const columns = [
   { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
   { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
-  { title: '所属集群', dataIndex: 'cluster_id', key: 'cluster_id', width: 130, slots: { customRender: 'clusterName' } },
-  { title: '创建用户', dataIndex: 'user_id', key: 'user_id', width: 120, slots: { customRender: 'userName' } },
-  { title: 'YAML 内容', dataIndex: 'content', key: 'content', width: 250, slots: { customRender: 'content' } },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
-  { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: 160, slots: { customRender: 'updatedAt' } },
-  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
+  { title: '所属集群', dataIndex: 'cluster_id', key: 'cluster_id', width: 130 },
+  { title: '创建用户', dataIndex: 'user_id', key: 'user_id', width: 120 },
+  { title: 'YAML 内容', dataIndex: 'content', key: 'content', width: 250 },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: 160 },
+  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center' },
 ];
 
 // 重置所有筛选条件

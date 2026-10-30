@@ -145,7 +145,6 @@ const columns = [
     dataIndex: 'created_at',
     key: 'created_at',
     width: 160,
-    slots: { customRender: 'createdAt' },
   },
   {
     title: '操作',

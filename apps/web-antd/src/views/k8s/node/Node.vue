@@ -13,12 +13,12 @@
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
-          <a-select 
-            v-model:value="filterClusterId" 
-            placeholder="选择集群" 
+          <a-select
+            v-model:value="filterClusterId"
+            placeholder="选择集群"
             class="k8s-cluster-selector"
             aria-label="选择集群"
-            allow-clear 
+            allow-clear
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
@@ -31,9 +31,9 @@
                 <a-tag color="blue" size="small">{{ getEnvText(cluster.env) }}</a-tag>
               </div>
             </a-select-option>
-            <a-select-option 
-              v-if="clusters.length > 0 && clusters.length < clustersTotal" 
-              :value="'__load_more__'" 
+            <a-select-option
+              v-if="clusters.length > 0 && clusters.length < clustersTotal"
+              :value="'__load_more__'"
               disabled
               style="text-align: center; color: var(--ops-muted);"
             >
@@ -41,12 +41,12 @@
               <span v-if="!clustersLoading">滚动加载更多...</span>
             </a-select-option>
           </a-select>
-          
-          <a-select 
-            v-model:value="filterStatus" 
-            placeholder="状态筛选" 
-            class="k8s-filter-select" 
-            allow-clear 
+
+          <a-select
+            v-model:value="filterStatus"
+            placeholder="状态筛选"
+            class="k8s-filter-select"
+            allow-clear
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined aria-hidden="true"  /></template>
@@ -57,15 +57,15 @@
             <a-select-option :value="NodeStatus.Error">异常</a-select-option>
           </a-select>
         </div>
-        
+
         <div class="k8s-search-group">
-          <a-input 
-            v-model:value="searchText" 
-            placeholder="搜索节点名称" 
-            class="k8s-search-input" 
+          <a-input
+            v-model:value="searchText"
+            placeholder="搜索节点名称"
+            class="k8s-search-input"
             @pressEnter="onSearch"
             @input="onSearch"
-            allow-clear 
+            allow-clear
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -73,12 +73,12 @@
           </a-input>
         </div>
       </div>
-      
+
       <!-- 操作区域 -->
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
-          <a-button 
-            @click="resetFilters" 
+          <a-button
+            @click="resetFilters"
             :disabled="!filterClusterId && !filterStatus && !searchText"
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
@@ -86,13 +86,13 @@
             <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             重置筛选
           </a-button>
-          
-          
-          <a-button 
-            type="primary" 
-            danger 
-            @click="() => batchOperation('禁用调度')" 
-            :disabled="!selectedRows.length" 
+
+
+          <a-button
+            type="primary"
+            danger
+            @click="() => batchOperation('禁用调度')"
+            :disabled="!selectedRows.length"
             v-if="selectedRows.length > 0 && can('k8s.node.batchCordon')"
             class="k8s-toolbar-btn"
             title="批量禁用调度"
@@ -133,151 +133,146 @@
         class="k8s-table"
         :scroll="{ x: 1200 }"
       >
-        <template #status="{ text }">
-          <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
-        </template>
-
-        <template #schedulable="{ text }">
-          <a-badge :status="getSchedulableColor(text)" :text="getSchedulableText(text)" />
-        </template>
-
-        <template #roles="{ text }">
-          <div class="k8s-roles-display">
-            <template v-if="text && text.length > 0">
-              <a-tooltip v-for="role in text.slice(0, 2)" :key="role" :title="role">
-                <a-tag class="k8s-role-tag">{{ role }}</a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="text.length > 2" :title="text.join(', ')">
-                <a-tag class="k8s-role-tag">+{{ text.length - 2 }}</a-tag>
-              </a-tooltip>
-            </template>
+        <template #bodyCell="{ column, text, record }">
+          <template v-if="column.key === 'status'">
+            <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
+          </template>
+          <template v-else-if="column.key === 'schedulable'">
+            <a-badge :status="getSchedulableColor(text)" :text="getSchedulableText(text)" />
+          </template>
+          <template v-else-if="column.key === 'roles'">
+            <div class="k8s-roles-display">
+              <template v-if="text && text.length > 0">
+                <a-tooltip v-for="role in text.slice(0, 2)" :key="role" :title="role">
+                  <a-tag class="k8s-role-tag">{{ role }}</a-tag>
+                </a-tooltip>
+                <a-tooltip v-if="text.length > 2" :title="text.join(', ')">
+                  <a-tag class="k8s-role-tag">+{{ text.length - 2 }}</a-tag>
+                </a-tooltip>
+              </template>
+              <span v-else class="k8s-no-data">-</span>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'labels'">
+            <div class="k8s-labels-display">
+              <template v-if="Array.isArray(text)">
+                <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
+                  <a-tag class="k8s-label-item">
+                    {{ label.key }}: {{ label.value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip v-if="text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                  <a-tag class="k8s-label-item">
+                    {{ text.length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="text.length === 0" class="k8s-no-data">-</span>
+              </template>
+              <template v-else-if="text && typeof text === 'object'">
+                <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
+                  <a-tag class="k8s-label-item">
+                    {{ key }}: {{ value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip v-if="Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                  <a-tag class="k8s-label-item">
+                    {{ Object.keys(text).length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'annotations'">
+            <div class="k8s-annotations-display">
+              <template v-if="Array.isArray(text)">
+                <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                  <a-tag class="k8s-annotation-item" color="purple">
+                    {{ text.length }} 个注解
+                  </a-tag>
+                </a-tooltip>
+                <span v-else class="k8s-no-data">-</span>
+              </template>
+              <template v-else-if="text && typeof text === 'object'">
+                <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                  <a-tag class="k8s-annotation-item" color="purple">
+                    {{ Object.keys(text).length }} 个注解
+                  </a-tag>
+                </a-tooltip>
+                <span v-else class="k8s-no-data">-</span>
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'uid'">
+            <a-tooltip v-if="text" :title="text">
+              <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
+                {{ text.substring(0, 8) }}...
+              </span>
+            </a-tooltip>
             <span v-else class="k8s-no-data">-</span>
-          </div>
+          </template>
+          <template v-else-if="column.key === 'created_at'">
+            <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
+              <div>{{ formatDateTime(text) }}</div>
+              <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <div class="k8s-action-column">
+              <a-tooltip title="查看详情">
+                <a-button title="查看详情" @click="showNodeDetail(record)">
+                  <template #icon><EyeOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="管理标签">
+                <a-button title="管理标签" @click="openEditLabelModal(record)">
+                  <template #icon><TagsOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip v-if="can('k8s.node.taintAdd') || can('k8s.node.taintDelete')" title="管理污点">
+                <a-button title="管理污点" @click="openTaintModal(record)">
+                  <template #icon><WarningOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip
+                v-if="record.schedulable === 1 ? can('k8s.node.cordon') : can('k8s.node.uncordon')"
+                :title="record.schedulable === 1 ? '禁用调度' : '启用调度'"
+              >
+                <a-button
+                  :title="record.schedulable === 1 ? '禁用调度' : '启用调度'"
+                  @click="toggleNodeSchedule(record)"
+                  data-action="schedule"
+                >
+                  <template #icon>
+                    <StopOutlined aria-hidden="true" v-if="record.schedulable === 1" />
+                    <PlayCircleOutlined aria-hidden="true" v-else />
+                  </template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="驱逐节点">
+                <a-button
+                  title="驱逐节点"
+                  @click="openDrainModal(record)"
+                  danger
+                  data-action="drain"
+                >
+                  <template #icon><DisconnectOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+          </template>
         </template>
 
         <template #os_image="{ text }">
           <span v-if="text && text.trim()" :title="text">{{ text }}</span>
           <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #labels="{ text }">
-          <div class="k8s-labels-display">
-            <template v-if="Array.isArray(text)">
-              <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
-                <a-tag class="k8s-label-item">
-                  {{ label.key }}: {{ label.value }}
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-                <a-tag class="k8s-label-item">
-                  {{ text.length }} 个标签
-                </a-tag>
-              </a-tooltip>
-              <span v-if="text.length === 0" class="k8s-no-data">-</span>
-            </template>
-            <template v-else-if="text && typeof text === 'object'">
-              <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
-                <a-tag class="k8s-label-item">
-                  {{ key }}: {{ value }}
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
-                <a-tag class="k8s-label-item">
-                  {{ Object.keys(text).length }} 个标签
-                </a-tag>
-              </a-tooltip>
-              <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #annotations="{ text }">
-          <div class="k8s-annotations-display">
-            <template v-if="Array.isArray(text)">
-              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-                <a-tag class="k8s-annotation-item" color="purple">
-                  {{ text.length }} 个注解
-                </a-tag>
-              </a-tooltip>
-              <span v-else class="k8s-no-data">-</span>
-            </template>
-            <template v-else-if="text && typeof text === 'object'">
-              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
-                <a-tag class="k8s-annotation-item" color="purple">
-                  {{ Object.keys(text).length }} 个注解
-                </a-tag>
-              </a-tooltip>
-              <span v-else class="k8s-no-data">-</span>
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #uid="{ text }">
-          <a-tooltip v-if="text" :title="text">
-            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
-              {{ text.substring(0, 8) }}...
-            </span>
-          </a-tooltip>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #createdAt="{ text }">
-          <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
-            <div>{{ formatDateTime(text) }}</div>
-            <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
-          </div>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #actions="{ record }">
-          <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
-              <a-button title="查看详情" @click="showNodeDetail(record)">
-                <template #icon><EyeOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="管理标签">
-              <a-button title="管理标签" @click="openEditLabelModal(record)">
-                <template #icon><TagsOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="can('k8s.node.taintAdd') || can('k8s.node.taintDelete')" title="管理污点">
-              <a-button title="管理污点" @click="openTaintModal(record)">
-                <template #icon><WarningOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip
-              v-if="record.schedulable === 1 ? can('k8s.node.cordon') : can('k8s.node.uncordon')"
-              :title="record.schedulable === 1 ? '禁用调度' : '启用调度'"
-            >
-              <a-button 
-                :title="record.schedulable === 1 ? '禁用调度' : '启用调度'"
-                @click="toggleNodeSchedule(record)"
-                data-action="schedule"
-              >
-                <template #icon>
-                  <StopOutlined aria-hidden="true" v-if="record.schedulable === 1" />
-                  <PlayCircleOutlined aria-hidden="true" v-else />
-                </template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="驱逐节点">
-              <a-button 
-                title="驱逐节点" 
-                @click="openDrainModal(record)" 
-                danger
-                data-action="drain"
-              >
-                <template #icon><DisconnectOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-          </div>
         </template>
 
         <template #emptyText>
@@ -307,19 +302,19 @@
       :autoFocus="false"
       :keyboard="true"
     >
-      <a-alert 
-        message="标签管理说明" 
-        description="标签用于组织和选择 Kubernetes 资源。可以为节点添加自定义标签，用于 Pod 调度选择器、节点亲和性等场景。保存后将完全覆盖现有标签配置。" 
-        type="info" 
-        show-icon 
-        style="margin-bottom: 16px;" 
+      <a-alert
+        message="标签管理说明"
+        description="标签用于组织和选择 Kubernetes 资源。可以为节点添加自定义标签，用于 Pod 调度选择器、节点亲和性等场景。保存后将完全覆盖现有标签配置。"
+        type="info"
+        show-icon
+        style="margin-bottom: 16px;"
         closable
       />
-      
-      <a-form 
+
+      <a-form
         ref="labelFormRef"
-        :model="labelFormModel" 
-        layout="vertical" 
+        :model="labelFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="labelFormRules"
       >
@@ -330,15 +325,15 @@
                 暂无标签，点击下方"添加"按钮添加新标签
               </div>
               <div v-for="(_, key) in labelFormModel.labels" :key="key" class="k8s-key-value-row">
-                <a-input 
-                  :value="key" 
-                  :placeholder="`标签键: ${key}`" 
+                <a-input
+                  :value="key"
+                  :placeholder="`标签键: ${key}`"
                   disabled
                   class="k8s-form-input k8s-key-input"
                 />
-                <a-input 
-                  v-model:value="labelFormModel.labels[key]" 
-                  placeholder="标签值" 
+                <a-input
+                  v-model:value="labelFormModel.labels[key]"
+                  placeholder="标签值"
                   class="k8s-form-input k8s-value-input"
                   :maxlength="200"
                 />
@@ -382,11 +377,11 @@
       :autoFocus="false"
       :keyboard="true"
     >
-      <a-alert 
-        message="污点管理说明" 
-        type="info" 
-        show-icon 
-        style="margin-bottom: 16px;" 
+      <a-alert
+        message="污点管理说明"
+        type="info"
+        show-icon
+        style="margin-bottom: 16px;"
         closable
       >
         <template #description>
@@ -403,11 +398,11 @@
           </div>
         </template>
       </a-alert>
-      
-      <a-form 
+
+      <a-form
         ref="taintFormRef"
-        :model="taintFormModel" 
-        layout="vertical" 
+        :model="taintFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="taintFormRules"
       >
@@ -418,24 +413,24 @@
                 暂无污点，点击下方"添加污点"按钮添加新污点
               </div>
               <div v-for="(taint, idx) in taintFormModel.taints" :key="idx" class="k8s-key-value-row">
-                <a-input 
-                  v-model:value="taint.key" 
-                  placeholder="污点键" 
+                <a-input
+                  v-model:value="taint.key"
+                  placeholder="污点键"
                   class="k8s-form-input"
                   :maxlength="100"
                   :disabled="!can('k8s.node.taintAdd')"
                   :readonly="!isNewTaint(taint)"
                 />
-                <a-input 
-                  v-model:value="taint.value" 
-                  placeholder="污点值（可选）" 
+                <a-input
+                  v-model:value="taint.value"
+                  placeholder="污点值（可选）"
                   class="k8s-form-input"
                   :maxlength="100"
                   :disabled="!can('k8s.node.taintAdd')"
                 />
-                <a-select 
-                  v-model:value="taint.effect" 
-                  placeholder="污点效果" 
+                <a-select
+                  v-model:value="taint.effect"
+                  placeholder="污点效果"
                   class="k8s-form-input"
                   style="width: 150px"
                   :disabled="!can('k8s.node.taintAdd')"
@@ -458,7 +453,7 @@
         </a-form-item>
 
         <a-divider>YAML 配置验证</a-divider>
-        
+
         <a-form-item label="YAML 数据" help="可选：输入污点的 YAML 配置进行验证">
           <a-form-item-rest>
             <a-textarea
@@ -472,9 +467,9 @@
               :rows="6"
               style="font-family: monospace; margin-bottom: 8px;"
             />
-            <a-button 
-              type="default" 
-              @click="handleValidateYaml" 
+            <a-button
+              type="default"
+              @click="handleValidateYaml"
               :loading="yamlValidating"
               :disabled="!taintYamlData || !taintYamlData.trim()"
             >
@@ -502,18 +497,18 @@
       :autoFocus="false"
       :keyboard="true"
     >
-      <a-form 
+      <a-form
         ref="drainFormRef"
-        :model="drainFormModel" 
-        layout="vertical" 
+        :model="drainFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="drainFormRules"
       >
-        <a-alert 
-          message="警告：驱逐节点将安全迁移该节点上的所有 Pod" 
-          type="warning" 
-          show-icon 
-          style="margin-bottom: 20px;" 
+        <a-alert
+          message="警告：驱逐节点将安全迁移该节点上的所有 Pod"
+          type="warning"
+          show-icon
+          style="margin-bottom: 20px;"
         >
           <template #description>
             <div>
@@ -663,7 +658,7 @@
                 </div>
               </a-card>
             </a-col>
-            
+
             <a-col :xs="24" :lg="12">
               <a-card title="系统信息" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item" v-if="currentNodeDetail.kubelet_version">
@@ -706,9 +701,9 @@
               <a-card title="标签信息" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display" style="max-height: 300px; overflow-y: auto;">
                   <template v-if="currentNodeDetail.labels && Object.keys(currentNodeDetail.labels).length > 0">
-                    <div 
-                      v-for="(value, key) in currentNodeDetail.labels" 
-                      :key="key" 
+                    <div
+                      v-for="(value, key) in currentNodeDetail.labels"
+                      :key="key"
                       class="k8s-detail-kv-item"
                     >
                       <span class="k8s-kv-key">{{ key }}</span>
@@ -722,14 +717,14 @@
                 </div>
               </a-card>
             </a-col>
-            
+
             <a-col :xs="24" :lg="12">
               <a-card title="污点信息" class="k8s-detail-card" size="small">
                 <div class="k8s-taints-display" style="max-height: 300px; overflow-y: auto;">
                   <template v-if="currentNodeDetail.taints && currentNodeDetail.taints.length > 0">
-                    <div 
-                      v-for="(taint, index) in currentNodeDetail.taints" 
-                      :key="index" 
+                    <div
+                      v-for="(taint, index) in currentNodeDetail.taints"
+                      :key="index"
                       class="k8s-detail-taint-item"
                     >
                       <div><strong>键:</strong> {{ taint.key }}</div>
@@ -749,9 +744,9 @@
             <a-col :span="24">
               <a-card title="注解信息" class="k8s-detail-card" size="small">
                 <div class="k8s-annotations-display" style="max-height: 200px; overflow-y: auto;">
-                  <div 
-                    v-for="(value, key) in currentNodeDetail.annotations" 
-                    :key="key" 
+                  <div
+                    v-for="(value, key) in currentNodeDetail.annotations"
+                    :key="key"
                     class="k8s-detail-kv-item"
                   >
                     <span class="k8s-kv-key">{{ key }}</span>
@@ -766,16 +761,18 @@
           <a-row style="margin-top: 16px;" v-if="currentNodeDetail.conditions && currentNodeDetail.conditions.length > 0">
             <a-col :span="24">
               <a-card title="节点状况" class="k8s-detail-card" size="small">
-                <a-table 
-                  :columns="conditionColumns" 
-                  :data-source="currentNodeDetail.conditions" 
+                <a-table
+                  :columns="conditionColumns"
+                  :data-source="currentNodeDetail.conditions"
                   :pagination="false"
                   size="small"
                   row-key="type"
                   :scroll="{ x: 800 }"
                 >
-                  <template #status="{ text }">
-                    <a-badge :status="text === 'True' ? 'success' : (text === 'False' ? 'default' : 'error')" :text="text" />
+                  <template #bodyCell="{ column, text }">
+                    <template v-if="column.key === 'status'">
+                      <a-badge :status="text === 'True' ? 'success' : (text === 'False' ? 'default' : 'error')" :text="text" />
+                    </template>
                   </template>
                   <template #emptyText>
                     <div style="text-align: center; color: var(--ops-muted); padding: 20px;">
@@ -800,11 +797,11 @@ import { onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { useNodePage } from './Node';
 import { formatDateTime, getRelativeTime } from '../shared/utils';
-import { 
-  PlusOutlined, 
-  ReloadOutlined, 
-  FilterOutlined, 
-  DeleteOutlined, 
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  FilterOutlined,
+  DeleteOutlined,
   NodeIndexOutlined,
   EyeOutlined,
   TagsOutlined,
@@ -834,57 +831,57 @@ const {
   selectedRows,
   currentPage,
   pageSize,
-  
+
   // modal state
   isLabelModalVisible,
   isTaintModalVisible,
   isDrainModalVisible,
   submitLoading,
-  
+
   // detail modal
   isDetailModalVisible,
   detailLoading,
   currentNodeDetail,
-  
+
   // form models
   labelFormModel,
   taintFormModel,
   drainFormModel,
-  
+
   // form refs
   labelFormRef,
   taintFormRef,
   drainFormRef,
-  
+
   // form rules
   labelFormRules,
   taintFormRules,
   drainFormRules,
-  
+
   // computed
   filteredNodes,
   rowSelection,
-  
+
   // helpers
   getEnvText,
   getStatusText,
   getStatusColor,
   getSchedulableText,
   getSchedulableColor,
-  
+
   // operations
   fetchClusters,
   fetchNodes,
   clearNodes,
   showNodeDetail,
   closeDetailModal,
-  
+
   // label operations
   openEditLabelModal,
   closeLabelModal,
   submitLabelForm,
   removeLabelField,
-  
+
   // taint operations
   openTaintModal,
   closeTaintModal,
@@ -894,26 +891,26 @@ const {
   submitTaintForm,
   hasTaintChanges,
   validateTaintYaml,
-  
+
   // schedule operations
   toggleNodeSchedule,
-  
+
   // drain operations
   openDrainModal,
   closeDrainModal,
   submitDrainForm,
-  
+
   // batch operations
   batchOperation,
-  
+
   // cluster pagination
   loadMoreClusters,
   handlePageChange,
-  
+
   // pagination state
   total,
   clustersTotal,
-  
+
   // constants
   NodeStatus,
 } = useNodePage();
@@ -931,7 +928,7 @@ const handleValidateYaml = async () => {
     message.warning('请输入 YAML 数据');
     return;
   }
-  
+
   yamlValidating.value = true;
   try {
     await validateTaintYaml(taintYamlData.value);
@@ -944,21 +941,21 @@ const addNewLabel = () => {
   if (!newLabelKey.value || !newLabelKey.value.trim()) return;
   const key = newLabelKey.value.trim();
   const value = newLabelValue.value || '';
-  
+
   // 先获取所有现有的键，然后重建对象确保新键在最后
   const existingKeys = Object.keys(labelFormModel.value.labels);
   const newLabels: Record<string, string> = {};
-  
+
   // 先添加所有现有的标签（排除要添加的键，以防重复）
   existingKeys.forEach(k => {
     if (k !== key) {
       newLabels[k] = labelFormModel.value.labels[k] || '';
     }
   });
-  
+
   // 最后添加新标签
   newLabels[key] = value;
-  
+
   labelFormModel.value.labels = newLabels;
   newLabelKey.value = '';
   newLabelValue.value = '';
@@ -1016,23 +1013,23 @@ const handleClusterDropdownScroll = (e: Event) => {
 
 const columns = [
   { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center', slots: { customRender: 'status' } },
-  { title: '调度', dataIndex: 'schedulable', key: 'schedulable', width: 90, align: 'center', slots: { customRender: 'schedulable' } },
-  { title: '角色', dataIndex: 'roles', key: 'roles', width: 120, slots: { customRender: 'roles' } },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center' },
+  { title: '调度', dataIndex: 'schedulable', key: 'schedulable', width: 90, align: 'center' },
+  { title: '角色', dataIndex: 'roles', key: 'roles', width: 120 },
   { title: '运行时间', dataIndex: 'age', key: 'age', width: 110, align: 'center' },
   { title: '内部IP', dataIndex: 'internal_ip', key: 'internal_ip', width: 130, ellipsis: true },
   { title: 'Kubelet', dataIndex: 'kubelet_version', key: 'kubelet_version', width: 120, align: 'center', ellipsis: true },
   { title: '系统', dataIndex: 'os_image', key: 'os_image', width: 140, align: 'center', ellipsis: true },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
-  { title: '操作', key: 'actions', width: 280, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  { title: '操作', key: 'actions', width: 280, fixed: 'right', align: 'center' },
 ];
 
 const conditionColumns = [
   { title: '类型', dataIndex: 'type', key: 'type', width: '15%' },
-  { title: '状态', dataIndex: 'status', key: 'status', width: '10%', slots: { customRender: 'status' } },
+  { title: '状态', dataIndex: 'status', key: 'status', width: '10%' },
   { title: '原因', dataIndex: 'reason', key: 'reason', width: '20%' },
   { title: '消息', dataIndex: 'message', key: 'message', width: '35%', ellipsis: true },
   { title: '最后更新', dataIndex: 'lastTransitionTime', key: 'lastTransitionTime', width: '20%' },
@@ -1040,12 +1037,12 @@ const conditionColumns = [
 
 // 检查是否有系统信息
 const hasSystemInfo = (node: any) => {
-  return node.kubelet_version || 
+  return node.kubelet_version ||
          (node.kube_proxy_version && node.kube_proxy_version.trim()) ||
-         node.container_runtime || 
-         node.operating_system || 
-         node.architecture || 
-         node.kernel_version || 
+         node.container_runtime ||
+         node.operating_system ||
+         node.architecture ||
+         node.kernel_version ||
          node.os_image;
 };
 

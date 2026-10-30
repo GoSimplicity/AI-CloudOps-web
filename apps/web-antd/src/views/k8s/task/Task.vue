@@ -17,12 +17,12 @@
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
-          <a-select 
-            v-model:value="filterClusterId" 
-            placeholder="选择集群" 
+          <a-select
+            v-model:value="filterClusterId"
+            placeholder="选择集群"
             class="k8s-cluster-selector"
             aria-label="选择集群"
-            allow-clear 
+            allow-clear
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
@@ -35,9 +35,9 @@
                 <a-tag color="blue" size="small">{{ getEnvText(cluster.env) }}</a-tag>
               </div>
             </a-select-option>
-            <a-select-option 
-              v-if="clusters.length > 0 && clusters.length < clustersTotal" 
-              :value="'__load_more__'" 
+            <a-select-option
+              v-if="clusters.length > 0 && clusters.length < clustersTotal"
+              :value="'__load_more__'"
               disabled
               style="text-align: center; color: #999;"
             >
@@ -46,11 +46,11 @@
             </a-select-option>
           </a-select>
 
-          <a-select 
-            v-model:value="filterTemplateId" 
-            placeholder="选择模板" 
-            class="k8s-filter-select" 
-            allow-clear 
+          <a-select
+            v-model:value="filterTemplateId"
+            placeholder="选择模板"
+            class="k8s-filter-select"
+            allow-clear
             @change="handleFilterChange"
             :disabled="!filterClusterId"
             :loading="templatesLoading"
@@ -59,9 +59,9 @@
             <a-select-option v-for="template in templates" :key="template.id" :value="template.id">
               {{ template.name }}
             </a-select-option>
-            <a-select-option 
-              v-if="templates.length > 0 && templates.length < templatesTotal" 
-              :value="'__load_more_templates__'" 
+            <a-select-option
+              v-if="templates.length > 0 && templates.length < templatesTotal"
+              :value="'__load_more_templates__'"
               disabled
               style="text-align: center; color: #999;"
             >
@@ -71,11 +71,11 @@
             </a-select-option>
           </a-select>
 
-          <a-select 
-            v-model:value="filterStatus" 
-            placeholder="状态筛选" 
-            class="k8s-filter-select" 
-            allow-clear 
+          <a-select
+            v-model:value="filterStatus"
+            placeholder="状态筛选"
+            class="k8s-filter-select"
+            allow-clear
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined aria-hidden="true"  /></template>
@@ -88,13 +88,13 @@
         </div>
 
         <div class="k8s-search-group">
-          <a-input 
-            v-model:value="searchText" 
-            placeholder="🔍 搜索任务名称" 
-            class="k8s-search-input" 
+          <a-input
+            v-model:value="searchText"
+            placeholder="🔍 搜索任务名称"
+            class="k8s-search-input"
             @pressEnter="onSearch"
             @input="onSearch"
-            allow-clear 
+            allow-clear
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -106,8 +106,8 @@
       <!-- 操作区域 -->
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
-          <a-button 
-            @click="resetFilters" 
+          <a-button
+            @click="resetFilters"
             :disabled="!filterStatus && !searchText && !filterClusterId && !filterTemplateId"
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
@@ -117,10 +117,10 @@
           </a-button>
 
 
-          <a-button 
-            type="primary" 
-            @click="() => batchOperation('执行')" 
-            :disabled="!selectedRows.length || selectedRows.some(row => row.status === TaskStatus.RUNNING)" 
+          <a-button
+            type="primary"
+            @click="() => batchOperation('执行')"
+            :disabled="!selectedRows.length || selectedRows.some(row => row.status === TaskStatus.RUNNING)"
             v-if="can('k8s.task.batchApply') && (selectedRows.length > 0)"
             class="k8s-toolbar-btn"
             title="批量执行选中的任务"
@@ -129,11 +129,11 @@
             执行 ({{ selectedRows.length }})
           </a-button>
 
-          <a-button 
-            type="primary" 
-            danger 
-            @click="() => batchOperation('删除')" 
-            :disabled="!selectedRows.length" 
+          <a-button
+            type="primary"
+            danger
+            @click="() => batchOperation('删除')"
+            :disabled="!selectedRows.length"
             v-if="can('k8s.task.batchDelete') && (selectedRows.length > 0)"
             class="k8s-toolbar-btn"
             title="批量删除选中的任务"
@@ -177,88 +177,84 @@
         class="k8s-table task-table"
         :scroll="{ x: 1400 }"
       >
-        <template #status="{ text }">
-          <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
-        </template>
-
-        <template #template_id="{ text }">
-          <a-tag color="blue" v-if="text">{{ getTemplateName(text) }}</a-tag>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #variables="{ text }">
-          <div class="task-variables">
-            <a-tag v-for="(variable, index) in (text || []).slice(0, 3)" :key="index" color="cyan" class="variable-tag">
-              {{ variable }}
-            </a-tag>
-            <a-tooltip v-if="(text || []).length > 3" :title="(text || []).join('\n')">
-              <a-tag color="cyan" class="variable-tag">
-                +{{ (text || []).length - 3 }} 更多
-              </a-tag>
-            </a-tooltip>
-            <span v-if="!text || !Array.isArray(text) || text.length === 0" class="k8s-no-data">-</span>
-          </div>
-        </template>
-
-        <template #apply_result="{ text }">
-          <div class="apply-result-preview">
-            <code v-if="text" class="result-preview">{{ getResultPreview(text) }}</code>
+        <template #bodyCell="{ column, text, record }">
+          <template v-if="column.key === 'status'">
+            <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
+          </template>
+          <template v-else-if="column.key === 'template_id'">
+            <a-tag color="blue" v-if="text">{{ getTemplateName(text) }}</a-tag>
             <span v-else class="k8s-no-data">-</span>
-          </div>
-        </template>
-
-        <template #createdAt="{ text }">
-          <div v-if="text" style="font-size: 12px; color: #666;">
-            <div>{{ formatDateTime(text) }}</div>
-            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
-          </div>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #updatedAt="{ text }">
-          <div v-if="text" style="font-size: 12px; color: #666;">
-            <div>{{ formatDateTime(text) }}</div>
-            <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
-          </div>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #actions="{ record }">
-          <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
-              <a-button title="查看详情" @click="showTaskDetail(record)">
-                <template #icon><EyeOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="can('k8s.task.apply')" title="执行任务">
-              <a-button 
-                title="执行任务" 
-                @click="openExecuteModal(record)"
-                :disabled="record.status === TaskStatus.RUNNING"
-              >
-                <template #icon><PlayCircleOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="编辑">
-              <a-button 
-                title="编辑" 
-                @click="openEditModal(record)"
-                :disabled="record.status === TaskStatus.RUNNING"
-              >
-                <template #icon><EditOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="can('k8s.task.delete')" title="删除">
-              <a-button 
-                title="删除" 
-                danger 
-                @click="deleteTask(record)"
-                :disabled="record.status === TaskStatus.RUNNING"
-              >
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-          </div>
+          </template>
+          <template v-else-if="column.key === 'variables'">
+            <div class="task-variables">
+              <a-tag v-for="(variable, index) in (text || []).slice(0, 3)" :key="index" color="cyan" class="variable-tag">
+                {{ variable }}
+              </a-tag>
+              <a-tooltip v-if="(text || []).length > 3" :title="(text || []).join('\n')">
+                <a-tag color="cyan" class="variable-tag">
+                  +{{ (text || []).length - 3 }} 更多
+                </a-tag>
+              </a-tooltip>
+              <span v-if="!text || !Array.isArray(text) || text.length === 0" class="k8s-no-data">-</span>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'apply_result'">
+            <div class="apply-result-preview">
+              <code v-if="text" class="result-preview">{{ getResultPreview(text) }}</code>
+              <span v-else class="k8s-no-data">-</span>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'created_at'">
+            <div v-if="text" style="font-size: 12px; color: #666;">
+              <div>{{ formatDateTime(text) }}</div>
+              <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'updated_at'">
+            <div v-if="text" style="font-size: 12px; color: #666;">
+              <div>{{ formatDateTime(text) }}</div>
+              <div style="color: #999; font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <div class="k8s-action-column">
+              <a-tooltip title="查看详情">
+                <a-button title="查看详情" @click="showTaskDetail(record)">
+                  <template #icon><EyeOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip v-if="can('k8s.task.apply')" title="执行任务">
+                <a-button
+                  title="执行任务"
+                  @click="openExecuteModal(record)"
+                  :disabled="record.status === TaskStatus.RUNNING"
+                >
+                  <template #icon><PlayCircleOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="编辑">
+                <a-button
+                  title="编辑"
+                  @click="openEditModal(record)"
+                  :disabled="record.status === TaskStatus.RUNNING"
+                >
+                  <template #icon><EditOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip v-if="can('k8s.task.delete')" title="删除">
+                <a-button
+                  title="删除"
+                  danger
+                  @click="deleteTask(record)"
+                  :disabled="record.status === TaskStatus.RUNNING"
+                >
+                  <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+          </template>
         </template>
 
         <template #emptyText>
@@ -284,17 +280,17 @@
       okText="创建"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="formRef"
-        :model="createFormModel" 
-        layout="vertical" 
+        :model="createFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="createFormRules"
       >
         <a-form-item label="任务名称" name="name" :required="true">
-          <a-input 
-            v-model:value="createFormModel.name" 
-            placeholder="请输入任务名称（例如：deploy-nginx-prod）" 
+          <a-input
+            v-model:value="createFormModel.name"
+            placeholder="请输入任务名称（例如：deploy-nginx-prod）"
             class="k8s-form-input"
             :maxlength="50"
           />
@@ -304,9 +300,9 @@
         </a-form-item>
 
         <a-form-item label="选择模板" name="template_id" :required="true">
-          <a-select 
-            v-model:value="createFormModel.template_id" 
-            placeholder="请选择 YAML 模板" 
+          <a-select
+            v-model:value="createFormModel.template_id"
+            placeholder="请选择 YAML 模板"
             class="k8s-form-input"
             :disabled="!filterClusterId"
             :loading="templatesLoading"
@@ -318,9 +314,9 @@
                 <a-tag color="green" size="small" style="flex-shrink: 0;">ID: {{ template.id }}</a-tag>
               </div>
             </a-select-option>
-            <a-select-option 
-              v-if="templates.length > 0 && templates.length < templatesTotal" 
-              :value="'__load_more_templates_create__'" 
+            <a-select-option
+              v-if="templates.length > 0 && templates.length < templatesTotal"
+              :value="'__load_more_templates_create__'"
               disabled
               style="text-align: center; color: #999;"
             >
@@ -337,16 +333,16 @@
               暂无变量，点击下方按钮添加
             </div>
             <div v-for="(_, index) in createFormModel.variables" :key="index" class="variable-input-row">
-              <a-input 
-                v-model:value="createFormModel.variables[index]" 
-                placeholder="输入变量值（例如：nginx:1.20）" 
+              <a-input
+                v-model:value="createFormModel.variables[index]"
+                placeholder="输入变量值（例如：nginx:1.20）"
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button 
-                type="text" 
-                danger 
-                @click="removeVariableField(index)" 
+              <a-button
+                type="text"
+                danger
+                @click="removeVariableField(index)"
                 size="small"
               >
                 <template #icon><DeleteOutlined aria-hidden="true"  /></template>
@@ -374,26 +370,26 @@
       okText="保存"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="editFormRef"
-        :model="editFormModel" 
-        layout="vertical" 
+        :model="editFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="editFormRules"
       >
         <a-form-item label="任务名称" name="name" :required="true">
-          <a-input 
-            v-model:value="editFormModel.name" 
-            placeholder="请输入任务名称" 
+          <a-input
+            v-model:value="editFormModel.name"
+            placeholder="请输入任务名称"
             class="k8s-form-input"
             :maxlength="255"
           />
         </a-form-item>
 
         <a-form-item label="选择模板">
-          <a-select 
-            v-model:value="editFormModel.template_id" 
-            placeholder="请选择 YAML 模板" 
+          <a-select
+            v-model:value="editFormModel.template_id"
+            placeholder="请选择 YAML 模板"
             class="k8s-form-input"
             :disabled="!filterClusterId"
             :loading="templatesLoading"
@@ -413,16 +409,16 @@
               暂无变量，点击下方按钮添加
             </div>
             <div v-for="(_, index) in editFormModel.variables" :key="index" class="variable-input-row">
-              <a-input 
-                v-model:value="editFormModel.variables[index]" 
-                placeholder="输入变量值" 
+              <a-input
+                v-model:value="editFormModel.variables[index]"
+                placeholder="输入变量值"
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button 
-                type="text" 
-                danger 
-                @click="removeEditVariableField(index)" 
+              <a-button
+                type="text"
+                danger
+                @click="removeEditVariableField(index)"
                 size="small"
               >
                 <template #icon><DeleteOutlined aria-hidden="true"  /></template>
@@ -458,10 +454,10 @@
         style="margin-bottom: 24px;"
       />
 
-      <a-form 
+      <a-form
         ref="executeFormRef"
-        :model="executeFormModel" 
-        layout="vertical" 
+        :model="executeFormModel"
+        layout="vertical"
         class="k8s-form"
       >
         <a-form-item label="执行选项">
@@ -583,11 +579,11 @@ import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted } from 'vue';
 import { useTaskPage } from './Task';
 import { formatDateTime, getRelativeTime } from '../shared/utils';
-import { 
-  PlusOutlined, 
-  ReloadOutlined, 
-  FilterOutlined, 
-  DeleteOutlined, 
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  FilterOutlined,
+  DeleteOutlined,
   PlayCircleOutlined,
   EyeOutlined,
   SearchOutlined,
@@ -766,13 +762,13 @@ const getResultPreview = (result: string) => {
 const columns = [
   { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
   { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center', slots: { customRender: 'status' } },
-  { title: '使用模板', dataIndex: 'template_id', key: 'template_id', width: 150, slots: { customRender: 'template_id' } },
-  { title: '变量', dataIndex: 'variables', key: 'variables', width: 150, slots: { customRender: 'variables' } },
-  { title: '执行结果', dataIndex: 'apply_result', key: 'apply_result', width: 200, slots: { customRender: 'apply_result' } },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
-  { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: 160, slots: { customRender: 'updatedAt' } },
-  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center' },
+  { title: '使用模板', dataIndex: 'template_id', key: 'template_id', width: 150 },
+  { title: '变量', dataIndex: 'variables', key: 'variables', width: 150 },
+  { title: '执行结果', dataIndex: 'apply_result', key: 'apply_result', width: 200 },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: 160 },
+  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center' },
 ];
 
 // 重置所有筛选条件

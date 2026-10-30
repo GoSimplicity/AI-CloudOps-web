@@ -346,42 +346,36 @@ const columns = [
     key: 'status',
     width: 90,
     align: 'center',
-    slots: { customRender: 'status' },
   },
   {
     title: '部署策略',
     key: 'strategyDetails',
     width: 180,
     align: 'center',
-    slots: { customRender: 'strategyDetails' },
   },
   {
     title: '镜像',
     dataIndex: 'images',
     key: 'images',
     width: 200,
-    slots: { customRender: 'images' },
   },
   {
     title: '标签',
     dataIndex: 'labels',
     key: 'labels',
     width: 150,
-    slots: { customRender: 'labels' },
   },
   {
     title: '注解',
     dataIndex: 'annotations',
     key: 'annotations',
     width: 120,
-    slots: { customRender: 'annotations' },
   },
   {
     title: '选择器',
     dataIndex: 'selector',
     key: 'selector',
     width: 150,
-    slots: { customRender: 'selector' },
   },
   {
     title: 'UID',
@@ -389,14 +383,12 @@ const columns = [
     key: 'uid',
     width: 100,
     ellipsis: true,
-    slots: { customRender: 'uid' },
   },
   {
     title: '创建时间',
     dataIndex: 'created_at',
     key: 'created_at',
     width: 160,
-    slots: { customRender: 'createdAt' },
   },
   {
     title: '操作',
@@ -404,7 +396,6 @@ const columns = [
     width: 450,
     fixed: 'right',
     align: 'center',
-    slots: { customRender: 'actions' },
   },
 ];
 
@@ -793,287 +784,281 @@ onMounted(async () => {
         class="k8s-table deployment-table"
         :scroll="{ x: 2080 }"
       >
-        <template #status="{ text }">
-          <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
-        </template>
-
-        <template #strategyDetails="{ record }">
-          <div
-            class="k8s-strategy-display"
-            style="
-              display: flex;
-              flex-direction: column;
-              gap: 4px;
-              font-size: 12px;
-            "
-          >
-            <div v-if="record.strategy">
-              <a-tag color="geekblue">{{ record.strategy }}</a-tag>
-            </div>
+        <template #bodyCell="{ column, text, record }">
+          <template v-if="column.key === 'status'">
+            <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
+          </template>
+          <template v-else-if="column.key === 'strategyDetails'">
             <div
-              v-if="record.max_unavailable"
-              style="display: flex; align-items: center; gap: 4px"
-            >
-              <span style="color: #999">不可用:</span>
-              <a-tag color="orange" size="small">{{
-                record.max_unavailable
-              }}</a-tag>
-            </div>
-            <div
-              v-if="record.max_surge"
-              style="display: flex; align-items: center; gap: 4px"
-            >
-              <span style="color: #999">超出:</span>
-              <a-tag color="cyan" size="small">{{ record.max_surge }}</a-tag>
-            </div>
-            <span
-              v-if="
-                !record.strategy && !record.max_unavailable && !record.max_surge
+              class="k8s-strategy-display"
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                font-size: 12px;
               "
-              class="k8s-no-data"
-              >-</span
             >
-          </div>
-        </template>
-
-        <template #images="{ text }">
-          <div class="k8s-images-display">
-            <a-tag
-              v-for="(image, index) in (Array.isArray(text) ? text : []).slice(
-                0,
-                2,
-              )"
-              :key="index"
-              class="k8s-image-tag"
-            >
-              {{ image.split('/').pop()?.split(':')[0] || image }}
-            </a-tag>
-            <a-tooltip
-              v-if="(Array.isArray(text) ? text : []).length > 2"
-              :title="(Array.isArray(text) ? text : []).join('\n')"
-            >
-              <a-tag class="k8s-image-tag">
-                +{{ (Array.isArray(text) ? text : []).length - 2 }} 更多
-              </a-tag>
-            </a-tooltip>
-            <span
-              v-if="!text || !Array.isArray(text) || text.length === 0"
-              class="k8s-no-data"
-              >-</span
-            >
-          </div>
-        </template>
-
-        <template #labels="{ text }">
-          <div class="k8s-labels-display">
-            <template v-if="Array.isArray(text)">
-              <!-- 数组格式 -->
-              <a-tooltip
-                v-for="label in text.slice(0, 3)"
-                :key="label.key"
-                :title="`${label.key}: ${label.value}`"
+              <div v-if="record.strategy">
+                <a-tag color="geekblue">{{ record.strategy }}</a-tag>
+              </div>
+              <div
+                v-if="record.max_unavailable"
+                style="display: flex; align-items: center; gap: 4px"
               >
-                <a-tag class="k8s-label-item">
-                  {{ label.key }}: {{ label.value }}
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip
-                v-if="text.length > 3"
-                :title="
-                  text
-                    .map((item: any) => `${item.key}: ${item.value}`)
-                    .join('\n')
+                <span style="color: #999">不可用:</span>
+                <a-tag color="orange" size="small">{{
+                  record.max_unavailable
+                }}</a-tag>
+              </div>
+              <div
+                v-if="record.max_surge"
+                style="display: flex; align-items: center; gap: 4px"
+              >
+                <span style="color: #999">超出:</span>
+                <a-tag color="cyan" size="small">{{ record.max_surge }}</a-tag>
+              </div>
+              <span
+                v-if="
+                  !record.strategy && !record.max_unavailable && !record.max_surge
                 "
-              >
-                <a-tag class="k8s-label-item"> {{ text.length }} 个标签 </a-tag>
-              </a-tooltip>
-              <span v-if="text.length === 0" class="k8s-no-data">-</span>
-            </template>
-            <template v-else-if="text && typeof text === 'object'">
-              <!-- 对象格式 -->
-              <a-tooltip
-                v-for="[key, value] in Object.entries(text).slice(0, 3)"
-                :key="key"
-                :title="`${key}: ${value}`"
-              >
-                <a-tag class="k8s-label-item"> {{ key }}: {{ value }} </a-tag>
-              </a-tooltip>
-              <a-tooltip
-                v-if="Object.keys(text).length > 3"
-                :title="
-                  Object.entries(text)
-                    .map(([k, v]: [string, any]) => `${k}: ${v}`)
-                    .join('\n')
-                "
-              >
-                <a-tag class="k8s-label-item">
-                  {{ Object.keys(text).length }} 个标签
-                </a-tag>
-              </a-tooltip>
-              <span v-if="Object.keys(text).length === 0" class="k8s-no-data"
+                class="k8s-no-data"
                 >-</span
               >
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #annotations="{ text }">
-          <div class="k8s-annotations-display">
-            <template v-if="Array.isArray(text)">
-              <!-- 数组格式 -->
-              <a-tooltip
-                v-if="text.length > 0"
-                :title="
-                  text
-                    .map((item: any) => `${item.key}: ${item.value}`)
-                    .join('\n')
-                "
-              >
-                <a-tag class="k8s-annotation-item" color="purple">
-                  {{ text.length }} 个注解
-                </a-tag>
-              </a-tooltip>
-              <span v-else class="k8s-no-data">-</span>
-            </template>
-            <template v-else-if="text && typeof text === 'object'">
-              <!-- 对象格式 -->
-              <a-tooltip
-                v-if="Object.keys(text).length > 0"
-                :title="
-                  Object.entries(text)
-                    .map(([k, v]: [string, any]) => `${k}: ${v}`)
-                    .join('\n')
-                "
-              >
-                <a-tag class="k8s-annotation-item" color="purple">
-                  {{ Object.keys(text).length }} 个注解
-                </a-tag>
-              </a-tooltip>
-              <span v-else class="k8s-no-data">-</span>
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #selector="{ text }">
-          <div class="k8s-selector-display">
-            <template v-if="text && typeof text === 'object'">
-              <a-tooltip
-                v-if="Object.keys(text).length > 0"
-                :title="
-                  Object.entries(text)
-                    .map(([k, v]: [string, any]) => `${k}: ${v}`)
-                    .join('\n')
-                "
-              >
-                <a-tag class="k8s-selector-item" color="cyan">
-                  {{ Object.keys(text).length }} 个选择器
-                </a-tag>
-              </a-tooltip>
-              <span v-else class="k8s-no-data">-</span>
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #uid="{ text }">
-          <a-tooltip v-if="text" :title="text">
-            <span
-              class="k8s-uid-text"
-              style="font-family: monospace; font-size: 11px; color: #666"
-            >
-              {{ text.substring(0, 8) }}...
-            </span>
-          </a-tooltip>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #createdAt="{ text }">
-          <div v-if="text" style="font-size: 12px; color: #666">
-            <div>{{ formatDateTime(text) }}</div>
-            <div style="color: #999; font-size: 11px; margin-top: 2px">
-              {{ getRelativeTime(text) }}
             </div>
-          </div>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #actions="{ record }">
-          <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
-              <a-button title="查看详情" @click="showDeploymentDetail(record)">
-                <template #icon><EyeOutlined aria-hidden="true" /></template>
-              </a-button>
+          </template>
+          <template v-else-if="column.key === 'images'">
+            <div class="k8s-images-display">
+              <a-tag
+                v-for="(image, index) in (Array.isArray(text) ? text : []).slice(
+                  0,
+                  2,
+                )"
+                :key="index"
+                class="k8s-image-tag"
+              >
+                {{ image.split('/').pop()?.split(':')[0] || image }}
+              </a-tag>
+              <a-tooltip
+                v-if="(Array.isArray(text) ? text : []).length > 2"
+                :title="(Array.isArray(text) ? text : []).join('\n')"
+              >
+                <a-tag class="k8s-image-tag">
+                  +{{ (Array.isArray(text) ? text : []).length - 2 }} 更多
+                </a-tag>
+              </a-tooltip>
+              <span
+                v-if="!text || !Array.isArray(text) || text.length === 0"
+                class="k8s-no-data"
+                >-</span
+              >
+            </div>
+          </template>
+          <template v-else-if="column.key === 'labels'">
+            <div class="k8s-labels-display">
+              <template v-if="Array.isArray(text)">
+                <!-- 数组格式 -->
+                <a-tooltip
+                  v-for="label in text.slice(0, 3)"
+                  :key="label.key"
+                  :title="`${label.key}: ${label.value}`"
+                >
+                  <a-tag class="k8s-label-item">
+                    {{ label.key }}: {{ label.value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip
+                  v-if="text.length > 3"
+                  :title="
+                    text
+                      .map((item: any) => `${item.key}: ${item.value}`)
+                      .join('\n')
+                  "
+                >
+                  <a-tag class="k8s-label-item"> {{ text.length }} 个标签 </a-tag>
+                </a-tooltip>
+                <span v-if="text.length === 0" class="k8s-no-data">-</span>
+              </template>
+              <template v-else-if="text && typeof text === 'object'">
+                <!-- 对象格式 -->
+                <a-tooltip
+                  v-for="[key, value] in Object.entries(text).slice(0, 3)"
+                  :key="key"
+                  :title="`${key}: ${value}`"
+                >
+                  <a-tag class="k8s-label-item"> {{ key }}: {{ value }} </a-tag>
+                </a-tooltip>
+                <a-tooltip
+                  v-if="Object.keys(text).length > 3"
+                  :title="
+                    Object.entries(text)
+                      .map(([k, v]: [string, any]) => `${k}: ${v}`)
+                      .join('\n')
+                  "
+                >
+                  <a-tag class="k8s-label-item">
+                    {{ Object.keys(text).length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="Object.keys(text).length === 0" class="k8s-no-data"
+                  >-</span
+                >
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'annotations'">
+            <div class="k8s-annotations-display">
+              <template v-if="Array.isArray(text)">
+                <!-- 数组格式 -->
+                <a-tooltip
+                  v-if="text.length > 0"
+                  :title="
+                    text
+                      .map((item: any) => `${item.key}: ${item.value}`)
+                      .join('\n')
+                  "
+                >
+                  <a-tag class="k8s-annotation-item" color="purple">
+                    {{ text.length }} 个注解
+                  </a-tag>
+                </a-tooltip>
+                <span v-else class="k8s-no-data">-</span>
+              </template>
+              <template v-else-if="text && typeof text === 'object'">
+                <!-- 对象格式 -->
+                <a-tooltip
+                  v-if="Object.keys(text).length > 0"
+                  :title="
+                    Object.entries(text)
+                      .map(([k, v]: [string, any]) => `${k}: ${v}`)
+                      .join('\n')
+                  "
+                >
+                  <a-tag class="k8s-annotation-item" color="purple">
+                    {{ Object.keys(text).length }} 个注解
+                  </a-tag>
+                </a-tooltip>
+                <span v-else class="k8s-no-data">-</span>
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'selector'">
+            <div class="k8s-selector-display">
+              <template v-if="text && typeof text === 'object'">
+                <a-tooltip
+                  v-if="Object.keys(text).length > 0"
+                  :title="
+                    Object.entries(text)
+                      .map(([k, v]: [string, any]) => `${k}: ${v}`)
+                      .join('\n')
+                  "
+                >
+                  <a-tag class="k8s-selector-item" color="cyan">
+                    {{ Object.keys(text).length }} 个选择器
+                  </a-tag>
+                </a-tooltip>
+                <span v-else class="k8s-no-data">-</span>
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'uid'">
+            <a-tooltip v-if="text" :title="text">
+              <span
+                class="k8s-uid-text"
+                style="font-family: monospace; font-size: 11px; color: #666"
+              >
+                {{ text.substring(0, 8) }}...
+              </span>
             </a-tooltip>
-            <a-tooltip title="编辑">
-              <a-button title="编辑" @click="openEditModal(record)">
-                <template #icon><EditOutlined aria-hidden="true" /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="查看 YAML">
-              <a-button title="查看 YAML" @click="showYamlModal(record)">
-                <template #icon
-                  ><FileTextOutlined aria-hidden="true"
-                /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="伸缩">
-              <a-button title="伸缩" @click="openScaleModal(record)">
-                <template #icon><ExpandOutlined aria-hidden="true" /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="重启">
-              <a-button title="重启" @click="restartDeployment(record)">
-                <template #icon><RedoOutlined aria-hidden="true" /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip
-              v-if="record.status === K8sDeploymentStatus.Running"
-              title="暂停"
-            >
-              <a-button title="暂停" @click="pauseDeployment(record)">
-                <template #icon
-                  ><PauseCircleOutlined aria-hidden="true"
-                /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip
-              v-if="record.status === K8sDeploymentStatus.Paused"
-              title="恢复"
-            >
-              <a-button title="恢复" @click="resumeDeployment(record)">
-                <template #icon
-                  ><PlayCircleOutlined aria-hidden="true"
-                /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="查看 Pod">
-              <a-button title="查看 Pod" @click="showPodModal(record)">
-                <template #icon
-                  ><ContainerOutlined aria-hidden="true"
-                /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="版本历史">
-              <a-button title="版本历史" @click="showHistoryModal(record)">
-                <template #icon
-                  ><HistoryOutlined aria-hidden="true"
-                /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="can('k8s.deployment.delete')" title="删除">
-              <a-button title="删除" danger @click="deleteDeployment(record)">
-                <template #icon><DeleteOutlined aria-hidden="true" /></template>
-              </a-button>
-            </a-tooltip>
-          </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'created_at'">
+            <div v-if="text" style="font-size: 12px; color: #666">
+              <div>{{ formatDateTime(text) }}</div>
+              <div style="color: #999; font-size: 11px; margin-top: 2px">
+                {{ getRelativeTime(text) }}
+              </div>
+            </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <div class="k8s-action-column">
+              <a-tooltip title="查看详情">
+                <a-button title="查看详情" @click="showDeploymentDetail(record)">
+                  <template #icon><EyeOutlined aria-hidden="true" /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="编辑">
+                <a-button title="编辑" @click="openEditModal(record)">
+                  <template #icon><EditOutlined aria-hidden="true" /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="查看 YAML">
+                <a-button title="查看 YAML" @click="showYamlModal(record)">
+                  <template #icon
+                    ><FileTextOutlined aria-hidden="true"
+                  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="伸缩">
+                <a-button title="伸缩" @click="openScaleModal(record)">
+                  <template #icon><ExpandOutlined aria-hidden="true" /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="重启">
+                <a-button title="重启" @click="restartDeployment(record)">
+                  <template #icon><RedoOutlined aria-hidden="true" /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip
+                v-if="record.status === K8sDeploymentStatus.Running"
+                title="暂停"
+              >
+                <a-button title="暂停" @click="pauseDeployment(record)">
+                  <template #icon
+                    ><PauseCircleOutlined aria-hidden="true"
+                  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip
+                v-if="record.status === K8sDeploymentStatus.Paused"
+                title="恢复"
+              >
+                <a-button title="恢复" @click="resumeDeployment(record)">
+                  <template #icon
+                    ><PlayCircleOutlined aria-hidden="true"
+                  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="查看 Pod">
+                <a-button title="查看 Pod" @click="showPodModal(record)">
+                  <template #icon
+                    ><ContainerOutlined aria-hidden="true"
+                  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="版本历史">
+                <a-button title="版本历史" @click="showHistoryModal(record)">
+                  <template #icon
+                    ><HistoryOutlined aria-hidden="true"
+                  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip v-if="can('k8s.deployment.delete')" title="删除">
+                <a-button title="删除" danger @click="deleteDeployment(record)">
+                  <template #icon><DeleteOutlined aria-hidden="true" /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+          </template>
         </template>
 
         <template #emptyText>

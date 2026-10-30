@@ -17,12 +17,12 @@
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
-          <a-select 
-            v-model:value="filterClusterId" 
-            placeholder="选择集群" 
+          <a-select
+            v-model:value="filterClusterId"
+            placeholder="选择集群"
             class="k8s-cluster-selector"
             aria-label="选择集群"
-            allow-clear 
+            allow-clear
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
@@ -35,9 +35,9 @@
                 <a-tag color="blue" size="small">{{ getEnvText(cluster.env) }}</a-tag>
               </div>
             </a-select-option>
-            <a-select-option 
-              v-if="clusters.length > 0 && clusters.length < clustersTotal" 
-              :value="'__load_more__'" 
+            <a-select-option
+              v-if="clusters.length > 0 && clusters.length < clustersTotal"
+              :value="'__load_more__'"
               disabled
               style="text-align: center; color: var(--ops-muted);"
             >
@@ -46,11 +46,11 @@
             </a-select-option>
           </a-select>
 
-          <a-select 
-            v-model:value="filterAccessMode" 
-            placeholder="访问模式" 
-            class="k8s-filter-select" 
-            allow-clear 
+          <a-select
+            v-model:value="filterAccessMode"
+            placeholder="访问模式"
+            class="k8s-filter-select"
+            allow-clear
             @change="handleFilterChange"
           >
             <template #suffixIcon><KeyOutlined aria-hidden="true"  /></template>
@@ -59,17 +59,17 @@
             <a-select-option value="ReadWriteMany">RWX</a-select-option>
             <a-select-option value="ReadWriteOncePod">RWOP</a-select-option>
           </a-select>
-          
+
         </div>
 
         <div class="k8s-search-group">
-          <a-input 
-            v-model:value="searchText" 
-            placeholder="搜索 PV 名称" 
-            class="k8s-search-input" 
+          <a-input
+            v-model:value="searchText"
+            placeholder="搜索 PV 名称"
+            class="k8s-search-input"
             @pressEnter="onSearch"
             @input="onSearch"
-            allow-clear 
+            allow-clear
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -81,8 +81,8 @@
       <!-- 操作区域 -->
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
-          <a-button 
-            @click="resetFilters" 
+          <a-button
+            @click="resetFilters"
             :disabled="!filterAccessMode && !searchText && !filterClusterId"
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
@@ -90,10 +90,10 @@
             <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             重置筛选
           </a-button>
-          
 
-          <a-button 
-            @click="openCreateYamlModal" 
+
+          <a-button
+            @click="openCreateYamlModal"
             :disabled="!filterClusterId"
             class="k8s-toolbar-btn"
             title="通过YAML创建PV"
@@ -101,12 +101,12 @@
             <template #icon><FileTextOutlined aria-hidden="true"  /></template>
             YAML 创建
           </a-button>
-          
-          <a-button 
-            type="primary" 
-            danger 
-            @click="deleteBatchPVs" 
-            :disabled="!selectedRows.length" 
+
+          <a-button
+            type="primary"
+            danger
+            @click="deleteBatchPVs"
+            :disabled="!selectedRows.length"
             v-if="can('k8s.pv.batchDelete') && (selectedRows.length > 0)"
             class="k8s-toolbar-btn"
             title="批量删除选中的 PV"
@@ -147,157 +147,149 @@
         class="k8s-table pv-table"
         @change="handleTableChange"
       >
-        <template #name="{ record }">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <DatabaseOutlined aria-hidden="true" style="color: #1677ff; font-size: 16px;" />
-            <span style="font-weight: 500; color: var(--ops-ink);">{{ record.name }}</span>
-          </div>
-        </template>
-
-        <template #status="{ text }">
-          <a-badge :status="getPVStatusColor(text)" :text="getPVStatusText(text)" />
-        </template>
-
-        <template #capacity="{ text }">
-          <a-tag color="blue">{{ text }}</a-tag>
-        </template>
-
-        <template #access_modes="{ text }">
-          <div class="k8s-tags-display">
-            <a-tag 
-              v-for="mode in text" 
-              :key="mode"
-              color="green"
-              size="small"
-            >
-              {{ getAccessModeText(mode) }}
-            </a-tag>
-            <span v-if="!text || text.length === 0" class="k8s-no-data">
-              无访问模式
-            </span>
-          </div>
-        </template>
-
-        <template #reclaim_policy="{ text }">
-          <a-tag :color="text === 'Retain' ? 'orange' : text === 'Delete' ? 'red' : 'blue'">
-            {{ text || '未设置' }}
-          </a-tag>
-        </template>
-
-        <template #claim_ref="{ record }">
-          <div v-if="record.claim_ref && record.claim_ref.name">
-            <a-tag color="cyan">
-              {{ record.claim_ref.namespace }}/{{ record.claim_ref.name }}
-            </a-tag>
-          </div>
-          <span v-else class="k8s-no-data">未绑定</span>
-        </template>
-
-        <template #labels="{ text }">
-          <div class="k8s-labels-display">
-            <template v-if="Array.isArray(text)">
-              <!-- 数组格式 -->
-              <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
-                <a-tag class="k8s-label-item">
-                  {{ label.key }}: {{ label.value }}
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-                <a-tag class="k8s-label-item">
-                  {{ text.length }} 个标签
-                </a-tag>
-              </a-tooltip>
-              <span v-if="text.length === 0" class="k8s-no-data">-</span>
-            </template>
-            <template v-else-if="text && typeof text === 'object'">
-              <!-- 对象格式 -->
-              <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
-                <a-tag class="k8s-label-item">
-                  {{ key }}: {{ value }}
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
-                <a-tag class="k8s-label-item">
-                  {{ Object.keys(text).length }} 个标签
-                </a-tag>
-              </a-tooltip>
-              <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #annotations="{ text }">
-          <div class="k8s-annotations-display">
-            <template v-if="Array.isArray(text)">
-              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-                <a-tag class="k8s-annotation-item" color="purple">{{ text.length }} 个注解</a-tag>
-              </a-tooltip>
-              <span v-else class="k8s-no-data">-</span>
-            </template>
-            <template v-else-if="text && typeof text === 'object'">
-              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
-                <a-tag class="k8s-annotation-item" color="purple">{{ Object.keys(text).length }} 个注解</a-tag>
-              </a-tooltip>
-              <span v-else class="k8s-no-data">-</span>
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #uid="{ text }">
-          <a-tooltip v-if="text" :title="text">
-            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
-              {{ text.substring(0, 8) }}...
-            </span>
-          </a-tooltip>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #createdAt="{ text }">
-          <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
-            <div>{{ formatDateTime(text) }}</div>
-            <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
-          </div>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #actions="{ record }">
-          <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
-              <a-button title="查看详情" @click="openDetailModal(record)">
-                <template #icon><EyeOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="查看 YAML">
-              <a-button title="查看 YAML" @click="openYamlModal(record)">
-                <template #icon><FileTextOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="编辑">
-              <a-button title="编辑" @click="openEditModal(record)">
-                <template #icon><EditOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="回收PV" v-if="record.status === K8sPVStatus.Released">
-              <a-button title="回收PV" @click="reclaimPV(record)">
-                <template #icon><UndoOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="can('k8s.pv.delete')" title="删除">
-              <a-button 
-                title="删除" 
-                danger 
-                @click="deletePV(record)"
+        <template #bodyCell="{ column, record, text }">
+          <template v-if="column.key === 'name'">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <DatabaseOutlined aria-hidden="true" style="color: #1677ff; font-size: 16px;" />
+              <span style="font-weight: 500; color: var(--ops-ink);">{{ record.name }}</span>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'status'">
+            <a-badge :status="getPVStatusColor(text)" :text="getPVStatusText(text)" />
+          </template>
+          <template v-else-if="column.key === 'capacity'">
+            <a-tag color="blue">{{ text }}</a-tag>
+          </template>
+          <template v-else-if="column.key === 'access_modes'">
+            <div class="k8s-tags-display">
+              <a-tag
+                v-for="mode in text"
+                :key="mode"
+                color="green"
+                size="small"
               >
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
-              </a-button>
+                {{ getAccessModeText(mode) }}
+              </a-tag>
+              <span v-if="!text || text.length === 0" class="k8s-no-data">
+                无访问模式
+              </span>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'reclaim_policy'">
+            <a-tag :color="text === 'Retain' ? 'orange' : text === 'Delete' ? 'red' : 'blue'">
+              {{ text || '未设置' }}
+            </a-tag>
+          </template>
+          <template v-else-if="column.key === 'claim_ref'">
+            <div v-if="record.claim_ref && record.claim_ref.name">
+              <a-tag color="cyan">
+                {{ record.claim_ref.namespace }}/{{ record.claim_ref.name }}
+              </a-tag>
+            </div>
+            <span v-else class="k8s-no-data">未绑定</span>
+          </template>
+          <template v-else-if="column.key === 'labels'">
+            <div class="k8s-labels-display">
+              <template v-if="Array.isArray(text)">
+                <!-- 数组格式 -->
+                <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
+                  <a-tag class="k8s-label-item">
+                    {{ label.key }}: {{ label.value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip v-if="text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                  <a-tag class="k8s-label-item">
+                    {{ text.length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="text.length === 0" class="k8s-no-data">-</span>
+              </template>
+              <template v-else-if="text && typeof text === 'object'">
+                <!-- 对象格式 -->
+                <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
+                  <a-tag class="k8s-label-item">
+                    {{ key }}: {{ value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip v-if="Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                  <a-tag class="k8s-label-item">
+                    {{ Object.keys(text).length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'annotations'">
+            <div class="k8s-annotations-display">
+              <template v-if="Array.isArray(text)">
+                <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                  <a-tag class="k8s-annotation-item" color="purple">{{ text.length }} 个注解</a-tag>
+                </a-tooltip>
+                <span v-else class="k8s-no-data">-</span>
+              </template>
+              <template v-else-if="text && typeof text === 'object'">
+                <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                  <a-tag class="k8s-annotation-item" color="purple">{{ Object.keys(text).length }} 个注解</a-tag>
+                </a-tooltip>
+                <span v-else class="k8s-no-data">-</span>
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'uid'">
+            <a-tooltip v-if="text" :title="text">
+              <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
+                {{ text.substring(0, 8) }}...
+              </span>
             </a-tooltip>
-          </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'created_at'">
+            <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
+              <div>{{ formatDateTime(text) }}</div>
+              <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <div class="k8s-action-column">
+              <a-tooltip title="查看详情">
+                <a-button title="查看详情" @click="openDetailModal(record)">
+                  <template #icon><EyeOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="查看 YAML">
+                <a-button title="查看 YAML" @click="openYamlModal(record)">
+                  <template #icon><FileTextOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="编辑">
+                <a-button title="编辑" @click="openEditModal(record)">
+                  <template #icon><EditOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="回收PV" v-if="record.status === K8sPVStatus.Released">
+                <a-button title="回收PV" @click="reclaimPV(record)">
+                  <template #icon><UndoOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip v-if="can('k8s.pv.delete')" title="删除">
+                <a-button
+                  title="删除"
+                  danger
+                  @click="deletePV(record)"
+                >
+                  <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+          </template>
         </template>
 
         <template #emptyText>
@@ -332,28 +324,28 @@
         class="k8s-form"
       >
         <a-form-item label="PV名称" name="name" :required="true">
-          <a-input 
-            v-model:value="createFormModel.name" 
-            placeholder="请输入 PV 名称（例如：pv-data-01）" 
+          <a-input
+            v-model:value="createFormModel.name"
+            placeholder="请输入 PV 名称（例如：pv-data-01）"
             class="k8s-form-input"
             :maxlength="63"
           />
         </a-form-item>
 
         <a-form-item label="存储容量" name="capacity" :required="true">
-          <a-input 
-            v-model:value="createFormModel.capacity" 
-            placeholder="例如：10Gi, 500Mi, 1Ti" 
+          <a-input
+            v-model:value="createFormModel.capacity"
+            placeholder="例如：10Gi, 500Mi, 1Ti"
             class="k8s-form-input"
             :maxlength="20"
           />
         </a-form-item>
 
         <a-form-item label="访问模式" name="access_modes">
-          <a-select 
-            v-model:value="createFormModel.access_modes" 
-            mode="multiple" 
-            placeholder="选择访问模式" 
+          <a-select
+            v-model:value="createFormModel.access_modes"
+            mode="multiple"
+            placeholder="选择访问模式"
             class="k8s-form-input"
             :maxTagCount="2"
           >
@@ -385,18 +377,18 @@
         </a-row>
 
         <a-form-item label="存储类">
-          <a-input 
-            v-model:value="createFormModel.storage_class" 
-            placeholder="输入存储类名称（可选）" 
+          <a-input
+            v-model:value="createFormModel.storage_class"
+            placeholder="输入存储类名称（可选）"
             class="k8s-form-input"
             :maxlength="253"
           />
         </a-form-item>
 
         <a-form-item label="卷类型" :required="true">
-          <a-select 
-            v-model:value="createFormModel.volume_type" 
-            placeholder="选择卷类型" 
+          <a-select
+            v-model:value="createFormModel.volume_type"
+            placeholder="选择卷类型"
             class="k8s-form-input"
             @change="handleVolumeTypeChange"
           >
@@ -414,14 +406,14 @@
         <a-form-item label="卷源配置" :required="true">
           <div class="k8s-key-value-inputs">
             <div v-for="(_, key) in createFormModel.volume_source" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="key" 
+              <a-input
+                :value="key"
+                :placeholder="key"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="createFormModel.volume_source[key]" 
+              <a-input
+                v-model:value="createFormModel.volume_source[key]"
                 :placeholder="isRequiredField(createFormModel.volume_type, key) ? `请输入 ${key} (必填)` : `请输入 ${key} (可选)`"
                 class="k8s-form-input"
                 :maxlength="200"
@@ -458,15 +450,15 @@
                 暂无标签，点击下方按钮添加
               </div>
             <div v-for="(_, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                placeholder="标签键" 
+              <a-input
+                :value="key"
+                placeholder="标签键"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="createFormModel.labels[key]" 
-                placeholder="标签值" 
+              <a-input
+                v-model:value="createFormModel.labels[key]"
+                placeholder="标签值"
                 class="k8s-form-input"
                 :maxlength="200"
               />
@@ -497,15 +489,15 @@
                 暂无注解，点击下方按钮添加
               </div>
             <div v-for="(_, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                placeholder="注解键" 
+              <a-input
+                :value="key"
+                placeholder="注解键"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="createFormModel.annotations[key]" 
-                placeholder="注解值" 
+              <a-input
+                v-model:value="createFormModel.annotations[key]"
+                placeholder="注解值"
                 class="k8s-form-input"
                 :maxlength="500"
               />
@@ -608,10 +600,10 @@
         </a-form-item>
 
         <a-form-item label="访问模式">
-          <a-select 
-            v-model:value="editFormModel.access_modes" 
-            mode="multiple" 
-            placeholder="选择访问模式" 
+          <a-select
+            v-model:value="editFormModel.access_modes"
+            mode="multiple"
+            placeholder="选择访问模式"
             class="k8s-form-input"
             :maxTagCount="2"
           >
@@ -645,15 +637,15 @@
               暂无配置，点击下方按钮添加
             </div>
             <div v-for="(_, key) in editFormModel.volume_source" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                placeholder="配置键" 
+              <a-input
+                :value="key"
+                placeholder="配置键"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="editFormModel.volume_source[key]" 
-                placeholder="配置值" 
+              <a-input
+                v-model:value="editFormModel.volume_source[key]"
+                placeholder="配置值"
                 class="k8s-form-input"
                 :maxlength="200"
               />
@@ -689,15 +681,15 @@
                 暂无标签，点击下方按钮添加
               </div>
             <div v-for="(_, key) in editFormModel.labels" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                placeholder="标签键" 
+              <a-input
+                :value="key"
+                placeholder="标签键"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="editFormModel.labels[key]" 
-                placeholder="标签值" 
+              <a-input
+                v-model:value="editFormModel.labels[key]"
+                placeholder="标签值"
                 class="k8s-form-input"
                 :maxlength="200"
               />
@@ -728,15 +720,15 @@
                 暂无注解，点击下方按钮添加
               </div>
             <div v-for="(_, key) in editFormModel.annotations" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                placeholder="注解键" 
+              <a-input
+                :value="key"
+                placeholder="注解键"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="editFormModel.annotations[key]" 
-                placeholder="注解值" 
+              <a-input
+                v-model:value="editFormModel.annotations[key]"
+                placeholder="注解值"
                 class="k8s-form-input"
                 :maxlength="500"
               />
@@ -957,12 +949,12 @@ const {
   pageSize,
   total,
   clustersTotal,
-  
+
   // form refs
   formRef,
   yamlFormRef,
   createYamlFormRef,
-  
+
   // modal state
   isCreateModalVisible,
   isCreateYamlModalVisible,
@@ -971,32 +963,32 @@ const {
   isYamlModalVisible,
   submitLoading,
   detailLoading,
-  
+
   // current operation
   currentOperationPV,
   currentPVDetail,
-  
+
   // form models
   createFormModel,
   editFormModel,
   yamlFormModel,
   createYamlFormModel,
-  
+
   // form rules
   createFormRules,
   yamlFormRules,
   createYamlFormRules,
-  
+
   // computed
   filteredPVs,
   rowSelection,
-  
+
   // helpers
   getEnvText,
   getPVStatusText,
   getPVStatusColor,
   getAccessModeText,
-  
+
   // api calls
   fetchClusters,
   fetchPVs,
@@ -1007,15 +999,15 @@ const {
   deletePV,
   reclaimPV,
   deleteBatchPVs,
-  
-  
+
+
   // modal handlers
   openCreateModal,
   openCreateYamlModal,
   openEditModal,
   openDetailModal,
   openYamlModal,
-  
+
   // form helpers
   resetCreateForm,
   resetEditForm,
@@ -1023,12 +1015,12 @@ const {
   resetCreateYamlForm,
   handleVolumeTypeChange,
   isRequiredField,
-  
+
   // filter handlers
   handleClusterChange,
   handleFilterChange,
   handleClusterDropdownScroll,
-  
+
   // label/annotation helpers
   newLabelKey,
   newAnnotationKey,
@@ -1042,7 +1034,7 @@ const {
   removeEditLabelField,
   addNewEditAnnotation,
   removeEditAnnotationField,
-  
+
   // volume source helpers
   newVolumeSourceKey,
   newVolumeSourceValue,
@@ -1052,7 +1044,7 @@ const {
   newEditVolumeSourceValue,
   addNewEditVolumeSource,
   removeEditVolumeSourceField,
-  
+
   // yaml operations
   insertYamlTemplate,
   formatYaml,
@@ -1060,23 +1052,23 @@ const {
   clearYaml,
   formatEditYaml,
   validateEditYaml,
-  
+
   // constants
   K8sPVStatus,
 } = usePVPage();
 
 const columns = [
-  { title: 'PV名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left', slots: { customRender: 'name' } },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center', slots: { customRender: 'status' } },
-  { title: '容量', dataIndex: 'capacity', key: 'capacity', width: 100, align: 'center', slots: { customRender: 'capacity' } },
-  { title: '访问模式', dataIndex: 'access_modes', key: 'access_modes', width: 140, slots: { customRender: 'access_modes' } },
-  { title: '回收策略', dataIndex: 'reclaim_policy', key: 'reclaim_policy', width: 100, align: 'center', slots: { customRender: 'reclaim_policy' } },
-  { title: '绑定PVC', dataIndex: 'claim_ref', key: 'claim_ref', width: 150, ellipsis: true, slots: { customRender: 'claim_ref' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
-  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
+  { title: 'PV名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center' },
+  { title: '容量', dataIndex: 'capacity', key: 'capacity', width: 100, align: 'center' },
+  { title: '访问模式', dataIndex: 'access_modes', key: 'access_modes', width: 140 },
+  { title: '回收策略', dataIndex: 'reclaim_policy', key: 'reclaim_policy', width: 100, align: 'center' },
+  { title: '绑定PVC', dataIndex: 'claim_ref', key: 'claim_ref', width: 150, ellipsis: true },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center' },
 ];
 
 // 搜索功能

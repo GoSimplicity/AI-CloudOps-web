@@ -17,12 +17,12 @@
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
-          <a-select 
-            v-model:value="filterClusterId" 
-            placeholder="选择集群" 
+          <a-select
+            v-model:value="filterClusterId"
+            placeholder="选择集群"
             class="k8s-cluster-selector"
             aria-label="选择集群"
-            allow-clear 
+            allow-clear
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
@@ -35,9 +35,9 @@
                 <a-tag color="blue" size="small">{{ cluster.env ? getEnvText(cluster.env) : '未知' }}</a-tag>
               </div>
             </a-select-option>
-            <a-select-option 
-              v-if="clusters.length > 0 && clusters.length < clustersTotal" 
-              :value="'__load_more__'" 
+            <a-select-option
+              v-if="clusters.length > 0 && clusters.length < clustersTotal"
+              :value="'__load_more__'"
               disabled
               style="text-align: center; color: var(--ops-muted);"
             >
@@ -46,12 +46,12 @@
             </a-select-option>
           </a-select>
 
-          <a-select 
-            v-model:value="filterNamespace" 
-            placeholder="选择命名空间" 
+          <a-select
+            v-model:value="filterNamespace"
+            placeholder="选择命名空间"
             class="k8s-filter-select k8s-namespace-selector"
             aria-label="选择命名空间"
-            allow-clear 
+            allow-clear
             @change="handleFilterChange"
             :disabled="!filterClusterId"
             :loading="namespacesLoading"
@@ -60,9 +60,9 @@
             <a-select-option v-for="ns in namespaces" :key="ns.name" :value="ns.name">
               {{ ns.name }}
             </a-select-option>
-            <a-select-option 
-              v-if="namespaces.length > 0 && namespaces.length < namespacesTotal" 
-              :value="'__load_more_namespaces__'" 
+            <a-select-option
+              v-if="namespaces.length > 0 && namespaces.length < namespacesTotal"
+              :value="'__load_more_namespaces__'"
               disabled
               style="text-align: center; color: var(--ops-muted);"
             >
@@ -71,7 +71,7 @@
               </a-button>
             </a-select-option>
           </a-select>
-          
+
           <!-- 标签过滤器 -->
           <div class="role-labels-filter">
             <a-button type="dashed" @click="openLabelsFilter" class="k8s-toolbar-btn">
@@ -82,8 +82,8 @@
               </a-tag>
             </a-button>
             <div v-if="Object.keys(filterLabels).length > 0" class="active-filters" style="margin-top: 8px;">
-              <a-tag 
-                v-for="(value, key) in filterLabels" 
+              <a-tag
+                v-for="(value, key) in filterLabels"
                 :key="key"
                 closable
                 @close="removeFilterLabel(key)"
@@ -96,15 +96,15 @@
             </div>
           </div>
         </div>
-        
+
         <div class="k8s-search-group">
-          <a-input 
-            v-model:value="searchText" 
-            placeholder="搜索 Role 名称" 
-            class="k8s-search-input" 
+          <a-input
+            v-model:value="searchText"
+            placeholder="搜索 Role 名称"
+            class="k8s-search-input"
             @pressEnter="onSearch"
             @input="onSearch"
-            allow-clear 
+            allow-clear
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -112,12 +112,12 @@
           </a-input>
         </div>
       </div>
-      
+
       <!-- 操作区域 -->
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
-          <a-button 
-            @click="resetFilters" 
+          <a-button
+            @click="resetFilters"
             :disabled="!searchText && !filterClusterId && !filterNamespace && Object.keys(filterLabels).length === 0"
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
@@ -125,10 +125,10 @@
             <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             重置筛选
           </a-button>
-          
 
-          <a-button 
-            @click="openCreateYamlModal" 
+
+          <a-button
+            @click="openCreateYamlModal"
             :disabled="!filterClusterId"
             class="k8s-toolbar-btn"
             title="通过YAML创建Role"
@@ -136,12 +136,12 @@
             <template #icon><FileTextOutlined aria-hidden="true"  /></template>
             YAML 创建
           </a-button>
-          
-          <a-button 
-            type="primary" 
-            danger 
-            @click="() => batchOperation('删除')" 
-            :disabled="!selectedRows.length" 
+
+          <a-button
+            type="primary"
+            danger
+            @click="() => batchOperation('删除')"
+            :disabled="!selectedRows.length"
             v-if="can('k8s.role.batchDelete') && (selectedRows.length > 0)"
             class="k8s-toolbar-btn"
             title="批量删除选中的 Role"
@@ -185,136 +185,133 @@
         class="k8s-table role-table"
         :scroll="{ x: 1600 }"
       >
-        <template #rules="{ record }">
-          <div class="role-rules">
-            <template v-if="getRulesFromRecord(record) && getRulesFromRecord(record).length > 0">
-              <div v-for="(rule, index) in getRulesFromRecord(record).slice(0, 2)" :key="index" class="rule-item">
-                <div class="rule-verbs">
-                  <a-tag v-for="verb in (rule.verbs || []).slice(0, 3)" :key="verb" color="blue" size="small">
-                    {{ verb }}
-                  </a-tag>
-                  <a-tag v-if="(rule.verbs || []).length > 3" size="small">
-                    +{{ (rule.verbs || []).length - 3 }}
-                  </a-tag>
+        <template #bodyCell="{ column, record, text }">
+          <template v-if="column.key === 'rules'">
+            <div class="role-rules">
+              <template v-if="getRulesFromRecord(record) && getRulesFromRecord(record).length > 0">
+                <div v-for="(rule, index) in getRulesFromRecord(record).slice(0, 2)" :key="index" class="rule-item">
+                  <div class="rule-verbs">
+                    <a-tag v-for="verb in (rule.verbs || []).slice(0, 3)" :key="verb" color="blue" size="small">
+                      {{ verb }}
+                    </a-tag>
+                    <a-tag v-if="(rule.verbs || []).length > 3" size="small">
+                      +{{ (rule.verbs || []).length - 3 }}
+                    </a-tag>
+                  </div>
+                  <div class="rule-resources">
+                    <span class="rule-label">资源:</span>
+                    <a-tag v-for="resource in (rule.resources || []).slice(0, 2)" :key="resource" color="green" size="small">
+                      {{ resource }}
+                    </a-tag>
+                    <a-tag v-if="(rule.resources || []).length > 2" size="small">
+                      +{{ (rule.resources || []).length - 2 }}
+                    </a-tag>
+                  </div>
                 </div>
-                <div class="rule-resources">
-                  <span class="rule-label">资源:</span>
-                  <a-tag v-for="resource in (rule.resources || []).slice(0, 2)" :key="resource" color="green" size="small">
-                    {{ resource }}
-                  </a-tag>
-                  <a-tag v-if="(rule.resources || []).length > 2" size="small">
-                    +{{ (rule.resources || []).length - 2 }}
-                  </a-tag>
+                <div v-if="getRulesFromRecord(record).length > 2" class="rule-more">
+                  <a-tag size="small">+{{ getRulesFromRecord(record).length - 2 }} 更多规则</a-tag>
                 </div>
-              </div>
-              <div v-if="getRulesFromRecord(record).length > 2" class="rule-more">
-                <a-tag size="small">+{{ getRulesFromRecord(record).length - 2 }} 更多规则</a-tag>
-              </div>
-            </template>
-            <span v-else class="k8s-no-data">无策略规则</span>
-          </div>
-        </template>
-
-        <template #labels="{ text }">
-          <div class="k8s-labels-display">
-            <template v-if="Array.isArray(text)">
-              <!-- 数组格式 -->
-              <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
-                <a-tag class="k8s-label-item">
-                  {{ label.key }}: {{ label.value }}
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-                <a-tag class="k8s-label-item">
-                  {{ text.length }} 个标签
-                </a-tag>
-              </a-tooltip>
-              <span v-if="text.length === 0" class="k8s-no-data">-</span>
-            </template>
-            <template v-else-if="text && typeof text === 'object'">
-              <!-- 对象格式 -->
-              <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
-                <a-tag class="k8s-label-item">
-                  {{ key }}: {{ value }}
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
-                <a-tag class="k8s-label-item">
-                  {{ Object.keys(text).length }} 个标签
-                </a-tag>
-              </a-tooltip>
-              <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #annotations="{ text }">
-          <div class="k8s-annotations-display">
-            <template v-if="Array.isArray(text)">
-              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-                <a-tag class="k8s-annotation-item" color="purple">{{ text.length }} 个注解</a-tag>
-              </a-tooltip>
-              <span v-else class="k8s-no-data">-</span>
-            </template>
-            <template v-else-if="text && typeof text === 'object'">
-              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
-                <a-tag class="k8s-annotation-item" color="purple">{{ Object.keys(text).length }} 个注解</a-tag>
-              </a-tooltip>
-              <span v-else class="k8s-no-data">-</span>
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #uid="{ text }">
-          <a-tooltip v-if="text" :title="text">
-            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
-              {{ text.substring(0, 8) }}...
-            </span>
-          </a-tooltip>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #createdAt="{ text }">
-          <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
-            <div>{{ formatDateTime(text) }}</div>
-            <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
-          </div>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #actions="{ record }">
-          <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
-              <a-button title="查看详情" @click="showRoleDetail(record)">
-                <template #icon><EyeOutlined aria-hidden="true"  /></template>
-              </a-button>
+              </template>
+              <span v-else class="k8s-no-data">无策略规则</span>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'labels'">
+            <div class="k8s-labels-display">
+              <template v-if="Array.isArray(text)">
+                <!-- 数组格式 -->
+                <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
+                  <a-tag class="k8s-label-item">
+                    {{ label.key }}: {{ label.value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip v-if="text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                  <a-tag class="k8s-label-item">
+                    {{ text.length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="text.length === 0" class="k8s-no-data">-</span>
+              </template>
+              <template v-else-if="text && typeof text === 'object'">
+                <!-- 对象格式 -->
+                <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
+                  <a-tag class="k8s-label-item">
+                    {{ key }}: {{ value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip v-if="Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                  <a-tag class="k8s-label-item">
+                    {{ Object.keys(text).length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'annotations'">
+            <div class="k8s-annotations-display">
+              <template v-if="Array.isArray(text)">
+                <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                  <a-tag class="k8s-annotation-item" color="purple">{{ text.length }} 个注解</a-tag>
+                </a-tooltip>
+                <span v-else class="k8s-no-data">-</span>
+              </template>
+              <template v-else-if="text && typeof text === 'object'">
+                <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                  <a-tag class="k8s-annotation-item" color="purple">{{ Object.keys(text).length }} 个注解</a-tag>
+                </a-tooltip>
+                <span v-else class="k8s-no-data">-</span>
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'uid'">
+            <a-tooltip v-if="text" :title="text">
+              <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
+                {{ text.substring(0, 8) }}...
+              </span>
             </a-tooltip>
-            <a-tooltip title="编辑">
-              <a-button title="编辑" @click="openEditModal(record)">
-                <template #icon><EditOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="查看 YAML">
-              <a-button title="查看 YAML" @click="showYamlModal(record)">
-                <template #icon><FileTextOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="can('k8s.role.delete')" title="删除">
-              <a-button 
-                title="删除" 
-                danger 
-                @click="deleteRole(record)"
-              >
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-          </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'created_at'">
+            <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
+              <div>{{ formatDateTime(text) }}</div>
+              <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <div class="k8s-action-column">
+              <a-tooltip title="查看详情">
+                <a-button title="查看详情" @click="showRoleDetail(record)">
+                  <template #icon><EyeOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="编辑">
+                <a-button title="编辑" @click="openEditModal(record)">
+                  <template #icon><EditOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="查看 YAML">
+                <a-button title="查看 YAML" @click="showYamlModal(record)">
+                  <template #icon><FileTextOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip v-if="can('k8s.role.delete')" title="删除">
+                <a-button
+                  title="删除"
+                  danger
+                  @click="deleteRole(record)"
+                >
+                  <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+          </template>
         </template>
 
         <template #emptyText>
@@ -341,17 +338,17 @@
       okText="创建"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="formRef"
-        :model="createFormModel" 
-        layout="vertical" 
+        :model="createFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="createFormRules"
       >
         <a-form-item label="Role 名称" name="name" :required="true">
-          <a-input 
-            v-model:value="createFormModel.name" 
-            placeholder="请输入 Role 名称（例如：pod-reader）" 
+          <a-input
+            v-model:value="createFormModel.name"
+            placeholder="请输入 Role 名称（例如：pod-reader）"
             class="k8s-form-input"
             :maxlength="63"
           />
@@ -361,18 +358,18 @@
         </a-form-item>
 
         <a-form-item label="命名空间" name="namespace" :required="true">
-          <a-select 
-            v-model:value="createFormModel.namespace" 
-            placeholder="请选择命名空间" 
+          <a-select
+            v-model:value="createFormModel.namespace"
+            placeholder="请选择命名空间"
             class="k8s-form-input"
             :disabled="!filterClusterId"
           >
             <a-select-option v-for="ns in namespaces" :key="ns.name" :value="ns.name">
               {{ ns.name }}
             </a-select-option>
-            <a-select-option 
-              v-if="namespaces.length > 0 && namespaces.length < namespacesTotal" 
-              :value="'__load_more_namespaces_create__'" 
+            <a-select-option
+              v-if="namespaces.length > 0 && namespaces.length < namespacesTotal"
+              :value="'__load_more_namespaces_create__'"
               disabled
               style="text-align: center; color: var(--ops-muted);"
             >
@@ -388,10 +385,10 @@
             <div v-for="(rule, ruleIndex) in createFormModel.rules" :key="ruleIndex" class="rule-input-group">
               <div class="rule-header">
                 <span class="rule-title">规则 {{ ruleIndex + 1 }}</span>
-                <a-button 
-                  type="text" 
-                  danger 
-                  @click="removeRuleField(ruleIndex)" 
+                <a-button
+                  type="text"
+                  danger
+                  @click="removeRuleField(ruleIndex)"
                   :disabled="createFormModel.rules.length <= 1"
                   size="small"
                   class="k8s-remove-btn"
@@ -406,8 +403,8 @@
                 <label class="rule-field-label">动词 (Verbs) *</label>
                 <div class="rule-tags-input">
                   <div class="tags-display">
-                    <a-tag 
-                      v-for="(verb, verbIndex) in rule.verbs" 
+                    <a-tag
+                      v-for="(verb, verbIndex) in rule.verbs"
                       :key="verbIndex"
                       closable
                       @close="removeVerbFromRule(ruleIndex, verbIndex)"
@@ -433,8 +430,8 @@
                       <a-select-option value="deletecollection">deletecollection</a-select-option>
                       <a-select-option value="*">* (全部)</a-select-option>
                     </a-select>
-                    <a-button 
-                      type="primary" 
+                    <a-button
+                      type="primary"
                       @click="() => { addVerbToRule(ruleIndex, newVerbs[ruleIndex] || ''); newVerbs[ruleIndex] = ''; }"
                       :disabled="!newVerbs[ruleIndex]"
                       size="small"
@@ -450,8 +447,8 @@
                 <label class="rule-field-label">API 组 (API Groups)</label>
                 <div class="rule-tags-input">
                   <div class="tags-display">
-                    <a-tag 
-                      v-for="(apiGroup, groupIndex) in rule.api_groups" 
+                    <a-tag
+                      v-for="(apiGroup, groupIndex) in rule.api_groups"
                       :key="groupIndex"
                       closable
                       @close="removeApiGroupFromRule(ruleIndex, groupIndex)"
@@ -466,21 +463,21 @@
                       @input="(e: any) => newApiGroups[ruleIndex] = e.target.value"
                       placeholder="输入API组，留空表示core组"
                       style="flex: 1; margin-right: 8px;"
-                      @press-enter="() => { 
+                      @press-enter="() => {
                         const value = newApiGroups[ruleIndex];
                         if (value !== undefined) {
-                          addApiGroupToRule(ruleIndex, value.trim()); 
-                          newApiGroups[ruleIndex] = ''; 
+                          addApiGroupToRule(ruleIndex, value.trim());
+                          newApiGroups[ruleIndex] = '';
                         }
                       }"
                     />
-                    <a-button 
-                      type="primary" 
-                      @click="() => { 
+                    <a-button
+                      type="primary"
+                      @click="() => {
                         const value = newApiGroups[ruleIndex];
                         if (value !== undefined) {
-                          addApiGroupToRule(ruleIndex, value.trim()); 
-                          newApiGroups[ruleIndex] = ''; 
+                          addApiGroupToRule(ruleIndex, value.trim());
+                          newApiGroups[ruleIndex] = '';
                         }
                       }"
                       size="small"
@@ -496,8 +493,8 @@
                 <label class="rule-field-label">资源 (Resources) *</label>
                 <div class="rule-tags-input">
                   <div class="tags-display">
-                    <a-tag 
-                      v-for="(resource, resourceIndex) in (rule.resources || [])" 
+                    <a-tag
+                      v-for="(resource, resourceIndex) in (rule.resources || [])"
                       :key="resourceIndex"
                       v-show="resource && resource.trim()"
                       closable
@@ -513,21 +510,21 @@
                       @input="(e: any) => newResources[ruleIndex] = e.target.value"
                       placeholder="输入资源类型，如: pods, services"
                       style="flex: 1; margin-right: 8px;"
-                      @press-enter="() => { 
+                      @press-enter="() => {
                         const value = newResources[ruleIndex];
                         if (value && value.trim()) {
-                          addResourceToRule(ruleIndex, value.trim()); 
-                          newResources[ruleIndex] = ''; 
+                          addResourceToRule(ruleIndex, value.trim());
+                          newResources[ruleIndex] = '';
                         }
                       }"
                     />
-                    <a-button 
-                      type="primary" 
-                      @click="() => { 
+                    <a-button
+                      type="primary"
+                      @click="() => {
                         const value = newResources[ruleIndex];
                         if (value && value.trim()) {
-                          addResourceToRule(ruleIndex, value.trim()); 
-                          newResources[ruleIndex] = ''; 
+                          addResourceToRule(ruleIndex, value.trim());
+                          newResources[ruleIndex] = '';
                         }
                       }"
                       :disabled="!newResources[ruleIndex]?.trim()"
@@ -553,15 +550,15 @@
               暂无标签，点击下方按钮添加
             </div>
             <div v-for="(_, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`标签键: ${key}`" 
+              <a-input
+                :value="key"
+                :placeholder="`标签键: ${key}`"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="createFormModel.labels[key]" 
-                placeholder="标签值" 
+              <a-input
+                v-model:value="createFormModel.labels[key]"
+                placeholder="标签值"
                 class="k8s-form-input"
                 :maxlength="200"
               />
@@ -590,15 +587,15 @@
               暂无注解，点击下方按钮添加
             </div>
             <div v-for="(_, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`注解键: ${key}`" 
+              <a-input
+                :value="key"
+                :placeholder="`注解键: ${key}`"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="createFormModel.annotations[key]" 
-                placeholder="注解值" 
+              <a-input
+                v-model:value="createFormModel.annotations[key]"
+                placeholder="注解值"
                 class="k8s-form-input"
                 :maxlength="500"
               />
@@ -636,10 +633,10 @@
       okText="保存"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="editFormRef"
-        :model="editFormModel" 
-        layout="vertical" 
+        :model="editFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="editFormRules"
       >
@@ -647,9 +644,9 @@
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="Role 名称" name="name">
-              <a-input 
-                v-model:value="editFormModel.name" 
-                placeholder="Role 名称" 
+              <a-input
+                v-model:value="editFormModel.name"
+                placeholder="Role 名称"
                 class="k8s-form-input"
                 disabled
               />
@@ -660,9 +657,9 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="命名空间" name="namespace">
-              <a-input 
-                v-model:value="editFormModel.namespace" 
-                placeholder="命名空间" 
+              <a-input
+                v-model:value="editFormModel.namespace"
+                placeholder="命名空间"
                 class="k8s-form-input"
                 disabled
               />
@@ -679,10 +676,10 @@
             <div v-for="(rule, ruleIndex) in editFormModel.rules" :key="ruleIndex" class="rule-input-group">
               <div class="rule-header">
                 <span class="rule-title">规则 {{ ruleIndex + 1 }}</span>
-                <a-button 
-                  type="text" 
-                  danger 
-                  @click="removeRuleField(ruleIndex)" 
+                <a-button
+                  type="text"
+                  danger
+                  @click="removeRuleField(ruleIndex)"
                   :disabled="editFormModel.rules.length <= 1"
                   size="small"
                   class="k8s-remove-btn"
@@ -697,8 +694,8 @@
                 <label class="rule-field-label">动词 (Verbs) *</label>
                 <div class="rule-tags-input">
                   <div class="tags-display">
-                    <a-tag 
-                      v-for="(verb, verbIndex) in rule.verbs" 
+                    <a-tag
+                      v-for="(verb, verbIndex) in rule.verbs"
                       :key="verbIndex"
                       closable
                       @close="removeVerbFromRule(ruleIndex, verbIndex)"
@@ -724,8 +721,8 @@
                       <a-select-option value="deletecollection">deletecollection</a-select-option>
                       <a-select-option value="*">* (全部)</a-select-option>
                     </a-select>
-                    <a-button 
-                      type="primary" 
+                    <a-button
+                      type="primary"
                       @click="() => { addVerbToRule(ruleIndex, newVerbs[ruleIndex] || ''); newVerbs[ruleIndex] = ''; }"
                       :disabled="!newVerbs[ruleIndex]"
                       size="small"
@@ -741,8 +738,8 @@
                 <label class="rule-field-label">API 组 (API Groups)</label>
                 <div class="rule-tags-input">
                   <div class="tags-display">
-                    <a-tag 
-                      v-for="(apiGroup, groupIndex) in rule.api_groups" 
+                    <a-tag
+                      v-for="(apiGroup, groupIndex) in rule.api_groups"
                       :key="groupIndex"
                       closable
                       @close="removeApiGroupFromRule(ruleIndex, groupIndex)"
@@ -757,21 +754,21 @@
                       @input="(e: any) => newApiGroups[ruleIndex] = e.target.value"
                       placeholder="输入API组，留空表示core组"
                       style="flex: 1; margin-right: 8px;"
-                      @press-enter="() => { 
+                      @press-enter="() => {
                         const value = newApiGroups[ruleIndex];
                         if (value !== undefined) {
-                          addApiGroupToRule(ruleIndex, value.trim()); 
-                          newApiGroups[ruleIndex] = ''; 
+                          addApiGroupToRule(ruleIndex, value.trim());
+                          newApiGroups[ruleIndex] = '';
                         }
                       }"
                     />
-                    <a-button 
-                      type="primary" 
-                      @click="() => { 
+                    <a-button
+                      type="primary"
+                      @click="() => {
                         const value = newApiGroups[ruleIndex];
                         if (value !== undefined) {
-                          addApiGroupToRule(ruleIndex, value.trim()); 
-                          newApiGroups[ruleIndex] = ''; 
+                          addApiGroupToRule(ruleIndex, value.trim());
+                          newApiGroups[ruleIndex] = '';
                         }
                       }"
                       size="small"
@@ -787,8 +784,8 @@
                 <label class="rule-field-label">资源 (Resources) *</label>
                 <div class="rule-tags-input">
                   <div class="tags-display">
-                    <a-tag 
-                      v-for="(resource, resourceIndex) in (rule.resources || [])" 
+                    <a-tag
+                      v-for="(resource, resourceIndex) in (rule.resources || [])"
                       :key="resourceIndex"
                       v-show="resource && resource.trim()"
                       closable
@@ -804,21 +801,21 @@
                       @input="(e: any) => newResources[ruleIndex] = e.target.value"
                       placeholder="输入资源类型，如: pods, services"
                       style="flex: 1; margin-right: 8px;"
-                      @press-enter="() => { 
+                      @press-enter="() => {
                         const value = newResources[ruleIndex];
                         if (value && value.trim()) {
-                          addResourceToRule(ruleIndex, value.trim()); 
-                          newResources[ruleIndex] = ''; 
+                          addResourceToRule(ruleIndex, value.trim());
+                          newResources[ruleIndex] = '';
                         }
                       }"
                     />
-                    <a-button 
-                      type="primary" 
-                      @click="() => { 
+                    <a-button
+                      type="primary"
+                      @click="() => {
                         const value = newResources[ruleIndex];
                         if (value && value.trim()) {
-                          addResourceToRule(ruleIndex, value.trim()); 
-                          newResources[ruleIndex] = ''; 
+                          addResourceToRule(ruleIndex, value.trim());
+                          newResources[ruleIndex] = '';
                         }
                       }"
                       :disabled="!newResources[ruleIndex]?.trim()"
@@ -845,15 +842,15 @@
               暂无标签，点击下方按钮添加
             </div>
             <div v-for="(_, key) in editFormModel.labels" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`标签键: ${key}`" 
+              <a-input
+                :value="key"
+                :placeholder="`标签键: ${key}`"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="editFormModel.labels[key]" 
-                placeholder="标签值" 
+              <a-input
+                v-model:value="editFormModel.labels[key]"
+                placeholder="标签值"
                 class="k8s-form-input"
                 :maxlength="100"
               />
@@ -883,15 +880,15 @@
               暂无注解，点击下方按钮添加
             </div>
             <div v-for="(_, key) in editFormModel.annotations" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                :placeholder="`注解键: ${key}`" 
+              <a-input
+                :value="key"
+                :placeholder="`注解键: ${key}`"
                 disabled
                 class="k8s-form-input"
               />
-              <a-input 
-                v-model:value="editFormModel.annotations[key]" 
-                placeholder="注解值" 
+              <a-input
+                v-model:value="editFormModel.annotations[key]"
+                placeholder="注解值"
                 class="k8s-form-input"
                 :maxlength="500"
               />
@@ -929,10 +926,10 @@
       okText="创建"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="createYamlFormRef"
-        :model="createYamlFormModel" 
-        layout="vertical" 
+        :model="createYamlFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="createYamlFormRules"
       >
@@ -955,9 +952,9 @@
               清空
             </a-button>
           </div>
-          <a-textarea 
-            v-model:value="createYamlFormModel.yaml" 
-            placeholder="请输入 Role YAML 内容，或点击【插入模板】使用默认模板" 
+          <a-textarea
+            v-model:value="createYamlFormModel.yaml"
+            placeholder="请输入 Role YAML 内容，或点击【插入模板】使用默认模板"
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -1006,7 +1003,7 @@
                 </div>
               </a-card>
             </a-col>
-            
+
             <a-col :xs="24" :lg="12">
               <a-card title="策略规则统计" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
@@ -1129,10 +1126,10 @@
       okText="保存修改"
       cancelText="取消"
     >
-      <a-form 
+      <a-form
         ref="yamlFormRef"
-        :model="yamlFormModel" 
-        layout="vertical" 
+        :model="yamlFormModel"
+        layout="vertical"
         class="k8s-form"
         :rules="yamlFormRules"
       >
@@ -1147,9 +1144,9 @@
               检查格式
             </a-button>
           </div>
-          <a-textarea 
-            v-model:value="yamlFormModel.yaml" 
-            placeholder="YAML 内容" 
+          <a-textarea
+            v-model:value="yamlFormModel.yaml"
+            placeholder="YAML 内容"
             :rows="20"
             class="k8s-config-textarea"
           />
@@ -1173,8 +1170,8 @@
         <div class="current-filters" v-if="Object.keys(filterLabels).length > 0">
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
-            <a-tag 
-              v-for="(value, key) in filterLabels" 
+            <a-tag
+              v-for="(value, key) in filterLabels"
               :key="key"
               closable
               @close="removeFilterLabel(key)"
@@ -1219,10 +1216,10 @@ import { namespacedResourceKey } from '../shared/utils';
 import { onMounted, ref, watch } from 'vue';
 import { useRolePage } from './Role';
 import { formatDateTime, getRelativeTime } from '../shared/utils';
-import { 
-  PlusOutlined, 
-  ReloadOutlined, 
-  DeleteOutlined, 
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  DeleteOutlined,
   SafetyCertificateOutlined,
   AppstoreOutlined,
   EyeOutlined,
@@ -1261,7 +1258,7 @@ const {
   total,
   clustersTotal,
   namespacesTotal,
-  
+
   // modal state
   isCreateModalVisible,
   isCreateYamlModalVisible,
@@ -1270,36 +1267,36 @@ const {
   isYamlModalVisible,
   submitLoading,
   detailLoading,
-  
+
   // operation targets
   currentOperationRole,
   currentRoleDetail,
-  
+
   // form models
   createFormModel,
   editFormModel,
   createYamlFormModel,
   yamlFormModel,
-  
+
   // form refs
   formRef,
   editFormRef,
   yamlFormRef,
   createYamlFormRef,
-  
+
   // form rules
   createFormRules,
   editFormRules,
   createYamlFormRules,
   yamlFormRules,
-  
+
   // computed
   filteredRoles,
   rowSelection,
-  
+
   // helpers
   getEnvText,
-  
+
   // operations
   fetchClusters,
   fetchNamespaces,
@@ -1308,16 +1305,16 @@ const {
   clearNamespaces,
   loadMoreClusters,
   loadMoreNamespaces,
-  
+
   // detail operations
   showRoleDetail,
   closeDetailModal,
-  
+
   // YAML operations
   showYamlModal,
   closeYamlModal,
   submitYamlForm,
-  
+
   // create operations
   openCreateModal,
   closeCreateModal,
@@ -1325,26 +1322,26 @@ const {
   openCreateYamlModal,
   closeCreateYamlModal,
   submitCreateYamlForm,
-  
+
   // edit operations
   openEditModal,
   closeEditModal,
   submitEditForm,
-  
+
   // role operations
   deleteRole,
-  
+
   // filter operations
   addFilterLabel,
   removeFilterLabel,
   clearFilterLabels,
-  
+
   // batch operations
   batchOperation,
-  
+
   // pagination operations
   handlePageChange,
-  
+
   // form field operations
   addRuleField,
   removeRuleField,
@@ -1356,7 +1353,7 @@ const {
   removeResourceFromRule,
   removeLabelField,
   removeAnnotationField,
-  
+
   // YAML utility functions
   insertYamlTemplate,
   formatYaml,
@@ -1418,7 +1415,7 @@ const handleClusterChange = () => {
   currentPage.value = 1;
   clearNamespaces();
   clearRoles();
-  
+
   if (filterClusterId.value) {
     fetchNamespaces(true);
     fetchRoles();
@@ -1446,12 +1443,12 @@ const handleClusterDropdownScroll = (e: Event) => {
 // 从record中获取rules信息，如果rules为null则尝试从annotations中解析
 const getRulesFromRecord = (record: any): any[] => {
   if (!record) return [];
-  
+
   // 如果rules字段存在且不为null，直接返回
   if (record.rules && Array.isArray(record.rules)) {
     return record.rules;
   }
-  
+
   // 尝试从annotations中解析rules
   if (record.annotations && record.annotations['kubectl.kubernetes.io/last-applied-configuration']) {
     try {
@@ -1463,7 +1460,7 @@ const getRulesFromRecord = (record: any): any[] => {
 
     }
   }
-  
+
   return [];
 };
 
@@ -1472,20 +1469,20 @@ const formatAge = (age: string, creationTimestamp?: string): string => {
   if (age && age.trim() !== '') {
     return age;
   }
-  
+
   if (!creationTimestamp) {
     return '-';
   }
-  
+
   try {
     const createTime = new Date(creationTimestamp);
     const now = new Date();
     const diff = now.getTime() - createTime.getTime();
-    
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (days > 0) {
       return `${days}天`;
     } else if (hours > 0) {
@@ -1513,12 +1510,12 @@ const getTotalResources = (rules: any[]) => {
 const columns = [
   { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
   { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true },
-  { title: '策略规则', key: 'rules', width: 200, slots: { customRender: 'rules' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
-  { title: '操作', key: 'actions', width: 230, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
+  { title: '策略规则', key: 'rules', width: 200 },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  { title: '操作', key: 'actions', width: 230, fixed: 'right', align: 'center' },
 ];
 
 // 标签过滤器状态

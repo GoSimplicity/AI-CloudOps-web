@@ -17,12 +17,12 @@
       <!-- 筛选和搜索区域 -->
       <div class="k8s-toolbar-filters">
         <div class="k8s-filter-group">
-          <a-select 
-            v-model:value="filterClusterId" 
-            placeholder="选择集群" 
+          <a-select
+            v-model:value="filterClusterId"
+            placeholder="选择集群"
             class="k8s-cluster-selector"
             aria-label="选择集群"
-            allow-clear 
+            allow-clear
             @change="handleClusterChange"
             :loading="clustersLoading"
             :disabled="clustersLoading"
@@ -35,9 +35,9 @@
                 <a-tag color="blue" size="small">{{ getEnvText(cluster.env) }}</a-tag>
               </div>
             </a-select-option>
-            <a-select-option 
-              v-if="clusters.length > 0 && clusters.length < clustersTotal" 
-              :value="'__load_more__'" 
+            <a-select-option
+              v-if="clusters.length > 0 && clusters.length < clustersTotal"
+              :value="'__load_more__'"
               disabled
               style="text-align: center; color: var(--ops-muted);"
             >
@@ -46,12 +46,12 @@
             </a-select-option>
           </a-select>
 
-          <a-select 
-            v-model:value="filterNamespace" 
-            placeholder="选择命名空间" 
+          <a-select
+            v-model:value="filterNamespace"
+            placeholder="选择命名空间"
             class="k8s-filter-select k8s-namespace-selector"
             aria-label="选择命名空间"
-            allow-clear 
+            allow-clear
             @change="handleFilterChange"
             :disabled="!filterClusterId"
             :loading="namespacesLoading"
@@ -60,9 +60,9 @@
             <a-select-option v-for="ns in namespaces" :key="ns.name" :value="ns.name">
               {{ ns.name }}
             </a-select-option>
-            <a-select-option 
-              v-if="namespaces.length > 0 && namespaces.length < namespacesTotal" 
-              :value="'__load_more_namespaces__'" 
+            <a-select-option
+              v-if="namespaces.length > 0 && namespaces.length < namespacesTotal"
+              :value="'__load_more_namespaces__'"
               disabled
               style="text-align: center; color: var(--ops-muted);"
             >
@@ -72,11 +72,11 @@
             </a-select-option>
           </a-select>
 
-          <a-select 
-            v-model:value="filterStatus" 
-            placeholder="状态筛选" 
-            class="k8s-filter-select" 
-            allow-clear 
+          <a-select
+            v-model:value="filterStatus"
+            placeholder="状态筛选"
+            class="k8s-filter-select"
+            allow-clear
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined aria-hidden="true"  /></template>
@@ -87,11 +87,11 @@
             <a-select-option :value="K8sPVCStatus.Unknown">未知</a-select-option>
           </a-select>
 
-          <a-select 
-            v-model:value="filterAccessMode" 
-            placeholder="访问模式" 
-            class="k8s-filter-select" 
-            allow-clear 
+          <a-select
+            v-model:value="filterAccessMode"
+            placeholder="访问模式"
+            class="k8s-filter-select"
+            allow-clear
             @change="handleFilterChange"
           >
             <template #suffixIcon><KeyOutlined aria-hidden="true"  /></template>
@@ -103,13 +103,13 @@
         </div>
 
         <div class="k8s-search-group">
-          <a-input 
-            v-model:value="searchText" 
-            placeholder="搜索 PVC 名称" 
-            class="k8s-search-input" 
+          <a-input
+            v-model:value="searchText"
+            placeholder="搜索 PVC 名称"
+            class="k8s-search-input"
             @pressEnter="onSearch"
             @input="onSearch"
-            allow-clear 
+            allow-clear
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -121,8 +121,8 @@
       <!-- 操作区域 -->
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
-          <a-button 
-            @click="resetFilters" 
+          <a-button
+            @click="resetFilters"
             :disabled="!filterStatus && !filterAccessMode && !searchText && !filterClusterId && !filterNamespace"
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
@@ -130,10 +130,10 @@
             <template #icon><DeleteOutlined aria-hidden="true"  /></template>
             重置筛选
           </a-button>
-          
 
-          <a-button 
-            @click="openCreateYamlModal" 
+
+          <a-button
+            @click="openCreateYamlModal"
             :disabled="!filterClusterId"
             class="k8s-toolbar-btn"
             title="通过YAML创建PVC"
@@ -141,12 +141,12 @@
             <template #icon><FileTextOutlined aria-hidden="true"  /></template>
             YAML 创建
           </a-button>
-          
-          <a-button 
-            type="primary" 
-            danger 
-            @click="deleteBatchPVCs" 
-            :disabled="!selectedRows.length" 
+
+          <a-button
+            type="primary"
+            danger
+            @click="deleteBatchPVCs"
+            :disabled="!selectedRows.length"
             v-if="can('k8s.pvc.batchDelete') && (selectedRows.length > 0)"
             class="k8s-toolbar-btn"
             title="批量删除选中的 PVC"
@@ -190,172 +190,163 @@
         class="k8s-table pvc-table"
         @change="handleTableChange"
       >
-        <template #name="{ record }">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <InboxOutlined aria-hidden="true" style="color: #1677ff; font-size: 16px;" />
-            <span style="font-weight: 500; color: var(--ops-ink);">{{ record.name }}</span>
-          </div>
-        </template>
-
-        <template #namespace="{ text }">
-          <a-tag color="blue">{{ text }}</a-tag>
-        </template>
-
-        <template #status="{ text }">
-          <a-badge :status="getPVCStatusColor(text)" :text="getPVCStatusText(text)" />
-        </template>
-
-        <template #capacity="{ record }">
-          <div class="pvc-capacity-info">
-            <div class="pvc-capacity-item">
-              <span class="pvc-capacity-label">实际:</span>
-              <a-tag color="green">{{ record.capacity || '未分配' }}</a-tag>
+        <template #bodyCell="{ column, record, text }">
+          <template v-if="column.key === 'name'">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <InboxOutlined aria-hidden="true" style="color: #1677ff; font-size: 16px;" />
+              <span style="font-weight: 500; color: var(--ops-ink);">{{ record.name }}</span>
             </div>
-            <div class="pvc-capacity-item">
-              <span class="pvc-capacity-label">请求:</span>
-              <a-tag color="blue">{{ record.request_storage }}</a-tag>
+          </template>
+          <template v-else-if="column.key === 'namespace'">
+            <a-tag color="blue">{{ text }}</a-tag>
+          </template>
+          <template v-else-if="column.key === 'status'">
+            <a-badge :status="getPVCStatusColor(text)" :text="getPVCStatusText(text)" />
+          </template>
+          <template v-else-if="column.key === 'capacity'">
+            <div class="pvc-capacity-info">
+              <div class="pvc-capacity-item">
+                <span class="pvc-capacity-label">实际:</span>
+                <a-tag color="green">{{ record.capacity || '未分配' }}</a-tag>
+              </div>
+              <div class="pvc-capacity-item">
+                <span class="pvc-capacity-label">请求:</span>
+                <a-tag color="blue">{{ record.request_storage }}</a-tag>
+              </div>
             </div>
-          </div>
-        </template>
-
-        <template #access_modes="{ text }">
-          <div class="k8s-tags-display">
-            <a-tag 
-              v-for="mode in text" 
-              :key="mode"
-              color="green"
-              size="small"
-            >
-              {{ getAccessModeText(mode) }}
-            </a-tag>
-            <span v-if="!text || text.length === 0" class="k8s-no-data">
-              无访问模式
-            </span>
-          </div>
-        </template>
-
-        <template #storage_class="{ text }">
-          <span v-if="text">{{ text }}</span>
-          <span v-else class="k8s-no-data">默认存储类</span>
-        </template>
-
-        <template #volume_name="{ text }">
-          <div v-if="text">
-            <a-tag color="purple">{{ text }}</a-tag>
-          </div>
-          <span v-else class="k8s-no-data">未绑定</span>
-        </template>
-
-        <template #labels="{ text }">
-          <div class="k8s-labels-display">
-            <template v-if="Array.isArray(text)">
-              <!-- 数组格式 -->
-              <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
-                <a-tag class="k8s-label-item">
-                  {{ label.key }}: {{ label.value }}
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-                <a-tag class="k8s-label-item">
-                  {{ text.length }} 个标签
-                </a-tag>
-              </a-tooltip>
-              <span v-if="text.length === 0" class="k8s-no-data">-</span>
-            </template>
-            <template v-else-if="text && typeof text === 'object'">
-              <!-- 对象格式 -->
-              <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
-                <a-tag class="k8s-label-item">
-                  {{ key }}: {{ value }}
-                </a-tag>
-              </a-tooltip>
-              <a-tooltip v-if="Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
-                <a-tag class="k8s-label-item">
-                  {{ Object.keys(text).length }} 个标签
-                </a-tag>
-              </a-tooltip>
-              <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #annotations="{ text }">
-          <div class="k8s-annotations-display">
-            <template v-if="Array.isArray(text)">
-              <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
-                <a-tag class="k8s-annotation-item" color="purple">{{ text.length }} 个注解</a-tag>
-              </a-tooltip>
-              <span v-else class="k8s-no-data">-</span>
-            </template>
-            <template v-else-if="text && typeof text === 'object'">
-              <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
-                <a-tag class="k8s-annotation-item" color="purple">{{ Object.keys(text).length }} 个注解</a-tag>
-              </a-tooltip>
-              <span v-else class="k8s-no-data">-</span>
-            </template>
-            <template v-else>
-              <span class="k8s-no-data">-</span>
-            </template>
-          </div>
-        </template>
-
-        <template #uid="{ text }">
-          <a-tooltip v-if="text" :title="text">
-            <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
-              {{ text.substring(0, 8) }}...
-            </span>
-          </a-tooltip>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #createdAt="{ text }">
-          <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
-            <div>{{ formatDateTime(text) }}</div>
-            <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
-          </div>
-          <span v-else class="k8s-no-data">-</span>
-        </template>
-
-        <template #actions="{ record }">
-          <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
-              <a-button title="查看详情" @click="openDetailModal(record)">
-                <template #icon><EyeOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="查看 YAML">
-              <a-button title="查看 YAML" @click="openYamlModal(record)">
-                <template #icon><FileTextOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="编辑">
-              <a-button title="编辑" @click="openEditModal(record)">
-                <template #icon><EditOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="扩容PVC" v-if="record.status === K8sPVCStatus.Bound">
-              <a-button title="扩容PVC" @click="openExpandModal(record)">
-                <template #icon><ExpandOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="查看关联Pod">
-              <a-button title="查看关联Pod" @click="openPodsModal(record)">
-                <template #icon><ContainerOutlined aria-hidden="true"  /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip v-if="can('k8s.pvc.delete')" title="删除">
-              <a-button 
-                title="删除" 
-                danger 
-                @click="deletePVC(record)"
+          </template>
+          <template v-else-if="column.key === 'access_modes'">
+            <div class="k8s-tags-display">
+              <a-tag
+                v-for="mode in text"
+                :key="mode"
+                color="green"
+                size="small"
               >
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
-              </a-button>
+                {{ getAccessModeText(mode) }}
+              </a-tag>
+              <span v-if="!text || text.length === 0" class="k8s-no-data">
+                无访问模式
+              </span>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'storage_class'">
+            <span v-if="text">{{ text }}</span>
+            <span v-else class="k8s-no-data">默认存储类</span>
+          </template>
+          <template v-else-if="column.key === 'volume_name'">
+            <div v-if="text">
+              <a-tag color="purple">{{ text }}</a-tag>
+            </div>
+            <span v-else class="k8s-no-data">未绑定</span>
+          </template>
+          <template v-else-if="column.key === 'labels'">
+            <div class="k8s-labels-display">
+              <template v-if="Array.isArray(text)">
+                <!-- 数组格式 -->
+                <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
+                  <a-tag class="k8s-label-item">
+                    {{ label.key }}: {{ label.value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip v-if="text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                  <a-tag class="k8s-label-item">
+                    {{ text.length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="text.length === 0" class="k8s-no-data">-</span>
+              </template>
+              <template v-else-if="text && typeof text === 'object'">
+                <!-- 对象格式 -->
+                <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
+                  <a-tag class="k8s-label-item">
+                    {{ key }}: {{ value }}
+                  </a-tag>
+                </a-tooltip>
+                <a-tooltip v-if="Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                  <a-tag class="k8s-label-item">
+                    {{ Object.keys(text).length }} 个标签
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'annotations'">
+            <div class="k8s-annotations-display">
+              <template v-if="Array.isArray(text)">
+                <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                  <a-tag class="k8s-annotation-item" color="purple">{{ text.length }} 个注解</a-tag>
+                </a-tooltip>
+                <span v-else class="k8s-no-data">-</span>
+              </template>
+              <template v-else-if="text && typeof text === 'object'">
+                <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                  <a-tag class="k8s-annotation-item" color="purple">{{ Object.keys(text).length }} 个注解</a-tag>
+                </a-tooltip>
+                <span v-else class="k8s-no-data">-</span>
+              </template>
+              <template v-else>
+                <span class="k8s-no-data">-</span>
+              </template>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'uid'">
+            <a-tooltip v-if="text" :title="text">
+              <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
+                {{ text.substring(0, 8) }}...
+              </span>
             </a-tooltip>
-          </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'created_at'">
+            <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
+              <div>{{ formatDateTime(text) }}</div>
+              <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+            </div>
+            <span v-else class="k8s-no-data">-</span>
+          </template>
+          <template v-else-if="column.key === 'actions'">
+            <div class="k8s-action-column">
+              <a-tooltip title="查看详情">
+                <a-button title="查看详情" @click="openDetailModal(record)">
+                  <template #icon><EyeOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="查看 YAML">
+                <a-button title="查看 YAML" @click="openYamlModal(record)">
+                  <template #icon><FileTextOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="编辑">
+                <a-button title="编辑" @click="openEditModal(record)">
+                  <template #icon><EditOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="扩容PVC" v-if="record.status === K8sPVCStatus.Bound">
+                <a-button title="扩容PVC" @click="openExpandModal(record)">
+                  <template #icon><ExpandOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="查看关联Pod">
+                <a-button title="查看关联Pod" @click="openPodsModal(record)">
+                  <template #icon><ContainerOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+              <a-tooltip v-if="can('k8s.pvc.delete')" title="删除">
+                <a-button
+                  title="删除"
+                  danger
+                  @click="deletePVC(record)"
+                >
+                  <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+          </template>
         </template>
 
         <template #emptyText>
@@ -392,9 +383,9 @@
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="PVC名称" name="name" :required="true">
-              <a-input 
-                v-model:value="createFormModel.name" 
-                placeholder="请输入 PVC 名称（例如：pvc-web-data）" 
+              <a-input
+                v-model:value="createFormModel.name"
+                placeholder="请输入 PVC 名称（例如：pvc-web-data）"
                 class="k8s-form-input"
                 :maxlength="63"
               />
@@ -405,9 +396,9 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="命名空间" name="namespace" :required="true">
-              <a-select 
-                v-model:value="createFormModel.namespace" 
-                placeholder="请选择命名空间" 
+              <a-select
+                v-model:value="createFormModel.namespace"
+                placeholder="请选择命名空间"
                 class="k8s-form-input"
                 :disabled="!filterClusterId"
               >
@@ -425,9 +416,9 @@
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="请求存储" :name="['spec', 'request_storage']" :required="true">
-              <a-input 
-                v-model:value="createFormModel.spec.request_storage" 
-                placeholder="如: 10Gi, 500Mi, 1Ti" 
+              <a-input
+                v-model:value="createFormModel.spec.request_storage"
+                placeholder="如: 10Gi, 500Mi, 1Ti"
                 class="k8s-form-input"
                 :maxlength="20"
               />
@@ -438,10 +429,10 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="访问模式" :name="['spec', 'access_modes']" :required="true">
-              <a-select 
-                v-model:value="createFormModel.spec.access_modes" 
-                mode="multiple" 
-                placeholder="选择访问模式" 
+              <a-select
+                v-model:value="createFormModel.spec.access_modes"
+                mode="multiple"
+                placeholder="选择访问模式"
                 class="k8s-form-input"
                 :maxTagCount="1"
               >
@@ -460,9 +451,9 @@
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="存储类">
-              <a-input 
-                v-model:value="createFormModel.spec.storage_class" 
-                placeholder="输入存储类名称（可选）" 
+              <a-input
+                v-model:value="createFormModel.spec.storage_class"
+                placeholder="输入存储类名称（可选）"
                 class="k8s-form-input"
                 :maxlength="253"
               />
@@ -487,9 +478,9 @@
         <a-row :gutter="16">
           <a-col :span="24">
             <a-form-item label="绑定PV（可选）">
-              <a-select 
-                v-model:value="createFormModel.spec.volume_name" 
-                placeholder="留空将自动选择合适的 PV" 
+              <a-select
+                v-model:value="createFormModel.spec.volume_name"
+                placeholder="留空将自动选择合适的 PV"
                 class="k8s-form-input"
                 allow-clear
                 show-search
@@ -504,31 +495,31 @@
                 :options="pvOptions"
               >
                 <template #option="{ value, label, capacity, accessModes }">
-                  <div 
-                    v-if="value === '__load_more_pvs__'" 
+                  <div
+                    v-if="value === '__load_more_pvs__'"
                     style="text-align: center; color: var(--ops-muted); padding: 8px 0;"
                   >
                     <a-spin size="small" :spinning="pvsLoading" />
                     <span v-if="!pvsLoading" style="margin-left: 8px;">滚动加载更多...</span>
                   </div>
-                  <div 
+                  <div
                     v-else
                     style="
-                      display: flex; 
-                      align-items: center; 
-                      justify-content: space-between; 
-                      gap: 12px; 
+                      display: flex;
+                      align-items: center;
+                      justify-content: space-between;
+                      gap: 12px;
                       padding: 6px 4px;
                       min-height: 32px;
                     "
                   >
-                    <span 
+                    <span
                       style="
-                        flex: 1; 
-                        min-width: 0; 
-                        overflow: hidden; 
-                        text-overflow: ellipsis; 
-                        white-space: nowrap; 
+                        flex: 1;
+                        min-width: 0;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
                         font-weight: 500;
                         color: var(--ops-ink);
                       "
@@ -540,17 +531,17 @@
                       <a-tag color="blue" size="small" style="margin: 0; font-size: 12px;">
                         {{ capacity }}
                       </a-tag>
-                      <a-tag 
-                        v-for="(mode, idx) in (accessModes || []).slice(0, 2)" 
-                        :key="idx" 
-                        color="green" 
+                      <a-tag
+                        v-for="(mode, idx) in (accessModes || []).slice(0, 2)"
+                        :key="idx"
+                        color="green"
                         size="small"
                         style="margin: 0; font-size: 11px;"
                       >
                         {{ mode === 'ReadWriteOnce' ? 'RWO' : mode === 'ReadOnlyMany' ? 'ROX' : mode === 'ReadWriteMany' ? 'RWX' : 'RWOP' }}
                       </a-tag>
-                      <a-tooltip 
-                        v-if="(accessModes || []).length > 2" 
+                      <a-tooltip
+                        v-if="(accessModes || []).length > 2"
                         :title="(accessModes || []).slice(2).map((m: string) => m === 'ReadWriteOnce' ? 'RWO' : m === 'ReadOnlyMany' ? 'ROX' : m === 'ReadWriteMany' ? 'RWX' : 'RWOP').join(', ')"
                       >
                         <a-tag size="small" style="margin: 0; cursor: help; font-size: 11px;">
@@ -582,16 +573,16 @@
               暂无选择器，点击下方按钮添加
             </div>
             <div v-for="(_value, key) in createFormModel.spec.selector" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                placeholder="选择器键" 
+              <a-input
+                :value="key"
+                placeholder="选择器键"
                 class="k8s-form-input"
                 disabled
                 :maxlength="63"
               />
-              <a-input 
-                v-model:value="createFormModel.spec.selector[key]" 
-                placeholder="选择器值" 
+              <a-input
+                v-model:value="createFormModel.spec.selector[key]"
+                placeholder="选择器值"
                 class="k8s-form-input"
                 :maxlength="63"
               />
@@ -630,16 +621,16 @@
                 暂无标签，点击下方按钮添加
               </div>
               <div v-for="(_value, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
-                <a-input 
-                  :value="key" 
-                  placeholder="标签键" 
+                <a-input
+                  :value="key"
+                  placeholder="标签键"
                   class="k8s-form-input"
                   disabled
                   :maxlength="63"
                 />
-                <a-input 
-                  v-model:value="createFormModel.labels[key]" 
-                  placeholder="标签值" 
+                <a-input
+                  v-model:value="createFormModel.labels[key]"
+                  placeholder="标签值"
                   class="k8s-form-input"
                   :maxlength="63"
                 />
@@ -670,16 +661,16 @@
                 暂无注解，点击下方按钮添加
               </div>
               <div v-for="(_value, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
-                <a-input 
-                  :value="key" 
-                  placeholder="注解键" 
+                <a-input
+                  :value="key"
+                  placeholder="注解键"
                   class="k8s-form-input"
                   disabled
                   :maxlength="253"
                 />
-                <a-input 
-                  v-model:value="createFormModel.annotations[key]" 
-                  placeholder="注解值" 
+                <a-input
+                  v-model:value="createFormModel.annotations[key]"
+                  placeholder="注解值"
                   class="k8s-form-input"
                   :maxlength="500"
                 />
@@ -806,9 +797,9 @@
           <a-col :span="12">
             <a-form-item label="访问模式（只读）">
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <a-tag 
-                  v-for="mode in editFormModel.spec.access_modes" 
-                  :key="mode" 
+                <a-tag
+                  v-for="mode in editFormModel.spec.access_modes"
+                  :key="mode"
                   color="green"
                 >
                   {{ mode === 'ReadWriteOnce' ? 'RWO' : mode === 'ReadOnlyMany' ? 'ROX' : mode === 'ReadWriteMany' ? 'RWX' : 'RWOP' }}
@@ -834,16 +825,16 @@
               暂无标签，点击下方按钮添加
             </div>
             <div v-for="(_value, key) in editFormModel.labels" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                placeholder="标签键" 
-                class="k8s-form-input" 
+              <a-input
+                :value="key"
+                placeholder="标签键"
+                class="k8s-form-input"
                 disabled
                 :maxlength="63"
               />
-              <a-input 
-                v-model:value="editFormModel.labels[key]" 
-                placeholder="标签值" 
+              <a-input
+                v-model:value="editFormModel.labels[key]"
+                placeholder="标签值"
                 class="k8s-form-input"
                 :maxlength="63"
               />
@@ -872,16 +863,16 @@
               暂无注解，点击下方按钮添加
             </div>
             <div v-for="(_value, key) in editFormModel.annotations" :key="key" class="k8s-key-value-row">
-              <a-input 
-                :value="key" 
-                placeholder="注解键" 
+              <a-input
+                :value="key"
+                placeholder="注解键"
                 class="k8s-form-input"
                 disabled
                 :maxlength="253"
               />
-              <a-input 
-                v-model:value="editFormModel.annotations[key]" 
-                placeholder="注解值" 
+              <a-input
+                v-model:value="editFormModel.annotations[key]"
+                placeholder="注解值"
                 class="k8s-form-input"
                 :maxlength="500"
               />
@@ -1088,7 +1079,7 @@
           show-icon
           :style="{ marginBottom: '16px' }"
         />
-        
+
         <div v-if="currentOperationPVC" class="pvc-expand-info">
           <a-descriptions :column="1" bordered size="small">
             <a-descriptions-item label="当前容量">
@@ -1101,10 +1092,10 @@
         </div>
 
         <a-form-item label="新容量" name="new_capacity" style="margin-top: 16px;">
-          <a-input 
-            v-model:value="expandFormModel.new_capacity" 
-            placeholder="输入新的存储容量，如: 20Gi" 
-            class="k8s-form-input" 
+          <a-input
+            v-model:value="expandFormModel.new_capacity"
+            placeholder="输入新的存储容量，如: 20Gi"
+            class="k8s-form-input"
           />
           <div style="color: var(--ops-muted); font-size: 12px; margin-top: 4px;">
             支持的单位：Ki, Mi, Gi, Ti, Pi, K, M, G, T, P
@@ -1211,13 +1202,13 @@ const {
   clustersTotal,
   namespacesTotal,
   pvsTotal,
-  
+
   // form refs
   formRef,
   yamlFormRef,
   createYamlFormRef,
   expandFormRef,
-  
+
   // modal state
   isCreateModalVisible,
   isCreateYamlModalVisible,
@@ -1229,36 +1220,36 @@ const {
   submitLoading,
   detailLoading,
   podsLoading,
-  
+
   // current operation
   currentOperationPVC,
   currentPVCDetail,
   currentPVCPods,
-  
+
   // form models
   createFormModel,
   editFormModel,
   yamlFormModel,
   createYamlFormModel,
   expandFormModel,
-  
+
   // form rules
   createFormRules,
   yamlFormRules,
   createYamlFormRules,
   expandFormRules,
-  
+
   // computed
   filteredPVCs,
   rowSelection,
   pvOptions,
-  
+
   // helpers
   getEnvText,
   getPVCStatusText,
   getPVCStatusColor,
   getAccessModeText,
-  
+
   // api calls
   fetchClusters,
   fetchNamespaces,
@@ -1270,7 +1261,7 @@ const {
   deletePVC,
   expandPVC,
   deleteBatchPVCs,
-  
+
   // modal handlers
   openCreateModal,
   openCreateYamlModal,
@@ -1279,21 +1270,21 @@ const {
   openYamlModal,
   openExpandModal,
   openPodsModal,
-  
+
   // form helpers
   resetCreateForm,
   resetEditForm,
   resetYamlForm,
   resetCreateYamlForm,
   resetExpandForm,
-  
+
   // filter handlers
   handleClusterChange,
   handleFilterChange,
   handleClusterDropdownScroll,
   loadMoreNamespaces,
   loadMorePVs,
-  
+
   // label/annotation helpers
   newLabelKey,
   newAnnotationKey,
@@ -1303,13 +1294,13 @@ const {
   newEditAnnotationKey,
   addEditLabelItem,
   removeEditLabelItem,
-  
+
   // selector helpers
   newSelectorKey,
   newSelectorValue,
   addSelectorItem,
   removeSelectorItem,
-  
+
   // yaml operations
   insertYamlTemplate,
   formatYaml,
@@ -1317,24 +1308,24 @@ const {
   clearYaml,
   formatEditYaml,
   validateEditYaml,
-  
+
   // constants
   K8sPVCStatus,
 } = usePVCPage();
 
 const columns = [
-  { title: 'PVC名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left', slots: { customRender: 'name' } },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true, slots: { customRender: 'namespace' } },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center', slots: { customRender: 'status' } },
-  { title: '容量信息', dataIndex: 'capacity', key: 'capacity', width: 120, align: 'center', slots: { customRender: 'capacity' } },
-  { title: '访问模式', dataIndex: 'access_modes', key: 'access_modes', width: 140, slots: { customRender: 'access_modes' } },
-  { title: '存储类', dataIndex: 'storage_class', key: 'storage_class', width: 130, ellipsis: true, slots: { customRender: 'storage_class' } },
-  { title: '绑定PV', dataIndex: 'volume_name', key: 'volume_name', width: 150, ellipsis: true, slots: { customRender: 'volume_name' } },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150, slots: { customRender: 'labels' } },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120, slots: { customRender: 'annotations' } },
-  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true, slots: { customRender: 'uid' } },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160, slots: { customRender: 'createdAt' } },
-  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center', slots: { customRender: 'actions' } },
+  { title: 'PVC名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
+  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center' },
+  { title: '容量信息', dataIndex: 'capacity', key: 'capacity', width: 120, align: 'center' },
+  { title: '访问模式', dataIndex: 'access_modes', key: 'access_modes', width: 140 },
+  { title: '存储类', dataIndex: 'storage_class', key: 'storage_class', width: 130, ellipsis: true },
+  { title: '绑定PV', dataIndex: 'volume_name', key: 'volume_name', width: 150, ellipsis: true },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
+  { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  { title: '操作', key: 'actions', width: 200, fixed: 'right', align: 'center' },
 ];
 
 // Pod列表表格列定义

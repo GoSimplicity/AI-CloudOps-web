@@ -144,14 +144,12 @@ const columns = [
     dataIndex: 'status',
     key: 'status',
     width: 100,
-    slots: { customRender: 'status' },
   },
   {
     title: '类型',
     dataIndex: 'job_type',
     key: 'job_type',
     width: 120,
-    slots: { customRender: 'job_type' },
   },
   {
     title: '调度表达式',
@@ -171,21 +169,18 @@ const columns = [
     dataIndex: 'next_run_time',
     key: 'next_run_time',
     width: 160,
-    slots: { customRender: 'next_run_time' },
   },
   {
     title: '上次执行',
     dataIndex: 'last_run_time',
     key: 'last_run_time',
     width: 160,
-    slots: { customRender: 'last_run_time' },
   },
   {
     title: '最后状态',
     dataIndex: 'last_run_status',
     key: 'last_run_status',
     width: 100,
-    slots: { customRender: 'last_run_status' },
   },
   {
     title: '创建者',
@@ -198,7 +193,6 @@ const columns = [
     title: '操作',
     key: 'action',
     width: 250,
-    slots: { customRender: 'action' },
   },
 ];
 
@@ -400,90 +394,88 @@ onUnmounted(clearPage);
         class="k8s-table"
         :scroll="{ x: 1500 }"
       >
-        <template #status="{ text }">
-          <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
-        </template>
-
-        <template #job_type="{ text }">
-          <a-tag :color="getJobTypeColor(text)">{{ getJobTypeText(text) }}</a-tag>
-        </template>
-
-        <template #next_run_time="{ text }">
-          <span v-if="text">{{ formatDateTime(text) }}</span>
-          <span v-else class="k8s-no-data">暂无</span>
-        </template>
-
-        <template #last_run_time="{ text }">
-          <span v-if="text">{{ formatDateTime(text) }}</span>
-          <span v-else class="k8s-no-data">暂无</span>
-        </template>
-
-        <template #last_run_status="{ text, record }">
-          <a-tooltip v-if="record.last_run_time" :title="record.last_run_error || undefined">
-            <a-badge
-              :status="getLastRunStatusColor(text)"
-              :text="getLastRunStatusText(text)"
-            />
-          </a-tooltip>
-          <span v-else class="k8s-no-data">暂无</span>
-        </template>
-
-        <template #action="{ record }">
-          <div class="k8s-action-column">
-            <a-tooltip title="查看详情">
-              <a-button type="text" size="small" @click="showJobDetail(record)">
-                <template #icon><EyeOutlined /></template>
-              </a-button>
+        <template #bodyCell="{ column, text, record }">
+          <template v-if="column.key === 'status'">
+            <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
+          </template>
+          <template v-else-if="column.key === 'job_type'">
+            <a-tag :color="getJobTypeColor(text)">{{ getJobTypeText(text) }}</a-tag>
+          </template>
+          <template v-else-if="column.key === 'next_run_time'">
+            <span v-if="text">{{ formatDateTime(text) }}</span>
+            <span v-else class="k8s-no-data">暂无</span>
+          </template>
+          <template v-else-if="column.key === 'last_run_time'">
+            <span v-if="text">{{ formatDateTime(text) }}</span>
+            <span v-else class="k8s-no-data">暂无</span>
+          </template>
+          <template v-else-if="column.key === 'last_run_status'">
+            <a-tooltip v-if="record.last_run_time" :title="record.last_run_error || undefined">
+              <a-badge
+                :status="getLastRunStatusColor(text)"
+                :text="getLastRunStatusText(text)"
+              />
             </a-tooltip>
+            <span v-else class="k8s-no-data">暂无</span>
+          </template>
+          <template v-else-if="column.key === 'action'">
+            <div class="k8s-action-column">
+              <a-tooltip title="查看详情">
+                <a-button type="text" size="small" @click="showJobDetail(record)">
+                  <template #icon><EyeOutlined /></template>
+                </a-button>
+              </a-tooltip>
 
-            <a-tooltip :title="isLocalExecLocked(record) ? '本地命令/脚本任务已停用，不可编辑' : '编辑任务'">
-              <a-button
-                type="text"
-                size="small"
-                @click="openEditModal(record)"
-                :disabled="isLocalExecLocked(record)"
-              >
-                <template #icon><EditOutlined /></template>
-              </a-button>
-            </a-tooltip>
+              <a-tooltip :title="isLocalExecLocked(record) ? '本地命令/脚本任务已停用，不可编辑' : '编辑任务'">
+                <a-button
+                  type="text"
+                  size="small"
+                  @click="openEditModal(record)"
+                  :disabled="isLocalExecLocked(record)"
+                >
+                  <template #icon><EditOutlined /></template>
+                </a-button>
+              </a-tooltip>
 
-            <a-tooltip :title="record.status === CronJobStatus.ENABLED ? '禁用任务' : '启用任务'">
-              <a-button
-                type="text"
-                size="small"
-                @click="record.status === CronJobStatus.ENABLED ? disableJob(record) : enableJob(record)"
-              >
-                <template #icon>
-                  <PauseCircleOutlined v-if="record.status === CronJobStatus.ENABLED" />
-                  <PlayCircleOutlined v-else />
-                </template>
-              </a-button>
-            </a-tooltip>
+              <a-tooltip :title="record.status === CronJobStatus.ENABLED ? '禁用任务' : '启用任务'">
+                <a-button
+                  type="text"
+                  size="small"
+                  @click="record.status === CronJobStatus.ENABLED ? disableJob(record) : enableJob(record)"
+                >
+                  <template #icon>
+                    <PauseCircleOutlined v-if="record.status === CronJobStatus.ENABLED" />
+                    <PlayCircleOutlined v-else />
+                  </template>
+                </a-button>
+              </a-tooltip>
 
-            <a-tooltip v-if="can('cron.job.trigger')" :title="isLocalExecLocked(record) ? '本地命令/脚本任务已停用，不可执行' : '立即执行'">
-              <a-button
-                type="text"
-                size="small"
-                @click="triggerJob(record)"
-                :disabled="record.status === CronJobStatus.DISABLED || isLocalExecLocked(record)"
-              >
-                <template #icon><PlaySquareOutlined /></template>
-              </a-button>
-            </a-tooltip>
+              <a-tooltip v-if="can('cron.job.trigger')" :title="isLocalExecLocked(record) ? '本地命令/脚本任务已停用，不可执行' : '立即执行'">
+                <a-button
+                  type="text"
+                  size="small"
+                  @click="triggerJob(record)"
+                  :disabled="record.status === CronJobStatus.DISABLED || isLocalExecLocked(record)"
+                >
+                  <template #icon><PlaySquareOutlined /></template>
+                </a-button>
+              </a-tooltip>
 
-            <a-tooltip v-if="can('cron.job.delete')" title="删除任务">
-              <a-button
-                type="text"
-                size="small"
-                danger
-                @click="deleteJob(record)"
-                :disabled="record.is_built_in === 1"
-              >
-                <template #icon><DeleteOutlined /></template>
-              </a-button>
-            </a-tooltip>
-          </div>
+              <a-tooltip v-if="can('cron.job.delete')" title="删除任务">
+                <a-button
+                  type="text"
+                  size="small"
+                  danger
+                  @click="deleteJob(record)"
+                  :disabled="record.is_built_in === 1"
+                >
+                  <template #icon><DeleteOutlined /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+          </template>
         </template>
+
       </a-table>
     </div>
 
