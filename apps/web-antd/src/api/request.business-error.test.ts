@@ -110,6 +110,17 @@ describe('业务错误（code≠0）统一提示 · 请求链路集成', () => {
     expect(JSON.stringify(notices.error.mock.calls)).toContain('通知事件操作未完成');
   });
 
+  it.each(['/tree/cloud/managed/sync', '/tree/cloud/managed/history'])('%s 业务错误不回显上游内容', async (path) => {
+    const error = await requestClient.post(path, {}, { adapter: businessAdapter('private-resource-canary') }).catch((value) => value);
+    expect(JSON.stringify(notices.error.mock.calls)).not.toContain('private-resource-canary');
+    expect(String(error)).not.toContain('private-resource-canary');
+    expect(JSON.stringify(notices.error.mock.calls)).toContain('托管资源操作未完成');
+  });
+  it('托管资源 HTTP 400 不展示上游内容', async () => {
+    await requestClient.post('/tree/cloud/managed/sync', {}, { adapter: adapterOf(400, { code: 400, message: 'private-resource-canary' }) }).catch(() => {});
+    expect(JSON.stringify(notices.error.mock.calls)).not.toContain('private-resource-canary');
+    expect(JSON.stringify(notices.error.mock.calls)).toContain('托管资源操作未完成');
+  });
   it('通知事件 HTTP 400 不展示上游原文', async () => {
     await requestClient.post('/workorder/notification/events/1/cancel', {}, {
       adapter: adapterOf(400, { code: 400, message: 'private-event-canary' }),

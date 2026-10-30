@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+import CloudManagedResources from './CloudManagedResources.vue';
 import { onBeforeUnmount } from 'vue';
 
 import { ref, reactive, onMounted, computed, watch } from 'vue';
@@ -137,6 +138,7 @@ const router = useRouter();
 
 // 加载状态
 const loading = ref(false);
+const showManaged = ref(false);
 const detailLoading = ref(false);
 const submitLoading = ref(false);
 const syncLoading = ref(false);
@@ -1146,7 +1148,7 @@ const closeDetails = () => {
       <template #action><a-button :loading="accountsLoading" @click="fetchCloudAccounts()">重试读取账户</a-button></template>
     </a-alert>
     <!-- 页面头部 -->
-    <template #actions><a-button v-if="canSync" type="primary" aria-label="同步资源" :loading="accountsLoading" :disabled="accountsLoading" @click="showSyncModal" class="btn-create">
+    <template #actions><a-button aria-label="托管资源" @click="showManaged = !showManaged">{{ showManaged ? '关闭托管资源' : '托管资源' }}</a-button><a-button v-if="canSync" type="primary" aria-label="同步资源" :loading="accountsLoading" :disabled="accountsLoading" @click="showSyncModal" class="btn-create">
           <template #icon><sync-outlined /></template>
           <span class="btn-text">同步资源</span>
         </a-button><a-button @click="handleRefresh" class="btn-action">
@@ -1226,6 +1228,7 @@ const closeDetails = () => {
         </a-col>
       </a-row>
     </div></template>
+    <CloudManagedResources v-if="showManaged" />
 
     <!-- 搜索筛选区 -->
     <template #filters><a-form layout="inline" class="filter-form">

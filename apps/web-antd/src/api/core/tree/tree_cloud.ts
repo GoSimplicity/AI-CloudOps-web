@@ -351,3 +351,43 @@ export async function updateCloudResourceStatusApi(
 ) {
   return requestClient.put(`/tree/cloud/${id}/status`, data);
 }
+
+// 阿里云托管资源使用独立契约，不能当作 ECS/SSH 资源处理。
+export type ManagedCloudKind = 'rds' | 'clb' | 'cache';
+export interface ManagedRDS { instance_id: string; name: string; region: string; zone: string; status: string; engine: string; engine_version: string; instance_class: string }
+export interface ManagedCLB { instance_id: string; name: string; region: string; status: string; address_type: string; vpc_id: string }
+export interface ManagedCache { instance_id: string; name: string; region: string; zone: string; status: string; instance_type: string; engine_version: string; instance_class: string }
+export interface ManagedCloudResource {
+  id: number; cloud_account_id: number; cloud_account_region_id: number; kind: ManagedCloudKind;
+  provider_id: string; rds?: ManagedRDS | null; clb?: ManagedCLB | null; cache?: ManagedCache | null;
+  local_description: string; last_sync_time: string;
+}
+export interface ManagedCloudHistory {
+  id: number; cloud_account_id: number; cloud_account_region_id: number; kind: ManagedCloudKind;
+  resource_ids: string[]; status: 'running' | 'success' | 'failed' | 'cancelled' | 'unknown';
+  count: number; new_count: number; update_count: number; error_category?: string; retry_safe?: boolean;
+  operator_id: number; started_at: string; finished_at?: string | null;
+}
+export interface ManagedCloudScope { cloud_account_id: number; cloud_account_region_id: number; kind: ManagedCloudKind }
+export interface ManagedCloudSyncResult {
+  status: 'success' | 'failed' | 'cancelled' | 'unknown'; history_id?: number;
+  count: number; new_count: number; update_count: number; error_category?: string; retry_safe: boolean;
+}
+export interface ManagedPermissions { version: number; super_admin: boolean; permissions: string[] }
+export const managedPermissions = {
+  accountList: 'GET /api/tree/cloud/account/list',
+  accountDetail: 'GET /api/tree/cloud/account/:id/detail',
+  list: 'GET /api/tree/cloud/managed/list',
+  detail: 'GET /api/tree/cloud/managed/detail/:id',
+  history: 'GET /api/tree/cloud/managed/history',
+  sync: 'POST /api/tree/cloud/managed/sync',
+} as const;
+export const getManagedPermissions = () => requestClient.get<ManagedPermissions>('/user/permissions');
+export const getManagedResources = (params: ManagedCloudScope & { page: number; size: number }) =>
+  requestClient.get<{ items: ManagedCloudResource[]; total: number }>('/tree/cloud/managed/list', { params });
+export const getManagedResourceDetail = (id: number, params: ManagedCloudScope) =>
+  requestClient.get<ManagedCloudResource>(`/tree/cloud/managed/detail/${id}`, { params });
+export const getManagedSyncHistory = (params: ManagedCloudScope & { page: number; size: number }) =>
+  requestClient.get<{ items: ManagedCloudHistory[]; total: number }>('/tree/cloud/managed/history', { params });
+export const syncManagedResources = (data: ManagedCloudScope & { resource_ids: string[] }) =>
+  requestClient.post<ManagedCloudSyncResult>('/tree/cloud/managed/sync', data);
