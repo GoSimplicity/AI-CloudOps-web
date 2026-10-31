@@ -114,7 +114,7 @@ describe('sSH PTY交互合同', () => {
     const socket = latest();
     socket.open();
     expect(socket.binaryType).toBe('arraybuffer');
-    const terminal = transport.terminals[0]!;
+    const terminal = transport.terminals[0];
     terminal.input('中\r\x03\x1b[A\x7f\0');
     const binary = socket.send.mock.calls.filter(
       (call) => typeof call[0] !== 'string',
@@ -129,7 +129,7 @@ describe('sSH PTY交互合同', () => {
     render();
     const socket = latest();
     socket.open();
-    const terminal = transport.terminals[0]!;
+    const terminal = transport.terminals[0];
     const text = '中😀\0'.repeat(12_000);
     terminal.input(text);
     const chunks = socket.send.mock.calls
@@ -155,7 +155,7 @@ describe('sSH PTY交互合同', () => {
     render();
     const socket = latest();
     socket.open();
-    const terminal = transport.terminals[0]!;
+    const terminal = transport.terminals[0];
     terminal.cols = 120;
     terminal.rows = 42;
     terminal.resized();
@@ -166,7 +166,7 @@ describe('sSH PTY交互合同', () => {
     });
     const bytes = new TextEncoder().encode('真实字节\r\n');
     socket.onmessage?.({ data: bytes.buffer });
-    expect(Array.from(terminal.write.mock.calls[0]![0] as Uint8Array)).toEqual(
+    expect(Array.from(terminal.write.mock.calls[0][0] as Uint8Array)).toEqual(
       Array.from(bytes),
     );
   });
@@ -188,9 +188,7 @@ describe('sSH PTY交互合同', () => {
       'cloudops-auth.fresh.token.signature',
     );
     expect(wrapper!.find('[role="status"]').text()).toContain('连接已建立');
-    expect(transport.terminals[0]!.write).not.toHaveBeenCalledWith(
-      'OLD-OUTPUT',
-    );
+    expect(transport.terminals[0].write).not.toHaveBeenCalledWith('OLD-OUTPUT');
     expect(first.close).toHaveBeenCalled();
   });
 
@@ -198,7 +196,7 @@ describe('sSH PTY交互合同', () => {
     render();
     const socket = latest();
     socket.open();
-    const terminal = transport.terminals[0]!;
+    const terminal = transport.terminals[0];
     access.accessToken = '';
     await flushPromises();
     expect(socket.close).toHaveBeenCalled();
