@@ -120,6 +120,15 @@ export function streamReconnectDelay(attempt: number) {
   return Math.min(1000 * 2 ** Math.max(attempt - 1, 0), 30_000);
 }
 
+// 终端清理相互独立：单项失败不能跳过其它资源释放，也不输出原始异常。
+function completeTerminalCleanup(cleanup: () => void): void {
+  try {
+    cleanup();
+  } catch {
+    // 已关闭的第三方资源可能拒绝重复释放；调用方仍须清理剩余资源与状态。
+  }
+}
+
 export function usePodPage() {
   // state
   const pods = ref<K8sPod[]>([]);
@@ -1528,9 +1537,6 @@ export function usePodPage() {
           }
         }
       } catch (error: any) {
-        if (!isManualClose) {
-        }
-
         if (error?.name === 'AbortError') {
           isManualClose = true;
           onClose?.();
@@ -1699,6 +1705,7 @@ export function usePodPage() {
         logsStreamConnection.value = null;
       }
     } catch {
+      // 关闭已失效的流失败时仍在 finally 复位页面状态，不展示底层异常。
     } finally {
       // 确保状态被正确重置
       isLogsStreaming.value = false;
@@ -1764,29 +1771,9 @@ export function usePodPage() {
 
       // 清理之前的终端
       if (terminal.value) {
-        try {
-          // 先清理addon，避免dispose错误
-          if (fitAddon.value) {
-            // FitAddon没有dispose方法，直接设置为null
-            fitAddon.value = null;
-          }
-
-          // 安全地dispose terminal
-          terminal.value.dispose();
-          terminal.value = null;
-        } catch (error) {
-          // 捕获特定的addon dispose错误
-          if (
-            error instanceof Error &&
-            error.message.includes(
-              'Could not dispose an addon that has not been loaded',
-            )
-          ) {
-          }
-          // 强制重置状态
-          terminal.value = null;
-          fitAddon.value = null;
-        }
+        fitAddon.value = null;
+        completeTerminalCleanup(() => terminal.value?.dispose());
+        terminal.value = null;
       }
 
       // 创建新的终端实例
@@ -2110,16 +2097,9 @@ export function usePodPage() {
         socket.onclose = (event) => {
           if (socket !== ownedSocket) return;
           clearUnauthorizedRefreshResetTimer();
-          resizeSubscription?.dispose();
+          completeTerminalCleanup(() => resizeSubscription?.dispose());
           resizeSubscription = undefined;
           socket = null;
-
-          // 根据关闭代码提供更详细的错误信息
-          if (event.code === 1006) {
-          } else if (event.code === 1000) {
-          } else if (event.code === 1003) {
-          } else if (event.code === 4401) {
-          }
 
           if (isManualClose) {
             pendingHandshakeError = null;
@@ -2155,7 +2135,7 @@ export function usePodPage() {
     const close = () => {
       isManualClose = true;
       clearUnauthorizedRefreshResetTimer();
-      resizeSubscription?.dispose();
+      completeTerminalCleanup(() => resizeSubscription?.dispose());
       resizeSubscription = undefined;
 
       // 清理重连定时器
@@ -2166,7 +2146,7 @@ export function usePodPage() {
 
       // 关闭WebSocket连接
       if (socket) {
-        socket.close();
+        completeTerminalCleanup(() => socket?.close());
         socket = null;
       }
     };
@@ -2284,51 +2264,22 @@ export function usePodPage() {
 
   // 断开终端连接
   const disconnectTerminal = () => {
-    terminalResizeObserver?.disconnect();
-    terminalResizeObserver = undefined;
-    terminalInputSubscription?.dispose();
-    terminalInputSubscription = undefined;
     try {
-      // 关闭WebSocket连接
-      if (terminalConnection.value) {
-        terminalConnection.value.close();
-        terminalConnection.value = null;
-      }
-
-      // 清理终端实例
-      if (terminal.value) {
-        try {
-          // 先清理addons，避免dispose错误
-          if (fitAddon.value) {
-            // FitAddon没有dispose方法，直接设置为null
-            fitAddon.value = null;
-          }
-
-          // 安全地dispose terminal，捕获addon相关错误
-          terminal.value.dispose();
-          terminal.value = null;
-        } catch (error) {
-          // 捕获特定的addon dispose错误
-          if (
-            error instanceof Error &&
-            error.message.includes(
-              'Could not dispose an addon that has not been loaded',
-            )
-          ) {
-          }
-          // 强制重置状态，无论是否有错误
-          terminal.value = null;
-          fitAddon.value = null;
-        }
-      }
-
-      // 确保fitAddon也被清理
-      if (fitAddon.value) {
-        fitAddon.value = null;
-      }
-    } catch {
+      completeTerminalCleanup(() => terminalResizeObserver?.disconnect());
+      terminalResizeObserver = undefined;
+      completeTerminalCleanup(() => terminalInputSubscription?.dispose());
+      terminalInputSubscription = undefined;
+      completeTerminalCleanup(() => terminalConnection.value?.close());
+      terminalConnection.value = null;
+      fitAddon.value = null;
+      completeTerminalCleanup(() => terminal.value?.dispose());
     } finally {
-      // 确保状态被正确重置
+      // 即使第三方资源的清理抛错，也不能留下可复用的失效引用或连接状态。
+      terminalResizeObserver = undefined;
+      terminalInputSubscription = undefined;
+      terminalConnection.value = null;
+      terminal.value = null;
+      fitAddon.value = null;
       isTerminalConnected.value = false;
       terminalLoading.value = false;
     }
@@ -2829,7 +2780,7 @@ export function usePodPage() {
   if (getCurrentScope()) {
     onScopeDispose(() => {
       disconnectTerminal();
-      logsStreamConnection.value?.close();
+      completeTerminalCleanup(() => logsStreamConnection.value?.close());
       logsStreamConnection.value = null;
       isLogsStreaming.value = false;
     });

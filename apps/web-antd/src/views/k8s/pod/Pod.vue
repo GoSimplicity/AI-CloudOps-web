@@ -504,7 +504,7 @@ const uploadProgress = ref({
   current: 0,
   total: 0,
   percent: 0,
-  status: 'active' as 'active' | 'success' | 'exception',
+  status: 'active' as 'active' | 'exception' | 'success',
   currentFile: '',
 });
 

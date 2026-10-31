@@ -1,3 +1,5 @@
+import { effectScope } from 'vue';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -22,6 +24,12 @@ const notices = vi.hoisted(() => {
     warning: record('warning'),
   };
 });
+const cleanup = vi.hoisted(() => ({
+  input: vi.fn(),
+  observer: vi.fn(),
+  resize: vi.fn(),
+  terminal: vi.fn(),
+}));
 const refreshTokenApi = vi.hoisted(() => vi.fn());
 const logout = vi.hoisted(() => vi.fn());
 const access = vi.hoisted(() => {
@@ -45,10 +53,10 @@ vi.mock('xterm', () => ({
   Terminal: class {
     cols = 120;
     rows = 30;
-    dispose = vi.fn();
+    dispose = cleanup.terminal;
     loadAddon = vi.fn();
-    onData = vi.fn(() => ({ dispose: vi.fn() }));
-    onResize = vi.fn(() => ({ dispose: vi.fn() }));
+    onData = vi.fn(() => ({ dispose: cleanup.input }));
+    onResize = vi.fn(() => ({ dispose: cleanup.resize }));
     open = vi.fn();
     write = vi.fn();
     writeln = vi.fn();
@@ -172,7 +180,7 @@ beforeEach(() => {
   vi.stubGlobal(
     'ResizeObserver',
     class {
-      disconnect = vi.fn();
+      disconnect = cleanup.observer;
       observe = vi.fn();
     },
   );
@@ -316,4 +324,171 @@ describe('实时日志：刷新失败只提示登录过期', () => {
 
     expect(allNotices()).toEqual([['info', '📡 实时日志连接已停止']]);
   });
+});
+
+describe('terminal teardown failure isolation', () => {
+  it.each(['observer', 'input', 'terminal', 'socket', 'resize'])(
+    '%s failure does not skip remaining cleanup or retain connection state',
+    async (site) => {
+      const page = await openTerminal();
+      const socket = lastSocket();
+      socket.open();
+      page.terminalLoading.value = true;
+      notices.log.length = 0;
+      const fail = () => {
+        throw new Error('PRIVATE_TEARDOWN_FAILURE');
+      };
+      switch (site) {
+        case 'input': {
+          cleanup.input.mockImplementationOnce(fail);
+          break;
+        }
+        case 'observer': {
+          cleanup.observer.mockImplementationOnce(fail);
+          break;
+        }
+        case 'resize': {
+          cleanup.resize.mockImplementationOnce(fail);
+          break;
+        }
+        case 'socket': {
+          socket.close.mockImplementationOnce(fail);
+          break;
+        }
+        case 'terminal': {
+          cleanup.terminal.mockImplementationOnce(fail);
+          break;
+        }
+      }
+      expect(() => page.disconnectTerminal()).not.toThrow();
+      expect(cleanup.observer).toHaveBeenCalledTimes(1);
+      expect(cleanup.input).toHaveBeenCalledTimes(1);
+      expect(cleanup.resize).toHaveBeenCalledTimes(1);
+      expect(cleanup.terminal).toHaveBeenCalledTimes(1);
+      expect(socket.close).toHaveBeenCalledTimes(1);
+      expect(page.terminal.value).toBeNull();
+      expect(page.fitAddon.value).toBeNull();
+      expect(page.terminalConnection.value).toBeNull();
+      expect(page.isTerminalConnected.value).toBe(false);
+      expect(page.terminalLoading.value).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+      expect(notices.log).toEqual([]);
+      // 失效引用已清空：第二次关闭不重复释放，也不能重新连接。
+      page.disconnectTerminal();
+      await flush(10_000);
+      expect(cleanup.observer).toHaveBeenCalledTimes(1);
+      expect(cleanup.input).toHaveBeenCalledTimes(1);
+      expect(cleanup.resize).toHaveBeenCalledTimes(1);
+      expect(cleanup.terminal).toHaveBeenCalledTimes(1);
+      expect(socket.close).toHaveBeenCalledTimes(1);
+      expect(FakeWebSocket.instances).toHaveLength(1);
+    },
+  );
+
+  it('does not inspect a throwing error message getter during terminal replacement', async () => {
+    const page = usePodPage();
+    expect(await page.initializeTerminal()).toBe(true);
+    const previous = page.terminal.value;
+    const failure = new Error('fixture disposal failure');
+    const readMessage = vi.fn(() => {
+      throw new Error('PRIVATE_DISPOSE_MESSAGE');
+    });
+    Object.defineProperty(failure, 'message', { get: readMessage });
+    cleanup.terminal.mockImplementationOnce(() => {
+      throw failure;
+    });
+    expect(await page.initializeTerminal()).toBe(true);
+    expect(readMessage).not.toHaveBeenCalled();
+    expect(page.terminal.value).not.toBe(previous);
+    expect(page.terminal.value).not.toBeNull();
+    expect(notices.error).not.toHaveBeenCalled();
+    page.disconnectTerminal();
+  });
+
+  it.each([
+    { clean: true, code: 1000, reconnect: false, refresh: false },
+    { clean: true, code: 1003, reconnect: false, refresh: false },
+    { clean: false, code: 1003, reconnect: true, refresh: false },
+    { clean: false, code: 1006, reconnect: true, refresh: false },
+    { clean: true, code: 4401, reconnect: true, refresh: true },
+  ])(
+    'close code $code clean=$clean preserves actual routing',
+    async ({ clean, code, reconnect, refresh }) => {
+      const page = usePodPage();
+      const closed = vi.fn();
+      const conn = page.execK8sPodWebSocket(
+        {
+          cluster_id: 1,
+          container: 'app',
+          namespace: 'default',
+          pod_name: 'fixture',
+        },
+        vi.fn(),
+        vi.fn(),
+        vi.fn(),
+        closed,
+      );
+      const socket = lastSocket();
+      socket.open();
+      socket.onclose?.({ code, wasClean: clean });
+      // 旧连接的迟到回调不能对已换代连接重复作决定。
+      socket.onclose?.({ code, wasClean: clean });
+      await flush(1000);
+      expect(refreshTokenApi).toHaveBeenCalledTimes(refresh ? 1 : 0);
+      expect(FakeWebSocket.instances).toHaveLength(reconnect ? 2 : 1);
+      expect(closed).toHaveBeenCalledTimes(reconnect ? 0 : 1);
+      conn.close();
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
+  it('resize cleanup failure on socket close still schedules normal reconnection', async () => {
+    const page = await openTerminal();
+    const socket = lastSocket();
+    socket.open();
+    cleanup.resize.mockImplementationOnce(() => {
+      throw new Error('PRIVATE_RESIZE_CLEANUP');
+    });
+    expect(() =>
+      socket.onclose?.({ code: 1006, wasClean: false }),
+    ).not.toThrow();
+    await flush(1000);
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    page.disconnectTerminal();
+    expect(vi.getTimerCount()).toBe(0);
+    expect(notices.log.flat().some((value) => value.includes('PRIVATE_'))).toBe(
+      false,
+    );
+  });
+});
+
+it('scope disposal isolates terminal and log close failures and clears owned state', () => {
+  const scope = effectScope();
+  const page = scope.run(() => usePodPage());
+  if (!page) {
+    throw new Error('Expected owned Pod page scope');
+  }
+  const closeTerminal = vi.fn(() => {
+    throw new Error('PRIVATE_TERMINAL_CLOSE');
+  });
+  const closeLogs = vi.fn(() => {
+    throw new Error('PRIVATE_LOG_CLOSE');
+  });
+  page.terminalConnection.value = {
+    close: closeTerminal,
+    sendCommand: vi.fn(),
+  };
+  page.logsStreamConnection.value = { close: closeLogs };
+  page.isTerminalConnected.value = true;
+  page.terminalLoading.value = true;
+  page.isLogsStreaming.value = true;
+  expect(() => scope.stop()).not.toThrow();
+  expect(closeTerminal).toHaveBeenCalledTimes(1);
+  expect(closeLogs).toHaveBeenCalledTimes(1);
+  expect(page.terminalConnection.value).toBeNull();
+  expect(page.logsStreamConnection.value).toBeNull();
+  expect(page.isTerminalConnected.value).toBe(false);
+  expect(page.terminalLoading.value).toBe(false);
+  expect(page.isLogsStreaming.value).toBe(false);
+  expect(notices.log).toEqual([]);
 });
