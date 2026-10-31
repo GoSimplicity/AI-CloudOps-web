@@ -148,5 +148,5 @@
 仅删除 `Secret.vue` 中 `handleClusterChange` 的空 `else {}`；条件、清空旧列表以及读取命名空间/Secret 的分支原样保留，没有新增行为或规则例外。
 
 - Secret 模块11文件474项测试与应用类型检查通过。
-- 重新执行完整 ESLint 扫描：**12255 errors、5 warnings**，退出码1；`no-empty` 已为0。仍未宣称全仓 lint 通过。
+- 重新执行完整 ESLint 扫描：**12254 errors、5 warnings**，退出码1；`no-empty` 已为0。仍未宣称全仓 lint 通过。
 - 前一运行逻辑阶段的完整2153项测试和11项构建保留原范围，本次采用模块复验，没有把它们伪写为本次重跑结果。没有执行真实Kubernetes或生产操作。
