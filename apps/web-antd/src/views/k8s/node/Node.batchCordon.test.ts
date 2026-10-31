@@ -122,6 +122,14 @@ async function settle() {
 
 let wrapper: VueWrapper<any>;
 
+/** 必须存在的测试控件或记录缺失时立即失败，并为后续操作收窄类型。 */
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('Expected test fixture to exist');
+  }
+  return value;
+}
+
 function setSubject(codes: string[], username = 'ops') {
   useUserStore().setUserInfo({ roles: [], username } as any);
   useAccessStore().setAccessCodes(codes);
@@ -155,15 +163,17 @@ async function selectRows(count: number) {
 
 /** 真实点击表头全选 */
 async function selectAll() {
-  document.body
-    .querySelector<HTMLInputElement>('.ant-table-thead .ant-checkbox-input')!
-    .click();
+  required(
+    document.body.querySelector<HTMLInputElement>(
+      '.ant-table-thead .ant-checkbox-input',
+    ),
+  ).click();
   await flushPromises();
 }
 
 function checkedNames() {
   return rowBoxes()
-    .map((box, index) => (box.checked ? NODES[index]!.name : null))
+    .map((box, index) => (box.checked ? required(NODES[index]).name : null))
     .filter(Boolean);
 }
 
@@ -180,10 +190,10 @@ function bodyButton(text: string) {
 }
 
 async function runBatch() {
-  batchButton()!.click();
+  required(batchButton()).click();
   await flushPromises();
   expect(document.body.textContent).toContain('批量禁用调度');
-  bodyButton('确认执行')!.click();
+  required(bodyButton('确认执行')).click();
   await flushPromises();
   await settle();
 }
@@ -471,9 +481,9 @@ describe('U3 获批（开关打开）后按码收紧', () => {
     expect(batchButton()).toBeNull();
     await selectRows(2);
     expect(batchButton()).not.toBeNull();
-    batchButton()!.click();
+    required(batchButton()).click();
     await flushPromises();
-    bodyButton('取消')!.click();
+    required(bodyButton('取消')).click();
     await flushPromises();
     expect(cordonRequests()).toHaveLength(0);
   });
@@ -585,10 +595,10 @@ describe('测试账号 A / B / C（U3 未获批）：Node 调度按钮', () => {
     it('直接调用行内 cordon / uncordon 函数：不弹确认、不发请求，提示无权限', async () => {
       setSubject(codes());
       await mountPage();
-      wrapper.vm.toggleNodeSchedule({ ...NODES[0]! });
+      wrapper.vm.toggleNodeSchedule({ ...required(NODES[0]) });
       await flushPromises();
       await confirmIfShown('确认禁用');
-      wrapper.vm.toggleNodeSchedule({ ...NODES[2]! });
+      wrapper.vm.toggleNodeSchedule({ ...required(NODES[2]) });
       await flushPromises();
       await confirmIfShown('确认启用');
       expect(scheduleRequests()).toEqual([]);
@@ -621,7 +631,7 @@ describe('测试账号 A / B / C（U3 未获批）：Node 调度按钮', () => {
     it('可调度节点「禁用调度」确认后发 1 次 cordon', async () => {
       await mountPage();
       expect(rowScheduleButton(0)?.getAttribute('title')).toBe('禁用调度');
-      rowScheduleButton(0)!.click();
+      required(rowScheduleButton(0)).click();
       await flushPromises();
       await confirmIfShown('确认禁用');
       expect(scheduleRequests()).toEqual([
@@ -632,7 +642,7 @@ describe('测试账号 A / B / C（U3 未获批）：Node 调度按钮', () => {
     it('不可调度节点「启用调度」确认后发 1 次 uncordon', async () => {
       await mountPage();
       expect(rowScheduleButton(2)?.getAttribute('title')).toBe('启用调度');
-      rowScheduleButton(2)!.click();
+      required(rowScheduleButton(2)).click();
       await flushPromises();
       await confirmIfShown('确认启用');
       expect(scheduleRequests()).toEqual([
@@ -677,12 +687,12 @@ describe('复审 v4 P3-4：确认框打开后权限被收回，点确定不发�
   ])('%s', async (_label, rowIndex, code, okText) => {
     setSubject([code]);
     await mountPage();
-    rowScheduleButton(rowIndex)!.click();
+    required(rowScheduleButton(rowIndex)).click();
     await flushPromises();
     expect(bodyButton(okText)).toBeTruthy();
     useAccessStore().setAccessCodes([]);
     await flushPromises();
-    bodyButton(okText)!.click();
+    required(bodyButton(okText)).click();
     await flushPromises();
     await settle();
     expectDeniedOnce();
@@ -693,12 +703,12 @@ describe('复审 v4 P3-4：确认框打开后权限被收回，点确定不发�
     setSubject([BATCH_CORDON]);
     await mountPage();
     await selectRows(2);
-    batchButton()!.click();
+    required(batchButton()).click();
     await flushPromises();
     expect(bodyButton('确认执行')).toBeTruthy();
     useAccessStore().setAccessCodes([]);
     await flushPromises();
-    bodyButton('确认执行')!.click();
+    required(bodyButton('确认执行')).click();
     await flushPromises();
     await settle();
     expectDeniedOnce();
@@ -707,9 +717,9 @@ describe('复审 v4 P3-4：确认框打开后权限被收回，点确定不发�
   it('权限未被收回：同样的操作正常发请求（对照）', async () => {
     setSubject([CORDON]);
     await mountPage();
-    rowScheduleButton(0)!.click();
+    required(rowScheduleButton(0)).click();
     await flushPromises();
-    bodyButton('确认禁用')!.click();
+    required(bodyButton('确认禁用')).click();
     await flushPromises();
     await settle();
     expect(scheduleRequests()).toHaveLength(1);

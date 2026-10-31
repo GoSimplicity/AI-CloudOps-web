@@ -55,6 +55,14 @@ const EXISTING = { key: 'dedicated', value: 'gpu', effect: 'NoSchedule' };
 
 let wrapper: VueWrapper<any>;
 
+/** 必须存在的测试控件或记录缺失时立即失败，并为后续操作收窄类型。 */
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('Expected test fixture to exist');
+  }
+  return value;
+}
+
 function setSubject(codes: string[], username = 'ops') {
   useUserStore().setUserInfo({ roles: [], username } as any);
   useAccessStore().setAccessCodes(codes);
@@ -81,7 +89,7 @@ function taintEntry() {
 }
 
 async function openTaintModal() {
-  taintEntry()!.click();
+  required(taintEntry()).click();
   await flushPromises();
 }
 
@@ -98,7 +106,7 @@ function saveButton() {
 }
 
 async function save() {
-  saveButton()!.click();
+  required(saveButton()).click();
   await flushPromises();
 }
 
@@ -204,7 +212,9 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     setSubject([DELETE]);
     await mountPage();
     await openTaintModal();
-    const row = modalRoot()!.querySelector('.k8s-key-value-row')!;
+    const row = required(
+      required(modalRoot()).querySelector('.k8s-key-value-row'),
+    );
     const inputs = row.querySelectorAll('input');
     expect(inputs.length).toBeGreaterThanOrEqual(2);
     for (const input of inputs) expect(input.disabled).toBe(true);
@@ -216,7 +226,9 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     setSubject([ADD]);
     await mountPage();
     await openTaintModal();
-    const row = modalRoot()!.querySelector('.k8s-key-value-row')!;
+    const row = required(
+      required(modalRoot()).querySelector('.k8s-key-value-row'),
+    );
     for (const input of row.querySelectorAll('input'))
       expect(input.disabled).toBe(false);
     expect(row.querySelector('.ant-select-disabled')).toBeNull();
@@ -226,7 +238,7 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     setSubject([ADD]);
     await mountPage();
     await openTaintModal();
-    expect(modalRoot()!.querySelector('.k8s-remove-btn')).toBeNull();
+    expect(required(modalRoot()).querySelector('.k8s-remove-btn')).toBeNull();
   });
 
   it('c-6 只有 delete 码时手动塞入新增污点后点保存：不发任何请求，提示无权限，弹窗保持打开', async () => {
@@ -272,10 +284,10 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     setSubject([ADD, DELETE]);
     await mountPage();
     await openTaintModal();
-    expect(saveButton()!.disabled).toBe(true);
+    expect(required(saveButton()).disabled).toBe(true);
     wrapper.vm.taintFormModel.taints[0].effect = 'NoExecute';
     await flushPromises();
-    expect(saveButton()!.disabled).toBe(false);
+    expect(required(saveButton()).disabled).toBe(false);
     // 修改已有污点不能改到原始值（否则检测不到变化）
     expect(wrapper.vm.taintFormModel.originalTaints[0].effect).toBe(
       'NoSchedule',
@@ -309,9 +321,9 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
       throw forbidden;
     });
     // 删除已有污点，再新增一个
-    bodyButton('删除')!.click();
+    required(bodyButton('删除')).click();
     await flushPromises();
-    bodyButton('添加污点')!.click();
+    required(bodyButton('添加污点')).click();
     await flushPromises();
     wrapper.vm.taintFormModel.taints.at(-1).key = 'new-key';
     await flushPromises();
@@ -336,9 +348,9 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     setSubject([ADD, DELETE]);
     await mountPage();
     await openTaintModal();
-    bodyButton('删除')!.click();
+    required(bodyButton('删除')).click();
     await flushPromises();
-    bodyButton('添加污点')!.click();
+    required(bodyButton('添加污点')).click();
     await flushPromises();
     wrapper.vm.taintFormModel.taints.at(-1).key = 'new-key';
     await flushPromises();
@@ -356,19 +368,22 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     setSubject([ADD]);
     await mountPage();
     await openTaintModal();
-    bodyButton('添加污点')!.click();
+    required(bodyButton('添加污点')).click();
     await flushPromises();
-    const rows = () => [...modalRoot()!.querySelectorAll('.k8s-key-value-row')];
+    const rows = () => [
+      ...required(modalRoot()).querySelectorAll('.k8s-key-value-row'),
+    ];
     expect(rows()).toHaveLength(2);
-    expect(rows()[0]!.querySelector('.k8s-remove-btn')).toBeNull();
-    const removeNew =
-      rows()[1]!.querySelector<HTMLButtonElement>('.k8s-remove-btn');
+    expect(required(rows()[0]).querySelector('.k8s-remove-btn')).toBeNull();
+    const removeNew = required(rows()[1]).querySelector<HTMLButtonElement>(
+      '.k8s-remove-btn',
+    );
     expect(removeNew).not.toBeNull();
-    removeNew!.click();
+    required(removeNew).click();
     await flushPromises();
     expect(rows()).toHaveLength(1);
     expect(wrapper.vm.taintFormModel.taintsToDelete).toEqual([]);
-    expect(saveButton()!.disabled).toBe(true);
+    expect(required(saveButton()).disabled).toBe(true);
     expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
   });
 
@@ -383,14 +398,14 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     api.addK8sNodeTaints.mockImplementationOnce(async () => {
       order.push('add');
     });
-    bodyButton('删除')!.click();
+    required(bodyButton('删除')).click();
     await flushPromises();
-    bodyButton('添加污点')!.click();
+    required(bodyButton('添加污点')).click();
     await flushPromises();
     // 与原污点完全相同的 key/value/effect，也必须重新添加，否则保存后被删掉
     Object.assign(wrapper.vm.taintFormModel.taints.at(-1), EXISTING);
     await flushPromises();
-    expect(saveButton()!.disabled).toBe(false);
+    expect(required(saveButton()).disabled).toBe(false);
     await save();
     expect(order).toEqual(['delete', 'add']);
     expect(api.deleteK8sNodeTaints).toHaveBeenCalledWith(
@@ -432,8 +447,10 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     expect(taintEntry()).not.toBeNull();
     await openTaintModal();
     expect(bodyButton('添加污点')).toBeTruthy();
-    expect(modalRoot()!.querySelector('.k8s-remove-btn')).not.toBeNull();
-    for (const input of modalRoot()!.querySelectorAll(
+    expect(
+      required(modalRoot()).querySelector('.k8s-remove-btn'),
+    ).not.toBeNull();
+    for (const input of required(modalRoot()).querySelectorAll(
       '.k8s-key-value-row input',
     ))
       expect((input as HTMLInputElement).disabled).toBe(false);
@@ -446,20 +463,24 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
  */
 describe('c-5 新增行与已保存污点同 key：撤销新增行', () => {
   const rows = () => [
-    ...modalRoot()!.querySelectorAll<HTMLElement>('.k8s-key-value-row'),
+    ...required(modalRoot()).querySelectorAll<HTMLElement>(
+      '.k8s-key-value-row',
+    ),
   ];
 
   async function typeInto(row: HTMLElement, index: number, text: string) {
-    const input = row.querySelectorAll<HTMLInputElement>('input')[index]!;
+    const input = required(
+      row.querySelectorAll<HTMLInputElement>('input')[index],
+    );
     input.value = text;
     input.dispatchEvent(new Event('input'));
     await flushPromises();
   }
 
   async function addRowWithSameKey(value: string) {
-    bodyButton('添加污点')!.click();
+    required(bodyButton('添加污点')).click();
     await flushPromises();
-    const added = rows().at(-1)!;
+    const added = required(rows().at(-1));
     await typeInto(added, 0, EXISTING.key);
     await typeInto(added, 1, value);
   }
@@ -486,19 +507,20 @@ describe('c-5 新增行与已保存污点同 key：撤销新增行', () => {
         { ...EXISTING, value },
       ]);
       // 已保存的行：只有 add 码时没有删除按钮；新增行始终可撤销
-      expect(rows()[0]!.querySelector('.k8s-remove-btn') === null).toBe(
-        !codes().includes(DELETE),
+      expect(
+        required(rows()[0]).querySelector('.k8s-remove-btn') === null,
+      ).toBe(!codes().includes(DELETE));
+      const undo = required(rows()[1]).querySelector<HTMLButtonElement>(
+        '.k8s-remove-btn',
       );
-      const undo =
-        rows()[1]!.querySelector<HTMLButtonElement>('.k8s-remove-btn');
       expect(undo).not.toBeNull();
-      undo!.click();
+      required(undo).click();
       await flushPromises();
 
       expect(rows()).toHaveLength(1);
       expect(wrapper.vm.taintFormModel.taints).toEqual([EXISTING]);
       expect(wrapper.vm.taintFormModel.taintsToDelete).toEqual([]);
-      expect(saveButton()!.disabled).toBe(true);
+      expect(required(saveButton()).disabled).toBe(true);
       // 直接调用保存（绕过禁用）也不能发请求或提示无权限
       await wrapper.vm.submitTaintForm();
       await flushPromises();
@@ -528,8 +550,10 @@ describe('c-5 新增行与已保存污点同 key：撤销新增行', () => {
     setSubject([ADD, DELETE]);
     await mountPage();
     await openTaintModal();
-    await typeInto(rows()[0]!, 0, 'renamed');
-    rows()[0]!.querySelector<HTMLButtonElement>('.k8s-remove-btn')!.click();
+    await typeInto(required(rows()[0]), 0, 'renamed');
+    required(
+      required(rows()[0]).querySelector<HTMLButtonElement>('.k8s-remove-btn'),
+    ).click();
     await flushPromises();
     expect(wrapper.vm.taintFormModel.taintsToDelete).toEqual([EXISTING.key]);
     await save();
@@ -544,7 +568,9 @@ describe('c-5 新增行与已保存污点同 key：撤销新增行', () => {
     await mountPage();
     await openTaintModal();
     await addRowWithSameKey('cpu');
-    rows()[0]!.querySelector<HTMLButtonElement>('.k8s-remove-btn')!.click();
+    required(
+      required(rows()[0]).querySelector<HTMLButtonElement>('.k8s-remove-btn'),
+    ).click();
     await flushPromises();
     expect(wrapper.vm.taintFormModel.taintsToDelete).toEqual([EXISTING.key]);
     await save();
@@ -564,22 +590,26 @@ describe('c-5 新增行与已保存污点同 key：撤销新增行', () => {
  */
 describe('复审 v4 P3-1 / P3-2：污点按 key 整组提交', () => {
   const rows = () => [
-    ...modalRoot()!.querySelectorAll<HTMLElement>('.k8s-key-value-row'),
+    ...required(modalRoot()).querySelectorAll<HTMLElement>(
+      '.k8s-key-value-row',
+    ),
   ];
-  const keyInput = (row: HTMLElement) => row.querySelector('input')!;
+  const keyInput = (row: HTMLElement) => required(row.querySelector('input'));
 
   async function typeInto(row: HTMLElement, index: number, text: string) {
-    const input = row.querySelectorAll<HTMLInputElement>('input')[index]!;
+    const input = required(
+      row.querySelectorAll<HTMLInputElement>('input')[index],
+    );
     input.value = text;
     input.dispatchEvent(new Event('input'));
     await flushPromises();
   }
 
   async function addRow(taint: { effect: string; key: string; value: string }) {
-    bodyButton('添加污点')!.click();
+    required(bodyButton('添加污点')).click();
     await flushPromises();
-    await typeInto(rows().at(-1)!, 0, taint.key);
-    await typeInto(rows().at(-1)!, 1, taint.value);
+    await typeInto(required(rows().at(-1)), 0, taint.key);
+    await typeInto(required(rows().at(-1)), 1, taint.value);
     wrapper.vm.taintFormModel.taints.at(-1).effect = taint.effect;
     await flushPromises();
   }
@@ -597,19 +627,21 @@ describe('复审 v4 P3-1 / P3-2：污点按 key 整组提交', () => {
     setSubject(codes);
     await mountPage();
     await openTaintModal();
-    bodyButton('添加污点')!.click();
+    required(bodyButton('添加污点')).click();
     await flushPromises();
-    expect(keyInput(rows()[0]!).readOnly).toBe(true);
-    expect(keyInput(rows()[1]!).readOnly).toBe(false);
+    expect(keyInput(required(rows()[0])).readOnly).toBe(true);
+    expect(keyInput(required(rows()[1])).readOnly).toBe(false);
     // value 仍可修改（taintAdd 码覆盖「添加/修改污点」）
-    expect(rows()[0]!.querySelectorAll('input')[1]!.readOnly).toBe(false);
+    expect(
+      required(required(rows()[0]).querySelectorAll('input')[1]).readOnly,
+    ).toBe(false);
   });
 
   it('P3-1 兜底，add + delete 码：已保存行的 key 被改（a→b）不删行，保存时先删 a 再加 b，不留孤儿', async () => {
     setSubject([ADD, DELETE]);
     await mountPage();
     await openTaintModal();
-    await typeInto(rows()[0]!, 0, 'renamed');
+    await typeInto(required(rows()[0]), 0, 'renamed');
     await save();
     expect(api.deleteK8sNodeTaints).toHaveBeenCalledTimes(1);
     expect(api.deleteK8sNodeTaints).toHaveBeenCalledWith(
@@ -625,7 +657,7 @@ describe('复审 v4 P3-1 / P3-2：污点按 key 整组提交', () => {
     setSubject([ADD]);
     await mountPage();
     await openTaintModal();
-    await typeInto(rows()[0]!, 0, 'renamed');
+    await typeInto(required(rows()[0]), 0, 'renamed');
     await save();
     expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
     expect(api.addK8sNodeTaints).not.toHaveBeenCalled();
@@ -640,7 +672,7 @@ describe('复审 v4 P3-1 / P3-2：污点按 key 整组提交', () => {
     setSubject([ADD]);
     await mountPage();
     await openTaintModal();
-    await typeInto(rows()[1]!, 1, 'cpu');
+    await typeInto(required(rows()[1]), 1, 'cpu');
     await save();
     expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
     expect(api.addK8sNodeTaints).toHaveBeenCalledTimes(1);
@@ -656,7 +688,9 @@ describe('复审 v4 P3-1 / P3-2：污点按 key 整组提交', () => {
     setSubject([ADD, DELETE]);
     await mountPage();
     await openTaintModal();
-    rows()[0]!.querySelector<HTMLButtonElement>('.k8s-remove-btn')!.click();
+    required(
+      required(rows()[0]).querySelector<HTMLButtonElement>('.k8s-remove-btn'),
+    ).click();
     await flushPromises();
     await save();
     expect(api.deleteK8sNodeTaints).toHaveBeenCalledWith(
