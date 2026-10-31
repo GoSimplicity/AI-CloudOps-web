@@ -1,6 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd from 'ant-design-vue';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
 import Recovery from './CloudManagedOperationRecovery.vue';
 
 const api = vi.hoisted(() => ({

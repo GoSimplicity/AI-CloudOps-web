@@ -531,12 +531,12 @@ import {
 // 响应式数据
 const showDesigner = ref(true);
 const saving = ref(false);
-const saveError = ref<string | null>(null);
+const saveError = ref<null | string>(null);
 let saveRequest = 0;
 let categoryRequest = 0;
 let importRequest = 0;
 let clearDialog: ReturnType<typeof Modal.confirm> | undefined;
-const categoryError = ref<string | null>(null);
+const categoryError = ref<null | string>(null);
 const selectedCategory = ref<WorkorderCategoryItem | null>(null);
 const showJsonViewer = ref(false);
 const showCategoryModal = ref(false);

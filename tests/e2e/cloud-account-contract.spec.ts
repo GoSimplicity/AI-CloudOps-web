@@ -64,8 +64,8 @@ test('cloud account local CRUD preserves regions and never auto-verifies', async
   let token = '';
   const owned: Array<{
     id: number;
-    provider: number;
     name: string;
+    provider: number;
     updated: string;
   }> = [];
   async function api(path: string, method = 'GET', data?: unknown) {

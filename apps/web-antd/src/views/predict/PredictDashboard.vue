@@ -357,6 +357,7 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
+
 import {
   predictCpu,
   predictDisk,
@@ -377,10 +378,10 @@ const hasInitialData = ref(false);
 
 // 用户输入数据
 const inputData = ref({
-  currentQps: null as number | null,
-  currentCpu: null as number | null,
-  currentMemory: null as number | null,
-  currentDisk: null as number | null,
+  currentQps: null as null | number,
+  currentCpu: null as null | number,
+  currentMemory: null as null | number,
+  currentDisk: null as null | number,
 });
 
 // 表单验证
@@ -416,7 +417,7 @@ const metricsData = ref([
     icon: ThunderboltOutlined,
     currentValue: 0,
     unit: '/s',
-    trend: null as number | null,
+    trend: null as null | number,
   },
   {
     type: 'cpu',
@@ -424,7 +425,7 @@ const metricsData = ref([
     icon: ApiOutlined,
     currentValue: 0,
     unit: '%',
-    trend: null as number | null,
+    trend: null as null | number,
   },
   {
     type: 'memory',
@@ -432,7 +433,7 @@ const metricsData = ref([
     icon: DatabaseOutlined,
     currentValue: 0,
     unit: '%',
-    trend: null as number | null,
+    trend: null as null | number,
   },
   {
     type: 'disk',
@@ -440,7 +441,7 @@ const metricsData = ref([
     icon: HddOutlined,
     currentValue: 0,
     unit: '%',
-    trend: null as number | null,
+    trend: null as null | number,
   },
 ]);
 

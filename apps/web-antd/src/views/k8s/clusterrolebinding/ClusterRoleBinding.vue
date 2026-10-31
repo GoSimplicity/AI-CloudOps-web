@@ -1566,7 +1566,7 @@ const handleClusterDropdownScroll = (e: Event) => {
 };
 
 // 获取主体类型对应的颜色
-const getSubjectColor = (kind?: string | null) => {
+const getSubjectColor = (kind?: null | string) => {
   if (!kind) return 'default';
 
   switch (kind) {

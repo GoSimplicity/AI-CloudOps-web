@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { formatCommentContent } from './comment-content';
 
 describe('comment rendering', () => {

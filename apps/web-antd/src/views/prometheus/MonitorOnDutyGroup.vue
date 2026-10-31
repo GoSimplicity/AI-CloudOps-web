@@ -1157,7 +1157,7 @@ const paginationConfig = reactive({
 });
 
 // 用户选择相关状态
-const userOptions = ref<{ value: number; label: string }[]>([]);
+const userOptions = ref<{ label: string; value: number }[]>([]);
 const usersLoading = ref(false);
 const userSearchText = ref('');
 
@@ -1173,7 +1173,7 @@ const userPaginationConfig = reactive({
 const userCache = ref<Map<number, string>>(new Map());
 
 // 计划用户选择相关状态
-const planUserOptions = ref<{ value: string; label: string }[]>([]);
+const planUserOptions = ref<{ label: string; value: string }[]>([]);
 
 // 排班计划分页配置
 const planPaginationConfig = reactive({
@@ -1219,10 +1219,10 @@ const editForm = reactive<UpdateMonitorOnDutyGroupReq>({
 });
 
 const createChangeForm = reactive<{
-  on_duty_group_id: number;
   date: Dayjs | null;
-  origin_user_id: number | null;
-  on_duty_user_id: number | null;
+  on_duty_group_id: number;
+  on_duty_user_id: null | number;
+  origin_user_id: null | number;
   reason: string;
 }>({
   on_duty_group_id: 0,
@@ -1233,7 +1233,7 @@ const createChangeForm = reactive<{
 });
 
 // 调班记录用户选择相关状态
-const changeUserOptions = ref<{ value: number; label: string }[]>([]);
+const changeUserOptions = ref<{ label: string; value: number }[]>([]);
 const changeUsersLoading = ref(false);
 const changeUserSearchText = ref('');
 
@@ -1369,7 +1369,7 @@ const getInitials = (name: string): string => {
   return name.slice(0, 2).toUpperCase();
 };
 
-const formatDate = (timestamp: string | number): string => {
+const formatDate = (timestamp: number | string): string => {
   if (!timestamp) return '';
   // 如果是字符串，直接解析；如果是数字，按Unix时间戳处理
   const date =
@@ -1377,7 +1377,7 @@ const formatDate = (timestamp: string | number): string => {
   return date.format('YYYY-MM-DD');
 };
 
-const formatTime = (timestamp: string | number): string => {
+const formatTime = (timestamp: number | string): string => {
   if (!timestamp) return '';
   // 如果是字符串，直接解析；如果是数字，按Unix时间戳处理
   const date =
@@ -1385,7 +1385,7 @@ const formatTime = (timestamp: string | number): string => {
   return date.format('HH:mm');
 };
 
-const formatFullDateTime = (timestamp: string | number): string => {
+const formatFullDateTime = (timestamp: number | string): string => {
   if (!timestamp) return '';
   // 如果是字符串，直接解析；如果是数字，按Unix时间戳处理
   const date =
@@ -1604,10 +1604,10 @@ const fetchOnDutyHistory = async (
 
     // 构建API请求参数
     const apiParams: {
-      start_date?: string;
       end_date?: string;
       page?: number;
       size?: number;
+      start_date?: string;
     } = {
       page,
       size: historyPaginationConfig.pageSize,
@@ -1920,9 +1920,9 @@ const exportHistory = async (): Promise<void> => {
 
     // 获取所有历史记录
     const apiParams: {
-      start_date?: string;
       end_date?: string;
       size?: number;
+      start_date?: string;
     } = {
       size: 1000, // 设置较大的size以获取尽可能多的记录
     };

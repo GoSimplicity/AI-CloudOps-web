@@ -1,4 +1,5 @@
 import { beforeEach, expect, it } from 'vitest';
+
 import {
   parseManagedMarker,
   removeManagedMarker,

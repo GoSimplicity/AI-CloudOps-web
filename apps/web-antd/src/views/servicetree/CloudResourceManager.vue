@@ -120,7 +120,7 @@ const canSync = computed(
     hasPerm(resourcePermissions.accountDetail),
 );
 
-const loadError = ref<string | null>(null);
+const loadError = ref<null | string>(null);
 let listRequest = 0;
 let detailRequest = 0;
 let syncRegionRequest = 0;
@@ -133,9 +133,9 @@ const syncAccount = ref<CloudAccount | null>(null);
 const syncOutcomeUnknown = ref(false);
 const syncRegionResults = ref<SyncCloudResourceRegionResult[]>([]);
 const syncRegionsLoading = ref(false);
-const syncRegionError = ref<string | null>(null);
+const syncRegionError = ref<null | string>(null);
 const accountsLoading = ref(false);
-const accountLoadError = ref<string | null>(null);
+const accountLoadError = ref<null | string>(null);
 
 // ========== 状态定义 ==========
 const router = useRouter();
@@ -393,7 +393,7 @@ const getEnvironmentText = (environment?: string): string => {
 
 const getStatusBadgeType = (
   status: CloudResourceStatus,
-): 'success' | 'error' | 'processing' | 'warning' | 'default' => {
+): 'default' | 'error' | 'processing' | 'success' | 'warning' => {
   const types: Record<CloudResourceStatus, any> = {
     [CloudResourceStatus.RUNNING]: 'success',
     [CloudResourceStatus.STOPPED]: 'error',
@@ -1113,7 +1113,7 @@ const handleUpdateStatus = async (
 
 const handleStatusMenuClick = (
   record: TreeCloudResource,
-  event: { key: string | number },
+  event: { key: number | string },
 ): void => {
   handleUpdateStatus(record, Number(event.key) as CloudResourceStatus);
 };

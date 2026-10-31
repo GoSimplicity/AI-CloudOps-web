@@ -186,7 +186,7 @@ for (const testCase of cases) {
         page.state.filterClusterId.value = 1;
         if (page.namespace) page.namespace.value = 'alpha';
         const old = Promise.withResolvers<{
-          items: { name: string; namespace: string; cluster_id: number }[];
+          items: { cluster_id: number; name: string; namespace: string }[];
           total: number;
         }>();
         client.get.mockReturnValueOnce(old.promise);
@@ -237,7 +237,7 @@ for (const testCase of cases) {
       const page = testCase.create();
       page.state.filterClusterId.value = 1;
       const old = Promise.withResolvers<{
-        items: { name: string; namespace: string; cluster_id: number }[];
+        items: { cluster_id: number; name: string; namespace: string }[];
         total: number;
       }>();
       client.get.mockReturnValueOnce(old.promise);

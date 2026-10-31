@@ -18,7 +18,7 @@ import {
   retryNotificationEvent,
 } from '#/api/core/workorder/notification-events';
 
-type Action = 'cancel' | 'retry' | 'delivered' | 'redeliver';
+type Action = 'cancel' | 'delivered' | 'redeliver' | 'retry';
 const user = useUserStore();
 const access = useAccessStore();
 const identity = computed(() => ({ authenticated: !!access.accessToken, userId: user.userInfo?.userId }));

@@ -10,7 +10,7 @@ import { useRouter } from 'vue-router';
 import { useSshTerminal } from './use-ssh-terminal';
 import 'xterm/css/xterm.css';
 
-const props = defineProps<{ kind: 'local' | 'cloud'; resourceId: string }>();
+const props = defineProps<{ kind: 'cloud' | 'local'; resourceId: string }>();
 const viewport = ref<HTMLElement | null>(null);
 const router = useRouter();
 const { state, error, connect, disconnect } = useSshTerminal(viewport, {

@@ -607,8 +607,8 @@ const formDialog = reactive({
   form: {
     id: undefined as number | undefined,
     date: undefined as Dayjs | undefined,
-    origin_user_id: null as number | null,
-    on_duty_user_id: null as number | null,
+    origin_user_id: null as null | number,
+    on_duty_user_id: null as null | number,
     reason: '',
   },
 });

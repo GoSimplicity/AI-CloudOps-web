@@ -5,6 +5,7 @@ import type {
 
 import { generateAccessible } from '@vben/access';
 import { preferences } from '@vben/preferences';
+
 import { BasicLayout, IFrameView } from '#/layouts';
 
 const forbiddenComponent = () => import('#/views/_core/fallback/forbidden.vue');

@@ -366,16 +366,16 @@ const currentSessionId = ref('');
 const assistantMode = ref(1);
 const chatHistoryRef = ref<HTMLElement>();
 const pendingTurn = ref<null | {
-  question: string;
   mode: number;
-  turnId: string;
+  question: string;
   sessionId: string;
+  turnId: string;
 }>(null);
 const sessionNotice = ref('');
 
 // 聊天历史
 interface ChatMessage {
-  role: 'user' | 'assistant';
+  role: 'assistant' | 'user';
   content: string;
   timestamp: string;
   sourceDocuments?: any[];

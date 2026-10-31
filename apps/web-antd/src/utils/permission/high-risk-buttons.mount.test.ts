@@ -143,17 +143,17 @@ async function openRedactedSecretDetail() {
 }
 
 type Case = {
+  /** 返回被测按钮的渲染结果 */
+  find: () => HTMLElement[];
+  /** 被测按钮 key（或非清单路由码） */
+  key: Gate;
   /** 用例名 */
   name: string;
   page: keyof typeof pages;
-  /** 被测按钮 key（或非清单路由码） */
-  key: Gate;
-  /** 打开按钮所在界面所需的其它码（不含被测 key） */
-  prerequisite?: Gate[];
   /** 挂载后到达按钮所在界面的操作（勾选行、打开详情） */
   prepare?: () => Promise<void>;
-  /** 返回被测按钮的渲染结果 */
-  find: () => HTMLElement[];
+  /** 打开按钮所在界面所需的其它码（不含被测 key） */
+  prerequisite?: Gate[];
 };
 
 const CASES: Case[] = [

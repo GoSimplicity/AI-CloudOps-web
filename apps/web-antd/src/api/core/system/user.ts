@@ -1,4 +1,5 @@
 import type { UserInfo } from '@vben/types';
+
 import { requestClient } from '#/api/request';
 
 export interface User {

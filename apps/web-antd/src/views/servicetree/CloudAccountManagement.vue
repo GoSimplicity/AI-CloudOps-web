@@ -60,7 +60,7 @@ import {
 
 const { can, hasPerm } = usePermission();
 
-const loadError = ref<string | null>(null);
+const loadError = ref<null | string>(null);
 let listRequest = 0;
 let detailRequest = 0;
 let formRequest = 0;
@@ -99,8 +99,8 @@ const filterForm = reactive<GetCloudAccountListReq>({
 
 const formData = ref<
   CreateCloudAccountReq & {
-    id?: number;
     access_key: string;
+    id?: number;
     secret_key: string;
   }
 >({

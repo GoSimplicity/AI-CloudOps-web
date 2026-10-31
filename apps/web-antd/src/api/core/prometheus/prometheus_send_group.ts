@@ -1,5 +1,6 @@
-import { requestClient } from '#/api/request';
 import type { User } from '#/api/core/system/user';
+
+import { requestClient } from '#/api/request';
 
 // 发送组配置接口
 export interface MonitorSendGroup {

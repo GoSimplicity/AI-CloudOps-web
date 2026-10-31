@@ -1453,7 +1453,7 @@ const removeEditAnnotation = (item: LabelOrAnnotationItem) => {
 
 const severityText = (
   severity: AlertRuleSeverity | undefined,
-): 'critical' | 'warning' | 'info' => {
+): 'critical' | 'info' | 'warning' => {
   if (severity === AlertRuleSeverity.Critical) return 'critical';
   if (severity === AlertRuleSeverity.Warning) return 'warning';
   return 'info';

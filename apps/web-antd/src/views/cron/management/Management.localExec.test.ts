@@ -97,10 +97,10 @@ describe('sEC-03A 本地命令/脚本开关（真实页面）', () => {
     await start(false);
     const options = await openJobTypeOptions();
     expect(options).toEqual([
-      { text: '命令行', disabled: true },
-      { text: 'HTTP请求', disabled: false },
-      { text: '脚本任务', disabled: true },
-      { text: 'SSH远程', disabled: false },
+      { disabled: true, text: '命令行' },
+      { disabled: false, text: 'HTTP请求' },
+      { disabled: true, text: '脚本任务' },
+      { disabled: false, text: 'SSH远程' },
     ]);
     expect(
       document.body

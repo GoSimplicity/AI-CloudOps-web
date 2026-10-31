@@ -6,6 +6,7 @@ import {
 } from '@vue/test-utils';
 import Antd, { message, Modal } from 'ant-design-vue';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
 import LocalResource from './LocalResourceManagement.vue';
 
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts

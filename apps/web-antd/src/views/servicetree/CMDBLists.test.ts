@@ -1,7 +1,9 @@
+import type { Component } from 'vue';
+
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Component } from 'vue';
+
 import CloudAccount from './CloudAccountManagement.vue';
 import CloudResource from './CloudResourceManager.vue';
 import LocalResource from './LocalResourceManagement.vue';
@@ -23,9 +25,9 @@ vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 const pages: {
   component: Component;
-  path: string;
   create: string;
   hasSearch: boolean;
+  path: string;
 }[] = [
   {
     component: CloudAccount,

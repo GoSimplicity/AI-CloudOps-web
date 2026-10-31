@@ -160,8 +160,8 @@ describe('sSH PTY交互合同', () => {
     terminal.rows = 42;
     terminal.resized();
     expect(JSON.parse(socket.send.mock.calls.at(-1)![0])).toEqual({
-      op: 'resize',
       col_size: 120,
+      op: 'resize',
       row_size: 42,
     });
     const bytes = new TextEncoder().encode('真实字节\r\n');

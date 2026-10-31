@@ -449,7 +449,7 @@ it('aPI 按后端合同发送精确路径和请求体', async () => {
     ['/workorder/notification/events/10/retry', { reason: 'verified' }],
     [
       '/workorder/notification/events/10/resolve',
-      { delivery_id: 30, action: 'delivered', reason: 'verified' },
+      { action: 'delivered', delivery_id: 30, reason: 'verified' },
     ],
   ]);
 });

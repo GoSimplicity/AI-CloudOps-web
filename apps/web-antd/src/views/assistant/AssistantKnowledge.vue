@@ -216,7 +216,7 @@ const documentForm = reactive<AddDocumentRequest>({
 
 // 操作日志
 interface OperationLog {
-  type: 'success' | 'error' | 'info';
+  type: 'error' | 'info' | 'success';
   message: string;
   timestamp: string;
 }

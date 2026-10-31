@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { clusterResourceKey, namespacedResourceKey } from './utils';
 
 describe('kubernetes 表格资源身份', () => {

@@ -1931,7 +1931,6 @@ import {
   type ListSendLogReq,
   type NotificationLog,
 } from '#/api/core/workorder/workorder_notification';
-
 import { usePermission } from '#/utils/permission';
 import {
   shouldNotifyPageError,
@@ -2176,10 +2175,10 @@ const instanceDialog = reactive({
     tags: [] as string[],
     due_date: undefined as any,
   } as CreateWorkorderInstanceReq & {
-    id?: number;
-    form_data_json?: string;
-    tags?: string[];
     due_date?: any;
+    form_data_json?: string;
+    id?: number;
+    tags?: string[];
   },
 });
 
@@ -2281,7 +2280,7 @@ const actionDialog = reactive({
 const formDataValidationError = ref('');
 
 // 表单编辑模式：visual | json
-const formEditMode = ref<'visual' | 'json'>('visual');
+const formEditMode = ref<'json' | 'visual'>('visual');
 
 // 当前流程的表单设计
 const currentFormDesign = ref<WorkorderFormDesignItem | null>(null);
@@ -2677,7 +2676,7 @@ const initializeVisualFormData = (): void => {
 };
 
 // 模式切换处理
-const handleModeSwitch = (mode: 'visual' | 'json'): void => {
+const handleModeSwitch = (mode: 'json' | 'visual'): void => {
   if (mode === formEditMode.value) return;
 
   if (mode === 'json') {

@@ -47,7 +47,7 @@ const moduleData = ref<{
   systemInfo: Snapshot | null;
   systemMetrics: Snapshot | null;
 }>({ systemInfo: null, systemMetrics: null });
-const history = ref<Record<MetricKey, Array<number | null>>>({
+const history = ref<Record<MetricKey, Array<null | number>>>({
   cpu_usage: [],
   memory_usage: [],
   disk_usage: [],
@@ -72,7 +72,7 @@ let disposed = false;
 let generation = 0;
 let inFlight = false;
 
-function finite(value: unknown, maximum = Infinity): number | null {
+function finite(value: unknown, maximum = Infinity): null | number {
   return typeof value === 'number' &&
     Number.isFinite(value) &&
     value >= 0 &&

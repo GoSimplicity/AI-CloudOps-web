@@ -154,14 +154,14 @@ describe('三个终端客户端的握手契约', () => {
     socket.readyState = WebSocket.OPEN;
     socket.onopen();
     expect(JSON.parse(socket.send.mock.calls[0][0])).toEqual({
-      op: 'resize',
       col_size: 120,
+      op: 'resize',
       row_size: 30,
     });
     page.terminalConnection.value?.sendCommand('echo safe');
     expect(JSON.parse(socket.send.mock.calls.at(-1)[0])).toEqual({
-      op: 'stdin',
       data: 'echo safe',
+      op: 'stdin',
     });
     const longPaste = 'a'.repeat(65_535) + '中文😀\0'.repeat(12_000);
     const beforePaste = socket.send.mock.calls.length;
@@ -173,7 +173,7 @@ describe('三个终端客户端的握手契约', () => {
     expect(frames.length).toBeGreaterThan(1);
     expect(
       frames.every(
-        (frame: { op: string; data: string }) =>
+        (frame: { data: string; op: string }) =>
           frame.op === 'stdin' &&
           new TextEncoder().encode(frame.data).byteLength <= 65_536,
       ),

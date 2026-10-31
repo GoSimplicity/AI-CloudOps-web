@@ -1,6 +1,7 @@
 // Inventory real route components; comments and inactive files are not route evidence.
 import fs from 'node:fs';
 import path from 'node:path';
+
 import ts from 'typescript';
 
 const root = process.cwd();

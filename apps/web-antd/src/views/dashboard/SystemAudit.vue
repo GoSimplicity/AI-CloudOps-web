@@ -33,10 +33,10 @@ const { can } = usePermission();
 // 扩展审计日志类型，包含用户信息
 interface AuditLogWithUser extends AuditLog {
   user_info?: {
-    id: number;
-    username: string;
-    real_name?: string;
     avatar?: string;
+    id: number;
+    real_name?: string;
+    username: string;
   };
 }
 

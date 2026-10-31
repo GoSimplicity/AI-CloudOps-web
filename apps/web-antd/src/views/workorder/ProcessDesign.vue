@@ -572,7 +572,7 @@ interface Emits {
 const editMode = ref('basic');
 const processSteps = ref<ProcessStep[]>([]);
 const connections = ref<ProcessConnection[]>([]);
-const selectedStepIndex = ref<number | null>(null);
+const selectedStepIndex = ref<null | number>(null);
 const isPreviewModalVisible = ref(false);
 const definitionJsonString = ref('{"steps":[],"connections":[]}');
 
@@ -591,12 +591,12 @@ const processBasicInfo = ref({
 const categories = ref<WorkorderCategoryItem[]>([]);
 const formDesigns = ref<WorkorderFormDesignItem[]>([]);
 const saving = ref(false);
-const saveError = ref<string | null>(null);
+const saveError = ref<null | string>(null);
 const formsLoading = ref(false);
 const categoriesLoading = ref(false);
-const formLoadError = ref<string | null>(null);
-const categoryLoadError = ref<string | null>(null);
-const userLoadError = ref<string | null>(null);
+const formLoadError = ref<null | string>(null);
+const categoryLoadError = ref<null | string>(null);
+const userLoadError = ref<null | string>(null);
 let formsRequest = 0;
 let categoriesRequest = 0;
 let userRequest = 0;

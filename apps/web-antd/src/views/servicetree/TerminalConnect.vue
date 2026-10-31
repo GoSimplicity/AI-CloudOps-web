@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
+
 import OpsPage from '#/components/ops/OpsPage.vue';
+
 import SshTerminal from './components/SshTerminal.vue';
 
 const route = useRoute();

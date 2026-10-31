@@ -156,10 +156,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import { FormOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import type { FormInstance } from 'ant-design-vue';
+
 import type { FormField } from '#/api/core/workorder/workorder_form_design';
+
+import { ref, watch } from 'vue';
+
+import { FormOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 
 interface Props {
   fields: FormField[];

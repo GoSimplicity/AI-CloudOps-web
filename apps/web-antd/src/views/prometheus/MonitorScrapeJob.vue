@@ -1018,7 +1018,7 @@ const formDialog = reactive({
     scheme: 'http',
     scrape_interval: 15,
     scrape_timeout: 5,
-    pool_id: null as number | null,
+    pool_id: null as null | number,
     refresh_interval: 30,
     port: 9100,
     ip_address: '',

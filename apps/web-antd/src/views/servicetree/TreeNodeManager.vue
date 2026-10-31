@@ -42,12 +42,12 @@ import {
 
 const { can } = usePermission();
 
-const loadError = ref<string | null>(null);
+const loadError = ref<null | string>(null);
 let listRequest = 0;
 let detailRequest = 0;
 
 // 为了兼容后端返回的节点详情结构，定义本地扩展类型
-type NodeUser = { id: number; real_name: string; email?: string };
+type NodeUser = { email?: string; id: number; real_name: string };
 type TreeNodeWithRelations = TreeNode & {
   admins?: NodeUser[];
   members?: NodeUser[];

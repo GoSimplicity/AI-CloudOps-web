@@ -9,8 +9,8 @@ import { openWindow } from '@vben/utils';
 
 import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
-
 import AI from '#/views/ai/ai.vue';
+
 import InboxNotification from './components/InboxNotification.vue';
 
 const projectURL = 'https://github.com/GoSimplicity/AI-CloudOps';

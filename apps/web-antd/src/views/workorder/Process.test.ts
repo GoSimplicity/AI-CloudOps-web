@@ -6,6 +6,7 @@ import {
   createForbiddenResponseInterceptor,
   createPermissionDeniedError,
 } from '#/utils/permission/forbidden';
+
 import Process from './Process.vue';
 
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts

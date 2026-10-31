@@ -228,7 +228,9 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
+
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue';
+
 import {
   type FormField,
   FormFieldType,

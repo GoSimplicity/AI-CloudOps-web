@@ -1963,7 +1963,7 @@ test('workorder instance completes a real template draft submit and approval lif
     typeof token === 'string' && Number.isSafeInteger(uid) && uid > 0,
   ).toBe(true);
   const nonce = `cloudops-ui-flow-${Date.now()}`;
-  const owned: Array<{ kind: string; id: number }> = [];
+  const owned: Array<{ id: number; kind: string }> = [];
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   const api = async (path: string, method = 'GET', data?: unknown) => {

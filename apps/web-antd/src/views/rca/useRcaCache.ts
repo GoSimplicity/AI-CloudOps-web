@@ -1,5 +1,7 @@
 import { onMounted, reactive, ref } from 'vue';
+
 import { message } from 'ant-design-vue';
+
 import {
   clearAllCache,
   clearNamespaceCache,
@@ -8,6 +10,7 @@ import {
   type RCACacheStatsResponse,
   type RCAClearCacheResponse,
 } from '#/api/core/aiops/rca';
+
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 
 export function useRcaCache() {

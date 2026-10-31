@@ -112,8 +112,8 @@ const columns = [
 // 状态数据
 const loading = ref(false);
 const searchQuery = ref('');
-const statusFilter = ref<number | null>(null);
-const categoryFilter = ref<number | null>(null);
+const statusFilter = ref<null | number>(null);
+const categoryFilter = ref<null | number>(null);
 const currentPage = ref(1);
 const pageSize = ref(10);
 const total = ref(0);

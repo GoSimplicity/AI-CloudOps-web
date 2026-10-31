@@ -70,7 +70,7 @@ const cases = [
   },
 ];
 type Result = {
-  items: { name: string; namespace: string; cluster_id: number }[];
+  items: { cluster_id: number; name: string; namespace: string }[];
   total: number;
 };
 beforeEach(() => vi.clearAllMocks());

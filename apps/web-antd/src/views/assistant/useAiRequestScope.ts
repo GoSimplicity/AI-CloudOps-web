@@ -1,5 +1,7 @@
 import { computed, onBeforeUnmount, watch } from 'vue';
+
 import { useAccessStore, useUserStore } from '@vben/stores';
+
 import { assistantOwner } from '#/utils/assistant-account-scope';
 
 /** 每个固定任务通道独立计数，身份变化和卸载统一废弃迟到结果 */

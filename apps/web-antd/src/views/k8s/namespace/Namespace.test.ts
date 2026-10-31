@@ -5,6 +5,7 @@ import {
   createPermissionDeniedError,
 } from '#/utils/permission/forbidden';
 import { markRequestLayerTrace } from '#/utils/permission/request-notice';
+
 import { useNamespacePage } from './Namespace';
 
 const client = vi.hoisted(() => ({ get: vi.fn() }));
@@ -21,7 +22,7 @@ describe('命名空间查询作用域', () => {
     const page = useNamespacePage();
     page.filterClusterId.value = 1;
     const response = Promise.withResolvers<{
-      items: { name: string; cluster_id: number }[];
+      items: { cluster_id: number; name: string }[];
       total: number;
     }>();
     client.get.mockReturnValueOnce(response.promise);
@@ -41,7 +42,7 @@ describe('命名空间查询作用域', () => {
   it('慢的旧集群响应不能覆盖新集群的命名空间', async () => {
     const page = useNamespacePage();
     const old = Promise.withResolvers<{
-      items: { name: string; cluster_id: number }[];
+      items: { cluster_id: number; name: string }[];
       total: number;
     }>();
     page.filterClusterId.value = 1;

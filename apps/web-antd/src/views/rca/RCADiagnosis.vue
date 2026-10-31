@@ -497,7 +497,7 @@ let errorCategoriesChart: echarts.ECharts | null = null;
 
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
 const diagnosisError = ref('');
-const diagnosisContext = ref<{ namespace: string; hours: number } | null>(null);
+const diagnosisContext = ref<{ hours: number; namespace: string } | null>(null);
 const scope = useAiRequestScope(() => {
   diagnosisLane.invalidate();
   stopAutoRefresh();

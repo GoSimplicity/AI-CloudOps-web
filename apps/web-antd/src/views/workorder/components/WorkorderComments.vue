@@ -422,7 +422,7 @@ const loading = ref(false);
 const commentsList = ref<WorkorderInstanceCommentItem[]>([]);
 const quickCommenting = ref(false);
 const quickCommentText = ref('');
-const highlightCommentId = ref<number | null>(null);
+const highlightCommentId = ref<null | number>(null);
 const sortOrder = ref<'newest' | 'oldest'>('newest');
 
 // 回复相关状态

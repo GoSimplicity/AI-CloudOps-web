@@ -892,7 +892,7 @@ const formatTime = (input: number | string): string => {
   });
 };
 
-const formatFullDateTime = (input: string | number): string => {
+const formatFullDateTime = (input: number | string): string => {
   if (!input) return '';
   const date =
     typeof input === 'number' ? new Date(input * 1000) : new Date(input);

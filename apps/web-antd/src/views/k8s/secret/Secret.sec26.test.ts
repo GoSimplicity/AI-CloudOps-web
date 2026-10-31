@@ -374,8 +374,8 @@ describe('规则 2：更新 Secret 的 data', () => {
     });
     await opening;
     expect(page.editFormModel.value.labels).toEqual({
-      app: 'fake-fresh',
       added: 'fake-fresh',
+      app: 'fake-fresh',
     });
     expect(page.editFormModel.value.annotations).toEqual({
       note: 'fake-fresh',
@@ -383,8 +383,8 @@ describe('规则 2：更新 Secret 的 data', () => {
     await page.submitEditForm();
     expect(api.update).toHaveBeenCalledTimes(1);
     expect(lastPayload().labels).toEqual({
-      app: 'fake-fresh',
       added: 'fake-fresh',
+      app: 'fake-fresh',
     });
     expect(lastPayload().annotations).toEqual({ note: 'fake-fresh' });
   });
@@ -410,14 +410,14 @@ describe('规则 2：更新 Secret 的 data', () => {
     });
     await opening;
     expect(page.editFormModel.value.string_data).toEqual({
-      shared: 'fake-fresh',
       added: 'fake-fresh',
+      shared: 'fake-fresh',
     });
     await page.submitEditForm();
     expect(api.update).toHaveBeenCalledTimes(1);
     expect(lastPayload().string_data).toEqual({
-      shared: 'fake-fresh',
       added: 'fake-fresh',
+      shared: 'fake-fresh',
     });
   });
 

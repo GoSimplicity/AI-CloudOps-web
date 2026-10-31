@@ -46,7 +46,7 @@ import {
 
 const { can } = usePermission();
 
-const loadError = ref<string | null>(null);
+const loadError = ref<null | string>(null);
 let listRequest = 0;
 let detailRequest = 0;
 let formRequest = 0;

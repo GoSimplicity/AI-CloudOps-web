@@ -262,22 +262,22 @@ describe('云账户真实表单合同', () => {
     const payload = required(client.put.mock.calls[0])[1];
     expect(payload.regions).toEqual([
       {
+        description: '原描述',
+        is_default: true,
         region: 'cn-hangzhou',
         region_name: '杭州',
-        is_default: true,
-        description: '原描述',
       },
       {
+        description: '保留描述',
+        is_default: false,
         region: 'cn-shanghai',
         region_name: '上海',
-        is_default: false,
-        description: '保留描述',
       },
       {
+        description: '',
+        is_default: false,
         region: 'cn-beijing',
         region_name: '',
-        is_default: false,
-        description: '',
       },
     ]);
   });
@@ -588,12 +588,12 @@ it('临时账户编辑权限撤销时关闭并清除敏感输入', async () => {
     required(wrapper).vm as unknown as {
       $: {
         setupState: {
-          modalVisible: boolean;
           formData: {
             access_key: string;
             secret_key: string;
             session_token: string;
           };
+          modalVisible: boolean;
         };
       };
     }

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+
 import { useAccessStore, useUserStore } from '@vben/stores';
+
 import { BellOutlined } from '@ant-design/icons-vue';
+
 import {
   inboxPermissions as codes,
   deleteInboxMessage,
@@ -24,7 +27,7 @@ const authenticated = () =>
   owner.value.authenticated && /^[1-9]\d*$/.test(owner.value.id ?? '');
 const permissions = ref<InboxPermissions | null>(null);
 const open = ref(false);
-const unreadCount = ref<number | null>(null);
+const unreadCount = ref<null | number>(null);
 const messages = ref<InboxMessage[]>([]);
 const page = ref(1);
 const size = 10;
@@ -166,7 +169,7 @@ function changeFilter() {
   page.value = 1;
   void refreshList();
 }
-async function perform(kind: 'read' | 'readAll' | 'delete', id?: number) {
+async function perform(kind: 'delete' | 'read' | 'readAll', id?: number) {
   if (busy.value || !authenticated() || (kind !== 'readAll' && !safeId(id)))
     return;
   const epoch = generation;

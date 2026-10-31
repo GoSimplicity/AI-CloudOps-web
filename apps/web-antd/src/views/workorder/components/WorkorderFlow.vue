@@ -480,7 +480,7 @@ const IconComponent = ({ icon }: { icon: string }) => {
 const loading = ref(false);
 const flowList = ref<WorkorderInstanceFlowItem[]>([]);
 const filterType = ref<string>('all');
-const viewMode = ref<'timeline' | 'list'>('timeline');
+const viewMode = ref<'list' | 'timeline'>('timeline');
 
 // 详情对话框
 const detailDialog = reactive({

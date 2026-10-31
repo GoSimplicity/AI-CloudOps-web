@@ -356,7 +356,7 @@ let confidenceChart: echarts.ECharts | null = null;
 
 const formData = reactive({
   predictionType: 'qps',
-  currentValue: null as number | null,
+  currentValue: null as null | number,
   predictionHours: 24,
   granularity: PredictionGranularity.HOUR,
   targetUtilization: 70,
@@ -727,7 +727,7 @@ const onChartTabChange = (key: string) => {
   });
 };
 
-const getAccuracyColor = (accuracy?: number | null) => {
+const getAccuracyColor = (accuracy?: null | number) => {
   if (formatProbability(accuracy) === '未知') return 'default';
   if (accuracy! > 0.9) return 'green';
   if (accuracy! > 0.7) return 'orange';

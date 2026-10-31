@@ -121,9 +121,9 @@ describe('权限码常量（permission-codes.md v4 第 6 / 6.1 节）', () => {
 
   it('node 调度三个按钮属于 S1b（清单 v4），码为单节点 cordon / uncordon；drain 仍属 S3', () => {
     expect(S1B_PERMISSION_CODES).toEqual({
+      'k8s.node.batchCordon': '/api/k8s/node/:cluster_id/:node_name/cordon',
       'k8s.node.cordon': '/api/k8s/node/:cluster_id/:node_name/cordon',
       'k8s.node.uncordon': '/api/k8s/node/:cluster_id/:node_name/uncordon',
-      'k8s.node.batchCordon': '/api/k8s/node/:cluster_id/:node_name/cordon',
     });
     expect(PERMISSION_CODES).not.toHaveProperty('k8s.node.batchCordon');
     for (const key of S1B_KEYS) {
