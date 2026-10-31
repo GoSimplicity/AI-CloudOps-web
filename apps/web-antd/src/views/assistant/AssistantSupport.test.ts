@@ -7,6 +7,14 @@ import type { Component } from 'vue';
 import AssistantInfo from './AssistantInfo.vue';
 import AssistantKnowledge from './AssistantKnowledge.vue';
 
+/** 必须存在的页面、DOM 或调用缺失时立即失败，保留原测试前提。 */
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('Expected page contract fixture to exist');
+  }
+  return value;
+}
+
 const api = vi.hoisted(() => ({
   getAssistantInfo: vi.fn(),
   getAssistantConfig: vi.fn(),
@@ -72,12 +80,14 @@ async function screen(component: Component) {
   await flushPromises();
 }
 function button(text: string) {
-  return wrapper!
-    .findAll('button')
-    .find((item) => item.text().replace(/\s/g, '').includes(text))!;
+  return required(
+    required(wrapper)
+      .findAll('button')
+      .find((item) => item.text().replace(/\s/g, '').includes(text)),
+  );
 }
 async function upload(file: File) {
-  const input = wrapper!.get('input[type="file"]');
+  const input = required(wrapper).get('input[type="file"]');
   Object.defineProperty(input.element, 'files', {
     configurable: true,
     value: [file],
@@ -86,13 +96,13 @@ async function upload(file: File) {
   await flushPromises();
 }
 async function documentForm(filename = 'guide.md') {
-  await wrapper!
+  await required(wrapper)
     .get('input[placeholder="请输入文档标题"]')
     .setValue('测试文档');
-  await wrapper!
+  await required(wrapper)
     .get('input[placeholder="例如: document.txt"]')
     .setValue(filename);
-  await wrapper!
+  await required(wrapper)
     .get('textarea[placeholder="请输入文档内容"]')
     .setValue('仅当前文档索引');
 }
@@ -100,7 +110,7 @@ async function documentForm(filename = 'guide.md') {
 describe('助手服务信息真实控件', () => {
   it('按后端契约展示初始化状态，不把它等同健康检查', async () => {
     await screen(AssistantInfo);
-    expect(wrapper!.text()).toContain('已初始化');
+    expect(required(wrapper).text()).toContain('已初始化');
   });
   it('刷新失败清空旧资料并支持重试', async () => {
     api.getAssistantInfo
@@ -120,12 +130,14 @@ describe('助手服务信息真实控件', () => {
     await screen(AssistantInfo);
     await button('刷新信息').trigger('click');
     await flushPromises();
-    expect(wrapper!.text()).not.toContain('旧服务资料');
-    expect(wrapper!.find('[role="alert"]').text()).toContain('离线信息失败');
+    expect(required(wrapper).text()).not.toContain('旧服务资料');
+    expect(required(wrapper).find('[role="alert"]').text()).toContain(
+      '离线信息失败',
+    );
     await button('重试').trigger('click');
     await flushPromises();
-    expect(wrapper!.text()).toContain('恢复服务');
-    expect(wrapper!.text()).toContain('未初始化');
+    expect(required(wrapper).text()).toContain('恢复服务');
+    expect(required(wrapper).text()).toContain('未初始化');
   });
   it('服务器新快照缺失字段不保留旧版本或约束', async () => {
     api.getAssistantInfo
@@ -142,8 +154,8 @@ describe('助手服务信息真实控件', () => {
     await screen(AssistantInfo);
     await button('刷新信息').trigger('click');
     await flushPromises();
-    expect(wrapper!.text()).not.toContain('旧版本快照');
-    expect(wrapper!.text()).not.toContain('旧约束');
+    expect(required(wrapper).text()).not.toContain('旧版本快照');
+    expect(required(wrapper).text()).not.toContain('旧约束');
   });
 });
 
@@ -166,13 +178,17 @@ describe('知识库上传与显式索引边界', () => {
     await screen(AssistantKnowledge);
     await upload(new File(['正文'], 'guide.md'));
     expect(api.uploadKnowledgeFile).toHaveBeenCalledOnce();
-    expect(wrapper!.find('.ant-upload-list-item-done').exists()).toBe(true);
+    expect(required(wrapper).find('.ant-upload-list-item-done').exists()).toBe(
+      true,
+    );
   });
   it('上传失败结束上传中状态并可重新选择文件', async () => {
     api.uploadKnowledgeFile.mockRejectedValueOnce(new Error('离线上传失败'));
     await screen(AssistantKnowledge);
     await upload(new File(['正文'], 'guide.md'));
-    expect(wrapper!.find('.ant-upload-list-item-error').exists()).toBe(true);
+    expect(required(wrapper).find('.ant-upload-list-item-error').exists()).toBe(
+      true,
+    );
     await upload(new File(['正文'], 'retry.md'));
     expect(api.uploadKnowledgeFile).toHaveBeenCalledTimes(2);
   });

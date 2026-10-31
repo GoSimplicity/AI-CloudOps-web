@@ -11,6 +11,14 @@ import RCAAnalysis from './RCAAnalysis.vue';
 import RCADiagnosis from './RCADiagnosis.vue';
 import RCACache from './RCACache.vue';
 
+/** 必须存在的页面、DOM 或调用缺失时立即失败，保留原测试前提。 */
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('Expected page contract fixture to exist');
+  }
+  return value;
+}
+
 const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const api = vi.hoisted(() => ({
   analyzeRootCause: vi.fn(),
@@ -39,7 +47,7 @@ vi.mock('echarts/core', () => ({
   }),
 }));
 let wrapper: VueWrapper | undefined;
-const state = () => (wrapper!.vm as any).$.setupState;
+const state = () => (required(wrapper).vm as any).$.setupState;
 function render(component: any, actual = false) {
   wrapper = (actual ? mount : shallowMount)(component, {
     global: {
@@ -95,7 +103,7 @@ describe('rCA请求与账户边界', () => {
   it('挂载分析/诊断页不调用模型或诊断入口', async () => {
     render(RCAAnalysis);
     await flushPromises();
-    wrapper!.unmount();
+    required(wrapper).unmount();
     render(RCADiagnosis);
     await flushPromises();
     expect(api.analyzeRootCause).not.toHaveBeenCalled();
@@ -134,7 +142,7 @@ describe('rCA请求与账户边界', () => {
       (button) => button.textContent?.replace(/\s/g, '') === '取消',
     );
     expect(cancel).toBeTruthy();
-    cancel!.click();
+    required(cancel).click();
     await flushPromises();
     expect(api.clearAllCache).not.toHaveBeenCalled();
     expect(api.clearNamespaceCache).not.toHaveBeenCalled();
@@ -258,10 +266,10 @@ describe('rCA采集状态', () => {
     await flushPromises();
     await state().startAnalysis();
     await flushPromises();
-    expect(wrapper!.text()).toContain('分析完成');
-    expect(wrapper!.text()).toContain('100.0%');
-    expect(wrapper!.text()).toContain('采集成功，数据为空');
-    expect(wrapper!.text()).toContain('部分采集失败');
+    expect(required(wrapper).text()).toContain('分析完成');
+    expect(required(wrapper).text()).toContain('100.0%');
+    expect(required(wrapper).text()).toContain('采集成功，数据为空');
+    expect(required(wrapper).text()).toContain('部分采集失败');
     expect(message.success).toHaveBeenCalled();
   });
   it('降级时空覆盖率显示未知，并保留可用结果', async () => {
@@ -270,9 +278,9 @@ describe('rCA采集状态', () => {
     await flushPromises();
     await state().startAnalysis();
     await flushPromises();
-    expect(wrapper!.text()).toContain('分析降级');
-    expect(wrapper!.text()).toContain('采集覆盖率：未知');
-    expect(wrapper!.text()).toContain('置信度');
+    expect(required(wrapper).text()).toContain('分析降级');
+    expect(required(wrapper).text()).toContain('采集覆盖率：未知');
+    expect(required(wrapper).text()).toContain('置信度');
     expect(message.success).not.toHaveBeenCalled();
   });
   it('失败和未知状态不能显示置信度、根因或成功提示', async () => {
@@ -285,13 +293,13 @@ describe('rCA采集状态', () => {
       await flushPromises();
       await state().startAnalysis();
       await flushPromises();
-      expect(wrapper!.text()).toContain(
+      expect(required(wrapper).text()).toContain(
         status === 'failed' ? '分析失败' : '状态未知',
       );
-      expect(wrapper!.text()).not.toContain('不可用的根因');
-      expect(wrapper!.text()).not.toContain('置信度');
+      expect(required(wrapper).text()).not.toContain('不可用的根因');
+      expect(required(wrapper).text()).not.toContain('置信度');
       expect(message.success).not.toHaveBeenCalled();
-      wrapper!.unmount();
+      required(wrapper).unmount();
     }
   });
   it('快速诊断失败不能把空问题列表显示成无异常', async () => {
@@ -305,9 +313,9 @@ describe('rCA采集状态', () => {
     await flushPromises();
     await state().refreshAllDiagnosis();
     await flushPromises();
-    expect(wrapper!.text()).toContain('分析失败');
-    expect(wrapper!.text()).toContain('结果不可用');
-    expect(wrapper!.text()).not.toContain('本次未见关键问题');
+    expect(required(wrapper).text()).toContain('分析失败');
+    expect(required(wrapper).text()).toContain('结果不可用');
+    expect(required(wrapper).text()).not.toContain('本次未见关键问题');
     expect(message.success).not.toHaveBeenCalled();
   });
 });

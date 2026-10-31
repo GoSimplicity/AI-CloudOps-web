@@ -4,6 +4,14 @@ import Antd from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Welcome from './SystemWelcome.vue';
 
+/** 必须存在的页面、DOM 或调用缺失时立即失败，保留原测试前提。 */
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('Expected page contract fixture to exist');
+  }
+  return value;
+}
+
 const api = vi.hoisted(() => ({
   getSystemInfoApi: vi.fn(),
   getSystemMetricsApi: vi.fn(),
@@ -60,7 +68,7 @@ const sample = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 let wrapper: VueWrapper | undefined;
-const state = () => (wrapper!.vm as any).$.setupState;
+const state = () => (required(wrapper).vm as any).$.setupState;
 function render() {
   wrapper = mount(Welcome, { global: { plugins: [Antd] } });
   return wrapper;
@@ -109,14 +117,18 @@ describe('系统欢迎页真实采样合同', () => {
   it('真实零负载、运行时长和进程数均保留，不误判缺失', async () => {
     render();
     await flushPromises();
-    const load = wrapper!
-      .findAll('.info-item')
-      .find((item) => item.text().includes('系统负载'))!;
+    const load = required(
+      required(wrapper)
+        .findAll('.info-item')
+        .find((item) => item.text().includes('系统负载')),
+    );
     expect(load.text()).toContain('0.00 / 0.00 / 0.00');
     expect(state().formatUptime(0)).toBe('0分钟');
-    const processes = wrapper!
-      .findAll('.info-item')
-      .find((item) => item.text().includes('进程数'))!;
+    const processes = required(
+      required(wrapper)
+        .findAll('.info-item')
+        .find((item) => item.text().includes('进程数')),
+    );
     expect(processes.text()).toContain('0');
     expect(state().metrics[0].value).toBe('0.0');
   });
@@ -145,8 +157,8 @@ describe('系统欢迎页真实采样合同', () => {
       -1,
     )[0];
     expect(option.series[0].data).toEqual([12, 6]);
-    expect(wrapper!.text()).toContain('累计网络流量');
-    expect(wrapper!.text()).not.toContain('实时监控');
+    expect(required(wrapper).text()).toContain('累计网络流量');
+    expect(required(wrapper).text()).not.toContain('实时监控');
   });
   it('后续请求失败清除旧healthy、数值、图表和正常事件', async () => {
     render();
@@ -166,7 +178,7 @@ describe('系统欢迎页真实采样合同', () => {
     expect(
       state().events.some((event: any) => event.id === 'system_normal'),
     ).toBe(false);
-    expect(wrapper!.text()).toContain('metrics unavailable');
+    expect(required(wrapper).text()).toContain('metrics unavailable');
   });
   it('空响应不会渲染成全零健康', async () => {
     api.getSystemInfoApi.mockResolvedValue(null);
@@ -177,7 +189,7 @@ describe('系统欢迎页真实采样合同', () => {
     expect(
       state().metrics.every((metric: any) => metric.value === '未知'),
     ).toBe(true);
-    expect(wrapper!.text()).toContain('暂无性能采样');
+    expect(required(wrapper).text()).toContain('暂无性能采样');
   });
   it('缺失或无效单项不是零，不宣称系统健康', async () => {
     api.getSystemMetricsApi.mockResolvedValue(
@@ -214,7 +226,7 @@ describe('系统欢迎页真实采样合同', () => {
     const pending = deferred();
     api.getSystemMetricsApi.mockReturnValueOnce(pending.promise);
     render();
-    wrapper!.unmount();
+    required(wrapper).unmount();
     const before = charts.instances.length;
     pending.resolve(sample({ cpu_usage: 99 }));
     await flushPromises();
@@ -269,8 +281,8 @@ describe('系统欢迎页真实采样合同', () => {
     );
     render();
     await flushPromises();
-    expect(wrapper!.text()).toContain('fresh-host');
-    expect(wrapper!.text()).toContain('host cache unavailable');
+    expect(required(wrapper).text()).toContain('fresh-host');
+    expect(required(wrapper).text()).toContain('host cache unavailable');
     expect(state().systemStatusClass).not.toBe('status-healthy');
   });
   it('只有缓存host响应时不能把其中旧数值当实时metrics', async () => {
@@ -279,7 +291,7 @@ describe('系统欢迎页真实采样合同', () => {
     );
     render();
     await flushPromises();
-    expect(wrapper!.text()).toContain('owned-host');
+    expect(required(wrapper).text()).toContain('owned-host');
     expect(state().moduleData.systemMetrics).toBeNull();
     expect(
       state().metrics.every((metric: any) => metric.value === '未知'),

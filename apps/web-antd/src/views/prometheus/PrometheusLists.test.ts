@@ -19,6 +19,14 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
   usePermission: () => ({ can: () => true, hasPerm: () => true }),
 }));
 
+/** 必须存在的页面、DOM 或调用缺失时立即失败，保留原测试前提。 */
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('Expected page contract fixture to exist');
+  }
+  return value;
+}
+
 const client = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
@@ -142,11 +150,11 @@ const row = (name: string) => ({
   need_upgrade: 2,
 });
 function button(text: string) {
-  const target = wrapper!
+  const target = required(wrapper)
     .findAll('button')
     .find((item) => item.text().replace(/\s/g, '').includes(text));
   expect(target, `button ${text}`).toBeDefined();
-  return target!;
+  return required(target);
 }
 function mountPage(
   page: (typeof pages)[number],
@@ -170,16 +178,16 @@ describe.each(pages)('$title 页面真实控件', (page) => {
       .mockResolvedValue({ items: [row('恢复记录')], total: 1 });
     mountPage(page, list);
     await flushPromises();
-    expect(wrapper!.text()).toContain('旧记录');
+    expect(required(wrapper).text()).toContain('旧记录');
     await button('重置').trigger('click');
     await flushPromises();
     expect(message.success).not.toHaveBeenCalled();
-    expect(wrapper!.text()).not.toContain('旧记录');
-    expect(wrapper!.text()).toContain('离线测试失败');
+    expect(required(wrapper).text()).not.toContain('旧记录');
+    expect(required(wrapper).text()).toContain('离线测试失败');
     await button('重试').trigger('click');
     await flushPromises();
-    expect(wrapper!.text()).toContain('恢复记录');
-    expect(wrapper!.find('[role="alert"]').exists()).toBe(false);
+    expect(required(wrapper).text()).toContain('恢复记录');
+    expect(required(wrapper).find('[role="alert"]').exists()).toBe(false);
   });
 
   it('旧响应不能覆盖更新查询的结果', async () => {
@@ -198,8 +206,8 @@ describe.each(pages)('$title 页面真实控件', (page) => {
     await flushPromises();
     complete({ items: [row('过期结果')], total: 200 });
     await flushPromises();
-    expect(wrapper!.text()).toContain('新结果');
-    expect(wrapper!.text()).not.toContain('过期结果');
+    expect(required(wrapper).text()).toContain('新结果');
+    expect(required(wrapper).text()).not.toContain('过期结果');
   });
 
   it('旧请求失败不能清除更新查询的结果', async () => {
@@ -218,15 +226,15 @@ describe.each(pages)('$title 页面真实控件', (page) => {
     await flushPromises();
     fail(new Error('过期错误'));
     await flushPromises();
-    expect(wrapper!.text()).toContain('新结果');
-    expect(wrapper!.text()).not.toContain('过期错误');
+    expect(required(wrapper).text()).toContain('新结果');
+    expect(required(wrapper).text()).not.toContain('过期错误');
   });
 
   if (page.create)
     it('创建取消不会调用写API', async () => {
       mountPage(page, vi.fn().mockResolvedValue({ items: [], total: 0 }));
       await flushPromises();
-      await button(page.create!).trigger('click');
+      await button(required(page.create)).trigger('click');
       await flushPromises();
       const cancel = [
         ...document.querySelectorAll<HTMLButtonElement>(
@@ -239,7 +247,7 @@ describe.each(pages)('$title 页面真实控件', (page) => {
       expect(document.querySelector('.ant-modal-title')?.textContent).toContain(
         page.modalTitle ?? page.create,
       );
-      cancel!.click();
+      required(cancel).click();
       await flushPromises();
       expect(document.querySelector('.ant-modal-title')).toBeNull();
       expect(client.post).not.toHaveBeenCalled();
@@ -249,20 +257,22 @@ describe.each(pages)('$title 页面真实控件', (page) => {
 });
 
 it('采集任务统计只展示本页观测，不把比例外推到总数', async () => {
-  const page = pages[1]!;
+  const page = required(pages[1]);
   mountPage(
     page,
     vi.fn().mockResolvedValue({ items: [row('本页唯一任务')], total: 100 }),
   );
   await flushPromises();
-  const statistic = wrapper!
-    .findAll('.ant-statistic')
-    .find((item) => item.text().includes('本页已启用'))!;
+  const statistic = required(
+    required(wrapper)
+      .findAll('.ant-statistic')
+      .find((item) => item.text().includes('本页已启用')),
+  );
   expect(statistic.find('.ant-statistic-content').text()).toBe('1');
 });
 
 it('告警事件次数筛选明确作用于本页并实际过滤数据', async () => {
-  const page = pages.find((item) => item.title === '告警事件')!;
+  const page = required(pages.find((item) => item.title === '告警事件'));
   mountPage(
     page,
     vi.fn().mockResolvedValue({
@@ -274,18 +284,22 @@ it('告警事件次数筛选明确作用于本页并实际过滤数据', async (
     }),
   );
   await flushPromises();
-  const filter = wrapper!
-    .findAll('.ant-select')
-    .find((item) => item.text().includes('触发次数'))!;
+  const filter = required(
+    required(wrapper)
+      .findAll('.ant-select')
+      .find((item) => item.text().includes('触发次数')),
+  );
   await filter.get('.ant-select-selector').trigger('mousedown');
   await flushPromises();
-  const option = [
-    ...document.querySelectorAll<HTMLElement>('.ant-select-item-option'),
-  ].find((item) => item.textContent?.includes('5次以上'))!;
+  const option = required(
+    [...document.querySelectorAll<HTMLElement>('.ant-select-item-option')].find(
+      (item) => item.textContent?.includes('5次以上'),
+    ),
+  );
   expect(option).toBeDefined();
   option.click();
   await flushPromises();
-  expect(wrapper!.text()).not.toContain('单次事件');
-  expect(wrapper!.text()).toContain('高频事件');
-  expect(wrapper!.text()).toContain('本页');
+  expect(required(wrapper).text()).not.toContain('单次事件');
+  expect(required(wrapper).text()).toContain('高频事件');
+  expect(required(wrapper).text()).toContain('本页');
 });
