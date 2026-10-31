@@ -39,9 +39,9 @@ const listPath = computed(() =>
 </script>
 
 <template>
-  <section class="ssh-terminal" aria-label="SSH 交互终端">
+  <section aria-label="SSH 交互终端" class="ssh-terminal">
     <div class="ssh-terminal__toolbar">
-      <div class="ssh-terminal__status" role="status" aria-live="polite">
+      <div aria-live="polite" class="ssh-terminal__status" role="status">
         <Badge :status="tones[state]" :text="labels[state]" />
         <span class="ssh-terminal__identity"
           >资源 #{{ resourceId || '未指定' }}</span
@@ -52,27 +52,27 @@ const listPath = computed(() =>
           <ArrowLeftOutlined />资源列表
         </Button>
         <Button
-          aria-label="重新连接"
           :disabled="state === 'connecting'"
+          aria-label="重新连接"
           @click="connect"
         >
           <ReloadOutlined />重新连接
         </Button>
         <Button
           v-if="state === 'connecting' || state === 'connected'"
-          danger
           aria-label="关闭连接"
+          danger
           @click="disconnect"
         >
           <DisconnectOutlined />关闭连接
         </Button>
       </div>
     </div>
-    <Alert v-if="error" :message="error" type="error" show-icon />
+    <Alert v-if="error" :message="error" show-icon type="error" />
     <div
       ref="viewport"
-      class="ssh-terminal__viewport"
       aria-label="终端输入与输出"
+      class="ssh-terminal__viewport"
     ></div>
     <p class="ssh-terminal__hint">
       在终端内输入命令，Ctrl+C 中断，窗口大小自动同步。重新连接会清空本地显示

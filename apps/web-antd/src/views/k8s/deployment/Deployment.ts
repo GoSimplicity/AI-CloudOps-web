@@ -1,41 +1,41 @@
-import { ref, computed, h } from 'vue';
+import { computed, h, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 import yaml from 'js-yaml';
 import {
-  type K8sDeployment,
-  type GetDeploymentListReq,
-  type CreateDeploymentReq,
-  type CreateDeploymentByYamlReq,
-  type UpdateDeploymentReq,
-  type UpdateDeploymentByYamlReq,
-  K8sDeploymentStatus,
-  getDeploymentListApi,
-  getDeploymentDetailsApi,
-  getDeploymentYamlApi,
   createDeploymentApi,
   createDeploymentByYamlApi,
+  type CreateDeploymentByYamlReq,
+  type CreateDeploymentReq,
+  deleteDeploymentApi,
+  getDeploymentDetailsApi,
+  getDeploymentHistoryApi,
+  getDeploymentListApi,
+  type GetDeploymentListReq,
+  getDeploymentPodsApi,
+  getDeploymentYamlApi,
+  type K8sDeployment,
+  K8sDeploymentStatus,
+  pauseDeploymentApi,
+  restartDeploymentApi,
+  resumeDeploymentApi,
+  scaleDeploymentApi,
   updateDeploymentApi,
   updateDeploymentByYamlApi,
-  deleteDeploymentApi,
-  restartDeploymentApi,
-  scaleDeploymentApi,
-  pauseDeploymentApi,
-  resumeDeploymentApi,
-  getDeploymentPodsApi,
-  getDeploymentHistoryApi,
+  type UpdateDeploymentByYamlReq,
+  type UpdateDeploymentReq,
 } from '#/api/core/k8s/k8s_deployment';
 import {
-  type K8sCluster,
-  type ListClustersReq,
-  type KeyValueList,
-  getClustersListApi,
   Env,
+  getClustersListApi,
+  type K8sCluster,
+  type KeyValueList,
+  type ListClustersReq,
 } from '#/api/core/k8s/k8s_cluster';
 import {
+  getNamespacesListApi,
   type K8sNamespace,
   type K8sNamespaceListReq,
-  getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
 import {
   shouldNotifyPageError,

@@ -7,8 +7,8 @@ import {
 } from '#/api/core/tree/tree_cloud';
 import CloudManagedOperationRecovery from './CloudManagedOperationRecovery.vue';
 import {
-  parseManagedMarker,
   type ManagedOperationMarker,
+  parseManagedMarker,
 } from './managed-operation-marker';
 import { validManagedOperation } from './managed-operation-contract';
 
@@ -224,9 +224,9 @@ onBeforeUnmount(() => {
     <h3>持久操作记录</h3>
     <a-alert
       v-if="!canList"
-      type="warning"
       message="缺少操作列表权限，无法确认该范围的操作状态"
       show-icon
+      type="warning"
     />
     <template v-else>
       <a-space wrap>
@@ -246,8 +246,8 @@ onBeforeUnmount(() => {
           超级管理员：查看所有用户
         </a-checkbox>
         <a-button
-          :loading="loading"
           :disabled="reviewBusy"
+          :loading="loading"
           @click="
             clearSelection();
             load();
@@ -256,42 +256,42 @@ onBeforeUnmount(() => {
           刷新操作列表
         </a-button>
       </a-space>
-      <a-alert v-if="error" type="warning" :message="error" show-icon />
+      <a-alert v-if="error" :message="error" show-icon type="warning" />
       <a-alert
         v-else-if="scopeBlocked"
-        type="warning"
         message="服务端确认该范围仍有未确认操作；若本人列表没有记录，请联系超级管理员核对"
         show-icon
+        type="warning"
       />
       <a-table
         :data-source="records"
-        :row-key="rowKey"
         :loading="loading"
         :pagination="false"
-        size="small"
+        :row-key="rowKey"
         :scroll="{ x: 640 }"
+        size="small"
       >
-        <a-table-column title="所属用户" key="owner">
+        <a-table-column key="owner" title="所属用户">
           <template #default="{ record }">
             {{ record.owner_id }}
           </template>
         </a-table-column>
-        <a-table-column title="操作 ID" key="operation">
+        <a-table-column key="operation" title="操作 ID">
           <template #default="{ record }">
             {{ record.operation_id }}
           </template>
         </a-table-column>
-        <a-table-column title="状态" key="state">
+        <a-table-column key="state" title="状态">
           <template #default="{ record }">
             {{ labels[record.state] ?? '未知' }}
           </template>
         </a-table-column>
-        <a-table-column title="操作" key="action">
+        <a-table-column key="action" title="操作">
           <template #default="{ record }">
             <a-button
               v-if="canRead"
-              type="link"
               :disabled="reviewBusy"
+              type="link"
               @click="choose(record)"
             >
               查看或核对
@@ -302,9 +302,9 @@ onBeforeUnmount(() => {
       <a-pagination
         v-if="total > size"
         :current="page"
-        :total="total"
         :page-size="size"
         :show-size-changer="false"
+        :total="total"
         @change="changePage"
       />
       <template v-if="selected">
@@ -374,29 +374,29 @@ onBeforeUnmount(() => {
         </template>
         <template v-else-if="!selectedMarker">
           <a-alert
-            type="info"
             message="该旧记录没有资源快照，请输入原请求的资源ID；服务端会验证原请求摘要，不会猜测关联"
             show-icon
+            type="info"
           />
           <a-textarea
             v-model:value="resourceInput"
-            aria-label="旧操作资源ID"
             :maxlength="12000"
             :rows="3"
+            aria-label="旧操作资源ID"
           />
           <a-button @click="useResourceIDs">使用核对的资源ID</a-button>
         </template>
         <CloudManagedOperationRecovery
           v-else
           :key="`${viewer}:${selected.owner_id}:${selected.operation_id}`"
-          :marker="selectedMarker"
-          :scope="scope"
-          :owner="viewer"
-          :operation-owner="selected.owner_id"
           :allow-cross-owner="superAdmin"
+          :authorize="authorize"
           :can-read="canRead"
           :can-review="canReview"
-          :authorize="authorize"
+          :marker="selectedMarker"
+          :operation-owner="selected.owner_id"
+          :owner="viewer"
+          :scope="scope"
           @acknowledged="acknowledged"
           @busy="
             reviewBusy = $event;

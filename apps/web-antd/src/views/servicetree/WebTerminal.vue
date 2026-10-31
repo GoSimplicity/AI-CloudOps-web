@@ -12,9 +12,9 @@ const resourceId = computed(() =>
 
 <template>
   <OpsPage
-    title="本地资源终端"
     description="使用资源配置建立 SSH 会话并执行交互操作"
+    title="本地资源终端"
   >
-    <SshTerminal kind="local" :resource-id="resourceId" />
+    <SshTerminal :resource-id="resourceId" kind="local" />
   </OpsPage>
 </template>

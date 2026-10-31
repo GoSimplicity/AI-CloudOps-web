@@ -1,27 +1,27 @@
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 import yaml from 'js-yaml';
 import { formatK8sTime } from '../shared/utils';
 import {
-  type K8sYamlTemplate,
-  type YamlTemplateListReq,
-  type YamlTemplateCreateReq,
-  type YamlTemplateUpdateReq,
-  type YamlTemplateCheckReq,
-  type YamlTemplateDeleteReq,
-  getYamlTemplateList,
+  checkYamlTemplate,
   createYamlTemplate,
-  updateYamlTemplate,
   deleteYamlTemplate,
   getYamlTemplateDetail,
-  checkYamlTemplate,
+  getYamlTemplateList,
+  type K8sYamlTemplate,
+  updateYamlTemplate,
+  type YamlTemplateCheckReq,
+  type YamlTemplateCreateReq,
+  type YamlTemplateDeleteReq,
+  type YamlTemplateListReq,
+  type YamlTemplateUpdateReq,
 } from '#/api/core/k8s/k8s_yaml';
 import {
+  Env,
+  getClustersListApi,
   type K8sCluster,
   type ListClustersReq,
-  getClustersListApi,
-  Env,
 } from '#/api/core/k8s/k8s_cluster';
 import {
   shouldNotifyPageError,

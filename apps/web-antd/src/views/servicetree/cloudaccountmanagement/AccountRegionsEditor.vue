@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import {
-  CloudProvider,
   type CloudAccountRegionInput,
+  CloudProvider,
 } from '#/api/core/tree/tree_account';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { FormItemRest, message, Modal } from 'ant-design-vue';
 import {
-  getAvailableRegions,
   type AvailableRegion,
+  getAvailableRegions,
 } from '#/api/core/tree/tree_account_region';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 import { computeProviderName, isSupportedAccountProvider } from './provider';
@@ -170,8 +170,6 @@ const options = computed(() => {
     <a-select
       id="account-region-codes"
       v-model:value="codes"
-      mode="tags"
-      :token-separators="[',']"
       :disabled="disabled"
       :options="options"
       :placeholder="
@@ -181,7 +179,9 @@ const options = computed(() => {
             ? '输入 Azure 地域，如 eastus'
             : '输入地域代码，回车添加，可选择多个'
       "
+      :token-separators="[',']"
       aria-label="授权地域代码"
+      mode="tags"
     />
     <p class="region-hint">
       按账户授权范围手动填写；地域参考仅供参考，云端查询使用已保存凭据。
@@ -224,10 +224,10 @@ const options = computed(() => {
         <label :for="`project-${item.region}`">{{ item.region }} 项目 ID</label>
         <a-input
           :id="`project-${item.region}`"
-          :value="item.project_id ?? ''"
+          :aria-label="`${item.region} 项目 ID`"
           :disabled="disabled"
           :maxlength="64"
-          :aria-label="`${item.region} 项目 ID`"
+          :value="item.project_id ?? ''"
           placeholder="请输入该地域的项目 ID"
           @update:value="(value: string) => updateProjectID(item.region, value)"
         />

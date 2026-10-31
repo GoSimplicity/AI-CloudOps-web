@@ -1,31 +1,31 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  PlusOutlined,
-  FormOutlined,
   CheckCircleOutlined,
-  EditOutlined,
-  StopOutlined,
   DownOutlined,
+  EditOutlined,
   EyeOutlined,
+  FormOutlined,
+  PlusOutlined,
+  StopOutlined,
 } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
-  listWorkorderFormDesign,
-  detailWorkorderFormDesign,
   createWorkorderFormDesign,
-  updateWorkorderFormDesign,
-  deleteWorkorderFormDesign,
-  FormDesignStatus,
-  FormFieldType,
-  type WorkorderFormDesignItem,
-  type FormField,
-  type FormSchema,
-  type ListWorkorderFormDesignReq,
   type CreateWorkorderFormDesignReq,
+  deleteWorkorderFormDesign,
+  detailWorkorderFormDesign,
+  FormDesignStatus,
+  type FormField,
+  FormFieldType,
+  type FormSchema,
+  listWorkorderFormDesign,
+  type ListWorkorderFormDesignReq,
+  updateWorkorderFormDesign,
   type UpdateWorkorderFormDesignReq,
+  type WorkorderFormDesignItem,
 } from '#/api/core/workorder/workorder_form_design';
 import type { WorkorderCategoryItem } from '#/api/core/workorder/workorder_category';
 import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
@@ -1142,7 +1142,7 @@ onMounted(() => {
 <template>
   <OpsPage title="表单管理">
     <template #actions>
-      <a-button type="primary" @click="handleCreateForm" class="btn-create">
+      <a-button class="btn-create" type="primary" @click="handleCreateForm">
         <template #icon>
           <PlusOutlined />
         </template>
@@ -1153,18 +1153,18 @@ onMounted(() => {
       <div class="search-filters">
         <a-input-search
           v-model:value="searchQuery"
-          placeholder="搜索表单..."
-          class="search-input"
-          @search="handleSearch"
-          @change="handleSearchChange"
           allow-clear
+          class="search-input"
+          placeholder="搜索表单..."
+          @change="handleSearchChange"
+          @search="handleSearch"
         />
         <a-select
           v-model:value="categoryFilter"
-          placeholder="选择分类"
-          class="category-filter"
-          @change="handleCategoryChange"
           allow-clear
+          class="category-filter"
+          placeholder="选择分类"
+          @change="handleCategoryChange"
         >
           <a-select-option :value="undefined">全部分类</a-select-option>
           <a-select-option
@@ -1177,10 +1177,10 @@ onMounted(() => {
         </a-select>
         <a-select
           v-model:value="statusFilter"
-          placeholder="状态"
-          class="status-filter"
-          @change="handleStatusChange"
           allow-clear
+          class="status-filter"
+          placeholder="状态"
+          @change="handleStatusChange"
         >
           <a-select-option :value="undefined">全部状态</a-select-option>
           <a-select-option :value="1">草稿</a-select-option>
@@ -1189,16 +1189,16 @@ onMounted(() => {
         </a-select>
         <a-select
           v-model:value="templateFilter"
-          placeholder="模板类型"
-          class="template-filter"
-          @change="handleTemplateChange"
           allow-clear
+          class="template-filter"
+          placeholder="模板类型"
+          @change="handleTemplateChange"
         >
           <a-select-option :value="undefined">全部类型</a-select-option>
           <a-select-option :value="1">模板</a-select-option>
           <a-select-option :value="2">非模板</a-select-option>
         </a-select>
-        <a-button @click="handleResetFilters" class="reset-btn">
+        <a-button class="reset-btn" @click="handleResetFilters">
           重置
         </a-button>
       </div>
@@ -1207,12 +1207,12 @@ onMounted(() => {
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="[16, 16]">
-          <a-col :xs="12" :sm="12" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="12" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页表单数"
                 :value="stats.total"
                 :value-style="{ color: '#3f8600' }"
+                title="本页表单数"
               >
                 <template #prefix>
                   <FormOutlined />
@@ -1220,12 +1220,12 @@ onMounted(() => {
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="12" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="12" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页已发布"
                 :value="stats.published"
                 :value-style="{ color: '#52c41a' }"
+                title="本页已发布"
               >
                 <template #prefix>
                   <CheckCircleOutlined />
@@ -1233,12 +1233,12 @@ onMounted(() => {
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="12" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="12" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页草稿"
                 :value="stats.draft"
                 :value-style="{ color: '#faad14' }"
+                title="本页草稿"
               >
                 <template #prefix>
                   <EditOutlined />
@@ -1246,12 +1246,12 @@ onMounted(() => {
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="12" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="12" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页已归档"
                 :value="stats.archived"
                 :value-style="{ color: '#cf1322' }"
+                title="本页已归档"
               >
                 <template #prefix>
                   <StopOutlined />
@@ -1263,7 +1263,7 @@ onMounted(() => {
       </div>
     </template>
 
-    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button size="small" @click="loadFormDesigns"> 重试 </a-button>
       </template>
@@ -1272,13 +1272,13 @@ onMounted(() => {
     <div class="table-container">
       <a-card>
         <a-table
-          :data-source="formDesigns"
           :columns="columns"
-          :pagination="paginationConfig"
+          :data-source="formDesigns"
           :loading="loading"
-          row-key="id"
-          bordered
+          :pagination="paginationConfig"
           :scroll="{ x: 1400 }"
+          bordered
+          row-key="id"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -1362,7 +1362,7 @@ onMounted(() => {
                       </a-tag>
                     </div>
                   </template>
-                  <a-tag size="small" color="default">
+                  <a-tag color="default" size="small">
                     +{{ (record.tags || []).length - 2 }}
                   </a-tag>
                 </a-popover>
@@ -1379,15 +1379,15 @@ onMounted(() => {
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleViewForm(record)"
                 >
                   查看
                 </a-button>
                 <a-button
-                  type="default"
                   size="small"
+                  type="default"
                   @click="handleEditForm(record)"
                 >
                   编辑
@@ -1399,13 +1399,13 @@ onMounted(() => {
                         <EyeOutlined /> 预览
                       </a-menu-item>
                       <a-menu-divider />
-                      <a-menu-item key="publish" v-if="record.status === 1">
+                      <a-menu-item v-if="record.status === 1" key="publish">
                         发布
                       </a-menu-item>
-                      <a-menu-item key="archive" v-if="record.status === 2">
+                      <a-menu-item v-if="record.status === 2" key="archive">
                         归档
                       </a-menu-item>
-                      <a-menu-item key="unarchive" v-if="record.status === 3">
+                      <a-menu-item v-if="record.status === 3" key="unarchive">
                         取消归档
                       </a-menu-item>
                       <a-menu-divider
@@ -1434,13 +1434,13 @@ onMounted(() => {
 
     <!-- 表单创建/编辑对话框 -->
     <a-modal
+      :destroy-on-close="true"
       :open="formDialogVisible"
       :title="formDialog.isEdit ? '编辑表单' : '创建表单'"
       :width="formDialogWidth"
-      @ok="saveForm"
-      @cancel="closeFormDialog"
-      :destroy-on-close="true"
       class="responsive-modal form-design-modal"
+      @cancel="closeFormDialog"
+      @ok="saveForm"
     >
       <a-form
         ref="formRef"
@@ -1467,11 +1467,8 @@ onMounted(() => {
         <a-form-item label="分类" name="category_id">
           <a-select
             v-model:value="formDialog.form.category_id"
-            placeholder="请选择分类"
-            style="width: 100%"
-            show-search
             :filter-option="false"
-            option-label-prop="children"
+            :loading="categorySelectorLoading"
             :not-found-content="
               categorySelectorLoading
                 ? undefined
@@ -1479,11 +1476,14 @@ onMounted(() => {
                   ? '无搜索结果'
                   : '无数据'
             "
-            @search="handleCategorySearch"
+            allow-clear
+            option-label-prop="children"
+            placeholder="请选择分类"
+            show-search
+            style="width: 100%"
             @dropdown-visible-change="handleCategoryDropdownChange"
             @popup-scroll="handleCategoryScroll"
-            allow-clear
-            :loading="categorySelectorLoading"
+            @search="handleCategorySearch"
           >
             <template #notFoundContent>
               <div v-if="categorySelectorLoading" class="category-loading">
@@ -1511,15 +1511,15 @@ onMounted(() => {
             <a-select-option
               v-if="categoryPagination.hasMore"
               :value="'__load_more__'"
-              disabled
               class="load-more-option"
+              disabled
             >
               <div class="load-more-content" @click.stop="loadMoreCategories">
                 <a-button
-                  type="link"
-                  size="small"
                   :loading="categorySelectorLoading"
+                  size="small"
                   style="padding: 0; height: auto; font-size: 12px"
+                  type="link"
                 >
                   <template v-if="!categorySelectorLoading">
                     <Icon
@@ -1538,11 +1538,11 @@ onMounted(() => {
         <a-form-item label="标签" name="tags">
           <a-select
             v-model:value="formDialog.form.tags"
+            :max-tag-count="5"
+            :max-tag-text-length="10"
             mode="tags"
             placeholder="请输入标签，按回车添加"
             style="width: 100%"
-            :max-tag-count="5"
-            :max-tag-text-length="10"
           />
         </a-form-item>
 
@@ -1553,7 +1553,7 @@ onMounted(() => {
           </a-radio-group>
         </a-form-item>
 
-        <a-form-item label="状态" name="status" v-if="formDialog.isEdit">
+        <a-form-item v-if="formDialog.isEdit" label="状态" name="status">
           <a-select
             v-model:value="formDialog.form.status"
             placeholder="请选择状态"
@@ -1571,16 +1571,16 @@ onMounted(() => {
               <h4>字段配置 (JSON格式)</h4>
               <div class="header-actions">
                 <a-button
+                  :disabled="!formDialog.form.fieldsJson"
                   size="small"
                   @click="formatFieldsJson"
-                  :disabled="!formDialog.form.fieldsJson"
                 >
                   格式化
                 </a-button>
                 <a-button
+                  :disabled="!formDialog.form.fieldsJson"
                   size="small"
                   @click="validateFieldsJson"
-                  :disabled="!formDialog.form.fieldsJson"
                 >
                   验证
                 </a-button>
@@ -1600,20 +1600,20 @@ onMounted(() => {
 
             <div v-if="jsonValidationError" class="json-error-message">
               <a-alert
-                type="error"
                 :message="jsonValidationError"
-                show-icon
                 closable
+                show-icon
+                type="error"
                 @close="jsonValidationError = ''"
               />
             </div>
 
             <div class="json-help">
               <a-alert
-                type="info"
-                message="字段配置说明"
                 :description="fieldsHelpText"
+                message="字段配置说明"
                 show-icon
+                type="info"
               />
             </div>
           </div>
@@ -1621,41 +1621,41 @@ onMounted(() => {
 
         <a-alert
           v-if="!formDialog.isEdit"
-          message="提示"
           description="您可以现在设计表单字段，也可以创建后再进行设计。"
-          type="info"
+          message="提示"
           show-icon
           style="margin-bottom: 16px"
+          type="info"
         />
       </a-form>
     </a-modal>
 
     <!-- 字段示例对话框 -->
     <a-modal
-      :open="exampleDialogVisible"
-      title="表单字段JSON示例"
-      :width="800"
       :footer="null"
-      @cancel="closeExampleDialog"
+      :open="exampleDialogVisible"
+      :width="800"
       class="example-dialog"
+      title="表单字段JSON示例"
+      @cancel="closeExampleDialog"
     >
       <div class="example-content">
         <a-tabs>
           <a-tab-pane key="simple" tab="简单示例">
             <pre class="json-example">{{ simpleFieldsExample }}</pre>
-            <a-button @click="copyExample(simpleFieldsExample)" size="small">
+            <a-button size="small" @click="copyExample(simpleFieldsExample)">
               复制到编辑器
             </a-button>
           </a-tab-pane>
           <a-tab-pane key="complex" tab="复杂示例">
             <pre class="json-example">{{ complexFieldsExample }}</pre>
-            <a-button @click="copyExample(complexFieldsExample)" size="small">
+            <a-button size="small" @click="copyExample(complexFieldsExample)">
               复制到编辑器
             </a-button>
           </a-tab-pane>
           <a-tab-pane key="all-types" tab="所有字段类型">
             <pre class="json-example">{{ allTypesFieldsExample }}</pre>
-            <a-button @click="copyExample(allTypesFieldsExample)" size="small">
+            <a-button size="small" @click="copyExample(allTypesFieldsExample)">
               复制到编辑器
             </a-button>
           </a-tab-pane>
@@ -1665,12 +1665,12 @@ onMounted(() => {
 
     <!-- 预览对话框 -->
     <a-modal
-      :open="previewDialogVisible"
-      title="表单预览"
-      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closePreviewDialog"
+      :open="previewDialogVisible"
+      :width="previewDialogWidth"
       class="preview-dialog"
+      title="表单预览"
+      @cancel="closePreviewDialog"
     >
       <div v-if="previewDialog.form" class="form-preview-wrapper">
         <a-spin :spinning="previewLoading">
@@ -1684,11 +1684,11 @@ onMounted(() => {
             </p>
             <div class="preview-mode-notice">
               <a-alert
-                message="预览模式"
-                description="您可以查看和选择表单字段，但无法提交表单。"
-                type="info"
-                show-icon
                 banner
+                description="您可以查看和选择表单字段，但无法提交表单。"
+                message="预览模式"
+                show-icon
+                type="info"
               />
             </div>
           </div>
@@ -1696,8 +1696,8 @@ onMounted(() => {
           <div class="preview-form">
             <a-form
               :model="previewFormData"
-              layout="vertical"
               class="dynamic-form"
+              layout="vertical"
             >
               <template
                 v-for="field in previewDialog.form.schema.fields"
@@ -1722,8 +1722,8 @@ onMounted(() => {
                     v-else-if="field.type === FormFieldType.Number"
                     v-model:value="previewFormData[field.name]"
                     :placeholder="field.placeholder"
-                    style="width: 100%"
                     class="preview-input"
+                    style="width: 100%"
                   />
 
                   <!-- 密码输入框 -->
@@ -1748,8 +1748,8 @@ onMounted(() => {
                     v-else-if="field.type === FormFieldType.Date"
                     v-model:value="previewFormData[field.name]"
                     :placeholder="field.placeholder"
-                    style="width: 100%"
                     class="preview-input"
+                    style="width: 100%"
                   />
 
                   <!-- 下拉选择 -->
@@ -1757,8 +1757,8 @@ onMounted(() => {
                     v-else-if="field.type === FormFieldType.Select"
                     v-model:value="previewFormData[field.name]"
                     :placeholder="field.placeholder || '请选择'"
-                    style="width: 100%"
                     class="preview-input"
+                    style="width: 100%"
                   >
                     <a-select-option
                       v-for="option in field.options"
@@ -1815,14 +1815,14 @@ onMounted(() => {
 
               <div class="preview-form-actions">
                 <a-tooltip title="预览模式下无法提交表单">
-                  <a-button type="primary" disabled size="large">
+                  <a-button disabled size="large" type="primary">
                     提交表单 (预览模式)
                   </a-button>
                 </a-tooltip>
                 <a-button
-                  @click="resetPreviewForm"
                   size="large"
                   style="margin-left: 12px"
+                  @click="resetPreviewForm"
                 >
                   重置表单
                 </a-button>
@@ -1835,12 +1835,12 @@ onMounted(() => {
 
     <!-- 详情对话框 -->
     <a-modal
-      :open="detailDialogVisible"
-      title="表单详情"
-      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeDetailDialog"
+      :open="detailDialogVisible"
+      :width="previewDialogWidth"
       class="detail-dialog"
+      title="表单详情"
+      @cancel="closeDetailDialog"
     >
       <div v-if="detailDialog.form" class="form-details">
         <div class="detail-header">
@@ -1855,7 +1855,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <a-descriptions bordered :column="1" :labelStyle="{ width: '120px' }">
+        <a-descriptions :column="1" :labelStyle="{ width: '120px' }" bordered>
           <a-descriptions-item label="ID">
             {{ detailDialog.form.id }}
           </a-descriptions-item>
@@ -1875,8 +1875,8 @@ onMounted(() => {
             {{ formatFullDateTime(detailDialog.form.updated_at || '') }}
           </a-descriptions-item>
           <a-descriptions-item
-            label="标签"
             v-if="detailDialog.form.tags && detailDialog.form.tags.length"
+            label="标签"
           >
             <div class="detail-tags-list">
               <a-tag
@@ -1896,13 +1896,13 @@ onMounted(() => {
         <div class="schema-preview">
           <h3>表单结构</h3>
           <a-table
-            :data-source="detailDialog.form.schema.fields"
             :columns="schemaColumns"
+            :data-source="detailDialog.form.schema.fields"
             :pagination="false"
-            bordered
-            size="small"
-            row-key="name"
             :scroll="{ x: 600 }"
+            bordered
+            row-key="name"
+            size="small"
           >
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'required'">

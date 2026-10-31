@@ -1,17 +1,17 @@
 <template>
   <OpsPage
-    title="快速诊断"
-    description="按选择范围诊断，部分失败与未知状态单独显示"
     class="rca-diagnosis"
+    description="按选择范围诊断，部分失败与未知状态单独显示"
+    title="快速诊断"
   >
     <!-- 页面头部 -->
     <template #actions>
       <a-button
-        type="primary"
-        size="large"
-        @click="refreshAllDiagnosis"
-        :loading="loading"
         :disabled="!isFormValid || loading"
+        :loading="loading"
+        size="large"
+        type="primary"
+        @click="refreshAllDiagnosis"
       >
         {{ loading ? '诊断中...' : '开始诊断' }}
       </a-button>
@@ -21,9 +21,9 @@
     <a-alert
       v-if="diagnosisError"
       :message="diagnosisError"
-      type="error"
-      show-icon
       role="alert"
+      show-icon
+      type="error"
     />
     <div class="config-section">
       <div class="section-header">
@@ -39,8 +39,8 @@
           <a-input
             v-model:value="inputData.namespace"
             :disabled="loading"
-            placeholder="输入K8s命名空间"
             class="modern-input"
+            placeholder="输入K8s命名空间"
           />
         </div>
         <div class="config-item">
@@ -84,8 +84,8 @@
 
     <CollectionSummary
       v-if="quickDiagnosisResult && !loading"
-      :status="quickDiagnosisResult.status"
       :collection="quickDiagnosisResult.collection"
+      :status="quickDiagnosisResult.status"
     />
 
     <!-- 核心指标卡片 -->
@@ -199,7 +199,7 @@
     </div>
 
     <!-- 诊断结果区域 -->
-    <div class="diagnosis-section" v-if="quickDiagnosisResult || loading">
+    <div v-if="quickDiagnosisResult || loading" class="diagnosis-section">
       <!-- 加载状态 -->
       <div v-if="loading" class="loading-container">
         <a-spin />
@@ -231,7 +231,7 @@
                 <span class="issue-severity">{{
                   issue.severity || 'critical'
                 }}</span>
-                <span class="issue-time" v-if="issue.timestamp">
+                <span v-if="issue.timestamp" class="issue-time">
                   {{ formatShortTime(issue.timestamp) }}
                 </span>
               </div>
@@ -244,8 +244,8 @@
               >
                 <div class="confidence-bar">
                   <div
-                    class="confidence-fill"
                     :style="{ width: issue.confidence * 100 + '%' }"
+                    class="confidence-fill"
                   ></div>
                 </div>
                 <span class="confidence-text"
@@ -291,7 +291,7 @@
       :message="`未完成：${diagnosisFailures.join('、')}。当前结果不代表完整健康检查。`"
       show-icon
     />
-    <div class="charts-section" v-if="hasInitialData">
+    <div v-if="hasInitialData" class="charts-section">
       <div class="chart-container">
         <div class="chart-header">
           <h3>本次诊断错误总量</h3>
@@ -312,7 +312,7 @@
     </div>
 
     <!-- 根因分析详情 -->
-    <div class="rca-section" v-if="rcaAnalysisResult">
+    <div v-if="rcaAnalysisResult" class="rca-section">
       <div class="section-header">
         <h2>根因分析</h2>
         <a-tag v-if="rcaUsable" color="#6366f1">
@@ -326,8 +326,8 @@
       </div>
 
       <CollectionSummary
-        :status="rcaAnalysisResult.status"
         :collection="rcaAnalysisResult.collection"
+        :status="rcaAnalysisResult.status"
       />
       <div v-if="rcaUsable" class="rca-content">
         <div
@@ -340,16 +340,16 @@
             <div class="cause-confidence">
               <div class="confidence-mini-bar">
                 <div
-                  class="confidence-mini-fill"
                   :style="{ width: cause.confidence * 100 + '%' }"
+                  class="confidence-mini-fill"
                 ></div>
               </div>
             </div>
           </div>
           <p class="cause-description">{{ cause.description || '暂无描述' }}</p>
           <div
-            class="cause-components"
             v-if="cause.affected_components?.length"
+            class="cause-components"
           >
             <span class="components-label">影响组件:</span>
             <a-tag
@@ -361,8 +361,8 @@
             </a-tag>
           </div>
           <div
-            class="cause-recommendations"
             v-if="cause.recommendations?.length"
+            class="cause-recommendations"
           >
             <span class="components-label">建议:</span>
             <div class="rec-list">
@@ -380,7 +380,7 @@
     </div>
 
     <!-- 系统摘要 -->
-    <div class="summary-section" v-if="hasInitialData">
+    <div v-if="hasInitialData" class="summary-section">
       <div class="summary-grid">
         <div class="summary-item">
           <span class="summary-label">命名空间</span>
@@ -407,8 +407,8 @@
           }}</span>
         </div>
         <div
-          class="summary-item"
           v-if="quickDiagnosisResult?.analysis_duration"
+          class="summary-item"
         >
           <span class="summary-label">分析耗时</span>
           <span class="summary-value"
@@ -426,15 +426,15 @@ import CollectionSummary from './CollectionSummary.vue';
 import { analysisStatus } from './collection';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
-import { ref, computed, onMounted, nextTick, onUnmounted, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 // 按需引入echarts，减少打包体积
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart, PieChart } from 'echarts/charts';
 import {
   GridComponent,
-  TooltipComponent,
   LegendComponent,
   TitleComponent,
+  TooltipComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
@@ -452,16 +452,16 @@ echarts.use([
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import type {
-  QuickDiagnosisResponse,
-  EventPatternsResponse,
   ErrorSummaryResponse,
+  EventPatternsResponse,
+  QuickDiagnosisResponse,
   RCAAnalysisResponse,
 } from '#/api/core/aiops/rca';
 import {
-  quickDiagnosis,
-  getEventPatterns,
-  getErrorSummary,
   analyzeRootCause,
+  getErrorSummary,
+  getEventPatterns,
+  quickDiagnosis,
 } from '#/api/core/aiops/rca';
 
 // 响应式数据

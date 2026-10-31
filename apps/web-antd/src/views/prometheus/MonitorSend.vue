@@ -1,11 +1,11 @@
 <template>
-  <OpsPage title="发送组" description="配置接收对象、通知方式与升级规则">
+  <OpsPage description="配置接收对象、通知方式与升级规则" title="发送组">
     <!-- 页面标题 -->
     <template #actions>
       <a-button
+        class="btn-create"
         type="primary"
         @click="handleCreateSendGroup"
-        class="btn-create"
       >
         <template #icon>
           <PlusOutlined />
@@ -17,18 +17,18 @@
       <div class="search-filters">
         <a-input-search
           v-model:value="searchQuery"
-          placeholder="搜索发送组名称..."
-          class="search-input"
-          @search="handleSearch"
-          @change="handleSearchChange"
           allow-clear
+          class="search-input"
+          placeholder="搜索发送组名称..."
+          @change="handleSearchChange"
+          @search="handleSearch"
         />
         <a-select
           v-model:value="enableFilter"
-          placeholder="启用状态"
-          class="filter-select"
-          @change="handleEnableChange"
           allow-clear
+          class="filter-select"
+          placeholder="启用状态"
+          @change="handleEnableChange"
         >
           <a-select-option :value="undefined">全部</a-select-option>
           <a-select-option :value="1">启用</a-select-option>
@@ -36,16 +36,16 @@
         </a-select>
         <a-select
           v-model:value="upgradeFilter"
-          placeholder="升级配置"
-          class="filter-select"
-          @change="handleUpgradeChange"
           allow-clear
+          class="filter-select"
+          placeholder="升级配置"
+          @change="handleUpgradeChange"
         >
           <a-select-option :value="undefined">全部</a-select-option>
           <a-select-option :value="1">需要升级</a-select-option>
           <a-select-option :value="2">无需升级</a-select-option>
         </a-select>
-        <a-button @click="handleResetFilters" class="reset-btn">
+        <a-button class="reset-btn" @click="handleResetFilters">
           重置
         </a-button>
       </div>
@@ -55,12 +55,12 @@
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="[16, 16]">
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="总发送组"
                 :value="loadError ? '未知' : stats.total"
                 :value-style="{ color: '#3f8600' }"
+                title="总发送组"
               >
                 <template #prefix>
                   <Icon icon="carbon:send" />
@@ -68,12 +68,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页启用中"
                 :value="loadError ? '未知' : stats.enabled"
                 :value-style="{ color: '#52c41a' }"
+                title="本页启用中"
               >
                 <template #prefix>
                   <Icon icon="carbon:checkmark" />
@@ -81,12 +81,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页配置升级"
                 :value="loadError ? '未知' : stats.needUpgrade"
                 :value-style="{ color: '#faad14' }"
+                title="本页配置升级"
               >
                 <template #prefix>
                   <Icon icon="carbon:upgrade" />
@@ -94,12 +94,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页关联池数"
                 :value="loadError ? '未知' : stats.associatedPools"
                 :value-style="{ color: '#cf1322' }"
+                title="本页关联池数"
               >
                 <template #prefix>
                   <Icon icon="carbon:link" />
@@ -113,13 +113,13 @@
 
     <a-alert
       v-if="loadError"
-      type="error"
-      show-icon
       :message="loadError"
       role="alert"
+      show-icon
+      type="error"
     >
       <template #action>
-        <a-button size="small" :loading="loading" @click="loadSendGroupList">
+        <a-button :loading="loading" size="small" @click="loadSendGroupList">
           重试
         </a-button>
       </template>
@@ -129,13 +129,13 @@
     <div class="table-container">
       <a-card>
         <a-table
-          :data-source="sendGroupList"
           :columns="columns"
-          :pagination="paginationConfig"
+          :data-source="sendGroupList"
           :loading="loading"
-          row-key="id"
-          bordered
+          :pagination="paginationConfig"
           :scroll="{ x: 1400 }"
+          bordered
+          row-key="id"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -261,7 +261,7 @@
                     record.need_upgrade === 1 ? '是' : '否'
                   }}</span>
                 </div>
-                <div class="config-item" v-if="record.need_upgrade === 1">
+                <div v-if="record.need_upgrade === 1" class="config-item">
                   <span class="config-label">升级时间:</span>
                   <span class="config-value"
                     >{{ record.upgrade_minutes }}分钟</span
@@ -296,15 +296,15 @@
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleViewSendGroup(record)"
                 >
                   查看
                 </a-button>
                 <a-button
-                  type="default"
                   size="small"
+                  type="default"
                   @click="handleEditSendGroup(record)"
                 >
                   编辑
@@ -329,13 +329,13 @@
 
     <!-- 创建/编辑发送组对话框 -->
     <a-modal
+      :destroy-on-close="true"
       :open="formDialogVisible"
       :title="formDialog.isEdit ? '编辑发送组' : '创建发送组'"
       :width="formDialogWidth"
-      @ok="saveSendGroup"
-      @cancel="closeFormDialog"
-      :destroy-on-close="true"
       class="responsive-modal send-group-modal"
+      @cancel="closeFormDialog"
+      @ok="saveSendGroup"
     >
       <a-form
         ref="formRef"
@@ -346,11 +346,11 @@
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item
+                :rules="[{ required: true, message: '请输入发送组名称' }]"
                 label="发送组名称"
                 name="name"
-                :rules="[{ required: true, message: '请输入发送组名称' }]"
               >
                 <a-input
                   v-model:value="formDialog.form.name"
@@ -358,11 +358,11 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item
+                :rules="[{ required: true, message: '请输入发送组中文名称' }]"
                 label="发送组中文名称"
                 name="name_zh"
-                :rules="[{ required: true, message: '请输入发送组中文名称' }]"
               >
                 <a-input
                   v-model:value="formDialog.form.name_zh"
@@ -376,18 +376,18 @@
         <div class="form-section">
           <div class="section-title">关联配置</div>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="关联采集池" name="pool_id">
                 <a-select
                   v-model:value="formDialog.form.pool_id"
-                  placeholder="请搜索并选择采集池"
-                  class="full-width"
-                  show-search
                   :filter-option="false"
-                  @search="handleDialogPoolSearch"
-                  @popupScroll="handleDialogPoolScroll"
                   :loading="dialogPoolLoading"
                   allow-clear
+                  class="full-width"
+                  placeholder="请搜索并选择采集池"
+                  show-search
+                  @popupScroll="handleDialogPoolScroll"
+                  @search="handleDialogPoolSearch"
                 >
                   <a-select-option
                     v-for="pool in dialogPools"
@@ -399,18 +399,18 @@
                 </a-select>
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="关联值班组" name="on_duty_group_id">
                 <a-select
                   v-model:value="formDialog.form.on_duty_group_id"
-                  placeholder="请搜索并选择值班组"
-                  class="full-width"
-                  show-search
                   :filter-option="false"
-                  @search="handleDialogOnDutyGroupSearch"
-                  @popupScroll="handleDialogOnDutyGroupScroll"
                   :loading="dialogOnDutyGroupLoading"
                   allow-clear
+                  class="full-width"
+                  placeholder="请搜索并选择值班组"
+                  show-search
+                  @popupScroll="handleDialogOnDutyGroupScroll"
+                  @search="handleDialogOnDutyGroupSearch"
                 >
                   <a-select-option
                     v-for="group in dialogOnDutyGroups"
@@ -428,7 +428,7 @@
         <div class="form-section">
           <div class="section-title">通知配置</div>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="是否启用" name="enable">
                 <a-switch
                   v-model:checked="formDialog.form.enable"
@@ -436,7 +436,7 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="发送恢复消息" name="send_resolved">
                 <a-switch
                   v-model:checked="formDialog.form.send_resolved"
@@ -446,7 +446,7 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="重复发送间隔" name="repeat_interval">
                 <a-input
                   v-model:value="formDialog.form.repeat_interval"
@@ -454,7 +454,7 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="需要升级" name="need_upgrade">
                 <a-switch
                   v-model:checked="formDialog.form.need_upgrade"
@@ -478,16 +478,16 @@
           </a-row>
         </div>
 
-        <div class="form-section" v-if="formDialog.form.need_upgrade">
+        <div v-if="formDialog.form.need_upgrade" class="form-section">
           <div class="section-title">升级配置</div>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="升级时间间隔(分钟)" name="upgrade_minutes">
                 <a-input-number
                   v-model:value="formDialog.form.upgrade_minutes"
                   :min="1"
-                  placeholder="请输入升级时间间隔"
                   class="full-width"
+                  placeholder="请输入升级时间间隔"
                 />
               </a-form-item>
             </a-col>
@@ -500,15 +500,15 @@
           <a-form-item label="静态接收用户" name="static_receive_users">
             <a-select
               v-model:value="formDialog.form.static_receive_users"
-              mode="multiple"
-              placeholder="请搜索并选择静态接收用户"
-              class="full-width"
-              show-search
               :filter-option="false"
-              @search="handleDialogUserSearch"
-              @popupScroll="handleDialogUserScroll"
               :loading="dialogUserLoading"
               :options="dialogUsers"
+              class="full-width"
+              mode="multiple"
+              placeholder="请搜索并选择静态接收用户"
+              show-search
+              @popupScroll="handleDialogUserScroll"
+              @search="handleDialogUserSearch"
             />
           </a-form-item>
 
@@ -516,9 +516,9 @@
           <a-form-item label="通知方式" name="notify_methods">
             <a-select
               v-model:value="formDialog.form.notify_methods"
+              class="full-width"
               mode="multiple"
               placeholder="请选择通知方式"
-              class="full-width"
             >
               <a-select-option value="email">邮件</a-select-option>
               <a-select-option value="sms">短信</a-select-option>
@@ -535,15 +535,15 @@
           >
             <a-select
               v-model:value="formDialog.form.first_upgrade_users"
-              mode="multiple"
-              placeholder="请搜索并选择首次升级用户"
-              class="full-width"
-              show-search
               :filter-option="false"
-              @search="handleDialogUserSearch"
-              @popupScroll="handleDialogUserScroll"
               :loading="dialogUserLoading"
               :options="dialogUsers"
+              class="full-width"
+              mode="multiple"
+              placeholder="请搜索并选择首次升级用户"
+              show-search
+              @popupScroll="handleDialogUserScroll"
+              @search="handleDialogUserSearch"
             />
           </a-form-item>
 
@@ -555,15 +555,15 @@
           >
             <a-select
               v-model:value="formDialog.form.second_upgrade_users"
-              mode="multiple"
-              placeholder="请搜索并选择二次升级用户"
-              class="full-width"
-              show-search
               :filter-option="false"
-              @search="handleDialogUserSearch"
-              @popupScroll="handleDialogUserScroll"
               :loading="dialogUserLoading"
               :options="dialogUsers"
+              class="full-width"
+              mode="multiple"
+              placeholder="请搜索并选择二次升级用户"
+              show-search
+              @popupScroll="handleDialogUserScroll"
+              @search="handleDialogUserSearch"
             />
           </a-form-item>
         </div>
@@ -572,12 +572,12 @@
 
     <!-- 详情对话框 -->
     <a-modal
-      :open="detailDialogVisible"
-      title="发送组详情"
-      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeDetailDialog"
+      :open="detailDialogVisible"
+      :width="previewDialogWidth"
       class="detail-dialog"
+      title="发送组详情"
+      @cancel="closeDetailDialog"
     >
       <div v-if="detailDialog.form" class="pool-details">
         <div class="detail-header">
@@ -611,7 +611,7 @@
           </div>
         </div>
 
-        <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
+        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
           <a-descriptions-item label="ID">
             {{ detailDialog.form.id }}
           </a-descriptions-item>
@@ -671,19 +671,19 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { PlusOutlined, DownOutlined } from '@ant-design/icons-vue';
+import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
-  getMonitorSendGroupListApi,
   createMonitorSendGroupApi,
-  updateMonitorSendGroupApi,
+  type CreateMonitorSendGroupReq,
   deleteMonitorSendGroupApi,
   getMonitorSendGroupDetailApi,
-  type MonitorSendGroup,
+  getMonitorSendGroupListApi,
   type GetMonitorSendGroupListReq,
-  type CreateMonitorSendGroupReq,
+  type MonitorSendGroup,
+  updateMonitorSendGroupApi,
   type UpdateMonitorSendGroupReq,
 } from '#/api/core/prometheus/prometheus_send_group';
 import { getUserList } from '#/api/core/system/user';

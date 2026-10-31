@@ -10,7 +10,7 @@ function toggleTheme() {
 <template>
   <div class="ops-auth">
     <header class="ops-auth-header">
-      <a href="/" class="ops-wordmark" aria-label="CloudOps 首页"
+      <a aria-label="CloudOps 首页" class="ops-wordmark" href="/"
         >CLOUD<span>OPS</span></a
       >
       <button class="ops-theme-switch" type="button" @click="toggleTheme">
@@ -18,7 +18,7 @@ function toggleTheme() {
       </button>
     </header>
     <main class="ops-auth-main">
-      <section class="ops-auth-intro" aria-label="运维控制台">
+      <section aria-label="运维控制台" class="ops-auth-intro">
         <p class="ops-eyebrow">INFRASTRUCTURE / OPERATIONS</p>
         <h1>让每一次操作<br />都有依据。</h1>
         <p>
@@ -28,7 +28,7 @@ function toggleTheme() {
           <span>资源管理</span><span>监控告警</span><span>智能诊断</span>
         </div>
       </section>
-      <section class="ops-auth-form" aria-label="账户登录">
+      <section aria-label="账户登录" class="ops-auth-form">
         <RouterView />
         <p class="ops-auth-help">
           账号由管理员分配。如需重置密码，请联系管理员。

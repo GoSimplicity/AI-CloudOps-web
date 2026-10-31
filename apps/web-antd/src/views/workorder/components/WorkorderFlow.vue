@@ -2,17 +2,17 @@
   <div>
     <!-- 流转记录对话框 -->
     <a-modal
-      :open="flowDialog.visible"
-      title=""
-      :width="previewDialogWidth"
       :footer="null"
+      :open="flowDialog.visible"
+      :width="previewDialogWidth"
+      centered
+      class="flow-dialog responsive-modal"
+      title=""
       @cancel="
         () => {
           flowDialog.visible = false;
         }
       "
-      class="flow-dialog responsive-modal"
-      centered
     >
       <template #title>
         <div class="flow-dialog-header">
@@ -27,13 +27,13 @@
           </div>
           <div class="header-actions">
             <a-tooltip title="刷新流转记录">
-              <a-button type="text" size="small" @click="refreshFlow">
+              <a-button size="small" type="text" @click="refreshFlow">
                 <IconComponent icon="refresh" />
               </a-button>
             </a-tooltip>
             <a-tooltip title="筛选流转类型">
               <a-dropdown>
-                <a-button type="text" size="small">
+                <a-button size="small" type="text">
                   <IconComponent icon="filter" />
                 </a-button>
                 <template #overlay>
@@ -47,7 +47,7 @@
               </a-dropdown>
             </a-tooltip>
             <a-tooltip title="显示模式">
-              <a-button type="text" size="small" @click="toggleViewMode">
+              <a-button size="small" type="text" @click="toggleViewMode">
                 <IconComponent
                   :icon="viewMode === 'timeline' ? 'list' : 'timeline'"
                 />
@@ -148,8 +148,8 @@
                     <div class="card-actions">
                       <a-tooltip title="查看详情">
                         <a-button
-                          type="text"
                           size="small"
+                          type="text"
                           @click="showFlowDetail(item)"
                         >
                           <IconComponent icon="detail" />
@@ -185,8 +185,8 @@
                         </div>
                       </div>
                       <div
-                        class="system-badge"
                         v-if="item.is_system_action === 1"
+                        class="system-badge"
                       >
                         <IconComponent icon="system" />
                         <span>系统</span>
@@ -256,8 +256,8 @@
                 <div
                   v-for="(item, index) in filteredFlowList"
                   :key="item.id"
-                  class="table-row"
                   :style="{ '--delay': index * 0.1 + 's' }"
+                  class="table-row"
                 >
                   <div class="body-cell action" data-label="操作类型">
                     <div
@@ -319,8 +319,8 @@
                   </div>
                   <div class="body-cell actions" data-label="操作">
                     <a-button
-                      type="text"
                       size="small"
+                      type="text"
                       @click="showFlowDetail(item)"
                     >
                       <IconComponent icon="detail" />
@@ -354,16 +354,16 @@
 
     <!-- 详情对话框 -->
     <a-modal
+      :footer="null"
       :open="detailDialog.visible"
-      title="流转详情"
       :width="600"
+      class="flow-detail-dialog responsive-modal"
+      title="流转详情"
       @cancel="
         () => {
           detailDialog.visible = false;
         }
       "
-      :footer="null"
-      class="flow-detail-dialog responsive-modal"
     >
       <div v-if="detailDialog.item" class="flow-detail-content">
         <div class="detail-header">
@@ -380,10 +380,10 @@
         </div>
 
         <a-descriptions
-          bordered
           :column="1"
-          size="small"
+          bordered
           class="flow-descriptions"
+          size="small"
         >
           <a-descriptions-item label="操作类型">
             <div class="description-value">
@@ -421,8 +421,8 @@
             </div>
           </a-descriptions-item>
           <a-descriptions-item
-            label="处理说明"
             v-if="detailDialog.item.comment"
+            label="处理说明"
           >
             <div class="comment-detail">{{ detailDialog.item.comment }}</div>
           </a-descriptions-item>
@@ -433,22 +433,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import {
-  SendOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  UserOutlined,
-  StopOutlined,
   PlayCircleOutlined,
+  SendOutlined,
+  StopOutlined,
+  UserOutlined,
 } from '@ant-design/icons-vue';
 
 import {
-  type WorkorderInstanceFlowItem,
-  type ListWorkorderInstanceFlowReq,
   FlowAction,
   listWorkorderInstanceFlow,
+  type ListWorkorderInstanceFlowReq,
+  type WorkorderInstanceFlowItem,
 } from '#/api/core/workorder/workorder_instance_flow';
 
 import { InstanceStatus } from '#/api/core/workorder/workorder_instance';

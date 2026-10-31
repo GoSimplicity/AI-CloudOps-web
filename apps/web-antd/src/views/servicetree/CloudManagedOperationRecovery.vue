@@ -2,9 +2,9 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import {
   getManagedOperation,
-  reviewManagedOperation,
   type ManagedCloudOperation,
   type ManagedCloudScope,
+  reviewManagedOperation,
 } from '#/api/core/tree/tree_cloud';
 import { validManagedOperation } from './managed-operation-contract';
 import type { ManagedOperationMarker } from './managed-operation-marker';
@@ -235,9 +235,9 @@ onBeforeUnmount(() => {
     <p>资源：{{ marker.resource_ids.join(', ') }}</p>
     <a-alert
       v-if="!readAllowed"
-      type="warning"
       message="缺少操作查询权限，不能确认结果"
       show-icon
+      type="warning"
     />
     <a-button :disabled="!readAllowed || busy" :loading="busy" @click="query">
       查询本次操作
@@ -258,18 +258,18 @@ onBeforeUnmount(() => {
                 : '已读取持久结果'
       }}
     </p>
-    <a-alert v-if="error" type="warning" :message="error" show-icon />
+    <a-alert v-if="error" :message="error" show-icon type="warning" />
     <a-modal
-      :open="reviewOpen"
-      title="核对本次操作"
-      ok-text="保存操作核对"
-      :confirm-loading="busy"
-      :closable="!busy"
-      :mask-closable="false"
       :cancel-button-props="{ disabled: busy }"
+      :closable="!busy"
+      :confirm-loading="busy"
+      :mask-closable="false"
       :ok-button-props="{
         disabled: !verified || uncertainReview || !readAllowed || !canReview,
       }"
+      :open="reviewOpen"
+      ok-text="保存操作核对"
+      title="核对本次操作"
       @cancel="reviewOpen = false"
       @ok="submit"
     >
@@ -291,14 +291,14 @@ onBeforeUnmount(() => {
         <a-textarea
           id="managed-operation-review-reason"
           v-model:value="reason"
-          :rows="4"
-          :maxlength="1000"
           :disabled="busy"
+          :maxlength="1000"
+          :rows="4"
         />
         <a-checkbox v-model:checked="verified" :disabled="busy">
           已核对该操作的全部资源与本地状态
         </a-checkbox>
-        <a-alert v-if="error" type="warning" :message="error" show-icon />
+        <a-alert v-if="error" :message="error" show-icon type="warning" />
       </template>
     </a-modal>
   </section>

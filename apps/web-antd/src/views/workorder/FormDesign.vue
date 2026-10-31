@@ -1,31 +1,31 @@
 <template>
   <OpsPage
-    title="表单设计"
-    description="配置字段并校验预览，保存为草稿、已发布表单或模板"
     class="dynamic-form-container"
+    description="配置字段并校验预览，保存为草稿、已发布表单或模板"
+    title="表单设计"
   >
     <template #actions>
       <template v-if="showDesigner">
         <a-space>
           <a-button
-            @click="saveFormDesign"
             :loading="saving"
             aria-label="保存设计"
-            type="primary"
             class="btn-primary"
+            type="primary"
+            @click="saveFormDesign"
           >
             <template #icon>
               <SaveOutlined />
             </template>
             保存设计
           </a-button>
-          <a-button @click="togglePreview" :disabled="saving" type="default">
+          <a-button :disabled="saving" type="default" @click="togglePreview">
             <template #icon>
               <EyeOutlined />
             </template>
             预览表单
           </a-button>
-          <a-button @click="clearForm" :disabled="saving" type="default">
+          <a-button :disabled="saving" type="default" @click="clearForm">
             <template #icon>
               <DeleteOutlined />
             </template>
@@ -34,14 +34,14 @@
         </a-space> </template
       ><template v-else>
         <a-space>
-          <a-button @click="togglePreview" :disabled="saving" type="default">
+          <a-button :disabled="saving" type="default" @click="togglePreview">
             <template #icon>
               <EditOutlined />
             </template>
             返回设计
           </a-button>
-          <a-button @click="resetForm" type="default"> 重置数据 </a-button>
-          <a-button @click="submitForm" type="primary" class="btn-primary">
+          <a-button type="default" @click="resetForm"> 重置数据 </a-button>
+          <a-button class="btn-primary" type="primary" @click="submitForm">
             校验预览
           </a-button>
         </a-space>
@@ -50,45 +50,45 @@
     <a-alert
       v-if="saveError"
       :message="saveError"
-      type="error"
-      show-icon
       class="designer-error"
+      show-icon
+      type="error"
     />
     <!-- 表单设计器 -->
-    <div class="form-designer" v-if="showDesigner">
+    <div v-if="showDesigner" class="form-designer">
       <a-card class="designer-card">
-        <div class="designer-content" :inert="saving || undefined">
+        <div :inert="saving || undefined" class="designer-content">
           <!-- 表单基础信息配置 -->
           <div class="form-meta-config">
             <div class="config-header">
               <h4>表单基础信息</h4>
             </div>
             <a-row :gutter="16">
-              <a-col :span="24" :md="8">
-                <a-form-item label="表单名称" class="form-item">
+              <a-col :md="8" :span="24">
+                <a-form-item class="form-item" label="表单名称">
                   <a-input
                     v-model:value="formMeta.name"
-                    placeholder="请输入表单名称"
-                    :maxlength="200"
                     :disabled="saving"
+                    :maxlength="200"
                     class="config-input"
+                    placeholder="请输入表单名称"
                   />
                 </a-form-item>
               </a-col>
-              <a-col :span="24" :md="8">
-                <a-form-item label="表单分类" class="form-item">
+              <a-col :md="8" :span="24">
+                <a-form-item class="form-item" label="表单分类">
                   <a-button
-                    class="category-trigger"
-                    @click="showCategoryModal = true"
                     :disabled="saving"
                     block
+                    class="category-trigger"
+                    @click="showCategoryModal = true"
                   >
                     {{ selectedCategory?.name ?? '选择分类' }}
                   </a-button>
                   <a-button
                     v-if="formMeta.category_id"
-                    type="link"
                     :disabled="saving"
+                    type="link"
                     @click="
                       formMeta.category_id = undefined;
                       selectedCategory = null;
@@ -98,14 +98,14 @@
                   </a-button>
                 </a-form-item>
               </a-col>
-              <a-col :span="24" :md="8">
-                <a-form-item label="表单状态" class="form-item">
+              <a-col :md="8" :span="24">
+                <a-form-item class="form-item" label="表单状态">
                   <a-select
                     id="form-design-status"
                     v-model:value="formMeta.status"
-                    placeholder="请选择状态"
                     :disabled="saving"
                     class="config-input"
+                    placeholder="请选择状态"
                   >
                     <a-select-option :value="FormDesignStatus.Draft">
                       草稿
@@ -121,33 +121,33 @@
               </a-col>
             </a-row>
             <a-row :gutter="16">
-              <a-col :span="24" :md="16">
-                <a-form-item label="表单描述" class="form-item">
+              <a-col :md="16" :span="24">
+                <a-form-item class="form-item" label="表单描述">
                   <a-textarea
                     v-model:value="formMeta.description"
-                    placeholder="请输入表单描述"
+                    :disabled="saving"
                     :maxlength="1000"
                     :rows="2"
-                    :disabled="saving"
                     class="config-input"
+                    placeholder="请输入表单描述"
                   />
                 </a-form-item>
               </a-col>
-              <a-col :span="24" :md="8">
-                <a-form-item label="标签" class="form-item">
+              <a-col :md="8" :span="24">
+                <a-form-item class="form-item" label="标签">
                   <a-select
                     v-model:value="formMeta.tags"
-                    mode="tags"
-                    placeholder="输入标签后按回车"
                     :disabled="saving"
                     class="config-input"
+                    mode="tags"
+                    placeholder="输入标签后按回车"
                   />
                 </a-form-item>
               </a-col>
             </a-row>
             <a-row :gutter="16">
-              <a-col :span="24" :md="12">
-                <a-form-item label="是否为模板" class="form-item switch-item">
+              <a-col :md="12" :span="24">
+                <a-form-item class="form-item switch-item" label="是否为模板">
                   <a-switch
                     v-model:checked="isTemplate"
                     :disabled="saving"
@@ -167,73 +167,73 @@
             </div>
             <div class="field-buttons">
               <a-button
-                @click="addFieldType('text')"
-                class="field-btn"
                 :disabled="saving"
+                class="field-btn"
+                @click="addFieldType('text')"
               >
                 <PlusOutlined />
                 <span>文本框</span>
               </a-button>
               <a-button
-                @click="addFieldType('number')"
-                class="field-btn"
                 :disabled="saving"
+                class="field-btn"
+                @click="addFieldType('number')"
               >
                 <PlusOutlined />
                 <span>数字</span>
               </a-button>
               <a-button
-                @click="addFieldType('password')"
-                class="field-btn"
                 :disabled="saving"
+                class="field-btn"
+                @click="addFieldType('password')"
               >
                 <PlusOutlined />
                 <span>密码</span>
               </a-button>
               <a-button
-                @click="addFieldType('textarea')"
-                class="field-btn"
                 :disabled="saving"
+                class="field-btn"
+                @click="addFieldType('textarea')"
               >
                 <PlusOutlined />
                 <span>多行文本</span>
               </a-button>
               <a-button
-                @click="addFieldType('date')"
-                class="field-btn"
                 :disabled="saving"
+                class="field-btn"
+                @click="addFieldType('date')"
               >
                 <PlusOutlined />
                 <span>日期</span>
               </a-button>
               <a-button
-                @click="addFieldType('select')"
-                class="field-btn"
                 :disabled="saving"
+                class="field-btn"
+                @click="addFieldType('select')"
               >
                 <PlusOutlined />
                 <span>下拉选项</span>
               </a-button>
               <a-button
-                @click="addFieldType('radio')"
-                class="field-btn"
                 :disabled="saving"
+                class="field-btn"
+                @click="addFieldType('radio')"
               >
                 <PlusOutlined />
                 <span>单选框</span>
               </a-button>
               <a-button
-                @click="addFieldType('checkbox')"
-                class="field-btn"
                 :disabled="saving"
+                class="field-btn"
+                @click="addFieldType('checkbox')"
               >
                 <PlusOutlined />
                 <span>复选框</span>
               </a-button>
               <a-button
-                @click="addFieldType('switch')"
-                class="field-btn"
                 :disabled="saving"
+                class="field-btn"
+                @click="addFieldType('switch')"
               >
                 <PlusOutlined />
                 <span>开关</span>
@@ -248,27 +248,27 @@
               <span class="actions-desc">导入、导出和管理表单配置</span>
             </div>
             <div class="action-buttons">
-              <a-button @click="toggleJsonViewer" class="action-btn">
+              <a-button class="action-btn" @click="toggleJsonViewer">
                 <template #icon>
                   <CodeOutlined />
                 </template>
                 <span>查看 JSON</span>
               </a-button>
-              <a-button @click="copyJson" class="action-btn">
+              <a-button class="action-btn" @click="copyJson">
                 <template #icon>
                   <CopyOutlined />
                 </template>
                 <span>复制配置</span>
               </a-button>
-              <a-button @click="exportConfig" class="action-btn">
+              <a-button class="action-btn" @click="exportConfig">
                 <template #icon>
                   <DownloadOutlined />
                 </template>
                 <span>导出文件</span>
               </a-button>
               <a-upload
-                :show-upload-list="false"
                 :before-upload="importConfig"
+                :show-upload-list="false"
                 accept=".json"
                 class="upload-wrapper"
               >
@@ -283,7 +283,7 @@
           </div>
 
           <!-- 字段列表 -->
-          <div class="field-list" v-if="formSchema.fields.length > 0">
+          <div v-if="formSchema.fields.length > 0" class="field-list">
             <div class="list-header">
               <h4>表单字段配置</h4>
               <span class="field-count"
@@ -301,35 +301,35 @@
                   <div class="field-actions" @click.stop>
                     <a-tooltip title="上移">
                       <a-button
-                        type="text"
-                        size="small"
-                        @click="moveField(index, -1)"
                         :disabled="index === 0"
                         class="action-btn-small"
+                        size="small"
+                        type="text"
+                        @click="moveField(index, -1)"
                       >
                         <UpOutlined />
                       </a-button>
                     </a-tooltip>
                     <a-tooltip title="下移">
                       <a-button
-                        type="text"
-                        size="small"
-                        @click="moveField(index, 1)"
                         :disabled="index === formSchema.fields.length - 1"
                         class="action-btn-small"
+                        size="small"
+                        type="text"
+                        @click="moveField(index, 1)"
                       >
                         <DownOutlined />
                       </a-button>
                     </a-tooltip>
                     <a-tooltip title="删除">
                       <a-button
-                        type="text"
+                        :disabled="saving"
+                        aria-label="删除字段"
+                        class="action-btn-small"
                         danger
                         size="small"
+                        type="text"
                         @click="removeField(index)"
-                        aria-label="删除字段"
-                        :disabled="saving"
-                        class="action-btn-small"
                       >
                         <DeleteOutlined />
                       </a-button>
@@ -338,8 +338,8 @@
                 </template>
 
                 <FieldConfig
-                  :field="field"
                   :class="{ 'field-saving': saving }"
+                  :field="field"
                   @update="updateField(index, $event)"
                 />
               </a-collapse-panel>
@@ -353,7 +353,7 @@
               </template>
               <div class="empty-desc">
                 <p>请在上方选择字段类型开始设计表单</p>
-                <a-button type="primary" @click="addFieldType('text')" ghost>
+                <a-button ghost type="primary" @click="addFieldType('text')">
                   <PlusOutlined /> 添加第一个字段
                 </a-button>
               </div>
@@ -364,7 +364,7 @@
     </div>
 
     <!-- 表单预览 -->
-    <div class="form-preview" v-if="!showDesigner">
+    <div v-if="!showDesigner" class="form-preview">
       <a-card class="preview-card">
         <div class="preview-content">
           <div class="preview-header">
@@ -373,22 +373,22 @@
               {{ formMeta.description }}
             </p>
             <a-alert
-              message="预览模式"
-              description="此处仅校验字段与填写体验，不会创建或提交真实工单。"
-              type="info"
-              show-icon
               banner
               class="preview-notice"
+              description="此处仅校验字段与填写体验，不会创建或提交真实工单。"
+              message="预览模式"
+              show-icon
+              type="info"
             />
           </div>
 
           <DynamicForm
-            :fields="formSchema.fields"
-            :show-actions="false"
-            v-model:data="formData"
-            :rules="formRules"
-            @submit="handleSubmit"
             ref="dynamicFormRef"
+            v-model:data="formData"
+            :fields="formSchema.fields"
+            :rules="formRules"
+            :show-actions="false"
+            @submit="handleSubmit"
           />
         </div>
       </a-card>
@@ -396,20 +396,20 @@
 
     <!-- JSON 配置查看 -->
     <a-modal
-      :open="showJsonViewer"
-      title="表单配置 JSON"
-      :width="800"
       :footer="null"
-      @cancel="toggleJsonViewer"
+      :open="showJsonViewer"
+      :width="800"
       class="json-modal"
+      title="表单配置 JSON"
+      @cancel="toggleJsonViewer"
     >
       <div class="json-viewer">
         <div class="json-actions">
           <a-space>
-            <a-button @click="copyJson" size="small">
+            <a-button size="small" @click="copyJson">
               <CopyOutlined /> 复制配置
             </a-button>
-            <a-button @click="exportConfig" size="small">
+            <a-button size="small" @click="exportConfig">
               <DownloadOutlined /> 导出文件
             </a-button>
           </a-space>
@@ -422,30 +422,30 @@
 
     <!-- 分类选择弹窗 -->
     <a-modal
-      :open="showCategoryModal"
-      title="选择表单分类"
-      :width="600"
-      @cancel="closeCategoryModal"
       :footer="null"
+      :open="showCategoryModal"
+      :width="600"
       class="category-modal"
+      title="选择表单分类"
+      @cancel="closeCategoryModal"
     >
       <div class="category-modal-content">
         <div class="category-search">
           <a-input-search
             v-model:value="categorySearch"
-            placeholder="搜索分类名称"
-            @search="searchCategories"
-            @input="onCategorySearchInput"
-            enter-button
             allow-clear
+            enter-button
+            placeholder="搜索分类名称"
+            @input="onCategorySearchInput"
+            @search="searchCategories"
           />
         </div>
 
         <a-alert
           v-if="categoryError"
           :message="categoryError"
-          type="error"
           show-icon
+          type="error"
         >
           <template #action>
             <a-button @click="loadCategories()">重试</a-button>
@@ -462,7 +462,7 @@
                 @click="selectCategory(category)"
               >
                 <div class="category-name">{{ category.name }}</div>
-                <div class="category-desc" v-if="category.description">
+                <div v-if="category.description" class="category-desc">
                   {{ category.description }}
                 </div>
               </div>
@@ -471,7 +471,7 @@
           </a-spin>
         </div>
 
-        <div class="category-pagination" v-if="categoryPagination.total > 0">
+        <div v-if="categoryPagination.total > 0" class="category-pagination">
           <a-pagination
             v-model:current="categoryPagination.page"
             v-model:page-size="categoryPagination.size"
@@ -492,35 +492,35 @@
 
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { ref, reactive, computed, onBeforeUnmount, watch } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  PlusOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  EditOutlined,
-  FormOutlined,
-  UpOutlined,
-  DownOutlined,
   CodeOutlined,
-  DownloadOutlined,
-  UploadOutlined,
   CopyOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  DownOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FormOutlined,
+  PlusOutlined,
   SaveOutlined,
+  UploadOutlined,
+  UpOutlined,
 } from '@ant-design/icons-vue';
 import FieldConfig from './components/FieldConfig.vue';
 import DynamicForm from './components/DynamicForm.vue';
 import {
-  FormDesignStatus,
-  FormFieldType,
-  type FormField,
-  type FormSchema,
-  type CreateWorkorderFormDesignReq,
   createWorkorderFormDesign,
+  type CreateWorkorderFormDesignReq,
+  FormDesignStatus,
+  type FormField,
+  FormFieldType,
+  type FormSchema,
 } from '#/api/core/workorder/workorder_form_design';
 import type {
-  WorkorderCategoryItem,
   ListWorkorderCategoryReq,
+  WorkorderCategoryItem,
 } from '#/api/core/workorder/workorder_category';
 import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
 import {

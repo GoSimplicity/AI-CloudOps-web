@@ -3,35 +3,35 @@ import OpsPage from '#/components/ops/OpsPage.vue';
 import { filterNodeTree, flattenNodeTree } from './shared/node-tree';
 import { onBeforeUnmount } from 'vue';
 
-import { ref, reactive, onMounted, computed, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { PlusOutlined, DownOutlined } from '@ant-design/icons-vue';
+import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
-  getTreeList,
-  getNodeDetail,
-  createNode,
-  updateNode,
-  deleteNode,
-  removeNodeMember,
-  bindResource,
-  unbindResource,
   addNodeMember,
-  moveNode,
-  type TreeNode,
-  type GetTreeNodeListReq,
+  bindResource,
+  createNode,
   type CreateTreeNodeReq,
-  type UpdateTreeNodeReq,
-  TreeNodeStatus,
+  deleteNode,
+  getNodeDetail,
+  getTreeList,
+  type GetTreeNodeListReq,
+  moveNode,
+  removeNodeMember,
+  type TreeNode,
   TreeNodeMemberType,
+  TreeNodeStatus,
+  unbindResource,
+  updateNode,
+  type UpdateTreeNodeReq,
 } from '#/api/core/tree/tree_node';
 
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 import {
   getTreeLocalList,
   type GetTreeLocalResourceListReq,
-  type TreeLocalResource,
   ResourceStatus,
+  type TreeLocalResource,
 } from '#/api/core/tree/tree_local';
 
 import { usePermission } from '#/utils/permission';
@@ -742,41 +742,41 @@ onBeforeUnmount(() => {
 
 <template>
   <OpsPage
-    title="服务树"
-    description="维护节点、成员与资源关联"
     class="cmdb-console tree-node-container"
+    description="维护节点、成员与资源关联"
+    title="服务树"
   >
-    <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button @click="loadTreeData()">重试</a-button>
       </template>
     </a-alert>
     <!-- 页面标题 -->
     <template #actions>
-      <a-button type="primary" @click="handleCreateNode" class="btn-create">
+      <a-button class="btn-create" type="primary" @click="handleCreateNode">
         <template #icon>
           <PlusOutlined />
         </template>
         <span class="btn-text">创建节点</span> </a-button
-      ><a-button @click="loadTreeData()" :loading="treeLoading">
+      ><a-button :loading="treeLoading" @click="loadTreeData()">
         刷新
       </a-button> </template
     ><template #filters>
       <div class="search-filters">
         <a-input-search
           v-model:value="searchQuery"
-          placeholder="搜索节点名称..."
-          class="search-input"
-          @search="handleSearch"
-          @change="handleSearchChange"
           allow-clear
+          class="search-input"
+          placeholder="搜索节点名称..."
+          @change="handleSearchChange"
+          @search="handleSearch"
         />
         <a-select
           v-model:value="levelFilter"
-          placeholder="节点层级"
-          class="filter-select"
-          @change="handleLevelChange"
           allow-clear
+          class="filter-select"
+          placeholder="节点层级"
+          @change="handleLevelChange"
         >
           <a-select-option :value="undefined">全部层级</a-select-option>
           <a-select-option :value="1">第1层</a-select-option>
@@ -786,16 +786,16 @@ onBeforeUnmount(() => {
         </a-select>
         <a-select
           v-model:value="statusFilter"
-          placeholder="节点状态"
-          class="filter-select"
-          @change="handleStatusChange"
           allow-clear
+          class="filter-select"
+          placeholder="节点状态"
+          @change="handleStatusChange"
         >
           <a-select-option :value="undefined">全部状态</a-select-option>
           <a-select-option :value="1">活跃</a-select-option>
           <a-select-option :value="2">非活跃</a-select-option>
         </a-select>
-        <a-button @click="handleResetFilters" class="reset-btn">
+        <a-button class="reset-btn" @click="handleResetFilters">
           重置
         </a-button>
       </div>
@@ -805,36 +805,36 @@ onBeforeUnmount(() => {
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="[16, 16]">
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
-              <a-statistic title="当前节点" :value="stats.total_nodes">
+              <a-statistic :value="stats.total_nodes" title="当前节点">
                 <template #prefix>
                   <Icon icon="carbon:tree-view" />
                 </template>
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
-              <a-statistic title="当前活跃节点" :value="stats.active_nodes">
+              <a-statistic :value="stats.active_nodes" title="当前活跃节点">
                 <template #prefix>
                   <Icon icon="carbon:checkmark-outline" />
                 </template>
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
-              <a-statistic title="当前资源关联" :value="stats.total_resources">
+              <a-statistic :value="stats.total_resources" title="当前资源关联">
                 <template #prefix>
                   <Icon icon="carbon:data-table" />
                 </template>
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
-              <a-statistic title="当前管理员关联" :value="stats.total_admins">
+              <a-statistic :value="stats.total_admins" title="当前管理员关联">
                 <template #prefix>
                   <Icon icon="carbon:user-admin" />
                 </template>
@@ -849,17 +849,17 @@ onBeforeUnmount(() => {
     <div class="content-layout">
       <a-row :gutter="16">
         <!-- 左侧树状结构 -->
-        <a-col :xs="24" :sm="24" :md="8" :lg="6">
-          <a-card class="tree-card" :loading="treeLoading">
+        <a-col :lg="6" :md="8" :sm="24" :xs="24">
+          <a-card :loading="treeLoading" class="tree-card">
             <template #title>
               <div class="tree-header">
                 <Icon icon="carbon:tree-view" />
                 <span>节点树</span>
                 <a-button
-                  type="text"
-                  size="small"
-                  @click="refreshTree"
                   :loading="treeLoading"
+                  size="small"
+                  type="text"
+                  @click="refreshTree"
                 >
                   <Icon icon="carbon:refresh" />
                 </a-button>
@@ -909,11 +909,11 @@ onBeforeUnmount(() => {
         </a-col>
 
         <!-- 右侧详情展示 -->
-        <a-col :xs="24" :sm="24" :md="16" :lg="18">
+        <a-col :lg="18" :md="16" :sm="24" :xs="24">
           <a-card
             v-if="selectedNode"
-            class="detail-card"
             :loading="detailLoading"
+            class="detail-card"
           >
             <template #title>
               <div class="detail-header">
@@ -921,8 +921,8 @@ onBeforeUnmount(() => {
                 <span>{{ selectedNode.name }}</span>
                 <div class="detail-actions">
                   <a-button
-                    type="primary"
                     size="small"
+                    type="primary"
                     @click="handleEditNode(selectedNode)"
                   >
                     编辑
@@ -958,9 +958,9 @@ onBeforeUnmount(() => {
               <!-- 基本信息 -->
               <a-tab-pane key="info" tab="基本信息">
                 <a-descriptions
-                  bordered
                   :column="2"
                   :labelStyle="{ width: '120px' }"
+                  bordered
                 >
                   <a-descriptions-item label="节点ID">
                     {{ selectedNode.id }}
@@ -988,13 +988,13 @@ onBeforeUnmount(() => {
                   <a-descriptions-item label="创建人">
                     {{ selectedNode.create_user_name }}
                   </a-descriptions-item>
-                  <a-descriptions-item label="创建时间" :span="2">
+                  <a-descriptions-item :span="2" label="创建时间">
                     {{ formatFullDateTime(selectedNode.created_at) }}
                   </a-descriptions-item>
-                  <a-descriptions-item label="更新时间" :span="2">
+                  <a-descriptions-item :span="2" label="更新时间">
                     {{ formatFullDateTime(selectedNode.updated_at) }}
                   </a-descriptions-item>
-                  <a-descriptions-item label="描述" :span="2">
+                  <a-descriptions-item :span="2" label="描述">
                     {{ selectedNode.description || '无描述' }}
                   </a-descriptions-item>
                 </a-descriptions>
@@ -1006,8 +1006,8 @@ onBeforeUnmount(() => {
                   <div class="section-header">
                     <h4>管理员 ({{ selectedNode.admins?.length || 0 }})</h4>
                     <a-button
-                      type="primary"
                       size="small"
+                      type="primary"
                       @click="handleAddMember(1)"
                     >
                       添加管理员
@@ -1045,8 +1045,8 @@ onBeforeUnmount(() => {
                   <div class="section-header">
                     <h4>普通成员 ({{ selectedNode.members?.length || 0 }})</h4>
                     <a-button
-                      type="primary"
                       size="small"
+                      type="primary"
                       @click="handleAddMember(2)"
                     >
                       添加成员
@@ -1093,8 +1093,8 @@ onBeforeUnmount(() => {
                       }})
                     </h4>
                     <a-button
-                      type="primary"
                       size="small"
+                      type="primary"
                       @click="handleBindResource"
                     >
                       绑定资源
@@ -1122,9 +1122,9 @@ onBeforeUnmount(() => {
                         </a-tag>
                       </div>
                       <a-button
-                        type="text"
                         danger
                         size="small"
+                        type="text"
                         @click="handleUnbindResource(resource.id)"
                       >
                         解绑
@@ -1146,13 +1146,13 @@ onBeforeUnmount(() => {
 
     <!-- 创建/编辑节点对话框 -->
     <a-modal
+      :destroy-on-close="true"
       :open="formDialogVisible"
       :title="formDialog.isEdit ? '编辑节点' : '创建节点'"
       :width="formDialogWidth"
-      @ok="saveNode"
-      @cancel="closeFormDialog"
-      :destroy-on-close="true"
       class="responsive-modal node-modal"
+      @cancel="closeFormDialog"
+      @ok="saveNode"
     >
       <a-form
         ref="formRef"
@@ -1163,11 +1163,11 @@ onBeforeUnmount(() => {
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item
+                :rules="[{ required: true, message: '请输入节点名称' }]"
                 label="节点名称"
                 name="name"
-                :rules="[{ required: true, message: '请输入节点名称' }]"
               >
                 <a-input
                   v-model:value="formDialog.form.name"
@@ -1175,18 +1175,18 @@ onBeforeUnmount(() => {
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="父节点" name="parent_id">
                 <a-tree-select
                   v-model:value="formDialog.form.parent_id"
-                  :tree-data="treeData"
                   :field-names="{
                     children: 'children',
                     label: 'name',
                     value: 'id',
                   }"
-                  placeholder="请选择父节点"
+                  :tree-data="treeData"
                   allow-clear
+                  placeholder="请选择父节点"
                   tree-default-expand-all
                 />
               </a-form-item>
@@ -1197,14 +1197,14 @@ onBeforeUnmount(() => {
               <a-form-item label="节点描述" name="description">
                 <a-textarea
                   v-model:value="formDialog.form.description"
-                  placeholder="请输入节点描述"
                   :rows="3"
+                  placeholder="请输入节点描述"
                 />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="节点状态" name="status">
                 <a-select
                   v-model:value="formDialog.form.status"
@@ -1215,15 +1215,15 @@ onBeforeUnmount(() => {
                 </a-select>
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="是否叶子节点" name="is_leaf">
                 <a-switch
                   :checked="formDialog.form.is_leaf === 1"
+                  class="tech-switch"
                   @change="
                     (checked: boolean) =>
                       (formDialog.form.is_leaf = checked ? 1 : 2)
                   "
-                  class="tech-switch"
                 />
               </a-form-item>
             </a-col>
@@ -1236,17 +1236,17 @@ onBeforeUnmount(() => {
     <a-modal
       :open="moveDialogVisible"
       title="移动节点"
-      @ok="handleMoveNode"
       @cancel="closeMoveDialog"
+      @ok="handleMoveNode"
     >
       <a-form layout="vertical">
         <a-form-item label="选择新的父节点">
           <a-tree-select
             v-model:value="moveDialog.newParentId"
-            :tree-data="treeData"
             :field-names="{ children: 'children', label: 'name', value: 'id' }"
-            placeholder="请选择新的父节点"
+            :tree-data="treeData"
             allow-clear
+            placeholder="请选择新的父节点"
             tree-default-expand-all
           />
         </a-form-item>
@@ -1256,31 +1256,31 @@ onBeforeUnmount(() => {
     <!-- 添加成员对话框 -->
     <a-modal
       :open="addMemberDialogVisible"
-      title="添加成员"
-      @ok="handleAddMemberConfirm"
-      @cancel="closeAddMemberDialog"
       :width="600"
+      title="添加成员"
+      @cancel="closeAddMemberDialog"
+      @ok="handleAddMemberConfirm"
     >
       <a-form layout="vertical">
         <a-form-item label="搜索用户">
           <a-input-search
             v-model:value="userSearchQuery"
+            enter-button
             placeholder="搜索用户名或邮箱"
             @search="handleUserSearch"
-            enter-button
           />
         </a-form-item>
         <a-form-item label="选择用户">
           <a-select
             v-model:value="addMemberDialog.selectedUsers"
+            :field-names="{ label: 'real_name', value: 'id' }"
+            :filter-option="filterUserOption"
+            :options="userOptions"
             mode="multiple"
             placeholder="请选择用户"
-            :options="userOptions"
-            :field-names="{ label: 'real_name', value: 'id' }"
             show-search
-            :filter-option="filterUserOption"
           />
-          <div class="user-option-extra" v-if="userOptions.length > 0">
+          <div v-if="userOptions.length > 0" class="user-option-extra">
             <div class="user-option-list">
               <div
                 v-for="user in userOptions"
@@ -1311,18 +1311,18 @@ onBeforeUnmount(() => {
     <!-- 绑定资源对话框 -->
     <a-modal
       :open="bindResourceDialogVisible"
-      title="当前资源关联"
-      @ok="handleBindResourceConfirm"
-      @cancel="closeBindResourceDialog"
       :width="800"
+      title="当前资源关联"
+      @cancel="closeBindResourceDialog"
+      @ok="handleBindResourceConfirm"
     >
       <div class="bind-resource-content">
         <a-table
-          :data-source="availableResources"
           :columns="resourceColumns"
-          :row-selection="resourceRowSelection"
-          :pagination="resourcePagination"
+          :data-source="availableResources"
           :loading="resourceLoading"
+          :pagination="resourcePagination"
+          :row-selection="resourceRowSelection"
           row-key="id"
           size="small"
         >

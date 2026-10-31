@@ -1,8 +1,8 @@
 <template>
-  <OpsPage title="告警规则" description="维护告警表达式、严重性与通知分组">
+  <OpsPage description="维护告警表达式、严重性与通知分组" title="告警规则">
     <!-- 页面标题 -->
     <template #actions>
-      <a-button type="primary" @click="showAddModal" class="btn-create">
+      <a-button class="btn-create" type="primary" @click="showAddModal">
         <template #icon>
           <PlusOutlined />
         </template>
@@ -13,17 +13,17 @@
       <div class="search-filters">
         <a-input-search
           v-model:value="searchParams.search"
-          placeholder="搜索规则名称..."
-          class="search-input"
-          @search="handleSearch"
           allow-clear
+          class="search-input"
+          placeholder="搜索规则名称..."
+          @search="handleSearch"
         />
         <a-select
           v-model:value="searchParams.severity"
-          placeholder="严重性"
-          class="filter-select"
-          @change="handleSearch"
           allow-clear
+          class="filter-select"
+          placeholder="严重性"
+          @change="handleSearch"
         >
           <a-select-option :value="AlertRuleSeverity.Critical">
             Critical
@@ -37,15 +37,15 @@
         </a-select>
         <a-select
           v-model:value="searchParams.enable"
-          placeholder="启用状态"
-          class="filter-select"
-          @change="handleSearch"
           allow-clear
+          class="filter-select"
+          placeholder="启用状态"
+          @change="handleSearch"
         >
           <a-select-option :value="1">启用</a-select-option>
           <a-select-option :value="2">禁用</a-select-option>
         </a-select>
-        <a-button @click="handleReset" class="reset-btn"> 重置 </a-button>
+        <a-button class="reset-btn" @click="handleReset"> 重置 </a-button>
       </div>
     </template>
 
@@ -53,12 +53,12 @@
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="[16, 16]">
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="总规则"
                 :value="loadError ? '未知' : stats.total"
                 :value-style="{ color: '#3f8600' }"
+                title="总规则"
               >
                 <template #prefix>
                   <Icon icon="carbon:container-registry" />
@@ -66,12 +66,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页Critical"
                 :value="loadError ? '未知' : stats.critical"
                 :value-style="{ color: '#cf1322' }"
+                title="本页Critical"
               >
                 <template #prefix>
                   <Icon icon="carbon:warning-alt" />
@@ -79,12 +79,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页Warning"
                 :value="loadError ? '未知' : stats.warning"
                 :value-style="{ color: '#faad14' }"
+                title="本页Warning"
               >
                 <template #prefix>
                   <Icon icon="carbon:notification" />
@@ -92,12 +92,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页已启用"
                 :value="loadError ? '未知' : stats.enabled"
                 :value-style="{ color: '#1890ff' }"
+                title="本页已启用"
               >
                 <template #prefix>
                   <Icon icon="carbon:checkmark-outline" />
@@ -112,13 +112,13 @@
     <!-- 表格容器 -->
     <a-alert
       v-if="loadError"
-      type="error"
-      show-icon
       :message="loadError"
       role="alert"
+      show-icon
+      type="error"
     >
       <template #action>
-        <a-button size="small" :loading="loading" @click="fetchAlertRules">
+        <a-button :loading="loading" size="small" @click="fetchAlertRules">
           重试
         </a-button>
       </template>
@@ -127,13 +127,13 @@
     <div class="table-container">
       <a-card>
         <a-table
-          :data-source="data"
           :columns="columns"
-          :pagination="paginationConfig"
+          :data-source="data"
           :loading="loading"
-          row-key="id"
-          bordered
+          :pagination="paginationConfig"
           :scroll="{ x: 1400 }"
+          bordered
+          row-key="id"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -148,7 +148,7 @@
             </template>
 
             <template v-if="column.key === 'expr'">
-              <div class="expr-container" :title="record.expr">
+              <div :title="record.expr" class="expr-container">
                 {{ record.expr }}
               </div>
             </template>
@@ -170,9 +170,9 @@
                   </template>
                   <a-popover
                     v-if="record.labels.length > 2"
+                    placement="topLeft"
                     title="所有标签"
                     trigger="hover"
-                    placement="topLeft"
                   >
                     <template #content>
                       <div class="all-tags-container">
@@ -225,9 +225,9 @@
                   </template>
                   <a-popover
                     v-if="record.annotations.length > 2"
+                    placement="topLeft"
                     title="所有注解"
                     trigger="hover"
-                    placement="topLeft"
                   >
                     <template #content>
                       <div class="all-tags-container">
@@ -315,15 +315,15 @@
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="showDetailModal(record)"
                 >
                   查看
                 </a-button>
                 <a-button
-                  type="default"
                   size="small"
+                  type="default"
                   @click="showEditModal(record)"
                 >
                   编辑
@@ -346,13 +346,13 @@
 
     <!-- 新建告警规则对话框 -->
     <a-modal
-      :open="isAddModalVisible"
-      title="新建告警规则"
-      :width="formDialogWidth"
-      @ok="handleAdd"
-      @cancel="closeAddModal"
       :destroy-on-close="true"
+      :open="isAddModalVisible"
+      :width="formDialogWidth"
       class="responsive-modal alert-rule-modal"
+      title="新建告警规则"
+      @cancel="closeAddModal"
+      @ok="handleAdd"
     >
       <a-form
         ref="addFormRef"
@@ -373,14 +373,14 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="所属实例池" name="pool_id">
                 <a-select
                   v-model:value="addForm.pool_id"
+                  :loading="poolLoading"
                   placeholder="请选择所属实例池"
                   @dropdown-visible-change="onPoolDropdownChange"
                   @popupScroll="handlePoolScroll"
-                  :loading="poolLoading"
                 >
                   <a-select-option
                     v-for="pool in scrapePools"
@@ -392,14 +392,14 @@
                 </a-select>
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="发送组" name="send_group_id">
                 <a-select
                   v-model:value="addForm.send_group_id"
+                  :loading="sendGroupLoading"
                   placeholder="请选择发送组"
                   @dropdown-visible-change="onSendGroupDropdownChange"
                   @popupScroll="handleSendGroupScroll"
-                  :loading="sendGroupLoading"
                 >
                   <a-select-option
                     v-for="group in sendGroups"
@@ -413,27 +413,27 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="IP地址" name="ip">
                 <a-input
                   v-model:value="addForm.ip"
-                  placeholder="请输入IP地址"
                   class="ip-input"
+                  placeholder="请输入IP地址"
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="端口" name="port">
                 <a-input
                   v-model:value="addForm.port"
-                  placeholder="端口"
                   class="port-input"
+                  placeholder="端口"
                 />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="Grafana链接" name="grafana_link">
                 <a-input
                   v-model:value="addForm.grafana_link"
@@ -449,8 +449,8 @@
           <a-form-item label="表达式" name="expr">
             <a-textarea
               v-model:value="addForm.expr"
-              placeholder="请输入PromQL表达式"
               :rows="4"
+              placeholder="请输入PromQL表达式"
             />
           </a-form-item>
           <a-form-item>
@@ -459,7 +459,7 @@
             </a-button>
           </a-form-item>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="严重性" name="severity">
                 <a-select
                   v-model:value="addForm.severity"
@@ -477,7 +477,7 @@
                 </a-select>
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="持续时间" name="for_time">
                 <a-input
                   v-model:value="addForm.for_time"
@@ -498,14 +498,14 @@
             <div class="label-input-group">
               <a-input
                 v-model:value="label.labelKey"
-                placeholder="标签名"
                 class="label-key-input"
+                placeholder="标签名"
               />
               <div class="label-separator">:</div>
               <a-input
                 v-model:value="label.labelValue"
-                placeholder="标签值"
                 class="label-value-input"
+                placeholder="标签值"
               />
               <MinusCircleOutlined
                 v-if="addForm.labels.length > 1"
@@ -516,8 +516,8 @@
           </a-form-item>
           <a-form-item>
             <a-button
-              type="dashed"
               class="add-dynamic-button"
+              type="dashed"
               @click="addLabel"
             >
               <PlusOutlined /> 添加标签
@@ -535,14 +535,14 @@
             <div class="label-input-group">
               <a-input
                 v-model:value="annotation.labelKey"
-                placeholder="注解名"
                 class="label-key-input"
+                placeholder="注解名"
               />
               <div class="label-separator">:</div>
               <a-input
                 v-model:value="annotation.labelValue"
-                placeholder="注解值"
                 class="label-value-input"
+                placeholder="注解值"
               />
               <MinusCircleOutlined
                 v-if="addForm.annotations.length > 1"
@@ -553,9 +553,9 @@
           </a-form-item>
           <a-form-item>
             <a-button
+              class="add-dynamic-button"
               type="dashed"
               @click="addAnnotation"
-              class="add-dynamic-button"
             >
               <PlusOutlined /> 添加注解
             </a-button>
@@ -566,13 +566,13 @@
 
     <!-- 编辑AlertRule对话框 -->
     <a-modal
-      :open="isEditModalVisible"
-      title="编辑AlertRule"
-      :width="formDialogWidth"
-      @ok="handleEdit"
-      @cancel="closeEditModal"
       :destroy-on-close="true"
+      :open="isEditModalVisible"
+      :width="formDialogWidth"
       class="responsive-modal alert-rule-modal"
+      title="编辑AlertRule"
+      @cancel="closeEditModal"
+      @ok="handleEdit"
     >
       <a-form
         ref="editFormRef"
@@ -593,14 +593,14 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="所属实例池" name="pool_id">
                 <a-select
                   v-model:value="editForm.pool_id"
+                  :loading="poolLoading"
                   placeholder="请选择所属实例池"
                   @dropdown-visible-change="onPoolDropdownChange"
                   @popupScroll="handlePoolScroll"
-                  :loading="poolLoading"
                 >
                   <a-select-option
                     v-for="pool in scrapePools"
@@ -612,14 +612,14 @@
                 </a-select>
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="发送组" name="send_group_id">
                 <a-select
                   v-model:value="editForm.send_group_id"
+                  :loading="sendGroupLoading"
                   placeholder="请选择发送组"
                   @dropdown-visible-change="onSendGroupDropdownChange"
                   @popupScroll="handleSendGroupScroll"
-                  :loading="sendGroupLoading"
                 >
                   <a-select-option
                     v-for="group in sendGroups"
@@ -633,27 +633,27 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="IP地址" name="ip">
                 <a-input
                   v-model:value="editForm.ip"
-                  placeholder="请输入IP地址"
                   class="ip-input"
+                  placeholder="请输入IP地址"
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="端口" name="port">
                 <a-input
                   v-model:value="editForm.port"
-                  placeholder="端口"
                   class="port-input"
+                  placeholder="端口"
                 />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="Grafana链接" name="grafana_link">
                 <a-input
                   v-model:value="editForm.grafana_link"
@@ -679,8 +679,8 @@
           <a-form-item label="表达式" name="expr">
             <a-textarea
               v-model:value="editForm.expr"
-              placeholder="请输入PromQL表达式"
               :rows="4"
+              placeholder="请输入PromQL表达式"
             />
           </a-form-item>
           <a-form-item>
@@ -689,7 +689,7 @@
             </a-button>
           </a-form-item>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="严重性" name="severity">
                 <a-select
                   v-model:value="editForm.severity"
@@ -707,7 +707,7 @@
                 </a-select>
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="持续时间" name="for_time">
                 <a-input
                   v-model:value="editForm.for_time"
@@ -728,14 +728,14 @@
             <div class="label-input-group">
               <a-input
                 v-model:value="label.labelKey"
-                placeholder="标签名"
                 class="label-key-input"
+                placeholder="标签名"
               />
               <div class="label-separator">:</div>
               <a-input
                 v-model:value="label.labelValue"
-                placeholder="标签值"
                 class="label-value-input"
+                placeholder="标签值"
               />
               <MinusCircleOutlined
                 v-if="editForm.labels.length > 1"
@@ -746,8 +746,8 @@
           </a-form-item>
           <a-form-item>
             <a-button
-              type="dashed"
               class="add-dynamic-button"
+              type="dashed"
               @click="addEditLabel"
             >
               <PlusOutlined /> 添加标签
@@ -765,14 +765,14 @@
             <div class="label-input-group">
               <a-input
                 v-model:value="annotation.labelKey"
-                placeholder="注解名"
                 class="label-key-input"
+                placeholder="注解名"
               />
               <div class="label-separator">:</div>
               <a-input
                 v-model:value="annotation.labelValue"
-                placeholder="注解值"
                 class="label-value-input"
+                placeholder="注解值"
               />
               <MinusCircleOutlined
                 v-if="editForm.annotations.length > 1"
@@ -783,9 +783,9 @@
           </a-form-item>
           <a-form-item>
             <a-button
+              class="add-dynamic-button"
               type="dashed"
               @click="addEditAnnotation"
-              class="add-dynamic-button"
             >
               <PlusOutlined /> 添加注解
             </a-button>
@@ -796,12 +796,12 @@
 
     <!-- 详情对话框 -->
     <a-modal
-      :open="detailModalVisible"
-      title="AlertRule详情"
-      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeDetailModal"
+      :open="detailModalVisible"
+      :width="previewDialogWidth"
       class="detail-dialog"
+      title="AlertRule详情"
+      @cancel="closeDetailModal"
     >
       <div v-if="currentRecord" class="pool-details">
         <div class="detail-header">
@@ -821,7 +821,7 @@
           </div>
         </div>
 
-        <a-descriptions bordered :column="1" :label-style="{ width: '150px' }">
+        <a-descriptions :column="1" :label-style="{ width: '150px' }" bordered>
           <a-descriptions-item label="ID">
             {{ currentRecord.id }}
           </a-descriptions-item>
@@ -863,35 +863,35 @@
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
 
-import { ref, reactive, onMounted, computed } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  PlusOutlined,
   DownOutlined,
   MinusCircleOutlined,
+  PlusOutlined,
 } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import { useDebounceFn } from '@vueuse/core';
 import {
-  getMonitorAlertRuleListApi,
-  createMonitorAlertRuleApi,
-  updateMonitorAlertRuleApi,
-  deleteMonitorAlertRuleApi,
-  promqlExprCheckApi,
   AlertRuleSeverity,
+  createMonitorAlertRuleApi,
+  type CreateMonitorAlertRuleReq,
+  deleteMonitorAlertRuleApi,
+  getMonitorAlertRuleListApi,
   type GetMonitorAlertRuleListReq,
   type MonitorAlertRule,
-  type CreateMonitorAlertRuleReq,
+  promqlExprCheckApi,
+  updateMonitorAlertRuleApi,
   type UpdateMonitorAlertRuleReq,
 } from '#/api/core/prometheus/prometheus_alert_rule';
 import {
-  getMonitorAlertManagerPoolListApi,
   getMonitorAlertManagerPoolApi,
+  getMonitorAlertManagerPoolListApi,
   type MonitorAlertManagerPool,
 } from '#/api/core/prometheus/prometheus_alert_pool';
 import {
-  getMonitorSendGroupListApi,
   getMonitorSendGroupDetailApi,
+  getMonitorSendGroupListApi,
   type MonitorSendGroup,
 } from '#/api/core/prometheus/prometheus_send_group';
 

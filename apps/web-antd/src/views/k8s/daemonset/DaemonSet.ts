@@ -1,42 +1,42 @@
-import { ref, computed, h } from 'vue';
+import { computed, h, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 import yaml from 'js-yaml';
 import {
-  type K8sDaemonSet,
-  type K8sDaemonSetHistory,
-  type GetDaemonSetListReq,
-  type CreateDaemonSetReq,
-  type CreateDaemonSetByYamlReq,
-  type UpdateDaemonSetReq,
-  type UpdateDaemonSetByYamlReq,
-  type RestartDaemonSetReq,
-  type RollbackDaemonSetReq,
-  K8sDaemonSetStatus,
-  getDaemonSetListApi,
-  getDaemonSetDetailsApi,
-  getDaemonSetYamlApi,
   createDaemonSetApi,
   createDaemonSetByYamlApi,
+  type CreateDaemonSetByYamlReq,
+  type CreateDaemonSetReq,
+  deleteDaemonSetApi,
+  getDaemonSetDetailsApi,
+  getDaemonSetHistoryApi,
+  getDaemonSetListApi,
+  type GetDaemonSetListReq,
+  getDaemonSetPodsApi,
+  getDaemonSetYamlApi,
+  type K8sDaemonSet,
+  type K8sDaemonSetHistory,
+  K8sDaemonSetStatus,
+  restartDaemonSetApi,
+  type RestartDaemonSetReq,
+  rollbackDaemonSetApi,
+  type RollbackDaemonSetReq,
   updateDaemonSetApi,
   updateDaemonSetByYamlApi,
-  deleteDaemonSetApi,
-  restartDaemonSetApi,
-  rollbackDaemonSetApi,
-  getDaemonSetPodsApi,
-  getDaemonSetHistoryApi,
+  type UpdateDaemonSetByYamlReq,
+  type UpdateDaemonSetReq,
 } from '#/api/core/k8s/k8s_daemonset';
 import {
-  type K8sCluster,
-  type ListClustersReq,
-  type KeyValueList,
-  getClustersListApi,
   Env,
+  getClustersListApi,
+  type K8sCluster,
+  type KeyValueList,
+  type ListClustersReq,
 } from '#/api/core/k8s/k8s_cluster';
 import {
+  getNamespacesListApi,
   type K8sNamespace,
   type K8sNamespaceListReq,
-  getNamespacesListApi,
 } from '#/api/core/k8s/k8s_namespace';
 import {
   shouldNotifyPageError,

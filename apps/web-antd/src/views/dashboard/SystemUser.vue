@@ -1,28 +1,28 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { ref, reactive, computed, onMounted } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import type { FormInstance } from 'ant-design-vue';
 
 import {
-  getUserList,
-  registerApi,
-  updateUserInfo,
-  deleteUser,
-  getUserDetailApi,
-  getUserStatistics,
   changePassword,
   type ChangePasswordReq,
-  type UserSignUpReq,
-  type UpdateProfileReq,
+  deleteUser,
+  getUserDetailApi,
+  getUserList,
   type GetUserListReq,
+  getUserStatistics,
+  registerApi,
+  type UpdateProfileReq,
+  updateUserInfo,
+  type UserSignUpReq,
 } from '#/api/core/system/user';
 import {
   assignRolesToUserApi,
-  revokeRolesFromUserApi,
   getUserRolesApi,
   listRolesApi,
+  revokeRolesFromUserApi,
 } from '#/api/core/system/system';
 
 import { usePermission } from '#/utils/permission';
@@ -708,11 +708,11 @@ onMounted(() => {
         <div class="search-left">
           <a-input
             v-model:value="searchParams.search"
-            placeholder="搜索用户名"
-            aria-label="搜索用户"
             allowClear
-            @pressEnter="handleSearch"
+            aria-label="搜索用户"
             class="search-input"
+            placeholder="搜索用户名"
+            @pressEnter="handleSearch"
           >
             <template #prefix>
               <Icon icon="material-symbols:search" />
@@ -721,9 +721,9 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.enable"
-            placeholder="状态筛选"
             allowClear
             class="status-select"
+            placeholder="状态筛选"
           >
             <a-select-option :value="1">启用</a-select-option>
             <a-select-option :value="2">禁用</a-select-option>
@@ -731,9 +731,9 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.account_type"
-            placeholder="账号类型"
             allowClear
             class="type-select"
+            placeholder="账号类型"
           >
             <a-select-option :value="1">普通用户</a-select-option>
             <a-select-option :value="2">服务账号</a-select-option>
@@ -750,11 +750,11 @@ onMounted(() => {
     <!-- 用户表格 -->
     <div class="table-container">
       <a-table
-        :scroll="{ x: 'max-content' }"
         :columns="tableColumns"
         :data-source="userList"
-        :pagination="paginationConfig"
         :loading="loading"
+        :pagination="paginationConfig"
+        :scroll="{ x: 'max-content' }"
         row-key="id"
         size="middle"
         @change="handleTableChange"
@@ -800,11 +800,11 @@ onMounted(() => {
           <template v-if="column.key === 'status'">
             <a-switch
               :checked="record.enable === 1"
+              size="small"
               @change="
                 (checked: boolean) =>
                   handleStatusChange(record, checked ? 1 : 2)
               "
-              size="small"
             />
           </template>
 
@@ -818,18 +818,18 @@ onMounted(() => {
 
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
-              <a-button type="text" size="small" @click="handleView(record)">
+              <a-button size="small" type="text" @click="handleView(record)">
                 查看
               </a-button>
-              <a-button type="text" size="small" @click="handleEdit(record)">
+              <a-button size="small" type="text" @click="handleEdit(record)">
                 编辑信息
               </a-button>
-              <a-button type="text" size="small" @click="handleEPwd(record)">
+              <a-button size="small" type="text" @click="handleEPwd(record)">
                 修改密码
               </a-button>
               <a-button
-                type="text"
                 size="small"
+                type="text"
                 @click="handleRoleManagement(record)"
               >
                 角色
@@ -839,7 +839,7 @@ onMounted(() => {
                 title="确定要删除吗？"
                 @confirm="handleDelete(record)"
               >
-                <a-button type="text" size="small" danger>删除</a-button>
+                <a-button danger size="small" type="text">删除</a-button>
               </a-popconfirm>
             </div>
           </template>
@@ -850,9 +850,9 @@ onMounted(() => {
     <!-- 查看用户详情 -->
     <a-modal
       v-model:open="viewModalVisible"
+      :footer="null"
       title="用户详情"
       width="700px"
-      :footer="null"
     >
       <div v-if="viewUserData" class="user-detail">
         <div class="detail-section">
@@ -910,14 +910,14 @@ onMounted(() => {
               <label>注册时间</label>
               <span>{{ formatTime(viewUserData.created_at) }}</span>
             </div>
-            <div class="detail-item" v-if="viewUserData.desc">
+            <div v-if="viewUserData.desc" class="detail-item">
               <label>用户描述</label>
               <span>{{ viewUserData.desc }}</span>
             </div>
           </div>
         </div>
 
-        <div class="detail-section" v-if="viewUserData.roles?.length">
+        <div v-if="viewUserData.roles?.length" class="detail-section">
           <h3>角色信息</h3>
           <div class="roles-list">
             <a-tag
@@ -934,10 +934,10 @@ onMounted(() => {
     <!-- 修改密码 -->
     <a-modal
       v-model:open="pwdModalVisible"
+      :confirm-loading="submitLoading"
       :title="modalTitle"
       width="600px"
       @ok="handleChangePasswordSubmit"
-      :confirm-loading="submitLoading"
     >
       <a-form
         ref="formRef"
@@ -953,9 +953,9 @@ onMounted(() => {
           </a-col>
           <a-col :span="12">
             <a-form-item
+              :rules="[{ required: true, message: '请输入密码' }]"
               label="登录密码"
               name="password"
-              :rules="[{ required: true, message: '请输入密码' }]"
             >
               <a-input-password v-model:value="formData.password" />
             </a-form-item>
@@ -978,10 +978,10 @@ onMounted(() => {
     <!-- 编辑用户,不修改密码 -->
     <a-modal
       v-model:open="modalVisible"
+      :confirm-loading="submitLoading"
       :title="modalTitle"
       width="600px"
       @ok="handleSubmit"
-      :confirm-loading="submitLoading"
     >
       <a-form
         ref="formRef"
@@ -1005,17 +1005,17 @@ onMounted(() => {
                 <Icon icon="material-symbols:person" style="font-size: 48px" />
               </div>
               <div v-if="avatarUploading" class="upload-loading">
-                <Icon icon="material-symbols:refresh" class="loading-icon" />
+                <Icon class="loading-icon" icon="material-symbols:refresh" />
               </div>
             </div>
             <div class="avatar-upload-actions">
               <a-upload
-                name="avatar"
-                :show-upload-list="false"
-                action="/api/upload"
                 :before-upload="beforeAvatarUpload"
-                @change="handleAvatarChange"
+                :show-upload-list="false"
                 accept="image/*"
+                action="/api/upload"
+                name="avatar"
+                @change="handleAvatarChange"
               >
                 <a-button :loading="avatarUploading">
                   <Icon icon="material-symbols:upload" />
@@ -1024,8 +1024,8 @@ onMounted(() => {
               </a-upload>
               <a-button
                 v-if="formData.avatar"
-                @click="handleRemoveAvatar"
                 danger
+                @click="handleRemoveAvatar"
               >
                 <Icon icon="material-symbols:delete" />
                 移除头像
@@ -1071,7 +1071,7 @@ onMounted(() => {
           </a-col>
         </a-row>
 
-        <a-row :gutter="16" v-if="modalTitle === '新建用户'">
+        <a-row v-if="modalTitle === '新建用户'" :gutter="16">
           <a-col :span="12">
             <a-form-item label="密码" name="password">
               <a-input-password v-model:value="formData.password" />
@@ -1116,9 +1116,9 @@ onMounted(() => {
     <!-- 角色管理 -->
     <a-modal
       v-model:open="roleModalVisible"
+      :footer="null"
       title="角色管理"
       width="700px"
-      :footer="null"
     >
       <div v-if="currentUser">
         <div class="role-header">
@@ -1143,9 +1143,9 @@ onMounted(() => {
                   </div>
                 </div>
                 <a-button
-                  type="text"
                   danger
                   size="small"
+                  type="text"
                   @click="handleRevokeRole(role)"
                 >
                   移除
@@ -1171,8 +1171,8 @@ onMounted(() => {
                   </div>
                 </div>
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleAssignRole(role)"
                 >
                   分配

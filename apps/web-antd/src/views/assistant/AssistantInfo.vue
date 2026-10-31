@@ -1,8 +1,8 @@
 <template>
   <OpsPage
-    title="服务信息"
-    description="查看初始化状态、能力说明与服务配置"
     class="info-container"
+    description="查看初始化状态、能力说明与服务配置"
+    title="服务信息"
   >
     <!-- 页面头部 -->
     <template #actions>
@@ -16,9 +16,9 @@
         清除服务缓存
       </a-button>
       <a-button
+        :loading="loading || configLoading"
         type="primary"
         @click="refreshInfo"
-        :loading="loading || configLoading"
       >
         <template #icon>
           <ReloadOutlined />
@@ -30,12 +30,12 @@
     <a-alert
       v-if="loadError"
       :message="loadError"
-      type="error"
-      show-icon
       role="alert"
+      show-icon
+      type="error"
     >
       <template #action>
-        <a-button @click="refreshInfo" :loading="loading || configLoading">
+        <a-button :loading="loading || configLoading" @click="refreshInfo">
           重试
         </a-button>
       </template>
@@ -65,7 +65,7 @@
       </div>
 
       <!-- 服务基本信息 -->
-      <a-card title="基本信息" class="info-card" :loading="loading">
+      <a-card :loading="loading" class="info-card" title="基本信息">
         <a-descriptions :column="{ xs: 1, md: 2 }" bordered>
           <a-descriptions-item label="服务名称">
             <a-tag color="blue">{{ serviceInfo.service || '未知' }}</a-tag>
@@ -92,7 +92,7 @@
       </a-card>
 
       <!-- 服务能力 -->
-      <a-card title="服务能力" class="info-card" :loading="loading">
+      <a-card :loading="loading" class="info-card" title="服务能力">
         <div
           v-if="serviceInfo.capabilities && serviceInfo.capabilities.length > 0"
           class="capabilities-grid"
@@ -114,7 +114,7 @@
       </a-card>
 
       <!-- API 端点 -->
-      <a-card title="API 端点" class="info-card" :loading="loading">
+      <a-card :loading="loading" class="info-card" title="API 端点">
         <div
           v-if="
             serviceInfo.endpoints &&
@@ -128,7 +128,7 @@
           >
             <div class="endpoint-header">
               <a-tag color="purple">{{ name }}</a-tag>
-              <a-button type="link" size="small" @click="copyToClipboard(url)">
+              <a-button size="small" type="link" @click="copyToClipboard(url)">
                 <template #icon>
                   <CopyOutlined />
                 </template>
@@ -144,7 +144,7 @@
       </a-card>
 
       <!-- 配置信息 -->
-      <a-card title="配置参数" class="info-card" :loading="configLoading">
+      <a-card :loading="configLoading" class="info-card" title="配置参数">
         <div
           v-if="configInfo.config && Object.keys(configInfo.config).length > 0"
         >
@@ -187,24 +187,24 @@
 
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import {
-  ReloadOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  ThunderboltOutlined,
-  CopyOutlined,
   CalendarOutlined,
+  CheckCircleOutlined,
   ClockCircleOutlined,
+  CloseCircleOutlined,
+  CopyOutlined,
+  ReloadOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons-vue';
 import {
   clearAssistantCache,
-  getAssistantInfo,
-  getAssistantConfig,
   type ClearCacheResponse,
-  type ServiceInfoResponse,
+  getAssistantConfig,
+  getAssistantInfo,
   type ServiceConfigResponse,
+  type ServiceInfoResponse,
 } from '#/api/core/aiops/assistant';
 import { usePermission } from '#/utils/permission';
 import { useAiRequestScope } from './useAiRequestScope';

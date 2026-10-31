@@ -3,15 +3,15 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useAccessStore, useUserStore } from '@vben/stores';
 import { BellOutlined } from '@ant-design/icons-vue';
 import {
+  inboxPermissions as codes,
   deleteInboxMessage,
   getInboxMessages,
   getInboxPermissions,
   getInboxUnreadCount,
-  inboxPermissions as codes,
-  markAllInboxRead,
-  markInboxRead,
   type InboxMessage,
   type InboxPermissions,
+  markAllInboxRead,
+  markInboxRead,
 } from '#/api/core/workorder/inbox';
 
 const access = useAccessStore();
@@ -243,14 +243,14 @@ onBeforeUnmount(() => {
 <template>
   <a-popover
     :open="open"
-    trigger="click"
-    placement="bottomRight"
-    overlay-class-name="inbox-popover"
     :overlay-style="{ width: 'min(420px, calc(100vw - 16px))' }"
+    overlay-class-name="inbox-popover"
+    placement="bottomRight"
+    trigger="click"
     @open-change="handleOpen"
   >
     <template #content>
-      <section class="inbox" aria-label="站内消息列表">
+      <section aria-label="站内消息列表" class="inbox">
         <header class="inbox-header">
           <div>
             <strong>站内消息</strong
@@ -259,7 +259,7 @@ onBeforeUnmount(() => {
             }}</span>
           </div>
           <a-space>
-            <a-button size="small" :disabled="busy" @click="refresh">
+            <a-button :disabled="busy" size="small" @click="refresh">
               刷新 </a-button
             ><a-button
               v-if="allow(codes.readAll)"
@@ -274,9 +274,9 @@ onBeforeUnmount(() => {
         </header>
         <a-alert
           v-if="permissionError"
-          type="warning"
           :message="permissionError"
           show-icon
+          type="warning"
         />
         <a-alert
           v-else-if="!allow(codes.list)"
@@ -287,21 +287,21 @@ onBeforeUnmount(() => {
         <template v-else>
           <a-alert
             v-if="unreadError"
-            type="warning"
             :message="unreadError"
             show-icon
+            type="warning"
           />
           <a-alert
             v-if="listError"
-            type="error"
             :message="listError"
             show-icon
+            type="error"
           />
           <a-alert
             v-if="actionError"
-            type="error"
             :message="actionError"
             show-icon
+            type="error"
           />
           <a-checkbox v-model:checked="unreadOnly" @change="changeFilter">
             仅未读
@@ -355,21 +355,21 @@ onBeforeUnmount(() => {
           </a-spin>
           <a-pagination
             v-if="total > size"
-            size="small"
             :current="page"
             :page-size="size"
-            :total="total"
             :show-size-changer="false"
+            :total="total"
+            size="small"
             @change="changePage"
           />
         </template>
       </section>
     </template>
-    <a-badge :count="unreadCount ?? 0" :overflow-count="99" :offset="[-3, 3]">
+    <a-badge :count="unreadCount ?? 0" :offset="[-3, 3]" :overflow-count="99">
       <a-button
-        type="text"
-        aria-label="站内消息"
         :title="unreadCount === null ? '未读数量未知' : `未读 ${unreadCount}`"
+        aria-label="站内消息"
+        type="text"
       >
         <template #icon><BellOutlined /></template>
       </a-button>

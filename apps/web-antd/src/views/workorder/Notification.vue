@@ -1,13 +1,13 @@
 <template>
   <OpsPage
-    title="通知配置"
-    description="管理工单触发渠道、接收范围与发送记录"
     class="notification-management-container"
+    description="管理工单触发渠道、接收范围与发送记录"
+    title="通知配置"
   >
     <template #actions>
       <a-button
-        aria-label="刷新通知配置"
         :loading="loading"
+        aria-label="刷新通知配置"
         @click="loadNotifications"
       >
         刷新
@@ -16,10 +16,10 @@
         {{ showEvents ? '关闭投递事件' : '投递事件' }}
       </a-button>
       <a-button
-        type="primary"
         aria-label="创建通知配置"
-        @click="handleCreateNotification"
         class="btn-create"
+        type="primary"
+        @click="handleCreateNotification"
       >
         <template #icon>
           <PlusOutlined />
@@ -31,20 +31,20 @@
       <div class="search-filters">
         <a-input-search
           v-model:value="searchQuery"
-          placeholder="搜索通知配置..."
+          allow-clear
           aria-label="搜索通知配置"
           class="search-input"
-          @search="handleSearch"
+          placeholder="搜索通知配置..."
           @change="handleSearchChange"
-          allow-clear
+          @search="handleSearch"
         />
         <a-select
           v-model:value="channelFilter"
-          placeholder="选择通知渠道"
+          allow-clear
           aria-label="通知渠道筛选"
           class="channel-filter"
+          placeholder="选择通知渠道"
           @change="handleChannelChange"
-          allow-clear
         >
           <a-select-option :value="undefined">全部渠道</a-select-option>
           <a-select-option
@@ -57,11 +57,11 @@
         </a-select>
         <a-select
           v-model:value="statusFilter"
-          placeholder="状态"
+          allow-clear
           aria-label="配置状态筛选"
           class="status-filter"
+          placeholder="状态"
           @change="handleStatusChange"
-          allow-clear
         >
           <a-select-option :value="undefined">全部状态</a-select-option>
           <a-select-option :value="NotificationStatus.Enabled">
@@ -72,9 +72,9 @@
           </a-select-option>
         </a-select>
         <a-button
-          @click="handleResetFilters"
-          class="reset-btn"
           aria-label="重置通知筛选"
+          class="reset-btn"
+          @click="handleResetFilters"
         >
           重置
         </a-button>
@@ -85,8 +85,8 @@
       <div class="stats-grid">
         <a-card class="stats-card">
           <a-statistic
-            title="总配置数"
             :value="loadError ? '未知' : stats.total"
+            title="总配置数"
           >
             <template #prefix>
               <BellOutlined />
@@ -96,8 +96,8 @@
 
         <a-card class="stats-card">
           <a-statistic
-            title="本页启用"
             :value="loadError ? '未知' : stats.enabled"
+            title="本页启用"
           >
             <template #prefix>
               <CheckCircleOutlined />
@@ -107,8 +107,8 @@
 
         <a-card class="stats-card">
           <a-statistic
-            title="本页禁用"
             :value="loadError ? '未知' : stats.disabled"
+            title="本页禁用"
           >
             <template #prefix>
               <StopOutlined />
@@ -119,10 +119,10 @@
     </template>
     <a-alert
       v-if="loadError"
-      type="error"
-      show-icon
       :message="loadError"
       role="alert"
+      show-icon
+      type="error"
     >
       <template #action>
         <a-button size="small" @click="loadNotifications"> 重试 </a-button>
@@ -131,13 +131,13 @@
     <div class="table-container">
       <a-card>
         <a-table
-          :data-source="notifications"
           :columns="columns"
-          :pagination="paginationConfig"
+          :data-source="notifications"
           :loading="loading"
-          row-key="id"
-          bordered
+          :pagination="paginationConfig"
           :scroll="{ x: 1400 }"
+          bordered
+          row-key="id"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -204,10 +204,10 @@
             <template v-if="column.key === 'status'">
               <a-switch
                 :checked="record.status === NotificationStatus.Enabled"
+                :loading="record.statusLoading"
                 @change="
                   (checked: boolean) => handleStatusToggle(record, checked)
                 "
-                :loading="record.statusLoading"
               />
             </template>
 
@@ -238,15 +238,15 @@
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleViewNotification(record)"
                 >
                   查看
                 </a-button>
                 <a-button
-                  type="default"
                   size="small"
+                  type="default"
                   @click="handleEditNotification(record)"
                 >
                   编辑
@@ -279,7 +279,7 @@
                       </a-menu-item>
                     </a-menu>
                   </template>
-                  <a-button size="small" aria-label="通知更多操作">
+                  <a-button aria-label="通知更多操作" size="small">
                     更多
                     <DownOutlined />
                   </a-button>
@@ -293,17 +293,17 @@
 
     <!-- 通知配置创建/编辑对话框 -->
     <a-modal
+      :cancel-button-props="{ disabled: notificationDialog.saving }"
+      :closable="!notificationDialog.saving"
+      :confirm-loading="notificationDialog.saving"
+      :destroy-on-close="true"
+      :mask-closable="!notificationDialog.saving"
       :open="notificationDialogVisible"
       :title="notificationDialog.isEdit ? '编辑通知配置' : '创建通知配置'"
       :width="notificationDialogWidth"
-      @ok="saveNotification"
-      @cancel="closeNotificationDialog"
-      :destroy-on-close="true"
-      :confirm-loading="notificationDialog.saving"
-      :closable="!notificationDialog.saving"
-      :mask-closable="!notificationDialog.saving"
-      :cancel-button-props="{ disabled: notificationDialog.saving }"
       class="responsive-modal notification-config-modal"
+      @cancel="closeNotificationDialog"
+      @ok="saveNotification"
     >
       <a-alert
         v-if="Object.values(optionErrors).some(Boolean)"
@@ -313,8 +313,8 @@
         show-icon
       />
       <a-form
-        :disabled="notificationDialog.saving"
         ref="formRef"
+        :disabled="notificationDialog.saving"
         :model="notificationDialog.form"
         :rules="notificationRules"
         layout="vertical"
@@ -329,28 +329,28 @@
         <a-form-item label="配置描述" name="description">
           <a-textarea
             v-model:value="notificationDialog.form.description"
-            placeholder="请输入通知配置描述"
             :rows="3"
+            placeholder="请输入通知配置描述"
           />
         </a-form-item>
 
         <a-form-item label="关联流程" name="processId">
           <a-select
             v-model:value="notificationDialog.form.processId"
-            placeholder="请选择关联流程（可选）"
-            allow-clear
-            show-search
-            option-filter-prop="label"
-            :loading="processLoading"
             :dropdown-match-select-width="false"
-            @popup-scroll="(e: Event) => handleProcessScroll(e)"
+            :loading="processLoading"
+            allow-clear
+            option-filter-prop="label"
+            placeholder="请选择关联流程（可选）"
+            show-search
             @focus="() => loadProcesses(true)"
+            @popup-scroll="(e: Event) => handleProcessScroll(e)"
           >
             <a-select-option
               v-for="process in processes"
               :key="process.id"
-              :value="process.id"
               :label="process.name"
+              :value="process.id"
             >
               <div class="form-option">
                 <span class="form-name">{{ process.name }}</span>
@@ -374,20 +374,20 @@
         <a-form-item label="关联模板" name="templateId">
           <a-select
             v-model:value="notificationDialog.form.templateId"
-            placeholder="请选择关联模板（可选）"
-            allow-clear
-            show-search
-            option-filter-prop="label"
-            :loading="templateLoading"
             :dropdown-match-select-width="false"
-            @popup-scroll="(e: Event) => handleTemplateScroll(e)"
+            :loading="templateLoading"
+            allow-clear
+            option-filter-prop="label"
+            placeholder="请选择关联模板（可选）"
+            show-search
             @focus="() => loadTemplates(true)"
+            @popup-scroll="(e: Event) => handleTemplateScroll(e)"
           >
             <a-select-option
               v-for="template in templates"
               :key="template.id"
-              :value="template.id"
               :label="template.name"
+              :value="template.id"
             >
               <div class="form-option">
                 <span class="form-name">{{ template.name }}</span>
@@ -411,20 +411,20 @@
         <a-form-item label="关联分类" name="categoryId">
           <a-select
             v-model:value="notificationDialog.form.categoryId"
-            placeholder="请选择关联分类（可选）"
-            allow-clear
-            show-search
-            option-filter-prop="label"
-            :loading="categoryLoading"
             :dropdown-match-select-width="false"
-            @popup-scroll="(e: Event) => handleCategoryScroll(e)"
+            :loading="categoryLoading"
+            allow-clear
+            option-filter-prop="label"
+            placeholder="请选择关联分类（可选）"
+            show-search
             @focus="() => loadCategories(true)"
+            @popup-scroll="(e: Event) => handleCategoryScroll(e)"
           >
             <a-select-option
               v-for="category in categories"
               :key="category.id"
-              :value="category.id"
               :label="category.name"
+              :value="category.id"
             >
               <div class="form-option">
                 <span class="form-name">{{ category.name }}</span>
@@ -466,19 +466,19 @@
           </a-checkbox-group>
           <div class="form-help" style="margin-top: 8px">
             <a-alert
-              message="选择触发通知的工单事件类型"
-              description="建议选择关键事件以避免通知过多"
-              type="info"
-              show-icon
               banner
+              description="建议选择关键事件以避免通知过多"
+              message="选择触发通知的工单事件类型"
+              show-icon
+              type="info"
             />
           </div>
         </a-form-item>
 
         <a-alert
-          type="info"
-          show-icon
           message="通知计划在事件发生后生成；更改配置不会修改已生成的计划。"
+          show-icon
+          type="info"
         />
         <a-alert
           v-if="
@@ -488,9 +488,9 @@
               NotificationTrigger.IMMEDIATE ||
               notificationDialog.form.repeatInterval != null)
           "
-          type="warning"
-          show-icon
           message="历史高级规则尚未验证，不会自动执行。请重新设置触发参数，或停用后重新启用。"
+          show-icon
+          type="warning"
         />
         <a-form-item label="触发类型" name="triggerType">
           <a-radio-group v-model:value="notificationDialog.form.triggerType">
@@ -502,14 +502,14 @@
         </a-form-item>
 
         <a-form-item
+          v-if="notificationDialog.form.triggerType === 'conditional'"
           label="触发条件"
           name="triggerCondition"
-          v-if="notificationDialog.form.triggerType === 'conditional'"
         >
           <a-textarea
             v-model:value="notificationDialog.form.triggerCondition"
-            placeholder="例如 {&quot;status&quot;:2,&quot;priority&quot;:1}"
             :rows="4"
+            placeholder="例如 {&quot;status&quot;:2,&quot;priority&quot;:1}"
           />
         </a-form-item>
 
@@ -569,7 +569,7 @@
               notificationDialog.form.channels.includes('email')
             "
           >
-            <a-alert message="通知渠道配置建议" type="info" show-icon banner>
+            <a-alert banner message="通知渠道配置建议" show-icon type="info">
               <template #description>
                 <div>
                   <div
@@ -625,10 +625,10 @@
         >
           <a-select
             v-model:value="notificationDialog.form.recipientUsers"
+            :token-separators="[',', ';', ' ']"
             mode="tags"
             placeholder="请输入用户ID"
             style="width: 100%"
-            :token-separators="[',', ';', ' ']"
           />
         </a-form-item>
 
@@ -639,10 +639,10 @@
         >
           <a-select
             v-model:value="notificationDialog.form.recipientRoles"
+            :token-separators="[',', ';', ' ']"
             mode="tags"
             placeholder="请输入角色ID"
             style="width: 100%"
-            :token-separators="[',', ';', ' ']"
           />
         </a-form-item>
 
@@ -653,10 +653,10 @@
         >
           <a-select
             v-model:value="notificationDialog.form.recipientDepts"
+            :token-separators="[',', ';', ' ']"
             mode="tags"
             placeholder="请输入部门ID"
             style="width: 100%"
-            :token-separators="[',', ';', ' ']"
           />
         </a-form-item>
 
@@ -667,10 +667,10 @@
         >
           <a-alert
             v-if="recipientError"
-            class="recipient-error"
             :message="recipientError"
-            type="error"
+            class="recipient-error"
             show-icon
+            type="error"
           />
           <p class="text-gray">
             每个地址明确选择渠道。邮箱填写邮箱地址，飞书填写 ou_/on_/oc_ ID
@@ -704,12 +704,12 @@
             <a-input
               v-model:value="address.name"
               :aria-label="'自定义接收人名称' + (index + 1)"
-              placeholder="接收人名称（可选）"
               :maxlength="100"
+              placeholder="接收人名称（可选）"
             />
             <a-button
-              danger
               :aria-label="'移除接收地址' + (index + 1)"
+              danger
               @click="
                 notificationDialog.form.recipientAddresses.splice(index, 1)
               "
@@ -734,18 +734,18 @@
         <a-form-item label="消息模板" name="messageTemplate">
           <a-textarea
             v-model:value="notificationDialog.form.messageTemplate"
+            :maxlength="2000"
             :rows="8"
             placeholder="请输入通知消息模板"
             show-count
-            :maxlength="2000"
           />
           <div class="template-help">
             <a-alert
-              message="📋 AI-CloudOps 通知系统支持的模板变量"
-              type="info"
-              show-icon
               banner
+              message="📋 AI-CloudOps 通知系统支持的模板变量"
+              show-icon
               style="margin-top: 8px"
+              type="info"
             >
               <template #description>
                 <div class="template-variables-help">
@@ -899,16 +899,16 @@
         </a-form-item>
 
         <a-form-item
+          v-if="notificationDialog.form.triggerType === 'scheduled'"
           label="定时发送时间"
           name="scheduledTime"
-          v-if="notificationDialog.form.triggerType === 'scheduled'"
         >
           <a-date-picker
             v-model:value="notificationDialog.form.scheduledTime"
-            show-time
-            placeholder="请选择发送时间"
-            style="width: 100%"
             :disabled-date="disabledDate"
+            placeholder="请选择发送时间"
+            show-time
+            style="width: 100%"
           />
         </a-form-item>
 
@@ -921,8 +921,8 @@
           <a-input-number
             id="notification-delay-minutes"
             v-model:value="notificationDialog.form.delayMinutes"
-            :min="1"
             :max="10080"
+            :min="1"
             style="width: 100%"
           />
         </a-form-item>
@@ -930,8 +930,8 @@
           <a-input-number
             id="notification-repeat-interval"
             v-model:value="notificationDialog.form.repeatInterval"
-            :min="1"
             :max="10080"
+            :min="1"
             placeholder="不重复时留空"
             style="width: 100%"
           />
@@ -940,8 +940,8 @@
           <a-input-number
             id="notification-repeat-count"
             v-model:value="notificationDialog.form.repeatCount"
-            :min="2"
             :max="100"
+            :min="2"
             placeholder="不重复时留空"
             style="width: 100%"
           />
@@ -950,9 +950,9 @@
         <a-form-item label="最大重试次数" name="maxRetries">
           <a-input-number
             v-model:value="notificationDialog.form.maxRetries"
-            placeholder="最大重试次数"
-            :min="0"
             :max="100"
+            :min="0"
+            placeholder="最大重试次数"
             style="width: 100%"
           />
         </a-form-item>
@@ -960,8 +960,8 @@
         <a-form-item label="重试间隔（分钟）" name="retryInterval">
           <a-input-number
             v-model:value="notificationDialog.form.retryInterval"
-            placeholder="重试间隔（分钟）"
             :min="1"
+            placeholder="重试间隔（分钟）"
             style="width: 100%"
           />
         </a-form-item>
@@ -985,36 +985,36 @@
 
         <a-form-item label="状态" name="status">
           <a-switch
-            aria-label="通知启用状态"
             :checked="
               notificationDialog.form.status === NotificationStatus.Enabled
             "
+            aria-label="通知启用状态"
+            checked-children="启用"
+            un-checked-children="禁用"
             @change="
               (checked: boolean) =>
                 (notificationDialog.form.status = checked
                   ? NotificationStatus.Enabled
                   : NotificationStatus.Disabled)
             "
-            checked-children="启用"
-            un-checked-children="禁用"
           />
         </a-form-item>
 
         <a-form-item
+          v-if="notificationDialog.isEdit"
           label="是否默认配置"
           name="isDefault"
-          v-if="notificationDialog.isEdit"
         >
           <a-switch
             :checked="notificationDialog.form.isDefault === IsDefault.Yes"
+            checked-children="是"
+            un-checked-children="否"
             @change="
               (checked: boolean) =>
                 (notificationDialog.form.isDefault = checked
                   ? IsDefault.Yes
                   : IsDefault.No)
             "
-            checked-children="是"
-            un-checked-children="否"
           />
         </a-form-item>
       </a-form>
@@ -1022,12 +1022,12 @@
 
     <!-- 通知详情对话框 -->
     <a-modal
-      :open="detailDialogVisible"
-      title="通知配置详情"
-      :width="detailDialogWidth"
       :footer="null"
-      @cancel="closeDetailDialog"
+      :open="detailDialogVisible"
+      :width="detailDialogWidth"
       class="detail-dialog"
+      title="通知配置详情"
+      @cancel="closeDetailDialog"
     >
       <div v-if="detailDialog.notification" class="notification-details">
         <div class="detail-header">
@@ -1043,7 +1043,7 @@
           />
         </div>
 
-        <a-descriptions bordered :column="1" :labelStyle="{ width: '120px' }">
+        <a-descriptions :column="1" :labelStyle="{ width: '120px' }" bordered>
           <a-descriptions-item label="配置ID">
             {{ detailDialog.notification.id }}
           </a-descriptions-item>
@@ -1170,15 +1170,15 @@
 
     <!-- 发送记录对话框 -->
     <a-modal
-      :open="logsDialogVisible"
-      title="发送记录"
-      :width="logsDialogWidth"
       :footer="null"
-      @cancel="closeLogsDialog"
+      :open="logsDialogVisible"
+      :width="logsDialogWidth"
       class="logs-dialog"
+      title="发送记录"
+      @cancel="closeLogsDialog"
     >
       <div class="send-logs">
-        <a-alert v-if="logsError" :message="logsError" type="error" show-icon>
+        <a-alert v-if="logsError" :message="logsError" show-icon type="error">
           <template #action>
             <a-button
               v-if="activeLogsNotificationId"
@@ -1189,10 +1189,10 @@
           </template>
         </a-alert>
         <a-table
-          :data-source="sendLogs"
           :columns="logsColumns"
-          :pagination="logsPagination"
+          :data-source="sendLogs"
           :loading="logsLoading"
+          :pagination="logsPagination"
           row-key="id"
           size="small"
           @change="handleLogsTableChange"
@@ -1234,12 +1234,12 @@
       @ok="confirmTestSend"
       @cancel="closeTestSend"
     >
-      <a-alert message="测试将实际发送到下面指定的地址" type="info" show-icon />
+      <a-alert message="测试将实际发送到下面指定的地址" show-icon type="info" />
       <a-alert
         v-if="testSendDialog.error"
         :message="testSendDialog.error"
-        type="error"
         show-icon
+        type="error"
       />
       <a-form layout="vertical" style="margin-top: 16px">
         <a-form-item label="发送渠道" required>
@@ -1259,8 +1259,8 @@
         <a-form-item label="接收地址" required>
           <a-input
             v-model:value="testSendDialog.recipient"
-            placeholder="请输入接收地址"
             :disabled="testSendDialog.sending"
+            placeholder="请输入接收地址"
           />
         </a-form-item>
       </a-form>
@@ -1268,19 +1268,19 @@
 
     <!-- 手动发送对话框 -->
     <a-modal
-      :open="manualSendDialogVisible"
-      title="手动发送通知"
-      :width="600"
-      @ok="saveManualSend"
-      @cancel="closeManualSendDialog"
-      :destroy-on-close="true"
       :confirm-loading="manualSendDialog.saving"
+      :destroy-on-close="true"
+      :open="manualSendDialogVisible"
+      :width="600"
       class="responsive-modal manual-send-modal"
+      title="手动发送通知"
+      @cancel="closeManualSendDialog"
+      @ok="saveManualSend"
     >
       <a-alert
         message="直接发送编辑后的内容，模板变量不会自动替换"
-        type="info"
         show-icon
+        type="info"
       />
       <a-form
         :model="manualSendDialog.form"
@@ -1336,10 +1336,10 @@
         <a-form-item label="通知内容" name="content">
           <a-textarea
             v-model:value="manualSendDialog.form.content"
+            :maxlength="1000"
             :rows="6"
             placeholder="请输入通知内容"
             show-count
-            :maxlength="1000"
           />
         </a-form-item>
       </a-form>
@@ -1349,7 +1349,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import OpsPage from '#/components/ops/OpsPage.vue';
 import NotificationEvents from './NotificationEvents.vue';
 import { useWindowSize } from '@vueuse/core';
@@ -1363,48 +1363,48 @@ import {
 } from './notification-schedule';
 import type { FormInstance } from 'ant-design-vue';
 import {
-  PlusOutlined,
   BellOutlined,
   CheckCircleOutlined,
-  StopOutlined,
-  SendOutlined,
-  DownOutlined,
   CopyOutlined,
+  DownOutlined,
   FileTextOutlined,
-  MessageOutlined,
   MailOutlined,
+  MessageOutlined,
   PhoneOutlined,
+  PlusOutlined,
+  SendOutlined,
+  StopOutlined,
 } from '@ant-design/icons-vue';
 import {
-  NotificationStatus,
-  getNotificationSendStatus as getSendStatus,
-  NotificationChannel,
-  NotificationTrigger,
-  NotificationPriority,
-  IsDefault,
-  type Notification,
-  type NotificationLog,
-  type NotificationRecipientAddress,
-  type CreateNotificationReq,
-  type UpdateNotificationReq,
-  type ListNotificationReq,
-  type ListSendLogReq,
-  type ManualSendNotificationReq,
-  getNotificationList,
-  getNotificationDetail,
   createNotification,
-  updateNotification,
+  type CreateNotificationReq,
   deleteNotification,
-  updateNotificationStatus,
-  getSendLogs,
-  testSendNotification,
-  sendNotificationManually,
-  getEventTypeName,
-  getNotificationChannelName,
-  getRecipientTypeName,
   getAllEventTypes,
   getAllNotificationChannels,
   getAllRecipientTypes,
+  getEventTypeName,
+  getNotificationChannelName,
+  getNotificationDetail,
+  getNotificationList,
+  getRecipientTypeName,
+  getSendLogs,
+  getNotificationSendStatus as getSendStatus,
+  IsDefault,
+  type ListNotificationReq,
+  type ListSendLogReq,
+  type ManualSendNotificationReq,
+  type Notification,
+  NotificationChannel,
+  type NotificationLog,
+  NotificationPriority,
+  type NotificationRecipientAddress,
+  NotificationStatus,
+  NotificationTrigger,
+  sendNotificationManually,
+  testSendNotification,
+  updateNotification,
+  type UpdateNotificationReq,
+  updateNotificationStatus,
 } from '#/api/core/workorder/workorder_notification';
 import {
   listWorkorderProcess,

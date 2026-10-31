@@ -10,18 +10,18 @@ import { useAccessStore } from '@vben/stores';
 import { usePermission } from '#/utils/permission';
 import { message } from 'ant-design-vue';
 import {
+  type AutoFixInfoResponse,
+  type AutoFixOperation,
+  type AutoFixReadyResponse,
+  type AutoFixWorkflowRequest,
+  type AutoFixWorkflowResponse,
   confirmAutoFixWorkflow,
   executeAutoFixWorkflow,
-  getAutoFixInfo,
-  getAutoFixReady,
   getAutoFixHistory,
+  getAutoFixInfo,
   getAutoFixOperation,
   getAutoFixPlan,
-  type AutoFixOperation,
-  type AutoFixWorkflowRequest,
-  type AutoFixInfoResponse,
-  type AutoFixReadyResponse,
-  type AutoFixWorkflowResponse,
+  getAutoFixReady,
 } from '#/api/core/aiops/autofix';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 import { reportAutoFixOutcomeUncertain } from './autofix-errors';

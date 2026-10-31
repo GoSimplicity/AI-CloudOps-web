@@ -1,8 +1,8 @@
 <template>
   <OpsPage
-    title="知识库管理"
-    description="上传 UTF-8 文档并管理知识索引"
     class="knowledge-container"
+    description="上传 UTF-8 文档并管理知识索引"
+    title="知识库管理"
   >
     <!-- 页面头部 -->
     <template #actions>
@@ -20,27 +20,27 @@
       <div class="stats-grid">
         <a-card class="stat-card">
           <a-statistic
-            title="文档数量"
             :value="!statsKnown ? '未统计' : knowledgeStats.documents_count"
             :value-style="{ color: '#1890ff' }"
+            title="文档数量"
           >
             <template #prefix><FileTextOutlined /></template>
           </a-statistic>
         </a-card>
         <a-card class="stat-card">
           <a-statistic
-            title="向量数量"
             :value="!statsKnown ? '未统计' : knowledgeStats.vector_count"
             :value-style="{ color: '#52c41a' }"
+            title="向量数量"
           >
             <template #prefix><NodeIndexOutlined /></template>
           </a-statistic>
         </a-card>
         <a-card class="stat-card">
           <a-statistic
-            title="最后更新"
             :value="knowledgeStats.last_update"
             :value-style="{ color: '#fa8c16' }"
+            title="最后更新"
           >
             <template #prefix><ClockCircleOutlined /></template>
           </a-statistic>
@@ -51,9 +51,9 @@
     <a-alert
       v-if="loadError"
       :message="loadError"
-      type="error"
-      show-icon
       role="alert"
+      show-icon
+      type="error"
     />
     <p class="index-note">
       重建会重新索引全库并调用嵌入模型；上传和添加仅索引当前文档
@@ -65,8 +65,8 @@
       <div class="function-area">
         <a-row :gutter="24">
           <!-- 文件上传 -->
-          <a-col :xs="24" :lg="12">
-            <a-card title="文档上传" class="function-card">
+          <a-col :lg="12" :xs="24">
+            <a-card class="function-card" title="文档上传">
               <div class="upload-area">
                 <a-upload-dragger
                   v-model:fileList="fileList"
@@ -91,9 +91,9 @@
           </a-col>
 
           <!-- 手动添加文档 -->
-          <a-col :xs="24" :lg="12">
-            <a-card title="手动添加文档" class="function-card">
-              <a-form layout="vertical" :model="documentForm">
+          <a-col :lg="12" :xs="24">
+            <a-card class="function-card" title="手动添加文档">
+              <a-form :model="documentForm" layout="vertical">
                 <a-form-item label="文档标题" name="title">
                   <a-input
                     v-model:value="documentForm.title"
@@ -109,16 +109,16 @@
                 <a-form-item label="文档内容" name="content">
                   <a-textarea
                     v-model:value="documentForm.content"
-                    placeholder="请输入文档内容"
                     :rows="6"
+                    placeholder="请输入文档内容"
                   />
                 </a-form-item>
                 <a-form-item>
                   <a-button
-                    type="primary"
-                    @click="addDocument"
                     :loading="adding"
                     block
+                    type="primary"
+                    @click="addDocument"
                   >
                     添加文档
                   </a-button>
@@ -130,7 +130,7 @@
       </div>
 
       <!-- 操作日志 -->
-      <a-card title="操作日志" class="log-card">
+      <a-card class="log-card" title="操作日志">
         <div class="log-container">
           <div v-if="operationLogs.length === 0" class="empty-log">
             <a-empty description="暂无操作记录" />
@@ -164,26 +164,26 @@
 
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { ref, reactive, onMounted } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { message, Upload, type UploadProps } from 'ant-design-vue';
 import {
-  ReloadOutlined,
-  FileTextOutlined,
-  NodeIndexOutlined,
-  ClockCircleOutlined,
-  InboxOutlined,
   CheckCircleOutlined,
+  ClockCircleOutlined,
   CloseCircleOutlined,
+  FileTextOutlined,
+  InboxOutlined,
   InfoCircleOutlined,
+  NodeIndexOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons-vue';
 import {
-  refreshKnowledgeBase,
-  uploadKnowledgeFile,
   addDocument as addDocumentAPI,
   type AddDocumentRequest,
-  type RefreshKnowledgeResponse,
-  type UploadKnowledgeResponse,
   type AddDocumentResponse,
+  refreshKnowledgeBase,
+  type RefreshKnowledgeResponse,
+  uploadKnowledgeFile,
+  type UploadKnowledgeResponse,
 } from '#/api/core/aiops/assistant';
 import { usePermission } from '#/utils/permission';
 import {

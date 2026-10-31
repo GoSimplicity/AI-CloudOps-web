@@ -1,21 +1,21 @@
 <template>
   <OpsPage
-    title="RoleBinding 管理"
     description="管理和监控集群中的所有 Kubernetes RoleBinding"
+    title="RoleBinding 管理"
   >
     <template #actions>
       <a-button
+        :disabled="!filterClusterId"
         type="primary"
         @click="openCreateModal"
-        :disabled="!filterClusterId"
       >
         <template #icon><PlusOutlined aria-hidden="true" /></template>
         创建 RoleBinding
       </a-button>
       <a-button
-        @click="fetchRoleBindings"
-        :loading="loading"
         :disabled="!filterClusterId"
+        :loading="loading"
+        @click="fetchRoleBindings"
       >
         <template #icon><ReloadOutlined aria-hidden="true" /></template>
         刷新数据
@@ -30,13 +30,13 @@
           <div class="k8s-filter-group">
             <a-select
               v-model:value="filterClusterId"
-              placeholder="选择集群"
-              class="k8s-cluster-selector"
-              aria-label="选择集群"
-              allow-clear
-              @change="handleClusterChange"
-              :loading="clustersLoading"
               :disabled="clustersLoading"
+              :loading="clustersLoading"
+              allow-clear
+              aria-label="选择集群"
+              class="k8s-cluster-selector"
+              placeholder="选择集群"
+              @change="handleClusterChange"
               @popup-scroll="handleClusterDropdownScroll"
             >
               <template #suffixIcon>
@@ -54,7 +54,7 @@
                     justify-content: space-between;
                   "
                 >
-                  <span class="k8s-cluster-name" :title="cluster.name">{{
+                  <span :title="cluster.name" class="k8s-cluster-name">{{
                     cluster.name
                   }}</span>
                   <a-tag color="blue" size="small">
@@ -68,20 +68,20 @@
                 disabled
                 style="text-align: center; color: var(--ops-muted)"
               >
-                <a-spin size="small" :spinning="clustersLoading" />
+                <a-spin :spinning="clustersLoading" size="small" />
                 <span v-if="!clustersLoading">滚动加载更多...</span>
               </a-select-option>
             </a-select>
 
             <a-select
               v-model:value="filterNamespace"
-              placeholder="选择命名空间"
-              class="k8s-filter-select k8s-namespace-selector"
-              aria-label="选择命名空间"
-              allow-clear
-              @change="handleFilterChange"
               :disabled="!filterClusterId"
               :loading="namespacesLoading"
+              allow-clear
+              aria-label="选择命名空间"
+              class="k8s-filter-select k8s-namespace-selector"
+              placeholder="选择命名空间"
+              @change="handleFilterChange"
             >
               <template #suffixIcon>
                 <AppstoreOutlined aria-hidden="true" />
@@ -102,10 +102,10 @@
                 style="text-align: center; color: var(--ops-muted)"
               >
                 <a-button
-                  type="link"
-                  size="small"
-                  @click.stop="loadMoreNamespaces"
                   :loading="namespacesLoading"
+                  size="small"
+                  type="link"
+                  @click.stop="loadMoreNamespaces"
                 >
                   加载更多...
                 </a-button>
@@ -115,9 +115,9 @@
             <!-- 标签过滤器 -->
             <div class="rolebinding-labels-filter">
               <a-button
+                class="k8s-toolbar-btn"
                 type="dashed"
                 @click="openLabelsFilter"
-                class="k8s-toolbar-btn"
               >
                 <template #icon><TagsOutlined aria-hidden="true" /></template>
                 标签过滤（本页）
@@ -139,10 +139,10 @@
                   v-for="(value, key) in filterLabels"
                   :key="key"
                   closable
-                  @close="removeFilterLabel(key)"
                   color="blue"
                   size="small"
                   style="margin-right: 4px; margin-bottom: 4px"
+                  @close="removeFilterLabel(key)"
                 >
                   {{ key }}: {{ value }}
                 </a-tag>
@@ -153,11 +153,11 @@
           <div class="k8s-search-group">
             <a-input
               v-model:value="searchText"
-              placeholder="搜索 RoleBinding 名称"
-              class="k8s-search-input"
-              @pressEnter="onSearch"
-              @input="onSearch"
               allow-clear
+              class="k8s-search-input"
+              placeholder="搜索 RoleBinding 名称"
+              @input="onSearch"
+              @pressEnter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -185,10 +185,10 @@
             </a-button>
 
             <a-button
-              @click="openCreateYamlModal"
               :disabled="!filterClusterId"
               class="k8s-toolbar-btn"
               title="通过YAML创建RoleBinding"
+              @click="openCreateYamlModal"
             >
               <template #icon><FileTextOutlined aria-hidden="true" /></template>
               YAML 创建
@@ -214,9 +214,9 @@
     </template>
     <a-alert
       v-if="clustersError"
-      type="error"
       :message="clustersError"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button size="small" @click="fetchClusters(true)">
@@ -226,9 +226,9 @@
     </a-alert>
     <a-alert
       v-if="namespacesError"
-      type="error"
       :message="namespacesError"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button size="small" @click="fetchNamespaces(true)">
@@ -236,7 +236,7 @@
         </a-button>
       </template>
     </a-alert>
-    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button size="small" @click="fetchRoleBindings"> 重试查询 </a-button>
       </template>
@@ -247,9 +247,7 @@
       <a-table
         :columns="columns"
         :data-source="filteredRoleBindings"
-        :row-selection="rowSelection"
         :loading="loading"
-        :row-key="namespacedResourceKey"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,
@@ -260,9 +258,11 @@
             `后端共 ${total} 条，本页匹配 ${filteredRoleBindings.length} 条`,
           pageSizeOptions: ['10', '20', '30', '50'],
         }"
-        @change="handleTableChange"
-        class="k8s-table rolebinding-table"
+        :row-key="namespacedResourceKey"
+        :row-selection="rowSelection"
         :scroll="{ x: 1600 }"
+        class="k8s-table rolebinding-table"
+        @change="handleTableChange"
       >
         <template #bodyCell="{ column, record, text }">
           <template v-if="column.key === 'roleRef'">
@@ -448,8 +448,8 @@
               </a-tooltip>
               <a-tooltip v-if="can('k8s.rolebinding.delete')" title="删除">
                 <a-button
-                  title="删除"
                   danger
+                  title="删除"
                   @click="deleteRoleBinding(record)"
                 >
                   <template #icon>
@@ -475,29 +475,29 @@
     <!-- 创建 RoleBinding 模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      title="创建 RoleBinding"
-      @ok="submitCreateForm"
-      @cancel="closeCreateModal"
       :confirmLoading="submitLoading"
-      width="900px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="创建"
-      cancelText="取消"
+      title="创建 RoleBinding"
+      width="900px"
+      @cancel="closeCreateModal"
+      @ok="submitCreateForm"
     >
       <a-form
         ref="formRef"
         :model="createFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="createFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
-        <a-form-item label="RoleBinding 名称" name="name" :required="true">
+        <a-form-item :required="true" label="RoleBinding 名称" name="name">
           <a-input
             v-model:value="createFormModel.name"
-            placeholder="请输入 RoleBinding 名称（例如：my-rolebinding）"
-            class="k8s-form-input"
             :maxlength="63"
+            class="k8s-form-input"
+            placeholder="请输入 RoleBinding 名称（例如：my-rolebinding）"
           />
           <div
             style="color: var(--ops-muted); font-size: 12px; margin-top: 4px"
@@ -506,12 +506,12 @@
           </div>
         </a-form-item>
 
-        <a-form-item label="命名空间" name="namespace" :required="true">
+        <a-form-item :required="true" label="命名空间" name="namespace">
           <a-select
             v-model:value="createFormModel.namespace"
-            placeholder="请选择命名空间"
-            class="k8s-form-input"
             :disabled="!filterClusterId"
+            class="k8s-form-input"
+            placeholder="请选择命名空间"
           >
             <a-select-option
               v-for="ns in namespaces"
@@ -529,10 +529,10 @@
               style="text-align: center; color: var(--ops-muted)"
             >
               <a-button
-                type="link"
-                size="small"
-                @click.stop="loadMoreNamespaces"
                 :loading="namespacesLoading"
+                size="small"
+                type="link"
+                @click.stop="loadMoreNamespaces"
               >
                 加载更多...
               </a-button>
@@ -540,14 +540,14 @@
           </a-select>
         </a-form-item>
 
-        <a-form-item label="角色引用" :required="true">
+        <a-form-item :required="true" label="角色引用">
           <a-row :gutter="12">
             <a-col :span="8">
               <a-form-item :name="['role_ref', 'kind']" no-style>
                 <a-select
                   v-model:value="createFormModel.role_ref.kind"
-                  placeholder="角色类型"
                   class="k8s-form-input"
+                  placeholder="角色类型"
                 >
                   <a-select-option value="Role">Role</a-select-option>
                   <a-select-option value="ClusterRole">
@@ -559,7 +559,6 @@
             <a-col :span="16">
               <a-form-item
                 :name="['role_ref', 'name']"
-                no-style
                 :rules="[
                   {
                     required: true,
@@ -567,18 +566,19 @@
                     trigger: 'blur',
                   },
                 ]"
+                no-style
               >
                 <a-input
                   v-model:value="createFormModel.role_ref.name"
-                  placeholder="请输入角色名称（例如：pod-reader）"
                   class="k8s-form-input"
+                  placeholder="请输入角色名称（例如：pod-reader）"
                 />
               </a-form-item>
             </a-col>
           </a-row>
         </a-form-item>
 
-        <a-form-item label="主体配置" :required="true">
+        <a-form-item :required="true" label="主体配置">
           <div class="k8s-key-value-inputs">
             <div
               v-for="(subject, index) in createFormModel.subjects"
@@ -587,8 +587,8 @@
             >
               <a-select
                 v-model:value="subject.kind"
-                placeholder="主体类型"
                 class="k8s-form-input"
+                placeholder="主体类型"
                 style="width: 120px"
               >
                 <a-select-option value="User">User</a-select-option>
@@ -599,30 +599,30 @@
               </a-select>
               <a-input
                 v-model:value="subject.name"
-                placeholder="主体名称"
                 class="k8s-form-input"
+                placeholder="主体名称"
               />
               <a-input
                 v-model:value="subject.namespace"
-                placeholder="命名空间（ServiceAccount需要）"
-                class="k8s-form-input"
                 :disabled="subject.kind !== 'ServiceAccount'"
+                class="k8s-form-input"
+                placeholder="命名空间（ServiceAccount需要）"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeSubjectField(index)"
                 :disabled="createFormModel.subjects.length <= 1"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeSubjectField(index)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
             <a-button
+              style="margin-top: 8px"
               type="dashed"
               @click="addSubjectField"
-              style="margin-top: 8px"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
               添加主体
@@ -647,23 +647,23 @@
               class="k8s-key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`标签键: ${key}`"
-                disabled
+                :value="key"
                 class="k8s-form-input"
+                disabled
               />
               <a-input
                 v-model:value="createFormModel.labels[key]"
-                placeholder="标签值"
-                class="k8s-form-input"
                 :maxlength="200"
+                class="k8s-form-input"
+                placeholder="标签值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeLabelField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeLabelField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -704,23 +704,23 @@
               class="k8s-key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`注解键: ${key}`"
-                disabled
+                :value="key"
                 class="k8s-form-input"
+                disabled
               />
               <a-input
                 v-model:value="createFormModel.annotations[key]"
-                placeholder="注解值"
-                class="k8s-form-input"
                 :maxlength="500"
+                class="k8s-form-input"
+                placeholder="注解值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeAnnotationField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeAnnotationField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -749,29 +749,29 @@
     <!-- 编辑 RoleBinding 模态框 -->
     <a-modal
       v-model:open="isEditModalVisible"
-      title="编辑 RoleBinding"
-      @ok="submitEditForm"
-      @cancel="closeEditModal"
       :confirmLoading="submitLoading"
-      width="900px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="保存"
-      cancelText="取消"
+      title="编辑 RoleBinding"
+      width="900px"
+      @cancel="closeEditModal"
+      @ok="submitEditForm"
     >
       <a-form
         ref="editFormRef"
         :model="editFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="editFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
         <a-alert
-          message="编辑提示"
           description="RoleBinding 创建后只能编辑主体、标签和注解信息。名称、命名空间和角色引用（roleRef）是不可变的，无法修改。如需更改角色引用，请删除后重新创建。"
-          type="warning"
+          message="编辑提示"
           show-icon
           style="margin-bottom: 24px"
+          type="warning"
         />
 
         <!-- 基础信息（只读） -->
@@ -780,8 +780,8 @@
             <a-form-item label="RoleBinding 名称">
               <a-input
                 :value="editFormModel.name"
-                disabled
                 class="k8s-form-input"
+                disabled
               />
             </a-form-item>
           </a-col>
@@ -789,8 +789,8 @@
             <a-form-item label="命名空间">
               <a-input
                 :value="editFormModel.namespace"
-                disabled
                 class="k8s-form-input"
+                disabled
               />
             </a-form-item>
           </a-col>
@@ -801,9 +801,9 @@
             <a-col :span="8">
               <a-select
                 v-model:value="editFormModel.role_ref.kind"
-                placeholder="角色类型"
                 class="k8s-form-input"
                 disabled
+                placeholder="角色类型"
               >
                 <a-select-option value="Role">Role</a-select-option>
                 <a-select-option value="ClusterRole">
@@ -814,9 +814,9 @@
             <a-col :span="16">
               <a-input
                 v-model:value="editFormModel.role_ref.name"
-                placeholder="角色名称"
                 class="k8s-form-input"
                 disabled
+                placeholder="角色名称"
               />
             </a-col>
           </a-row>
@@ -825,7 +825,7 @@
           </div>
         </a-form-item>
 
-        <a-form-item label="主体配置" :required="true">
+        <a-form-item :required="true" label="主体配置">
           <div class="k8s-key-value-inputs">
             <div
               v-for="(subject, index) in editFormModel.subjects"
@@ -834,8 +834,8 @@
             >
               <a-select
                 v-model:value="subject.kind"
-                placeholder="主体类型"
                 class="k8s-form-input"
+                placeholder="主体类型"
                 style="width: 120px"
               >
                 <a-select-option value="User">User</a-select-option>
@@ -846,30 +846,30 @@
               </a-select>
               <a-input
                 v-model:value="subject.name"
-                placeholder="主体名称"
                 class="k8s-form-input"
+                placeholder="主体名称"
               />
               <a-input
                 v-model:value="subject.namespace"
-                placeholder="命名空间（ServiceAccount需要）"
-                class="k8s-form-input"
                 :disabled="subject.kind !== 'ServiceAccount'"
+                class="k8s-form-input"
+                placeholder="命名空间（ServiceAccount需要）"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeEditSubjectField(index)"
                 :disabled="editFormModel.subjects.length <= 1"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeEditSubjectField(index)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
             <a-button
+              style="margin-top: 8px"
               type="dashed"
               @click="addEditSubjectField"
-              style="margin-top: 8px"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
               添加主体
@@ -894,23 +894,23 @@
               class="k8s-key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`标签键: ${key}`"
-                disabled
+                :value="key"
                 class="k8s-form-input"
+                disabled
               />
               <a-input
                 v-model:value="editFormModel.labels[key]"
-                placeholder="标签值"
-                class="k8s-form-input"
                 :maxlength="200"
+                class="k8s-form-input"
+                placeholder="标签值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeEditLabelField(String(key))"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeEditLabelField(String(key))"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -951,23 +951,23 @@
               class="k8s-key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`注解键: ${key}`"
-                disabled
+                :value="key"
                 class="k8s-form-input"
+                disabled
               />
               <a-input
                 v-model:value="editFormModel.annotations[key]"
-                placeholder="注解值"
-                class="k8s-form-input"
                 :maxlength="500"
+                class="k8s-form-input"
+                placeholder="注解值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeEditAnnotationField(String(key))"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeEditAnnotationField(String(key))"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -996,22 +996,22 @@
     <!-- 通过 YAML 创建 RoleBinding 模态框 -->
     <a-modal
       v-model:open="isCreateYamlModalVisible"
-      title="通过 YAML 创建 RoleBinding"
-      @ok="submitCreateYamlForm"
-      @cancel="closeCreateYamlModal"
       :confirmLoading="submitLoading"
-      width="900px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="创建"
-      cancelText="取消"
+      title="通过 YAML 创建 RoleBinding"
+      width="900px"
+      @cancel="closeCreateYamlModal"
+      @ok="submitCreateYamlForm"
     >
       <a-form
         ref="createYamlFormRef"
         :model="createYamlFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="createYamlFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
@@ -1050,9 +1050,9 @@
           </div>
           <a-textarea
             v-model:value="createYamlFormModel.yaml"
-            placeholder="请输入 RoleBinding YAML 内容，或点击【插入模板】使用默认模板"
             :rows="20"
             class="k8s-config-textarea"
+            placeholder="请输入 RoleBinding YAML 内容，或点击【插入模板】使用默认模板"
           />
         </a-form-item>
       </a-form>
@@ -1061,18 +1061,18 @@
     <!-- 详情模态框 -->
     <a-modal
       v-model:open="isDetailModalVisible"
-      title="RoleBinding 详情"
       :footer="null"
-      @cancel="closeDetailModal"
-      width="1000px"
       :maskClosable="false"
       destroyOnClose
+      title="RoleBinding 详情"
+      width="1000px"
+      @cancel="closeDetailModal"
     >
       <a-spin :spinning="detailLoading">
         <div v-if="currentRoleBindingDetail" class="k8s-detail-content">
           <a-row :gutter="[24, 16]">
-            <a-col :xs="24" :lg="12">
-              <a-card title="基本信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="基本信息">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">RoleBinding 名称:</span>
                   <span class="k8s-detail-value">{{
@@ -1114,8 +1114,8 @@
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="角色引用" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="角色引用">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">角色类型:</span>
                   <span class="k8s-detail-value">
@@ -1148,7 +1148,7 @@
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px">
             <a-col :xs="24">
-              <a-card title="主体信息" class="k8s-detail-card" size="small">
+              <a-card class="k8s-detail-card" size="small" title="主体信息">
                 <div class="rolebinding-subjects-detail">
                   <div
                     v-for="(
@@ -1193,8 +1193,8 @@
           </a-row>
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px">
-            <a-col :xs="24" :lg="12">
-              <a-card title="标签信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="标签信息">
                 <div class="k8s-labels-display">
                   <a-tooltip
                     v-for="[key, value] in Object.entries(
@@ -1230,8 +1230,8 @@
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="注解信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="注解信息">
                 <div class="k8s-annotations-display">
                   <a-tooltip
                     v-for="[key, value] in Object.entries(
@@ -1275,22 +1275,22 @@
     <!-- YAML 模态框 -->
     <a-modal
       v-model:open="isYamlModalVisible"
-      :title="`查看/编辑 ${currentOperationRoleBinding?.name} YAML`"
-      @ok="submitYamlForm"
-      @cancel="closeYamlModal"
       :confirmLoading="submitLoading"
-      width="900px"
       :maskClosable="false"
+      :title="`查看/编辑 ${currentOperationRoleBinding?.name} YAML`"
+      cancelText="取消"
       destroyOnClose
       okText="保存修改"
-      cancelText="取消"
+      width="900px"
+      @cancel="closeYamlModal"
+      @ok="submitYamlForm"
     >
       <a-form
         ref="yamlFormRef"
         :model="yamlFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="yamlFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
@@ -1315,9 +1315,9 @@
           </div>
           <a-textarea
             v-model:value="yamlFormModel.yaml"
-            placeholder="YAML 内容"
             :rows="20"
             class="k8s-config-textarea"
+            placeholder="YAML 内容"
           />
         </a-form-item>
       </a-form>
@@ -1326,14 +1326,14 @@
     <!-- 标签过滤模态框 -->
     <a-modal
       v-model:open="isLabelsFilterModalVisible"
-      title="本页标签过滤设置"
-      @ok="applyLabelsFilter"
-      @cancel="closeLabelsFilterModal"
-      width="550px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="应用过滤"
-      cancelText="取消"
+      title="本页标签过滤设置"
+      width="550px"
+      @cancel="closeLabelsFilterModal"
+      @ok="applyLabelsFilter"
     >
       <div class="labels-filter-form">
         <div
@@ -1346,18 +1346,18 @@
               v-for="(value, key) in filterLabels"
               :key="key"
               closable
-              @close="removeFilterLabel(key)"
               color="blue"
               style="margin-right: 8px; margin-bottom: 8px"
+              @close="removeFilterLabel(key)"
             >
               {{ key }}: {{ value }}
             </a-tag>
           </div>
           <a-button
-            type="link"
             danger
-            @click="clearFilterLabels"
             style="padding: 0; margin-bottom: 16px"
+            type="link"
+            @click="clearFilterLabels"
           >
             清除所有过滤条件
           </a-button>
@@ -1398,21 +1398,21 @@ import { onMounted, ref } from 'vue';
 import { useRoleBindingPage } from './RoleBinding';
 import { formatDateTime, getRelativeTime } from '../shared/utils';
 import {
-  PlusOutlined,
-  ReloadOutlined,
-  DeleteOutlined,
-  TeamOutlined,
   AppstoreOutlined,
-  EyeOutlined,
-  TagsOutlined,
-  DeploymentUnitOutlined,
-  SearchOutlined,
-  FileTextOutlined,
-  FileAddOutlined,
-  FormatPainterOutlined,
   CheckCircleOutlined,
   ClearOutlined,
+  DeleteOutlined,
+  DeploymentUnitOutlined,
   EditOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FormatPainterOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  TagsOutlined,
+  TeamOutlined,
 } from '@ant-design/icons-vue';
 
 import { usePermission } from '#/utils/permission';

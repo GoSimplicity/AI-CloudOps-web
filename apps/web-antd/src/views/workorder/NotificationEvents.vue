@@ -5,17 +5,17 @@ import { message } from 'ant-design-vue';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 import {
   cancelNotificationEvent,
+  notificationEventPermissions as codes,
+  type CurrentPermissions,
   getCurrentPermissions,
   getNotificationDeliveries,
   getNotificationResolutions,
   listNotificationEvents,
-  notificationEventPermissions as codes,
-  resolveNotificationDelivery,
-  retryNotificationEvent,
-  type CurrentPermissions,
   type NotificationDelivery,
   type NotificationEvent,
   type NotificationResolution,
+  resolveNotificationDelivery,
+  retryNotificationEvent,
 } from '#/api/core/workorder/notification-events';
 
 type Action = 'cancel' | 'retry' | 'delivered' | 'redeliver';
@@ -228,26 +228,26 @@ onBeforeUnmount(() => { alive = false; session++; listGeneration++; detailGenera
 </script>
 
 <template>
-  <section class="notification-events" aria-label="通知事件管理">
+  <section aria-label="通知事件管理" class="notification-events">
     <div class="events-heading">
       <div><h2>投递事件</h2><p>查看排期、投递结果和人工处置记录。</p></div>
       <a-space>
-        <a-select v-model:value="filter" allow-clear placeholder="全部状态" aria-label="筛选事件状态" style="width: 150px" @change="changeFilter">
+        <a-select v-model:value="filter" allow-clear aria-label="筛选事件状态" placeholder="全部状态" style="width: 150px" @change="changeFilter">
           <a-select-option v-for="(label, value) in eventStates" :key="value" :value="value">{{ label }}</a-select-option>
         </a-select>
         <a-button :loading="loading" :disabled="!allowed(codes.list)" @click="loadList">刷新</a-button>
       </a-space>
     </div>
-    <a-alert v-if="failure" type="error" :message="failure" show-icon />
+    <a-alert v-if="failure" :message="failure" show-icon type="error" />
     <a-alert v-else-if="!allowed(codes.list)" type="info" message="当前用户无事件列表权限" show-icon />
     <template v-else>
-      <a-table :data-source="events" :loading="loading" :pagination="false" row-key="id" size="middle" :scroll="{ x: 850 }">
+      <a-table :data-source="events" :loading="loading" :pagination="false" :scroll="{ x: 850 }" row-key="id" size="middle">
         <a-table-column key="id" title="事件 ID"><template #default="{ record }">{{ safeId(record.id) ? record.id : '—' }}</template></a-table-column>
         <a-table-column key="instance" title="工单 ID"><template #default="{ record }">{{ safeId(record.instance_id) ? record.instance_id : '—' }}</template></a-table-column>
         <a-table-column key="event" title="事件"><template #default="{ record }">{{ eventsNames[record.event_type] ?? '其他事件' }}</template></a-table-column>
         <a-table-column key="status" title="状态"><template #default="{ record }">{{ states[record.status] ?? '未知状态' }}</template></a-table-column>
         <a-table-column key="scheduled" title="下次处理"><template #default="{ record }">{{ dateText(record.next_attempt_at) }}</template></a-table-column>
-        <a-table-column key="operation" title="操作" :width="235">
+        <a-table-column key="operation" :width="235" title="操作">
 <template #default="{ record }">
           <a-space>
             <a-button v-if="allowed(codes.deliveries)" type="link" size="small" :disabled="!safeId(record.id)" @click="openDetails(record)">详情</a-button>
@@ -257,14 +257,14 @@ onBeforeUnmount(() => { alive = false; session++; listGeneration++; detailGenera
         </template>
 </a-table-column>
       </a-table>
-      <a-pagination class="events-pagination" :current="page" :page-size="pageSize" :total="total" :show-size-changer="false" @change="changePage" />
+      <a-pagination :current="page" :page-size="pageSize" :show-size-changer="false" :total="total" class="events-pagination" @change="changePage" />
     </template>
     <a-drawer :open="!!selected" title="投递详情" width="min(680px, 100vw)" @close="closeDetails">
-      <a-alert type="warning" message="结果未知不代表失败，请核对渠道记录后再处理。" show-icon />
+      <a-alert message="结果未知不代表失败，请核对渠道记录后再处理。" show-icon type="warning" />
       <p v-if="selected">事件 {{ selected.id }} · {{ states[selected.status] ?? '未知状态' }}</p>
-      <a-alert v-if="detailFailure" type="error" :message="detailFailure" show-icon />
+      <a-alert v-if="detailFailure" :message="detailFailure" show-icon type="error" />
       <a-spin :spinning="detailLoading">
-        <a-table :data-source="deliveries" :pagination="false" row-key="id" size="small" :scroll="{ x: 600 }">
+        <a-table :data-source="deliveries" :pagination="false" :scroll="{ x: 600 }" row-key="id" size="small">
           <a-table-column key="channel" title="渠道"><template #default="{ record }">{{ record.channel === 'email' ? '邮件' : record.channel === 'feishu' ? '飞书' : record.channel === 'in_app' ? '站内消息' : '其他' }}</template></a-table-column>
           <a-table-column key="recipient" title="接收人"><template #default="{ record }"><div>{{ masked(record.channel, record.recipient_masked) }}</div><small class="hash">{{ hashText(record.recipient_hash) }}</small></template></a-table-column>
           <a-table-column key="status" title="状态"><template #default="{ record }">{{ states[record.status] ?? '未知状态' }}</template></a-table-column>
@@ -272,8 +272,8 @@ onBeforeUnmount(() => { alive = false; session++; listGeneration++; detailGenera
           <a-table-column key="actions" title="处置">
 <template #default="{ record }">
             <a-space v-if="selected && allowed(codes.resolve) && ['uncertain', 'failed'].includes(selected.status) && ['uncertain', 'sending', 'failed'].includes(record.status)">
-              <a-button type="link" size="small" @click="openAction('delivered', selected, record)">确认送达</a-button>
-              <a-button type="link" size="small" @click="openAction('redeliver', selected, record)">重新投递</a-button>
+              <a-button size="small" type="link" @click="openAction('delivered', selected, record)">确认送达</a-button>
+              <a-button size="small" type="link" @click="openAction('redeliver', selected, record)">重新投递</a-button>
             </a-space>
           </template>
 </a-table-column>
@@ -285,8 +285,8 @@ onBeforeUnmount(() => { alive = false; session++; listGeneration++; detailGenera
         </div>
       </a-spin>
     </a-drawer>
-    <a-modal :open="!!action" :z-index="1100" :title="action ? actionTitle[action] : ''" ok-text="确认" cancel-text="取消" :confirm-loading="submitting" :closable="!submitting" :mask-closable="!submitting" :keyboard="!submitting" @cancel="closeAction" @ok="submitAction">
-      <a-alert v-if="action" type="warning" :message="actionWarning[action]" show-icon />
+    <a-modal :closable="!submitting" :confirm-loading="submitting" :keyboard="!submitting" :mask-closable="!submitting" :open="!!action" :title="action ? actionTitle[action] : ''" :z-index="1100" cancel-text="取消" ok-text="确认" @cancel="closeAction" @ok="submitAction">
+      <a-alert v-if="action" :message="actionWarning[action]" show-icon type="warning" />
       <label class="reason-label" for="notification-action-reason">核对原因（请勿填写密钥或消息正文）</label>
       <a-textarea id="notification-action-reason" v-model:value="reason" :disabled="submitting" :maxlength="500" :rows="3" />
     </a-modal>

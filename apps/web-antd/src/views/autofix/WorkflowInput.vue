@@ -15,20 +15,20 @@ const templateKey = defineModel<AutoFixTemplateKey>('templateKey', {
 });
 </script>
 <template>
-  <a-card title="修复输入" class="config-card">
+  <a-card class="config-card" title="修复输入">
     <a-form layout="vertical">
       <a-form-item label="命名空间" required>
         <a-input
           v-model:value="namespace"
-          placeholder="default"
           :disabled="busy"
+          placeholder="default"
         />
       </a-form-item>
       <a-form-item label="Deployment">
         <a-input
           v-model:value="deployment"
-          placeholder="例如 payment-service"
           :disabled="busy"
+          placeholder="例如 payment-service"
         />
       </a-form-item>
       <a-form-item label="故障类型模板">
@@ -46,16 +46,16 @@ const templateKey = defineModel<AutoFixTemplateKey>('templateKey', {
       <a-form-item label="问题描述" required>
         <a-textarea
           v-model:value="description"
-          :disabled="busy"
           :auto-size="{ minRows: 4, maxRows: 8 }"
+          :disabled="busy"
           placeholder="描述当前故障现象、涉及资源和期望处理方式"
         />
       </a-form-item>
       <a-form-item label="事件/诊断补充">
         <a-textarea
           v-model:value="event"
-          :disabled="busy"
           :auto-size="{ minRows: 3, maxRows: 6 }"
+          :disabled="busy"
           placeholder="可粘贴 K8s Event、Pod 状态、错误日志摘要"
         />
       </a-form-item>

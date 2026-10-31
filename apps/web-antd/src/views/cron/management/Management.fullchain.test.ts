@@ -2,7 +2,7 @@ import type { FormInstance } from 'ant-design-vue';
 
 import { $t } from '@vben/locales';
 
-import axios, { AxiosError, type AxiosAdapter } from 'axios';
+import axios, { type AxiosAdapter, AxiosError } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BUSINESS_ERROR_MESSAGE_KEY_PREFIX } from '#/utils/permission/business-error';

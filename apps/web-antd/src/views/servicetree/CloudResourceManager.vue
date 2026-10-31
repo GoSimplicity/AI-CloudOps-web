@@ -3,93 +3,93 @@ import OpsPage from '#/components/ops/OpsPage.vue';
 import CloudManagedResources from './CloudManagedResources.vue';
 import { onBeforeUnmount } from 'vue';
 
-import { ref, reactive, onMounted, computed, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { message, Empty, Modal } from 'ant-design-vue';
+import { Empty, message, Modal } from 'ant-design-vue';
 import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  DownOutlined,
-  CloudOutlined,
-  SearchOutlined,
-  SyncOutlined,
-  ReloadOutlined,
-  HistoryOutlined,
-  FileTextOutlined,
-  CloudServerOutlined,
-  CheckCircleOutlined,
-  DesktopOutlined,
   ApartmentOutlined,
-  CodeOutlined,
-  DatabaseOutlined,
-  ClusterOutlined,
-  CloudUploadOutlined,
-  GlobalOutlined,
-  EyeOutlined,
-  LockOutlined,
-  EnvironmentOutlined,
-  TagsOutlined,
-  TagOutlined,
-  ExperimentOutlined,
-  RocketOutlined,
-  FireOutlined,
-  InfoCircleOutlined,
-  SafetyOutlined,
-  UserOutlined,
-  KeyOutlined,
-  CloudSyncOutlined,
   ArrowLeftOutlined,
   ArrowRightOutlined,
-  HddOutlined,
+  CheckCircleOutlined,
+  ClearOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
-  StopOutlined,
-  LoadingOutlined,
-  PauseCircleOutlined,
-  EllipsisOutlined,
+  CloudOutlined,
+  CloudServerOutlined,
+  CloudSyncOutlined,
+  CloudUploadOutlined,
+  ClusterOutlined,
+  CodeOutlined,
+  DatabaseOutlined,
+  DeleteOutlined,
+  DesktopOutlined,
   DisconnectOutlined,
+  DownOutlined,
+  EditOutlined,
+  EllipsisOutlined,
+  EnvironmentOutlined,
+  ExperimentOutlined,
   ExportOutlined,
-  ClearOutlined,
+  EyeOutlined,
   FileExcelOutlined,
+  FileTextOutlined,
+  FireOutlined,
+  GlobalOutlined,
+  HddOutlined,
+  HistoryOutlined,
+  InfoCircleOutlined,
+  KeyOutlined,
+  LoadingOutlined,
+  LockOutlined,
+  PauseCircleOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  RocketOutlined,
+  SafetyOutlined,
+  SearchOutlined,
+  StopOutlined,
+  SyncOutlined,
+  TagOutlined,
+  TagsOutlined,
+  UserOutlined,
 } from '@ant-design/icons-vue';
 
 import { downloadCsv } from '#/utils/export-csv';
 
 // API 导入
 import {
-  getTreeCloudResourceListApi,
-  getTreeCloudResourceDetailApi,
-  updateTreeCloudResourceApi,
-  deleteTreeCloudResourceApi,
-  bindTreeCloudResourceApi,
-  unBindTreeCloudResourceApi,
-  syncTreeCloudResourceApi,
-  getSyncHistoryApi,
-  getChangeLogApi,
-  updateCloudResourceStatusApi,
-  CloudResourceType,
-  CloudResourceStatus,
-  ChargeType,
   AuthMode,
-  SyncMode,
-  type TreeCloudResource,
-  type GetTreeCloudResourceListReq,
-  type UpdateTreeCloudResourceReq,
-  type SyncTreeCloudResourceReq,
-  type SyncCloudResourceRegionResult,
-  type KeyValue,
-  type CloudResourceSyncHistory,
+  bindTreeCloudResourceApi,
+  ChargeType,
   type CloudResourceChangeLog,
+  CloudResourceStatus,
+  type CloudResourceSyncHistory,
+  CloudResourceType,
+  deleteTreeCloudResourceApi,
+  getChangeLogApi,
+  getSyncHistoryApi,
+  getTreeCloudResourceDetailApi,
+  getTreeCloudResourceListApi,
+  type GetTreeCloudResourceListReq,
+  type KeyValue,
+  type SyncCloudResourceRegionResult,
+  SyncMode,
+  syncTreeCloudResourceApi,
+  type SyncTreeCloudResourceReq,
+  type TreeCloudResource,
+  unBindTreeCloudResourceApi,
+  updateCloudResourceStatusApi,
+  updateTreeCloudResourceApi,
+  type UpdateTreeCloudResourceReq,
 } from '#/api/core/tree/tree_cloud';
 
 import {
-  getCloudAccountListApi,
-  getCloudAccountDetailApi,
+  type CloudAccount,
+  type CloudAccountRegion,
   CloudAccountStatus,
   CloudProvider,
-  type CloudAccountRegion,
-  type CloudAccount,
+  getCloudAccountDetailApi,
+  getCloudAccountListApi,
 } from '#/api/core/tree/tree_account';
 
 import { getTreeList } from '#/api/core/tree/tree_node';
@@ -1246,11 +1246,11 @@ const closeDetails = () => {
 
 <template>
   <OpsPage
-    title="云资源"
-    description="管理已接入云厂商的计算实例，其他存量资源可查看"
     class="cmdb-console cloud-resource-manager"
+    description="管理已接入云厂商的计算实例，其他存量资源可查看"
+    title="云资源"
   >
-    <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button @click="fetchResources()">重试</a-button>
       </template>
@@ -1258,8 +1258,8 @@ const closeDetails = () => {
     <a-alert
       v-if="accountLoadError"
       :message="accountLoadError"
-      type="error"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button :loading="accountsLoading" @click="fetchCloudAccounts()">
@@ -1273,16 +1273,16 @@ const closeDetails = () => {
         {{ showManaged ? '关闭托管资源' : '托管资源' }} </a-button
       ><a-button
         v-if="canSync"
-        type="primary"
-        aria-label="同步资源"
-        :loading="accountsLoading"
         :disabled="accountsLoading"
-        @click="showSyncModal"
+        :loading="accountsLoading"
+        aria-label="同步资源"
         class="btn-create"
+        type="primary"
+        @click="showSyncModal"
       >
         <template #icon><sync-outlined /></template>
         <span class="btn-text">同步资源</span> </a-button
-      ><a-button @click="handleRefresh" class="btn-action">
+      ><a-button class="btn-action" @click="handleRefresh">
         <template #icon><reload-outlined /></template>
         <span class="btn-text">刷新</span> </a-button
       ><a-dropdown>
@@ -1304,43 +1304,43 @@ const closeDetails = () => {
             </a-sub-menu>
           </a-menu>
         </template> </a-dropdown
-      ><a-button @click="fetchResources()" :loading="loading"> 刷新 </a-button>
+      ><a-button :loading="loading" @click="fetchResources()"> 刷新 </a-button>
     </template>
 
     <!-- 统计卡片区 -->
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="[16, 16]">
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
-              <a-statistic title="匹配资源数" :value="stats.total">
+              <a-statistic :value="stats.total" title="匹配资源数">
                 <template #prefix>
                   <cloud-server-outlined />
                 </template>
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
-              <a-statistic title="本页运行中" :value="stats.running">
+              <a-statistic :value="stats.running" title="本页运行中">
                 <template #prefix>
                   <check-circle-outlined />
                 </template>
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
-              <a-statistic title="本页云服务器" :value="stats.ecs">
+              <a-statistic :value="stats.ecs" title="本页云服务器">
                 <template #prefix>
                   <desktop-outlined />
                 </template>
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
-              <a-statistic title="本页已绑定" :value="stats.bound">
+              <a-statistic :value="stats.bound" title="本页已绑定">
                 <template #prefix>
                   <apartment-outlined />
                 </template>
@@ -1354,12 +1354,12 @@ const closeDetails = () => {
 
     <!-- 搜索筛选区 -->
     <template #filters>
-      <a-form layout="inline" class="filter-form">
+      <a-form class="filter-form" layout="inline">
         <a-form-item>
           <a-input
             v-model:value="filterForm.search"
-            placeholder="搜索资源名称/实例ID/IP地址"
             allow-clear
+            placeholder="搜索资源名称/实例ID/IP地址"
             style="width: 280px"
             @pressEnter="handleSearch"
           >
@@ -1369,8 +1369,8 @@ const closeDetails = () => {
         <a-form-item label="云账户">
           <a-select
             v-model:value="filterForm.cloud_account_id"
-            placeholder="全部账户"
             allow-clear
+            placeholder="全部账户"
             style="width: 180px"
             @change="handleSearch"
           >
@@ -1386,8 +1386,8 @@ const closeDetails = () => {
         <a-form-item label="资源类型">
           <a-select
             v-model:value="filterForm.resource_type"
-            placeholder="全部类型"
             allow-clear
+            placeholder="全部类型"
             style="width: 140px"
             @change="handleSearch"
           >
@@ -1414,8 +1414,8 @@ const closeDetails = () => {
         <a-form-item label="状态">
           <a-select
             v-model:value="filterForm.status"
-            placeholder="全部状态"
             allow-clear
+            placeholder="全部状态"
             style="width: 130px"
             @change="handleSearch"
           >
@@ -1436,8 +1436,8 @@ const closeDetails = () => {
         <a-form-item label="环境">
           <a-select
             v-model:value="filterForm.environment"
-            placeholder="全部环境"
             allow-clear
+            placeholder="全部环境"
             style="width: 120px"
             @change="handleSearch"
           >
@@ -1466,10 +1466,10 @@ const closeDetails = () => {
           :data-source="resources"
           :loading="loading"
           :pagination="paginationConfig"
-          @change="handleTableChange"
-          row-key="id"
           :scroll="{ x: 1800 }"
           class="resource-table"
+          row-key="id"
+          @change="handleTableChange"
         >
           <!-- 资源名称列 -->
           <template #bodyCell="{ column, record }">
@@ -1543,14 +1543,14 @@ const closeDetails = () => {
                   v-if="record.cpu || record.memory || record.disk"
                   title="CPU / 内存 / 磁盘"
                 >
-                  <div class="config-item" v-if="record.cpu">
+                  <div v-if="record.cpu" class="config-item">
                     <span>{{ record.cpu }}核</span>
                   </div>
                   <div class="config-item">
                     <hdd-outlined class="config-icon" />
                     <span v-if="record.memory">{{ record.memory }}GB</span>
                   </div>
-                  <div class="config-item" v-if="record.disk">
+                  <div v-if="record.disk" class="config-item">
                     <database-outlined class="config-icon" />
                     <span>{{ record.disk }}GB</span>
                   </div>
@@ -1656,12 +1656,12 @@ const closeDetails = () => {
                         .join(', ')
                     "
                   >
-                    <a-tag color="blue" class="node-tag">
+                    <a-tag class="node-tag" color="blue">
                       +{{ record.tree_nodes.length - 2 }}
                     </a-tag>
                   </a-tooltip>
                 </template>
-                <a-tag v-else color="default" class="node-tag"> 未绑定 </a-tag>
+                <a-tag v-else class="node-tag" color="default"> 未绑定 </a-tag>
               </div>
             </template>
 
@@ -1684,8 +1684,8 @@ const closeDetails = () => {
               <a-space :size="4" class="action-buttons">
                 <a-tooltip title="查看详情">
                   <a-button
-                    type="text"
                     size="small"
+                    type="text"
                     @click="handleViewDetail(record)"
                   >
                     <eye-outlined />
@@ -1734,7 +1734,7 @@ const closeDetails = () => {
                   </a-button>
                 </a-tooltip>
                 <a-dropdown :trigger="['click']">
-                  <a-button type="text" size="small">
+                  <a-button size="small" type="text">
                     <ellipsis-outlined />
                   </a-button>
                   <template #overlay>
@@ -1774,14 +1774,14 @@ const closeDetails = () => {
     <!-- 编辑资源对话框 -->
     <a-modal
       v-model:open="editModalVisible"
-      title="编辑云资源"
-      :width="800"
-      @ok="handleUpdate"
-      @cancel="editModalVisible = false"
       :confirm-loading="submitLoading"
+      :width="800"
       class="modern-modal"
+      title="编辑云资源"
+      @cancel="editModalVisible = false"
+      @ok="handleUpdate"
     >
-      <a-form :model="editForm" layout="vertical" class="edit-form">
+      <a-form :model="editForm" class="edit-form" layout="vertical">
         <a-divider orientation="left">
           <info-circle-outlined /> 基本信息
         </a-divider>
@@ -1811,9 +1811,9 @@ const closeDetails = () => {
             <a-form-item label="资源描述">
               <a-textarea
                 v-model:value="editForm.description"
-                placeholder="请输入资源描述信息"
-                :rows="3"
                 :maxlength="500"
+                :rows="3"
+                placeholder="请输入资源描述信息"
                 show-count
               />
             </a-form-item>
@@ -1821,27 +1821,27 @@ const closeDetails = () => {
         </a-row>
 
         <a-divider
-          orientation="left"
           v-if="
             currentResource &&
             currentResource.resource_type === CloudResourceType.ECS
           "
+          orientation="left"
         >
           <safety-outlined /> SSH配置（仅云服务器）
         </a-divider>
         <a-row
-          :gutter="16"
           v-if="
             currentResource &&
             currentResource.resource_type === CloudResourceType.ECS
           "
+          :gutter="16"
         >
           <a-col :span="12">
             <a-form-item label="SSH端口">
               <a-input-number
                 v-model:value="editForm.port"
-                :min="1"
                 :max="65535"
+                :min="1"
                 placeholder="22"
                 style="width: 100%"
               />
@@ -1869,23 +1869,23 @@ const closeDetails = () => {
               </a-radio-group>
             </a-form-item>
           </a-col>
-          <a-col :span="24" v-if="editForm.auth_mode === AuthMode.PASSWORD">
+          <a-col v-if="editForm.auth_mode === AuthMode.PASSWORD" :span="24">
             <a-form-item label="登录密码">
               <a-input-password
                 v-model:value="editForm.password"
-                placeholder="请输入密码（留空则不修改）"
                 autocomplete="new-password"
+                placeholder="请输入密码（留空则不修改）"
               >
                 <template #prefix><lock-outlined /></template>
               </a-input-password>
             </a-form-item>
           </a-col>
-          <a-col :span="24" v-if="editForm.auth_mode === AuthMode.KEY">
+          <a-col v-if="editForm.auth_mode === AuthMode.KEY" :span="24">
             <a-form-item label="SSH私钥">
               <a-textarea
                 v-model:value="editForm.key"
-                placeholder="请粘贴SSH私钥内容（留空则不修改）"
                 :rows="6"
+                placeholder="请粘贴SSH私钥内容（留空则不修改）"
                 style="font-family: 'Courier New', monospace"
               />
             </a-form-item>
@@ -1901,10 +1901,10 @@ const closeDetails = () => {
             <a-tag
               v-for="(tag, index) in editForm.tags"
               :key="`${tag.key}-${tag.value}-${index}`"
+              class="tag-item"
               closable
               color="blue"
               @close="removeTag(index)"
-              class="tag-item"
             >
               <strong>{{ tag.key }}</strong>: {{ tag.value }}
             </a-tag>
@@ -1932,11 +1932,13 @@ const closeDetails = () => {
     <!-- 同步资源对话框 -->
     <a-modal
       v-model:open="syncModalVisible"
-      title="同步云资源"
-      @ok="handleSync"
-      @cancel="closeSyncModal"
-      ok-text="开始同步"
-      cancel-text="取消"
+      :body-style="{ maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto' }"
+      :cancel-button-props="{ disabled: syncLoading }"
+      :closable="!syncLoading"
+      :confirm-loading="syncLoading"
+      :destroy-on-close="true"
+      :keyboard="!syncLoading"
+      :mask-closable="!syncLoading"
       :ok-button-props="{
         disabled:
           syncRegionsLoading ||
@@ -1944,33 +1946,31 @@ const closeDetails = () => {
           !syncRegions.length ||
           syncOutcomeUnknown,
       }"
-      :cancel-button-props="{ disabled: syncLoading }"
-      :closable="!syncLoading"
-      :mask-closable="!syncLoading"
-      :keyboard="!syncLoading"
-      :destroy-on-close="true"
       :style="{ top: 'var(--ops-space-xl)' }"
-      :body-style="{ maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto' }"
-      :confirm-loading="syncLoading"
       :width="700"
+      cancel-text="取消"
       class="modern-modal"
+      ok-text="开始同步"
+      title="同步云资源"
+      @cancel="closeSyncModal"
+      @ok="handleSync"
     >
       <a-alert
-        message="同步说明"
         description="支持已接入云厂商的计算实例。华为云、Azure 和 GCP 需指定一个地域和实例ID。"
-        type="info"
+        message="同步说明"
         show-icon
         style="margin-bottom: 24px"
+        type="info"
       />
-      <a-form layout="vertical" class="sync-form cloud-sync-form">
+      <a-form class="sync-form cloud-sync-form" layout="vertical">
         <a-form-item label="云账户" required>
           <a-select
             id="cloud-sync-account"
             v-model:value="syncForm.cloud_account_id"
             :disabled="syncLoading"
-            @change="loadSyncRegions"
             placeholder="请选择已启用的云账户"
             size="large"
+            @change="loadSyncRegions"
           >
             <a-select-option
               v-for="account in syncAccounts"
@@ -2001,9 +2001,9 @@ const closeDetails = () => {
           />
           <a-alert
             v-if="syncRegionError"
-            type="error"
             :message="syncRegionError"
             show-icon
+            type="error"
           />
           <a-button
             v-if="syncRegionError"
@@ -2065,11 +2065,11 @@ const closeDetails = () => {
           <a-select
             id="cloud-sync-instance-ids"
             v-model:value="syncForm.instance_ids"
-            mode="tags"
             :disabled="syncLoading"
             :token-separators="[',', ' ']"
-            placeholder="输入实例 ID，按回车添加"
             aria-label="实例ID"
+            mode="tags"
+            placeholder="输入实例 ID，按回车添加"
           />
           <div class="form-tip">
             必须选择一个授权地域并指定实例ID；不提供全量或无ID同步
@@ -2077,9 +2077,9 @@ const closeDetails = () => {
         </a-form-item>
         <a-alert
           v-if="syncOutcomeUnknown"
-          type="warning"
-          show-icon
           message="结果不确定或审计不可用，请先核对资源和同步历史，不能直接重试"
+          show-icon
+          type="warning"
         />
         <ul v-if="syncRegionResults.length" aria-label="地域同步结果">
           <li v-for="region in syncRegionResults" :key="region.region_id">
@@ -2137,11 +2137,11 @@ const closeDetails = () => {
           <a-tree-select
             v-model:value="syncForm.bind_node_id"
             :disabled="syncLoading"
+            :field-names="{ children: 'children', label: 'name', value: 'id' }"
             :tree-data="treeData"
             placeholder="请选择服务树节点"
-            :field-names="{ children: 'children', label: 'name', value: 'id' }"
-            tree-default-expand-all
             size="large"
+            tree-default-expand-all
           >
             <template #suffixIcon>
               <apartment-outlined />
@@ -2154,35 +2154,35 @@ const closeDetails = () => {
     <!-- 绑定服务树对话框 -->
     <a-modal
       v-model:open="bindModalVisible"
-      title="绑定服务树节点"
-      @ok="handleBind"
-      @cancel="bindModalVisible = false"
       :confirm-loading="bindLoading"
-      width="min(600px, 100vw)"
       class="modern-modal"
+      title="绑定服务树节点"
+      width="min(600px, 100vw)"
+      @cancel="bindModalVisible = false"
+      @ok="handleBind"
     >
       <a-form layout="vertical">
         <a-form-item label="选择服务树节点">
           <a-tree-select
             v-model:value="selectedTreeNodeIds"
+            :field-names="{ children: 'children', label: 'name', value: 'id' }"
+            :show-checked-strategy="'SHOW_PARENT'"
             :tree-data="treeData"
-            placeholder="请选择要绑定的节点（支持多选）"
             allow-clear
             multiple
-            tree-checkable
-            :show-checked-strategy="'SHOW_PARENT'"
-            :field-names="{ children: 'children', label: 'name', value: 'id' }"
+            placeholder="请选择要绑定的节点（支持多选）"
             size="large"
             style="width: 100%"
+            tree-checkable
           />
         </a-form-item>
         <a-alert
           v-if="
             currentResource?.tree_nodes && currentResource.tree_nodes.length > 0
           "
-          type="info"
           show-icon
           style="margin-top: 16px"
+          type="info"
         >
           <template #message>
             <div class="current-bindings">
@@ -2205,19 +2205,19 @@ const closeDetails = () => {
     <!-- 解绑节点对话框 -->
     <a-modal
       v-model:open="unbindModalVisible"
-      title="解绑服务树节点"
-      @ok="handleUnbind"
-      @cancel="unbindModalVisible = false"
       :confirm-loading="unbindLoading"
-      width="min(600px, 100vw)"
       class="modern-modal"
+      title="解绑服务树节点"
+      width="min(600px, 100vw)"
+      @cancel="unbindModalVisible = false"
+      @ok="handleUnbind"
     >
       <a-alert
-        message="请选择要解绑的节点"
         description="解绑后，该资源将不再关联到所选的服务树节点。"
-        type="warning"
+        message="请选择要解绑的节点"
         show-icon
         style="margin-bottom: 16px"
+        type="warning"
       />
       <a-form layout="vertical">
         <a-form-item label="选择要解绑的节点">
@@ -2227,9 +2227,9 @@ const closeDetails = () => {
           >
             <a-row :gutter="[8, 8]">
               <a-col
-                :span="24"
                 v-for="node in currentResource?.tree_nodes"
                 :key="node.id"
+                :span="24"
               >
                 <a-checkbox :value="node.id" class="unbind-checkbox">
                   <apartment-outlined /> {{ node.name }}
@@ -2244,19 +2244,19 @@ const closeDetails = () => {
     <!-- 同步历史对话框 -->
     <a-modal
       v-model:open="syncHistoryModalVisible"
-      title="云资源同步历史"
-      :width="1000"
       :footer="null"
+      :width="1000"
       class="modern-modal"
+      title="云资源同步历史"
     >
       <a-table
         :columns="syncHistoryColumns"
         :data-source="syncHistoryList"
         :loading="syncHistoryLoading"
         :pagination="syncHistoryPagination"
-        @change="handleSyncHistoryTableChange"
         row-key="id"
         size="middle"
+        @change="handleSyncHistoryTableChange"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'sync_status'">
@@ -2293,7 +2293,7 @@ const closeDetails = () => {
               <a-tag color="blue">
                 <sync-outlined /> 更新: {{ record.update_count }}
               </a-tag>
-              <a-tag color="red" v-if="record.failed_count > 0">
+              <a-tag v-if="record.failed_count > 0" color="red">
                 <close-circle-outlined /> 失败:
                 {{ record.failed_count }}
               </a-tag>
@@ -2317,19 +2317,19 @@ const closeDetails = () => {
     <!-- 变更日志对话框 -->
     <a-modal
       v-model:open="changeLogModalVisible"
-      title="资源变更日志"
-      :width="1100"
       :footer="null"
+      :width="1100"
       class="modern-modal"
+      title="资源变更日志"
     >
       <a-table
         :columns="changeLogColumns"
         :data-source="changeLogList"
         :loading="changeLogLoading"
         :pagination="changeLogPagination"
-        @change="handleChangeLogTableChange"
         row-key="id"
         size="middle"
+        @change="handleChangeLogTableChange"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'change_type'">
@@ -2369,11 +2369,11 @@ const closeDetails = () => {
     <!-- 资源详情抽屉 -->
     <a-drawer
       v-model:open="detailVisible"
-      @close="closeDetails"
-      title="云资源详情"
-      width="min(600px, 100vw)"
       :destroy-on-close="true"
       class="detail-drawer"
+      title="云资源详情"
+      width="min(600px, 100vw)"
+      @close="closeDetails"
     >
       <a-skeleton :loading="detailLoading" active>
         <a-empty
@@ -2405,16 +2405,16 @@ const closeDetails = () => {
 
             <!-- 基本信息 -->
             <a-descriptions
-              bordered
               :column="2"
-              size="small"
+              bordered
               class="detail-descriptions"
+              size="small"
               title="基本信息"
             >
-              <a-descriptions-item label="资源ID" :span="1">
+              <a-descriptions-item :span="1" label="资源ID">
                 {{ currentDetail.id }}
               </a-descriptions-item>
-              <a-descriptions-item label="实例ID" :span="1">
+              <a-descriptions-item :span="1" label="实例ID">
                 <a-typography-text
                   v-if="currentDetail.instance_id"
                   :copyable="{ text: currentDetail.instance_id }"
@@ -2424,43 +2424,43 @@ const closeDetails = () => {
                 <span v-else>-</span>
               </a-descriptions-item>
               <a-descriptions-item
-                label="云账户"
-                :span="2"
                 v-if="currentDetail.cloud_account"
+                :span="2"
+                label="云账户"
               >
                 <cloud-outlined /> {{ currentDetail.cloud_account.name }}
               </a-descriptions-item>
-              <a-descriptions-item label="区域" :span="1">
+              <a-descriptions-item :span="1" label="区域">
                 <environment-outlined /> {{ currentDetail.region || '-' }}
               </a-descriptions-item>
-              <a-descriptions-item label="可用区" :span="1">
+              <a-descriptions-item :span="1" label="可用区">
                 {{ currentDetail.zone_id || '-' }}
               </a-descriptions-item>
-              <a-descriptions-item label="VPC" :span="2">
+              <a-descriptions-item :span="2" label="VPC">
                 {{ currentDetail.vpc_id || '-' }}
               </a-descriptions-item>
             </a-descriptions>
 
             <!-- 配置信息 -->
             <a-descriptions
-              bordered
               :column="2"
-              size="small"
+              bordered
               class="detail-descriptions"
-              title="配置信息"
+              size="small"
               style="margin-top: 16px"
+              title="配置信息"
             >
-              <a-descriptions-item label="实例规格" :span="2">
+              <a-descriptions-item :span="2" label="实例规格">
                 {{ currentDetail.instance_type || '-' }}
               </a-descriptions-item>
-              <a-descriptions-item label="CPU" :span="1">
+              <a-descriptions-item :span="1" label="CPU">
                 {{ currentDetail.cpu ? currentDetail.cpu + ' 核' : '-' }}
               </a-descriptions-item>
-              <a-descriptions-item label="内存" :span="1">
+              <a-descriptions-item :span="1" label="内存">
                 <hdd-outlined />
                 {{ currentDetail.memory ? currentDetail.memory + ' GB' : '-' }}
               </a-descriptions-item>
-              <a-descriptions-item label="磁盘" :span="2">
+              <a-descriptions-item :span="2" label="磁盘">
                 <database-outlined />
                 {{ currentDetail.disk ? currentDetail.disk + ' GB' : '-' }}
               </a-descriptions-item>
@@ -2468,14 +2468,14 @@ const closeDetails = () => {
 
             <!-- 网络信息 -->
             <a-descriptions
-              bordered
               :column="2"
-              size="small"
+              bordered
               class="detail-descriptions"
-              title="网络信息"
+              size="small"
               style="margin-top: 16px"
+              title="网络信息"
             >
-              <a-descriptions-item label="公网IP" :span="2">
+              <a-descriptions-item :span="2" label="公网IP">
                 <a-typography-text
                   v-if="currentDetail.public_ip"
                   :copyable="{ text: currentDetail.public_ip }"
@@ -2484,7 +2484,7 @@ const closeDetails = () => {
                 </a-typography-text>
                 <span v-else>-</span>
               </a-descriptions-item>
-              <a-descriptions-item label="私网IP" :span="2">
+              <a-descriptions-item :span="2" label="私网IP">
                 <a-typography-text
                   v-if="currentDetail.private_ip"
                   :copyable="{ text: currentDetail.private_ip }"
@@ -2497,34 +2497,34 @@ const closeDetails = () => {
 
             <!-- 系统信息 -->
             <a-descriptions
-              bordered
               :column="2"
-              size="small"
+              bordered
               class="detail-descriptions"
-              title="系统信息"
+              size="small"
               style="margin-top: 16px"
+              title="系统信息"
             >
-              <a-descriptions-item label="操作系统" :span="2">
+              <a-descriptions-item :span="2" label="操作系统">
                 {{ currentDetail.os_name || currentDetail.os_type || '-' }}
               </a-descriptions-item>
-              <a-descriptions-item label="镜像名称" :span="2">
+              <a-descriptions-item :span="2" label="镜像名称">
                 {{ currentDetail.image_name || '-' }}
               </a-descriptions-item>
-              <a-descriptions-item label="镜像ID" :span="2">
+              <a-descriptions-item :span="2" label="镜像ID">
                 {{ currentDetail.image_id || '-' }}
               </a-descriptions-item>
             </a-descriptions>
 
             <!-- 费用信息 -->
             <a-descriptions
-              bordered
               :column="2"
-              size="small"
+              bordered
               class="detail-descriptions"
-              title="费用信息"
+              size="small"
               style="margin-top: 16px"
+              title="费用信息"
             >
-              <a-descriptions-item label="计费方式" :span="1">
+              <a-descriptions-item :span="1" label="计费方式">
                 {{
                   currentDetail.charge_type === ChargeType.PRE_PAID
                     ? '包年包月'
@@ -2533,7 +2533,7 @@ const closeDetails = () => {
                       : '未知'
                 }}
               </a-descriptions-item>
-              <a-descriptions-item label="月度费用" :span="1">
+              <a-descriptions-item :span="1" label="月度费用">
                 <span v-if="currentDetail.monthly_cost" class="cost-display">
                   {{ formatCost(currentDetail.monthly_cost) }}
                   {{ currentDetail.currency || '币种未知' }}
@@ -2541,9 +2541,9 @@ const closeDetails = () => {
                 <span v-else>未知</span>
               </a-descriptions-item>
               <a-descriptions-item
-                label="到期时间"
-                :span="2"
                 v-if="currentDetail.expire_time"
+                :span="2"
+                label="到期时间"
               >
                 <clock-circle-outlined />
                 {{ formatDateTime(currentDetail.expire_time) }}
@@ -2552,12 +2552,12 @@ const closeDetails = () => {
 
             <!-- 其他信息 -->
             <a-descriptions
-              bordered
               :column="1"
-              size="small"
+              bordered
               class="detail-descriptions"
-              title="其他信息"
+              size="small"
               style="margin-top: 16px"
+              title="其他信息"
             >
               <a-descriptions-item label="描述信息">
                 {{ currentDetail.description || '-' }}
@@ -2583,8 +2583,8 @@ const closeDetails = () => {
                   <a-tag
                     v-for="(tag, index) in currentDetail.tags"
                     :key="`${tag.key}-${tag.value}-${index}`"
-                    color="blue"
                     class="detail-tag"
+                    color="blue"
                   >
                     <strong>{{ tag.key }}</strong>: {{ tag.value }}
                   </a-tag>
@@ -2610,8 +2610,8 @@ const closeDetails = () => {
                   <a-tag
                     v-for="node in currentDetail.tree_nodes"
                     :key="node.id"
-                    color="blue"
                     class="detail-tag"
+                    color="blue"
                   >
                     <apartment-outlined /> {{ node.name }}
                   </a-tag>

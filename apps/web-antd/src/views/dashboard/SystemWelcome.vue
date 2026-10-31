@@ -17,7 +17,7 @@ import {
   TooltipComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-import { WarningOutlined, InfoCircleOutlined } from '@ant-design/icons-vue';
+import { InfoCircleOutlined, WarningOutlined } from '@ant-design/icons-vue';
 import OpsPage from '#/components/ops/OpsPage.vue';
 import {
   getSystemInfoApi,
@@ -536,9 +536,9 @@ onBeforeUnmount(() => {
 
 <template>
   <OpsPage
-    title="系统欢迎页"
-    description="后端运行主机的最近采样，每30秒读取一次；页面展示采样范围内的状态"
     class="dashboard-container"
+    description="后端运行主机的最近采样，每30秒读取一次；页面展示采样范围内的状态"
+    title="系统欢迎页"
   >
     <template #actions>
       <a-space wrap>
@@ -552,8 +552,8 @@ onBeforeUnmount(() => {
     </template>
     <template #summary>
       <a-row :gutter="[12, 12]" class="metrics-section">
-        <a-col v-for="metric in metrics" :key="metric.key" :xs="12" :md="6">
-          <section class="metric-card" :aria-label="metric.label">
+        <a-col v-for="metric in metrics" :key="metric.key" :md="6" :xs="12">
+          <section :aria-label="metric.label" class="metric-card">
             <span class="metric-label">{{ metric.label }}</span>
             <div class="metric-reading">
               <strong class="metric-value">{{ metric.value }}</strong
@@ -563,8 +563,8 @@ onBeforeUnmount(() => {
             </div>
             <div
               :ref="(el) => miniRef(metric.key, el)"
-              class="metric-chart"
               aria-hidden="true"
+              class="metric-chart"
             ></div>
           </section>
         </a-col>
@@ -583,7 +583,7 @@ onBeforeUnmount(() => {
       ><span title="浏览器当前时间">当前时间：{{ currentTime }}</span>
     </div>
     <a-row :gutter="[16, 16]">
-      <a-col :xs="24" :lg="12">
+      <a-col :lg="12" :xs="24">
         <section class="surface-card">
           <h2>主机信息</h2>
           <div class="system-info-grid">
@@ -630,7 +630,7 @@ onBeforeUnmount(() => {
           </div>
         </section>
       </a-col>
-      <a-col :xs="24" :lg="12">
+      <a-col :lg="12" :xs="24">
         <section class="surface-card">
           <h2>累计网络流量</h2>
           <p class="section-note">后端网络计数器的累计接收与发送，单位 MiB</p>
@@ -642,15 +642,15 @@ onBeforeUnmount(() => {
           </p>
           <a-empty v-if="!hasNetworkValues" description="暂无网络采样" />
           <div
-            ref="networkChart"
             v-show="hasNetworkValues"
+            ref="networkChart"
+            aria-label="累计网络流量柱图"
             class="chart-container-small"
             role="img"
-            aria-label="累计网络流量柱图"
           ></div>
         </section>
       </a-col>
-      <a-col :xs="24" :lg="16">
+      <a-col :lg="16" :xs="24">
         <section class="surface-card">
           <h2>当前性能采样</h2>
           <p class="section-note">
@@ -658,15 +658,15 @@ onBeforeUnmount(() => {
           </p>
           <a-empty v-if="!hasPerformanceValues" description="暂无性能采样" />
           <div
-            ref="trendChart"
             v-show="hasPerformanceValues"
+            ref="trendChart"
+            aria-label="当前性能采样柱图"
             class="chart-container"
             role="img"
-            aria-label="当前性能采样柱图"
           ></div>
         </section>
       </a-col>
-      <a-col :xs="24" :lg="8">
+      <a-col :lg="8" :xs="24">
         <section class="surface-card">
           <h2>本次采样提示</h2>
           <a-empty
@@ -682,10 +682,10 @@ onBeforeUnmount(() => {
           <div v-for="event in events" :key="event.id" class="event-item">
             <WarningOutlined
               v-if="event.type === 'error' || event.type === 'warning'"
-              class="event-icon"
               aria-hidden="true"
+              class="event-icon"
             />
-            <InfoCircleOutlined v-else class="event-icon" aria-hidden="true" />
+            <InfoCircleOutlined v-else aria-hidden="true" class="event-icon" />
             <span>{{ event.message }}</span>
           </div>
           <p class="section-note">
@@ -696,8 +696,8 @@ onBeforeUnmount(() => {
       <a-col
         v-for="resource in resources"
         :key="resource.name"
-        :xs="24"
         :md="8"
+        :xs="24"
       >
         <section class="surface-card resource-card">
           <div class="resource-header">

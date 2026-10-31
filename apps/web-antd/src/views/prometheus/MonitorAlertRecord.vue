@@ -1,8 +1,8 @@
 <template>
-  <OpsPage title="记录规则" description="维护记录表达式、实例池与启用状态">
+  <OpsPage description="维护记录表达式、实例池与启用状态" title="记录规则">
     <!-- 页面标题 -->
     <template #actions>
-      <a-button type="primary" @click="showAddModal" class="btn-create">
+      <a-button class="btn-create" type="primary" @click="showAddModal">
         <template #icon>
           <PlusOutlined />
         </template>
@@ -13,24 +13,24 @@
       <div class="search-filters">
         <a-input-search
           v-model:value="searchText"
-          placeholder="搜索记录名称..."
-          class="search-input"
-          @search="handleSearch"
-          @change="handleSearchChange"
           allow-clear
+          class="search-input"
+          placeholder="搜索记录名称..."
+          @change="handleSearchChange"
+          @search="handleSearch"
         />
         <a-select
           v-model:value="enabledFilter"
-          placeholder="启用状态"
-          class="filter-select"
-          @change="handleEnabledFilterChange"
           allow-clear
+          class="filter-select"
+          placeholder="启用状态"
+          @change="handleEnabledFilterChange"
         >
           <a-select-option :value="undefined">全部</a-select-option>
           <a-select-option :value="1">已启用</a-select-option>
           <a-select-option :value="2">已禁用</a-select-option>
         </a-select>
-        <a-button @click="handleReset" class="reset-btn"> 重置 </a-button>
+        <a-button class="reset-btn" @click="handleReset"> 重置 </a-button>
       </div>
     </template>
 
@@ -38,12 +38,12 @@
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="[16, 16]">
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="总记录"
                 :value="loadError ? '未知' : stats.total"
                 :value-style="{ color: '#3f8600' }"
+                title="总记录"
               >
                 <template #prefix>
                   <Icon icon="carbon:data-table" />
@@ -51,12 +51,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页已启用"
                 :value="loadError ? '未知' : stats.enabled"
                 :value-style="{ color: '#52c41a' }"
+                title="本页已启用"
               >
                 <template #prefix>
                   <Icon icon="carbon:check-mark" />
@@ -64,12 +64,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页已禁用"
                 :value="loadError ? '未知' : stats.disabled"
                 :value-style="{ color: '#faad14' }"
+                title="本页已禁用"
               >
                 <template #prefix>
                   <Icon icon="carbon:close-filled" />
@@ -77,12 +77,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页实例池"
                 :value="loadError ? '未知' : stats.pools"
                 :value-style="{ color: '#cf1322' }"
+                title="本页实例池"
               >
                 <template #prefix>
                   <Icon icon="carbon:server" />
@@ -96,13 +96,13 @@
 
     <a-alert
       v-if="loadError"
-      type="error"
-      show-icon
       :message="loadError"
       role="alert"
+      show-icon
+      type="error"
     >
       <template #action>
-        <a-button size="small" :loading="loading" @click="fetchRecordRules">
+        <a-button :loading="loading" size="small" @click="fetchRecordRules">
           重试
         </a-button>
       </template>
@@ -112,13 +112,13 @@
     <div class="table-container">
       <a-card>
         <a-table
-          :data-source="data"
           :columns="columns"
-          :pagination="paginationConfig"
+          :data-source="data"
           :loading="loading"
-          row-key="id"
-          bordered
+          :pagination="paginationConfig"
           :scroll="{ x: 1500 }"
+          bordered
+          row-key="id"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -153,7 +153,7 @@
 
             <template v-if="column.key === 'expr'">
               <div class="expr-content">
-                <span class="expr-text" :title="record.expr">{{
+                <span :title="record.expr" class="expr-text">{{
                   truncateText(record.expr, 50)
                 }}</span>
               </div>
@@ -185,15 +185,15 @@
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleViewRecord(record)"
                 >
                   查看
                 </a-button>
                 <a-button
-                  type="default"
                   size="small"
+                  type="default"
                   @click="showEditModal(record)"
                 >
                   编辑
@@ -201,10 +201,10 @@
                 <a-dropdown>
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
-                      <a-menu-item key="enable" v-if="record.enable === 2">
+                      <a-menu-item v-if="record.enable === 2" key="enable">
                         启用
                       </a-menu-item>
-                      <a-menu-item key="disable" v-if="record.enable === 1">
+                      <a-menu-item v-if="record.enable === 1" key="disable">
                         禁用
                       </a-menu-item>
                       <a-menu-item
@@ -230,14 +230,14 @@
 
     <!-- 新增记录规则模态框 -->
     <a-modal
-      :open="isAddModalVisible"
-      title="新增记录规则"
-      :width="formDialogWidth"
-      @ok="handleAdd"
-      @cancel="closeAddModal"
       :confirm-loading="submitLoading"
       :destroy-on-close="true"
+      :open="isAddModalVisible"
+      :width="formDialogWidth"
       class="responsive-modal scrape-pool-modal"
+      title="新增记录规则"
+      @cancel="closeAddModal"
+      @ok="handleAdd"
     >
       <a-form
         ref="addFormRef"
@@ -263,12 +263,12 @@
               <a-form-item label="Prometheus 实例池" name="pool_id">
                 <a-select
                   v-model:value="addForm.pool_id"
-                  placeholder="请选择实例池"
-                  class="full-width"
-                  show-search
                   :filter-option="false"
-                  @search="handlePoolSearch"
+                  class="full-width"
+                  placeholder="请选择实例池"
+                  show-search
                   @dropdown-visible-change="handlePoolDropdownChange"
+                  @search="handlePoolSearch"
                 >
                   <a-select-option
                     v-for="pool in poolOptions"
@@ -308,14 +308,14 @@
         <div class="form-section">
           <div class="section-title">规则配置</div>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="是否启用" name="enable">
                 <a-switch
                   :checked="addForm.enable === 1"
+                  class="tech-switch"
                   @change="
                     (checked: boolean) => (addForm.enable = checked ? 1 : 2)
                   "
-                  class="tech-switch"
                 />
               </a-form-item>
             </a-col>
@@ -326,16 +326,16 @@
               <a-form-item label="表达式" name="expr">
                 <a-textarea
                   v-model:value="addForm.expr"
-                  placeholder="请输入表达式"
                   :rows="3"
+                  placeholder="请输入表达式"
                 />
               </a-form-item>
               <a-form-item>
                 <a-button
-                  type="primary"
-                  class="validate-button"
-                  @click="validateAddExpression"
                   :loading="validatingExpr"
+                  class="validate-button"
+                  type="primary"
+                  @click="validateAddExpression"
                 >
                   <template #icon>
                     <Icon icon="mdi:check-circle-outline" />
@@ -351,14 +351,14 @@
 
     <!-- 编辑记录规则模态框 -->
     <a-modal
-      :open="isEditModalVisible"
-      title="编辑记录规则"
-      :width="formDialogWidth"
-      @ok="handleUpdate"
-      @cancel="closeEditModal"
       :confirm-loading="submitLoading"
       :destroy-on-close="true"
+      :open="isEditModalVisible"
+      :width="formDialogWidth"
       class="responsive-modal scrape-pool-modal"
+      title="编辑记录规则"
+      @cancel="closeEditModal"
+      @ok="handleUpdate"
     >
       <a-form
         ref="editFormRef"
@@ -384,12 +384,12 @@
               <a-form-item label="Prometheus 实例池" name="pool_id">
                 <a-select
                   v-model:value="editForm.pool_id"
-                  placeholder="请选择实例池"
-                  class="full-width"
-                  show-search
                   :filter-option="false"
-                  @search="handlePoolSearch"
+                  class="full-width"
+                  placeholder="请选择实例池"
+                  show-search
                   @dropdown-visible-change="handlePoolDropdownChange"
+                  @search="handlePoolSearch"
                 >
                   <a-select-option
                     v-for="pool in poolOptions"
@@ -429,14 +429,14 @@
         <div class="form-section">
           <div class="section-title">规则配置</div>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="是否启用" name="enable">
                 <a-switch
                   :checked="editForm.enable === 1"
+                  class="tech-switch"
                   @change="
                     (checked: boolean) => (editForm.enable = checked ? 1 : 2)
                   "
-                  class="tech-switch"
                 />
               </a-form-item>
             </a-col>
@@ -447,16 +447,16 @@
               <a-form-item label="表达式" name="expr">
                 <a-textarea
                   v-model:value="editForm.expr"
-                  placeholder="请输入表达式"
                   :rows="3"
+                  placeholder="请输入表达式"
                 />
               </a-form-item>
               <a-form-item>
                 <a-button
-                  type="primary"
-                  class="validate-button"
-                  @click="validateEditExpression"
                   :loading="validatingExpr"
+                  class="validate-button"
+                  type="primary"
+                  @click="validateEditExpression"
                 >
                   <template #icon>
                     <Icon icon="mdi:check-circle-outline" />
@@ -472,12 +472,12 @@
 
     <!-- 详情对话框 -->
     <a-modal
-      :open="detailDialogVisible"
-      title="记录规则详情"
-      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeDetailDialog"
+      :open="detailDialogVisible"
+      :width="previewDialogWidth"
       class="detail-dialog"
+      title="记录规则详情"
+      @cancel="closeDetailDialog"
     >
       <div v-if="detailDialog.form" class="pool-details">
         <div class="detail-header">
@@ -491,7 +491,7 @@
           </div>
         </div>
 
-        <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
+        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
           <a-descriptions-item label="ID">
             {{ detailDialog.form.id }}
           </a-descriptions-item>
@@ -539,18 +539,18 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { PlusOutlined, DownOutlined } from '@ant-design/icons-vue';
+import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import type { FormInstance } from 'ant-design-vue';
 import {
-  getMonitorRecordRuleListApi,
   createMonitorRecordRuleApi,
-  updateMonitorRecordRuleApi,
   deleteMonitorRecordRuleApi,
   getMonitorRecordRuleApi,
+  getMonitorRecordRuleListApi,
   type MonitorRecordRule,
+  updateMonitorRecordRuleApi,
 } from '#/api/core/prometheus/prometheus_alert_record';
 import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_scrape_pool';
 import { promqlExprCheckApi } from '#/api/core/prometheus/prometheus_alert_rule';

@@ -1,11 +1,11 @@
 <template>
-  <OpsPage title="采集池" description="管理 Prometheus 实例与采集能力">
+  <OpsPage description="管理 Prometheus 实例与采集能力" title="采集池">
     <!-- 页面标题 -->
     <template #actions>
       <a-button
+        class="btn-create"
         type="primary"
         @click="handleCreateScrapePool"
-        class="btn-create"
       >
         <template #icon>
           <PlusOutlined />
@@ -17,18 +17,18 @@
       <div class="search-filters">
         <a-input-search
           v-model:value="searchQuery"
-          placeholder="搜索采集池名称..."
-          class="search-input"
-          @search="handleSearch"
-          @change="handleSearchChange"
           allow-clear
+          class="search-input"
+          placeholder="搜索采集池名称..."
+          @change="handleSearchChange"
+          @search="handleSearch"
         />
         <a-select
           v-model:value="supportAlertFilter"
-          placeholder="告警支持"
-          class="filter-select"
-          @change="handleSupportAlertChange"
           allow-clear
+          class="filter-select"
+          placeholder="告警支持"
+          @change="handleSupportAlertChange"
         >
           <a-select-option :value="undefined">全部</a-select-option>
           <a-select-option :value="1">支持告警</a-select-option>
@@ -36,16 +36,16 @@
         </a-select>
         <a-select
           v-model:value="supportRecordFilter"
-          placeholder="记录支持"
-          class="filter-select"
-          @change="handleSupportRecordChange"
           allow-clear
+          class="filter-select"
+          placeholder="记录支持"
+          @change="handleSupportRecordChange"
         >
           <a-select-option :value="undefined">全部</a-select-option>
           <a-select-option :value="1">支持记录</a-select-option>
           <a-select-option :value="2">不支持记录</a-select-option>
         </a-select>
-        <a-button @click="handleResetFilters" class="reset-btn">
+        <a-button class="reset-btn" @click="handleResetFilters">
           重置
         </a-button>
       </div>
@@ -55,12 +55,12 @@
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="[16, 16]">
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="总采集池"
                 :value="loadError ? '未知' : stats.total"
                 :value-style="{ color: '#3f8600' }"
+                title="总采集池"
               >
                 <template #prefix>
                   <Icon icon="carbon:container-registry" />
@@ -68,12 +68,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页支持告警"
                 :value="loadError ? '未知' : stats.supportAlert"
                 :value-style="{ color: '#52c41a' }"
+                title="本页支持告警"
               >
                 <template #prefix>
                   <Icon icon="carbon:warning-alt" />
@@ -81,12 +81,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页支持记录"
                 :value="loadError ? '未知' : stats.supportRecord"
                 :value-style="{ color: '#faad14' }"
+                title="本页支持记录"
               >
                 <template #prefix>
                   <Icon icon="carbon:data-table" />
@@ -94,12 +94,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页活跃实例"
                 :value="loadError ? '未知' : stats.activeInstances"
                 :value-style="{ color: '#cf1322' }"
+                title="本页活跃实例"
               >
                 <template #prefix>
                   <Icon icon="carbon:server" />
@@ -113,13 +113,13 @@
 
     <a-alert
       v-if="loadError"
-      type="error"
-      show-icon
       :message="loadError"
       role="alert"
+      show-icon
+      type="error"
     >
       <template #action>
-        <a-button size="small" :loading="loading" @click="loadScrapePoolList">
+        <a-button :loading="loading" size="small" @click="loadScrapePoolList">
           重试
         </a-button>
       </template>
@@ -129,13 +129,13 @@
     <div class="table-container">
       <a-card>
         <a-table
-          :data-source="scrapePoolList"
           :columns="columns"
-          :pagination="paginationConfig"
+          :data-source="scrapePoolList"
           :loading="loading"
-          row-key="id"
-          bordered
+          :pagination="paginationConfig"
           :scroll="{ x: 1400 }"
+          bordered
+          row-key="id"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -238,15 +238,15 @@
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleViewScrapePool(record)"
                 >
                   查看
                 </a-button>
                 <a-button
-                  type="default"
                   size="small"
+                  type="default"
                   @click="handleEditScrapePool(record)"
                 >
                   编辑
@@ -271,13 +271,13 @@
 
     <!-- 创建/编辑采集池对话框 -->
     <a-modal
+      :destroy-on-close="true"
       :open="formDialogVisible"
       :title="formDialog.isEdit ? '编辑采集池' : '创建采集池'"
       :width="formDialogWidth"
-      @ok="saveScrapePool"
-      @cancel="closeFormDialog"
-      :destroy-on-close="true"
       class="responsive-modal scrape-pool-modal"
+      @cancel="closeFormDialog"
+      @ok="saveScrapePool"
     >
       <a-form
         ref="formRef"
@@ -290,9 +290,9 @@
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item
+                :rules="[{ required: true, message: '请输入采集池名称' }]"
                 label="采集池名称"
                 name="name"
-                :rules="[{ required: true, message: '请输入采集池名称' }]"
               >
                 <a-input
                   v-model:value="formDialog.form.name"
@@ -316,8 +316,8 @@
             <div class="dynamic-input-container">
               <a-input
                 v-model:value="instance.value"
-                placeholder="请输入Prometheus实例地址"
                 class="dynamic-input"
+                placeholder="请输入Prometheus实例地址"
               />
               <MinusCircleOutlined
                 v-if="formDialog.form.prometheus_instances.length > 1"
@@ -328,8 +328,8 @@
           </a-form-item>
           <a-form-item>
             <a-button
-              type="dashed"
               class="add-dynamic-button"
+              type="dashed"
               @click="addPrometheusInstance"
             >
               <PlusOutlined />
@@ -341,37 +341,37 @@
         <div class="form-section">
           <div class="section-title">采集配置</div>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item
+                :rules="[{ required: true, message: '请输入采集间隔' }]"
                 label="采集间隔(秒)"
                 name="scrape_interval"
-                :rules="[{ required: true, message: '请输入采集间隔' }]"
               >
                 <a-input-number
                   v-model:value="formDialog.form.scrape_interval"
                   :min="1"
-                  placeholder="请输入采集间隔（秒）"
                   class="full-width"
+                  placeholder="请输入采集间隔（秒）"
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item
+                :rules="[{ required: true, message: '请输入采集超时时间' }]"
                 label="采集超时(秒)"
                 name="scrape_timeout"
-                :rules="[{ required: true, message: '请输入采集超时时间' }]"
               >
                 <a-input-number
                   v-model:value="formDialog.form.scrape_timeout"
                   :min="1"
-                  placeholder="请输入采集超时时间（秒）"
                   class="full-width"
+                  placeholder="请输入采集超时时间（秒）"
                 />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="支持告警" name="support_alert">
                 <a-switch
                   v-model:checked="formDialog.form.support_alert"
@@ -379,7 +379,7 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="支持记录" name="support_record">
                 <a-switch
                   v-model:checked="formDialog.form.support_record"
@@ -391,15 +391,15 @@
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item
+                :rules="[{ required: true, message: '请输入远程超时时间' }]"
                 label="远程超时(秒)"
                 name="remote_timeout_seconds"
-                :rules="[{ required: true, message: '请输入远程超时时间' }]"
               >
                 <a-input-number
                   v-model:value="formDialog.form.remote_timeout_seconds"
                   :min="1"
-                  placeholder="请输入远程超时（秒）"
                   class="full-width"
+                  placeholder="请输入远程超时（秒）"
                 />
               </a-form-item>
             </a-col>
@@ -419,7 +419,7 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="远程读取地址" name="remote_read_url">
                 <a-input
                   v-model:value="formDialog.form.remote_read_url"
@@ -427,7 +427,7 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="AlertManager地址" name="alert_manager_url">
                 <a-input
                   v-model:value="formDialog.form.alert_manager_url"
@@ -441,7 +441,7 @@
         <div class="form-section">
           <div class="section-title">文件路径配置</div>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="规则文件路径" name="rule_file_path">
                 <a-input
                   v-model:value="formDialog.form.rule_file_path"
@@ -449,7 +449,7 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="记录文件路径" name="record_file_path">
                 <a-input
                   v-model:value="formDialog.form.record_file_path"
@@ -464,10 +464,10 @@
           <div class="section-title">标签配置</div>
           <a-form-item label="标签" name="tags">
             <a-select
-              mode="tags"
               v-model:value="formDialog.form.tags"
-              placeholder="输入并回车添加标签"
               :token-separators="[',']"
+              mode="tags"
+              placeholder="输入并回车添加标签"
               style="width: 100%"
             />
           </a-form-item>
@@ -477,12 +477,12 @@
 
     <!-- 详情对话框 -->
     <a-modal
-      :open="detailDialogVisible"
-      title="采集池详情"
-      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeDetailDialog"
+      :open="detailDialogVisible"
+      :width="previewDialogWidth"
       class="detail-dialog"
+      title="采集池详情"
+      @cancel="closeDetailDialog"
     >
       <div v-if="detailDialog.form" class="pool-details">
         <div class="detail-header">
@@ -513,7 +513,7 @@
           </div>
         </div>
 
-        <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
+        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
           <a-descriptions-item label="ID">
             {{ detailDialog.form.id }}
           </a-descriptions-item>
@@ -573,23 +573,23 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  PlusOutlined,
   DownOutlined,
   MinusCircleOutlined,
+  PlusOutlined,
 } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
-  getMonitorScrapePoolListApi,
   createMonitorScrapePoolApi,
-  updateMonitorScrapePoolApi,
+  type CreateMonitorScrapePoolReq,
   deleteMonitorScrapePoolApi,
   getMonitorScrapePoolDetailApi,
-  type MonitorScrapePool,
+  getMonitorScrapePoolListApi,
   type GetMonitorScrapePoolListReq,
-  type CreateMonitorScrapePoolReq,
+  type MonitorScrapePool,
+  updateMonitorScrapePoolApi,
   type UpdateMonitorScrapePoolReq,
 } from '#/api/core/prometheus/prometheus_scrape_pool';
 

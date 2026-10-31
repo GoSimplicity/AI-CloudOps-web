@@ -7,20 +7,20 @@
     <template #actions>
       <a-button @click="goBack">返回值班组</a-button>
       <a-button
+        :disabled="!calendarDays.length || !!scheduleError"
+        :loading="exportLoading"
+        class="action-btn"
         type="default"
         @click="exportSchedule"
-        class="action-btn"
-        :loading="exportLoading"
-        :disabled="!calendarDays.length || !!scheduleError"
       >
         <template #icon> </template>
         导出
       </a-button>
       <a-button
+        :disabled="!dutyGroupDetail"
+        class="action-btn"
         type="primary"
         @click="handleCreateChange"
-        class="action-btn"
-        :disabled="!dutyGroupDetail"
       >
         申请换班
       </a-button>
@@ -29,17 +29,17 @@
       <div class="search-filters">
         <a-input-search
           v-model:value="searchQuery"
-          placeholder="搜索值班历史..."
-          class="search-input"
-          @search="handleSearch"
           allow-clear
+          class="search-input"
+          placeholder="搜索值班历史..."
+          @search="handleSearch"
         />
         <a-date-picker
           v-model:value="dateFilter"
-          placeholder="筛选日期"
-          class="filter-select"
-          @change="handleDateChange"
           allow-clear
+          class="filter-select"
+          placeholder="筛选日期"
+          @change="handleDateChange"
         />
       </div>
     </template>
@@ -100,10 +100,10 @@
     </template>
     <a-alert
       v-if="loadError"
-      type="error"
-      show-icon
       :message="loadError"
       role="alert"
+      show-icon
+      type="error"
     >
       <template #action>
         <a-button :loading="detailLoading" @click="fetchDutyGroups">
@@ -118,11 +118,11 @@
         <div class="calendar-header">
           <div class="calendar-nav">
             <a-button
-              @click="previousMonth"
-              aria-label="上个月"
-              size="large"
-              class="nav-btn"
               :disabled="loading"
+              aria-label="上个月"
+              class="nav-btn"
+              size="large"
+              @click="previousMonth"
             >
               <Icon icon="carbon:chevron-left" />
             </a-button>
@@ -131,11 +131,11 @@
               <span class="calendar-subtitle">值班安排</span>
             </div>
             <a-button
-              @click="nextMonth"
-              aria-label="下个月"
-              size="large"
-              class="nav-btn"
               :disabled="loading"
+              aria-label="下个月"
+              class="nav-btn"
+              size="large"
+              @click="nextMonth"
             >
               <Icon icon="carbon:chevron-right" />
             </a-button>
@@ -143,13 +143,13 @@
 
           <div class="calendar-actions">
             <a-button
+              :disabled="isCurrentMonthToday"
               size="small"
               @click="goToToday"
-              :disabled="isCurrentMonthToday"
             >
               今日
             </a-button>
-            <a-button size="small" @click="refreshCalendar" :loading="loading">
+            <a-button :loading="loading" size="small" @click="refreshCalendar">
               刷新
             </a-button>
           </div>
@@ -160,9 +160,9 @@
             <!-- 星期标题 -->
             <div class="calendar-weekdays">
               <div
-                class="weekday-header"
                 v-for="weekday in weekdays"
                 :key="weekday"
+                class="weekday-header"
               >
                 {{ weekday }}
               </div>
@@ -186,9 +186,9 @@
               >
                 <div class="day-header">
                   <div class="day-number">{{ formatDayNumber(day.date) }}</div>
-                  <div class="day-badges" v-if="day.isCurrentMonth">
+                  <div v-if="day.isCurrentMonth" class="day-badges">
                     <div class="today-badge" v-if="isToday(day.date)">今日</div>
-                    <div class="adjusted-badge" v-if="day.isAdjusted">换班</div>
+                    <div v-if="day.isAdjusted" class="adjusted-badge">换班</div>
                     <div class="weekend-badge" v-if="isWeekend(day.date)">
                       {{ getWeekendType(day.date) }}
                     </div>
@@ -196,7 +196,7 @@
                 </div>
 
                 <div class="day-content">
-                  <div class="duty-info" v-if="day.user">
+                  <div v-if="day.user" class="duty-info">
                     <a-avatar
                       size="small"
                       :style="{
@@ -211,14 +211,14 @@
                       <span class="duty-name">{{
                         day.user.real_name || day.user.username
                       }}</span>
-                      <div class="duty-extra" v-if="day.originUser">
+                      <div v-if="day.originUser" class="duty-extra">
                         <span class="original-user"
                           >原: {{ day.originUser }}</span
                         >
                       </div>
                     </div>
                   </div>
-                  <div class="no-duty" v-else>
+                  <div v-else class="no-duty">
                     <span class="no-duty-text">无安排</span>
                   </div>
                 </div>
@@ -240,13 +240,13 @@
         </template>
 
         <a-table
-          :data-source="historyList"
           :columns="historyColumns"
-          :pagination="paginationConfig"
+          :data-source="historyList"
           :loading="historyLoading"
+          :pagination="paginationConfig"
+          class="records-table"
           row-key="id"
           @change="handleTableChange"
-          class="records-table"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'date'">
@@ -277,7 +277,7 @@
                     getUserName(record.origin_user_id)
                   }}</span>
                 </div>
-                <Icon icon="carbon:arrow-right" class="arrow" />
+                <Icon class="arrow" icon="carbon:arrow-right" />
                 <div class="user-item">
                   <a-avatar
                     size="small"
@@ -310,7 +310,7 @@
 
           <template #emptyText>
             <div class="empty-state">
-              <Icon icon="carbon:no-image" class="empty-icon" />
+              <Icon class="empty-icon" icon="carbon:no-image" />
               <div class="empty-title">暂无值班历史</div>
               <div class="empty-description">当前时间段内没有值班历史记录</div>
             </div>
@@ -321,30 +321,30 @@
 
     <!-- 换班申请对话框 -->
     <a-modal
+      :confirmLoading="submitting"
       :open="formDialogVisible"
       :title="formDialog.isEdit ? '编辑换班记录' : '申请换班'"
-      @ok="saveChange"
       @cancel="closeFormDialog"
-      :confirmLoading="submitting"
+      @ok="saveChange"
     >
       <a-form :model="formDialog.form" layout="vertical">
         <a-form-item label="换班日期" required>
           <a-date-picker
             v-model:value="formDialog.form.date"
+            :disabled-date="disabledDate"
             placeholder="请选择换班日期"
             style="width: 100%"
-            :disabled-date="disabledDate"
           />
         </a-form-item>
 
         <a-form-item label="原值班人" required>
           <a-select
             v-model:value="formDialog.form.origin_user_id"
-            placeholder="请选择原值班人"
-            style="width: 100%"
-            show-search
-            allow-clear
             :filter-option="filterOption"
+            allow-clear
+            placeholder="请选择原值班人"
+            show-search
+            style="width: 100%"
           >
             <a-select-option
               v-for="member in dutyGroupDetail?.users || []"
@@ -359,11 +359,11 @@
         <a-form-item label="新值班人" required>
           <a-select
             v-model:value="formDialog.form.on_duty_user_id"
-            placeholder="请选择新值班人"
-            style="width: 100%"
-            show-search
-            allow-clear
             :filter-option="filterOption"
+            allow-clear
+            placeholder="请选择新值班人"
+            show-search
+            style="width: 100%"
           >
             <a-select-option
               v-for="member in dutyGroupDetail?.users || []"
@@ -378,9 +378,9 @@
         <a-form-item label="换班原因" required>
           <a-textarea
             v-model:value="formDialog.form.reason"
-            placeholder="请输入换班原因"
-            :rows="3"
             :maxlength="200"
+            :rows="3"
+            placeholder="请输入换班原因"
             show-count
           />
         </a-form-item>
@@ -389,11 +389,11 @@
 
     <!-- 日期详情对话框 -->
     <a-modal
+      :footer="null"
       :open="dayDetailVisible"
       title="值班日详情"
-      :footer="null"
-      @cancel="closeDayDetail"
       width="400"
+      @cancel="closeDayDetail"
     >
       <div v-if="selectedDay" class="day-detail-container">
         <div class="day-detail-header">
@@ -445,7 +445,7 @@
             </div>
 
             <div v-if="selectedDay.originUser" class="change-info">
-              <Icon icon="carbon:change-catalog" class="change-icon" />
+              <Icon class="change-icon" icon="carbon:change-catalog" />
               <span>原值班人：{{ selectedDay.originUser }}</span>
             </div>
 
@@ -463,7 +463,7 @@
           </div>
 
           <div v-else class="duty-unassigned">
-            <Icon icon="carbon:user-off" class="unassigned-icon" />
+            <Icon class="unassigned-icon" icon="carbon:user-off" />
             <div class="unassigned-text">该日期暂无值班安排</div>
           </div>
         </div>
@@ -475,21 +475,21 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
-import { ref, reactive, onMounted, computed, nextTick, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 import dayjs, { Dayjs } from 'dayjs';
 import { Icon } from '@iconify/vue';
 import {
+  createMonitorOnDutyGroupChangeApi,
+  type CreateMonitorOnDutyGroupChangeReq,
+  getMonitorOnDutyGroupChangeListApi,
   getMonitorOnDutyGroupDetailApi,
   getMonitorOnDutyGroupFuturePlanApi,
   getMonitorOnDutyHistoryApi,
-  createMonitorOnDutyGroupChangeApi,
-  getMonitorOnDutyGroupChangeListApi,
-  type MonitorOnDutyHistory,
   type MonitorOnDutyGroup,
-  type CreateMonitorOnDutyGroupChangeReq,
+  type MonitorOnDutyHistory,
 } from '#/api/core/prometheus/prometheus_onduty';
 
 // Define User type locally

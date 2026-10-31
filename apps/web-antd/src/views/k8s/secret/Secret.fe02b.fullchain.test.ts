@@ -1,6 +1,6 @@
 import { $t } from '@vben/locales';
 
-import axios, { AxiosError, type AxiosAdapter } from 'axios';
+import axios, { type AxiosAdapter, AxiosError } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**

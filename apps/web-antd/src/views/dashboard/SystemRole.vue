@@ -1,22 +1,22 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import type { FormInstance } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
 
 import {
-  listRolesApi,
-  createRoleApi,
-  updateRoleApi,
-  deleteRoleApi,
-  getRoleDetailApi,
   assignApisToRoleApi,
-  revokeApisFromRoleApi,
+  createRoleApi,
+  deleteRoleApi,
   getRoleApisApi,
-  type Role,
+  getRoleDetailApi,
+  listRolesApi,
   type ListRolesReq,
+  revokeApisFromRoleApi,
+  type Role,
+  updateRoleApi,
 } from '#/api/core/system/system';
 
 import { listApisApi } from '#/api/core/system/api';
@@ -666,11 +666,11 @@ onMounted(() => {
         <div class="search-left">
           <a-input
             v-model:value="searchParams.search"
-            placeholder="搜索角色名称或编码"
-            aria-label="搜索角色"
             allowClear
-            @pressEnter="handleSearch"
+            aria-label="搜索角色"
             class="search-input"
+            placeholder="搜索角色名称或编码"
+            @pressEnter="handleSearch"
           >
             <template #prefix>
               <Icon icon="material-symbols:search" />
@@ -679,9 +679,9 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.status"
-            placeholder="状态筛选"
             allowClear
             class="status-select"
+            placeholder="状态筛选"
           >
             <a-select-option :value="1">启用</a-select-option>
             <a-select-option :value="0">禁用</a-select-option>
@@ -689,9 +689,9 @@ onMounted(() => {
 
           <a-select
             v-model:value="typeFilter"
-            placeholder="类型筛选"
             allowClear
             class="type-select"
+            placeholder="类型筛选"
           >
             <a-select-option :value="1">系统角色</a-select-option>
             <a-select-option :value="0">自定义角色</a-select-option>
@@ -708,11 +708,11 @@ onMounted(() => {
     <!-- 角色表格 -->
     <div class="table-container">
       <a-table
-        :scroll="{ x: 'max-content' }"
         :columns="tableColumns"
         :data-source="filteredRoles"
-        :pagination="paginationConfig"
         :loading="loading"
+        :pagination="paginationConfig"
+        :scroll="{ x: 'max-content' }"
         row-key="id"
         size="middle"
         @change="handleTableChange"
@@ -747,12 +747,12 @@ onMounted(() => {
           <template v-if="column.key === 'status'">
             <a-switch
               :checked="record.status === 1"
+              :disabled="record.is_system === 1"
+              size="small"
               @change="
                 (checked: boolean) =>
                   handleStatusChange(record, checked ? 1 : 0)
               "
-              size="small"
-              :disabled="record.is_system === 1"
             />
           </template>
 
@@ -776,15 +776,15 @@ onMounted(() => {
 
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
-              <a-button type="text" size="small" @click="handleView(record)">
+              <a-button size="small" type="text" @click="handleView(record)">
                 查看
               </a-button>
-              <a-button type="text" size="small" @click="handleEdit(record)">
+              <a-button size="small" type="text" @click="handleEdit(record)">
                 编辑
               </a-button>
               <a-button
-                type="text"
                 size="small"
+                type="text"
                 @click="handlePermission(record)"
               >
                 权限
@@ -796,10 +796,10 @@ onMounted(() => {
                 :disabled="record.is_system === 1"
               >
                 <a-button
-                  type="text"
-                  size="small"
-                  danger
                   :disabled="record.is_system === 1"
+                  danger
+                  size="small"
+                  type="text"
                 >
                   删除
                 </a-button>
@@ -813,9 +813,9 @@ onMounted(() => {
     <!-- 查看角色详情 -->
     <a-modal
       v-model:open="viewModalVisible"
+      :footer="null"
       title="角色详情"
       width="700px"
-      :footer="null"
     >
       <div v-if="viewRoleData" class="role-detail">
         <div class="detail-section">
@@ -846,7 +846,7 @@ onMounted(() => {
                 {{ viewRoleData.status === 1 ? '启用' : '禁用' }}
               </a-tag>
             </div>
-            <div class="detail-item" v-if="viewRoleData.description">
+            <div v-if="viewRoleData.description" class="detail-item">
               <label>角色描述</label>
               <span>{{ viewRoleData.description }}</span>
             </div>
@@ -857,7 +857,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="detail-section" v-if="viewRoleData.apis?.length">
+        <div v-if="viewRoleData.apis?.length" class="detail-section">
           <h3>权限信息</h3>
           <div class="apis-list">
             <div
@@ -876,7 +876,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="detail-section" v-if="viewRoleData.users?.length">
+        <div v-if="viewRoleData.users?.length" class="detail-section">
           <h3>关联用户</h3>
           <div class="users-list">
             <a-tag
@@ -894,10 +894,10 @@ onMounted(() => {
     <!-- 编辑角色 -->
     <a-modal
       v-model:open="modalVisible"
+      :confirm-loading="submitLoading"
       :title="modalTitle"
       width="900px"
       @ok="handleSubmit"
-      :confirm-loading="submitLoading"
     >
       <a-form
         ref="formRef"
@@ -939,10 +939,10 @@ onMounted(() => {
             <div class="api-search-container">
               <a-input
                 v-model:value="apiSearchParams.search"
-                placeholder="搜索API名称"
                 allowClear
-                @pressEnter="handleApiSearch"
                 class="api-search-input"
+                placeholder="搜索API名称"
+                @pressEnter="handleApiSearch"
               >
                 <template #prefix>
                   <Icon icon="material-symbols:search" />
@@ -952,9 +952,9 @@ onMounted(() => {
                 </template>
               </a-input>
               <a-button
+                :loading="apiLoading"
                 type="primary"
                 @click="handleApiSearch"
-                :loading="apiLoading"
               >
                 搜索
               </a-button>
@@ -964,7 +964,7 @@ onMounted(() => {
             <div v-if="selectedApis.length > 0" class="selected-apis">
               <div class="selected-header">
                 <span>已选择 {{ selectedApis.length }} 个API</span>
-                <a-button type="text" size="small" @click="clearSelectedApis">
+                <a-button size="small" type="text" @click="clearSelectedApis">
                   清空
                 </a-button>
               </div>
@@ -982,10 +982,10 @@ onMounted(() => {
                     <div class="api-path">{{ api.path }}</div>
                   </div>
                   <a-button
-                    type="text"
-                    size="small"
-                    @click="removeSelectedApi(api)"
                     class="remove-btn"
+                    size="small"
+                    type="text"
+                    @click="removeSelectedApi(api)"
                   >
                     <Icon icon="material-symbols:close" />
                   </a-button>
@@ -999,26 +999,26 @@ onMounted(() => {
                 <span>选择API权限 ({{ apiPagination.total }} 个)</span>
                 <div class="api-actions">
                   <a-button
-                    type="text"
-                    size="small"
-                    @click="selectCurrentPageApis"
                     :disabled="currentPageApis.length === 0"
+                    size="small"
+                    type="text"
+                    @click="selectCurrentPageApis"
                   >
                     选择当前页 ({{ currentPageApis.length }})
                   </a-button>
                   <a-button
-                    type="text"
-                    size="small"
-                    @click="selectAllSearchedApis"
                     :disabled="apiPagination.total === 0"
                     :loading="selectAllLoading"
+                    size="small"
+                    type="text"
+                    @click="selectAllSearchedApis"
                   >
                     选择全部搜索结果 ({{ apiPagination.total }})
                   </a-button>
                 </div>
               </div>
 
-              <div class="api-list" v-if="modalApiList.length > 0">
+              <div v-if="modalApiList.length > 0" class="api-list">
                 <div
                   v-for="api in modalApiList"
                   :key="api.id"
@@ -1057,7 +1057,7 @@ onMounted(() => {
               </div>
 
               <!-- API分页 -->
-              <div class="api-pagination" v-if="apiPagination.total > 0">
+              <div v-if="apiPagination.total > 0" class="api-pagination">
                 <a-pagination
                   v-model:current="apiPagination.current"
                   v-model:page-size="apiPagination.pageSize"
@@ -1083,9 +1083,9 @@ onMounted(() => {
     <!-- 权限管理 -->
     <a-modal
       v-model:open="permissionModalVisible"
+      :footer="null"
       title="权限管理"
       width="800px"
-      :footer="null"
     >
       <div v-if="currentRole">
         <div class="permission-header">
@@ -1111,9 +1111,9 @@ onMounted(() => {
                   <div class="permission-path">{{ api.path }}</div>
                 </div>
                 <a-button
-                  type="text"
                   danger
                   size="small"
+                  type="text"
                   @click="handleRevokeApi(api)"
                 >
                   移除
@@ -1140,8 +1140,8 @@ onMounted(() => {
                   <div class="permission-path">{{ api.path }}</div>
                 </div>
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleAssignApi(api)"
                 >
                   分配

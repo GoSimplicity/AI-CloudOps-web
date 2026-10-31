@@ -1,21 +1,21 @@
 <template>
   <OpsPage
-    title="YAML 任务管理"
     description="基于模板创建和执行 Kubernetes YAML 部署任务"
+    title="YAML 任务管理"
   >
     <template #actions>
       <a-button
+        :disabled="!filterClusterId || !templates.length"
         type="primary"
         @click="openCreateModal"
-        :disabled="!filterClusterId || !templates.length"
       >
         <template #icon><PlusOutlined aria-hidden="true" /></template>
         创建任务
       </a-button>
       <a-button
-        @click="fetchTasks"
-        :loading="loading"
         :disabled="!filterClusterId"
+        :loading="loading"
+        @click="fetchTasks"
       >
         <template #icon><ReloadOutlined aria-hidden="true" /></template>
         刷新数据
@@ -30,13 +30,13 @@
           <div class="k8s-filter-group">
             <a-select
               v-model:value="filterClusterId"
-              placeholder="选择集群"
-              class="k8s-cluster-selector"
-              aria-label="选择集群"
-              allow-clear
-              @change="handleClusterChange"
-              :loading="clustersLoading"
               :disabled="clustersLoading"
+              :loading="clustersLoading"
+              allow-clear
+              aria-label="选择集群"
+              class="k8s-cluster-selector"
+              placeholder="选择集群"
+              @change="handleClusterChange"
               @popup-scroll="handleClusterDropdownScroll"
             >
               <template #suffixIcon>
@@ -54,7 +54,7 @@
                     justify-content: space-between;
                   "
                 >
-                  <span class="k8s-cluster-name" :title="cluster.name">{{
+                  <span :title="cluster.name" class="k8s-cluster-name">{{
                     cluster.name
                   }}</span>
                   <a-tag color="blue" size="small">
@@ -68,19 +68,19 @@
                 disabled
                 style="text-align: center; color: #999"
               >
-                <a-spin size="small" :spinning="clustersLoading" />
+                <a-spin :spinning="clustersLoading" size="small" />
                 <span v-if="!clustersLoading">滚动加载更多...</span>
               </a-select-option>
             </a-select>
 
             <a-select
               v-model:value="filterTemplateId"
-              placeholder="选择模板"
-              class="k8s-filter-select"
-              allow-clear
-              @change="handleFilterChange"
               :disabled="!filterClusterId"
               :loading="templatesLoading"
+              allow-clear
+              class="k8s-filter-select"
+              placeholder="选择模板"
+              @change="handleFilterChange"
             >
               <template #suffixIcon>
                 <FileTextOutlined aria-hidden="true" />
@@ -99,10 +99,10 @@
                 style="text-align: center; color: #999"
               >
                 <a-button
-                  type="link"
-                  size="small"
-                  @click.stop="loadMoreTemplates"
                   :loading="templatesLoading"
+                  size="small"
+                  type="link"
+                  @click.stop="loadMoreTemplates"
                 >
                   加载更多...
                 </a-button>
@@ -111,9 +111,9 @@
 
             <a-select
               v-model:value="filterStatus"
-              placeholder="状态筛选"
-              class="k8s-filter-select"
               allow-clear
+              class="k8s-filter-select"
+              placeholder="状态筛选"
               @change="handleFilterChange"
             >
               <template #suffixIcon>
@@ -138,11 +138,11 @@
           <div class="k8s-search-group">
             <a-input
               v-model:value="searchText"
-              placeholder="🔍 搜索任务名称"
-              class="k8s-search-input"
-              @pressEnter="onSearch"
-              @input="onSearch"
               allow-clear
+              class="k8s-search-input"
+              placeholder="🔍 搜索任务名称"
+              @input="onSearch"
+              @pressEnter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -155,7 +155,6 @@
         <div class="k8s-toolbar-actions">
           <div class="k8s-action-buttons">
             <a-button
-              @click="resetFilters"
               :disabled="
                 !filterStatus &&
                 !searchText &&
@@ -164,6 +163,7 @@
               "
               class="k8s-toolbar-btn"
               title="重置所有筛选条件"
+              @click="resetFilters"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               重置筛选
@@ -204,9 +204,9 @@
     </template>
     <a-alert
       v-if="clustersError"
-      type="error"
       :message="clustersError"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button size="small" @click="fetchClusters(true)">
@@ -216,9 +216,9 @@
     </a-alert>
     <a-alert
       v-if="templatesError"
-      type="error"
       :message="templatesError"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button size="small" @click="fetchTemplates(true)">
@@ -226,7 +226,7 @@
         </a-button>
       </template>
     </a-alert>
-    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button size="small" @click="fetchTasks"> 重试查询 </a-button>
       </template>
@@ -237,9 +237,7 @@
       <a-table
         :columns="columns"
         :data-source="filteredTasks"
-        :row-selection="rowSelection"
         :loading="loading"
-        row-key="id"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,
@@ -250,9 +248,11 @@
             `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
           pageSizeOptions: ['10', '20', '30', '50'],
         }"
-        @change="handleTableChange"
-        class="k8s-table task-table"
+        :row-selection="rowSelection"
         :scroll="{ x: 1400 }"
+        class="k8s-table task-table"
+        row-key="id"
+        @change="handleTableChange"
       >
         <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'status'">
@@ -262,7 +262,7 @@
             />
           </template>
           <template v-else-if="column.key === 'template_id'">
-            <a-tag color="blue" v-if="text">{{ getTemplateName(text) }}</a-tag>
+            <a-tag v-if="text" color="blue">{{ getTemplateName(text) }}</a-tag>
             <span v-else class="k8s-no-data">-</span>
           </template>
           <template v-else-if="column.key === 'variables'">
@@ -279,7 +279,7 @@
                 v-if="(text || []).length > 3"
                 :title="(text || []).join('\n')"
               >
-                <a-tag color="cyan" class="variable-tag">
+                <a-tag class="variable-tag" color="cyan">
                   +{{ (text || []).length - 3 }} 更多
                 </a-tag>
               </a-tooltip>
@@ -325,9 +325,9 @@
               </a-tooltip>
               <a-tooltip v-if="can('k8s.task.apply')" title="执行任务">
                 <a-button
+                  :disabled="record.status === TaskStatus.RUNNING"
                   title="执行任务"
                   @click="openExecuteModal(record)"
-                  :disabled="record.status === TaskStatus.RUNNING"
                 >
                   <template #icon>
                     <PlayCircleOutlined aria-hidden="true" />
@@ -336,19 +336,19 @@
               </a-tooltip>
               <a-tooltip title="编辑">
                 <a-button
+                  :disabled="record.status === TaskStatus.RUNNING"
                   title="编辑"
                   @click="openEditModal(record)"
-                  :disabled="record.status === TaskStatus.RUNNING"
                 >
                   <template #icon><EditOutlined aria-hidden="true" /></template>
                 </a-button>
               </a-tooltip>
               <a-tooltip v-if="can('k8s.task.delete')" title="删除">
                 <a-button
-                  title="删除"
-                  danger
-                  @click="deleteTask(record)"
                   :disabled="record.status === TaskStatus.RUNNING"
+                  danger
+                  title="删除"
+                  @click="deleteTask(record)"
                 >
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
@@ -372,42 +372,42 @@
     <!-- 创建任务模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      title="创建 YAML 任务"
-      @ok="submitCreateForm"
-      @cancel="closeCreateModal"
       :confirmLoading="submitLoading"
-      width="700px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="创建"
-      cancelText="取消"
+      title="创建 YAML 任务"
+      width="700px"
+      @cancel="closeCreateModal"
+      @ok="submitCreateForm"
     >
       <a-form
         ref="formRef"
         :model="createFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="createFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
-        <a-form-item label="任务名称" name="name" :required="true">
+        <a-form-item :required="true" label="任务名称" name="name">
           <a-input
             v-model:value="createFormModel.name"
-            placeholder="请输入任务名称（例如：deploy-nginx-prod）"
-            class="k8s-form-input"
             :maxlength="50"
+            class="k8s-form-input"
+            placeholder="请输入任务名称（例如：deploy-nginx-prod）"
           />
           <div style="color: #999; font-size: 12px; margin-top: 4px">
             支持中英文、数字、下划线和连字符，用于标识和查找任务
           </div>
         </a-form-item>
 
-        <a-form-item label="选择模板" name="template_id" :required="true">
+        <a-form-item :required="true" label="选择模板" name="template_id">
           <a-select
             v-model:value="createFormModel.template_id"
-            placeholder="请选择 YAML 模板"
-            class="k8s-form-input"
             :disabled="!filterClusterId"
             :loading="templatesLoading"
+            class="k8s-form-input"
+            placeholder="请选择 YAML 模板"
             @popup-scroll="handleTemplateDropdownScroll"
           >
             <a-select-option
@@ -444,10 +444,10 @@
               style="text-align: center; color: #999"
             >
               <a-button
-                type="link"
-                size="small"
-                @click.stop="loadMoreTemplates"
                 :loading="templatesLoading"
+                size="small"
+                type="link"
+                @click.stop="loadMoreTemplates"
               >
                 加载更多...
               </a-button>
@@ -470,23 +470,23 @@
             >
               <a-input
                 v-model:value="createFormModel.variables[index]"
-                placeholder="输入变量值（例如：nginx:1.20）"
-                class="k8s-form-input"
                 :maxlength="200"
+                class="k8s-form-input"
+                placeholder="输入变量值（例如：nginx:1.20）"
               />
               <a-button
-                type="text"
                 danger
-                @click="removeVariableField(index)"
                 size="small"
+                type="text"
+                @click="removeVariableField(index)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
             <a-button
+              style="margin-top: 8px; width: 100%"
               type="dashed"
               @click="addVariableField"
-              style="margin-top: 8px; width: 100%"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
               添加变量
@@ -499,39 +499,39 @@
     <!-- 编辑任务模态框 -->
     <a-modal
       v-model:open="isEditModalVisible"
-      title="编辑 YAML 任务"
-      @ok="submitEditForm"
-      @cancel="closeEditModal"
       :confirmLoading="submitLoading"
-      width="700px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="保存"
-      cancelText="取消"
+      title="编辑 YAML 任务"
+      width="700px"
+      @cancel="closeEditModal"
+      @ok="submitEditForm"
     >
       <a-form
         ref="editFormRef"
         :model="editFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="editFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
-        <a-form-item label="任务名称" name="name" :required="true">
+        <a-form-item :required="true" label="任务名称" name="name">
           <a-input
             v-model:value="editFormModel.name"
-            placeholder="请输入任务名称"
-            class="k8s-form-input"
             :maxlength="255"
+            class="k8s-form-input"
+            placeholder="请输入任务名称"
           />
         </a-form-item>
 
         <a-form-item label="选择模板">
           <a-select
             v-model:value="editFormModel.template_id"
-            placeholder="请选择 YAML 模板"
-            class="k8s-form-input"
             :disabled="!filterClusterId"
             :loading="templatesLoading"
+            class="k8s-form-input"
+            placeholder="请选择 YAML 模板"
           >
             <a-select-option
               v-for="template in templates"
@@ -578,23 +578,23 @@
             >
               <a-input
                 v-model:value="editFormModel.variables[index]"
-                placeholder="输入变量值"
-                class="k8s-form-input"
                 :maxlength="200"
+                class="k8s-form-input"
+                placeholder="输入变量值"
               />
               <a-button
-                type="text"
                 danger
-                @click="removeEditVariableField(index)"
                 size="small"
+                type="text"
+                @click="removeEditVariableField(index)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
             <a-button
+              style="margin-top: 8px; width: 100%"
               type="dashed"
               @click="addEditVariableField"
-              style="margin-top: 8px; width: 100%"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
               添加变量
@@ -607,29 +607,29 @@
     <!-- 执行任务模态框 -->
     <a-modal
       v-model:open="isExecuteModalVisible"
-      title="执行任务"
-      @ok="submitExecuteForm"
-      @cancel="closeExecuteModal"
       :confirmLoading="executeLoading"
-      width="500px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="执行"
-      cancelText="取消"
+      title="执行任务"
+      width="500px"
+      @cancel="closeExecuteModal"
+      @ok="submitExecuteForm"
     >
       <a-alert
-        message="任务执行"
         :description="`即将执行任务 '${currentOperationTask?.name}'，请确认执行选项`"
-        type="info"
+        message="任务执行"
         show-icon
         style="margin-bottom: 24px"
+        type="info"
       />
 
       <a-form
         ref="executeFormRef"
         :model="executeFormModel"
-        layout="vertical"
         class="k8s-form"
+        layout="vertical"
       >
         <a-form-item label="执行选项">
           <a-checkbox v-model:checked="executeFormModel.dry_run">
@@ -640,7 +640,7 @@
           </div>
         </a-form-item>
 
-        <a-form-item label="任务信息" v-if="currentOperationTask">
+        <a-form-item v-if="currentOperationTask" label="任务信息">
           <div class="task-info-display">
             <div class="info-item">
               <span class="info-label">任务名称:</span>
@@ -653,11 +653,11 @@
               }}</span>
             </div>
             <div
-              class="info-item"
               v-if="
                 currentOperationTask.variables &&
                 currentOperationTask.variables.length > 0
               "
+              class="info-item"
             >
               <span class="info-label">变量列表:</span>
               <div class="info-variables">
@@ -678,17 +678,17 @@
     <!-- 详情模态框 -->
     <a-modal
       v-model:open="isDetailModalVisible"
-      title="任务详情"
       :footer="null"
-      @cancel="closeDetailModal"
-      width="900px"
       :maskClosable="false"
       destroyOnClose
+      title="任务详情"
+      width="900px"
+      @cancel="closeDetailModal"
     >
       <div v-if="currentTaskDetail" class="k8s-detail-content">
         <a-row :gutter="[24, 16]">
-          <a-col :xs="24" :lg="12">
-            <a-card title="基本信息" class="k8s-detail-card" size="small">
+          <a-col :lg="12" :xs="24">
+            <a-card class="k8s-detail-card" size="small" title="基本信息">
               <div class="k8s-detail-item">
                 <span class="k8s-detail-label">任务ID:</span>
                 <span class="k8s-detail-value">{{ currentTaskDetail.id }}</span>
@@ -721,8 +721,8 @@
             </a-card>
           </a-col>
 
-          <a-col :xs="24" :lg="12">
-            <a-card title="执行信息" class="k8s-detail-card" size="small">
+          <a-col :lg="12" :xs="24">
+            <a-card class="k8s-detail-card" size="small" title="执行信息">
               <div class="k8s-detail-item">
                 <span class="k8s-detail-label">使用模板:</span>
                 <span class="k8s-detail-value">{{
@@ -746,8 +746,8 @@
         </a-row>
 
         <a-row :gutter="[24, 16]" style="margin-top: 16px">
-          <a-col :xs="24" :lg="12">
-            <a-card title="任务变量" class="k8s-detail-card" size="small">
+          <a-col :lg="12" :xs="24">
+            <a-card class="k8s-detail-card" size="small" title="任务变量">
               <div class="task-variables">
                 <a-tag
                   v-for="(variable, index) in currentTaskDetail.variables || []"
@@ -770,8 +770,8 @@
             </a-card>
           </a-col>
 
-          <a-col :xs="24" :lg="12">
-            <a-card title="执行结果" class="k8s-detail-card" size="small">
+          <a-col :lg="12" :xs="24">
+            <a-card class="k8s-detail-card" size="small" title="执行结果">
               <pre
                 v-if="currentTaskDetail.apply_result"
                 class="apply-result-detail"
@@ -792,16 +792,16 @@ import { onMounted } from 'vue';
 import { useTaskPage } from './Task';
 import { formatDateTime, getRelativeTime } from '../shared/utils';
 import {
+  DatabaseOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileTextOutlined,
+  FilterOutlined,
+  PlayCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
-  FilterOutlined,
-  DeleteOutlined,
-  PlayCircleOutlined,
-  EyeOutlined,
   SearchOutlined,
-  EditOutlined,
-  FileTextOutlined,
-  DatabaseOutlined,
 } from '@ant-design/icons-vue';
 
 import { usePermission } from '#/utils/permission';

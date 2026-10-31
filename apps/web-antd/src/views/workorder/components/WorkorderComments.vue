@@ -2,35 +2,35 @@
   <div>
     <!-- 快速评论对话框 -->
     <a-modal
+      :confirm-loading="loading"
+      :destroy-on-close="true"
       :open="commentDialog.visible"
-      title="添加评论"
       :width="dialogWidth"
-      @ok="saveComment"
+      cancel-text="取消"
+      class="responsive-modal comment-modal"
+      ok-text="发布评论"
+      title="添加评论"
       @cancel="
         () => {
           commentDialog.visible = false;
         }
       "
-      :destroy-on-close="true"
-      class="responsive-modal comment-modal"
-      :confirm-loading="loading"
-      ok-text="发布评论"
-      cancel-text="取消"
+      @ok="saveComment"
     >
       <div class="comment-form-wrapper">
         <a-form :model="commentDialog.form" layout="vertical">
           <a-form-item
+            :rules="[{ required: true, message: '请输入评论内容' }]"
             label="评论内容"
             name="content"
-            :rules="[{ required: true, message: '请输入评论内容' }]"
           >
             <a-textarea
               v-model:value="commentDialog.form.content"
+              :max-length="500"
               :rows="5"
+              class="comment-textarea"
               placeholder="分享你的想法或意见..."
               show-count
-              :max-length="500"
-              class="comment-textarea"
             />
           </a-form-item>
           <div class="comment-options">
@@ -61,34 +61,34 @@
 
     <!-- 评论查看对话框 -->
     <a-modal
-      :open="commentsViewDialog.visible"
-      title=""
-      :width="previewDialogWidth"
       :footer="null"
+      :open="commentsViewDialog.visible"
+      :width="previewDialogWidth"
+      centered
+      class="comments-dialog responsive-modal"
+      title=""
       @cancel="
         () => {
           commentsViewDialog.visible = false;
         }
       "
-      class="comments-dialog responsive-modal"
-      centered
     >
       <template #title>
         <div class="comments-dialog-header">
           <div class="header-info">
-            <IconComponent icon="comment" class="header-icon" />
+            <IconComponent class="header-icon" icon="comment" />
             <span class="header-title">工单评论</span>
             <a-badge :count="commentsList.length" class="comment-count" />
           </div>
           <div class="header-actions">
             <a-tooltip title="刷新评论">
-              <a-button type="text" size="small" @click="refreshComments">
+              <a-button size="small" type="text" @click="refreshComments">
                 <IconComponent icon="refresh" />
               </a-button>
             </a-tooltip>
             <a-tooltip title="排序方式">
               <a-dropdown>
-                <a-button type="text" size="small">
+                <a-button size="small" type="text">
                   <IconComponent icon="sort" />
                 </a-button>
                 <template #overlay>
@@ -119,9 +119,9 @@
                 }}</span>
               </div>
               <a-button
-                type="text"
-                size="small"
                 class="quote-close"
+                size="small"
+                type="text"
                 @click="clearQuote"
               >
                 <IconComponent icon="close" />
@@ -138,18 +138,18 @@
             <a-textarea
               ref="quickTextareaRef"
               v-model:value="quickCommentText"
-              placeholder="快速添加评论..."
               :rows="2"
               class="quick-textarea"
+              placeholder="快速添加评论..."
               @keydown.ctrl.enter="submitQuickComment"
             />
             <div class="quick-comment-actions">
               <span class="keyboard-hint">Ctrl + Enter 快速发送</span>
               <a-button
-                type="primary"
-                size="small"
-                @click="submitQuickComment"
                 :loading="quickCommenting"
+                size="small"
+                type="primary"
+                @click="submitQuickComment"
               >
                 <IconComponent icon="send" /> 发送
               </a-button>
@@ -213,9 +213,9 @@
                       }}</span>
                       <a-tag
                         v-if="comment.is_system === 1"
+                        class="system-tag"
                         color="orange"
                         size="small"
-                        class="system-tag"
                       >
                         <IconComponent icon="system" /> 系统
                       </a-tag>
@@ -225,8 +225,8 @@
                       <span class="comment-time">{{
                         formatRelativeTime(comment.created_at)
                       }}</span>
-                      <a-dropdown trigger="click" placement="bottomRight">
-                        <a-button type="text" size="small" class="more-actions">
+                      <a-dropdown placement="bottomRight" trigger="click">
+                        <a-button class="more-actions" size="small" type="text">
                           <IconComponent icon="more" />
                         </a-button>
                         <template #overlay>
@@ -264,10 +264,10 @@
 
                   <div class="comment-actions">
                     <a-button
-                      type="text"
-                      size="small"
-                      @click="showReplyInput(comment.id)"
                       class="action-btn"
+                      size="small"
+                      type="text"
+                      @click="showReplyInput(comment.id)"
                     >
                       <IconComponent icon="reply" /> 回复
                     </a-button>
@@ -291,10 +291,10 @@
                           取消
                         </a-button>
                         <a-button
-                          type="primary"
-                          size="small"
-                          @click="submitReply(comment.id)"
                           :loading="replySubmitting[comment.id]"
+                          size="small"
+                          type="primary"
+                          @click="submitReply(comment.id)"
                         >
                           回复
                         </a-button>
@@ -311,8 +311,8 @@
                       <IconComponent icon="replies" />
                       <span>{{ comment.children.length }} 条回复</span>
                       <a-button
-                        type="text"
                         size="small"
+                        type="text"
                         @click="toggleReplies(comment.id)"
                       >
                         {{ repliesExpanded[comment.id] ? '收起' : '展开' }}
@@ -369,14 +369,14 @@
 
 <script setup lang="ts">
 import { formatCommentContent } from '#/utils/comment-content';
-import { ref, reactive, computed, nextTick } from 'vue';
+import { computed, nextTick, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import {
-  type WorkorderInstanceCommentItem,
-  type CreateWorkorderInstanceCommentReq,
-  type GetInstanceCommentsTreeReq,
   createWorkorderInstanceComment,
+  type CreateWorkorderInstanceCommentReq,
   getInstanceCommentsTree,
+  type GetInstanceCommentsTreeReq,
+  type WorkorderInstanceCommentItem,
 } from '#/api/core/workorder/workorder_instance_comment';
 import type { WorkorderInstanceItem } from '#/api/core/workorder/workorder_instance';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';

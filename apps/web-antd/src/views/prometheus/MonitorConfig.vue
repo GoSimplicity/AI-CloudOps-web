@@ -1,8 +1,8 @@
 <template>
-  <OpsPage title="监控配置" description="管理配置版本、实例与生效状态">
+  <OpsPage description="管理配置版本、实例与生效状态" title="监控配置">
     <!-- 页面标题 -->
     <template #actions>
-      <a-button type="primary" @click="showAddModal" class="btn-create">
+      <a-button class="btn-create" type="primary" @click="showAddModal">
         <template #icon>
           <PlusOutlined />
         </template>
@@ -13,18 +13,18 @@
       <div class="search-filters">
         <a-input-search
           v-model:value="searchText"
-          placeholder="搜索配置名称..."
-          class="search-input"
-          @search="handleSearch"
-          @change="handleSearchChange"
           allow-clear
+          class="search-input"
+          placeholder="搜索配置名称..."
+          @change="handleSearchChange"
+          @search="handleSearch"
         />
         <a-select
           v-model:value="searchPoolId"
-          placeholder="实例池（本页）"
-          class="filter-select"
-          @change="handleFilterChange"
           allow-clear
+          class="filter-select"
+          placeholder="实例池（本页）"
+          @change="handleFilterChange"
         >
           <a-select-option :value="undefined">全部实例池</a-select-option>
           <a-select-option
@@ -37,10 +37,10 @@
         </a-select>
         <a-select
           v-model:value="searchConfigType"
-          placeholder="全部类型"
-          class="filter-select"
-          @change="handleFilterChange"
           allow-clear
+          class="filter-select"
+          placeholder="全部类型"
+          @change="handleFilterChange"
         >
           <a-select-option :value="undefined">全部类型</a-select-option>
           <a-select-option :value="ConfigType.Prometheus">
@@ -61,10 +61,10 @@
         </a-select>
         <a-select
           v-model:value="searchStatus"
-          placeholder="全部状态"
-          class="filter-select"
-          @change="handleFilterChange"
           allow-clear
+          class="filter-select"
+          placeholder="全部状态"
+          @change="handleFilterChange"
         >
           <a-select-option :value="undefined">全部状态</a-select-option>
           <a-select-option :value="ConfigStatus.Active">激活</a-select-option>
@@ -72,7 +72,7 @@
             非激活
           </a-select-option>
         </a-select>
-        <a-button @click="handleReset" class="reset-btn"> 重置 </a-button>
+        <a-button class="reset-btn" @click="handleReset"> 重置 </a-button>
       </div>
     </template>
 
@@ -80,12 +80,12 @@
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="[16, 16]">
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="总配置数"
                 :value="loadError ? '未知' : stats.total"
                 :value-style="{ color: '#3f8600' }"
+                title="总配置数"
               >
                 <template #prefix>
                   <Icon icon="carbon:settings" />
@@ -93,12 +93,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页激活配置"
                 :value="loadError ? '未知' : stats.active"
                 :value-style="{ color: '#52c41a' }"
+                title="本页激活配置"
               >
                 <template #prefix>
                   <Icon icon="carbon:checkmark-filled" />
@@ -106,12 +106,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页告警规则"
                 :value="loadError ? '未知' : stats.alertRules"
                 :value-style="{ color: '#faad14' }"
+                title="本页告警规则"
               >
                 <template #prefix>
                   <Icon icon="carbon:warning-alt" />
@@ -119,12 +119,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页实例数"
                 :value="loadError ? '未知' : stats.instances"
                 :value-style="{ color: '#cf1322' }"
+                title="本页实例数"
               >
                 <template #prefix>
                   <Icon icon="carbon:server" />
@@ -139,13 +139,13 @@
     <!-- 表格容器 -->
     <a-alert
       v-if="loadError"
-      type="error"
-      show-icon
       :message="loadError"
       role="alert"
+      show-icon
+      type="error"
     >
       <template #action>
-        <a-button size="small" :loading="loading" @click="fetchConfigs">
+        <a-button :loading="loading" size="small" @click="fetchConfigs">
           重试
         </a-button>
       </template>
@@ -154,13 +154,13 @@
     <div class="table-container">
       <a-card>
         <a-table
-          :data-source="data"
           :columns="columns"
-          :pagination="paginationConfig"
+          :data-source="data"
           :loading="loading"
-          row-key="id"
-          bordered
+          :pagination="paginationConfig"
           :scroll="{ x: 1400 }"
+          bordered
+          row-key="id"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -229,15 +229,15 @@
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleViewDetail(record)"
                 >
                   查看
                 </a-button>
                 <a-button
-                  type="default"
                   size="small"
+                  type="default"
                   @click="showEditModal(record)"
                 >
                   编辑
@@ -269,13 +269,13 @@
 
     <!-- 新增配置模态框 -->
     <a-modal
-      :open="isAddModalVisible"
-      title="新增监控配置"
-      :width="formDialogWidth"
-      @ok="handleAdd"
-      @cancel="closeAddModal"
       :destroy-on-close="true"
+      :open="isAddModalVisible"
+      :width="formDialogWidth"
       class="responsive-modal config-modal"
+      title="新增监控配置"
+      @cancel="closeAddModal"
+      @ok="handleAdd"
     >
       <a-form
         ref="addFormRef"
@@ -286,11 +286,11 @@
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item
+                :rules="[{ required: true, message: '请输入配置名称' }]"
                 label="配置名称"
                 name="name"
-                :rules="[{ required: true, message: '请输入配置名称' }]"
               >
                 <a-input
                   v-model:value="addForm.name"
@@ -298,11 +298,11 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item
+                :rules="[{ required: true, message: '请选择配置类型' }]"
                 label="配置类型"
                 name="config_type"
-                :rules="[{ required: true, message: '请选择配置类型' }]"
               >
                 <a-select
                   v-model:value="addForm.config_type"
@@ -328,11 +328,11 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item
+                :rules="[{ required: true, message: '请选择实例池' }]"
                 label="实例池"
                 name="pool_id"
-                :rules="[{ required: true, message: '请选择实例池' }]"
               >
                 <a-select
                   v-model:value="addForm.pool_id"
@@ -348,11 +348,11 @@
                 </a-select>
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item
+                :rules="[{ required: true, message: '请输入实例IP' }]"
                 label="实例IP"
                 name="instance_ip"
-                :rules="[{ required: true, message: '请输入实例IP' }]"
               >
                 <a-input
                   v-model:value="addForm.instance_ip"
@@ -366,9 +366,9 @@
         <div class="form-section">
           <div class="section-title">配置内容</div>
           <a-form-item
+            :rules="[{ required: true, message: '请输入配置内容' }]"
             label="配置内容"
             name="config_content"
-            :rules="[{ required: true, message: '请输入配置内容' }]"
           >
             <a-textarea
               v-model:value="addForm.config_content"
@@ -386,8 +386,8 @@
               :checked-value="ConfigStatus.Active"
               :un-checked-value="ConfigStatus.Inactive"
               checked-children="激活"
-              un-checked-children="非激活"
               class="tech-switch"
+              un-checked-children="非激活"
             />
           </a-form-item>
         </div>
@@ -396,13 +396,13 @@
 
     <!-- 编辑配置模态框 -->
     <a-modal
-      :open="isEditModalVisible"
-      title="编辑监控配置"
-      :width="formDialogWidth"
-      @ok="handleEdit"
-      @cancel="closeEditModal"
       :destroy-on-close="true"
+      :open="isEditModalVisible"
+      :width="formDialogWidth"
       class="responsive-modal config-modal"
+      title="编辑监控配置"
+      @cancel="closeEditModal"
+      @ok="handleEdit"
     >
       <a-form
         ref="editFormRef"
@@ -413,11 +413,11 @@
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item
+                :rules="[{ required: true, message: '请输入配置名称' }]"
                 label="配置名称"
                 name="name"
-                :rules="[{ required: true, message: '请输入配置名称' }]"
               >
                 <a-input
                   v-model:value="editForm.name"
@@ -425,11 +425,11 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item
+                :rules="[{ required: true, message: '请选择配置类型' }]"
                 label="配置类型"
                 name="config_type"
-                :rules="[{ required: true, message: '请选择配置类型' }]"
               >
                 <a-select
                   v-model:value="editForm.config_type"
@@ -455,11 +455,11 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item
+                :rules="[{ required: true, message: '请选择实例池' }]"
                 label="实例池"
                 name="pool_id"
-                :rules="[{ required: true, message: '请选择实例池' }]"
               >
                 <a-select
                   v-model:value="editForm.pool_id"
@@ -475,11 +475,11 @@
                 </a-select>
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item
+                :rules="[{ required: true, message: '请输入实例IP' }]"
                 label="实例IP"
                 name="instance_ip"
-                :rules="[{ required: true, message: '请输入实例IP' }]"
               >
                 <a-input
                   v-model:value="editForm.instance_ip"
@@ -493,9 +493,9 @@
         <div class="form-section">
           <div class="section-title">配置内容</div>
           <a-form-item
+            :rules="[{ required: true, message: '请输入配置内容' }]"
             label="配置内容"
             name="config_content"
-            :rules="[{ required: true, message: '请输入配置内容' }]"
           >
             <a-textarea
               v-model:value="editForm.config_content"
@@ -513,8 +513,8 @@
               :checked-value="ConfigStatus.Active"
               :un-checked-value="ConfigStatus.Inactive"
               checked-children="激活"
-              un-checked-children="非激活"
               class="tech-switch"
+              un-checked-children="非激活"
             />
           </a-form-item>
         </div>
@@ -523,12 +523,12 @@
 
     <!-- 配置预览模态框 -->
     <a-modal
-      :open="isPreviewModalVisible"
-      title="配置内容预览"
-      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closePreviewModal"
+      :open="isPreviewModalVisible"
+      :width="previewDialogWidth"
       class="detail-dialog"
+      title="配置内容预览"
+      @cancel="closePreviewModal"
     >
       <div v-if="previewConfig" class="config-preview">
         <div class="preview-header">
@@ -544,10 +544,10 @@
         </div>
 
         <a-textarea
-          :value="previewConfig.config_content"
-          readonly
           :rows="20"
+          :value="previewConfig.config_content"
           class="preview-textarea"
+          readonly
         />
 
         <div class="detail-footer">
@@ -558,12 +558,12 @@
 
     <!-- 详情模态框 -->
     <a-modal
-      :open="isDetailModalVisible"
-      title="配置详情"
-      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeDetailModal"
+      :open="isDetailModalVisible"
+      :width="previewDialogWidth"
       class="detail-dialog"
+      title="配置详情"
+      @cancel="closeDetailModal"
     >
       <div v-if="detailConfig" class="config-details">
         <div class="detail-header">
@@ -589,7 +589,7 @@
           </div>
         </div>
 
-        <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
+        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
           <a-descriptions-item label="ID">
             {{ detailConfig.id }}
           </a-descriptions-item>
@@ -616,10 +616,10 @@
         <div class="config-content-section">
           <h4 class="content-title">配置内容</h4>
           <a-textarea
-            :value="detailConfig.config_content"
-            readonly
             :rows="15"
+            :value="detailConfig.config_content"
             class="preview-textarea"
+            readonly
           />
         </div>
 
@@ -640,21 +640,21 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { PlusOutlined, DownOutlined } from '@ant-design/icons-vue';
+import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
-  getMonitorConfigListApi,
-  getMonitorConfigApi,
-  createMonitorConfigApi,
-  updateMonitorConfigApi,
-  deleteMonitorConfigApi,
-  ConfigType,
   ConfigStatus,
-  type MonitorConfigItem,
-  type GetMonitorConfigListParams,
+  ConfigType,
+  createMonitorConfigApi,
   type CreateMonitorConfigParams,
+  deleteMonitorConfigApi,
+  getMonitorConfigApi,
+  getMonitorConfigListApi,
+  type GetMonitorConfigListParams,
+  type MonitorConfigItem,
+  updateMonitorConfigApi,
   type UpdateMonitorConfigParams,
 } from '#/api/core/prometheus/prometheus_config';
 

@@ -1,13 +1,13 @@
 <template>
   <OpsPage
-    title="节点管理"
     description="管理和监控集群中的所有 Kubernetes 节点"
+    title="节点管理"
   >
     <template #actions>
       <a-button
-        @click="fetchNodes"
-        :loading="loading"
         :disabled="!filterClusterId"
+        :loading="loading"
+        @click="fetchNodes"
       >
         <template #icon><ReloadOutlined aria-hidden="true" /></template>
         刷新数据
@@ -22,13 +22,13 @@
           <div class="k8s-filter-group">
             <a-select
               v-model:value="filterClusterId"
-              placeholder="选择集群"
-              class="k8s-cluster-selector"
-              aria-label="选择集群"
-              allow-clear
-              @change="handleClusterChange"
-              :loading="clustersLoading"
               :disabled="clustersLoading"
+              :loading="clustersLoading"
+              allow-clear
+              aria-label="选择集群"
+              class="k8s-cluster-selector"
+              placeholder="选择集群"
+              @change="handleClusterChange"
               @popup-scroll="handleClusterDropdownScroll"
             >
               <template #suffixIcon>
@@ -46,7 +46,7 @@
                     justify-content: space-between;
                   "
                 >
-                  <span class="k8s-cluster-name" :title="cluster.name">{{
+                  <span :title="cluster.name" class="k8s-cluster-name">{{
                     cluster.name
                   }}</span>
                   <a-tag color="blue" size="small">
@@ -60,16 +60,16 @@
                 disabled
                 style="text-align: center; color: var(--ops-muted)"
               >
-                <a-spin size="small" :spinning="clustersLoading" />
+                <a-spin :spinning="clustersLoading" size="small" />
                 <span v-if="!clustersLoading">滚动加载更多...</span>
               </a-select-option>
             </a-select>
 
             <a-select
               v-model:value="filterStatus"
-              placeholder="状态筛选"
-              class="k8s-filter-select"
               allow-clear
+              class="k8s-filter-select"
+              placeholder="状态筛选"
               @change="handleFilterChange"
             >
               <template #suffixIcon>
@@ -92,11 +92,11 @@
           <div class="k8s-search-group">
             <a-input
               v-model:value="searchText"
-              placeholder="搜索节点名称"
-              class="k8s-search-input"
-              @pressEnter="onSearch"
-              @input="onSearch"
               allow-clear
+              class="k8s-search-input"
+              placeholder="搜索节点名称"
+              @input="onSearch"
+              @pressEnter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -109,10 +109,10 @@
         <div class="k8s-toolbar-actions">
           <div class="k8s-action-buttons">
             <a-button
-              @click="resetFilters"
               :disabled="!filterClusterId && !filterStatus && !searchText"
               class="k8s-toolbar-btn"
               title="重置所有筛选条件"
+              @click="resetFilters"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               重置筛选
@@ -136,9 +136,9 @@
     </template>
     <a-alert
       v-if="clustersError"
-      type="error"
       :message="clustersError"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button size="small" @click="fetchClusters(true)">
@@ -146,7 +146,7 @@
         </a-button>
       </template>
     </a-alert>
-    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button size="small" @click="fetchNodes"> 重试查询 </a-button>
       </template>
@@ -157,9 +157,7 @@
       <a-table
         :columns="columns"
         :data-source="filteredNodes"
-        :row-selection="rowSelection"
         :loading="loading"
-        :row-key="clusterResourceKey"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,
@@ -170,9 +168,11 @@
             `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
           pageSizeOptions: ['10', '20', '30', '50'],
         }"
-        @change="handleTableChange"
-        class="k8s-table"
+        :row-key="clusterResourceKey"
+        :row-selection="rowSelection"
         :scroll="{ x: 1200 }"
+        class="k8s-table"
+        @change="handleTableChange"
       >
         <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'status'">
@@ -358,24 +358,24 @@
               >
                 <a-button
                   :title="record.schedulable === 1 ? '禁用调度' : '启用调度'"
-                  @click="toggleNodeSchedule(record)"
                   data-action="schedule"
+                  @click="toggleNodeSchedule(record)"
                 >
                   <template #icon>
                     <StopOutlined
-                      aria-hidden="true"
                       v-if="record.schedulable === 1"
+                      aria-hidden="true"
                     />
-                    <PlayCircleOutlined aria-hidden="true" v-else />
+                    <PlayCircleOutlined v-else aria-hidden="true" />
                   </template>
                 </a-button>
               </a-tooltip>
               <a-tooltip title="驱逐节点">
                 <a-button
-                  title="驱逐节点"
-                  @click="openDrainModal(record)"
                   danger
                   data-action="drain"
+                  title="驱逐节点"
+                  @click="openDrainModal(record)"
                 >
                   <template #icon>
                     <DisconnectOutlined aria-hidden="true" />
@@ -405,34 +405,34 @@
     <!-- 标签管理模态框 -->
     <a-modal
       v-model:open="isLabelModalVisible"
-      title="管理节点标签 (Node Labels)"
-      @ok="submitLabelForm"
-      @cancel="closeLabelModal"
+      :autoFocus="false"
       :confirmLoading="submitLoading"
-      width="800px"
+      :focusTriggerAfterClose="false"
+      :keyboard="true"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="保存更改"
-      cancelText="取消"
-      :focusTriggerAfterClose="false"
-      :autoFocus="false"
-      :keyboard="true"
+      title="管理节点标签 (Node Labels)"
+      width="800px"
+      @cancel="closeLabelModal"
+      @ok="submitLabelForm"
     >
       <a-alert
-        message="标签管理说明"
+        closable
         description="标签用于组织和选择 Kubernetes 资源。可以为节点添加自定义标签，用于 Pod 调度选择器、节点亲和性等场景。保存后将完全覆盖现有标签配置。"
-        type="info"
+        message="标签管理说明"
         show-icon
         style="margin-bottom: 16px"
-        closable
+        type="info"
       />
 
       <a-form
         ref="labelFormRef"
         :model="labelFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="labelFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
         <a-form-item label="标签配置 (Key-Value)">
           <a-form-item-rest>
@@ -456,22 +456,22 @@
                 class="k8s-key-value-row"
               >
                 <a-input
-                  :value="key"
                   :placeholder="`标签键: ${key}`"
-                  disabled
+                  :value="key"
                   class="k8s-form-input k8s-key-input"
+                  disabled
                 />
                 <a-input
                   v-model:value="labelFormModel.labels[key]"
-                  placeholder="标签值"
-                  class="k8s-form-input k8s-value-input"
                   :maxlength="200"
+                  class="k8s-form-input k8s-value-input"
+                  placeholder="标签值"
                 />
                 <a-button
-                  type="text"
-                  danger
-                  @click="removeLabelField(key)"
                   class="k8s-remove-btn"
+                  danger
+                  type="text"
+                  @click="removeLabelField(key)"
                 >
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
@@ -504,26 +504,26 @@
     <!-- 污点管理模态框 -->
     <a-modal
       v-model:open="isTaintModalVisible"
-      title="管理节点污点 (Node Taints)"
-      @ok="submitTaintForm"
-      @cancel="closeTaintModal"
+      :autoFocus="false"
       :confirmLoading="submitLoading"
-      width="800px"
+      :focusTriggerAfterClose="false"
+      :keyboard="true"
       :maskClosable="false"
-      destroyOnClose
-      okText="保存更改"
       :okButtonProps="{ disabled: !hasTaintChanges }"
       cancelText="取消"
-      :focusTriggerAfterClose="false"
-      :autoFocus="false"
-      :keyboard="true"
+      destroyOnClose
+      okText="保存更改"
+      title="管理节点污点 (Node Taints)"
+      width="800px"
+      @cancel="closeTaintModal"
+      @ok="submitTaintForm"
     >
       <a-alert
+        closable
         message="污点管理说明"
-        type="info"
         show-icon
         style="margin-bottom: 16px"
-        closable
+        type="info"
       >
         <template #description>
           <div>
@@ -548,9 +548,9 @@
       <a-form
         ref="taintFormRef"
         :model="taintFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="taintFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
         <a-form-item label="污点配置 (Key, Value, Effect)">
           <a-form-item-rest>
@@ -632,19 +632,19 @@
         <a-divider>YAML 配置验证</a-divider>
 
         <a-form-item
-          label="YAML 数据"
           help="可选：输入污点的 YAML 配置进行验证"
+          label="YAML 数据"
         >
           <a-form-item-rest>
             <a-textarea
               v-model:value="taintYamlData"
+              :rows="6"
               placeholder="taints:
   - key: node-role.kubernetes.io/master
     effect: NoSchedule
   - key: dedicated
     value: gpu
     effect: NoExecute"
-              :rows="6"
               style="font-family: monospace; margin-bottom: 8px"
             />
             <a-button
@@ -664,31 +664,31 @@
     <!-- 驱逐节点模态框 -->
     <a-modal
       v-model:open="isDrainModalVisible"
-      title="驱逐节点 (Drain Node)"
-      @ok="submitDrainForm"
-      @cancel="closeDrainModal"
+      :autoFocus="false"
       :confirmLoading="submitLoading"
-      width="650px"
+      :focusTriggerAfterClose="false"
+      :keyboard="true"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="确认驱逐"
-      cancelText="取消"
-      :focusTriggerAfterClose="false"
-      :autoFocus="false"
-      :keyboard="true"
+      title="驱逐节点 (Drain Node)"
+      width="650px"
+      @cancel="closeDrainModal"
+      @ok="submitDrainForm"
     >
       <a-form
         ref="drainFormRef"
         :model="drainFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="drainFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
         <a-alert
           message="警告：驱逐节点将安全迁移该节点上的所有 Pod"
-          type="warning"
           show-icon
           style="margin-bottom: 20px"
+          type="warning"
         >
           <template #description>
             <div>
@@ -707,7 +707,7 @@
         </a-alert>
 
         <a-row :gutter="16">
-          <a-col :xs="24" :sm="12">
+          <a-col :sm="12" :xs="24">
             <a-form-item name="force">
               <template #label>
                 <span
@@ -730,7 +730,7 @@
               </div>
             </a-form-item>
           </a-col>
-          <a-col :xs="24" :sm="12">
+          <a-col :sm="12" :xs="24">
             <a-form-item name="ignore_daemon_sets">
               <template #label>
                 <span
@@ -756,7 +756,7 @@
         </a-row>
 
         <a-row :gutter="16">
-          <a-col :xs="24" :sm="12">
+          <a-col :sm="12" :xs="24">
             <a-form-item name="delete_local_data">
               <template #label>
                 <span
@@ -779,12 +779,12 @@
               </div>
             </a-form-item>
           </a-col>
-          <a-col :xs="24" :sm="12">
+          <a-col :sm="12" :xs="24">
             <a-form-item label="优雅关闭时间 (秒)" name="grace_period_seconds">
               <a-input-number
                 v-model:value="drainFormModel.grace_period_seconds"
-                :min="0"
                 :max="3600"
+                :min="0"
                 :step="10"
                 class="k8s-form-input"
                 placeholder="30"
@@ -806,8 +806,8 @@
         <a-form-item label="超时时间 (秒)" name="timeout_seconds">
           <a-input-number
             v-model:value="drainFormModel.timeout_seconds"
-            :min="30"
             :max="7200"
+            :min="30"
             :step="30"
             class="k8s-form-input"
             placeholder="300"
@@ -825,21 +825,21 @@
     <!-- 详情模态框 -->
     <a-modal
       v-model:open="isDetailModalVisible"
-      title="节点详情 (Node Details)"
+      :autoFocus="false"
+      :focusTriggerAfterClose="false"
       :footer="null"
-      @cancel="closeDetailModal"
-      width="1000px"
+      :keyboard="true"
       :maskClosable="false"
       destroyOnClose
-      :focusTriggerAfterClose="false"
-      :autoFocus="false"
-      :keyboard="true"
+      title="节点详情 (Node Details)"
+      width="1000px"
+      @cancel="closeDetailModal"
     >
       <a-spin :spinning="detailLoading">
         <div v-if="currentNodeDetail" class="k8s-detail-content">
           <a-row :gutter="[24, 16]">
-            <a-col :xs="24" :lg="12">
-              <a-card title="基本信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="基本信息">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">节点名称:</span>
                   <span class="k8s-detail-value">{{
@@ -861,26 +861,26 @@
                   />
                 </div>
                 <div
-                  class="k8s-detail-item"
                   v-if="
                     currentNodeDetail.roles &&
                     currentNodeDetail.roles.length > 0
                   "
+                  class="k8s-detail-item"
                 >
                   <span class="k8s-detail-label">角色:</span>
                   <span class="k8s-detail-value">{{
                     currentNodeDetail.roles.join(', ')
                   }}</span>
                 </div>
-                <div class="k8s-detail-item" v-if="currentNodeDetail.age">
+                <div v-if="currentNodeDetail.age" class="k8s-detail-item">
                   <span class="k8s-detail-label">运行时间:</span>
                   <span class="k8s-detail-value">{{
                     currentNodeDetail.age
                   }}</span>
                 </div>
                 <div
-                  class="k8s-detail-item"
                   v-if="currentNodeDetail.internal_ip"
+                  class="k8s-detail-item"
                 >
                   <span class="k8s-detail-label">内部IP:</span>
                   <span class="k8s-detail-value">{{
@@ -899,7 +899,7 @@
                     currentNodeDetail.external_ip
                   }}</span>
                 </div>
-                <div class="k8s-detail-item" v-if="currentNodeDetail.hostname">
+                <div v-if="currentNodeDetail.hostname" class="k8s-detail-item">
                   <span class="k8s-detail-label">主机名:</span>
                   <span class="k8s-detail-value">{{
                     currentNodeDetail.hostname
@@ -908,11 +908,11 @@
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="系统信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="系统信息">
                 <div
-                  class="k8s-detail-item"
                   v-if="currentNodeDetail.kubelet_version"
+                  class="k8s-detail-item"
                 >
                   <span class="k8s-detail-label">Kubelet版本:</span>
                   <span class="k8s-detail-value">{{
@@ -932,8 +932,8 @@
                   }}</span>
                 </div>
                 <div
-                  class="k8s-detail-item"
                   v-if="currentNodeDetail.container_runtime"
+                  class="k8s-detail-item"
                 >
                   <span class="k8s-detail-label">容器运行时:</span>
                   <span class="k8s-detail-value">{{
@@ -941,8 +941,8 @@
                   }}</span>
                 </div>
                 <div
-                  class="k8s-detail-item"
                   v-if="currentNodeDetail.operating_system"
+                  class="k8s-detail-item"
                 >
                   <span class="k8s-detail-label">操作系统:</span>
                   <span class="k8s-detail-value">{{
@@ -950,8 +950,8 @@
                   }}</span>
                 </div>
                 <div
-                  class="k8s-detail-item"
                   v-if="currentNodeDetail.architecture"
+                  class="k8s-detail-item"
                 >
                   <span class="k8s-detail-label">系统架构:</span>
                   <span class="k8s-detail-value">{{
@@ -959,15 +959,15 @@
                   }}</span>
                 </div>
                 <div
-                  class="k8s-detail-item"
                   v-if="currentNodeDetail.kernel_version"
+                  class="k8s-detail-item"
                 >
                   <span class="k8s-detail-label">内核版本:</span>
                   <span class="k8s-detail-value">{{
                     currentNodeDetail.kernel_version
                   }}</span>
                 </div>
-                <div class="k8s-detail-item" v-if="currentNodeDetail.os_image">
+                <div v-if="currentNodeDetail.os_image" class="k8s-detail-item">
                   <span class="k8s-detail-label">系统镜像:</span>
                   <span class="k8s-detail-value">{{
                     currentNodeDetail.os_image
@@ -989,8 +989,8 @@
           </a-row>
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px">
-            <a-col :xs="24" :lg="12">
-              <a-card title="标签信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="标签信息">
                 <div
                   class="k8s-labels-display"
                   style="max-height: 300px; overflow-y: auto"
@@ -1025,8 +1025,8 @@
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="污点信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="污点信息">
                 <div
                   class="k8s-taints-display"
                   style="max-height: 300px; overflow-y: auto"
@@ -1073,7 +1073,7 @@
             "
           >
             <a-col :span="24">
-              <a-card title="注解信息" class="k8s-detail-card" size="small">
+              <a-card class="k8s-detail-card" size="small" title="注解信息">
                 <div
                   class="k8s-annotations-display"
                   style="max-height: 200px; overflow-y: auto"
@@ -1093,21 +1093,21 @@
           </a-row>
 
           <a-row
-            style="margin-top: 16px"
             v-if="
               currentNodeDetail.conditions &&
               currentNodeDetail.conditions.length > 0
             "
+            style="margin-top: 16px"
           >
             <a-col :span="24">
-              <a-card title="节点状况" class="k8s-detail-card" size="small">
+              <a-card class="k8s-detail-card" size="small" title="节点状况">
                 <a-table
                   :columns="conditionColumns"
                   :data-source="currentNodeDetail.conditions"
                   :pagination="false"
-                  size="small"
-                  row-key="type"
                   :scroll="{ x: 800 }"
+                  row-key="type"
+                  size="small"
                 >
                   <template #bodyCell="{ column, text }">
                     <template v-if="column.key === 'status'">
@@ -1152,20 +1152,20 @@ import { message } from 'ant-design-vue';
 import { useNodePage } from './Node';
 import { formatDateTime, getRelativeTime } from '../shared/utils';
 import {
+  CheckOutlined,
+  DeleteOutlined,
+  DeploymentUnitOutlined,
+  DisconnectOutlined,
+  EyeOutlined,
+  FilterOutlined,
+  NodeIndexOutlined,
+  PlayCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
-  FilterOutlined,
-  DeleteOutlined,
-  NodeIndexOutlined,
-  EyeOutlined,
+  SearchOutlined,
+  StopOutlined,
   TagsOutlined,
   WarningOutlined,
-  StopOutlined,
-  PlayCircleOutlined,
-  DisconnectOutlined,
-  DeploymentUnitOutlined,
-  SearchOutlined,
-  CheckOutlined,
 } from '@ant-design/icons-vue';
 
 import { usePermission } from '#/utils/permission';

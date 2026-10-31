@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import {
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FilterOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
+  PlaySquareOutlined,
   PlusOutlined,
   ReloadOutlined,
-  FilterOutlined,
   SearchOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  EditOutlined,
-  PlayCircleOutlined,
-  PauseCircleOutlined,
-  PlaySquareOutlined,
 } from '@ant-design/icons-vue';
 import { onMounted, onUnmounted, watch } from 'vue';
 import OpsPage from '#/components/ops/OpsPage.vue';
@@ -249,19 +249,19 @@ onUnmounted(clearPage);
 
 <template>
   <OpsPage
-    title="定时任务管理"
     description="配置执行周期、查看任务结果并管理启停状态"
+    title="定时任务管理"
   >
     <template #actions>
       <a-button
+        :disabled="submitLoading"
         type="primary"
         @click="openCreateModal"
-        :disabled="submitLoading"
       >
         <template #icon><PlusOutlined /></template>
         创建任务
       </a-button>
-      <a-button @click="fetchCronJobs()" :loading="loading">
+      <a-button :loading="loading" @click="fetchCronJobs()">
         <template #icon><ReloadOutlined /></template>
         刷新数据
       </a-button>
@@ -273,9 +273,9 @@ onUnmounted(clearPage);
         <div class="k8s-filter-group">
           <a-select
             v-model:value="filterStatus"
-            placeholder="状态筛选"
-            class="k8s-filter-select"
             allow-clear
+            class="k8s-filter-select"
+            placeholder="状态筛选"
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
@@ -293,9 +293,9 @@ onUnmounted(clearPage);
 
           <a-select
             v-model:value="filterJobType"
-            placeholder="任务类型"
-            class="k8s-filter-select"
             allow-clear
+            class="k8s-filter-select"
+            placeholder="任务类型"
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
@@ -318,10 +318,10 @@ onUnmounted(clearPage);
         <div class="k8s-search-group">
           <a-input
             v-model:value="searchText"
-            placeholder="搜索任务名称或描述..."
-            class="k8s-search-input"
-            @keyup.enter="onSearch"
             allow-clear
+            class="k8s-search-input"
+            placeholder="搜索任务名称或描述..."
+            @keyup.enter="onSearch"
           >
             <template #prefix><SearchOutlined /></template>
           </a-input>
@@ -331,10 +331,10 @@ onUnmounted(clearPage);
       <!-- 操作按钮 -->
       <div class="k8s-toolbar-actions">
         <a-button
-          @click="resetFilters"
           :disabled="!filterStatus && !filterJobType && !searchText"
           class="k8s-toolbar-btn"
           title="重置所有筛选条件"
+          @click="resetFilters"
         >
           <template #icon><DeleteOutlined /></template>
           重置筛选
@@ -354,22 +354,22 @@ onUnmounted(clearPage);
         </a-button>
 
         <a-button
-          @click="batchOperation('启用')"
-          :disabled="!selectedRows.length"
           v-if="selectedRows.length > 0"
+          :disabled="!selectedRows.length"
           class="k8s-toolbar-btn"
           title="批量启用选中的任务"
+          @click="batchOperation('启用')"
         >
           <template #icon><PlayCircleOutlined /></template>
           启用 ({{ selectedRows.length }})
         </a-button>
 
         <a-button
-          @click="batchOperation('禁用')"
-          :disabled="!selectedRows.length"
           v-if="selectedRows.length > 0"
+          :disabled="!selectedRows.length"
           class="k8s-toolbar-btn"
           title="批量禁用选中的任务"
+          @click="batchOperation('禁用')"
         >
           <template #icon><PauseCircleOutlined /></template>
           禁用 ({{ selectedRows.length }})
@@ -381,11 +381,11 @@ onUnmounted(clearPage);
     <a-alert
       v-if="error"
       :message="error"
-      type="error"
-      show-icon
-      closable
-      @close="error = null"
       class="k8s-error-alert"
+      closable
+      show-icon
+      type="error"
+      @close="error = null"
     >
       <template #action>
         <a-button size="small" type="primary" @click="fetchCronJobs()">
@@ -400,9 +400,7 @@ onUnmounted(clearPage);
       <a-table
         :columns="columns"
         :data-source="filteredCronJobs"
-        :row-selection="rowSelection"
         :loading="loading"
-        row-key="id"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,
@@ -413,9 +411,11 @@ onUnmounted(clearPage);
             `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
           pageSizeOptions: ['10', '20', '30', '50'],
         }"
-        @change="handleTableChange"
-        class="k8s-table"
+        :row-selection="rowSelection"
         :scroll="{ x: 1500 }"
+        class="k8s-table"
+        row-key="id"
+        @change="handleTableChange"
       >
         <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'status'">
@@ -453,8 +453,8 @@ onUnmounted(clearPage);
             <div class="k8s-action-column">
               <a-tooltip title="查看详情">
                 <a-button
-                  type="text"
                   size="small"
+                  type="text"
                   @click="showJobDetail(record)"
                 >
                   <template #icon><EyeOutlined /></template>
@@ -486,8 +486,8 @@ onUnmounted(clearPage);
                 "
               >
                 <a-button
-                  type="text"
                   size="small"
+                  type="text"
                   @click="
                     record.status === CronJobStatus.ENABLED
                       ? disableJob(record)
@@ -526,11 +526,11 @@ onUnmounted(clearPage);
 
               <a-tooltip v-if="can('cron.job.delete')" title="删除任务">
                 <a-button
-                  type="text"
-                  size="small"
-                  danger
-                  @click="deleteJob(record)"
                   :disabled="record.is_built_in === 1"
+                  danger
+                  size="small"
+                  type="text"
+                  @click="deleteJob(record)"
                 >
                   <template #icon><DeleteOutlined /></template>
                 </a-button>
@@ -544,50 +544,50 @@ onUnmounted(clearPage);
     <!-- 创建任务模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      title="创建定时任务"
-      :width="800"
       :confirm-loading="submitLoading"
-      @ok="submitCreateForm"
-      @cancel="closeCreateModal"
-      ok-text="创建任务"
+      :width="800"
       cancel-text="取消"
       destroy-on-close
+      ok-text="创建任务"
+      title="创建定时任务"
+      @cancel="closeCreateModal"
+      @ok="submitCreateForm"
     >
       <a-form
         ref="formRef"
+        :label-col="{ span: 6 }"
         :model="createFormModel"
         :rules="createFormRules"
-        :label-col="{ span: 6 }"
         :wrapper-col="{ span: 18 }"
         class="k8s-form"
       >
-        <a-form-item label="任务名称" name="name" has-feedback>
+        <a-form-item has-feedback label="任务名称" name="name">
           <a-input
             v-model:value="createFormModel.name"
-            placeholder="请输入任务名称"
             :maxlength="100"
+            placeholder="请输入任务名称"
           />
         </a-form-item>
 
         <a-form-item label="任务描述" name="description">
           <a-textarea
             v-model:value="createFormModel.description"
-            placeholder="请输入任务描述"
-            :rows="3"
             :maxlength="500"
+            :rows="3"
+            placeholder="请输入任务描述"
             show-count
           />
         </a-form-item>
 
         <a-form-item
-          label="任务类型"
-          name="job_type"
-          has-feedback
           :extra="
             allowLocalExec
               ? undefined
               : '本地命令/脚本任务已停用（cron.allow_local_exec=false），请改用 HTTP 或 SSH 任务'
           "
+          has-feedback
+          label="任务类型"
+          name="job_type"
         >
           <a-select
             v-model:value="createFormModel.job_type"
@@ -595,8 +595,8 @@ onUnmounted(clearPage);
             @change="handleJobTypeChange"
           >
             <a-select-option
-              :value="CronJobType.COMMAND"
               :disabled="!allowLocalExec"
+              :value="CronJobType.COMMAND"
             >
               命令行
             </a-select-option>
@@ -604,8 +604,8 @@ onUnmounted(clearPage);
               HTTP请求
             </a-select-option>
             <a-select-option
-              :value="CronJobType.SCRIPT"
               :disabled="!allowLocalExec"
+              :value="CronJobType.SCRIPT"
             >
               脚本任务
             </a-select-option>
@@ -614,9 +614,9 @@ onUnmounted(clearPage);
         </a-form-item>
 
         <a-form-item
+          extra="停用仅保存配置，明确启用后才参与调度。"
           label="初始状态"
           name="status"
-          extra="停用仅保存配置，明确启用后才参与调度。"
         >
           <a-select
             id="cron-create-status"
@@ -632,17 +632,17 @@ onUnmounted(clearPage);
           </a-select>
         </a-form-item>
 
-        <a-form-item label="调度表达式" name="schedule" has-feedback>
+        <a-form-item has-feedback label="调度表达式" name="schedule">
           <a-input
             v-model:value="createFormModel.schedule"
-            placeholder="例：0 0 * * * (每天午夜执行)"
             :maxlength="100"
+            placeholder="例：0 0 * * * (每天午夜执行)"
           >
             <template #addonAfter>
               <a-button
+                size="small"
                 type="link"
                 @click="validateScheduleExpression('create')"
-                size="small"
               >
                 验证
               </a-button>
@@ -658,12 +658,12 @@ onUnmounted(clearPage);
 
         <!-- 命令行任务配置 -->
         <template v-if="createFormModel.job_type === CronJobType.COMMAND">
-          <a-form-item label="执行命令" name="command" has-feedback>
+          <a-form-item has-feedback label="执行命令" name="command">
             <a-textarea
               v-model:value="createFormModel.command"
-              placeholder="请输入要执行的命令"
-              :rows="3"
               :maxlength="1000"
+              :rows="3"
+              placeholder="请输入要执行的命令"
             />
           </a-form-item>
 
@@ -676,23 +676,23 @@ onUnmounted(clearPage);
               >
                 <a-input
                   v-model:value="createFormModel.args![index]"
-                  placeholder="输入参数"
                   class="k8s-form-input"
+                  placeholder="输入参数"
                   style="flex: 1; margin-right: 8px"
                 />
                 <a-button
-                  @click="removeArg(index)"
-                  type="primary"
                   danger
                   size="small"
+                  type="primary"
+                  @click="removeArg(index)"
                 >
                   删除
                 </a-button>
               </div>
               <a-button
-                @click="addArg"
-                type="dashed"
                 style="width: 100%; margin-top: 8px"
+                type="dashed"
+                @click="addArg"
               >
                 <template #icon><PlusOutlined /></template>
                 添加参数
@@ -703,8 +703,8 @@ onUnmounted(clearPage);
           <a-form-item label="工作目录" name="work_dir">
             <a-input
               v-model:value="createFormModel.work_dir"
-              placeholder="命令执行的工作目录，留空使用默认目录"
               :maxlength="255"
+              placeholder="命令执行的工作目录，留空使用默认目录"
             />
           </a-form-item>
 
@@ -717,27 +717,27 @@ onUnmounted(clearPage);
               >
                 <a-input
                   v-model:value="env.key"
-                  placeholder="变量名"
                   class="k8s-form-input"
+                  placeholder="变量名"
                 />
                 <a-input
                   v-model:value="env.value"
-                  placeholder="变量值"
                   class="k8s-form-input"
+                  placeholder="变量值"
                 />
                 <a-button
-                  @click="removeEnvironment(index)"
-                  type="primary"
                   danger
                   size="small"
+                  type="primary"
+                  @click="removeEnvironment(index)"
                 >
                   删除
                 </a-button>
               </div>
               <a-button
-                @click="addEnvironment"
-                type="dashed"
                 style="width: 100%; margin-top: 8px"
+                type="dashed"
+                @click="addEnvironment"
               >
                 <template #icon><PlusOutlined /></template>
                 添加环境变量
@@ -748,7 +748,7 @@ onUnmounted(clearPage);
 
         <!-- HTTP 请求任务配置 -->
         <template v-if="createFormModel.job_type === CronJobType.HTTP">
-          <a-form-item label="请求方法" name="http_method" has-feedback>
+          <a-form-item has-feedback label="请求方法" name="http_method">
             <a-select
               v-model:value="createFormModel.http_method"
               placeholder="请选择HTTP方法"
@@ -762,11 +762,11 @@ onUnmounted(clearPage);
             </a-select>
           </a-form-item>
 
-          <a-form-item label="请求URL" name="http_url" has-feedback>
+          <a-form-item has-feedback label="请求URL" name="http_url">
             <a-input
               v-model:value="createFormModel.http_url"
-              placeholder="https://example.com/api/endpoint"
               :maxlength="500"
+              placeholder="https://example.com/api/endpoint"
             />
           </a-form-item>
 
@@ -779,27 +779,27 @@ onUnmounted(clearPage);
               >
                 <a-input
                   v-model:value="header.key"
-                  placeholder="Header名称"
                   class="k8s-form-input"
+                  placeholder="Header名称"
                 />
                 <a-input
                   v-model:value="header.value"
-                  placeholder="Header值"
                   class="k8s-form-input"
+                  placeholder="Header值"
                 />
                 <a-button
-                  @click="removeHttpHeader(index)"
-                  type="primary"
                   danger
                   size="small"
+                  type="primary"
+                  @click="removeHttpHeader(index)"
                 >
                   删除
                 </a-button>
               </div>
               <a-button
-                @click="addHttpHeader"
-                type="dashed"
                 style="width: 100%; margin-top: 8px"
+                type="dashed"
+                @click="addHttpHeader"
               >
                 <template #icon><PlusOutlined /></template>
                 添加请求头
@@ -810,9 +810,9 @@ onUnmounted(clearPage);
           <a-form-item label="请求体" name="http_body">
             <a-textarea
               v-model:value="createFormModel.http_body"
-              placeholder="POST/PUT请求的数据体，支持JSON格式"
-              :rows="4"
               :maxlength="5000"
+              :rows="4"
+              placeholder="POST/PUT请求的数据体，支持JSON格式"
               show-count
             />
           </a-form-item>
@@ -821,7 +821,7 @@ onUnmounted(clearPage);
         <!-- 脚本任务配置 -->
         <!-- 脚本任务配置 -->
         <template v-if="createFormModel.job_type === CronJobType.SCRIPT">
-          <a-form-item label="脚本类型" name="script_type" has-feedback>
+          <a-form-item has-feedback label="脚本类型" name="script_type">
             <a-select
               v-model:value="createFormModel.script_type"
               placeholder="请选择脚本类型"
@@ -833,30 +833,30 @@ onUnmounted(clearPage);
             </a-select>
           </a-form-item>
 
-          <a-form-item label="脚本内容" name="script_content" has-feedback>
+          <a-form-item has-feedback label="脚本内容" name="script_content">
             <a-textarea
               v-model:value="createFormModel.script_content"
-              placeholder="请输入脚本内容"
-              :rows="10"
               :maxlength="10000"
-              show-count
+              :rows="10"
               class="k8s-config-textarea"
+              placeholder="请输入脚本内容"
+              show-count
             />
           </a-form-item>
         </template>
 
         <!-- SSH 远程任务配置 -->
         <template v-if="createFormModel.job_type === CronJobType.SSH">
-          <a-form-item label="SSH资源" name="ssh_resource_id" has-feedback>
+          <a-form-item has-feedback label="SSH资源" name="ssh_resource_id">
             <a-select
               v-model:value="createFormModel.ssh_resource_id"
-              placeholder="请选择SSH资源"
+              :filter-option="false"
               :loading="sshResourcesLoading"
+              placeholder="请选择SSH资源"
+              show-search
               @dropdown-visible-change="
                 (open: boolean) => open && fetchSshResources()
               "
-              show-search
-              :filter-option="false"
               @search="searchSshResources"
             >
               <a-select-option
@@ -873,8 +873,8 @@ onUnmounted(clearPage);
                 >
                   <span>{{ resource.name }}</span>
                   <a-tag
-                    size="small"
                     :color="resource.status === 1 ? 'green' : 'red'"
+                    size="small"
                   >
                     {{ resource.ip_addr }}:{{ resource.port }}
                   </a-tag>
@@ -883,22 +883,22 @@ onUnmounted(clearPage);
             </a-select>
           </a-form-item>
 
-          <a-form-item label="远程命令" name="ssh_command" has-feedback>
+          <a-form-item has-feedback label="远程命令" name="ssh_command">
             <a-textarea
               v-model:value="createFormModel.ssh_command"
-              placeholder="请输入要在远程服务器执行的命令"
-              :rows="4"
               :maxlength="2000"
-              show-count
+              :rows="4"
               class="k8s-config-textarea"
+              placeholder="请输入要在远程服务器执行的命令"
+              show-count
             />
           </a-form-item>
 
           <a-form-item label="工作目录" name="ssh_work_dir">
             <a-input
               v-model:value="createFormModel.ssh_work_dir"
-              placeholder="远程命令执行的工作目录，留空使用默认目录"
               :maxlength="500"
+              placeholder="远程命令执行的工作目录，留空使用默认目录"
             />
           </a-form-item>
 
@@ -911,27 +911,27 @@ onUnmounted(clearPage);
               >
                 <a-input
                   v-model:value="env.key"
-                  placeholder="变量名"
                   class="k8s-form-input"
+                  placeholder="变量名"
                 />
                 <a-input
                   v-model:value="env.value"
-                  placeholder="变量值"
                   class="k8s-form-input"
+                  placeholder="变量值"
                 />
                 <a-button
-                  @click="removeSshEnvironment(index)"
-                  type="primary"
                   danger
                   size="small"
+                  type="primary"
+                  @click="removeSshEnvironment(index)"
                 >
                   删除
                 </a-button>
               </div>
               <a-button
-                @click="addSshEnvironment"
-                type="dashed"
                 style="width: 100%; margin-top: 8px"
+                type="dashed"
+                @click="addSshEnvironment"
               >
                 <template #icon><PlusOutlined /></template>
                 添加环境变量
@@ -943,11 +943,11 @@ onUnmounted(clearPage);
         <a-form-item label="超时时间" name="timeout">
           <a-input-number
             v-model:value="createFormModel.timeout"
-            placeholder="秒"
-            :min="1"
             :max="3600"
-            style="width: 100%"
+            :min="1"
             addon-after="秒"
+            placeholder="秒"
+            style="width: 100%"
           />
           <div class="cron-timeout-tip">
             <small>任务执行超时时间，1-3600秒，默认300秒</small>
@@ -955,17 +955,17 @@ onUnmounted(clearPage);
         </a-form-item>
 
         <a-form-item
+          extra="初次执行之外的重投预算，包含失败与进程崩溃恢复；0 表示不自动重投"
           label="自动重投次数"
           name="max_retry"
-          extra="初次执行之外的重投预算，包含失败与进程崩溃恢复；0 表示不自动重投"
         >
           <a-input-number
             v-model:value="createFormModel.max_retry"
-            placeholder="次数"
-            :min="0"
             :max="10"
-            style="width: 100%"
+            :min="0"
             addon-after="次"
+            placeholder="次数"
+            style="width: 100%"
           />
         </a-form-item>
       </a-form>
@@ -974,52 +974,52 @@ onUnmounted(clearPage);
     <!-- 编辑任务模态框 -->
     <a-modal
       v-model:open="isEditModalVisible"
-      title="编辑定时任务"
-      :width="800"
       :confirm-loading="submitLoading"
-      @ok="submitEditForm"
-      @cancel="closeEditModal"
-      ok-text="保存修改"
+      :width="800"
       cancel-text="取消"
       destroy-on-close
+      ok-text="保存修改"
+      title="编辑定时任务"
+      @cancel="closeEditModal"
+      @ok="submitEditForm"
     >
       <a-form
         ref="formRef"
+        :label-col="{ span: 6 }"
         :model="editFormModel"
         :rules="editFormRules"
-        :label-col="{ span: 6 }"
         :wrapper-col="{ span: 18 }"
         class="k8s-form"
       >
-        <a-form-item label="任务名称" name="name" has-feedback>
+        <a-form-item has-feedback label="任务名称" name="name">
           <a-input
             v-model:value="editFormModel.name"
-            placeholder="请输入任务名称"
             :maxlength="100"
+            placeholder="请输入任务名称"
           />
         </a-form-item>
 
         <a-form-item label="任务描述" name="description">
           <a-textarea
             v-model:value="editFormModel.description"
-            placeholder="请输入任务描述"
-            :rows="3"
             :maxlength="500"
+            :rows="3"
+            placeholder="请输入任务描述"
             show-count
           />
         </a-form-item>
 
-        <a-form-item label="调度表达式" name="schedule" has-feedback>
+        <a-form-item has-feedback label="调度表达式" name="schedule">
           <a-input
             v-model:value="editFormModel.schedule"
-            placeholder="例：0 0 * * * (每天午夜执行)"
             :maxlength="100"
+            placeholder="例：0 0 * * * (每天午夜执行)"
           >
             <template #addonAfter>
               <a-button
+                size="small"
                 type="link"
                 @click="validateScheduleExpression('edit')"
-                size="small"
               >
                 验证
               </a-button>
@@ -1029,35 +1029,35 @@ onUnmounted(clearPage);
 
         <CronEditFields
           v-model="editFormModel"
-          :resources="filteredSshResources"
           :loading="sshResourcesLoading"
-          @search="searchSshResources"
+          :resources="filteredSshResources"
           @open-resources="fetchSshResources"
+          @search="searchSshResources"
         />
 
         <a-form-item label="超时时间" name="timeout">
           <a-input-number
             v-model:value="editFormModel.timeout"
-            placeholder="秒"
-            :min="1"
             :max="3600"
-            style="width: 100%"
+            :min="1"
             addon-after="秒"
+            placeholder="秒"
+            style="width: 100%"
           />
         </a-form-item>
 
         <a-form-item
+          extra="初次执行之外的重投预算，包含失败与进程崩溃恢复；0 表示不自动重投"
           label="自动重投次数"
           name="max_retry"
-          extra="初次执行之外的重投预算，包含失败与进程崩溃恢复；0 表示不自动重投"
         >
           <a-input-number
             v-model:value="editFormModel.max_retry"
-            placeholder="次数"
-            :min="0"
             :max="10"
-            style="width: 100%"
+            :min="0"
             addon-after="次"
+            placeholder="次数"
+            style="width: 100%"
           />
         </a-form-item>
       </a-form>
@@ -1066,9 +1066,9 @@ onUnmounted(clearPage);
     <!-- 任务详情模态框 -->
     <a-modal
       v-model:open="isDetailModalVisible"
-      title="任务详情"
-      :width="900"
       :footer="null"
+      :width="900"
+      title="任务详情"
       @cancel="closeDetailModal"
     >
       <a-spin :spinning="detailLoading">
@@ -1139,19 +1139,19 @@ onUnmounted(clearPage);
             <a-descriptions-item label="创建者">
               {{ currentJobDetail.created_by_name || '系统' }}
             </a-descriptions-item>
-            <a-descriptions-item label="任务描述" :span="2">
+            <a-descriptions-item :span="2" label="任务描述">
               {{ currentJobDetail.description || '无描述' }}
             </a-descriptions-item>
             <a-descriptions-item
-              label="执行耗时"
               v-if="currentJobDetail.last_run_duration > 0"
+              label="执行耗时"
             >
               {{ formatDuration(currentJobDetail.last_run_duration) }}
             </a-descriptions-item>
             <a-descriptions-item
-              label="执行输出"
-              :span="2"
               v-if="currentJobDetail.last_run_output"
+              :span="2"
+              label="执行输出"
             >
               <div
                 class="k8s-config-textarea"
@@ -1161,9 +1161,9 @@ onUnmounted(clearPage);
               </div>
             </a-descriptions-item>
             <a-descriptions-item
-              label="错误信息"
-              :span="2"
               v-if="currentJobDetail.last_run_error"
+              :span="2"
+              label="错误信息"
             >
               <div
                 class="k8s-config-textarea"

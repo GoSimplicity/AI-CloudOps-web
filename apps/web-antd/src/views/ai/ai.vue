@@ -11,7 +11,7 @@
       </div>
 
       <!-- 浮动提示 -->
-      <div class="tooltip-content" v-if="!isFloatWindowVisible">
+      <div v-if="!isFloatWindowVisible" class="tooltip-content">
         <Sparkles :size="16" />
         <span>AI-CloudOps助手</span>
       </div>
@@ -20,9 +20,9 @@
     <!-- 悬浮窗 -->
     <div
       v-if="isFloatWindowVisible"
-      class="ai-float-window"
-      :style="floatWindowStyle"
       ref="floatWindow"
+      :style="floatWindowStyle"
+      class="ai-float-window"
     >
       <!-- 悬浮窗头部 -->
       <div class="float-window-header" @mousedown="startDrag">
@@ -39,26 +39,26 @@
         <div class="header-actions">
           <button
             class="action-button minimize-btn"
-            @mousedown.stop
-            @click="minimizeWindow"
             title="最小化"
+            @click="minimizeWindow"
+            @mousedown.stop
           >
             <Minus :size="16" />
           </button>
           <button
-            class="action-button resize-btn"
-            @mousedown.stop
-            @click="toggleWindowSize"
             :title="isExpanded ? '缩小' : '放大'"
+            class="action-button resize-btn"
+            @click="toggleWindowSize"
+            @mousedown.stop
           >
             <Minimize2 v-if="isExpanded" :size="16" />
             <Maximize2 v-else :size="16" />
           </button>
           <button
             class="action-button clear-btn"
-            @mousedown.stop
-            @click="clearChat"
             title="新建会话"
+            @click="clearChat"
+            @mousedown.stop
           >
             <Trash2 :size="16" />
           </button>
@@ -70,13 +70,13 @@
             title="刷新知识库"
             :disabled="isRefreshing"
           >
-            <RefreshCw :size="16" :class="{ spinning: isRefreshing }" />
+            <RefreshCw :class="{ spinning: isRefreshing }" :size="16" />
           </button>
           <button
             class="action-button close-btn"
-            @mousedown.stop
-            @click="closeWindow"
             title="关闭"
+            @click="closeWindow"
+            @mousedown.stop
           >
             <X :size="16" />
           </button>
@@ -120,9 +120,9 @@
           <!-- 会话切换器 -->
           <div class="session-switcher" @click.stop>
             <button
+              :title="currentSessionName"
               class="session-button"
               @click="showSessionsPanel = !showSessionsPanel"
-              :title="currentSessionName"
             >
               会话：{{ currentSessionName }}
             </button>
@@ -131,8 +131,8 @@
                 <span>会话列表</span>
                 <button
                   class="sessions-new"
-                  @click="createNewSession"
                   title="新建会话"
+                  @click="createNewSession"
                 >
                   <Plus :size="12" />
                 </button>
@@ -179,12 +179,12 @@
         <span>{{ errorMessage }}</span>
         <button
           v-if="lastFailedQuestion && !sending && !pendingTurn"
-          @click="retryLast"
           class="error-retry"
+          @click="retryLast"
         >
           重试
         </button>
-        <button @click="errorMessage = ''" class="error-close">
+        <button class="error-close" @click="errorMessage = ''">
           <X :size="14" />
         </button>
       </div>
@@ -199,15 +199,15 @@
         }}</span>
         <button
           v-if="!sending && pendingTurn"
-          @click="recoverTurn"
           class="error-retry"
+          @click="recoverTurn"
         >
           查询并恢复
         </button>
         <button
           v-else-if="!sending && sessionNotice && sessionId"
-          @click="restoreCurrentSession"
           class="error-retry"
+          @click="restoreCurrentSession"
         >
           重新查询
         </button>
@@ -215,8 +215,8 @@
 
       <!-- 消息内容区域 -->
       <div
-        class="chat-messages"
         ref="messagesContainer"
+        class="chat-messages"
         @click="onMessagesClick"
       >
         <div
@@ -261,7 +261,7 @@
                     >
                       {{ currentMode === 1 ? 'RAG模式' : 'MCP模式' }}
                     </span>
-                    <span class="session-info" v-if="sessionId">
+                    <span v-if="sessionId" class="session-info">
                       会话: {{ sessionId.slice(-8) }}
                     </span>
                   </div>
@@ -318,9 +318,9 @@
                   <button
                     v-for="(question, idx) in msg.followUpQuestions"
                     :key="`followup-${idx}`"
+                    :disabled="sending"
                     class="follow-up-question"
                     @click="sendQuickMessage(question)"
-                    :disabled="sending"
                   >
                     {{ question }}
                   </button>
@@ -328,39 +328,39 @@
               </div>
 
               <div
-                class="message-actions"
                 v-if="msg.type === 'ai' && msg.content"
+                class="message-actions"
               >
                 <button
                   class="message-action-btn"
-                  @click="copyMessage(msg.content)"
                   title="复制"
+                  @click="copyMessage(msg.content)"
                 >
                   <Copy :size="12" />
                 </button>
                 <button
-                  class="message-action-btn"
-                  @click="regenerateAnswer(index)"
                   :disabled="sending"
+                  class="message-action-btn"
                   title="重新生成"
+                  @click="regenerateAnswer(index)"
                 >
                   <RefreshCw :size="12" />
                 </button>
                 <button
                   class="message-action-btn"
-                  @click="toggleLike(index)"
                   title="点赞"
+                  @click="toggleLike(index)"
                 >
-                  <ThumbsUp :size="12" :class="{ liked: msg.liked }" />
+                  <ThumbsUp :class="{ liked: msg.liked }" :size="12" />
                 </button>
               </div>
 
-              <div class="message-actions" v-if="msg.type === 'user'">
+              <div v-if="msg.type === 'user'" class="message-actions">
                 <button
-                  class="message-action-btn"
-                  @click="resendMessage(index)"
                   :disabled="sending"
+                  class="message-action-btn"
                   title="重发"
+                  @click="resendMessage(index)"
                 >
                   <RotateCcw :size="12" />
                 </button>
@@ -371,7 +371,7 @@
       </div>
 
       <!-- 快捷操作 -->
-      <div class="quick-actions" v-if="!sending && !isMinimized">
+      <div v-if="!sending && !isMinimized" class="quick-actions">
         <div class="quick-action-buttons">
           <button
             v-for="action in quickActions"
@@ -386,20 +386,20 @@
       </div>
 
       <!-- 输入区域 -->
-      <div class="chat-input" v-if="!isMinimized">
+      <div v-if="!isMinimized" class="chat-input">
         <div class="textarea-container">
           <div class="input-wrapper">
             <textarea
-              v-model="globalInputMessage"
-              placeholder="请输入您的问题...（Enter发送，Shift+Enter换行）"
-              :disabled="sending || !!pendingTurn || !!sessionNotice"
-              @keydown="handleEnterKey"
-              @input="onInputChange"
-              @compositionstart="onCompositionStart"
-              @compositionend="onCompositionEnd"
-              class="message-input"
-              rows="1"
               ref="messageInput"
+              v-model="globalInputMessage"
+              :disabled="sending || !!pendingTurn || !!sessionNotice"
+              class="message-input"
+              placeholder="请输入您的问题...（Enter发送，Shift+Enter换行）"
+              rows="1"
+              @compositionend="onCompositionEnd"
+              @compositionstart="onCompositionStart"
+              @input="onInputChange"
+              @keydown="handleEnterKey"
             ></textarea>
 
             <div class="input-actions">
@@ -416,8 +416,8 @@
               <button
                 v-if="sending"
                 class="stop-button"
-                @click="cancelGeneration"
                 title="停止生成"
+                @click="cancelGeneration"
               >
                 <Square :size="16" />
               </button>
@@ -433,7 +433,7 @@
                 @click="handleSearch"
                 :class="{ loading: sending }"
               >
-                <Send :size="16" v-if="!sending" />
+                <Send v-if="!sending" :size="16" />
                 <div v-else class="loading-spinner"></div>
               </button>
             </div>
@@ -445,9 +445,9 @@
           <div class="option-item">
             <label class="option-label">
               <input
-                type="checkbox"
                 v-model="useWebSearch"
                 class="option-checkbox"
+                type="checkbox"
               />
               <span>启用网络搜索</span>
             </label>
@@ -484,9 +484,9 @@
 
       <!-- 调整大小的拖拽手柄 -->
       <div
+        v-if="!isExpanded && !isMinimized"
         class="resize-handle"
         @mousedown="startResize"
-        v-if="!isExpanded && !isMinimized"
       ></div>
     </div>
 
@@ -501,38 +501,38 @@
 
 <script setup>
 import {
-  ref,
-  reactive,
-  onMounted,
+  computed,
   nextTick,
   onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
   watch,
-  computed,
 } from 'vue';
 import {
-  MessageCircle,
-  Sparkles,
-  Bot,
-  User,
-  Trash2,
-  X,
-  Copy,
-  ThumbsUp,
-  Send,
-  HelpCircle,
-  Settings,
-  Zap,
-  FileText,
-  Minus,
-  Maximize2,
-  Minimize2,
-  RefreshCw,
   AlertCircle,
-  Settings2,
-  Plus,
+  Bot,
+  Copy,
   Edit2,
+  FileText,
+  HelpCircle,
+  Maximize2,
+  MessageCircle,
+  Minimize2,
+  Minus,
+  Plus,
+  RefreshCw,
   RotateCcw,
+  Send,
+  Settings,
+  Settings2,
+  Sparkles,
   Square,
+  ThumbsUp,
+  Trash2,
+  User,
+  X,
+  Zap,
 } from 'lucide-vue-next';
 import { message } from 'ant-design-vue';
 import { marked } from 'marked';

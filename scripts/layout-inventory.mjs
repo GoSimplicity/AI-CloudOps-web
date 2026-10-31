@@ -1,5 +1,5 @@
 import { parse as parseSfc } from 'vue/compiler-sfc';
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, relative, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';

@@ -4,17 +4,17 @@ import { onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { useNamespacePage } from './Namespace';
 import {
+  AppstoreOutlined,
+  CopyOutlined,
+  DeleteOutlined,
+  DeploymentUnitOutlined,
+  EyeOutlined,
+  FilterOutlined,
+  FireOutlined,
   PlusOutlined,
   ReloadOutlined,
-  FilterOutlined,
-  DeleteOutlined,
-  AppstoreOutlined,
-  EyeOutlined,
-  TagsOutlined,
-  DeploymentUnitOutlined,
-  FireOutlined,
   SearchOutlined,
-  CopyOutlined,
+  TagsOutlined,
 } from '@ant-design/icons-vue';
 
 import { usePermission } from '#/utils/permission';
@@ -332,23 +332,23 @@ onMounted(async () => {
 
 <template>
   <OpsPage
-    title="命名空间管理"
     description="选择集群后查询和维护 Kubernetes 命名空间"
+    title="命名空间管理"
   >
     <!-- 页面头部 -->
     <template #actions>
       <a-button
+        :disabled="!filterClusterId"
         type="primary"
         @click="openCreateModal"
-        :disabled="!filterClusterId"
       >
         <template #icon><PlusOutlined aria-hidden="true" /></template>
         创建命名空间
       </a-button>
       <a-button
-        @click="fetchNamespaces"
-        :loading="loading"
         :disabled="!filterClusterId"
+        :loading="loading"
+        @click="fetchNamespaces"
       >
         <template #icon><ReloadOutlined aria-hidden="true" /></template>
         刷新数据
@@ -362,13 +362,13 @@ onMounted(async () => {
         <div class="k8s-filter-group">
           <a-select
             v-model:value="filterClusterId"
-            placeholder="选择集群"
+            :disabled="clustersLoading"
+            :loading="clustersLoading"
+            allow-clear
             aria-label="选择集群"
             class="k8s-cluster-selector"
-            allow-clear
+            placeholder="选择集群"
             @change="handleClusterChange"
-            :loading="clustersLoading"
-            :disabled="clustersLoading"
             @popup-scroll="handleClusterDropdownScroll"
           >
             <template #suffixIcon>
@@ -398,16 +398,16 @@ onMounted(async () => {
               disabled
               style="text-align: center; color: #999"
             >
-              <a-spin size="small" :spinning="clustersLoading" />
+              <a-spin :spinning="clustersLoading" size="small" />
               <span v-if="!clustersLoading">滚动加载更多...</span>
             </a-select-option>
           </a-select>
 
           <a-select
             v-model:value="filterStatus"
-            placeholder="状态筛选"
-            class="k8s-filter-select"
             allow-clear
+            class="k8s-filter-select"
+            placeholder="状态筛选"
             @change="handleFilterChange"
           >
             <template #suffixIcon>
@@ -427,9 +427,9 @@ onMounted(async () => {
           <!-- 标签过滤器 -->
           <div class="namespace-labels-filter">
             <a-button
+              class="k8s-toolbar-btn"
               type="dashed"
               @click="openLabelsFilter"
-              class="k8s-toolbar-btn"
             >
               <template #icon><TagsOutlined aria-hidden="true" /></template>
               标签过滤
@@ -451,10 +451,10 @@ onMounted(async () => {
                 v-for="(value, key) in filterLabels"
                 :key="key"
                 closable
-                @close="removeFilterLabel(key)"
                 color="blue"
                 size="small"
                 style="margin-right: 4px; margin-bottom: 4px"
+                @close="removeFilterLabel(key)"
               >
                 {{ key }}: {{ value }}
               </a-tag>
@@ -465,11 +465,11 @@ onMounted(async () => {
         <div class="k8s-search-group">
           <a-input
             v-model:value="searchText"
-            placeholder="搜索命名空间名称"
-            class="k8s-search-input"
-            @pressEnter="onSearch"
-            @input="onSearch"
             allow-clear
+            class="k8s-search-input"
+            placeholder="搜索命名空间名称"
+            @input="onSearch"
+            @pressEnter="onSearch"
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -513,16 +513,16 @@ onMounted(async () => {
     </template>
 
     <!-- 数据展示区域 -->
-    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button size="small" @click="fetchNamespaces"> 重试 </a-button>
       </template>
     </a-alert>
     <a-alert
       v-if="clustersError"
-      type="error"
       :message="clustersError"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button size="small" @click="() => fetchClusters(true)">
@@ -534,9 +534,7 @@ onMounted(async () => {
       <a-table
         :columns="columns"
         :data-source="filteredNamespaces"
-        :row-selection="rowSelection"
         :loading="loading"
-        row-key="name"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,
@@ -547,9 +545,11 @@ onMounted(async () => {
             `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
           pageSizeOptions: ['10', '20', '30', '50'],
         }"
-        @change="handleTableChange"
-        class="k8s-table namespace-table"
+        :row-selection="rowSelection"
         :scroll="{ x: 1080 }"
+        class="k8s-table namespace-table"
+        row-key="name"
+        @change="handleTableChange"
       >
         <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'status'">
@@ -568,13 +568,13 @@ onMounted(async () => {
           </template>
           <template v-else-if="column.key === 'uid'">
             <div class="k8s-uid-display">
-              <span class="uid-text" :title="text">{{ text }}</span>
+              <span :title="text" class="uid-text">{{ text }}</span>
               <a-button
-                type="text"
-                size="small"
-                class="uid-copy-btn"
-                @click="() => copyToClipboard(text)"
                 :title="'复制 UID'"
+                class="uid-copy-btn"
+                size="small"
+                type="text"
+                @click="() => copyToClipboard(text)"
               >
                 <template #icon><CopyOutlined aria-hidden="true" /></template>
               </a-button>
@@ -648,15 +648,15 @@ onMounted(async () => {
                 title="删除命名空间"
               >
                 <a-button
-                  title="删除"
-                  danger
-                  @click="deleteNamespace(record)"
                   :disabled="
                     record.name === 'default' ||
                     record.name === 'kube-system' ||
                     record.name === 'kube-public' ||
                     record.name === 'kube-node-lease'
                   "
+                  danger
+                  title="删除"
+                  @click="deleteNamespace(record)"
                 >
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
@@ -671,15 +671,15 @@ onMounted(async () => {
                 "
               >
                 <a-button
-                  title="强制删除"
-                  danger
-                  @click="forceDeleteNamespace(record)"
                   :disabled="
                     record.name === 'default' ||
                     record.name === 'kube-system' ||
                     record.name === 'kube-public' ||
                     record.name === 'kube-node-lease'
                   "
+                  danger
+                  title="强制删除"
+                  @click="forceDeleteNamespace(record)"
                 >
                   <template #icon><FireOutlined aria-hidden="true" /></template>
                 </a-button>
@@ -701,29 +701,29 @@ onMounted(async () => {
     <!-- 创建命名空间模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      title="创建命名空间"
-      @ok="submitCreateForm"
-      @cancel="closeCreateModal"
       :confirmLoading="submitLoading"
-      width="600px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="创建"
-      cancelText="取消"
+      title="创建命名空间"
+      width="600px"
+      @cancel="closeCreateModal"
+      @ok="submitCreateForm"
     >
       <a-form
         ref="createFormRef"
         :model="createFormModel"
-        layout="vertical"
-        class="create-form"
         :rules="createFormRules"
+        class="create-form"
+        layout="vertical"
       >
-        <a-form-item label="命名空间名称" name="name" :required="true">
+        <a-form-item :required="true" label="命名空间名称" name="name">
           <a-input
             v-model:value="createFormModel.name"
-            placeholder="请输入命名空间名称（例如：my-namespace）"
-            class="form-input"
             :maxlength="63"
+            class="form-input"
+            placeholder="请输入命名空间名称（例如：my-namespace）"
           />
           <div style="color: #999; font-size: 12px; margin-top: 4px">
             只能包含小写字母、数字和连字符，且不能以连字符开头或结尾
@@ -747,23 +747,23 @@ onMounted(async () => {
               class="key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`标签键: ${key}`"
-                disabled
+                :value="key"
                 class="form-input key-input"
+                disabled
               />
               <a-input
                 v-model:value="createFormModel.labels[key]"
-                placeholder="标签值"
-                class="form-input value-input"
                 :maxlength="200"
+                class="form-input value-input"
+                placeholder="标签值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeCreateLabelField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeCreateLabelField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -804,23 +804,23 @@ onMounted(async () => {
               class="key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`注解键: ${key}`"
-                disabled
+                :value="key"
                 class="form-input key-input"
+                disabled
               />
               <a-input
                 v-model:value="createFormModel.annotations[key]"
-                placeholder="注解值"
-                class="form-input value-input"
                 :maxlength="500"
+                class="form-input value-input"
+                placeholder="注解值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeCreateAnnotationField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeCreateAnnotationField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -849,22 +849,22 @@ onMounted(async () => {
     <!-- 标签/注解管理模态框 -->
     <a-modal
       v-model:open="isLabelModalVisible"
-      :title="isLabelEdit ? '编辑命名空间标签/注解' : '添加命名空间标签/注解'"
-      @ok="submitLabelForm"
-      @cancel="closeLabelModal"
       :confirmLoading="submitLoading"
-      width="800px"
       :maskClosable="false"
+      :title="isLabelEdit ? '编辑命名空间标签/注解' : '添加命名空间标签/注解'"
+      cancelText="取消"
       destroyOnClose
       okText="保存"
-      cancelText="取消"
+      width="800px"
+      @cancel="closeLabelModal"
+      @ok="submitLabelForm"
     >
       <a-form
         ref="labelFormRef"
         :model="labelFormModel"
-        layout="vertical"
-        class="label-form"
         :rules="labelFormRules"
+        class="label-form"
+        layout="vertical"
       >
         <a-form-item label="标签配置" name="labels">
           <div class="key-value-inputs">
@@ -883,22 +883,22 @@ onMounted(async () => {
               class="key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`标签键: ${key}`"
-                disabled
+                :value="key"
                 class="form-input key-input"
+                disabled
               />
               <a-input
                 v-model:value="labelFormModel.labels[key]"
-                placeholder="标签值"
-                class="form-input value-input"
                 :maxlength="200"
+                class="form-input value-input"
+                placeholder="标签值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeLabelField(key)"
                 class="k8s-remove-btn"
+                danger
+                type="text"
+                @click="removeLabelField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
                 删除
@@ -940,22 +940,22 @@ onMounted(async () => {
               class="key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`注解键: ${key}`"
-                disabled
+                :value="key"
                 class="form-input key-input"
+                disabled
               />
               <a-input
                 v-model:value="labelFormModel.annotations[key]"
-                placeholder="注解值"
-                class="form-input value-input"
                 :maxlength="500"
+                class="form-input value-input"
+                placeholder="注解值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeAnnotationField(key)"
                 class="k8s-remove-btn"
+                danger
+                type="text"
+                @click="removeAnnotationField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
                 删除
@@ -985,18 +985,18 @@ onMounted(async () => {
     <!-- 详情模态框 -->
     <a-modal
       v-model:open="isDetailModalVisible"
-      title="命名空间详情"
       :footer="null"
-      @cancel="closeDetailModal"
-      width="1000px"
       :maskClosable="false"
       destroyOnClose
+      title="命名空间详情"
+      width="1000px"
+      @cancel="closeDetailModal"
     >
       <a-spin :spinning="detailLoading">
         <div v-if="currentNamespaceDetail" class="k8s-detail-content">
           <a-row :gutter="[24, 16]">
-            <a-col :xs="24" :lg="12">
-              <a-card title="基本信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="基本信息">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">命名空间名称:</span>
                   <span class="k8s-detail-value">{{
@@ -1032,8 +1032,8 @@ onMounted(async () => {
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="标签信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="标签信息">
                 <div class="k8s-detail-labels-list">
                   <template
                     v-if="
@@ -1059,7 +1059,7 @@ onMounted(async () => {
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px">
             <a-col :xs="24">
-              <a-card title="注解信息" class="k8s-detail-card" size="small">
+              <a-card class="k8s-detail-card" size="small" title="注解信息">
                 <div class="k8s-detail-annotations-list">
                   <template
                     v-if="
@@ -1089,11 +1089,11 @@ onMounted(async () => {
 
           <a-row style="margin-top: 16px">
             <a-col :span="24">
-              <a-card title="详细信息" class="k8s-detail-card" size="small">
+              <a-card class="k8s-detail-card" size="small" title="详细信息">
                 <a-descriptions
                   :column="{ xxl: 3, xl: 3, lg: 2, md: 2, sm: 1, xs: 1 }"
-                  size="small"
                   bordered
+                  size="small"
                 >
                   <a-descriptions-item label="命名空间">
                     {{ currentNamespaceDetail.name }}
@@ -1127,27 +1127,27 @@ onMounted(async () => {
     <!-- 删除命名空间模态框 -->
     <a-modal
       v-model:open="isDeleteModalVisible"
-      title="删除命名空间"
-      @ok="submitDeleteForm"
-      @cancel="closeDeleteModal"
       :confirmLoading="submitLoading"
-      width="500px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="确认删除"
-      cancelText="取消"
       okType="danger"
+      title="删除命名空间"
+      width="500px"
+      @cancel="closeDeleteModal"
+      @ok="submitDeleteForm"
     >
       <div class="delete-form">
         <a-alert
-          message="警告"
           :description="`您即将删除命名空间 '${currentOperationNamespace?.name}'，此操作不可逆！`"
-          type="warning"
+          message="警告"
           show-icon
           style="margin-bottom: 24px"
+          type="warning"
         />
 
-        <a-form layout="vertical" class="delete-config-form">
+        <a-form class="delete-config-form" layout="vertical">
           <a-form-item label="删除方式">
             <a-radio-group v-model:value="deleteFormModel.force">
               <a-radio :value="2" style="display: block; margin-bottom: 12px">
@@ -1170,16 +1170,16 @@ onMounted(async () => {
           </a-form-item>
 
           <a-form-item
-            label="优雅删除时间（秒）"
             v-if="deleteFormModel.force === 2"
+            label="优雅删除时间（秒）"
           >
             <a-input-number
               v-model:value="deleteFormModel.grace_period_seconds"
-              :min="0"
               :max="3600"
+              :min="0"
               :step="10"
-              style="width: 100%"
               placeholder="30"
+              style="width: 100%"
             />
             <div style="color: #999; font-size: 12px; margin-top: 4px">
               默认30秒，最大3600秒
@@ -1192,14 +1192,14 @@ onMounted(async () => {
     <!-- 标签过滤模态框 -->
     <a-modal
       v-model:open="isLabelsFilterModalVisible"
-      title="标签过滤设置"
-      @ok="applyLabelsFilter"
-      @cancel="closeLabelsFilterModal"
-      width="550px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="应用过滤"
-      cancelText="取消"
+      title="标签过滤设置"
+      width="550px"
+      @cancel="closeLabelsFilterModal"
+      @ok="applyLabelsFilter"
     >
       <div class="labels-filter-form">
         <div
@@ -1212,18 +1212,18 @@ onMounted(async () => {
               v-for="(value, key) in filterLabels"
               :key="key"
               closable
-              @close="removeFilterLabel(key)"
               color="blue"
               style="margin-right: 8px; margin-bottom: 8px"
+              @close="removeFilterLabel(key)"
             >
               {{ key }}: {{ value }}
             </a-tag>
           </div>
           <a-button
-            type="link"
             danger
-            @click="clearFilterLabels"
             style="padding: 0; margin-bottom: 16px"
+            type="link"
+            @click="clearFilterLabels"
           >
             清除所有过滤条件
           </a-button>

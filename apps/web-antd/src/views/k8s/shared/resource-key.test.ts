@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { namespacedResourceKey, clusterResourceKey } from './utils';
+import { clusterResourceKey, namespacedResourceKey } from './utils';
 
 describe('Kubernetes 表格资源身份', () => {
   it('集群级同名资源仍使用不同选择键', () => {

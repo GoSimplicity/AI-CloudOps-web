@@ -1,22 +1,22 @@
 <template>
-  <OpsPage title="告警事件" description="按状态查询事件，认领或管理静默">
+  <OpsPage description="按状态查询事件，认领或管理静默" title="告警事件">
     <!-- 页面标题 -->
     <template #filters>
       <div class="search-filters">
         <a-input-search
           v-model:value="searchText"
-          placeholder="搜索告警事件名称..."
-          class="search-input"
-          @search="handleSearch"
-          @change="handleSearchChange"
           allow-clear
+          class="search-input"
+          placeholder="搜索告警事件名称..."
+          @change="handleSearchChange"
+          @search="handleSearch"
         />
         <a-select
           v-model:value="statusFilter"
-          placeholder="告警状态"
-          class="filter-select"
-          @change="handleStatusChange"
           allow-clear
+          class="filter-select"
+          placeholder="告警状态"
+          @change="handleStatusChange"
         >
           <a-select-option :value="undefined">全部状态</a-select-option>
           <a-select-option value="firing">告警中</a-select-option>
@@ -26,17 +26,17 @@
         </a-select>
         <a-select
           v-model:value="eventTimesFilter"
-          placeholder="触发次数（本页）"
-          class="filter-select"
-          @change="handleEventTimesChange"
           allow-clear
+          class="filter-select"
+          placeholder="触发次数（本页）"
+          @change="handleEventTimesChange"
         >
           <a-select-option :value="undefined">全部</a-select-option>
           <a-select-option :value="1">1次</a-select-option>
           <a-select-option :value="5">5次以上</a-select-option>
           <a-select-option :value="10">10次以上</a-select-option>
         </a-select>
-        <a-button @click="handleResetFilters" class="reset-btn">
+        <a-button class="reset-btn" @click="handleResetFilters">
           重置
         </a-button>
       </div>
@@ -46,12 +46,12 @@
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="[16, 16]">
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页总告警事件"
                 :value="loadError ? '未知' : stats.total"
                 :value-style="{ color: '#3f8600' }"
+                title="本页总告警事件"
               >
                 <template #prefix>
                   <Icon icon="carbon:container-registry" />
@@ -59,12 +59,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页告警中事件"
                 :value="loadError ? '未知' : stats.firing"
                 :value-style="{ color: '#cf1322' }"
+                title="本页告警中事件"
               >
                 <template #prefix>
                   <Icon icon="carbon:warning-alt" />
@@ -72,12 +72,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页已屏蔽事件"
                 :value="loadError ? '未知' : stats.silenced"
                 :value-style="{ color: '#faad14' }"
+                title="本页已屏蔽事件"
               >
                 <template #prefix>
                   <Icon icon="carbon:data-table" />
@@ -85,12 +85,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页已认领事件"
                 :value="loadError ? '未知' : stats.claimed"
                 :value-style="{ color: '#52c41a' }"
+                title="本页已认领事件"
               >
                 <template #prefix>
                   <Icon icon="carbon:server" />
@@ -104,13 +104,13 @@
 
     <a-alert
       v-if="loadError"
-      type="error"
-      show-icon
       :message="loadError"
       role="alert"
+      show-icon
+      type="error"
     >
       <template #action>
-        <a-button size="small" :loading="loading" @click="fetchResources">
+        <a-button :loading="loading" size="small" @click="fetchResources">
           重试
         </a-button>
       </template>
@@ -120,13 +120,13 @@
     <div class="table-container">
       <a-card>
         <a-table
-          :data-source="data"
           :columns="columns"
-          :pagination="paginationConfig"
+          :data-source="data"
           :loading="loading"
-          row-key="id"
-          bordered
+          :pagination="paginationConfig"
           :scroll="{ x: 1600 }"
+          bordered
+          row-key="id"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -200,8 +200,8 @@
               <div class="action-buttons">
                 <a-tooltip title="屏蔽告警">
                   <a-button
-                    type="primary"
                     size="small"
+                    type="primary"
                     @click="handleSilence(record)"
                   >
                     <template #icon>
@@ -211,8 +211,8 @@
                 </a-tooltip>
                 <a-tooltip title="认领告警">
                   <a-button
-                    type="default"
                     size="small"
+                    type="default"
                     @click="handleClaim(record)"
                   >
                     <template #icon>
@@ -244,12 +244,12 @@
 
     <!-- 详情对话框 -->
     <a-modal
-      :open="detailDialogVisible"
-      title="告警事件详情"
-      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeDetailDialog"
+      :open="detailDialogVisible"
+      :width="previewDialogWidth"
       class="detail-dialog"
+      title="告警事件详情"
+      @cancel="closeDetailDialog"
     >
       <div v-if="detailDialog.form" class="alert-details">
         <div class="detail-header">
@@ -261,7 +261,7 @@
           </div>
         </div>
 
-        <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
+        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
           <a-descriptions-item label="告警ID">
             {{ detailDialog.form.id }}
           </a-descriptions-item>
@@ -331,21 +331,21 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { DownOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import { useUserStore } from '@vben/stores';
 import {
-  getMonitorAlertEventListApi,
-  eventAlertSilenceApi,
   eventAlertClaimApi,
-  eventAlertUnSilenceApi,
-  type MonitorAlertEvent,
-  type GetMonitorAlertEventListReq,
-  type EventAlertSilenceReq,
   type EventAlertClaimReq,
+  eventAlertSilenceApi,
+  type EventAlertSilenceReq,
+  eventAlertUnSilenceApi,
   type EventAlertUnSilenceReq,
+  getMonitorAlertEventListApi,
+  type GetMonitorAlertEventListReq,
+  type MonitorAlertEvent,
   MonitorAlertEventStatus,
 } from '#/api/core/prometheus/prometheus_alert_event';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';

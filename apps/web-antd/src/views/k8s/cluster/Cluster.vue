@@ -3,19 +3,19 @@ import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted } from 'vue';
 import { useClusterPage } from './Cluster';
 import {
-  formatK8sTime,
   formatDateTime,
+  formatK8sTime,
   getRelativeTime,
 } from '../shared/utils';
 import './Cluster.css';
 import {
+  DeleteOutlined,
+  DeploymentUnitOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FilterOutlined,
   PlusOutlined,
   ReloadOutlined,
-  FilterOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  DeploymentUnitOutlined,
-  EyeOutlined,
   SearchOutlined,
   TagOutlined,
 } from '@ant-design/icons-vue';
@@ -161,14 +161,14 @@ onMounted(async () => {
 </script>
 
 <template>
-  <OpsPage title="集群管理" description="管理已接入的 Kubernetes 集群">
+  <OpsPage description="管理已接入的 Kubernetes 集群" title="集群管理">
     <!-- 页面头部 -->
     <template #actions>
       <a-button type="primary" @click="openCreate">
         <template #icon><PlusOutlined aria-hidden="true" /></template>
         新建集群
       </a-button>
-      <a-button @click="fetchClusters" :loading="loading">
+      <a-button :loading="loading" @click="fetchClusters">
         <template #icon><ReloadOutlined aria-hidden="true" /></template>
         刷新数据
       </a-button>
@@ -181,9 +181,9 @@ onMounted(async () => {
         <div class="k8s-filter-group">
           <a-select
             v-model:value="filterEnv"
-            placeholder="环境筛选"
-            class="k8s-filter-select"
             allow-clear
+            class="k8s-filter-select"
+            placeholder="环境筛选"
             @change="handleFilterChange"
           >
             <template #suffixIcon>
@@ -198,9 +198,9 @@ onMounted(async () => {
 
           <a-select
             v-model:value="filterStatus"
-            placeholder="状态筛选"
-            class="k8s-filter-select"
             allow-clear
+            class="k8s-filter-select"
+            placeholder="状态筛选"
             @change="handleFilterChange"
           >
             <template #suffixIcon>
@@ -219,11 +219,11 @@ onMounted(async () => {
         <div class="k8s-search-group">
           <a-input
             v-model:value="searchText"
-            placeholder="搜索集群名称、API地址等"
-            class="k8s-search-input"
-            @pressEnter="onSearch"
-            @input="onSearchInput"
             allow-clear
+            class="k8s-search-input"
+            placeholder="搜索集群名称、API地址等"
+            @input="onSearchInput"
+            @pressEnter="onSearch"
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -236,23 +236,23 @@ onMounted(async () => {
       <div class="k8s-toolbar-actions">
         <div class="k8s-action-buttons">
           <a-button
-            @click="resetFilters"
             :disabled="!filterEnv && !filterStatus && !searchText"
             class="k8s-toolbar-btn"
             title="重置所有筛选条件"
+            @click="resetFilters"
           >
             <template #icon><DeleteOutlined aria-hidden="true" /></template>
             重置筛选
           </a-button>
 
           <a-button
-            type="primary"
-            danger
-            @click="batchDelete"
-            :disabled="!selectedRows.length"
             v-if="selectedRows.length > 0"
+            :disabled="!selectedRows.length"
             class="k8s-toolbar-btn"
+            danger
             title="批量删除选中的集群"
+            type="primary"
+            @click="batchDelete"
           >
             <template #icon><DeleteOutlined aria-hidden="true" /></template>
             删除 ({{ selectedRows.length }})
@@ -262,7 +262,7 @@ onMounted(async () => {
     </template>
 
     <!-- 数据展示区域 -->
-    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button size="small" @click="fetchClusters">重试</a-button>
       </template>
@@ -271,9 +271,7 @@ onMounted(async () => {
       <a-table
         :columns="columns"
         :data-source="filteredClusters"
-        :row-selection="rowSelection"
         :loading="loading"
-        row-key="id"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,
@@ -284,9 +282,11 @@ onMounted(async () => {
             `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
           pageSizeOptions: ['10', '20', '30', '50'],
         }"
-        @change="handleTableChange"
-        class="k8s-table cluster-table"
+        :row-selection="rowSelection"
         :scroll="{ x: 1440 }"
+        class="k8s-table cluster-table"
+        row-key="id"
+        @change="handleTableChange"
       >
         <template #bodyCell="{ column, text, record }">
           <!-- 集群名称 -->
@@ -343,14 +343,14 @@ onMounted(async () => {
                   <a-tag
                     v-for="(ns, idx) in text"
                     :key="idx"
-                    color="cyan"
                     class="namespace-tag"
+                    color="cyan"
                   >
                     {{ ns }}
                   </a-tag>
                 </a-tooltip>
                 <a-tooltip v-else :title="text.join(', ')">
-                  <a-tag color="cyan" class="namespace-tag">
+                  <a-tag class="namespace-tag" color="cyan">
                     {{ text.length }} 个命名空间
                   </a-tag>
                 </a-tooltip>
@@ -424,12 +424,12 @@ onMounted(async () => {
               </a-tooltip>
               <a-tooltip title="删除">
                 <a-popconfirm
+                  cancel-text="取消"
+                  ok-text="确定"
                   title="确定要删除该集群吗?"
                   @confirm="confirmDelete(record)"
-                  ok-text="确定"
-                  cancel-text="取消"
                 >
-                  <a-button size="small" danger>
+                  <a-button danger size="small">
                     <template #icon>
                       <DeleteOutlined aria-hidden="true" />
                     </template>
@@ -452,32 +452,32 @@ onMounted(async () => {
 
     <a-modal
       v-model:open="isModalVisible"
-      :title="isEdit ? '编辑集群' : '新建集群'"
-      @ok="submitForm"
-      @cancel="closeModal"
       :confirmLoading="submitLoading"
-      width="800px"
-      :maskClosable="false"
       :keyboard="false"
+      :maskClosable="false"
+      :title="isEdit ? '编辑集群' : '新建集群'"
+      cancelText="取消"
       destroyOnClose
       okText="保存"
-      cancelText="取消"
+      width="800px"
+      @cancel="closeModal"
+      @ok="submitForm"
     >
       <a-form
         ref="formRef"
         :model="formModel"
-        layout="vertical"
-        class="cluster-form"
         :rules="formRules"
+        class="cluster-form"
+        layout="vertical"
       >
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="集群名称" name="name" required>
               <a-input
                 v-model:value="formModel.name"
-                placeholder="请输入集群名称"
-                class="form-input"
                 :maxlength="50"
+                class="form-input"
+                placeholder="请输入集群名称"
                 show-count
               />
             </a-form-item>
@@ -486,9 +486,9 @@ onMounted(async () => {
             <a-form-item label="环境" name="env">
               <a-select
                 v-model:value="formModel.env"
-                placeholder="请选择环境"
                 allow-clear
                 class="form-input"
+                placeholder="请选择环境"
               >
                 <a-select-option :value="Env.Prod">生产环境</a-select-option>
                 <a-select-option :value="Env.Dev">开发环境</a-select-option>
@@ -505,9 +505,9 @@ onMounted(async () => {
             <a-form-item label="API Server 地址" name="api_server_addr">
               <a-input
                 v-model:value="formModel.api_server_addr"
-                placeholder="https://x.x.x.x:6443"
-                class="form-input"
                 :maxlength="200"
+                class="form-input"
+                placeholder="https://x.x.x.x:6443"
               />
             </a-form-item>
           </a-col>
@@ -515,9 +515,9 @@ onMounted(async () => {
             <a-form-item label="Kubernetes 版本" name="version">
               <a-input
                 v-model:value="formModel.version"
-                placeholder="如 v1.28.0"
-                class="form-input"
                 :maxlength="20"
+                class="form-input"
+                placeholder="如 v1.28.0"
               />
             </a-form-item>
           </a-col>
@@ -528,11 +528,11 @@ onMounted(async () => {
         </a-divider>
 
         <a-alert
-          message="危险操作警告"
           description="修改资源配置可能影响集群性能和稳定性，请谨慎操作。生产环境建议经过充分测试后再进行调整。"
-          type="warning"
+          message="危险操作警告"
           show-icon
           style="margin-bottom: 16px"
+          type="warning"
         />
 
         <a-row :gutter="16">
@@ -540,11 +540,11 @@ onMounted(async () => {
             <a-form-item label="CPU 请求 (millicores)" name="cpu_request">
               <a-input-number
                 v-model:value="formModel.cpu_request"
-                placeholder="500"
-                class="form-input"
-                :min="0"
                 :max="100000"
+                :min="0"
                 :step="100"
+                class="form-input"
+                placeholder="500"
                 style="width: 100%"
               />
               <div style="color: #999; font-size: 12px; margin-top: 4px">
@@ -556,11 +556,11 @@ onMounted(async () => {
             <a-form-item label="CPU 限制 (millicores)" name="cpu_limit">
               <a-input-number
                 v-model:value="formModel.cpu_limit"
-                placeholder="2000"
-                class="form-input"
-                :min="0"
                 :max="100000"
+                :min="0"
                 :step="100"
+                class="form-input"
+                placeholder="2000"
                 style="width: 100%"
               />
               <div style="color: #999; font-size: 12px; margin-top: 4px">
@@ -575,11 +575,11 @@ onMounted(async () => {
             <a-form-item label="内存请求 (MiB)" name="memory_request">
               <a-input-number
                 v-model:value="formModel.memory_request"
-                placeholder="1024"
-                class="form-input"
-                :min="0"
                 :max="1048576"
+                :min="0"
                 :step="256"
+                class="form-input"
+                placeholder="1024"
                 style="width: 100%"
               />
               <div style="color: #999; font-size: 12px; margin-top: 4px">
@@ -591,11 +591,11 @@ onMounted(async () => {
             <a-form-item label="内存限制 (MiB)" name="memory_limit">
               <a-input-number
                 v-model:value="formModel.memory_limit"
-                placeholder="4096"
-                class="form-input"
-                :min="0"
                 :max="1048576"
+                :min="0"
                 :step="256"
+                class="form-input"
+                placeholder="4096"
                 style="width: 100%"
               />
               <div style="color: #999; font-size: 12px; margin-top: 4px">
@@ -623,16 +623,16 @@ onMounted(async () => {
           <a-spin :spinning="editDetailLoading && isEdit">
             <a-textarea
               v-model:value="formModel.kube_config_content"
-              :rows="6"
+              :maxlength="10000"
               :placeholder="
                 isEdit
                   ? '留空表示不修改；如需替换，请粘贴完整的新 kubeconfig'
                   : '请粘贴完整的 kubeconfig 内容...'
               "
-              class="form-input"
-              :maxlength="10000"
-              show-count
+              :rows="6"
               autocomplete="off"
+              class="form-input"
+              show-count
               spellcheck="false"
             />
           </a-spin>
@@ -650,21 +650,21 @@ onMounted(async () => {
         <a-form-item label="资源限制命名空间" name="restrict_namespace">
           <a-select
             v-model:value="formModel.restrict_namespace"
+            :maxTagCount="10"
+            class="form-input"
             mode="tags"
             placeholder="输入命名空间名称并回车添加"
-            class="form-input"
-            :maxTagCount="10"
           />
           <div style="color: #999; font-size: 12px; margin-top: 4px">
             可限制该集群只能操作指定的命名空间，留空表示无限制
           </div>
           <a-alert
-            message="重要提醒"
+            v-if="isEdit"
             description="修改命名空间限制会影响集群的访问权限范围，请确认操作的安全性。"
-            type="info"
+            message="重要提醒"
             show-icon
             style="margin-top: 8px"
-            v-if="isEdit"
+            type="info"
           />
         </a-form-item>
 
@@ -685,21 +685,21 @@ onMounted(async () => {
               >
                 <a-input
                   v-model:value="tag.key"
-                  placeholder="标签键"
-                  class="k8s-form-input"
                   :maxlength="50"
+                  class="k8s-form-input"
+                  placeholder="标签键"
                 />
                 <a-input
                   v-model:value="tag.value"
-                  placeholder="标签值"
-                  class="k8s-form-input"
                   :maxlength="200"
+                  class="k8s-form-input"
+                  placeholder="标签值"
                 />
                 <a-button
-                  type="text"
-                  danger
-                  @click="removeTag(idx)"
                   class="k8s-remove-btn"
+                  danger
+                  type="text"
+                  @click="removeTag(idx)"
                 >
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
@@ -707,7 +707,7 @@ onMounted(async () => {
                 </a-button>
               </div>
             </a-form-item-rest>
-            <a-button type="dashed" @click="addTag" block class="k8s-add-btn">
+            <a-button block class="k8s-add-btn" type="dashed" @click="addTag">
               <template #icon><PlusOutlined aria-hidden="true" /></template>
               添加标签
             </a-button>
@@ -722,8 +722,8 @@ onMounted(async () => {
             >
               <a-input-number
                 v-model:value="formModel.action_timeout_seconds"
-                :min="0"
                 :max="3600"
+                :min="0"
                 :step="30"
                 class="form-input"
                 placeholder="300"
@@ -741,18 +741,18 @@ onMounted(async () => {
     <!-- 详情模态框 -->
     <a-modal
       v-model:open="isDetailModalVisible"
-      title="集群详情"
       :footer="null"
-      @cancel="closeDetailModal"
-      width="1000px"
       :maskClosable="false"
       destroyOnClose
+      title="集群详情"
+      width="1000px"
+      @cancel="closeDetailModal"
     >
       <a-spin :spinning="detailLoading">
         <div v-if="currentClusterDetail" class="k8s-detail-content">
           <a-row :gutter="[24, 16]">
-            <a-col :xs="24" :lg="12">
-              <a-card title="基本信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="基本信息">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">集群名称:</span>
                   <span class="k8s-detail-value">{{
@@ -811,8 +811,8 @@ onMounted(async () => {
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="资源配置" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="资源配置">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">CPU 请求:</span>
                   <span class="k8s-detail-value"
@@ -850,8 +850,8 @@ onMounted(async () => {
           </a-row>
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px">
-            <a-col :xs="24" :lg="12">
-              <a-card title="命名空间限制" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="命名空间限制">
                 <div class="k8s-namespace-list">
                   <a-tag
                     v-for="ns in currentClusterDetail.restrict_namespace || []"
@@ -874,8 +874,8 @@ onMounted(async () => {
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="标签信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="标签信息">
                 <div class="k8s-labels-display">
                   <a-tooltip
                     v-for="tag in currentClusterDetail.tags || []"
@@ -902,11 +902,11 @@ onMounted(async () => {
 
           <a-row style="margin-top: 16px">
             <a-col :span="24">
-              <a-card title="详细信息" class="k8s-detail-card" size="small">
+              <a-card class="k8s-detail-card" size="small" title="详细信息">
                 <a-descriptions
                   :column="{ xxl: 3, xl: 3, lg: 2, md: 2, sm: 1, xs: 1 }"
-                  size="small"
                   bordered
+                  size="small"
                 >
                   <a-descriptions-item label="集群名称">
                     {{ currentClusterDetail.name }}
@@ -954,9 +954,9 @@ onMounted(async () => {
           <a-row style="margin-top: 16px">
             <a-col :span="24">
               <a-card
-                title="KubeConfig 配置"
                 class="k8s-detail-card"
                 size="small"
+                title="KubeConfig 配置"
               >
                 <a-tag
                   :color="

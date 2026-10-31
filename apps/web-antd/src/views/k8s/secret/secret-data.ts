@@ -402,7 +402,6 @@ const decodeBase64ToUtf8 = (base64Str: string): string | undefined => {
 };
 
 /** 不能原样放进单行双引号 / | 块的字符（YAML 会改写或报错）：除 \t、\n 外的控制字符、NEL、行 / 段分隔符、BOM */
-// eslint-disable-next-line no-control-regex
 const UNSAFE_DISPLAY_CHAR_PATTERN =
   /[\u0000-\u0008\u000B-\u001F\u007F\u0085\u2028\u2029\uFEFF]/;
 

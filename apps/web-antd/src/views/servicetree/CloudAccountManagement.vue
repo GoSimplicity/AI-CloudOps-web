@@ -8,47 +8,47 @@ import {
 } from './cloudaccountmanagement/provider';
 import { onBeforeUnmount } from 'vue';
 
-import { ref, reactive, onMounted, computed, watch } from 'vue';
-import { message, Modal, type FormInstance } from 'ant-design-vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  CloudOutlined,
-  SearchOutlined,
-  EnvironmentOutlined,
-  SafetyCertificateOutlined,
   CheckCircleOutlined,
+  ClearOutlined,
+  ClockCircleOutlined,
+  CloudOutlined,
+  CloudServerOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EnvironmentOutlined,
+  ExportOutlined,
   EyeOutlined,
-  UserOutlined,
+  GlobalOutlined,
+  InfoCircleOutlined,
   KeyOutlined,
   LockOutlined,
+  PlusOutlined,
+  SafetyCertificateOutlined,
+  SearchOutlined,
   TagsOutlined,
-  InfoCircleOutlined,
-  ClockCircleOutlined,
-  CloudServerOutlined,
-  GlobalOutlined,
-  ClearOutlined,
-  ExportOutlined,
+  UserOutlined,
 } from '@ant-design/icons-vue';
 
 import {
-  getCloudAccountListApi,
-  getCloudAccountDetailApi,
-  createCloudAccountApi,
-  updateCloudAccountApi,
-  deleteCloudAccountApi,
-  updateCloudAccountStatusApi,
-  verifyCloudAccountApi,
-  CloudProvider,
-  CloudAccountStatus,
   type CloudAccount,
   type CloudAccountRegionInput,
-  type GetCloudAccountListReq,
-  type CreateCloudAccountReq,
-  type UpdateCloudAccountReq,
+  CloudAccountStatus,
   type CloudCredentialType,
+  CloudProvider,
+  createCloudAccountApi,
+  type CreateCloudAccountReq,
+  deleteCloudAccountApi,
+  getCloudAccountDetailApi,
+  getCloudAccountListApi,
+  type GetCloudAccountListReq,
   type ProviderCredentialInput,
+  updateCloudAccountApi,
+  type UpdateCloudAccountReq,
+  updateCloudAccountStatusApi,
+  verifyCloudAccountApi,
 } from '#/api/core/tree/tree_account';
 import { downloadCsv } from '#/utils/export-csv';
 
@@ -963,11 +963,11 @@ const closeDetails = () => {
 
 <template>
   <OpsPage
-    title="云账户"
-    description="管理云账户和授权地域，验证操作需显式发起"
     class="cmdb-console cloud-account-management"
+    description="管理云账户和授权地域，验证操作需显式发起"
+    title="云账户"
   >
-    <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button @click="fetchCloudAccounts()">重试</a-button>
       </template>
@@ -988,7 +988,7 @@ const closeDetails = () => {
         <a-button @click="exportToExcel(cloudAccounts)">
           <export-outlined /> 导出当前页
         </a-button> </a-space
-      ><a-button @click="fetchCloudAccounts()" :loading="loading">
+      ><a-button :loading="loading" @click="fetchCloudAccounts()">
         刷新
       </a-button>
     </template>
@@ -997,36 +997,36 @@ const closeDetails = () => {
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="[16, 16]">
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
-              <a-statistic title="匹配账户数" :value="pagination.total">
+              <a-statistic :value="pagination.total" title="匹配账户数">
                 <template #prefix>
                   <cloud-outlined />
                 </template>
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
-              <a-statistic title="本页已启用" :value="enabledCount">
+              <a-statistic :value="enabledCount" title="本页已启用">
                 <template #prefix>
                   <check-circle-outlined />
                 </template>
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
-              <a-statistic title="本页阿里云" :value="aliCloudCount">
+              <a-statistic :value="aliCloudCount" title="本页阿里云">
                 <template #prefix>
                   <cloud-server-outlined />
                 </template>
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
-              <a-statistic title="本页腾讯云 / AWS" :value="tencentAndAwsCount">
+              <a-statistic :value="tencentAndAwsCount" title="本页腾讯云 / AWS">
                 <template #prefix>
                   <global-outlined />
                 </template>
@@ -1039,15 +1039,15 @@ const closeDetails = () => {
 
     <!-- 搜索筛选区 -->
     <template #filters>
-      <a-form layout="inline" class="filter-form">
+      <a-form class="filter-form" layout="inline">
         <a-form-item>
           <a-input
             v-model:value="filterForm.search"
-            placeholder="搜索账户名称"
             allow-clear
+            placeholder="搜索账户名称"
             style="width: 220px"
-            @pressEnter="handleSearch"
             @change="handleSearchChange"
+            @pressEnter="handleSearch"
           >
             <template #prefix><search-outlined /></template>
           </a-input>
@@ -1055,8 +1055,8 @@ const closeDetails = () => {
         <a-form-item label="云厂商">
           <a-select
             v-model:value="filterForm.provider"
-            placeholder="全部厂商"
             allow-clear
+            placeholder="全部厂商"
             style="width: 150px"
             @change="handleSearch"
           >
@@ -1079,8 +1079,8 @@ const closeDetails = () => {
         <a-form-item label="账户状态">
           <a-select
             v-model:value="filterForm.status"
-            placeholder="全部状态"
             allow-clear
+            placeholder="全部状态"
             style="width: 130px"
             @change="handleSearch"
           >
@@ -1097,7 +1097,7 @@ const closeDetails = () => {
             <a-button type="primary" @click="handleSearch">
               <search-outlined /> 查询
             </a-button>
-            <a-button @click="resetFilter" class="reset-btn">
+            <a-button class="reset-btn" @click="resetFilter">
               <clear-outlined /> 重置
             </a-button>
           </a-space>
@@ -1113,10 +1113,10 @@ const closeDetails = () => {
           :data-source="cloudAccounts"
           :loading="loading"
           :pagination="paginationConfig"
-          @change="handleTableChange"
-          row-key="id"
           :scroll="{ x: 1400 }"
           class="account-table"
+          row-key="id"
+          @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
             <!-- 账户名称列 -->
@@ -1250,8 +1250,8 @@ const closeDetails = () => {
                   title="查看详情"
                 >
                   <a-button
-                    type="text"
                     size="small"
+                    type="text"
                     @click="handleViewDetail(record)"
                   >
                     <eye-outlined />
@@ -1310,30 +1310,30 @@ const closeDetails = () => {
     <!-- 创建/编辑对话框 -->
     <a-modal
       v-model:open="modalVisible"
-      @cancel="closeForm"
-      :mask-closable="!submitLoading"
-      :closable="!submitLoading"
-      :keyboard="!submitLoading"
-      :title="isEdit ? '编辑云账户' : '添加云账户'"
-      :width="800"
-      :style="{ top: 'var(--ops-space-xl)' }"
       :body-style="{
         maxHeight: 'calc(100dvh - 200px)',
         overflowY: 'auto',
         paddingInline: 'var(--ops-space-sm)',
       }"
-      @ok="handleSubmit"
+      :closable="!submitLoading"
       :confirm-loading="submitLoading"
       :destroy-on-close="true"
+      :keyboard="!submitLoading"
+      :mask-closable="!submitLoading"
+      :style="{ top: 'var(--ops-space-xl)' }"
+      :title="isEdit ? '编辑云账户' : '添加云账户'"
+      :width="800"
       class="modern-modal"
+      @cancel="closeForm"
+      @ok="handleSubmit"
     >
       <a-form
-        :disabled="formLoading || submitLoading"
         ref="formRef"
+        :disabled="formLoading || submitLoading"
         :model="formData"
         :rules="formRules"
-        layout="vertical"
         class="account-form"
+        layout="vertical"
       >
         <a-divider orientation="left">
           <info-circle-outlined /> 基本信息
@@ -1350,14 +1350,14 @@ const closeDetails = () => {
               </a-input>
             </a-form-item>
           </a-col>
-          <a-col :xs="24" :sm="12">
+          <a-col :sm="12" :xs="24">
             <a-form-item label="云厂商" name="provider">
               <a-select
                 v-model:value="formData.provider"
-                placeholder="选择云厂商"
                 :disabled="isEdit"
-                @change="changeProvider"
+                placeholder="选择云厂商"
                 size="large"
+                @change="changeProvider"
               >
                 <a-select-option :value="CloudProvider.AliCloud">
                   <cloud-outlined /> 阿里云
@@ -1380,11 +1380,11 @@ const closeDetails = () => {
               </a-select>
             </a-form-item>
           </a-col>
-          <a-col v-if="!isEdit" :xs="24" :sm="12">
+          <a-col v-if="!isEdit" :sm="12" :xs="24">
             <a-form-item
+              extra="停用仅保存配置，可在核对后启用并显式同步。"
               label="初始状态"
               name="status"
-              extra="停用仅保存配置，可在核对后启用并显式同步。"
             >
               <a-select
                 id="cloud-account-create-status"
@@ -1401,7 +1401,7 @@ const closeDetails = () => {
               </a-select>
             </a-form-item>
           </a-col>
-          <a-col :xs="24" :sm="12">
+          <a-col :sm="12" :xs="24">
             <a-form-item label="授权地域" name="regions">
               <AccountRegionsEditor
                 v-model="formData.regions"
@@ -1439,21 +1439,21 @@ const closeDetails = () => {
         </a-form-item>
         <a-alert
           v-if="!structuredProvider && formData.credential_type === 'temporary'"
-          type="info"
-          show-icon
           message="临时凭据需提供完整密钥、令牌和 UTC 到期时间；暂不支持全量同步。"
+          show-icon
+          type="info"
         />
         <a-alert
           v-if="formData.provider === CloudProvider.HuaweiCloud"
-          type="info"
-          show-icon
           message="华为云仅支持指定实例 ID 的增量同步；每个地域必须配置对应项目 ID。"
+          show-icon
+          type="info"
         />
         <a-alert
           v-if="structuredProvider"
-          type="info"
-          show-icon
           message="Azure 和 GCP 仅支持指定实例 ID 的增量同步，不支持全量或无 ID 同步。"
+          show-icon
+          type="info"
         />
         <p v-if="structuredProvider && isEdit" class="form-hint">
           已保存凭据不会回显；全部留空保留现有凭据，修改任一项时需完整填写。
@@ -1475,8 +1475,8 @@ const closeDetails = () => {
             <a-form-item label="Access Key" name="access_key">
               <a-input
                 v-model:value="formData.access_key"
-                placeholder="请输入 Access Key"
                 autocomplete="off"
+                placeholder="请输入 Access Key"
                 size="large"
               >
                 <template #prefix><key-outlined /></template>
@@ -1487,8 +1487,8 @@ const closeDetails = () => {
             <a-form-item label="Secret Key" name="secret_key">
               <a-input-password
                 v-model:value="formData.secret_key"
-                placeholder="请输入 Secret Key"
                 autocomplete="new-password"
+                placeholder="请输入 Secret Key"
                 size="large"
               >
                 <template #prefix><lock-outlined /></template>
@@ -1500,9 +1500,9 @@ const closeDetails = () => {
               <a-form-item label="Session Token">
                 <a-input-password
                   v-model:value="formData.session_token"
-                  placeholder="请输入 Session Token"
-                  autocomplete="new-password"
                   :maxlength="8192"
+                  autocomplete="new-password"
+                  placeholder="请输入 Session Token"
                   size="large"
                 />
               </a-form-item>
@@ -1511,8 +1511,8 @@ const closeDetails = () => {
               <a-form-item label="到期时间（UTC）">
                 <a-input
                   v-model:value="formData.credential_expires_at"
-                  placeholder="例如 2027-01-01T00:00:00Z"
                   autocomplete="off"
+                  placeholder="例如 2027-01-01T00:00:00Z"
                   size="large"
                 />
               </a-form-item>
@@ -1521,43 +1521,43 @@ const closeDetails = () => {
         </a-row>
 
         <a-row v-if="formData.provider === CloudProvider.Azure" :gutter="16">
-          <a-col :xs="24" :sm="12">
+          <a-col :sm="12" :xs="24">
             <a-form-item label="租户 ID">
               <a-input
                 v-model:value="providerCredentialDraft.tenant_id"
-                placeholder="请输入租户 ID"
-                autocomplete="off"
                 :disabled="submitLoading || formLoading"
+                autocomplete="off"
+                placeholder="请输入租户 ID"
               />
             </a-form-item>
           </a-col>
-          <a-col :xs="24" :sm="12">
+          <a-col :sm="12" :xs="24">
             <a-form-item label="应用（客户端）ID">
               <a-input
                 v-model:value="providerCredentialDraft.client_id"
-                placeholder="请输入应用 ID"
-                autocomplete="off"
                 :disabled="submitLoading || formLoading"
+                autocomplete="off"
+                placeholder="请输入应用 ID"
               />
             </a-form-item>
           </a-col>
-          <a-col :xs="24" :sm="12">
+          <a-col :sm="12" :xs="24">
             <a-form-item label="订阅 ID">
               <a-input
                 v-model:value="providerCredentialDraft.subscription_id"
-                placeholder="请输入订阅 ID"
-                autocomplete="off"
                 :disabled="submitLoading || formLoading"
+                autocomplete="off"
+                placeholder="请输入订阅 ID"
               />
             </a-form-item>
           </a-col>
-          <a-col :xs="24" :sm="12">
+          <a-col :sm="12" :xs="24">
             <a-form-item label="客户端密钥">
               <a-input-password
                 v-model:value="providerCredentialDraft.client_secret"
-                placeholder="请输入客户端密钥"
-                autocomplete="new-password"
                 :disabled="submitLoading || formLoading"
+                autocomplete="new-password"
+                placeholder="请输入客户端密钥"
               />
             </a-form-item>
           </a-col>
@@ -1567,9 +1567,9 @@ const closeDetails = () => {
             <a-form-item label="资源项目 ID">
               <a-input
                 v-model:value="providerCredentialDraft.project_id"
-                placeholder="请输入 GCP 资源项目 ID"
-                autocomplete="off"
                 :disabled="submitLoading || formLoading"
+                autocomplete="off"
+                placeholder="请输入 GCP 资源项目 ID"
               />
             </a-form-item>
           </a-col>
@@ -1577,9 +1577,9 @@ const closeDetails = () => {
             <a-form-item label="服务账号 JSON">
               <a-input-password
                 v-model:value="providerCredentialDraft.service_account_json"
-                placeholder="粘贴服务账号 JSON"
-                autocomplete="new-password"
                 :disabled="submitLoading || formLoading"
+                autocomplete="new-password"
+                placeholder="粘贴服务账号 JSON"
               />
             </a-form-item>
           </a-col>
@@ -1595,7 +1595,7 @@ const closeDetails = () => {
           <tags-outlined /> 账户信息（可选）
         </a-divider>
         <a-row :gutter="16">
-          <a-col :xs="24" :sm="12">
+          <a-col :sm="12" :xs="24">
             <a-form-item label="账户ID" name="account_id">
               <a-input
                 v-model:value="formData.account_id"
@@ -1604,7 +1604,7 @@ const closeDetails = () => {
               />
             </a-form-item>
           </a-col>
-          <a-col :xs="24" :sm="12">
+          <a-col :sm="12" :xs="24">
             <a-form-item label="账户名称" name="account_name">
               <a-input
                 v-model:value="formData.account_name"
@@ -1626,9 +1626,9 @@ const closeDetails = () => {
             <a-form-item label="描述信息">
               <a-textarea
                 v-model:value="formData.description"
-                placeholder="云账户用途描述"
-                :rows="3"
                 :maxlength="500"
+                :rows="3"
+                placeholder="云账户用途描述"
                 show-count
               />
             </a-form-item>
@@ -1638,12 +1638,12 @@ const closeDetails = () => {
 
       <template #footer>
         <a-space>
-          <a-button @click="closeForm" :disabled="submitLoading">取消</a-button>
+          <a-button :disabled="submitLoading" @click="closeForm">取消</a-button>
           <a-button
+            :disabled="formLoading"
+            :loading="submitLoading"
             type="primary"
             @click="handleSubmit"
-            :loading="submitLoading"
-            :disabled="formLoading"
           >
             {{ isEdit ? '更新' : '添加' }}
           </a-button>
@@ -1654,11 +1654,11 @@ const closeDetails = () => {
     <!-- 详情抽屉 -->
     <a-drawer
       v-model:open="detailVisible"
-      @close="closeDetails"
-      title="云账户详情"
-      width="min(600px, 100vw)"
       :destroy-on-close="true"
       class="detail-drawer"
+      title="云账户详情"
+      width="min(600px, 100vw)"
+      @close="closeDetails"
     >
       <a-skeleton :loading="detailLoading" active>
         <a-empty
@@ -1690,21 +1690,21 @@ const closeDetails = () => {
 
             <!-- 详细信息 -->
             <a-descriptions
-              bordered
               :column="1"
-              size="small"
+              bordered
               class="detail-descriptions"
+              size="small"
               title="账户信息"
             >
-              <a-descriptions-item label="账户ID" :span="2">
+              <a-descriptions-item :span="2" label="账户ID">
                 {{ currentDetail.id }}
               </a-descriptions-item>
-              <a-descriptions-item label="云厂商" :span="1">
+              <a-descriptions-item :span="1" label="云厂商">
                 <a-tag :color="getProviderColor(currentDetail.provider)">
                   {{ getProviderText(currentDetail.provider) }}
                 </a-tag>
               </a-descriptions-item>
-              <a-descriptions-item label="地域" :span="1">
+              <a-descriptions-item :span="1" label="地域">
                 <a-space wrap>
                   <a-tag
                     v-for="region in currentDetail.regions ?? []"
@@ -1735,7 +1735,7 @@ const closeDetails = () => {
               >
                 {{ currentDetail.credential_expires_at || '未知' }}
               </a-descriptions-item>
-              <a-descriptions-item label="云账户ID" :span="2">
+              <a-descriptions-item :span="2" label="云账户ID">
                 <a-typography-text
                   v-if="currentDetail.account_id"
                   :copyable="{ text: currentDetail.account_id }"
@@ -1744,16 +1744,16 @@ const closeDetails = () => {
                 </a-typography-text>
                 <span v-else>-</span>
               </a-descriptions-item>
-              <a-descriptions-item label="云账户名称" :span="2">
+              <a-descriptions-item :span="2" label="云账户名称">
                 {{ currentDetail.account_name || '-' }}
               </a-descriptions-item>
-              <a-descriptions-item label="云账户别名" :span="2">
+              <a-descriptions-item :span="2" label="云账户别名">
                 {{ currentDetail.account_alias || '-' }}
               </a-descriptions-item>
-              <a-descriptions-item label="描述信息" :span="2">
+              <a-descriptions-item :span="2" label="描述信息">
                 {{ currentDetail.description || '-' }}
               </a-descriptions-item>
-              <a-descriptions-item label="状态" :span="2">
+              <a-descriptions-item :span="2" label="状态">
                 <a-switch
                   v-if="currentDetail"
                   :disabled="
@@ -1771,7 +1771,7 @@ const closeDetails = () => {
                   un-checked-children="禁用"
                 />
               </a-descriptions-item>
-              <a-descriptions-item label="创建人" :span="1">
+              <a-descriptions-item :span="1" label="创建人">
                 <a-avatar
                   size="small"
                   :style="{
@@ -1786,10 +1786,10 @@ const closeDetails = () => {
                   currentDetail.create_user_name || '-'
                 }}</span>
               </a-descriptions-item>
-              <a-descriptions-item label="创建时间" :span="1">
+              <a-descriptions-item :span="1" label="创建时间">
                 {{ formatDateTime(currentDetail.created_at) }}
               </a-descriptions-item>
-              <a-descriptions-item label="更新时间" :span="2">
+              <a-descriptions-item :span="2" label="更新时间">
                 {{ formatDateTime(currentDetail.updated_at) }}
               </a-descriptions-item>
             </a-descriptions>

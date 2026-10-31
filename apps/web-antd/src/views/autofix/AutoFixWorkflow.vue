@@ -1,22 +1,22 @@
 <template>
   <OpsPage
-    title="自动修复工作流"
-    description="诊断、规划与逐项审批，只执行已验证的原计划动作"
     class="autofix-workflow"
+    description="诊断、规划与逐项审批，只执行已验证的原计划动作"
+    title="自动修复工作流"
   >
     <template #actions>
-      <a-space class="action-toolbar" :size="10">
+      <a-space :size="10" class="action-toolbar">
         <a-button
+          :loading="infoLoading"
           class="tool-button"
           @click="loadServiceInfo()"
-          :loading="infoLoading"
         >
           检查服务依赖
         </a-button>
         <a-button
+          :disabled="!workflowResult"
           class="tool-button"
           @click="showRawDrawer = true"
-          :disabled="!workflowResult"
         >
           原始结果
         </a-button>
@@ -35,16 +35,16 @@
     <a-alert
       v-if="workflowError"
       :message="workflowError"
-      type="error"
-      show-icon
       role="alert"
+      show-icon
+      type="error"
     />
     <a-alert
       v-if="infoError"
       :message="infoError"
-      type="warning"
-      show-icon
       role="alert"
+      show-icon
+      type="warning"
     />
 
     <a-card class="operation-card" title="操作恢复与历史">
@@ -59,9 +59,9 @@
       <a-alert
         v-if="recoveryError"
         :message="recoveryError"
-        type="warning"
-        show-icon
         role="alert"
+        show-icon
+        type="warning"
       />
       <p v-if="currentOperationId && !canReadOperation" class="operation-hint">
         没有操作详情查询权限，请联系管理员；无法确认前不要重复执行。
@@ -117,9 +117,9 @@
       <a-alert
         v-if="historyError"
         :message="historyError"
-        type="warning"
-        show-icon
         role="alert"
+        show-icon
+        type="warning"
       />
       <div v-if="operationDetail?.execution_summary" class="operation-summary">
         执行摘要：{{ operationDetail.execution_summary.status || '未知' }}
@@ -150,7 +150,7 @@
     </a-card>
 
     <a-row :gutter="[24, 24]">
-      <a-col :xs="24" :lg="7">
+      <a-col :lg="7" :xs="24">
         <WorkflowInput
           v-model:namespace="formData.namespace"
           v-model:deployment="formData.deployment"
@@ -164,11 +164,11 @@
           @template-change="applyTemplate"
         />
 
-        <a-card title="服务状态" class="side-card">
+        <a-card class="side-card" title="服务状态">
           <a-skeleton
             v-if="infoLoading && !serviceInfo"
-            active
             :paragraph="{ rows: 4 }"
+            active
           />
           <template v-else>
             <div class="service-status">
@@ -203,9 +203,9 @@
         </a-card>
       </a-col>
 
-      <a-col :xs="24" :lg="17">
+      <a-col :lg="17" :xs="24">
         <a-row :gutter="[16, 16]" class="summary-grid">
-          <a-col :xs="12" :xl="6">
+          <a-col :xl="6" :xs="12">
             <div class="summary-card status">
               <div class="summary-icon">
                 <Icon icon="lucide:activity" width="22" />
@@ -220,7 +220,7 @@
               </div>
             </div>
           </a-col>
-          <a-col :xs="12" :xl="6">
+          <a-col :xl="6" :xs="12">
             <div class="summary-card fault">
               <div class="summary-icon">
                 <Icon icon="lucide:alert-triangle" width="22" />
@@ -233,7 +233,7 @@
               </div>
             </div>
           </a-col>
-          <a-col :xs="12" :xl="6">
+          <a-col :xl="6" :xs="12">
             <div class="summary-card action">
               <div class="summary-icon">
                 <Icon icon="lucide:list-checks" width="22" />
@@ -246,7 +246,7 @@
               </div>
             </div>
           </a-col>
-          <a-col :xs="12" :xl="6">
+          <a-col :xl="6" :xs="12">
             <div class="summary-card blocked">
               <div class="summary-icon">
                 <Icon icon="lucide:shield-alert" width="22" />
@@ -260,8 +260,8 @@
         </a-row>
 
         <a-row :gutter="[16, 16]" class="ai-insight-grid">
-          <a-col :xs="24" :xl="8">
-            <a-card title="AI分析" class="insight-card">
+          <a-col :xl="8" :xs="24">
+            <a-card class="insight-card" title="AI分析">
               <div v-if="aiAnalysisHighlights.length" class="insight-list">
                 <div
                   v-for="item in aiAnalysisHighlights"
@@ -274,8 +274,8 @@
               <a-empty v-else description="执行后展示 AI 诊断分析" />
             </a-card>
           </a-col>
-          <a-col :xs="24" :xl="8">
-            <a-card title="AI计划摘要" class="insight-card">
+          <a-col :xl="8" :xs="24">
+            <a-card class="insight-card" title="AI计划摘要">
               <div v-if="aiPlanHighlights.length" class="insight-list">
                 <div
                   v-for="item in aiPlanHighlights"
@@ -288,8 +288,8 @@
               <a-empty v-else description="执行后展示 AI 计划摘要" />
             </a-card>
           </a-col>
-          <a-col :xs="24" :xl="8">
-            <a-card title="AI复核要点" class="insight-card">
+          <a-col :xl="8" :xs="24">
+            <a-card class="insight-card" title="AI复核要点">
               <div v-if="aiReviewHighlights.length" class="insight-list">
                 <div
                   v-for="item in aiReviewHighlights"
@@ -310,12 +310,12 @@
               {{ normalizedResult?.workflow_engine || 'LangGraph' }}
             </a-tag>
           </template>
-          <a-steps :current="currentAgentStep" size="small" responsive>
+          <a-steps :current="currentAgentStep" responsive size="small">
             <a-step
               v-for="agent in workflowAgents"
               :key="agent.name"
-              :title="agent.title"
               :description="agent.description"
+              :title="agent.title"
             >
               <template #icon>
                 <Icon :icon="agent.icon" width="18" />
@@ -323,7 +323,7 @@
             </a-step>
           </a-steps>
 
-          <div class="agent-messages" v-if="visibleAgentMessages.length">
+          <div v-if="visibleAgentMessages.length" class="agent-messages">
             <div
               v-for="(item, index) in visibleAgentMessages"
               :key="`${item.agent}-${index}`"
@@ -352,10 +352,10 @@
           </template>
           <a-table
             :columns="actionColumns"
-            :scroll="{ x: 840 }"
             :data-source="candidateActions"
             :locale="{ emptyText: '暂无候选动作' }"
             :pagination="false"
+            :scroll="{ x: 840 }"
             row-key="action_id"
             size="small"
           >
@@ -422,8 +422,8 @@
         </a-card>
 
         <a-row :gutter="[16, 16]" class="bottom-section">
-          <a-col :xs="24" :xl="12">
-            <a-card title="执行结果" class="execution-card">
+          <a-col :xl="12" :xs="24">
+            <a-card class="execution-card" title="执行结果">
               <div v-if="executedActions.length" class="execution-list">
                 <div
                   v-for="action in executedActions"
@@ -455,30 +455,30 @@
               />
             </a-card>
           </a-col>
-          <a-col :xs="24" :xl="12">
-            <a-card title="Reviewer结论" class="review-card">
+          <a-col :xl="12" :xs="24">
+            <a-card class="review-card" title="Reviewer结论">
               <template v-if="normalizedResult">
                 <a-alert
+                  :description="reviewReason"
                   :message="
                     reviewApproved ? '允许自动执行' : '需要人工确认或补充诊断'
                   "
-                  :description="reviewReason"
                   :type="reviewApproved ? 'success' : 'warning'"
                   show-icon
                 />
                 <ApprovalPanel
                   v-if="normalizedResult.status === 'needs_human_confirmation'"
                   :actions="confirmableBlockedActions"
-                  :selected="selectedBlockedActionIds"
                   :busy="busy"
                   :can-confirm="canConfirmWorkflow"
                   :can-confirm-all="canConfirmAll"
-                  :issue="approvalIssue"
                   :expires-at="workflowResult?.approval?.expires_at"
-                  @toggle="toggleBlockedAction"
+                  :issue="approvalIssue"
+                  :selected="selectedBlockedActionIds"
                   @confirm="confirmWorkflowExecution"
-                  @confirm-one="confirmSingleAction"
                   @confirm-all="confirmAllActions"
+                  @confirm-one="confirmSingleAction"
+                  @toggle="toggleBlockedAction"
                 />
               </template>
               <a-empty v-else description="执行工作流后展示风险复核结论" />
@@ -517,10 +517,10 @@ import {
   formatBoolean,
   getActionIcon,
   getActionLabel,
-  getAllowedActionCount,
   getAiAnalysisHighlights,
   getAiPlanHighlights,
   getAiReviewHighlights,
+  getAllowedActionCount,
   getFaultLabel,
   getRiskTagColor,
   getStatusLabel,

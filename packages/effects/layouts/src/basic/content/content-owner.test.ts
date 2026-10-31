@@ -2,10 +2,10 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import {
   defineComponent,
   h,
+  nextTick,
   onUnmounted,
   reactive,
   toRefs,
-  nextTick,
 } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

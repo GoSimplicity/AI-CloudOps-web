@@ -2,39 +2,39 @@
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { onBeforeUnmount } from 'vue';
 
-import { ref, reactive, onMounted, computed, nextTick } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { message, Modal, Empty } from 'ant-design-vue';
+import { Empty, message, Modal } from 'ant-design-vue';
 import {
   ApiOutlined,
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  DownOutlined,
-  WindowsOutlined,
-  DesktopOutlined,
-  DeploymentUnitOutlined,
   CodeOutlined,
+  DeleteOutlined,
+  DeploymentUnitOutlined,
+  DesktopOutlined,
+  DownOutlined,
+  EditOutlined,
+  PlusOutlined,
+  WindowsOutlined,
 } from '@ant-design/icons-vue';
 import { useWindowSize } from '@vueuse/core';
 
 import {
-  getTreeLocalList,
-  getTreeLocalDetail,
-  createTreeLocal,
-  updateTreeLocal,
-  deleteTreeLocal,
-  bindTreeLocal,
-  unbindTreeLocal,
   AuthMode,
+  bindTreeLocal,
+  type BindTreeLocalResourceReq,
+  createTreeLocal,
+  type CreateTreeLocalResourceReq,
+  deleteTreeLocal,
+  getTreeLocalDetail,
+  getTreeLocalList,
+  type GetTreeLocalResourceListReq,
   ResourceStatus,
   type TreeLocalResource,
-  type GetTreeLocalResourceListReq,
-  type CreateTreeLocalResourceReq,
-  type UpdateTreeLocalResourceReq,
-  type BindTreeLocalResourceReq,
-  type UnBindTreeLocalResourceReq,
   type TreeNode,
+  unbindTreeLocal,
+  type UnBindTreeLocalResourceReq,
+  updateTreeLocal,
+  type UpdateTreeLocalResourceReq,
 } from '#/api/core/tree/tree_local';
 import { getTreeList } from '#/api/core/tree/tree_node';
 
@@ -715,32 +715,32 @@ const closeDetails = () => {
 
 <template>
   <OpsPage
-    title="本地资源"
-    description="维护服务器连接配置与服务树绑定"
     class="cmdb-console local-resource-management"
+    description="维护服务器连接配置与服务树绑定"
+    title="本地资源"
   >
-    <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button @click="fetchLocalResources()">重试</a-button>
       </template>
     </a-alert>
     <!-- 页面标题 -->
     <template #actions>
-      <a-button type="primary" @click="showCreateModal" class="btn-create">
+      <a-button class="btn-create" type="primary" @click="showCreateModal">
         <template #icon>
           <plus-outlined />
         </template>
         <span class="btn-text">添加服务器</span> </a-button
-      ><a-button @click="fetchLocalResources()" :loading="loading">
+      ><a-button :loading="loading" @click="fetchLocalResources()">
         刷新
       </a-button> </template
     ><template #filters>
       <div class="search-filters">
         <a-select
           v-model:value="filterForm.status"
-          placeholder="连接状态"
           allow-clear
           class="filter-select"
+          placeholder="连接状态"
           @change="handleSearch"
         >
           <a-select-option :value="ResourceStatus.RUNNING">
@@ -760,7 +760,7 @@ const closeDetails = () => {
           </a-select-option>
           <a-select-option :value="ResourceStatus.ERROR">错误</a-select-option>
         </a-select>
-        <a-button @click="resetFilter" class="reset-btn"> 重置 </a-button>
+        <a-button class="reset-btn" @click="resetFilter"> 重置 </a-button>
       </div>
     </template>
 
@@ -768,16 +768,16 @@ const closeDetails = () => {
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="[16, 16]">
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
-              <a-statistic title="匹配服务器" :value="pagination.total">
+              <a-statistic :value="pagination.total" title="匹配服务器">
                 <template #prefix>
                   <desktop-outlined />
                 </template>
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
                 title="本页运行中"
@@ -793,7 +793,7 @@ const closeDetails = () => {
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
                 title="本页Linux系统"
@@ -808,7 +808,7 @@ const closeDetails = () => {
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
                 title="本页已绑定节点"
@@ -836,11 +836,11 @@ const closeDetails = () => {
           :data-source="localResources"
           :loading="loading"
           :pagination="paginationConfig"
-          @change="handleTableChange"
-          row-key="id"
           :scroll="{ x: 1400 }"
-          class="resource-table"
           bordered
+          class="resource-table"
+          row-key="id"
+          @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
@@ -961,15 +961,15 @@ const closeDetails = () => {
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleViewDetail(record)"
                 >
                   查看
                 </a-button>
                 <a-button
-                  type="default"
                   size="small"
+                  type="default"
                   @click="handleEdit(record)"
                 >
                   编辑
@@ -982,10 +982,10 @@ const closeDetails = () => {
                       </a-menu-item>
                       <a-menu-item
                         key="unbind"
-                        @click="showUnbindModal(record)"
                         :disabled="
                           !record.tree_nodes || record.tree_nodes.length === 0
                         "
+                        @click="showUnbindModal(record)"
                       >
                         <deployment-unit-outlined /> 解绑服务树
                       </a-menu-item>
@@ -1022,30 +1022,30 @@ const closeDetails = () => {
     <!-- 创建/编辑服务器对话框 -->
     <a-modal
       v-model:open="modalVisible"
+      :destroy-on-close="true"
+      :footer="null"
       :title="isEdit ? '编辑服务器' : '添加服务器'"
       :width="modalWidth"
-      :footer="null"
-      :destroy-on-close="true"
       class="responsive-modal server-modal"
       @cancel="cancelForm"
     >
       <a-form
+        ref="formRef"
         :model="formData"
         :rules="formRules"
-        layout="vertical"
-        ref="formRef"
         class="server-form"
+        layout="vertical"
       >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <div class="form-grid">
-            <a-form-item label="服务器名称" name="name" class="form-item">
+            <a-form-item class="form-item" label="服务器名称" name="name">
               <a-input
                 v-model:value="formData.name"
                 placeholder="请输入服务器名称"
               />
             </a-form-item>
-            <a-form-item label="环境" name="environment" class="form-item">
+            <a-form-item class="form-item" label="环境" name="environment">
               <a-select
                 v-model:value="formData.environment"
                 placeholder="选择环境"
@@ -1056,25 +1056,25 @@ const closeDetails = () => {
                 <a-select-option value="prod">生产</a-select-option>
               </a-select>
             </a-form-item>
-            <a-form-item label="IP地址" name="ip_addr" class="form-item">
+            <a-form-item class="form-item" label="IP地址" name="ip_addr">
               <a-input
                 v-model:value="formData.ip_addr"
                 placeholder="192.168.1.100"
               />
             </a-form-item>
-            <a-form-item label="SSH端口" name="port" class="form-item">
+            <a-form-item class="form-item" label="SSH端口" name="port">
               <a-input-number
                 v-model:value="formData.port"
-                :min="1"
                 :max="65535"
-                style="width: 100%"
+                :min="1"
                 placeholder="22"
+                style="width: 100%"
               />
             </a-form-item>
-            <a-form-item label="用户名" name="username" class="form-item">
+            <a-form-item class="form-item" label="用户名" name="username">
               <a-input v-model:value="formData.username" placeholder="root" />
             </a-form-item>
-            <a-form-item label="操作系统类型" name="os_type" class="form-item">
+            <a-form-item class="form-item" label="操作系统类型" name="os_type">
               <a-select
                 v-model:value="formData.os_type"
                 placeholder="选择操作系统"
@@ -1087,13 +1087,13 @@ const closeDetails = () => {
                 </a-select-option>
               </a-select>
             </a-form-item>
-            <a-form-item label="操作系统名称" name="os_name" class="form-item">
+            <a-form-item class="form-item" label="操作系统名称" name="os_name">
               <a-input
                 v-model:value="formData.os_name"
                 placeholder="如: CentOS 7.9"
               />
             </a-form-item>
-            <a-form-item label="镜像名称" name="image_name" class="form-item">
+            <a-form-item class="form-item" label="镜像名称" name="image_name">
               <a-input
                 v-model:value="formData.image_name"
                 placeholder="如: centos-7.9-x86_64"
@@ -1153,23 +1153,23 @@ const closeDetails = () => {
           <a-form-item label="描述信息">
             <a-textarea
               v-model:value="formData.description"
-              placeholder="服务器用途描述"
               :rows="3"
+              placeholder="服务器用途描述"
             />
           </a-form-item>
 
           <a-form-item label="资源标签">
             <div class="tags-input">
               <div
-                class="current-tags"
                 v-if="formData.tags && formData.tags.length > 0"
+                class="current-tags"
               >
                 <a-tag
                   v-for="(tag, index) in formData.tags"
                   :key="`tag-${index}-${tag}`"
+                  class="tech-tag tag-item"
                   closable
                   @close="removeTag(index)"
-                  class="tech-tag tag-item"
                 >
                   {{ tag.value ? `${tag.key}=${tag.value}` : tag.key }}
                 </a-tag>
@@ -1182,7 +1182,7 @@ const closeDetails = () => {
                   style="width: 200px; margin-right: 8px"
                   @pressEnter="addTag"
                 />
-                <a-button type="dashed" @click="addTag" class="add-tag-btn">
+                <a-button class="add-tag-btn" type="dashed" @click="addTag">
                   <plus-outlined /> 添加标签
                 </a-button>
               </div>
@@ -1193,10 +1193,10 @@ const closeDetails = () => {
         <div class="form-actions">
           <a-button @click="cancelForm">取消</a-button>
           <a-button
-            type="primary"
-            @click="handleSubmit"
             :loading="submitLoading"
             style="margin-left: 8px"
+            type="primary"
+            @click="handleSubmit"
           >
             {{ isEdit ? '更新' : '添加' }}
           </a-button>
@@ -1207,22 +1207,22 @@ const closeDetails = () => {
     <!-- 绑定服务树节点对话框 -->
     <a-modal
       v-model:open="bindModalVisible"
-      title="绑定服务树节点"
-      @ok="handleBind"
       :confirm-loading="bindLoading"
       :destroy-on-close="true"
       class="responsive-modal"
+      title="绑定服务树节点"
+      @ok="handleBind"
     >
       <a-form layout="vertical">
         <a-form-item label="选择要绑定的服务树节点" required>
           <a-tree-select
             v-model:value="selectedTreeNodeIds"
-            style="width: 100%"
-            placeholder="请选择服务树节点"
+            :field-names="{ children: 'children', label: 'name', value: 'id' }"
+            :tree-data="treeData"
             allow-clear
             multiple
-            :tree-data="treeData"
-            :field-names="{ children: 'children', label: 'name', value: 'id' }"
+            placeholder="请选择服务树节点"
+            style="width: 100%"
           />
         </a-form-item>
       </a-form>
@@ -1231,11 +1231,11 @@ const closeDetails = () => {
     <!-- 管理绑定对话框 -->
     <a-modal
       v-model:open="unbindModalVisible"
-      title="管理服务树绑定"
-      @ok="handleUnbind"
       :confirm-loading="unbindLoading"
       :destroy-on-close="true"
       class="responsive-modal"
+      title="管理服务树绑定"
+      @ok="handleUnbind"
     >
       <a-form layout="vertical">
         <a-form-item label="当前绑定的节点">
@@ -1263,11 +1263,11 @@ const closeDetails = () => {
     <!-- 服务器详情抽屉 -->
     <a-drawer
       v-model:open="detailVisible"
-      @close="closeDetails"
-      title="服务器详情"
-      width="min(600px, 100vw)"
       :destroy-on-close="true"
       class="detail-drawer"
+      title="服务器详情"
+      width="min(600px, 100vw)"
+      @close="closeDetails"
     >
       <a-skeleton :loading="detailLoading" active>
         <a-empty
@@ -1296,7 +1296,7 @@ const closeDetails = () => {
               </div>
             </div>
 
-            <a-descriptions bordered :column="1">
+            <a-descriptions :column="1" bordered>
               <a-descriptions-item label="ID">
                 {{ currentDetail.id }}
               </a-descriptions-item>

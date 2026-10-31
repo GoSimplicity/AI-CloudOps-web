@@ -1,21 +1,21 @@
 <template>
   <OpsPage
-    title="YAML 模板管理"
     description="管理和维护 Kubernetes YAML 配置模板"
+    title="YAML 模板管理"
   >
     <template #actions>
       <a-button
+        :disabled="!filterClusterId"
         type="primary"
         @click="openCreateModal"
-        :disabled="!filterClusterId"
       >
         <template #icon><PlusOutlined aria-hidden="true" /></template>
         创建模板
       </a-button>
       <a-button
-        @click="fetchTemplates"
-        :loading="loading"
         :disabled="!filterClusterId"
+        :loading="loading"
+        @click="fetchTemplates"
       >
         <template #icon><ReloadOutlined aria-hidden="true" /></template>
         刷新数据
@@ -30,13 +30,13 @@
           <div class="k8s-filter-group">
             <a-select
               v-model:value="filterClusterId"
-              placeholder="选择集群"
-              class="k8s-cluster-selector"
-              aria-label="选择集群"
-              allow-clear
-              @change="handleClusterChange"
-              :loading="clustersLoading"
               :disabled="clustersLoading"
+              :loading="clustersLoading"
+              allow-clear
+              aria-label="选择集群"
+              class="k8s-cluster-selector"
+              placeholder="选择集群"
+              @change="handleClusterChange"
               @popup-scroll="handleClusterDropdownScroll"
             >
               <template #suffixIcon>
@@ -54,7 +54,7 @@
                     justify-content: space-between;
                   "
                 >
-                  <span class="k8s-cluster-name" :title="cluster.name">{{
+                  <span :title="cluster.name" class="k8s-cluster-name">{{
                     cluster.name
                   }}</span>
                   <a-tag color="blue" size="small">
@@ -68,7 +68,7 @@
                 disabled
                 style="text-align: center; color: #999"
               >
-                <a-spin size="small" :spinning="clustersLoading" />
+                <a-spin :spinning="clustersLoading" size="small" />
                 <span v-if="!clustersLoading">滚动加载更多...</span>
               </a-select-option>
             </a-select>
@@ -77,11 +77,11 @@
           <div class="k8s-search-group">
             <a-input
               v-model:value="searchText"
-              placeholder="🔍 搜索模板名称"
-              class="k8s-search-input"
-              @pressEnter="onSearch"
-              @input="onSearch"
               allow-clear
+              class="k8s-search-input"
+              placeholder="🔍 搜索模板名称"
+              @input="onSearch"
+              @pressEnter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -94,10 +94,10 @@
         <div class="k8s-toolbar-actions">
           <div class="k8s-action-buttons">
             <a-button
-              @click="resetFilters"
               :disabled="!searchText && !filterClusterId"
               class="k8s-toolbar-btn"
               title="重置所有筛选条件"
+              @click="resetFilters"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               重置筛选
@@ -121,9 +121,9 @@
     </template>
     <a-alert
       v-if="clustersError"
-      type="error"
       :message="clustersError"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button size="small" @click="fetchClusters(true)">
@@ -131,7 +131,7 @@
         </a-button>
       </template>
     </a-alert>
-    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button size="small" @click="fetchTemplates"> 重试查询 </a-button>
       </template>
@@ -142,9 +142,7 @@
       <a-table
         :columns="columns"
         :data-source="filteredTemplates"
-        :row-selection="rowSelection"
         :loading="loading"
-        row-key="id"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,
@@ -155,9 +153,11 @@
             `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
           pageSizeOptions: ['10', '20', '30', '50'],
         }"
-        @change="handleTableChange"
-        class="k8s-table template-table"
+        :row-selection="rowSelection"
         :scroll="{ x: 1200 }"
+        class="k8s-table template-table"
+        row-key="id"
+        @change="handleTableChange"
       >
         <template #bodyCell="{ column, record, text }">
           <template v-if="column.key === 'cluster_id'">
@@ -184,9 +184,9 @@
               </a-tooltip>
               <a-tooltip title="检查模板">
                 <a-button
+                  :loading="checkLoading"
                   title="检查模板"
                   @click="checkTemplate(record.content)"
-                  :loading="checkLoading"
                 >
                   <template #icon>
                     <CheckCircleOutlined aria-hidden="true" />
@@ -199,7 +199,7 @@
                 </a-button>
               </a-tooltip>
               <a-tooltip v-if="can('k8s.template.delete')" title="删除">
-                <a-button title="删除" danger @click="deleteTemplate(record)">
+                <a-button danger title="删除" @click="deleteTemplate(record)">
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
                   </template>
@@ -241,37 +241,37 @@
     <!-- 创建模板模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      title="创建 YAML 模板"
-      @ok="submitCreateForm"
-      @cancel="closeCreateModal"
       :confirmLoading="submitLoading"
-      width="900px"
       :maskClosable="false"
-      destroyOnClose
-      okText="创建"
       cancelText="取消"
       centered
+      destroyOnClose
+      okText="创建"
+      title="创建 YAML 模板"
+      width="900px"
+      @cancel="closeCreateModal"
+      @ok="submitCreateForm"
     >
       <a-form
         ref="formRef"
         :model="createFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="createFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
-        <a-form-item label="模板名称" name="name" :required="true">
+        <a-form-item :required="true" label="模板名称" name="name">
           <a-input
             v-model:value="createFormModel.name"
-            placeholder="请输入模板名称（例如：nginx-deployment-template）"
-            class="k8s-form-input"
             :maxlength="50"
+            class="k8s-form-input"
+            placeholder="请输入模板名称（例如：nginx-deployment-template）"
           />
           <div style="color: #999; font-size: 12px; margin-top: 4px">
             支持中英文、数字、下划线和连字符，用于标识和查找模板
           </div>
         </a-form-item>
 
-        <a-form-item label="YAML 内容" name="content" :required="true">
+        <a-form-item :required="true" label="YAML 内容" name="content">
           <div class="yaml-toolbar">
             <a-button
               class="yaml-toolbar-btn yaml-btn-template"
@@ -308,11 +308,11 @@
           </div>
           <a-textarea
             v-model:value="createFormModel.content"
-            placeholder="请输入 Kubernetes YAML 配置内容，或点击上方【插入模板】按钮使用默认模板"
+            :maxlength="50000"
             :rows="16"
             class="k8s-config-textarea"
+            placeholder="请输入 Kubernetes YAML 配置内容，或点击上方【插入模板】按钮使用默认模板"
             show-count
-            :maxlength="50000"
           />
         </a-form-item>
       </a-form>
@@ -321,34 +321,34 @@
     <!-- 编辑模板模态框 -->
     <a-modal
       v-model:open="isEditModalVisible"
-      title="编辑 YAML 模板"
-      @ok="submitEditForm"
-      @cancel="closeEditModal"
       :confirmLoading="submitLoading"
-      width="900px"
       :maskClosable="false"
-      destroyOnClose
-      okText="保存"
       cancelText="取消"
       centered
+      destroyOnClose
+      okText="保存"
+      title="编辑 YAML 模板"
+      width="900px"
+      @cancel="closeEditModal"
+      @ok="submitEditForm"
     >
       <a-form
         ref="editFormRef"
         :model="editFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="editFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
-        <a-form-item label="模板名称" name="name" :required="true">
+        <a-form-item :required="true" label="模板名称" name="name">
           <a-input
             v-model:value="editFormModel.name"
-            placeholder="请输入模板名称"
-            class="k8s-form-input"
             :maxlength="50"
+            class="k8s-form-input"
+            placeholder="请输入模板名称"
           />
         </a-form-item>
 
-        <a-form-item label="YAML 内容" name="content" :required="true">
+        <a-form-item :required="true" label="YAML 内容" name="content">
           <div class="yaml-toolbar">
             <a-button
               class="yaml-toolbar-btn yaml-btn-format"
@@ -371,11 +371,11 @@
           </div>
           <a-textarea
             v-model:value="editFormModel.content"
-            placeholder="请输入 Kubernetes YAML 配置内容"
+            :maxlength="50000"
             :rows="16"
             class="k8s-config-textarea"
+            placeholder="请输入 Kubernetes YAML 配置内容"
             show-count
-            :maxlength="50000"
           />
         </a-form-item>
       </a-form>
@@ -384,18 +384,18 @@
     <!-- 详情模态框 -->
     <a-modal
       v-model:open="isDetailModalVisible"
-      title="模板详情"
       :footer="null"
-      @cancel="closeDetailModal"
-      width="900px"
-      destroyOnClose
       centered
+      destroyOnClose
+      title="模板详情"
+      width="900px"
+      @cancel="closeDetailModal"
     >
       <a-spin :spinning="detailLoading">
         <div v-if="currentTemplateDetail" class="k8s-detail-content">
           <a-row :gutter="[24, 16]">
-            <a-col :xs="24" :lg="12">
-              <a-card title="基本信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="基本信息">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">模板ID:</span>
                   <span class="k8s-detail-value">{{
@@ -430,8 +430,8 @@
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="时间信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="时间信息">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">创建时间:</span>
                   <span class="k8s-detail-value">{{
@@ -450,7 +450,7 @@
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px">
             <a-col :span="24">
-              <a-card title="YAML 内容" class="k8s-detail-card" size="small">
+              <a-card class="k8s-detail-card" size="small" title="YAML 内容">
                 <pre class="yaml-content-detail">{{
                   currentTemplateDetail.content || '暂无内容'
                 }}</pre>
@@ -464,21 +464,21 @@
     <!-- YAML 查看模态框 -->
     <a-modal
       v-model:open="isYamlModalVisible"
-      :title="`查看模板: ${currentOperationTemplate?.name}`"
       :footer="null"
-      @cancel="closeYamlModal"
-      width="900px"
       :maskClosable="false"
+      :title="`查看模板: ${currentOperationTemplate?.name}`"
       destroyOnClose
+      width="900px"
+      @cancel="closeYamlModal"
     >
       <div class="yaml-view-modal">
         <div class="yaml-actions" style="margin-bottom: 16px">
           <a-space>
             <a-button
+              :disabled="!yamlFormModel.content"
+              :loading="checkLoading"
               type="primary"
               @click="() => checkTemplate(yamlFormModel.content)"
-              :loading="checkLoading"
-              :disabled="!yamlFormModel.content"
             >
               <template #icon>
                 <CheckCircleOutlined aria-hidden="true" />
@@ -509,19 +509,19 @@ import { message } from 'ant-design-vue';
 import { useTemplatePage } from './Template';
 import { formatDateTime, getRelativeTime } from '../shared/utils';
 import {
+  CheckCircleOutlined,
+  ClearOutlined,
+  CopyOutlined,
+  DatabaseOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FormatPainterOutlined,
   PlusOutlined,
   ReloadOutlined,
-  DeleteOutlined,
-  FileTextOutlined,
-  EyeOutlined,
   SearchOutlined,
-  EditOutlined,
-  CheckCircleOutlined,
-  DatabaseOutlined,
-  CopyOutlined,
-  FileAddOutlined,
-  FormatPainterOutlined,
-  ClearOutlined,
 } from '@ant-design/icons-vue';
 
 import { usePermission } from '#/utils/permission';

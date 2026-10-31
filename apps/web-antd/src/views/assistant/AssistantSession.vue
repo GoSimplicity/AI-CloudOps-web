@@ -1,15 +1,15 @@
 <template>
   <OpsPage
-    title="会话管理"
-    description="查询本人会话与服务端保存的对话；本地列表仅保存会话索引"
     class="session-container"
+    description="查询本人会话与服务端保存的对话；本地列表仅保存会话索引"
+    title="会话管理"
   >
     <!-- 页面头部 -->
     <template #actions>
       <a-button
+        :disabled="sessionHistory.length === 0"
         type="primary"
         @click="clearAllHistory"
-        :disabled="sessionHistory.length === 0"
       >
         <template #icon><DeleteOutlined /></template>
         清空历史
@@ -20,13 +20,13 @@
       <a-alert
         v-if="sessionError"
         :message="sessionError"
-        type="error"
-        show-icon
-        role="alert"
         class="session-error"
+        role="alert"
+        show-icon
+        type="error"
       />
       <!-- 会话搜索 -->
-      <a-card title="会话搜索" class="search-card">
+      <a-card class="search-card" title="会话搜索">
         <div class="search-area">
           <a-input-group compact>
             <a-input
@@ -36,9 +36,9 @@
               @pressEnter="searchSession"
             />
             <a-button
+              :loading="searching"
               type="primary"
               @click="searchSession"
-              :loading="searching"
             >
               <template #icon><SearchOutlined /></template>
               搜索
@@ -50,8 +50,8 @@
       <!-- 会话详情 -->
       <a-card
         v-if="currentSession.session_id"
-        title="会话详情"
         class="session-detail-card"
+        title="会话详情"
       >
         <a-descriptions :column="{ xs: 1, sm: 2 }" bordered>
           <a-descriptions-item label="会话ID">
@@ -93,15 +93,15 @@
 
         <a-alert
           v-if="currentSession.status === 'unknown'"
-          type="warning"
-          show-icon
           message="上次请求结果未知，请核对下方问题与已有结果；不要盲目重新执行。"
+          show-icon
+          type="warning"
         />
         <a-alert
           v-else-if="currentSession.status === 'running'"
-          type="info"
-          show-icon
           message="会话正在处理请求，请稍后刷新状态。"
+          show-icon
+          type="info"
         />
         <a-descriptions
           v-if="currentSession.active_turn_id"
@@ -134,15 +134,15 @@
 
         <div class="session-actions">
           <a-space wrap>
-            <a-button @click="refreshSession" :loading="searching">
+            <a-button :loading="searching" @click="refreshSession">
               <template #icon><ReloadOutlined /></template>
               刷新会话
             </a-button>
-            <a-button @click="addToHistory" type="dashed">
+            <a-button type="dashed" @click="addToHistory">
               <template #icon><PlusOutlined /></template>
               添加到历史
             </a-button>
-            <a-button @click="exportSession" type="default">
+            <a-button type="default" @click="exportSession">
               <template #icon><DownloadOutlined /></template>
               导出会话
             </a-button>
@@ -151,7 +151,7 @@
       </a-card>
 
       <!-- 会话历史 -->
-      <a-card title="本地会话历史" class="history-card">
+      <a-card class="history-card" title="本地会话历史">
         <div v-if="sessionHistory.length === 0" class="empty-history">
           <a-empty description="暂无会话历史记录">
             <template #image>
@@ -181,10 +181,10 @@
                 </div>
                 <div class="history-actions">
                   <a-button
-                    type="text"
-                    size="small"
-                    @click.stop="removeFromHistory(index)"
                     danger
+                    size="small"
+                    type="text"
+                    @click.stop="removeFromHistory(index)"
                   >
                     <template #icon><DeleteOutlined /></template>
                   </a-button>
@@ -210,9 +210,9 @@
       </a-card>
 
       <!-- 快速操作 -->
-      <a-card title="快速操作" class="quick-actions-card">
+      <a-card class="quick-actions-card" title="快速操作">
         <a-row :gutter="16">
-          <a-col :xs="24" :md="8">
+          <a-col :md="8" :xs="24">
             <div class="quick-action-item">
               <div class="action-icon">
                 <PlusCircleOutlined />
@@ -220,13 +220,13 @@
               <div class="action-content">
                 <div class="action-title">创建新会话</div>
                 <div class="action-desc">开始新的对话会话</div>
-                <a-button type="primary" @click="createNewSession" size="small">
+                <a-button size="small" type="primary" @click="createNewSession">
                   立即创建
                 </a-button>
               </div>
             </div>
           </a-col>
-          <a-col :xs="24" :md="8">
+          <a-col :md="8" :xs="24">
             <div class="quick-action-item">
               <div class="action-icon">
                 <FileTextOutlined />
@@ -235,17 +235,17 @@
                 <div class="action-title">批量导出</div>
                 <div class="action-desc">导出所有历史会话</div>
                 <a-button
+                  :disabled="sessionHistory.length === 0"
+                  size="small"
                   type="default"
                   @click="exportAllSessions"
-                  size="small"
-                  :disabled="sessionHistory.length === 0"
                 >
                   导出全部
                 </a-button>
               </div>
             </div>
           </a-col>
-          <a-col :xs="24" :md="8">
+          <a-col :md="8" :xs="24">
             <div class="quick-action-item">
               <div class="action-icon">
                 <BarChartOutlined />
@@ -253,7 +253,7 @@
               <div class="action-content">
                 <div class="action-title">统计分析</div>
                 <div class="action-desc">查看会话使用统计</div>
-                <a-button type="default" @click="showStatistics" size="small">
+                <a-button size="small" type="default" @click="showStatistics">
                   查看统计
                 </a-button>
               </div>
@@ -263,40 +263,40 @@
       </a-card>
 
       <!-- 统计信息 -->
-      <a-card v-if="showStats" title="本地会话统计" class="statistics-card">
+      <a-card v-if="showStats" class="statistics-card" title="本地会话统计">
         <a-row :gutter="16">
-          <a-col :xs="12" :md="6">
+          <a-col :md="6" :xs="12">
             <a-statistic
-              title="本地会话数"
               :value="sessionStats.totalSessions"
               :value-style="{ color: '#1890ff' }"
+              title="本地会话数"
             >
               <template #prefix><MessageOutlined /></template>
             </a-statistic>
           </a-col>
-          <a-col :xs="12" :md="6">
+          <a-col :md="6" :xs="12">
             <a-statistic
-              title="本地消息数"
               :value="sessionStats.totalMessages"
               :value-style="{ color: '#52c41a' }"
+              title="本地消息数"
             >
               <template #prefix><CommentOutlined /></template>
             </a-statistic>
           </a-col>
-          <a-col :xs="12" :md="6">
+          <a-col :md="6" :xs="12">
             <a-statistic
-              title="RAG模式会话"
               :value="sessionStats.ragSessions"
               :value-style="{ color: '#fa8c16' }"
+              title="RAG模式会话"
             >
               <template #prefix><DatabaseOutlined /></template>
             </a-statistic>
           </a-col>
-          <a-col :xs="12" :md="6">
+          <a-col :md="6" :xs="12">
             <a-statistic
-              title="MCP模式会话"
               :value="sessionStats.mcpSessions"
               :value-style="{ color: '#722ed1' }"
+              title="MCP模式会话"
             >
               <template #prefix><ApiOutlined /></template>
             </a-statistic>
@@ -309,7 +309,7 @@
 
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { ref, reactive, computed, watch, onBeforeUnmount } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { useRouter } from 'vue-router';
 import { useAccessStore, useUserStore } from '@vben/stores';
@@ -318,21 +318,21 @@ import {
   createAssistantAccountScope,
 } from '#/utils/assistant-account-scope';
 import {
-  SearchOutlined,
-  DeleteOutlined,
-  ReloadOutlined,
-  PlusOutlined,
-  DownloadOutlined,
-  HistoryOutlined,
-  ClockCircleOutlined,
-  MessageOutlined,
-  CalendarOutlined,
-  PlusCircleOutlined,
-  FileTextOutlined,
+  ApiOutlined,
   BarChartOutlined,
+  CalendarOutlined,
+  ClockCircleOutlined,
   CommentOutlined,
   DatabaseOutlined,
-  ApiOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  FileTextOutlined,
+  HistoryOutlined,
+  MessageOutlined,
+  PlusCircleOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
 } from '@ant-design/icons-vue';
 import {
   getSessionInfo,

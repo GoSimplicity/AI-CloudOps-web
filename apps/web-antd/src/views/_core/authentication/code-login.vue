@@ -16,7 +16,6 @@ const loading = ref(false);
  * @param values 登录表单数据
  */
 async function handleLogin(values: LoginCodeParams) {
-  // eslint-disable-next-line no-console
   void values;
 }
 </script>

@@ -1,44 +1,44 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  PlusOutlined,
-  FileOutlined,
   CheckCircleOutlined,
-  EditOutlined,
-  StopOutlined,
   DownOutlined,
+  EditOutlined,
+  FileOutlined,
+  PlusOutlined,
+  StopOutlined,
 } from '@ant-design/icons-vue';
 
 import {
-  type WorkorderTemplateItem,
-  type CreateWorkorderTemplateReq,
-  type UpdateWorkorderTemplateReq,
-  type DeleteWorkorderTemplateReq,
-  type ListWorkorderTemplateReq,
-  type DetailWorkorderTemplateReq,
-  TemplateStatus,
-  listWorkorderTemplate,
-  detailWorkorderTemplate,
   createWorkorderTemplate,
-  updateWorkorderTemplate,
+  type CreateWorkorderTemplateReq,
   deleteWorkorderTemplate,
+  type DeleteWorkorderTemplateReq,
+  detailWorkorderTemplate,
+  type DetailWorkorderTemplateReq,
+  listWorkorderTemplate,
+  type ListWorkorderTemplateReq,
+  TemplateStatus,
+  updateWorkorderTemplate,
+  type UpdateWorkorderTemplateReq,
+  type WorkorderTemplateItem,
 } from '#/api/core/workorder/workorder_template';
 
 import {
-  type WorkorderCategoryItem,
   listWorkorderCategory,
+  type WorkorderCategoryItem,
 } from '#/api/core/workorder/workorder_category';
 
 import {
-  type WorkorderProcessItem,
   listWorkorderProcess,
+  type WorkorderProcessItem,
 } from '#/api/core/workorder/workorder_process';
 
 import {
-  type WorkorderFormDesignItem,
   listWorkorderFormDesign,
+  type WorkorderFormDesignItem,
 } from '#/api/core/workorder/workorder_form_design';
 
 import { usePermission } from '#/utils/permission';
@@ -1104,7 +1104,7 @@ onMounted(async () => {
 <template>
   <OpsPage title="模板管理">
     <template #actions>
-      <a-button type="primary" @click="handleCreateTemplate" class="btn-create">
+      <a-button class="btn-create" type="primary" @click="handleCreateTemplate">
         <template #icon>
           <PlusOutlined />
         </template>
@@ -1115,15 +1115,15 @@ onMounted(async () => {
       <div class="search-filters">
         <a-input-search
           v-model:value="searchQuery"
-          placeholder="搜索模板名称..."
-          class="search-input"
-          @search="handleSearch"
           allow-clear
+          class="search-input"
+          placeholder="搜索模板名称..."
+          @search="handleSearch"
         />
         <a-select
           v-model:value="statusFilter"
-          placeholder="状态"
           class="status-filter"
+          placeholder="状态"
           @change="handleStatusChange"
         >
           <a-select-option :value="null">全部状态</a-select-option>
@@ -1132,8 +1132,8 @@ onMounted(async () => {
         </a-select>
         <a-select
           v-model:value="categoryFilter"
-          placeholder="分类"
           class="category-filter"
+          placeholder="分类"
           @change="handleCategoryChange"
         >
           <a-select-option :value="null">全部分类</a-select-option>
@@ -1151,12 +1151,12 @@ onMounted(async () => {
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="16">
-          <a-col :xs="12" :sm="12" :md="6">
+          <a-col :md="6" :sm="12" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="总模板数"
                 :value="stats.total"
                 :value-style="{ color: '#3f8600' }"
+                title="总模板数"
               >
                 <template #prefix>
                   <FileOutlined />
@@ -1164,12 +1164,12 @@ onMounted(async () => {
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="12" :md="6">
+          <a-col :md="6" :sm="12" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页启用"
                 :value="stats.enabled"
                 :value-style="{ color: '#52c41a' }"
+                title="本页启用"
               >
                 <template #prefix>
                   <CheckCircleOutlined />
@@ -1177,12 +1177,12 @@ onMounted(async () => {
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="12" :md="6">
+          <a-col :md="6" :sm="12" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页禁用"
                 :value="stats.disabled"
                 :value-style="{ color: '#cf1322' }"
+                title="本页禁用"
               >
                 <template #prefix>
                   <StopOutlined />
@@ -1190,12 +1190,12 @@ onMounted(async () => {
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="12" :md="6">
+          <a-col :md="6" :sm="12" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页本月新增"
                 :value="stats.thisMonth"
                 :value-style="{ color: '#faad14' }"
+                title="本页本月新增"
               >
                 <template #prefix>
                   <EditOutlined />
@@ -1207,7 +1207,7 @@ onMounted(async () => {
       </div>
     </template>
 
-    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button size="small" @click="loadTemplates">重试</a-button>
       </template>
@@ -1216,13 +1216,13 @@ onMounted(async () => {
     <div class="table-container">
       <a-card>
         <a-table
-          :data-source="templateList"
           :columns="columns"
-          :pagination="paginationConfig"
+          :data-source="templateList"
           :loading="loading"
-          row-key="id"
-          bordered
+          :pagination="paginationConfig"
           :scroll="{ x: 1300 }"
+          bordered
+          row-key="id"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -1291,15 +1291,15 @@ onMounted(async () => {
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleViewTemplate(record)"
                 >
                   查看
                 </a-button>
                 <a-button
-                  type="default"
                   size="small"
+                  type="default"
                   @click="handleEditTemplate(record)"
                 >
                   编辑
@@ -1325,18 +1325,18 @@ onMounted(async () => {
 
     <!-- 模板创建/编辑对话框 -->
     <a-modal
+      :confirm-loading="loading"
+      :destroy-on-close="true"
       :open="templateDialog.visible"
       :title="templateDialog.isEdit ? '编辑模板' : '创建模板'"
       :width="formDialogWidth"
-      @ok="saveTemplate"
+      class="responsive-modal template-form-modal"
       @cancel="
         () => {
           templateDialog.visible = false;
         }
       "
-      :destroy-on-close="true"
-      class="responsive-modal template-form-modal"
-      :confirm-loading="loading"
+      @ok="saveTemplate"
     >
       <a-form
         ref="formRef"
@@ -1371,11 +1371,8 @@ onMounted(async () => {
             <a-form-item label="分类" name="category_id">
               <a-select
                 v-model:value="templateDialog.form.category_id"
-                placeholder="请选择分类"
-                style="width: 100%"
-                show-search
                 :filter-option="false"
-                option-label-prop="children"
+                :loading="categorySelectorLoading"
                 :not-found-content="
                   categorySelectorLoading
                     ? undefined
@@ -1383,11 +1380,14 @@ onMounted(async () => {
                       ? '无搜索结果'
                       : '无数据'
                 "
-                @search="handleCategorySearch"
+                allow-clear
+                option-label-prop="children"
+                placeholder="请选择分类"
+                show-search
+                style="width: 100%"
                 @dropdown-visible-change="handleCategoryDropdownChange"
                 @popup-scroll="handleCategoryScroll"
-                allow-clear
-                :loading="categorySelectorLoading"
+                @search="handleCategorySearch"
               >
                 <template #notFoundContent>
                   <div v-if="categorySelectorLoading" class="selector-loading">
@@ -1415,18 +1415,18 @@ onMounted(async () => {
                 <a-select-option
                   v-if="categoryPagination.hasMore"
                   :value="'__load_more__'"
-                  disabled
                   class="load-more-option"
+                  disabled
                 >
                   <div
                     class="load-more-content"
                     @click.stop="loadMoreCategories"
                   >
                     <a-button
-                      type="link"
-                      size="small"
                       :loading="categorySelectorLoading"
+                      size="small"
                       style="padding: 0; height: auto; font-size: 12px"
+                      type="link"
                     >
                       <template v-if="!categorySelectorLoading">
                         加载更多 ({{ categoryPagination.current }}/{{
@@ -1444,11 +1444,8 @@ onMounted(async () => {
             <a-form-item label="关联流程" name="process_id">
               <a-select
                 v-model:value="templateDialog.form.process_id"
-                placeholder="请选择流程"
-                style="width: 100%"
-                show-search
                 :filter-option="false"
-                option-label-prop="children"
+                :loading="processSelectorLoading"
                 :not-found-content="
                   processSelectorLoading
                     ? undefined
@@ -1456,11 +1453,14 @@ onMounted(async () => {
                       ? '无搜索结果'
                       : '无数据'
                 "
-                @search="handleProcessSearch"
+                allow-clear
+                option-label-prop="children"
+                placeholder="请选择流程"
+                show-search
+                style="width: 100%"
                 @dropdown-visible-change="handleProcessDropdownChange"
                 @popup-scroll="handleProcessScroll"
-                allow-clear
-                :loading="processSelectorLoading"
+                @search="handleProcessSearch"
               >
                 <template #notFoundContent>
                   <div v-if="processSelectorLoading" class="selector-loading">
@@ -1488,18 +1488,18 @@ onMounted(async () => {
                 <a-select-option
                   v-if="processPagination.hasMore"
                   :value="'__load_more_process__'"
-                  disabled
                   class="load-more-option"
+                  disabled
                 >
                   <div
                     class="load-more-content"
                     @click.stop="loadMoreProcesses"
                   >
                     <a-button
-                      type="link"
-                      size="small"
                       :loading="processSelectorLoading"
+                      size="small"
                       style="padding: 0; height: auto; font-size: 12px"
+                      type="link"
                     >
                       <template v-if="!processSelectorLoading">
                         加载更多 ({{ processPagination.current }}/{{
@@ -1517,11 +1517,8 @@ onMounted(async () => {
             <a-form-item label="关联表单" name="form_design_id">
               <a-select
                 v-model:value="templateDialog.form.form_design_id"
-                placeholder="请选择表单"
-                style="width: 100%"
-                show-search
                 :filter-option="false"
-                option-label-prop="children"
+                :loading="formSelectorLoading"
                 :not-found-content="
                   formSelectorLoading
                     ? undefined
@@ -1529,11 +1526,14 @@ onMounted(async () => {
                       ? '无搜索结果'
                       : '无数据'
                 "
-                @search="handleFormSearch"
+                allow-clear
+                option-label-prop="children"
+                placeholder="请选择表单"
+                show-search
+                style="width: 100%"
                 @dropdown-visible-change="handleFormDropdownChange"
                 @popup-scroll="handleFormScroll"
-                allow-clear
-                :loading="formSelectorLoading"
+                @search="handleFormSearch"
               >
                 <template #notFoundContent>
                   <div v-if="formSelectorLoading" class="selector-loading">
@@ -1561,15 +1561,15 @@ onMounted(async () => {
                 <a-select-option
                   v-if="formPagination.hasMore"
                   :value="'__load_more_form__'"
-                  disabled
                   class="load-more-option"
+                  disabled
                 >
                   <div class="load-more-content" @click.stop="loadMoreForms">
                     <a-button
-                      type="link"
-                      size="small"
                       :loading="formSelectorLoading"
+                      size="small"
                       style="padding: 0; height: auto; font-size: 12px"
+                      type="link"
                     >
                       <template v-if="!formSelectorLoading">
                         加载更多 ({{ formPagination.current }}/{{
@@ -1588,11 +1588,11 @@ onMounted(async () => {
         <a-form-item label="标签" name="tags">
           <a-select
             v-model:value="templateDialog.form.tags"
+            :max-tag-count="10"
+            allow-clear
             mode="tags"
             placeholder="输入标签按回车添加"
             style="width: 100%"
-            :max-tag-count="10"
-            allow-clear
           />
         </a-form-item>
 
@@ -1608,16 +1608,16 @@ onMounted(async () => {
 
     <!-- 详情对话框 -->
     <a-modal
-      :open="detailDialog.visible"
-      title="模板详情"
-      :width="previewDialogWidth"
       :footer="null"
+      :open="detailDialog.visible"
+      :width="previewDialogWidth"
+      class="detail-dialog responsive-modal"
+      title="模板详情"
       @cancel="
         () => {
           detailDialog.visible = false;
         }
       "
-      class="detail-dialog responsive-modal"
     >
       <div v-if="detailDialog.template" class="template-details">
         <div class="detail-header">
@@ -1627,7 +1627,7 @@ onMounted(async () => {
           </a-tag>
         </div>
 
-        <a-descriptions bordered :column="2" :labelStyle="{ width: '120px' }">
+        <a-descriptions :column="2" :labelStyle="{ width: '120px' }" bordered>
           <a-descriptions-item label="模板ID">
             {{ detailDialog.template.id }}
           </a-descriptions-item>
@@ -1649,10 +1649,10 @@ onMounted(async () => {
           <a-descriptions-item label="关联流程">
             {{ detailDialog.template.process?.name || '未关联' }}
           </a-descriptions-item>
-          <a-descriptions-item label="关联表单" :span="2">
+          <a-descriptions-item :span="2" label="关联表单">
             {{ detailDialog.template.form_design?.name || '未关联' }}
           </a-descriptions-item>
-          <a-descriptions-item label="标签" :span="2">
+          <a-descriptions-item :span="2" label="标签">
             <template
               v-if="
                 detailDialog.template.tags && detailDialog.template.tags.length
@@ -1668,7 +1668,7 @@ onMounted(async () => {
             </template>
             <span v-else class="text-gray">无标签</span>
           </a-descriptions-item>
-          <a-descriptions-item label="描述" :span="2">
+          <a-descriptions-item :span="2" label="描述">
             {{ detailDialog.template.description || '无描述' }}
           </a-descriptions-item>
         </a-descriptions>

@@ -2,9 +2,9 @@
 import { computed, ref, watch } from 'vue';
 
 import {
-  runPredictionBacktest,
   type ForecastObservation,
   type PredictionBacktestResult,
+  runPredictionBacktest,
 } from '#/api/core/aiops/prediction-backtest';
 import { usePermission } from '#/utils/permission';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
@@ -129,15 +129,15 @@ async function run(): Promise<void> {
 </script>
 
 <template>
-  <a-card title="预测回测与误差校准" class="backtest-card">
+  <a-card class="backtest-card" title="预测回测与误差校准">
     <p>
       使用同一指标、模型和预测跨度的历史预测与实际观测。记录仅用于本次计算，不会自动修改模型准确率。
     </p>
     <a-alert
       v-if="!canRun"
-      type="info"
-      show-icon
       message="当前账户没有回测权限"
+      show-icon
+      type="info"
     />
     <template v-else>
       <p>
@@ -146,11 +146,11 @@ async function run(): Promise<void> {
       </p>
       <a-textarea
         v-model:value="input"
-        :rows="6"
+        :disabled="loading"
         :maxlength="1000000"
+        :rows="6"
         aria-label="回测记录 JSON"
         placeholder="粘贴已记录的预测与观测 JSON 数组"
-        :disabled="loading"
       />
       <div class="backtest-actions">
         <a-button
@@ -165,11 +165,11 @@ async function run(): Promise<void> {
       <a-alert
         v-if="error"
         :message="error"
-        type="error"
-        show-icon
         role="alert"
+        show-icon
+        type="error"
       />
-      <div v-if="result" class="backtest-result" aria-live="polite">
+      <div v-if="result" aria-live="polite" class="backtest-result">
         <h3>回测结果</h3>
         <p>
           样本 {{ result.sample_count }} 条，预测跨度

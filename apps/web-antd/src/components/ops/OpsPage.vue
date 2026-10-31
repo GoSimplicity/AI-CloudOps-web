@@ -3,7 +3,7 @@ defineProps<{ title: string; description?: string }>();
 </script>
 
 <template>
-  <section class="ops-page" :aria-label="title">
+  <section :aria-label="title" class="ops-page">
     <header class="ops-page__header">
       <div class="ops-page__heading">
         <h1>{{ title }}</h1>

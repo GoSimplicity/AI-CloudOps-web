@@ -1,5 +1,5 @@
 <template>
-  <section class="prediction-provenance" aria-label="预测来源和降级状态">
+  <section aria-label="预测来源和降级状态" class="prediction-provenance">
     <div>
       预测方式：<strong>{{ methodLabel }}</strong>
     </div>

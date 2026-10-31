@@ -1,9 +1,9 @@
 <template>
-  <section class="collection-summary" aria-label="分析状态和数据采集情况">
+  <section aria-label="分析状态和数据采集情况" class="collection-summary">
     <a-alert
-      :type="statusInfo.type"
-      :message="statusInfo.label"
       :description="statusInfo.description"
+      :message="statusInfo.label"
+      :type="statusInfo.type"
       show-icon
     />
     <div class="coverage">

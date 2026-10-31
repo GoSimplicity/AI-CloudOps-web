@@ -1,17 +1,17 @@
 <template>
   <OpsPage
-    title="根因分析"
-    description="明确发起分析后汇总观测与根因证据"
     class="rca-analysis"
+    description="明确发起分析后汇总观测与根因证据"
+    title="根因分析"
   >
     <!-- 页面头部 -->
     <template #actions>
       <a-button
-        type="primary"
-        size="large"
-        @click="startAnalysis"
-        :loading="analyzing"
         :disabled="!isFormValid || analyzing"
+        :loading="analyzing"
+        size="large"
+        type="primary"
+        @click="startAnalysis"
       >
         {{ analyzing ? '分析中...' : '开始分析' }}
       </a-button>
@@ -19,29 +19,29 @@
     <a-alert
       v-if="analysisError"
       :message="analysisError"
-      type="error"
-      show-icon
       role="alert"
+      show-icon
+      type="error"
     />
     <a-alert
       v-if="metricsError"
       :message="metricsError"
-      type="warning"
-      show-icon
       role="alert"
+      show-icon
+      type="warning"
     />
 
     <a-row :gutter="[24, 24]">
       <!-- 左侧配置面板 -->
-      <a-col :xs="24" :lg="7">
-        <a-card title="分析配置" class="config-card">
+      <a-col :lg="7" :xs="24">
+        <a-card class="config-card" title="分析配置">
           <a-form :model="formData" layout="vertical">
             <a-form-item label="Kubernetes命名空间" name="namespace" required>
               <a-input
                 v-model:value="formData.namespace"
                 :disabled="analyzing"
-                placeholder="输入要分析的K8s命名空间"
                 :status="!formData.namespace ? 'warning' : ''"
+                placeholder="输入要分析的K8s命名空间"
               />
               <div v-if="!formData.namespace" class="form-error">
                 请输入Kubernetes命名空间
@@ -52,9 +52,9 @@
               <a-slider
                 v-model:value="formData.timeWindowHours"
                 :disabled="analyzing"
-                :min="0.5"
-                :max="24"
                 :marks="timeMarks"
+                :max="24"
+                :min="0.5"
                 :step="0.5"
                 :tipFormatter="(value: number) => `${value}小时`"
                 class="time-window-slider"
@@ -65,20 +65,20 @@
               <a-select
                 v-model:value="formData.metrics"
                 :disabled="analyzing"
-                mode="multiple"
-                placeholder="选择要分析的指标"
+                :filter-option="filterMetrics"
                 :loading="loadingMetrics"
                 :options="availableMetrics"
-                show-search
-                :filter-option="filterMetrics"
-                max-tag-count="responsive"
                 allow-clear
+                max-tag-count="responsive"
+                mode="multiple"
+                placeholder="选择要分析的指标"
+                show-search
               />
               <a-button
-                size="small"
-                @click="loadAvailableMetrics"
                 :loading="loadingMetrics"
+                size="small"
                 style="margin-top: 8px"
+                @click="loadAvailableMetrics"
               >
                 刷新指标
               </a-button>
@@ -87,10 +87,10 @@
         </a-card>
 
         <!-- 分析状态卡片 -->
-        <a-card v-if="analysisResult" title="分析概览" class="status-card">
+        <a-card v-if="analysisResult" class="status-card" title="分析概览">
           <CollectionSummary
-            :status="analysisResult.status"
             :collection="analysisResult.collection"
+            :status="analysisResult.status"
           />
           <a-statistic
             title="分析ID"
@@ -137,7 +137,7 @@
       </a-col>
 
       <!-- 右侧结果面板 -->
-      <a-col :xs="24" :lg="17">
+      <a-col :lg="17" :xs="24">
         <!-- 分析中的加载状态 -->
         <a-card v-if="analyzing" class="loading-card">
           <div class="loading-container">
@@ -153,13 +153,13 @@
             (analysisResult.status === 'completed' ||
               analysisResult.status === 'degraded')
           "
-          class="result-card"
           :body-style="{ padding: 0 }"
+          class="result-card"
         >
           <a-tabs
             v-model:activeKey="activeResultTab"
-            @change="onResultTabChange"
             class="result-tabs"
+            @change="onResultTabChange"
           >
             <!-- 根因分析标签页 -->
             <a-tab-pane key="root-causes" tab="根因分析">
@@ -241,7 +241,7 @@
                               :key="idx"
                               class="event-item"
                             >
-                              <a-tag color="orange" class="event-tag">
+                              <a-tag class="event-tag" color="orange">
                                 {{ event.reason }}
                               </a-tag>
                               <span class="event-count"
@@ -294,9 +294,9 @@
             <a-tab-pane key="anomalies" tab="异常检测">
               <div class="tab-content">
                 <!-- 异常统计 -->
-                <div class="anomaly-stats" v-if="hasAnomalies">
+                <div v-if="hasAnomalies" class="anomaly-stats">
                   <a-row :gutter="[16, 16]">
-                    <a-col :xs="12" :sm="6">
+                    <a-col :sm="6" :xs="12">
                       <div class="stat-card">
                         <div class="stat-value">
                           {{ getCriticalEventsCount() }}
@@ -304,7 +304,7 @@
                         <div class="stat-label">关键事件</div>
                       </div>
                     </a-col>
-                    <a-col :xs="12" :sm="6">
+                    <a-col :sm="6" :xs="12">
                       <div class="stat-card">
                         <div class="stat-value">
                           {{ getEventClustersCount() }}
@@ -312,13 +312,13 @@
                         <div class="stat-label">事件集群</div>
                       </div>
                     </a-col>
-                    <a-col :xs="12" :sm="6">
+                    <a-col :sm="6" :xs="12">
                       <div class="stat-card">
                         <div class="stat-value">{{ getErrorTypesCount() }}</div>
                         <div class="stat-label">错误类型</div>
                       </div>
                     </a-col>
-                    <a-col :xs="12" :sm="6">
+                    <a-col :sm="6" :xs="12">
                       <div class="stat-card">
                         <div class="stat-value">{{ getTotalErrorCount() }}</div>
                         <div class="stat-label">错误总数</div>
@@ -501,8 +501,8 @@
                     </div>
                     <div class="rec-content">{{ rec }}</div>
                     <div class="rec-actions">
-                      <a-button type="link" size="small">查看详情</a-button>
-                      <a-button type="link" size="small">标记完成</a-button>
+                      <a-button size="small" type="link">查看详情</a-button>
+                      <a-button size="small" type="link">标记完成</a-button>
                     </div>
                   </div>
                 </div>
@@ -534,15 +534,15 @@ import OpsPage from '#/components/ops/OpsPage.vue';
 import CollectionSummary from './CollectionSummary.vue';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
-import { ref, reactive, computed, onMounted, nextTick, onUnmounted } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue';
 // 按需引入echarts，减少打包体积
 import * as echarts from 'echarts/core';
 import { BarChart, PieChart } from 'echarts/charts';
 import {
   GridComponent,
-  TooltipComponent,
   LegendComponent,
   TitleComponent,
+  TooltipComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
@@ -558,21 +558,21 @@ echarts.use([
 ]);
 import { message } from 'ant-design-vue';
 import {
-  PartitionOutlined,
-  BulbOutlined,
-  NodeIndexOutlined,
   AlertOutlined,
-  ExclamationCircleOutlined,
-  CheckCircleOutlined,
-  InfoCircleOutlined,
-  FileTextOutlined,
   BugOutlined,
+  BulbOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  FileTextOutlined,
+  InfoCircleOutlined,
+  NodeIndexOutlined,
+  PartitionOutlined,
 } from '@ant-design/icons-vue';
 import {
   analyzeRootCause,
   getAllPrometheusMetrics,
-  type RCAAnalyzeRequest,
   type RCAAnalysisResponse,
+  type RCAAnalyzeRequest,
 } from '../../api/core/aiops/rca';
 
 // 响应式数据

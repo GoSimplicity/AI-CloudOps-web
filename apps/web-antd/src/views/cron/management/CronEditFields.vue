@@ -2,8 +2,8 @@
 import { PlusOutlined } from '@ant-design/icons-vue';
 import {
   CronJobType,
-  type UpdateCronJobReq,
   type TreeLocalResource,
+  type UpdateCronJobReq,
 } from '#/api/core/cron/cron';
 import CronKeyValueFields from './CronKeyValueFields.vue';
 
@@ -32,12 +32,12 @@ function removeArg(index: number) {
 
 <template>
   <template v-if="model.job_type === CronJobType.COMMAND">
-    <a-form-item label="执行命令" name="command" has-feedback>
+    <a-form-item has-feedback label="执行命令" name="command">
       <a-textarea
+        :maxlength="1000"
+        :rows="3"
         :value="model.command"
         placeholder="请输入要执行的命令"
-        :rows="3"
-        :maxlength="1000"
         @update:value="setField('command', $event)"
       />
     </a-form-item>
@@ -55,17 +55,17 @@ function removeArg(index: number) {
               @update:value="setArg(index, $event)"
             />
             <a-button
-              type="primary"
               danger
               size="small"
+              type="primary"
               @click="removeArg(index)"
             >
               删除
             </a-button>
           </div>
           <a-button
-            type="dashed"
             style="width: 100%; margin-top: 8px"
+            type="dashed"
             @click="setField('args', [...(model.args ?? []), ''])"
           >
             <template #icon><PlusOutlined /></template>添加参数
@@ -75,25 +75,25 @@ function removeArg(index: number) {
     </a-form-item>
     <a-form-item label="工作目录" name="work_dir">
       <a-input
+        :maxlength="255"
         :value="model.work_dir"
         placeholder="命令执行的工作目录，留空使用默认目录"
-        :maxlength="255"
         @update:value="setField('work_dir', $event)"
       />
     </a-form-item>
     <a-form-item label="环境变量" name="environment">
       <CronKeyValueFields
         :items="model.environment ?? []"
+        add-text="添加环境变量"
         key-placeholder="变量名"
         value-placeholder="变量值"
-        add-text="添加环境变量"
         @change="setField('environment', $event)"
       />
     </a-form-item>
   </template>
 
   <template v-else-if="model.job_type === CronJobType.HTTP">
-    <a-form-item label="请求方法" name="http_method" has-feedback>
+    <a-form-item has-feedback label="请求方法" name="http_method">
       <a-select
         :value="model.http_method"
         placeholder="请选择HTTP方法"
@@ -108,29 +108,29 @@ function removeArg(index: number) {
         </a-select-option>
       </a-select>
     </a-form-item>
-    <a-form-item label="请求URL" name="http_url" has-feedback>
+    <a-form-item has-feedback label="请求URL" name="http_url">
       <a-input
+        :maxlength="500"
         :value="model.http_url"
         placeholder="https://example.com/api/endpoint"
-        :maxlength="500"
         @update:value="setField('http_url', $event)"
       />
     </a-form-item>
     <a-form-item label="请求头" name="http_headers">
       <CronKeyValueFields
         :items="model.http_headers ?? []"
+        add-text="添加请求头"
         key-placeholder="Header名称"
         value-placeholder="Header值"
-        add-text="添加请求头"
         @change="setField('http_headers', $event)"
       />
     </a-form-item>
     <a-form-item label="请求体" name="http_body">
       <a-textarea
+        :maxlength="5000"
+        :rows="4"
         :value="model.http_body"
         placeholder="POST/PUT请求的数据体"
-        :rows="4"
-        :maxlength="5000"
         show-count
         @update:value="setField('http_body', $event)"
       />
@@ -138,7 +138,7 @@ function removeArg(index: number) {
   </template>
 
   <template v-else-if="model.job_type === CronJobType.SCRIPT">
-    <a-form-item label="脚本类型" name="script_type" has-feedback>
+    <a-form-item has-feedback label="脚本类型" name="script_type">
       <a-select
         :value="model.script_type"
         placeholder="请选择脚本类型"
@@ -150,29 +150,29 @@ function removeArg(index: number) {
         <a-select-option value="powershell">PowerShell</a-select-option>
       </a-select>
     </a-form-item>
-    <a-form-item label="脚本内容" name="script_content" has-feedback>
+    <a-form-item has-feedback label="脚本内容" name="script_content">
       <a-textarea
-        :value="model.script_content"
-        placeholder="请输入脚本内容"
-        :rows="10"
         :maxlength="10000"
-        show-count
+        :rows="10"
+        :value="model.script_content"
         class="k8s-config-textarea"
+        placeholder="请输入脚本内容"
+        show-count
         @update:value="setField('script_content', $event)"
       />
     </a-form-item>
   </template>
 
   <template v-else-if="model.job_type === CronJobType.SSH">
-    <a-form-item label="SSH资源" name="ssh_resource_id" has-feedback>
+    <a-form-item has-feedback label="SSH资源" name="ssh_resource_id">
       <a-select
+        :filter-option="false"
+        :loading="loading"
         :value="model.ssh_resource_id"
         placeholder="请选择SSH资源"
-        :loading="loading"
         show-search
-        :filter-option="false"
-        @search="emit('search', $event)"
         @dropdown-visible-change="$event && emit('openResources')"
+        @search="emit('search', $event)"
         @update:value="setField('ssh_resource_id', $event)"
       >
         <a-select-option
@@ -184,31 +184,31 @@ function removeArg(index: number) {
         </a-select-option>
       </a-select>
     </a-form-item>
-    <a-form-item label="远程命令" name="ssh_command" has-feedback>
+    <a-form-item has-feedback label="远程命令" name="ssh_command">
       <a-textarea
-        :value="model.ssh_command"
-        placeholder="请输入要在远程服务器执行的命令"
-        :rows="4"
         :maxlength="2000"
-        show-count
+        :rows="4"
+        :value="model.ssh_command"
         class="k8s-config-textarea"
+        placeholder="请输入要在远程服务器执行的命令"
+        show-count
         @update:value="setField('ssh_command', $event)"
       />
     </a-form-item>
     <a-form-item label="工作目录" name="ssh_work_dir">
       <a-input
+        :maxlength="500"
         :value="model.ssh_work_dir"
         placeholder="远程命令执行的工作目录，留空使用默认目录"
-        :maxlength="500"
         @update:value="setField('ssh_work_dir', $event)"
       />
     </a-form-item>
     <a-form-item label="环境变量" name="ssh_environment">
       <CronKeyValueFields
         :items="model.ssh_environment ?? []"
+        add-text="添加环境变量"
         key-placeholder="变量名"
         value-placeholder="变量值"
-        add-text="添加环境变量"
         @change="setField('ssh_environment', $event)"
       />
     </a-form-item>

@@ -1,26 +1,26 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { downloadCsv } from '#/utils/export-csv';
-import { ref, reactive, onMounted, computed } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 
 import {
-  listAuditLogsApi,
-  getAuditLogDetailApi,
-  searchAuditLogsApi,
-  getAuditStatisticsApi,
-  getAuditTypesApi,
-  deleteAuditLogApi,
-  batchDeleteLogsApi,
+  type AdvancedSearchOptions,
   type AuditLog,
   type AuditStatistics,
   type AuditTypeInfo,
+  batchDeleteLogsApi,
+  deleteAuditLogApi,
+  getAuditLogDetailApi,
+  getAuditStatisticsApi,
+  getAuditTypesApi,
+  listAuditLogsApi,
   type ListAuditLogsRequest,
+  searchAuditLogsApi,
   type SearchAuditLogsRequest,
-  type AdvancedSearchOptions,
 } from '#/api/core/system/audit';
 
 import { getUserDetailApi } from '#/api/core/system/user';
@@ -520,11 +520,11 @@ onMounted(() => {
         <div class="search-left">
           <a-input
             v-model:value="searchParams.search"
-            placeholder="搜索关键词、Trace ID..."
-            aria-label="搜索审计日志"
             allowClear
-            @pressEnter="handleSearch"
+            aria-label="搜索审计日志"
             class="search-input"
+            placeholder="搜索关键词、Trace ID..."
+            @pressEnter="handleSearch"
           >
             <template #prefix>
               <Icon icon="material-symbols:search" />
@@ -533,9 +533,9 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.operation_type"
-            placeholder="操作类型"
             allowClear
             class="status-select"
+            placeholder="操作类型"
           >
             <a-select-option
               v-for="type in auditTypes"
@@ -548,9 +548,9 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.target_type"
-            placeholder="目标类型"
             allowClear
             class="type-select"
+            placeholder="目标类型"
           >
             <a-select-option
               v-for="type in getUniqueTargetTypes"
@@ -563,9 +563,9 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.status_code"
-            placeholder="状态码"
             allowClear
             class="type-select"
+            placeholder="状态码"
           >
             <a-select-option :value="200">200 - 成功</a-select-option>
             <a-select-option :value="400">400 - 客户端错误</a-select-option>
@@ -577,18 +577,18 @@ onMounted(() => {
 
           <a-date-picker
             v-model:value="startTime"
-            show-time
-            placeholder="开始时间"
-            format="YYYY-MM-DD HH:mm:ss"
             class="date-picker"
+            format="YYYY-MM-DD HH:mm:ss"
+            placeholder="开始时间"
+            show-time
           />
 
           <a-date-picker
             v-model:value="endTime"
-            show-time
-            placeholder="结束时间"
-            format="YYYY-MM-DD HH:mm:ss"
             class="date-picker"
+            format="YYYY-MM-DD HH:mm:ss"
+            placeholder="结束时间"
+            show-time
           />
         </div>
 
@@ -603,18 +603,18 @@ onMounted(() => {
     <!-- 审计日志表格 -->
     <div class="table-container">
       <a-table
-        :scroll="{ x: 'max-content' }"
         :columns="tableColumns"
         :data-source="auditLogList"
-        :pagination="paginationConfig"
         :loading="loading"
-        row-key="id"
-        size="middle"
-        @change="handleTableChange"
+        :pagination="paginationConfig"
         :row-selection="{
           selectedRowKeys: selectedRowKeys,
           onChange: onSelectChange,
         }"
+        :scroll="{ x: 'max-content' }"
+        row-key="id"
+        size="middle"
+        @change="handleTableChange"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'time'">
@@ -664,7 +664,7 @@ onMounted(() => {
 
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
-              <a-button type="text" size="small" @click="handleView(record)">
+              <a-button size="small" type="text" @click="handleView(record)">
                 查看
               </a-button>
               <a-popconfirm
@@ -672,7 +672,7 @@ onMounted(() => {
                 title="确定要删除吗？"
                 @confirm="handleDelete(record)"
               >
-                <a-button type="text" size="small" danger>删除</a-button>
+                <a-button danger size="small" type="text">删除</a-button>
               </a-popconfirm>
             </div>
           </template>
@@ -683,9 +683,9 @@ onMounted(() => {
     <!-- 查看审计日志详情 -->
     <a-modal
       v-model:open="viewModalVisible"
+      :footer="null"
       title="审计日志详情"
       width="900px"
-      :footer="null"
     >
       <div v-if="viewLogData" class="log-detail">
         <div class="detail-section">

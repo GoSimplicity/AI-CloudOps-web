@@ -23,7 +23,7 @@ const { can } = usePermission();
 // SEC-25/26 规则 4：逐项「确认此项」+ 批量「全部确认」；后端没有拒绝接口，不提供拒绝按钮
 </script>
 <template>
-  <section class="confirm-panel" aria-label="原计划动作审批">
+  <section aria-label="原计划动作审批" class="confirm-panel">
     <div class="confirm-panel-header">
       <strong>待明确审批的原计划动作</strong
       ><a-tag color="orange">{{ actions.length }}</a-tag>
@@ -34,12 +34,12 @@ const { can } = usePermission();
     >
       审批有效期至 {{ new Date(expiresAt).toLocaleString() }}
     </p>
-    <a-alert v-if="issue" :message="issue" type="warning" show-icon />
+    <a-alert v-if="issue" :message="issue" show-icon type="warning" />
     <a-alert
       v-else-if="!actions.length"
       message="当前阻断动作的资源、权限或命名空间硬限制未满足，不能通过审批放行"
-      type="warning"
       show-icon
+      type="warning"
     />
     <div class="confirm-action-list">
       <label

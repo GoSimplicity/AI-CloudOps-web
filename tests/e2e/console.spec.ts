@@ -1,5 +1,5 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
-import { readFileSync, readdirSync } from 'node:fs';
+import { expect, type Locator, type Page, test } from '@playwright/test';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ts from 'typescript';
 

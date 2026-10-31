@@ -2,7 +2,7 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { message } from 'ant-design-vue';
-import { AxiosError, type AxiosAdapter } from 'axios';
+import { type AxiosAdapter, AxiosError } from 'axios';
 import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 

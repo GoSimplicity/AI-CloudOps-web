@@ -2,7 +2,7 @@
   <OpsPage title="工单分类">
     <!-- 页面头部操作区 -->
     <template #actions>
-      <a-button type="primary" @click="handleCreate" class="create-btn">
+      <a-button class="create-btn" type="primary" @click="handleCreate">
         <template #icon>
           <PlusOutlined />
         </template>
@@ -13,17 +13,17 @@
       <div class="search-filters">
         <a-input-search
           v-model:value="searchQuery"
-          placeholder="搜索分类名称..."
-          class="search-input"
-          @search="handleSearch"
           allow-clear
+          class="search-input"
+          placeholder="搜索分类名称..."
+          @search="handleSearch"
         />
         <a-select
           v-model:value="statusFilter"
-          placeholder="状态筛选"
-          class="status-filter"
-          @change="handleStatusChange"
           allow-clear
+          class="status-filter"
+          placeholder="状态筛选"
+          @change="handleStatusChange"
         >
           <a-select-option :value="CategoryStatus.Enabled">
             启用
@@ -40,9 +40,9 @@
       <div class="stats-grid">
         <a-card class="stats-card">
           <a-statistic
-            title="总分类数"
             :value="statistics.total"
             :value-style="{ color: '#1890ff' }"
+            title="总分类数"
           >
             <template #prefix>
               <FolderOutlined />
@@ -52,9 +52,9 @@
 
         <a-card class="stats-card">
           <a-statistic
-            title="启用分类"
             :value="statistics.enabled"
             :value-style="{ color: '#52c41a' }"
+            title="启用分类"
           >
             <template #prefix>
               <CheckCircleOutlined />
@@ -64,9 +64,9 @@
 
         <a-card class="stats-card">
           <a-statistic
-            title="禁用分类"
             :value="statistics.disabled"
             :value-style="{ color: '#ff4d4f' }"
+            title="禁用分类"
           >
             <template #prefix>
               <StopOutlined />
@@ -80,13 +80,13 @@
     <div class="table-container">
       <a-card>
         <a-table
-          :data-source="categoryList"
           :columns="tableColumns"
-          :pagination="paginationConfig"
+          :data-source="categoryList"
           :loading="loading"
-          row-key="id"
-          bordered
+          :pagination="paginationConfig"
           :scroll="{ x: 'max-content' }"
+          bordered
+          row-key="id"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -130,15 +130,15 @@
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleView(record)"
                 >
                   查看
                 </a-button>
                 <a-button
-                  type="default"
                   size="small"
+                  type="default"
                   @click="handleEdit(record)"
                 >
                   编辑
@@ -185,13 +185,13 @@
 
     <!-- 创建/编辑对话框 -->
     <a-modal
+      :confirm-loading="submitLoading"
       :open="formDialog.visible"
       :title="formDialog.isEdit ? '编辑分类' : '创建分类'"
       :width="dialogWidth"
-      @ok="handleSubmit"
-      @cancel="closeFormDialog"
-      :confirm-loading="submitLoading"
       destroy-on-close
+      @cancel="closeFormDialog"
+      @ok="handleSubmit"
     >
       <a-form
         ref="formRef"
@@ -202,8 +202,8 @@
         <a-form-item label="分类名称" name="name">
           <a-input
             v-model:value="formDialog.data.name"
-            placeholder="请输入分类名称"
             maxlength="100"
+            placeholder="请输入分类名称"
           />
         </a-form-item>
 
@@ -211,8 +211,8 @@
           <a-textarea
             v-model:value="formDialog.data.description"
             :rows="3"
-            placeholder="请输入分类描述（可选）"
             maxlength="500"
+            placeholder="请输入分类描述（可选）"
           />
         </a-form-item>
 
@@ -227,14 +227,14 @@
 
     <!-- 详情对话框 -->
     <a-modal
-      :open="detailDialog.visible"
-      title="分类详情"
-      :width="dialogWidth"
       :footer="null"
+      :open="detailDialog.visible"
+      :width="dialogWidth"
+      title="分类详情"
       @cancel="closeDetailDialog"
     >
       <div v-if="detailDialog.data" class="detail-content">
-        <a-descriptions bordered :column="1">
+        <a-descriptions :column="1" bordered>
           <a-descriptions-item label="分类ID">
             {{ detailDialog.data.id }}
           </a-descriptions-item>
@@ -284,30 +284,30 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 
-import { ref, reactive, computed, onMounted, watch } from 'vue';
-import { message, Modal, type FormInstance } from 'ant-design-vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 import {
-  PlusOutlined,
-  FolderOutlined,
   CheckCircleOutlined,
-  StopOutlined,
-  DownOutlined,
   DeleteOutlined,
+  DownOutlined,
+  FolderOutlined,
+  PlusOutlined,
+  StopOutlined,
 } from '@ant-design/icons-vue';
 
 import {
   CategoryStatus,
-  type WorkorderCategoryItem,
-  type CreateWorkorderCategoryReq,
-  type UpdateWorkorderCategoryReq,
-  type DeleteWorkorderCategoryReq,
-  type DetailWorkorderCategoryReq,
-  type ListWorkorderCategoryReq,
   createWorkorderCategory,
-  updateWorkorderCategory,
+  type CreateWorkorderCategoryReq,
   deleteWorkorderCategory,
-  listWorkorderCategory,
+  type DeleteWorkorderCategoryReq,
   detailWorkorderCategory,
+  type DetailWorkorderCategoryReq,
+  listWorkorderCategory,
+  type ListWorkorderCategoryReq,
+  updateWorkorderCategory,
+  type UpdateWorkorderCategoryReq,
+  type WorkorderCategoryItem,
 } from '#/api/core/workorder/workorder_category';
 
 import { usePermission } from '#/utils/permission';

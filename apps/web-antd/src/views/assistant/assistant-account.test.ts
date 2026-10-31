@@ -1,5 +1,5 @@
-import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
-import { reactive, nextTick } from 'vue';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import { nextTick, reactive } from 'vue';
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AssistantQuery from './AssistantQuery.vue';

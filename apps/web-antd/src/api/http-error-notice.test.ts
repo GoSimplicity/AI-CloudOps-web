@@ -9,8 +9,8 @@ import {
   claimHttpErrorNotice,
   getHttpErrorNoticeKey,
   isNotifiedByRequestLayer,
-  markHttpErrorNotified,
   markHttpErrorNoticeReplaced,
+  markHttpErrorNotified,
   resetHttpErrorNoticeTracking,
 } from './http-error-notice';
 

@@ -19,16 +19,16 @@
           <a-form-item label="关联表单" name="form_design_id">
             <a-select
               v-model:value="formData.form_design_id"
-              placeholder="请选择关联表单"
-              style="width: 100%"
-              show-search
               :filter-option="false"
-              option-label-prop="children"
-              :not-found-content="formSelectorLoading ? undefined : '无数据'"
-              @search="handleFormSearch"
-              @dropdown-visible-change="handleFormDropdownChange"
-              allow-clear
               :loading="formSelectorLoading"
+              :not-found-content="formSelectorLoading ? undefined : '无数据'"
+              allow-clear
+              option-label-prop="children"
+              placeholder="请选择关联表单"
+              show-search
+              style="width: 100%"
+              @dropdown-visible-change="handleFormDropdownChange"
+              @search="handleFormSearch"
             >
               <a-select-option
                 v-for="form in forms"
@@ -50,18 +50,18 @@
           <a-form-item label="分类" name="category_id">
             <a-select
               v-model:value="formData.category_id"
-              placeholder="请选择分类"
-              style="width: 100%"
-              show-search
               :filter-option="false"
-              option-label-prop="children"
+              :loading="categorySelectorLoading"
               :not-found-content="
                 categorySelectorLoading ? undefined : '无数据'
               "
-              @search="handleCategorySearch"
-              @dropdown-visible-change="handleCategoryDropdownChange"
               allow-clear
-              :loading="categorySelectorLoading"
+              option-label-prop="children"
+              placeholder="请选择分类"
+              show-search
+              style="width: 100%"
+              @dropdown-visible-change="handleCategoryDropdownChange"
+              @search="handleCategorySearch"
             >
               <a-select-option
                 v-for="cat in categories"
@@ -105,19 +105,19 @@
       <a-form-item label="标签" name="tags">
         <a-select
           v-model:value="formData.tags"
+          :token-separators="[',']"
           mode="tags"
           placeholder="输入标签后按回车添加"
           style="width: 100%"
-          :token-separators="[',']"
         />
       </a-form-item>
 
       <a-form-item label="流程定义" name="definition">
         <a-textarea
           v-model:value="definitionJsonString"
+          :class="{ 'json-error': jsonError }"
           :rows="8"
           placeholder="请粘贴流程设计的JSON定义"
-          :class="{ 'json-error': jsonError }"
         />
         <div v-if="jsonError" class="json-error-message">
           {{ jsonError }}
@@ -128,21 +128,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { InfoCircleOutlined } from '@ant-design/icons-vue';
 import {
-  ProcessStatus,
   createDefaultProcessDefinition,
   type CreateWorkorderProcessReq,
+  ProcessStatus,
 } from '#/api/core/workorder/workorder_process';
 import {
-  type WorkorderCategoryItem,
   listWorkorderCategory,
+  type WorkorderCategoryItem,
 } from '#/api/core/workorder/workorder_category';
 import {
-  type WorkorderFormDesignItem,
-  listWorkorderFormDesign,
   FormDesignStatus,
+  listWorkorderFormDesign,
+  type WorkorderFormDesignItem,
 } from '#/api/core/workorder/workorder_form_design';
 
 // Props

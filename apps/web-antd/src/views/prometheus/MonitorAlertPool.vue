@@ -1,11 +1,11 @@
 <template>
   <OpsPage
-    title="告警实例池"
     description="维护 AlertManager 实例、分组与通知策略"
+    title="告警实例池"
   >
     <!-- 页面标题 -->
     <template #actions>
-      <a-button type="primary" @click="showAddModal" class="btn-create">
+      <a-button class="btn-create" type="primary" @click="showAddModal">
         <template #icon>
           <PlusOutlined />
         </template>
@@ -16,13 +16,13 @@
       <div class="search-filters">
         <a-input-search
           v-model:value="searchText"
-          placeholder="搜索实例池名称..."
-          class="search-input"
-          @search="handleSearch"
-          @change="handleSearchChange"
           allow-clear
+          class="search-input"
+          placeholder="搜索实例池名称..."
+          @change="handleSearchChange"
+          @search="handleSearch"
         />
-        <a-button @click="handleReset" class="reset-btn"> 重置 </a-button>
+        <a-button class="reset-btn" @click="handleReset"> 重置 </a-button>
       </div>
     </template>
 
@@ -30,12 +30,12 @@
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="[16, 16]">
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="总实例池"
                 :value="loadError ? '未知' : stats.total"
                 :value-style="{ color: '#3f8600' }"
+                title="总实例池"
               >
                 <template #prefix>
                   <Icon icon="carbon:container-registry" />
@@ -43,12 +43,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页告警实例"
                 :value="loadError ? '未知' : stats.alertInstances"
                 :value-style="{ color: '#52c41a' }"
+                title="本页告警实例"
               >
                 <template #prefix>
                   <Icon icon="carbon:warning-alt" />
@@ -56,12 +56,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页活跃实例池"
                 :value="loadError ? '未知' : stats.active"
                 :value-style="{ color: '#faad14' }"
+                title="本页活跃实例池"
               >
                 <template #prefix>
                   <Icon icon="carbon:data-table" />
@@ -69,12 +69,12 @@
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-col :lg="6" :md="6" :sm="6" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页分组标签"
                 :value="loadError ? '未知' : stats.groupLabels"
                 :value-style="{ color: '#cf1322' }"
+                title="本页分组标签"
               >
                 <template #prefix>
                   <Icon icon="carbon:server" />
@@ -88,15 +88,15 @@
 
     <a-alert
       v-if="loadError"
-      type="error"
-      show-icon
       :message="loadError"
       role="alert"
+      show-icon
+      type="error"
     >
       <template #action>
         <a-button
-          size="small"
           :loading="loading"
+          size="small"
           @click="fetchAlertManagerPools"
         >
           重试
@@ -108,13 +108,13 @@
     <div class="table-container">
       <a-card>
         <a-table
-          :data-source="data"
           :columns="columns"
-          :pagination="paginationConfig"
+          :data-source="data"
           :loading="loading"
-          row-key="id"
-          bordered
+          :pagination="paginationConfig"
           :scroll="{ x: 1400 }"
+          bordered
+          row-key="id"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -171,7 +171,7 @@
             </template>
 
             <template v-if="column.key === 'receiver'">
-              <a-tag color="blue" class="receiver-tag">
+              <a-tag class="receiver-tag" color="blue">
                 {{ record.receiver }}
               </a-tag>
             </template>
@@ -202,15 +202,15 @@
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleViewPool(record)"
                 >
                   查看
                 </a-button>
                 <a-button
-                  type="default"
                   size="small"
+                  type="default"
                   @click="showEditModal(record)"
                 >
                   编辑
@@ -235,13 +235,13 @@
 
     <!-- 新增AlertManager实例池模态框 -->
     <a-modal
-      :open="isAddModalVisible"
-      title="新增AlertManager实例池"
-      :width="formDialogWidth"
-      @ok="handleAdd"
-      @cancel="closeAddModal"
       :destroy-on-close="true"
+      :open="isAddModalVisible"
+      :width="formDialogWidth"
       class="responsive-modal alert-pool-modal"
+      title="新增AlertManager实例池"
+      @cancel="closeAddModal"
+      @ok="handleAdd"
     >
       <a-form
         ref="addFormRef"
@@ -254,9 +254,9 @@
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item
+                :rules="[{ required: true, message: '请输入实例池名称' }]"
                 label="实例池名称"
                 name="name"
-                :rules="[{ required: true, message: '请输入实例池名称' }]"
               >
                 <a-input
                   v-model:value="addForm.name"
@@ -280,8 +280,8 @@
             <div class="dynamic-input-container">
               <a-input
                 v-model:value="instance.value"
-                placeholder="请输入AlertManager实例IP"
                 class="dynamic-input"
+                placeholder="请输入AlertManager实例IP"
               />
               <MinusCircleOutlined
                 v-if="addForm.alert_manager_instances.length > 1"
@@ -292,8 +292,8 @@
           </a-form-item>
           <a-form-item>
             <a-button
-              type="dashed"
               class="add-dynamic-button"
+              type="dashed"
               @click="addAlertManagerInstance"
             >
               <PlusOutlined />
@@ -313,14 +313,14 @@
             <div class="label-input-group">
               <a-input
                 v-model:value="label.labelKey"
-                placeholder="请输入标签Key"
                 class="label-key-input"
+                placeholder="请输入标签Key"
               />
               <div class="label-separator">:</div>
               <a-input
                 v-model:value="label.labelValue"
-                placeholder="请输入标签Value"
                 class="label-value-input"
+                placeholder="请输入标签Value"
               />
               <MinusCircleOutlined
                 v-if="addForm.group_by.length > 1"
@@ -331,8 +331,8 @@
           </a-form-item>
           <a-form-item>
             <a-button
-              type="dashed"
               class="add-dynamic-button"
+              type="dashed"
               @click="addLabel"
             >
               <PlusOutlined />
@@ -344,7 +344,7 @@
         <div class="form-section">
           <div class="section-title">告警配置</div>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="默认恢复时间" name="resolve_timeout">
                 <a-input
                   v-model:value="addForm.resolve_timeout"
@@ -352,7 +352,7 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="默认分组第一次等待时间" name="group_wait">
                 <a-input
                   v-model:value="addForm.group_wait"
@@ -362,7 +362,7 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="默认分组等待间隔" name="group_interval">
                 <a-input
                   v-model:value="addForm.group_interval"
@@ -370,7 +370,7 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="默认重复发送时间" name="repeat_interval">
                 <a-input
                   v-model:value="addForm.repeat_interval"
@@ -401,13 +401,13 @@
 
     <!-- 编辑AlertManager实例池模态框 -->
     <a-modal
-      :open="isEditModalVisible"
-      title="编辑AlertManager实例池"
-      :width="formDialogWidth"
-      @ok="handleEdit"
-      @cancel="closeEditModal"
       :destroy-on-close="true"
+      :open="isEditModalVisible"
+      :width="formDialogWidth"
       class="responsive-modal alert-pool-modal"
+      title="编辑AlertManager实例池"
+      @cancel="closeEditModal"
+      @ok="handleEdit"
     >
       <a-form
         ref="editFormRef"
@@ -420,9 +420,9 @@
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item
+                :rules="[{ required: true, message: '请输入实例池名称' }]"
                 label="实例池名称"
                 name="name"
-                :rules="[{ required: true, message: '请输入实例池名称' }]"
               >
                 <a-input
                   v-model:value="editForm.name"
@@ -446,8 +446,8 @@
             <div class="dynamic-input-container">
               <a-input
                 v-model:value="instance.value"
-                placeholder="请输入AlertManager实例IP"
                 class="dynamic-input"
+                placeholder="请输入AlertManager实例IP"
               />
               <MinusCircleOutlined
                 v-if="editForm.alert_manager_instances.length > 1"
@@ -458,8 +458,8 @@
           </a-form-item>
           <a-form-item>
             <a-button
-              type="dashed"
               class="add-dynamic-button"
+              type="dashed"
               @click="addEditAlertManagerInstance"
             >
               <PlusOutlined />
@@ -479,14 +479,14 @@
             <div class="label-input-group">
               <a-input
                 v-model:value="label.labelKey"
-                placeholder="请输入标签Key"
                 class="label-key-input"
+                placeholder="请输入标签Key"
               />
               <div class="label-separator">:</div>
               <a-input
                 v-model:value="label.labelValue"
-                placeholder="请输入标签Value"
                 class="label-value-input"
+                placeholder="请输入标签Value"
               />
               <MinusCircleOutlined
                 v-if="editForm.group_by.length > 1"
@@ -497,8 +497,8 @@
           </a-form-item>
           <a-form-item>
             <a-button
-              type="dashed"
               class="add-dynamic-button"
+              type="dashed"
               @click="addEditLabel"
             >
               <PlusOutlined />
@@ -510,7 +510,7 @@
         <div class="form-section">
           <div class="section-title">告警配置</div>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="默认恢复时间" name="resolve_timeout">
                 <a-input
                   v-model:value="editForm.resolve_timeout"
@@ -518,7 +518,7 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="默认分组第一次等待时间" name="group_wait">
                 <a-input
                   v-model:value="editForm.group_wait"
@@ -528,7 +528,7 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="默认分组等待间隔" name="group_interval">
                 <a-input
                   v-model:value="editForm.group_interval"
@@ -536,7 +536,7 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
+            <a-col :sm="12" :xs="24">
               <a-form-item label="默认重复发送时间" name="repeat_interval">
                 <a-input
                   v-model:value="editForm.repeat_interval"
@@ -567,12 +567,12 @@
 
     <!-- 详情对话框 -->
     <a-modal
-      :open="detailDialogVisible"
-      title="实例池详情"
-      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeDetailDialog"
+      :open="detailDialogVisible"
+      :width="previewDialogWidth"
       class="detail-dialog"
+      title="实例池详情"
+      @cancel="closeDetailDialog"
     >
       <div v-if="detailDialog.form" class="pool-details">
         <div class="detail-header">
@@ -582,7 +582,7 @@
           </div>
         </div>
 
-        <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
+        <a-descriptions :column="1" :labelStyle="{ width: '150px' }" bordered>
           <a-descriptions-item label="ID">
             {{ detailDialog.form.id }}
           </a-descriptions-item>
@@ -626,34 +626,34 @@
 
     <!-- 用户选择模态框 -->
     <a-modal
+      :footer="null"
       :open="isUserModalVisible"
+      :width="600"
       title="选择兜底接收者"
       @cancel="closeUserModal"
-      :width="600"
-      :footer="null"
     >
       <div class="user-selection-content">
         <a-input-search
           v-model:value="userSearchText"
-          placeholder="搜索用户..."
-          @search="handleUserSearch"
-          style="margin-bottom: 16px"
           allow-clear
+          placeholder="搜索用户..."
+          style="margin-bottom: 16px"
+          @search="handleUserSearch"
         />
         <a-table
           :columns="userColumns"
           :data-source="userList"
           :loading="userLoading"
           :pagination="userPagination"
-          @change="handleUserTableChange"
           row-key="id"
           size="small"
+          @change="handleUserTableChange"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'action'">
               <a-button
-                type="primary"
                 size="small"
+                type="primary"
                 @click="handleSelectUser(record)"
               >
                 选择
@@ -669,23 +669,23 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  PlusOutlined,
   DownOutlined,
   MinusCircleOutlined,
+  PlusOutlined,
 } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
-  getMonitorAlertManagerPoolListApi,
   createMonitorAlertManagerPoolApi,
-  updateMonitorAlertManagerPoolApi,
-  deleteMonitorAlertManagerPoolApi,
-  getMonitorAlertManagerPoolApi,
-  type MonitorAlertManagerPool,
-  type GetAlertManagerPoolListParams,
   type CreateMonitorAlertManagerPoolReq,
+  deleteMonitorAlertManagerPoolApi,
+  type GetAlertManagerPoolListParams,
+  getMonitorAlertManagerPoolApi,
+  getMonitorAlertManagerPoolListApi,
+  type MonitorAlertManagerPool,
+  updateMonitorAlertManagerPoolApi,
   type UpdateMonitorAlertManagerPoolReq,
 } from '#/api/core/prometheus/prometheus_alert_pool';
 

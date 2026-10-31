@@ -4,14 +4,14 @@
       ref="formRef"
       :model="localData"
       :rules="rules"
+      class="form-container"
       layout="vertical"
       @finish="handleFinish"
-      class="form-container"
     >
       <template v-for="field in fields" :key="field.name">
         <a-form-item
-          :name="field.name"
           :label="field.label"
+          :name="field.name"
           :required="field.required === 1"
           class="form-field"
         >
@@ -45,9 +45,9 @@
             v-else-if="field.type === 'number'"
             v-model:value="localData[field.name]"
             :placeholder="field.placeholder"
-            style="width: 100%"
             class="form-input"
             size="large"
+            style="width: 100%"
           />
 
           <!-- 日期选择器 -->
@@ -55,9 +55,9 @@
             v-else-if="field.type === 'date'"
             v-model:value="localData[field.name]"
             :placeholder="field.placeholder"
-            style="width: 100%"
             class="form-input"
             size="large"
+            style="width: 100%"
           />
 
           <!-- 下拉选择 -->
@@ -65,9 +65,9 @@
             v-else-if="field.type === 'select'"
             v-model:value="localData[field.name]"
             :placeholder="field.placeholder || '请选择'"
-            style="width: 100%"
             class="form-input"
             size="large"
+            style="width: 100%"
           >
             <a-select-option
               v-for="(option, index) in field.options"
@@ -134,18 +134,18 @@
         </a-form-item>
       </template>
 
-      <div class="form-actions" v-if="showActions">
+      <div v-if="showActions" class="form-actions">
         <a-space size="large">
           <a-button
-            type="primary"
+            class="submit-btn"
             html-type="submit"
             size="large"
-            class="submit-btn"
+            type="primary"
           >
             <FormOutlined />
             提交表单
           </a-button>
-          <a-button @click="resetForm" size="large" class="reset-btn">
+          <a-button class="reset-btn" size="large" @click="resetForm">
             <ReloadOutlined />
             重置表单
           </a-button>

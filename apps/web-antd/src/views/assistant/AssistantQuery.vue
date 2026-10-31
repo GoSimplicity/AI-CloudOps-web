@@ -1,21 +1,21 @@
 <template>
   <OpsPage
-    title="智能问答"
-    description="明确发送问题后调用模型；会话按当前账户隔离"
     class="query-container"
+    description="明确发送问题后调用模型；会话按当前账户隔离"
+    title="智能问答"
   >
     <!-- 页面头部 -->
     <template #actions>
       <a-space wrap>
-        <a-button @click="clearSession" type="default">
-          <Icon icon="lucide:trash-2" size="16" class="muted-icon" />
+        <a-button type="default" @click="clearSession">
+          <Icon class="muted-icon" icon="lucide:trash-2" size="16" />
           清空会话
         </a-button>
-        <a-button @click="exportSession" type="default">
-          <Icon icon="lucide:download" size="16" class="muted-icon" />
+        <a-button type="default" @click="exportSession">
+          <Icon class="muted-icon" icon="lucide:download" size="16" />
           导出会话
         </a-button>
-        <a-button @click="goToSessionManage" type="primary">
+        <a-button type="primary" @click="goToSessionManage">
           <Icon icon="lucide:users" size="16" />
           会话管理
         </a-button>
@@ -26,14 +26,14 @@
     <div class="page-content">
       <a-row :gutter="[16, 16]">
         <!-- 聊天区域 -->
-        <a-col :xs="24" :xl="18">
+        <a-col :xl="18" :xs="24">
           <div class="content-card">
             <div class="card-header">
               <div class="header-title">
                 <Icon
+                  class="accent-icon"
                   icon="lucide:message-circle"
                   size="18"
-                  class="accent-icon"
                 />
                 对话
               </div>
@@ -41,12 +41,12 @@
 
             <div class="card-content">
               <!-- 聊天历史 -->
-              <div class="chat-history" ref="chatHistoryRef">
+              <div ref="chatHistoryRef" class="chat-history">
                 <div v-if="chatHistory.length === 0" class="empty-state">
                   <Icon
+                    class="muted-icon"
                     icon="lucide:message-circle"
                     size="48"
-                    class="muted-icon"
                   />
                   <p>开始您的第一次对话吧！</p>
                 </div>
@@ -100,9 +100,9 @@
                         <a-divider style="margin: 12px 0 8px 0" />
                         <div class="source-title">
                           <Icon
+                            class="muted-icon"
                             icon="lucide:file-text"
                             size="14"
-                            class="muted-icon"
                           />
                           参考文档
                         </div>
@@ -133,9 +133,9 @@
                         <a-divider style="margin: 12px 0 8px 0" />
                         <div class="follow-up-title">
                           <Icon
+                            class="muted-icon"
                             icon="lucide:lightbulb"
                             size="14"
-                            class="muted-icon"
                           />
                           相关问题
                         </div>
@@ -177,14 +177,14 @@
               <div class="chat-input">
                 <a-alert
                   v-if="sessionNotice && !pendingTurn"
-                  type="warning"
-                  show-icon
                   :message="sessionNotice"
+                  show-icon
+                  type="warning"
                 >
                   <template #action>
                     <a-button
-                      size="small"
                       :loading="isLoading"
+                      size="small"
                       @click="restoreSession"
                     >
                       重新查询
@@ -193,17 +193,17 @@
                 </a-alert>
                 <a-alert
                   v-if="pendingTurn"
-                  type="warning"
-                  show-icon
                   message="本次回复尚未确认，请先查询并恢复已完成的回复，或清空会话。"
+                  show-icon
+                  type="warning"
                 >
                   <template #description>
                     待核对问题：{{ pendingTurn.question }}
                   </template>
                   <template #action>
                     <a-button
-                      size="small"
                       :loading="isLoading"
+                      size="small"
                       @click="recoverTurn"
                     >
                       查询并恢复
@@ -212,13 +212,13 @@
                 </a-alert>
                 <a-input-search
                   v-model:value="questionInput"
-                  placeholder="请输入您的问题..."
-                  enter-button="发送"
-                  size="large"
-                  :loading="isLoading"
                   :disabled="isLoading || !!pendingTurn || !!sessionNotice"
-                  @search="sendMessage"
+                  :loading="isLoading"
+                  enter-button="发送"
+                  placeholder="请输入您的问题..."
+                  size="large"
                   @keydown.enter.prevent="sendMessage"
+                  @search="sendMessage"
                 />
               </div>
             </div>
@@ -226,12 +226,12 @@
         </a-col>
 
         <!-- 侧边栏 -->
-        <a-col :xs="24" :xl="6">
+        <a-col :xl="6" :xs="24">
           <!-- 会话信息 -->
           <div class="content-card sidebar-card">
             <div class="card-header">
               <div class="header-title">
-                <Icon icon="lucide:info" size="18" class="accent-icon" />
+                <Icon class="accent-icon" icon="lucide:info" size="18" />
                 会话信息
               </div>
             </div>
@@ -246,8 +246,8 @@
                 <label class="form-label">助手模式</label>
                 <a-select
                   v-model:value="assistantMode"
-                  class="form-control"
                   :disabled="isLoading || !!pendingTurn"
+                  class="form-control"
                   @change="onModeChange"
                 >
                   <a-select-option :value="1">RAG模式</a-select-option>
@@ -266,7 +266,7 @@
           <div class="content-card sidebar-card">
             <div class="card-header">
               <div class="header-title">
-                <Icon icon="lucide:zap" size="18" class="accent-icon" />
+                <Icon class="accent-icon" icon="lucide:zap" size="18" />
                 快捷问题
               </div>
             </div>
@@ -276,9 +276,9 @@
                 <a-button
                   v-for="(question, index) in quickQuestions"
                   :key="index"
-                  type="default"
                   block
                   class="quick-question-btn"
+                  type="default"
                   @click="askQuickQuestion(question)"
                 >
                   {{ question }}
@@ -293,9 +293,9 @@
     <!-- 文档详情弹窗 -->
     <a-modal
       v-model:open="documentModalVisible"
+      :footer="null"
       title="文档详情"
       width="800px"
-      :footer="null"
     >
       <div v-if="selectedDocument">
         <a-descriptions :column="1" bordered size="small">
@@ -330,7 +330,7 @@
 
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { ref, nextTick, watch, onBeforeUnmount } from 'vue';
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';

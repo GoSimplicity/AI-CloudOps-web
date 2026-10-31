@@ -11,7 +11,6 @@ defineOptions({ name: 'Register' });
 const loading = ref(false);
 
 function handleSubmit(value: LoginAndRegisterParams) {
-  // eslint-disable-next-line no-console
   void value;
 }
 </script>

@@ -1,17 +1,17 @@
 <template>
   <div class="field-config">
-    <a-form layout="vertical" class="config-form">
+    <a-form class="config-form" layout="vertical">
       <div class="config-section">
         <div class="section-title">
           <span>基础配置</span>
         </div>
         <a-row :gutter="16">
-          <a-col :span="24" :md="8">
-            <a-form-item label="字段类型" class="form-item">
+          <a-col :md="8" :span="24">
+            <a-form-item class="form-item" label="字段类型">
               <a-select
                 v-model:value="localField.type"
-                @change="handleTypeChange"
                 class="field-select"
+                @change="handleTypeChange"
               >
                 <a-select-option value="text">
                   <span class="option-content">📝 文本框</span>
@@ -44,40 +44,40 @@
             </a-form-item>
           </a-col>
 
-          <a-col :span="24" :md="8">
-            <a-form-item label="标签名称" class="form-item">
+          <a-col :md="8" :span="24">
+            <a-form-item class="form-item" label="标签名称">
               <a-input
                 v-model:value="localField.label"
-                placeholder="请输入字段标签"
                 class="config-input"
+                placeholder="请输入字段标签"
               />
             </a-form-item>
           </a-col>
 
-          <a-col :span="24" :md="8">
-            <a-form-item label="字段名称" class="form-item">
+          <a-col :md="8" :span="24">
+            <a-form-item class="form-item" label="字段名称">
               <a-input
                 v-model:value="localField.name"
-                placeholder="英文、数字、下划线"
                 class="config-input"
+                placeholder="英文、数字、下划线"
               />
             </a-form-item>
           </a-col>
         </a-row>
 
         <a-row :gutter="16">
-          <a-col :span="24" :md="12">
-            <a-form-item label="占位符文本" class="form-item">
+          <a-col :md="12" :span="24">
+            <a-form-item class="form-item" label="占位符文本">
               <a-input
                 v-model:value="localField.placeholder"
-                placeholder="输入框的提示文本"
                 class="config-input"
+                placeholder="输入框的提示文本"
               />
             </a-form-item>
           </a-col>
 
-          <a-col :span="24" :md="6">
-            <a-form-item label="是否必填" class="form-item switch-item">
+          <a-col :md="6" :span="24">
+            <a-form-item class="form-item switch-item" label="是否必填">
               <a-switch
                 v-model:checked="isRequired"
                 checked-children="必填"
@@ -89,13 +89,13 @@
       </div>
 
       <!-- 默认值配置 -->
-      <div class="config-section" v-if="showDefaultValue">
+      <div v-if="showDefaultValue" class="config-section">
         <div class="section-title">
           <span>默认值设置</span>
         </div>
         <a-row>
           <a-col :span="24">
-            <a-form-item label="默认值" class="form-item">
+            <a-form-item class="form-item" label="默认值">
               <template
                 v-if="
                   localField.type === 'text' ||
@@ -105,16 +105,16 @@
               >
                 <a-input
                   v-model:value="localField.default"
-                  placeholder="请输入默认值"
                   class="config-input"
+                  placeholder="请输入默认值"
                 />
               </template>
               <template v-else-if="localField.type === 'number'">
                 <a-input-number
                   v-model:value="localField.default"
+                  class="config-input"
                   placeholder="请输入默认数值"
                   style="width: 100%"
-                  class="config-input"
                 />
               </template>
               <template v-else-if="localField.type === 'switch'">
@@ -131,9 +131,9 @@
               >
                 <a-select
                   v-model:value="localField.default"
-                  placeholder="请选择默认值"
-                  class="config-input"
                   allow-clear
+                  class="config-input"
+                  placeholder="请选择默认值"
                 >
                   <a-select-option
                     v-for="(option, index) in localField.options || []"
@@ -165,14 +165,14 @@
       </div>
 
       <!-- 选项配置 -->
-      <div class="config-section" v-if="needsOptions">
+      <div v-if="needsOptions" class="config-section">
         <div class="section-title">
           <span>选项配置</span>
           <a-button
+            class="add-option-btn"
+            size="small"
             type="link"
             @click="addOption"
-            size="small"
-            class="add-option-btn"
           >
             <PlusOutlined /> 添加选项
           </a-button>
@@ -186,11 +186,11 @@
             <div class="option-header">
               <span class="option-index">选项 {{ index + 1 }}</span>
               <a-button
-                type="text"
+                class="remove-option-btn"
                 danger
                 size="small"
+                type="text"
                 @click="removeOption(index)"
-                class="remove-option-btn"
               >
                 <DeleteOutlined />
               </a-button>
@@ -199,23 +199,23 @@
               <a-col :span="24">
                 <a-input
                   :value="option"
-                  @update:value="(value: string) => updateOption(index, value)"
-                  placeholder="选项文本"
                   class="option-input"
+                  placeholder="选项文本"
+                  @update:value="(value: string) => updateOption(index, value)"
                 />
               </a-col>
             </a-row>
           </div>
 
           <div
-            class="add-option-area"
             v-if="!localField.options || localField.options.length === 0"
+            class="add-option-area"
           >
             <a-button
+              class="add-option-large"
+              size="large"
               type="dashed"
               @click="addOption"
-              size="large"
-              class="add-option-large"
             >
               <PlusOutlined /> 添加第一个选项
             </a-button>
@@ -227,11 +227,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, nextTick } from 'vue';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue';
+import { computed, nextTick, ref, watch } from 'vue';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import {
-  FormFieldType,
   type FormField,
+  FormFieldType,
 } from '#/api/core/workorder/workorder_form_design';
 
 interface Props {

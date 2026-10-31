@@ -1,21 +1,21 @@
 <template>
   <OpsPage
-    title="DaemonSet 管理"
     description="管理和监控集群中的所有 Kubernetes DaemonSet"
+    title="DaemonSet 管理"
   >
     <template #actions>
       <a-button
+        :disabled="!filterClusterId"
         type="primary"
         @click="openCreateModal"
-        :disabled="!filterClusterId"
       >
         <template #icon><PlusOutlined aria-hidden="true" /></template>
         创建 DaemonSet
       </a-button>
       <a-button
-        @click="fetchDaemonSets"
-        :loading="loading"
         :disabled="!filterClusterId"
+        :loading="loading"
+        @click="fetchDaemonSets"
       >
         <template #icon><ReloadOutlined aria-hidden="true" /></template>
         刷新数据
@@ -30,13 +30,13 @@
           <div class="k8s-filter-group">
             <a-select
               v-model:value="filterClusterId"
-              placeholder="选择集群"
-              class="k8s-cluster-selector"
-              aria-label="选择集群"
-              allow-clear
-              @change="handleClusterChange"
-              :loading="clustersLoading"
               :disabled="clustersLoading"
+              :loading="clustersLoading"
+              allow-clear
+              aria-label="选择集群"
+              class="k8s-cluster-selector"
+              placeholder="选择集群"
+              @change="handleClusterChange"
               @popup-scroll="handleClusterDropdownScroll"
             >
               <template #suffixIcon>
@@ -54,7 +54,7 @@
                     justify-content: space-between;
                   "
                 >
-                  <span class="k8s-cluster-name" :title="cluster.name">{{
+                  <span :title="cluster.name" class="k8s-cluster-name">{{
                     cluster.name
                   }}</span>
                   <a-tag color="blue" size="small">
@@ -68,20 +68,20 @@
                 disabled
                 style="text-align: center; color: var(--ops-muted)"
               >
-                <a-spin size="small" :spinning="clustersLoading" />
+                <a-spin :spinning="clustersLoading" size="small" />
                 <span v-if="!clustersLoading">滚动加载更多...</span>
               </a-select-option>
             </a-select>
 
             <a-select
               v-model:value="filterNamespace"
-              placeholder="选择命名空间"
-              class="k8s-filter-select k8s-namespace-selector"
-              aria-label="选择命名空间"
-              allow-clear
-              @change="handleFilterChange"
               :disabled="!filterClusterId"
               :loading="namespacesLoading"
+              allow-clear
+              aria-label="选择命名空间"
+              class="k8s-filter-select k8s-namespace-selector"
+              placeholder="选择命名空间"
+              @change="handleFilterChange"
             >
               <template #suffixIcon>
                 <AppstoreOutlined aria-hidden="true" />
@@ -102,10 +102,10 @@
                 style="text-align: center; color: var(--ops-muted)"
               >
                 <a-button
-                  type="link"
-                  size="small"
-                  @click.stop="loadMoreNamespaces"
                   :loading="namespacesLoading"
+                  size="small"
+                  type="link"
+                  @click.stop="loadMoreNamespaces"
                 >
                   加载更多...
                 </a-button>
@@ -114,9 +114,9 @@
 
             <a-select
               v-model:value="filterStatus"
-              placeholder="状态筛选"
-              class="k8s-filter-select"
               allow-clear
+              class="k8s-filter-select"
+              placeholder="状态筛选"
               @change="handleFilterChange"
             >
               <template #suffixIcon>
@@ -136,9 +136,9 @@
             <!-- 标签过滤器 -->
             <div class="k8s-labels-filter">
               <a-button
+                class="k8s-toolbar-btn"
                 type="dashed"
                 @click="openLabelsFilter"
-                class="k8s-toolbar-btn"
               >
                 <template #icon><TagsOutlined aria-hidden="true" /></template>
                 标签过滤
@@ -160,10 +160,10 @@
                   v-for="(value, key) in filterLabels"
                   :key="key"
                   closable
-                  @close="removeFilterLabel(key)"
                   color="blue"
                   size="small"
                   style="margin-right: 4px; margin-bottom: 4px"
+                  @close="removeFilterLabel(key)"
                 >
                   {{ key }}: {{ value }}
                 </a-tag>
@@ -174,11 +174,11 @@
           <div class="k8s-search-group">
             <a-input
               v-model:value="searchText"
-              placeholder="搜索 DaemonSet 名称"
-              class="k8s-search-input"
-              @pressEnter="onSearch"
-              @input="onSearch"
               allow-clear
+              class="k8s-search-input"
+              placeholder="搜索 DaemonSet 名称"
+              @input="onSearch"
+              @pressEnter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -207,10 +207,10 @@
             </a-button>
 
             <a-button
-              @click="openCreateYamlModal"
               :disabled="!filterClusterId"
               class="k8s-toolbar-btn"
               title="通过YAML创建DaemonSet"
+              @click="openCreateYamlModal"
             >
               <template #icon><FileTextOutlined aria-hidden="true" /></template>
               YAML 创建
@@ -230,11 +230,11 @@
             </a-button>
 
             <a-button
-              @click="() => batchOperation('重启')"
-              :disabled="!selectedRows.length"
               v-if="selectedRows.length > 0"
+              :disabled="!selectedRows.length"
               class="k8s-toolbar-btn"
               title="批量重启选中的 DaemonSet"
+              @click="() => batchOperation('重启')"
             >
               <template #icon><RedoOutlined aria-hidden="true" /></template>
               重启 ({{ selectedRows.length }})
@@ -245,9 +245,9 @@
     </template>
     <a-alert
       v-if="clustersError"
-      type="error"
       :message="clustersError"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button size="small" @click="fetchClusters(true)">
@@ -257,9 +257,9 @@
     </a-alert>
     <a-alert
       v-if="namespacesError"
-      type="error"
       :message="namespacesError"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button size="small" @click="fetchNamespaces(true)">
@@ -267,7 +267,7 @@
         </a-button>
       </template>
     </a-alert>
-    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button size="small" @click="fetchDaemonSets"> 重试查询 </a-button>
       </template>
@@ -278,9 +278,7 @@
       <a-table
         :columns="columns"
         :data-source="filteredDaemonSets"
-        :row-selection="rowSelection"
         :loading="loading"
-        :row-key="namespacedResourceKey"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,
@@ -291,9 +289,11 @@
             `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
           pageSizeOptions: ['10', '20', '30', '50'],
         }"
-        @change="handleTableChange"
-        class="k8s-table daemonset-table"
+        :row-key="namespacedResourceKey"
+        :row-selection="rowSelection"
         :scroll="{ x: 1340 }"
+        class="k8s-table daemonset-table"
+        @change="handleTableChange"
       >
         <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'status'">
@@ -378,7 +378,7 @@
             </div>
           </template>
           <template v-else-if="column.key === 'update_strategy'">
-            <a-tag color="cyan" v-if="text">{{ text }}</a-tag>
+            <a-tag v-if="text" color="cyan">{{ text }}</a-tag>
             <span v-else class="k8s-no-data">-</span>
           </template>
           <template v-else-if="column.key === 'labels'">
@@ -547,7 +547,7 @@
                 </a-button>
               </a-tooltip>
               <a-tooltip v-if="can('k8s.daemonset.delete')" title="删除">
-                <a-button title="删除" danger @click="deleteDaemonSet(record)">
+                <a-button danger title="删除" @click="deleteDaemonSet(record)">
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
                   </template>
@@ -571,29 +571,29 @@
     <!-- 创建 DaemonSet 模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      title="创建 DaemonSet"
-      @ok="submitCreateForm"
-      @cancel="closeCreateModal"
       :confirmLoading="submitLoading"
-      width="800px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="创建"
-      cancelText="取消"
+      title="创建 DaemonSet"
+      width="800px"
+      @cancel="closeCreateModal"
+      @ok="submitCreateForm"
     >
       <a-form
         ref="formRef"
         :model="createFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="createFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
-        <a-form-item label="DaemonSet 名称" name="name" :required="true">
+        <a-form-item :required="true" label="DaemonSet 名称" name="name">
           <a-input
             v-model:value="createFormModel.name"
-            placeholder="请输入 DaemonSet 名称（例如：my-daemonset）"
-            class="k8s-form-input"
             :maxlength="63"
+            class="k8s-form-input"
+            placeholder="请输入 DaemonSet 名称（例如：my-daemonset）"
           />
           <div
             style="color: var(--ops-muted); font-size: 12px; margin-top: 4px"
@@ -602,12 +602,12 @@
           </div>
         </a-form-item>
 
-        <a-form-item label="命名空间" name="namespace" :required="true">
+        <a-form-item :required="true" label="命名空间" name="namespace">
           <a-select
             v-model:value="createFormModel.namespace"
-            placeholder="请选择命名空间"
-            class="k8s-form-input"
             :disabled="!filterClusterId"
+            class="k8s-form-input"
+            placeholder="请选择命名空间"
           >
             <a-select-option
               v-for="ns in namespaces"
@@ -625,10 +625,10 @@
               style="text-align: center; color: var(--ops-muted)"
             >
               <a-button
-                type="link"
-                size="small"
-                @click.stop="loadMoreNamespaces"
                 :loading="namespacesLoading"
+                size="small"
+                type="link"
+                @click.stop="loadMoreNamespaces"
               >
                 加载更多...
               </a-button>
@@ -645,24 +645,24 @@
             >
               <a-input
                 v-model:value="createFormModel.images[index]"
-                placeholder="容器镜像（例如：nginx:latest）"
                 class="k8s-form-input"
+                placeholder="容器镜像（例如：nginx:latest）"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeImageField(index)"
                 :disabled="createFormModel.images.length <= 1"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeImageField(index)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
             <a-button
+              style="margin-top: 8px"
               type="dashed"
               @click="addImageField"
-              style="margin-top: 8px"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
               添加镜像
@@ -687,23 +687,23 @@
               class="k8s-key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`标签键: ${key}`"
-                disabled
+                :value="key"
                 class="k8s-form-input"
+                disabled
               />
               <a-input
                 v-model:value="createFormModel.labels[key]"
-                placeholder="标签值"
-                class="k8s-form-input"
                 :maxlength="200"
+                class="k8s-form-input"
+                placeholder="标签值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeLabelField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeLabelField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -744,23 +744,23 @@
               class="k8s-key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`注解键: ${key}`"
-                disabled
+                :value="key"
                 class="k8s-form-input"
+                disabled
               />
               <a-input
                 v-model:value="createFormModel.annotations[key]"
-                placeholder="注解值"
-                class="k8s-form-input"
                 :maxlength="500"
+                class="k8s-form-input"
+                placeholder="注解值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeAnnotationField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeAnnotationField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -789,22 +789,22 @@
     <!-- 通过 YAML 创建 DaemonSet 模态框 -->
     <a-modal
       v-model:open="isCreateYamlModalVisible"
-      title="通过 YAML 创建 DaemonSet"
-      @ok="submitCreateYamlForm"
-      @cancel="closeCreateYamlModal"
       :confirmLoading="submitLoading"
-      width="900px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="创建"
-      cancelText="取消"
+      title="通过 YAML 创建 DaemonSet"
+      width="900px"
+      @cancel="closeCreateYamlModal"
+      @ok="submitCreateYamlForm"
     >
       <a-form
         ref="createYamlFormRef"
         :model="createYamlFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="createYamlFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
@@ -843,9 +843,9 @@
           </div>
           <a-textarea
             v-model:value="createYamlFormModel.yaml"
-            placeholder="请输入 DaemonSet YAML 内容，或点击【插入模板】使用默认模板"
             :rows="20"
             class="k8s-config-textarea"
+            placeholder="请输入 DaemonSet YAML 内容，或点击【插入模板】使用默认模板"
           />
         </a-form-item>
       </a-form>
@@ -854,18 +854,18 @@
     <!-- 详情模态框 -->
     <a-modal
       v-model:open="isDetailModalVisible"
-      title="DaemonSet 详情"
       :footer="null"
-      @cancel="closeDetailModal"
-      width="1000px"
       :maskClosable="false"
       destroyOnClose
+      title="DaemonSet 详情"
+      width="1000px"
+      @cancel="closeDetailModal"
     >
       <a-spin :spinning="detailLoading">
         <div v-if="currentDaemonSetDetail" class="k8s-detail-content">
           <a-row :gutter="[24, 16]">
-            <a-col :xs="24" :lg="12">
-              <a-card title="基本信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="基本信息">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">DaemonSet 名称:</span>
                   <span class="k8s-detail-value">{{
@@ -900,8 +900,8 @@
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="Pod 调度信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="Pod 调度信息">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">期望调度数:</span>
                   <span class="k8s-detail-value">{{
@@ -937,8 +937,8 @@
           </a-row>
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px">
-            <a-col :xs="24" :lg="12">
-              <a-card title="更新策略" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="更新策略">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">策略类型:</span>
                   <span class="k8s-detail-value">{{
@@ -960,8 +960,8 @@
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="容器镜像" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="容器镜像">
                 <div class="k8s-images-display">
                   <a-tooltip
                     v-for="(image, index) in currentDaemonSetDetail.images ||
@@ -998,8 +998,8 @@
           </a-row>
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px">
-            <a-col :xs="24" :lg="12">
-              <a-card title="标签信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="标签信息">
                 <div class="k8s-labels-display">
                   <template v-if="Array.isArray(currentDaemonSetDetail.labels)">
                     <!-- 数组格式 -->
@@ -1075,8 +1075,8 @@
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="注解信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="注解信息">
                 <div class="k8s-annotations-display">
                   <template
                     v-if="Array.isArray(currentDaemonSetDetail.annotations)"
@@ -1162,22 +1162,22 @@
     <!-- 编辑模态框 -->
     <a-modal
       v-model:open="isEditModalVisible"
-      title="编辑 DaemonSet"
-      @ok="submitEditForm"
-      @cancel="closeEditModal"
       :confirmLoading="submitLoading"
-      width="800px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="确认更新"
-      cancelText="取消"
       okType="primary"
+      title="编辑 DaemonSet"
+      width="800px"
+      @cancel="closeEditModal"
+      @ok="submitEditForm"
     >
       <a-form
         ref="editFormRef"
         :model="editFormModel"
-        layout="vertical"
         class="k8s-form"
+        layout="vertical"
       >
         <a-row :gutter="16">
           <a-col :span="12">
@@ -1225,24 +1225,24 @@
               class="k8s-key-value-row"
             >
               <a-input
-                :value="key"
-                placeholder="标签键"
-                class="k8s-form-input"
                 :maxlength="200"
+                :value="key"
+                class="k8s-form-input"
                 disabled
+                placeholder="标签键"
               />
               <a-input
                 v-model:value="editFormModel.labels[key]"
-                placeholder="标签值"
-                class="k8s-form-input"
                 :maxlength="200"
+                class="k8s-form-input"
+                placeholder="标签值"
               />
               <a-button
-                type="text"
-                danger
-                @click="() => removeEditLabelField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="() => removeEditLabelField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -1283,24 +1283,24 @@
               class="k8s-key-value-row"
             >
               <a-input
-                :value="key"
-                placeholder="注解键"
-                class="k8s-form-input"
                 :maxlength="500"
+                :value="key"
+                class="k8s-form-input"
                 disabled
+                placeholder="注解键"
               />
               <a-input
                 v-model:value="editFormModel.annotations[key]"
-                placeholder="注解值"
-                class="k8s-form-input"
                 :maxlength="500"
+                class="k8s-form-input"
+                placeholder="注解值"
               />
               <a-button
-                type="text"
-                danger
-                @click="() => removeEditAnnotationField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="() => removeEditAnnotationField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -1329,22 +1329,22 @@
     <!-- YAML 模态框 -->
     <a-modal
       v-model:open="isYamlModalVisible"
-      :title="`查看/编辑 ${currentOperationDaemonSet?.name} YAML`"
-      @ok="submitYamlForm"
-      @cancel="closeYamlModal"
       :confirmLoading="submitLoading"
-      width="900px"
       :maskClosable="false"
+      :title="`查看/编辑 ${currentOperationDaemonSet?.name} YAML`"
+      cancelText="取消"
       destroyOnClose
       okText="保存修改"
-      cancelText="取消"
+      width="900px"
+      @cancel="closeYamlModal"
+      @ok="submitYamlForm"
     >
       <a-form
         ref="yamlFormRef"
         :model="yamlFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="yamlFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
@@ -1369,9 +1369,9 @@
           </div>
           <a-textarea
             v-model:value="yamlFormModel.yaml"
-            placeholder="YAML 内容"
             :rows="20"
             class="k8s-config-textarea"
+            placeholder="YAML 内容"
           />
         </a-form-item>
       </a-form>
@@ -1380,22 +1380,22 @@
     <!-- Pod 列表模态框 -->
     <a-modal
       v-model:open="isPodModalVisible"
-      :title="`${currentOperationDaemonSet?.name} Pod 列表`"
       :footer="null"
-      @cancel="closePodModal"
-      width="1000px"
       :maskClosable="false"
+      :title="`${currentOperationDaemonSet?.name} Pod 列表`"
       destroyOnClose
+      width="1000px"
+      @cancel="closePodModal"
     >
       <a-table
         :data-source="daemonSetPods"
-        :pagination="false"
         :loading="submitLoading"
-        size="small"
+        :pagination="false"
         class="k8s-table"
+        size="small"
       >
-        <a-table-column title="Pod 名称" dataIndex="name" key="name" />
-        <a-table-column title="状态" dataIndex="status" key="status">
+        <a-table-column key="name" dataIndex="name" title="Pod 名称" />
+        <a-table-column key="status" dataIndex="status" title="状态">
           <template #default="{ text }">
             <a-badge
               :status="text === 'Running' ? 'success' : 'error'"
@@ -1404,11 +1404,11 @@
           </template>
         </a-table-column>
         <a-table-column
-          title="重启次数"
-          dataIndex="restart_count"
           key="restart_count"
+          dataIndex="restart_count"
+          title="重启次数"
         />
-        <a-table-column title="创建时间" key="created_at">
+        <a-table-column key="created_at" title="创建时间">
           <template #default="{ record }">
             <span class="k8s-time-display">{{
               formatK8sTime(record.created_at)
@@ -1416,9 +1416,9 @@
           </template>
         </a-table-column>
         <a-table-column
-          title="节点名称"
-          dataIndex="node_name"
           key="node_name"
+          dataIndex="node_name"
+          title="节点名称"
         />
       </a-table>
     </a-modal>
@@ -1426,30 +1426,30 @@
     <!-- 版本历史模态框 -->
     <a-modal
       v-model:open="isHistoryModalVisible"
-      :title="`${currentOperationDaemonSet?.name} 版本历史`"
       :footer="null"
-      @cancel="closeHistoryModal"
-      width="800px"
       :maskClosable="false"
+      :title="`${currentOperationDaemonSet?.name} 版本历史`"
       destroyOnClose
+      width="800px"
+      @cancel="closeHistoryModal"
     >
       <a-table
         :data-source="daemonSetHistory"
-        :pagination="false"
         :loading="submitLoading"
-        size="small"
+        :pagination="false"
         class="k8s-table"
+        size="small"
       >
-        <a-table-column title="版本" dataIndex="revision" key="revision" />
-        <a-table-column title="日期" dataIndex="date" key="date" />
-        <a-table-column title="变更说明" dataIndex="message" key="message" />
-        <a-table-column title="操作" key="actions" width="100">
+        <a-table-column key="revision" dataIndex="revision" title="版本" />
+        <a-table-column key="date" dataIndex="date" title="日期" />
+        <a-table-column key="message" dataIndex="message" title="变更说明" />
+        <a-table-column key="actions" title="操作" width="100">
           <template #default="{ record }">
             <a-button
-              type="link"
-              size="small"
-              @click="rollbackToVersion(record.revision)"
               :disabled="record.revision === 1"
+              size="small"
+              type="link"
+              @click="rollbackToVersion(record.revision)"
             >
               回滚到此版本
             </a-button>
@@ -1461,14 +1461,14 @@
     <!-- 标签过滤模态框 -->
     <a-modal
       v-model:open="isLabelsFilterModalVisible"
-      title="标签过滤设置"
-      @ok="applyLabelsFilter"
-      @cancel="closeLabelsFilterModal"
-      width="550px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="应用过滤"
-      cancelText="取消"
+      title="标签过滤设置"
+      width="550px"
+      @cancel="closeLabelsFilterModal"
+      @ok="applyLabelsFilter"
     >
       <div class="labels-filter-form">
         <div
@@ -1481,18 +1481,18 @@
               v-for="(value, key) in filterLabels"
               :key="key"
               closable
-              @close="removeFilterLabel(key)"
               color="blue"
               style="margin-right: 8px; margin-bottom: 8px"
+              @close="removeFilterLabel(key)"
             >
               {{ key }}: {{ value }}
             </a-tag>
           </div>
           <a-button
-            type="link"
             danger
-            @click="clearFilterLabels"
             style="padding: 0; margin-bottom: 16px"
+            type="link"
+            @click="clearFilterLabels"
           >
             清除所有过滤条件
           </a-button>
@@ -1534,30 +1534,30 @@ import { message, Modal } from 'ant-design-vue';
 import { useDaemonSetPage } from './DaemonSet';
 import { rollbackDaemonSetApi } from '#/api/core/k8s/k8s_daemonset';
 import {
-  formatK8sTime,
   formatDateTime,
+  formatK8sTime,
   getRelativeTime,
 } from '../shared/utils';
 import {
-  PlusOutlined,
-  ReloadOutlined,
-  FilterOutlined,
-  DeleteOutlined,
-  DeploymentUnitOutlined,
   AppstoreOutlined,
-  EyeOutlined,
-  EditOutlined,
-  TagsOutlined,
-  SearchOutlined,
-  FileTextOutlined,
-  RedoOutlined,
-  ContainerOutlined,
-  HistoryOutlined,
-  HddOutlined,
-  FileAddOutlined,
-  FormatPainterOutlined,
   CheckCircleOutlined,
   ClearOutlined,
+  ContainerOutlined,
+  DeleteOutlined,
+  DeploymentUnitOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FilterOutlined,
+  FormatPainterOutlined,
+  HddOutlined,
+  HistoryOutlined,
+  PlusOutlined,
+  RedoOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  TagsOutlined,
 } from '@ant-design/icons-vue';
 
 import { usePermission } from '#/utils/permission';

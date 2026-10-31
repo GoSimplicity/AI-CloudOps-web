@@ -1,21 +1,21 @@
 <template>
   <OpsPage
-    title="PV 管理"
     description="管理和监控集群中的所有 Kubernetes PersistentVolume 持久化存储卷"
+    title="PV 管理"
   >
     <template #actions>
       <a-button
+        :disabled="!filterClusterId"
         type="primary"
         @click="openCreateModal"
-        :disabled="!filterClusterId"
       >
         <template #icon><PlusOutlined aria-hidden="true" /></template>
         创建 PV
       </a-button>
       <a-button
-        @click="fetchPVs"
-        :loading="loading"
         :disabled="!filterClusterId"
+        :loading="loading"
+        @click="fetchPVs"
       >
         <template #icon><ReloadOutlined aria-hidden="true" /></template>
         刷新数据
@@ -30,13 +30,13 @@
           <div class="k8s-filter-group">
             <a-select
               v-model:value="filterClusterId"
-              placeholder="选择集群"
-              class="k8s-cluster-selector"
-              aria-label="选择集群"
-              allow-clear
-              @change="handleClusterChange"
-              :loading="clustersLoading"
               :disabled="clustersLoading"
+              :loading="clustersLoading"
+              allow-clear
+              aria-label="选择集群"
+              class="k8s-cluster-selector"
+              placeholder="选择集群"
+              @change="handleClusterChange"
               @popup-scroll="handleClusterDropdownScroll"
             >
               <template #suffixIcon>
@@ -54,7 +54,7 @@
                     justify-content: space-between;
                   "
                 >
-                  <span class="k8s-cluster-name" :title="cluster.name">{{
+                  <span :title="cluster.name" class="k8s-cluster-name">{{
                     cluster.name
                   }}</span>
                   <a-tag color="blue" size="small">
@@ -68,16 +68,16 @@
                 disabled
                 style="text-align: center; color: var(--ops-muted)"
               >
-                <a-spin size="small" :spinning="clustersLoading" />
+                <a-spin :spinning="clustersLoading" size="small" />
                 <span v-if="!clustersLoading">滚动加载更多...</span>
               </a-select-option>
             </a-select>
 
             <a-select
               v-model:value="filterAccessMode"
-              placeholder="访问模式"
-              class="k8s-filter-select"
               allow-clear
+              class="k8s-filter-select"
+              placeholder="访问模式"
               @change="handleFilterChange"
             >
               <template #suffixIcon>
@@ -93,11 +93,11 @@
           <div class="k8s-search-group">
             <a-input
               v-model:value="searchText"
-              placeholder="搜索 PV 名称"
-              class="k8s-search-input"
-              @pressEnter="onSearch"
-              @input="onSearch"
               allow-clear
+              class="k8s-search-input"
+              placeholder="搜索 PV 名称"
+              @input="onSearch"
+              @pressEnter="onSearch"
             >
               <template #suffix>
                 <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -110,20 +110,20 @@
         <div class="k8s-toolbar-actions">
           <div class="k8s-action-buttons">
             <a-button
-              @click="resetFilters"
               :disabled="!filterAccessMode && !searchText && !filterClusterId"
               class="k8s-toolbar-btn"
               title="重置所有筛选条件"
+              @click="resetFilters"
             >
               <template #icon><DeleteOutlined aria-hidden="true" /></template>
               重置筛选
             </a-button>
 
             <a-button
-              @click="openCreateYamlModal"
               :disabled="!filterClusterId"
               class="k8s-toolbar-btn"
               title="通过YAML创建PV"
+              @click="openCreateYamlModal"
             >
               <template #icon><FileTextOutlined aria-hidden="true" /></template>
               YAML 创建
@@ -147,9 +147,9 @@
     </template>
     <a-alert
       v-if="clustersError"
-      type="error"
       :message="clustersError"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button size="small" @click="fetchClusters(true)">
@@ -157,7 +157,7 @@
         </a-button>
       </template>
     </a-alert>
-    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button size="small" @click="fetchPVs">重试查询</a-button>
       </template>
@@ -179,9 +179,9 @@
             `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
           pageSizeOptions: ['10', '20', '30', '50'],
         }"
+        :row-key="clusterResourceKey"
         :row-selection="rowSelection"
         :scroll="{ x: 1600 }"
-        :row-key="clusterResourceKey"
         class="k8s-table pv-table"
         @change="handleTableChange"
       >
@@ -386,15 +386,15 @@
                 </a-button>
               </a-tooltip>
               <a-tooltip
-                title="回收PV"
                 v-if="record.status === K8sPVStatus.Released"
+                title="回收PV"
               >
                 <a-button title="回收PV" @click="reclaimPV(record)">
                   <template #icon><UndoOutlined aria-hidden="true" /></template>
                 </a-button>
               </a-tooltip>
               <a-tooltip v-if="can('k8s.pv.delete')" title="删除">
-                <a-button title="删除" danger @click="deletePV(record)">
+                <a-button danger title="删除" @click="deletePV(record)">
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
                   </template>
@@ -418,48 +418,48 @@
     <!-- 创建PV模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      title="创建 PersistentVolume"
       :confirm-loading="submitLoading"
-      :width="800"
-      @ok="createPV"
-      @cancel="resetCreateForm"
       :maskClosable="false"
+      :width="800"
+      cancelText="取消"
       destroyOnClose
       okText="创建"
-      cancelText="取消"
+      title="创建 PersistentVolume"
+      @cancel="resetCreateForm"
+      @ok="createPV"
     >
       <a-form
         ref="formRef"
         :model="createFormModel"
         :rules="createFormRules"
-        layout="vertical"
         class="k8s-form"
+        layout="vertical"
       >
-        <a-form-item label="PV名称" name="name" :required="true">
+        <a-form-item :required="true" label="PV名称" name="name">
           <a-input
             v-model:value="createFormModel.name"
-            placeholder="请输入 PV 名称（例如：pv-data-01）"
-            class="k8s-form-input"
             :maxlength="63"
+            class="k8s-form-input"
+            placeholder="请输入 PV 名称（例如：pv-data-01）"
           />
         </a-form-item>
 
-        <a-form-item label="存储容量" name="capacity" :required="true">
+        <a-form-item :required="true" label="存储容量" name="capacity">
           <a-input
             v-model:value="createFormModel.capacity"
-            placeholder="例如：10Gi, 500Mi, 1Ti"
-            class="k8s-form-input"
             :maxlength="20"
+            class="k8s-form-input"
+            placeholder="例如：10Gi, 500Mi, 1Ti"
           />
         </a-form-item>
 
         <a-form-item label="访问模式" name="access_modes">
           <a-select
             v-model:value="createFormModel.access_modes"
+            :maxTagCount="2"
+            class="k8s-form-input"
             mode="multiple"
             placeholder="选择访问模式"
-            class="k8s-form-input"
-            :maxTagCount="2"
           >
             <a-select-option value="ReadWriteOnce">
               ReadWriteOnce
@@ -479,8 +479,8 @@
             <a-form-item label="回收策略">
               <a-select
                 v-model:value="createFormModel.reclaim_policy"
-                placeholder="选择回收策略"
                 class="k8s-form-input"
+                placeholder="选择回收策略"
               >
                 <a-select-option value="Retain">Retain</a-select-option>
                 <a-select-option value="Delete">Delete</a-select-option>
@@ -492,8 +492,8 @@
             <a-form-item label="卷模式">
               <a-select
                 v-model:value="createFormModel.volume_mode"
-                placeholder="选择卷模式"
                 class="k8s-form-input"
+                placeholder="选择卷模式"
               >
                 <a-select-option value="Filesystem">Filesystem</a-select-option>
                 <a-select-option value="Block">Block</a-select-option>
@@ -505,17 +505,17 @@
         <a-form-item label="存储类">
           <a-input
             v-model:value="createFormModel.storage_class"
-            placeholder="输入存储类名称（可选）"
-            class="k8s-form-input"
             :maxlength="253"
+            class="k8s-form-input"
+            placeholder="输入存储类名称（可选）"
           />
         </a-form-item>
 
-        <a-form-item label="卷类型" :required="true">
+        <a-form-item :required="true" label="卷类型">
           <a-select
             v-model:value="createFormModel.volume_type"
-            placeholder="选择卷类型"
             class="k8s-form-input"
+            placeholder="选择卷类型"
             @change="handleVolumeTypeChange"
           >
             <a-select-option value="hostPath">HostPath</a-select-option>
@@ -529,7 +529,7 @@
           </a-select>
         </a-form-item>
 
-        <a-form-item label="卷源配置" :required="true">
+        <a-form-item :required="true" label="卷源配置">
           <div class="k8s-key-value-inputs">
             <div
               v-for="(_, key) in createFormModel.volume_source"
@@ -537,10 +537,10 @@
               class="k8s-key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="key"
-                disabled
+                :value="key"
                 class="k8s-form-input"
+                disabled
               />
               <a-input
                 v-model:value="createFormModel.volume_source[key]"
@@ -553,11 +553,11 @@
                 :maxlength="200"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeVolumeSourceField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeVolumeSourceField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -610,22 +610,22 @@
               >
                 <a-input
                   :value="key"
-                  placeholder="标签键"
-                  disabled
                   class="k8s-form-input"
+                  disabled
+                  placeholder="标签键"
                 />
                 <a-input
                   v-model:value="createFormModel.labels[key]"
-                  placeholder="标签值"
-                  class="k8s-form-input"
                   :maxlength="200"
+                  class="k8s-form-input"
+                  placeholder="标签值"
                 />
                 <a-button
-                  type="text"
-                  danger
-                  @click="removeLabelField(key)"
-                  size="small"
                   class="k8s-remove-btn"
+                  danger
+                  size="small"
+                  type="text"
+                  @click="removeLabelField(key)"
                 >
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
@@ -675,22 +675,22 @@
               >
                 <a-input
                   :value="key"
-                  placeholder="注解键"
-                  disabled
                   class="k8s-form-input"
+                  disabled
+                  placeholder="注解键"
                 />
                 <a-input
                   v-model:value="createFormModel.annotations[key]"
-                  placeholder="注解值"
-                  class="k8s-form-input"
                   :maxlength="500"
+                  class="k8s-form-input"
+                  placeholder="注解值"
                 />
                 <a-button
-                  type="text"
-                  danger
-                  @click="removeAnnotationField(key)"
-                  size="small"
                   class="k8s-remove-btn"
+                  danger
+                  size="small"
+                  type="text"
+                  @click="removeAnnotationField(key)"
                 >
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
@@ -722,22 +722,22 @@
     <!-- YAML创建PV模态框 -->
     <a-modal
       v-model:open="isCreateYamlModalVisible"
-      title="通过 YAML 创建 PV"
       :confirm-loading="submitLoading"
-      :width="900"
-      @ok="createPVByYaml"
-      @cancel="resetCreateYamlForm"
       :maskClosable="false"
+      :width="900"
+      cancelText="取消"
       destroyOnClose
       okText="创建"
-      cancelText="取消"
+      title="通过 YAML 创建 PV"
+      @cancel="resetCreateYamlForm"
+      @ok="createPVByYaml"
     >
       <a-form
         ref="createYamlFormRef"
         :model="createYamlFormModel"
         :rules="createYamlFormRules"
-        layout="vertical"
         class="k8s-form"
+        layout="vertical"
       >
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
@@ -776,9 +776,9 @@
           </div>
           <a-textarea
             v-model:value="createYamlFormModel.yaml"
-            placeholder="请输入 PV 的 YAML 配置，或点击【插入模板】使用默认模板"
             :rows="20"
             class="k8s-config-textarea"
+            placeholder="请输入 PV 的 YAML 配置，或点击【插入模板】使用默认模板"
           />
         </a-form-item>
       </a-form>
@@ -787,45 +787,45 @@
     <!-- 编辑PV模态框 -->
     <a-modal
       v-model:open="isEditModalVisible"
-      title="编辑 PersistentVolume"
       :confirm-loading="submitLoading"
-      :width="800"
-      @ok="updatePV"
-      @cancel="resetEditForm"
       :maskClosable="false"
+      :width="800"
+      cancelText="取消"
       destroyOnClose
       okText="保存"
-      cancelText="取消"
+      title="编辑 PersistentVolume"
+      @cancel="resetEditForm"
+      @ok="updatePV"
     >
       <a-form
         ref="formRef"
         :model="editFormModel"
-        layout="vertical"
         class="k8s-form"
+        layout="vertical"
       >
         <a-form-item label="PV名称">
           <a-input
             v-model:value="editFormModel.name"
-            disabled
             class="k8s-form-input"
+            disabled
           />
         </a-form-item>
 
         <a-form-item label="存储容量">
           <a-input
             v-model:value="editFormModel.capacity"
-            placeholder="例如：10Gi"
             class="k8s-form-input"
+            placeholder="例如：10Gi"
           />
         </a-form-item>
 
         <a-form-item label="访问模式">
           <a-select
             v-model:value="editFormModel.access_modes"
+            :maxTagCount="2"
+            class="k8s-form-input"
             mode="multiple"
             placeholder="选择访问模式"
-            class="k8s-form-input"
-            :maxTagCount="2"
           >
             <a-select-option value="ReadWriteOnce">
               ReadWriteOnce
@@ -845,8 +845,8 @@
             <a-form-item label="回收策略">
               <a-select
                 v-model:value="editFormModel.reclaim_policy"
-                placeholder="选择回收策略"
                 class="k8s-form-input"
+                placeholder="选择回收策略"
               >
                 <a-select-option value="Retain">Retain</a-select-option>
                 <a-select-option value="Delete">Delete</a-select-option>
@@ -858,8 +858,8 @@
             <a-form-item label="存储类">
               <a-input
                 v-model:value="editFormModel.storage_class"
-                placeholder="存储类名称（可选）"
                 class="k8s-form-input"
+                placeholder="存储类名称（可选）"
               />
             </a-form-item>
           </a-col>
@@ -883,22 +883,22 @@
             >
               <a-input
                 :value="key"
-                placeholder="配置键"
-                disabled
                 class="k8s-form-input"
+                disabled
+                placeholder="配置键"
               />
               <a-input
                 v-model:value="editFormModel.volume_source[key]"
-                placeholder="配置值"
-                class="k8s-form-input"
                 :maxlength="200"
+                class="k8s-form-input"
+                placeholder="配置值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeEditVolumeSourceField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeEditVolumeSourceField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -951,22 +951,22 @@
               >
                 <a-input
                   :value="key"
-                  placeholder="标签键"
-                  disabled
                   class="k8s-form-input"
+                  disabled
+                  placeholder="标签键"
                 />
                 <a-input
                   v-model:value="editFormModel.labels[key]"
-                  placeholder="标签值"
-                  class="k8s-form-input"
                   :maxlength="200"
+                  class="k8s-form-input"
+                  placeholder="标签值"
                 />
                 <a-button
-                  type="text"
-                  danger
-                  @click="removeEditLabelField(key)"
-                  size="small"
                   class="k8s-remove-btn"
+                  danger
+                  size="small"
+                  type="text"
+                  @click="removeEditLabelField(key)"
                 >
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
@@ -1016,22 +1016,22 @@
               >
                 <a-input
                   :value="key"
-                  placeholder="注解键"
-                  disabled
                   class="k8s-form-input"
+                  disabled
+                  placeholder="注解键"
                 />
                 <a-input
                   v-model:value="editFormModel.annotations[key]"
-                  placeholder="注解值"
-                  class="k8s-form-input"
                   :maxlength="500"
+                  class="k8s-form-input"
+                  placeholder="注解值"
                 />
                 <a-button
-                  type="text"
-                  danger
-                  @click="removeEditAnnotationField(key)"
-                  size="small"
                   class="k8s-remove-btn"
+                  danger
+                  size="small"
+                  type="text"
+                  @click="removeEditAnnotationField(key)"
                 >
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
@@ -1063,15 +1063,15 @@
     <!-- PV详情模态框 -->
     <a-modal
       v-model:open="isDetailModalVisible"
-      :title="`PV 详情: ${currentOperationPV?.name}`"
       :footer="null"
+      :maskClosable="false"
+      :title="`PV 详情: ${currentOperationPV?.name}`"
       :width="900"
       class="k8s-detail-modal"
-      :maskClosable="false"
       destroyOnClose
     >
-      <div class="k8s-detail-content" v-if="currentPVDetail">
-        <a-card title="基本信息" size="small" class="k8s-detail-card">
+      <div v-if="currentPVDetail" class="k8s-detail-content">
+        <a-card class="k8s-detail-card" size="small" title="基本信息">
           <div class="k8s-detail-item">
             <span class="k8s-detail-label">名称:</span>
             <span class="k8s-detail-value">{{ currentPVDetail.name }}</span>
@@ -1155,9 +1155,9 @@
           "
         >
           <div
-            class="k8s-detail-item"
             v-for="(value, key) in currentPVDetail.claim_ref"
             :key="key"
+            class="k8s-detail-item"
           >
             <span class="k8s-detail-label">{{ key }}:</span>
             <span class="k8s-detail-value">{{ value }}</span>
@@ -1174,9 +1174,9 @@
           "
         >
           <div
-            class="k8s-detail-item"
             v-for="(value, key) in currentPVDetail.volume_source"
             :key="key"
+            class="k8s-detail-item"
           >
             <span class="k8s-detail-label">{{ key }}:</span>
             <span class="k8s-detail-value">{{
@@ -1185,7 +1185,7 @@
           </div>
         </a-card>
 
-        <a-card title="标签" size="small" class="k8s-detail-card">
+        <a-card class="k8s-detail-card" size="small" title="标签">
           <div class="k8s-labels-display">
             <template
               v-if="
@@ -1209,7 +1209,7 @@
           </div>
         </a-card>
 
-        <a-card title="注解" size="small" class="k8s-detail-card">
+        <a-card class="k8s-detail-card" size="small" title="注解">
           <div class="k8s-annotations-display">
             <a-tooltip
               v-for="(value, key) in currentPVDetail.annotations"
@@ -1251,22 +1251,22 @@
     <!-- YAML编辑模态框 -->
     <a-modal
       v-model:open="isYamlModalVisible"
-      :title="`查看/编辑 ${currentOperationPV?.name} YAML`"
       :confirm-loading="submitLoading"
-      :width="900"
-      @ok="updatePVByYaml"
-      @cancel="resetYamlForm"
       :maskClosable="false"
+      :title="`查看/编辑 ${currentOperationPV?.name} YAML`"
+      :width="900"
+      cancelText="取消"
       destroyOnClose
       okText="保存修改"
-      cancelText="取消"
+      @cancel="resetYamlForm"
+      @ok="updatePVByYaml"
     >
       <a-form
         ref="yamlFormRef"
         :model="yamlFormModel"
         :rules="yamlFormRules"
-        layout="vertical"
         class="k8s-form"
+        layout="vertical"
       >
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
@@ -1291,9 +1291,9 @@
           </div>
           <a-textarea
             v-model:value="yamlFormModel.yaml"
-            placeholder="YAML 内容"
             :rows="20"
             class="k8s-config-textarea"
+            placeholder="YAML 内容"
           />
         </a-form-item>
       </a-form>
@@ -1306,20 +1306,20 @@ import OpsPage from '#/components/ops/OpsPage.vue';
 import { clusterResourceKey } from '../shared/utils';
 import { onMounted } from 'vue';
 import {
-  PlusOutlined,
-  ReloadOutlined,
-  DatabaseOutlined,
-  KeyOutlined,
-  SearchOutlined,
-  DeleteOutlined,
-  FileTextOutlined,
-  EyeOutlined,
-  EditOutlined,
-  UndoOutlined,
-  FileAddOutlined,
-  FormatPainterOutlined,
   CheckCircleOutlined,
   ClearOutlined,
+  DatabaseOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  FormatPainterOutlined,
+  KeyOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  UndoOutlined,
 } from '@ant-design/icons-vue';
 import { usePVPage } from './PV';
 import { formatDateTime, getRelativeTime } from '../shared/utils';

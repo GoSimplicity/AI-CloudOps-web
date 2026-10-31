@@ -3,33 +3,33 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useAccessStore, useUserStore } from '@vben/stores';
 import { message } from 'ant-design-vue';
 import {
-  getCloudAccountDetailApi,
-  getCloudAccountListApi,
   type CloudAccount,
   type CloudAccountRegion,
+  getCloudAccountDetailApi,
+  getCloudAccountListApi,
 } from '#/api/core/tree/tree_account';
 import {
+  managedPermissions as codes,
   getManagedPermissions,
   getManagedResourceDetail,
   getManagedResources,
   getManagedSyncHistory,
-  managedPermissions as codes,
-  syncManagedResources,
-  resolveManagedHistory,
   type ManagedCloudHistory,
   type ManagedCloudKind,
   type ManagedCloudResource,
   type ManagedCloudScope,
   type ManagedCloudSyncResult,
   type ManagedPermissions,
+  resolveManagedHistory,
+  syncManagedResources,
 } from '#/api/core/tree/tree_cloud';
 import CloudManagedOperationsList from './CloudManagedOperationsList.vue';
 import CloudManagedOperationRecovery from './CloudManagedOperationRecovery.vue';
 import {
-  parseManagedMarker,
-  saveManagedMarker,
-  removeManagedMarker,
   type ManagedOperationMarker,
+  parseManagedMarker,
+  removeManagedMarker,
+  saveManagedMarker,
 } from './managed-operation-marker';
 import {
   shouldNotifyPageError,
@@ -862,14 +862,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="managed-resources" aria-label="托管资源管理">
+  <section aria-label="托管资源管理" class="managed-resources">
     <h2>托管资源</h2>
     <a-alert
-      type="info"
-      show-icon
       message="当前仅支持阿里云 RDS、传统型 CLB 与 Tair/Redis/Memcache 的指定 ID 增量同步；不支持全量删除、ALB/NLB 或其他厂商。"
+      show-icon
+      type="info"
     />
-    <a-alert v-if="error" type="error" :message="error" show-icon />
+    <a-alert v-if="error" :message="error" show-icon type="error" />
     <a-alert
       v-if="!can(codes.accountList) || !can(codes.accountDetail)"
       type="warning"
@@ -914,8 +914,8 @@ onBeforeUnmount(() => {
       />
       <a-select
         v-model:value="kind"
-        aria-label="托管资源类型"
         :disabled="syncing || reviewing || operationBusy"
+        aria-label="托管资源类型"
         @change="chooseKind"
       >
         <a-select-option value="rds">RDS 数据库</a-select-option
@@ -923,12 +923,12 @@ onBeforeUnmount(() => {
         ><a-select-option value="cache">缓存实例</a-select-option>
       </a-select>
     </div>
-    <a-alert v-if="regionError" type="error" :message="regionError" show-icon />
+    <a-alert v-if="regionError" :message="regionError" show-icon type="error" />
     <a-alert
       v-if="accountId && !regionLoading && !regions.length && !regionError"
-      type="info"
       message="该账户没有配置地域"
       show-icon
+      type="info"
     />
     <template v-if="scope">
       <a-alert
@@ -947,15 +947,15 @@ onBeforeUnmount(() => {
         <a-textarea
           id="managed-resource-ids"
           v-model:value="idsText"
-          :maxlength="12000"
           :disabled="syncing || reviewing || operationBusy"
+          :maxlength="12000"
           :rows="3"
           placeholder="例如 rm-example"
         />
         <a-button
-          type="primary"
-          :loading="syncing"
           :disabled="!canSync"
+          :loading="syncing"
+          type="primary"
           @click="sync"
         >
           同步指定 ID
@@ -1010,40 +1010,40 @@ onBeforeUnmount(() => {
       />
       <a-alert
         v-else-if="historyError"
-        type="warning"
         :message="historyError"
         show-icon
+        type="warning"
       />
       <a-alert
         v-else-if="historyBlocked || localBlocked"
-        type="warning"
-        show-icon
         :message="
           storageUnavailable
             ? '本机同步状态不可用，暂不能安全同步'
             : '该范围存在未确认操作，请先核对资源与历史；当前不能直接重试。'
         "
+        show-icon
+        type="warning"
       />
       <a-alert
         v-if="result"
-        :type="result.status === 'success' ? 'success' : 'warning'"
-        show-icon
-        :message="
-          result.status === 'success'
-            ? `已同步 ${result.count} 项`
-            : '同步未完成或结果未知，请核对历史'
-        "
         :description="
           result.history_id
             ? `历史记录 ${result.history_id}`
             : '没有可确认的持久历史记录'
         "
+        :message="
+          result.status === 'success'
+            ? `已同步 ${result.count} 项`
+            : '同步未完成或结果未知，请核对历史'
+        "
+        :type="result.status === 'success' ? 'success' : 'warning'"
+        show-icon
       />
       <div class="managed-header">
         <h3>{{ kindName[kind] }}</h3>
         <a-button
-          :loading="loading || historyLoading"
           :disabled="syncing || reviewing || operationBusy"
+          :loading="loading || historyLoading"
           @click="refreshScope"
         >
           刷新资源与历史
@@ -1060,11 +1060,11 @@ onBeforeUnmount(() => {
         :data-source="records"
         :loading="loading"
         :pagination="false"
+        :scroll="{ x: 700 }"
         row-key="id"
         size="small"
-        :scroll="{ x: 700 }"
       >
-        <a-table-column title="资源 ID" key="provider_id">
+        <a-table-column key="provider_id" title="资源 ID">
           <template #default="{ record }">
             {{
               idPattern.test(record.provider_id ?? '')
@@ -1073,7 +1073,7 @@ onBeforeUnmount(() => {
             }}
           </template>
         </a-table-column>
-        <a-table-column title="名称" key="name">
+        <a-table-column key="name" title="名称">
           <template #default="{ record }">
             {{
               safeText(
@@ -1082,7 +1082,7 @@ onBeforeUnmount(() => {
             }}
           </template>
         </a-table-column>
-        <a-table-column title="状态" key="status">
+        <a-table-column key="status" title="状态">
           <template #default="{ record }">
             {{
               safeText(
@@ -1093,12 +1093,12 @@ onBeforeUnmount(() => {
             }}
           </template>
         </a-table-column>
-        <a-table-column title="最近同步" key="time">
+        <a-table-column key="time" title="最近同步">
           <template #default="{ record }">
             {{ dateText(record.last_sync_time) }}
           </template>
         </a-table-column>
-        <a-table-column title="操作" key="action">
+        <a-table-column key="action" title="操作">
           <template #default="{ record }">
             <a-button
               v-if="can(codes.detail)"
@@ -1114,16 +1114,16 @@ onBeforeUnmount(() => {
       <a-pagination
         v-if="total > pageSize"
         :current="page"
-        :total="total"
         :page-size="pageSize"
         :show-size-changer="false"
+        :total="total"
         @change="changePage"
       />
       <a-alert
         v-if="detailError"
-        type="error"
         :message="detailError"
         show-icon
+        type="error"
       />
       <h3>最近同步历史</h3>
       <a-spin v-if="can(codes.history)" :spinning="historyLoading">
@@ -1198,17 +1198,17 @@ onBeforeUnmount(() => {
           id="managed-review-reason"
           v-model:value="reviewReason"
           :disabled="reviewing"
-          :rows="4"
           :maxlength="1000"
+          :rows="4"
         />
         <a-checkbox v-model:checked="reviewVerified" :disabled="reviewing">
           已核对实际资源与本地状态
         </a-checkbox>
         <a-alert
           v-if="reviewError"
-          type="warning"
           :message="reviewError"
           show-icon
+          type="warning"
         />
       </template>
     </a-modal>

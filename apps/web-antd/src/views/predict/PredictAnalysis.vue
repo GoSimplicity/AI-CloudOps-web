@@ -1,18 +1,18 @@
 <template>
   <OpsPage
-    title="预测分析"
-    description="明确开始后预测单个指标，保留真实时间、零值与缺失区间"
     class="predict-analysis"
+    description="明确开始后预测单个指标，保留真实时间、零值与缺失区间"
+    title="预测分析"
   >
     <!-- 页面头部 -->
     <template #actions>
       <a-space wrap>
         <a-button @click="resetForm"> 重置 </a-button>
         <a-button
+          :disabled="!isFormValid || analyzing"
+          :loading="analyzing"
           type="primary"
           @click="startAnalysis"
-          :loading="analyzing"
-          :disabled="!isFormValid || analyzing"
         >
           开始分析
         </a-button>
@@ -21,20 +21,20 @@
     <a-alert
       v-if="predictionError"
       :message="predictionError"
-      type="error"
-      show-icon
       role="alert"
+      show-icon
+      type="error"
     />
 
     <a-row :gutter="[24, 24]">
-      <a-col :xs="24" :lg="8">
-        <a-card title="预测配置" class="config-card">
+      <a-col :lg="8" :xs="24">
+        <a-card class="config-card" title="预测配置">
           <a-form :model="formData" layout="vertical">
             <a-form-item label="预测类型" name="predictionType">
               <a-select
                 v-model:value="formData.predictionType"
-                @change="onPredictionTypeChange"
                 placeholder="选择预测类型"
+                @change="onPredictionTypeChange"
               >
                 <a-select-option value="qps">
                   <div class="option-content">
@@ -90,9 +90,9 @@
             <a-form-item label="预测时长" name="predictionHours">
               <a-slider
                 v-model:value="formData.predictionHours"
-                :min="1"
-                :max="168"
                 :marks="timeMarks"
+                :max="168"
+                :min="1"
                 :tipFormatter="(value: number) => `${value}小时`"
               />
             </a-form-item>
@@ -113,8 +113,8 @@
                 <a-form-item label="目标利用率" name="targetUtilization">
                   <a-slider
                     v-model:value="formData.targetUtilization"
-                    :min="0"
                     :max="100"
+                    :min="0"
                     :step="5"
                     :tipFormatter="(value: number) => `${value}%`"
                   />
@@ -123,8 +123,8 @@
                 <a-form-item label="敏感度" name="sensitivity">
                   <a-slider
                     v-model:value="formData.sensitivity"
-                    :min="0"
                     :max="1"
+                    :min="0"
                     :step="0.1"
                     :tipFormatter="(value: number) => value"
                   />
@@ -158,8 +158,8 @@
         </a-card>
       </a-col>
 
-      <a-col :xs="24" :lg="16">
-        <a-card title="预测结果" class="result-card" v-if="predictionResult">
+      <a-col :lg="16" :xs="24">
+        <a-card v-if="predictionResult" class="result-card" title="预测结果">
           <template #extra>
             <a-space wrap>
               <a-tag :color="getAccuracyColor(predictionResult.model_accuracy)">
@@ -174,17 +174,17 @@
           </template>
 
           <PredictionProvenance
-            :result="predictionResult"
             :ai-requested="formData.enableAiInsights"
+            :result="predictionResult"
           />
           <a-tabs v-model:activeKey="activeChartTab" @change="onChartTabChange">
             <a-tab-pane key="trend" tab="趋势预测">
               <div ref="trendChartRef" class="chart-container"></div>
             </a-tab-pane>
             <a-tab-pane
+              v-if="formData.includeConfidence"
               key="confidence"
               tab="置信区间"
-              v-if="formData.includeConfidence"
             >
               <p v-if="!hasConfidenceBounds">当前响应未提供有效置信区间</p>
               <div ref="confidenceChartRef" class="chart-container"></div>
@@ -198,10 +198,10 @@
               <BarChartOutlined style="font-size: 64px; color: #bfbfbf" />
             </template>
             <a-button
+              :disabled="!isFormValid || analyzing"
+              :loading="analyzing"
               type="primary"
               @click="startAnalysis"
-              :loading="analyzing"
-              :disabled="!isFormValid || analyzing"
             >
               开始预测分析
             </a-button>
@@ -209,9 +209,9 @@
         </a-card>
 
         <a-card
-          title="扩缩容建议"
-          class="recommendations-card"
           v-if="predictionResult?.scaling_recommendations?.length"
+          class="recommendations-card"
+          title="扩缩容建议"
         >
           <div class="recommendations-grid">
             <div
@@ -239,12 +239,12 @@
         </a-card>
 
         <a-card
-          title="AI智能洞察"
-          class="insights-card"
           v-if="
             predictionResult?.ai_enhanced &&
             predictionResult?.ai_insights?.length
           "
+          class="insights-card"
+          title="AI智能洞察"
         >
           <div class="insights-list">
             <div
@@ -271,29 +271,29 @@ import { formatProbability } from './prediction-display';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
 import {
-  forecastPoints,
   confidenceValues,
+  forecastPoints,
   formatPredictionTime,
 } from './prediction-series';
 import {
-  ref,
-  reactive,
   computed,
-  onMounted,
   nextTick,
+  onMounted,
   onUnmounted,
+  reactive,
+  ref,
   watch,
 } from 'vue';
 // 按需引入echarts，减少打包体积
 import * as echarts from 'echarts/core';
 import { LineChart } from 'echarts/charts';
 import {
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  TitleComponent,
   DataZoomComponent,
+  GridComponent,
+  LegendComponent,
   MarkLineComponent,
+  TitleComponent,
+  TooltipComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
@@ -310,25 +310,25 @@ echarts.use([
 ]);
 import { message } from 'ant-design-vue';
 import {
-  ThunderboltOutlined,
   ApiOutlined,
-  DatabaseOutlined,
-  HddOutlined,
-  DownloadOutlined,
   BarChartOutlined,
   BulbOutlined,
+  DatabaseOutlined,
+  DownloadOutlined,
+  HddOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons-vue';
 import {
-  predictQps,
-  predictCpu,
-  predictMemory,
-  predictDisk,
-  type PredictionResponse,
-  type QpsPredictionRequest,
   type CpuPredictionRequest,
-  type MemoryPredictionRequest,
   type DiskPredictionRequest,
+  type MemoryPredictionRequest,
+  predictCpu,
+  predictDisk,
   PredictionGranularity,
+  type PredictionResponse,
+  predictMemory,
+  predictQps,
+  type QpsPredictionRequest,
 } from '#/api/core/aiops/predict';
 
 const analyzing = ref(false);

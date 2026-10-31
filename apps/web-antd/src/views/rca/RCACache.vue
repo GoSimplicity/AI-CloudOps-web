@@ -1,17 +1,17 @@
 <template>
   <OpsPage
-    title="RCA 缓存管理"
-    description="读取真实缓存状态；清理操作仅在明确提交后执行"
     class="rca-cache"
+    description="读取真实缓存状态；清理操作仅在明确提交后执行"
+    title="RCA 缓存管理"
   >
     <!-- 页面头部 -->
     <template #actions>
       <a-button
-        type="primary"
-        size="large"
-        @click="refreshCacheStats"
-        :loading="loadingStats"
         :disabled="loadingStats"
+        :loading="loadingStats"
+        size="large"
+        type="primary"
+        @click="refreshCacheStats"
       >
         {{ loadingStats ? '获取中...' : '刷新状态' }}
       </a-button>
@@ -19,16 +19,16 @@
     <a-alert
       v-if="statsError"
       :message="statsError"
-      type="error"
-      show-icon
       role="alert"
+      show-icon
+      type="error"
     />
     <a-alert
       v-if="operationError"
       :message="operationError"
-      type="error"
-      show-icon
       role="alert"
+      show-icon
+      type="error"
     />
 
     <!-- 加载状态 -->
@@ -38,7 +38,7 @@
     </a-card>
 
     <!-- 缓存概览卡片 -->
-    <div class="overview-grid" v-if="cacheStats">
+    <div v-if="cacheStats" class="overview-grid">
       <div class="overview-card status">
         <div class="card-icon">
           <CheckCircleOutlined v-if="cacheStats.healthy" />
@@ -110,8 +110,8 @@
             <a-input
               v-model:value="clearNamespaceForm.namespace"
               :disabled="clearingCache"
-              placeholder="输入要清除缓存的命名空间"
               class="operation-input"
+              placeholder="输入要清除缓存的命名空间"
             />
             <a-button
               v-if="can('aiops.rca.clearNamespace')"
@@ -135,8 +135,8 @@
             <a-select
               v-model:value="clearOperationForm.operation"
               :disabled="clearingCache"
-              placeholder="选择要清除缓存的操作类型"
               class="operation-select"
+              placeholder="选择要清除缓存的操作类型"
             >
               <a-select-option value="analyze">根因分析</a-select-option>
               <a-select-option value="diagnosis">快速诊断</a-select-option>
@@ -176,9 +176,9 @@
                 清除所有缓存
               </a-button>
               <a-button
-                @click="refreshCacheStats"
                 :loading="loadingStats"
                 block
+                @click="refreshCacheStats"
               >
                 刷新缓存状态
               </a-button>
@@ -189,7 +189,7 @@
     </div>
 
     <!-- 缓存详情 -->
-    <div class="details-section" v-if="cacheStats">
+    <div v-if="cacheStats" class="details-section">
       <div class="section-header">
         <h2>缓存详情</h2>
         <a-tag color="#6366f1">
@@ -271,7 +271,7 @@
     <div class="history-section">
       <div class="section-header">
         <h2>操作历史</h2>
-        <a-button @click="clearHistory" size="small"> 清空历史 </a-button>
+        <a-button size="small" @click="clearHistory"> 清空历史 </a-button>
       </div>
 
       <div class="history-list">
@@ -307,13 +307,13 @@
     <!-- 清除所有缓存确认模态框 -->
     <a-modal
       v-model:open="clearAllModalVisible"
-      title="确认清除所有缓存"
-      @ok="confirmClearAllCache"
-      @cancel="clearAllModalVisible = false"
       :confirm-loading="clearingCache"
-      ok-text="确认清除"
       cancel-text="取消"
+      ok-text="确认清除"
       ok-type="danger"
+      title="确认清除所有缓存"
+      @cancel="clearAllModalVisible = false"
+      @ok="confirmClearAllCache"
     >
       <div class="clear-all-warning">
         <ExclamationCircleOutlined
@@ -334,8 +334,8 @@ import OpsPage from '#/components/ops/OpsPage.vue';
 import { useRcaCache } from './useRcaCache';
 import {
   CheckCircleOutlined,
-  ExclamationCircleOutlined,
   CloseCircleOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 

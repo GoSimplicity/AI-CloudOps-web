@@ -1,18 +1,18 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { ref, reactive, onMounted } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import type { FormInstance } from 'ant-design-vue';
 
 import {
-  listApisApi,
   createApiApi,
-  updateApiApi,
+  type CreateApiReq,
   deleteApiApi,
   getApiDetailApi,
   getApiStatisticsApi,
-  type CreateApiReq,
+  listApisApi,
+  updateApiApi,
   type UpdateApiReq,
 } from '#/api/core/system/api';
 
@@ -373,11 +373,11 @@ onMounted(() => {
         <div class="search-left">
           <a-input
             v-model:value="searchParams.search"
-            placeholder="搜索API名称或路径"
-            aria-label="搜索API"
             allowClear
-            @pressEnter="handleSearch"
+            aria-label="搜索API"
             class="search-input"
+            placeholder="搜索API名称或路径"
+            @pressEnter="handleSearch"
           >
             <template #prefix>
               <Icon icon="material-symbols:search" />
@@ -386,9 +386,9 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.method"
-            placeholder="请求方法"
             allowClear
             class="method-select"
+            placeholder="请求方法"
           >
             <a-select-option :value="1">GET</a-select-option>
             <a-select-option :value="2">POST</a-select-option>
@@ -398,9 +398,9 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.is_public"
-            placeholder="访问权限"
             allowClear
             class="access-select"
+            placeholder="访问权限"
           >
             <a-select-option :value="1">公开</a-select-option>
             <a-select-option :value="2">私有</a-select-option>
@@ -417,11 +417,11 @@ onMounted(() => {
     <!-- API表格 -->
     <div class="table-container">
       <a-table
-        :scroll="{ x: 'max-content' }"
         :columns="tableColumns"
         :data-source="apiList"
-        :pagination="paginationConfig"
         :loading="loading"
+        :pagination="paginationConfig"
+        :scroll="{ x: 'max-content' }"
         row-key="id"
         size="middle"
         @change="handleTableChange"
@@ -454,11 +454,11 @@ onMounted(() => {
           <template v-if="column.key === 'access'">
             <a-switch
               :checked="record.is_public === 1"
+              size="small"
               @change="
                 (checked: boolean) =>
                   handleAccessChange(record, checked ? 1 : 2)
               "
-              size="small"
             />
           </template>
 
@@ -473,10 +473,10 @@ onMounted(() => {
 
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
-              <a-button type="text" size="small" @click="handleView(record)">
+              <a-button size="small" type="text" @click="handleView(record)">
                 查看
               </a-button>
-              <a-button type="text" size="small" @click="handleEdit(record)">
+              <a-button size="small" type="text" @click="handleEdit(record)">
                 编辑
               </a-button>
               <a-popconfirm
@@ -484,7 +484,7 @@ onMounted(() => {
                 title="确定要删除吗？"
                 @confirm="handleDelete(record)"
               >
-                <a-button type="text" size="small" danger>删除</a-button>
+                <a-button danger size="small" type="text">删除</a-button>
               </a-popconfirm>
             </div>
           </template>
@@ -495,9 +495,9 @@ onMounted(() => {
     <!-- 查看API详情 -->
     <a-modal
       v-model:open="viewModalVisible"
+      :footer="null"
       title="API详情"
       width="700px"
-      :footer="null"
     >
       <div v-if="viewApiData" class="api-detail">
         <div class="detail-section">
@@ -531,7 +531,7 @@ onMounted(() => {
               <label>API分类</label>
               <span>{{ viewApiData.category || '-' }}</span>
             </div>
-            <div class="detail-item" v-if="viewApiData.description">
+            <div v-if="viewApiData.description" class="detail-item">
               <label>API描述</label>
               <span>{{ viewApiData.description }}</span>
             </div>
@@ -547,10 +547,10 @@ onMounted(() => {
     <!-- 编辑API -->
     <a-modal
       v-model:open="modalVisible"
+      :confirm-loading="submitLoading"
       :title="modalTitle"
       width="800px"
       @ok="handleSubmit"
-      :confirm-loading="submitLoading"
     >
       <a-form
         ref="formRef"
@@ -606,8 +606,8 @@ onMounted(() => {
             <a-form-item label="API分类" name="category">
               <a-input-number
                 v-model:value="formData.category"
-                placeholder="分类ID"
                 :min="0"
+                placeholder="分类ID"
                 style="width: 100%"
               />
             </a-form-item>
@@ -630,7 +630,7 @@ onMounted(() => {
           />
         </a-form-item>
 
-        <div class="api-preview" v-if="formData.path && formData.method">
+        <div v-if="formData.path && formData.method" class="api-preview">
           <div class="preview-title">
             <Icon icon="material-symbols:preview" />
             接口预览

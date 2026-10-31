@@ -1,27 +1,27 @@
 <template>
   <OpsPage
-    title="流程设计"
-    description="关联已发布表单，配置步骤与连接后保存为草稿或发布"
     class="process-design-engine"
+    description="关联已发布表单，配置步骤与连接后保存为草稿或发布"
+    title="流程设计"
   >
     <template #actions>
       <a-button
-        type="primary"
-        aria-label="保存流程"
-        @click="saveProcess"
-        :loading="saving"
         :disabled="formsLoading || !!formLoadError"
+        :loading="saving"
+        aria-label="保存流程"
+        type="primary"
+        @click="saveProcess"
       >
         <SaveOutlined /> 保存流程
       </a-button>
       <a-button @click="copyProcessJson"><CopyOutlined /> 复制JSON</a-button>
     </template>
-    <a-alert v-if="saveError" :message="saveError" type="error" show-icon />
+    <a-alert v-if="saveError" :message="saveError" show-icon type="error" />
     <a-alert
       v-if="formLoadError"
       :message="formLoadError"
-      type="error"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button :loading="formsLoading" @click="loadFormDesigns">
@@ -32,8 +32,8 @@
     <a-alert
       v-if="categoryLoadError"
       :message="categoryLoadError"
-      type="error"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button :loading="categoriesLoading" @click="loadCategories">
@@ -41,28 +41,28 @@
         </a-button>
       </template>
     </a-alert>
-    <div class="edit-mode-tabs" :inert="saving || undefined">
+    <div :inert="saving || undefined" class="edit-mode-tabs">
       <a-tabs v-model:activeKey="editMode" type="card">
         <a-tab-pane key="basic" tab="基本信息">
           <div class="basic-info-form">
-            <a-form layout="vertical" :model="processBasicInfo">
+            <a-form :model="processBasicInfo" layout="vertical">
               <a-row :gutter="16">
-                <a-col :xs="24" :sm="12">
+                <a-col :sm="12" :xs="24">
                   <a-form-item label="流程名称" required>
                     <a-input
                       v-model:value="processBasicInfo.name"
-                      placeholder="请输入流程名称"
                       :maxlength="200"
+                      placeholder="请输入流程名称"
                     />
                   </a-form-item>
                 </a-col>
-                <a-col :xs="24" :sm="12">
+                <a-col :sm="12" :xs="24">
                   <a-form-item label="关联表单" required>
                     <a-select
                       id="process-design-form"
                       v-model:value="processBasicInfo.form_design_id"
-                      placeholder="选择关联表单"
                       :loading="formsLoading"
+                      placeholder="选择关联表单"
                     >
                       <a-select-option
                         v-for="form in formDesigns"
@@ -80,13 +80,13 @@
               </a-row>
 
               <a-row :gutter="16">
-                <a-col :xs="24" :sm="12">
+                <a-col :sm="12" :xs="24">
                   <a-form-item label="分类">
                     <a-select
                       v-model:value="processBasicInfo.category_id"
-                      placeholder="选择分类"
-                      allow-clear
                       :loading="categoriesLoading"
+                      allow-clear
+                      placeholder="选择分类"
                     >
                       <a-select-option
                         v-for="category in categories"
@@ -98,7 +98,7 @@
                     </a-select>
                   </a-form-item>
                 </a-col>
-                <a-col :xs="24" :sm="12">
+                <a-col :sm="12" :xs="24">
                   <a-form-item label="状态">
                     <a-select
                       id="process-design-status"
@@ -119,9 +119,9 @@
               <a-form-item label="描述">
                 <a-textarea
                   v-model:value="processBasicInfo.description"
-                  placeholder="请输入流程描述"
                   :maxlength="1000"
                   :rows="3"
+                  placeholder="请输入流程描述"
                 />
               </a-form-item>
 
@@ -162,7 +162,7 @@
 
             <div class="process-canvas">
               <div v-if="processSteps.length === 0" class="empty-canvas">
-                <a-empty description="暂无流程步骤" :image="emptyImage">
+                <a-empty :image="emptyImage" description="暂无流程步骤">
                   <a-button type="primary" @click="addProcessStep">
                     开始设计流程
                   </a-button>
@@ -201,11 +201,11 @@
                       </div>
                       <div class="step-actions">
                         <a-button
-                          type="text"
-                          size="small"
                           danger
-                          @click.stop="removeStepById(step.id)"
+                          size="small"
                           title="删除"
+                          type="text"
+                          @click.stop="removeStepById(step.id)"
                         >
                           <DeleteOutlined />
                         </a-button>
@@ -216,7 +216,7 @@
                       v-if="step.assignee_type && step.assignee_ids?.length"
                       class="step-assignees"
                     >
-                      <a-tag size="small" color="blue">
+                      <a-tag color="blue" size="small">
                         {{ getAssigneeTypeText(step.assignee_type) }}:
                         {{ step.assignee_ids.length }}人
                       </a-tag>
@@ -226,8 +226,8 @@
                       <a-tag
                         v-for="action in step.actions"
                         :key="action"
-                        size="small"
                         color="green"
+                        size="small"
                       >
                         {{ getActionText(action) }}
                       </a-tag>
@@ -262,17 +262,17 @@
               >
                 <template #extra>
                   <a-button
-                    type="text"
                     size="small"
+                    type="text"
                     @click="selectedStepIndex = null"
                   >
                     <CloseOutlined />
                   </a-button>
                 </template>
 
-                <a-form layout="vertical" :model="selectedStep">
+                <a-form :model="selectedStep" layout="vertical">
                   <a-row :gutter="16">
-                    <a-col :xs="24" :sm="12">
+                    <a-col :sm="12" :xs="24">
                       <a-form-item label="步骤名称">
                         <a-input
                           v-model:value="selectedStep.name"
@@ -280,7 +280,7 @@
                         />
                       </a-form-item>
                     </a-col>
-                    <a-col :xs="24" :sm="12">
+                    <a-col :sm="12" :xs="24">
                       <a-form-item label="步骤类型">
                         <a-select
                           v-model:value="selectedStep.type"
@@ -304,12 +304,12 @@
                   </a-row>
 
                   <a-row :gutter="16">
-                    <a-col :xs="24" :sm="12">
+                    <a-col :sm="12" :xs="24">
                       <a-form-item label="受理人类型">
                         <a-select
                           v-model:value="selectedStep.assignee_type"
-                          placeholder="选择受理人类型"
                           allow-clear
+                          placeholder="选择受理人类型"
                         >
                           <a-select-option :value="AssigneeType.User">
                             用户
@@ -320,7 +320,7 @@
                         </a-select>
                       </a-form-item>
                     </a-col>
-                    <a-col :xs="24" :sm="12">
+                    <a-col :sm="12" :xs="24">
                       <a-form-item label="排序(仅影响显示顺序)">
                         <a-input-number
                           v-model:value="selectedStep.sort_order"
@@ -336,10 +336,10 @@
                   <a-form-item label="后续步骤 (连接)">
                     <a-select
                       v-model:value="selectedStepConnections"
+                      :options="otherStepsOptions"
                       mode="multiple"
                       placeholder="选择此步骤完成后要流向的步骤"
                       style="width: 100%"
-                      :options="otherStepsOptions"
                     />
                     <div class="field-hint">
                       定义流程分支、并行或汇合。可选择多个后续步骤。
@@ -351,8 +351,8 @@
                   <a-alert
                     v-if="userLoadError"
                     :message="userLoadError"
-                    type="error"
                     show-icon
+                    type="error"
                   >
                     <template #action>
                       <a-button @click="fetchUserList(false)">
@@ -364,17 +364,17 @@
                     <a-select
                       id="process-assignees"
                       v-model:value="selectedStep.assignee_ids"
+                      :filter-option="false"
+                      :loading="userLoading"
+                      :options="userOptions"
                       mode="multiple"
                       placeholder="搜索并选择受理人"
-                      style="width: 100%"
-                      :options="userOptions"
-                      :loading="userLoading"
                       show-search
-                      :filter-option="false"
-                      @search="handleUserSearch"
+                      style="width: 100%"
                       @popupScroll="handleUserScroll"
+                      @search="handleUserSearch"
                     >
-                      <template #notFoundContent v-if="userLoading">
+                      <template v-if="userLoading" #notFoundContent>
                         <div style="text-align: center">
                           <a-spin size="small" />
                         </div>
@@ -421,8 +421,8 @@
               <a-textarea
                 v-model:value="definitionJsonString"
                 :rows="20"
-                placeholder="请输入或粘贴流程定义JSON"
                 class="json-textarea"
+                placeholder="请输入或粘贴流程定义JSON"
               />
               <div class="json-hint">
                 <a-typography-text type="secondary">
@@ -438,8 +438,8 @@
 
     <a-modal
       v-model:open="isPreviewModalVisible"
-      title="流程预览"
       :footer="null"
+      title="流程预览"
       width="800px"
       @cancel="handlePreviewCancel"
     >
@@ -489,23 +489,23 @@
 
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { ref, watch, computed, h, onMounted, onBeforeUnmount } from 'vue';
-import { message, Modal, Empty, Spin as ASpin } from 'ant-design-vue';
+import { computed, h, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { Spin as ASpin, Empty, message, Modal } from 'ant-design-vue';
 import {
-  PlusOutlined,
-  EyeOutlined,
-  CheckCircleOutlined,
-  DeleteOutlined,
   ArrowDownOutlined,
+  CheckCircleOutlined,
   CloseOutlined,
+  CopyOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
   FormatPainterOutlined,
-  SyncOutlined,
   InfoCircleOutlined,
   PlayCircleOutlined,
-  StopOutlined,
-  EditOutlined,
+  PlusOutlined,
   SaveOutlined,
-  CopyOutlined,
+  StopOutlined,
+  SyncOutlined,
 } from '@ant-design/icons-vue';
 import { debounce } from 'lodash-es';
 
@@ -514,20 +514,20 @@ import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 import {
   Action,
   AssigneeType,
+  createWorkorderProcess,
   type CreateWorkorderProcessReq,
   type ProcessConnection,
-  ProcessStepType,
   ProcessStatus,
-  createWorkorderProcess,
+  ProcessStepType,
 } from '#/api/core/workorder/workorder_process';
 import {
-  type WorkorderCategoryItem,
   listWorkorderCategory,
+  type WorkorderCategoryItem,
 } from '#/api/core/workorder/workorder_category';
 import {
-  type WorkorderFormDesignItem,
-  listWorkorderFormDesign,
   FormDesignStatus,
+  listWorkorderFormDesign,
+  type WorkorderFormDesignItem,
 } from '#/api/core/workorder/workorder_form_design';
 import {
   shouldNotifyPageError,

@@ -2,17 +2,17 @@
   <div>
     <!-- 时间线对话框 -->
     <a-modal
-      :open="timelineDialog.visible"
-      title=""
-      :width="previewDialogWidth"
       :footer="null"
+      :open="timelineDialog.visible"
+      :width="previewDialogWidth"
+      centered
+      class="timeline-dialog responsive-modal"
+      title=""
       @cancel="
         () => {
           timelineDialog.visible = false;
         }
       "
-      class="timeline-dialog responsive-modal"
-      centered
     >
       <template #title>
         <div class="timeline-dialog-header">
@@ -27,13 +27,13 @@
           </div>
           <div class="header-actions">
             <a-tooltip title="刷新时间线">
-              <a-button type="text" size="small" @click="refreshTimeline">
+              <a-button size="small" type="text" @click="refreshTimeline">
                 <IconComponent icon="refresh" />
               </a-button>
             </a-tooltip>
             <a-tooltip title="筛选操作">
               <a-dropdown>
-                <a-button type="text" size="small">
+                <a-button size="small" type="text">
                   <IconComponent icon="filter" />
                 </a-button>
                 <template #overlay>
@@ -47,7 +47,7 @@
               </a-dropdown>
             </a-tooltip>
             <a-tooltip title="时间排序">
-              <a-button type="text" size="small" @click="toggleTimeSort">
+              <a-button size="small" type="text" @click="toggleTimeSort">
                 <IconComponent
                   :icon="timeSortOrder === 'desc' ? 'time-desc' : 'time-asc'"
                 />
@@ -153,8 +153,8 @@
                     <div class="card-actions">
                       <a-tooltip title="查看详情">
                         <a-button
-                          type="text"
                           size="small"
+                          type="text"
                           @click="showTimelineDetail(item)"
                         >
                           <IconComponent icon="detail" />
@@ -222,10 +222,10 @@
                       class="timeline-card-actions"
                     >
                       <a-button
-                        type="text"
-                        size="small"
-                        @click="toggleDetail(item.id)"
                         class="toggle-detail-btn"
+                        size="small"
+                        type="text"
+                        @click="toggleDetail(item.id)"
                       >
                         <IconComponent
                           :icon="showDetails[item.id] ? 'collapse' : 'expand'"
@@ -266,16 +266,16 @@
 
     <!-- 详情对话框 -->
     <a-modal
+      :footer="null"
       :open="detailDialog.visible"
-      title="操作详情"
       :width="600"
+      class="timeline-detail-dialog responsive-modal"
+      title="操作详情"
       @cancel="
         () => {
           detailDialog.visible = false;
         }
       "
-      :footer="null"
-      class="timeline-detail-dialog responsive-modal"
     >
       <div v-if="detailDialog.item" class="timeline-detail-content">
         <div class="detail-header">
@@ -291,7 +291,7 @@
           </div>
         </div>
 
-        <a-descriptions bordered :column="1" size="small">
+        <a-descriptions :column="1" bordered size="small">
           <a-descriptions-item label="操作人">
             {{ detailDialog.item.operator_name }}
           </a-descriptions-item>
@@ -302,14 +302,14 @@
             {{ getActionText(detailDialog.item.action) }}
           </a-descriptions-item>
           <a-descriptions-item
-            label="备注说明"
             v-if="detailDialog.item.comment"
+            label="备注说明"
           >
             {{ detailDialog.item.comment }}
           </a-descriptions-item>
           <a-descriptions-item
-            label="详细数据"
             v-if="detailDialog.item.action_detail"
+            label="详细数据"
           >
             <pre class="detail-json">{{
               formatActionDetail(detailDialog.item.action_detail)
@@ -322,25 +322,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import {
-  PlusOutlined,
-  EditOutlined,
-  SendOutlined,
-  UserOutlined,
   CheckCircleOutlined,
+  EditOutlined,
   ExclamationCircleOutlined,
-  StopOutlined,
-  MessageOutlined,
   FileTextOutlined,
+  MessageOutlined,
+  PlusOutlined,
+  SendOutlined,
+  StopOutlined,
+  UserOutlined,
 } from '@ant-design/icons-vue';
 
 import {
-  type WorkorderInstanceTimelineItem,
+  listWorkorderInstanceTimeline,
   type ListWorkorderInstanceTimelineReq,
   TimelineAction,
-  listWorkorderInstanceTimeline,
+  type WorkorderInstanceTimelineItem,
 } from '#/api/core/workorder/workorder_instance_time_line';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 

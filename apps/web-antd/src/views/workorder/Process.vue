@@ -1,39 +1,39 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { ref, reactive, onMounted, computed } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  PlusOutlined,
   ApartmentOutlined,
   CheckCircleOutlined,
-  EditOutlined,
-  StopOutlined,
   DownOutlined,
+  EditOutlined,
+  PlusOutlined,
+  StopOutlined,
 } from '@ant-design/icons-vue';
 
 import {
-  type WorkorderProcessItem,
+  createDefaultProcessDefinition,
+  createWorkorderProcess,
   type CreateWorkorderProcessReq,
-  type UpdateWorkorderProcessReq,
+  deleteWorkorderProcess,
+  detailWorkorderProcess,
+  listWorkorderProcess,
   type ListWorkorderProcessReq,
   ProcessStatus,
-  createDefaultProcessDefinition,
-  listWorkorderProcess,
-  detailWorkorderProcess,
-  createWorkorderProcess,
   updateWorkorderProcess,
-  deleteWorkorderProcess,
+  type UpdateWorkorderProcessReq,
+  type WorkorderProcessItem,
 } from '#/api/core/workorder/workorder_process';
 
 import {
-  type WorkorderCategoryItem,
   listWorkorderCategory,
+  type WorkorderCategoryItem,
 } from '#/api/core/workorder/workorder_category';
 
 import {
-  type WorkorderFormDesignItem,
-  listWorkorderFormDesign,
   FormDesignStatus,
+  listWorkorderFormDesign,
+  type WorkorderFormDesignItem,
 } from '#/api/core/workorder/workorder_form_design';
 
 import ProcessBasicConfig from './components/ProcessBasicConfig.vue';
@@ -809,7 +809,7 @@ onMounted(async (): Promise<void> => {
 <template>
   <OpsPage title="流程管理">
     <template #actions>
-      <a-button type="primary" @click="handleCreateProcess" class="btn-create">
+      <a-button class="btn-create" type="primary" @click="handleCreateProcess">
         <template #icon>
           <PlusOutlined />
         </template>
@@ -820,15 +820,15 @@ onMounted(async (): Promise<void> => {
       <div class="search-filters">
         <a-input-search
           v-model:value="searchQuery"
-          placeholder="搜索流程..."
-          class="search-input"
-          @search="handleSearch"
           allow-clear
+          class="search-input"
+          placeholder="搜索流程..."
+          @search="handleSearch"
         />
         <a-select
           v-model:value="statusFilter"
-          placeholder="状态"
           class="status-filter"
+          placeholder="状态"
           @change="handleStatusChange"
         >
           <a-select-option :value="null">全部</a-select-option>
@@ -842,8 +842,8 @@ onMounted(async (): Promise<void> => {
         </a-select>
         <a-select
           v-model:value="categoryFilter"
-          placeholder="分类"
           class="category-filter"
+          placeholder="分类"
           @change="handleCategoryChange"
         >
           <a-select-option :value="null">全部分类</a-select-option>
@@ -861,12 +861,12 @@ onMounted(async (): Promise<void> => {
     <template #summary>
       <div class="stats-row">
         <a-row :gutter="16">
-          <a-col :xs="12" :sm="12" :md="6">
+          <a-col :md="6" :sm="12" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="总流程数"
                 :value="stats.total"
                 :value-style="{ color: '#3f8600' }"
+                title="总流程数"
               >
                 <template #prefix>
                   <ApartmentOutlined />
@@ -874,12 +874,12 @@ onMounted(async (): Promise<void> => {
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="12" :md="6">
+          <a-col :md="6" :sm="12" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页已发布"
                 :value="stats.published"
                 :value-style="{ color: '#52c41a' }"
+                title="本页已发布"
               >
                 <template #prefix>
                   <CheckCircleOutlined />
@@ -887,12 +887,12 @@ onMounted(async (): Promise<void> => {
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="12" :md="6">
+          <a-col :md="6" :sm="12" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页草稿"
                 :value="stats.draft"
                 :value-style="{ color: '#faad14' }"
+                title="本页草稿"
               >
                 <template #prefix>
                   <EditOutlined />
@@ -900,12 +900,12 @@ onMounted(async (): Promise<void> => {
               </a-statistic>
             </a-card>
           </a-col>
-          <a-col :xs="12" :sm="12" :md="6">
+          <a-col :md="6" :sm="12" :xs="12">
             <a-card class="stats-card">
               <a-statistic
-                title="本页已归档"
                 :value="stats.archived"
                 :value-style="{ color: '#cf1322' }"
+                title="本页已归档"
               >
                 <template #prefix>
                   <StopOutlined />
@@ -917,7 +917,7 @@ onMounted(async (): Promise<void> => {
       </div>
     </template>
 
-    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button size="small" @click="loadProcesses">重试</a-button>
       </template>
@@ -926,13 +926,13 @@ onMounted(async (): Promise<void> => {
     <div class="table-container">
       <a-card>
         <a-table
-          :data-source="processList"
           :columns="columns"
-          :pagination="paginationConfig"
+          :data-source="processList"
           :loading="loading"
-          row-key="id"
-          bordered
+          :pagination="paginationConfig"
           :scroll="{ x: 1200 }"
+          bordered
+          row-key="id"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -1013,15 +1013,15 @@ onMounted(async (): Promise<void> => {
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleViewProcess(record)"
                 >
                   查看
                 </a-button>
                 <a-button
-                  type="default"
                   size="small"
+                  type="default"
                   @click="handleEditProcess(record)"
                 >
                   编辑
@@ -1030,20 +1030,20 @@ onMounted(async (): Promise<void> => {
                   <template #overlay>
                     <a-menu @click="(e: any) => handleCommand(e.key, record)">
                       <a-menu-item
-                        key="publish"
                         v-if="record.status === ProcessStatus.Draft"
+                        key="publish"
                       >
                         发布
                       </a-menu-item>
                       <a-menu-item
-                        key="archive"
                         v-if="record.status === ProcessStatus.Published"
+                        key="archive"
                       >
                         归档
                       </a-menu-item>
                       <a-menu-item
-                        key="activate"
                         v-if="record.status === ProcessStatus.Archived"
+                        key="activate"
                       >
                         激活
                       </a-menu-item>
@@ -1077,14 +1077,14 @@ onMounted(async (): Promise<void> => {
 
     <!-- 流程创建/编辑对话框 -->
     <a-modal
+      :confirm-loading="loading"
+      :destroy-on-close="true"
       :open="processDialog.visible"
       :title="processDialog.isEdit ? '编辑流程' : '创建流程'"
       :width="formDialogWidth"
-      @ok="saveProcess"
-      @cancel="closeProcessDialog"
-      :destroy-on-close="true"
       class="responsive-modal process-design-modal"
-      :confirm-loading="loading"
+      @cancel="closeProcessDialog"
+      @ok="saveProcess"
     >
       <div class="modal-content">
         <!-- 流程编辑模式切换 -->
@@ -1105,12 +1105,12 @@ onMounted(async (): Promise<void> => {
 
     <!-- 详情对话框 -->
     <a-modal
-      :open="detailDialog.visible"
-      title="流程详情"
-      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeDetailDialog"
+      :open="detailDialog.visible"
+      :width="previewDialogWidth"
       class="detail-dialog responsive-modal"
+      title="流程详情"
+      @cancel="closeDetailDialog"
     >
       <div v-if="detailDialog.process" class="process-details">
         <div class="detail-header">
@@ -1120,7 +1120,7 @@ onMounted(async (): Promise<void> => {
           </a-tag>
         </div>
 
-        <a-descriptions bordered :column="2">
+        <a-descriptions :column="2" bordered>
           <a-descriptions-item label="ID">
             {{ detailDialog.process.id }}
           </a-descriptions-item>
@@ -1162,7 +1162,7 @@ onMounted(async (): Promise<void> => {
               >
             </div>
           </a-descriptions-item>
-          <a-descriptions-item label="描述" :span="2">
+          <a-descriptions-item :span="2" label="描述">
             {{ detailDialog.process.description || '无描述' }}
           </a-descriptions-item>
         </a-descriptions>

@@ -1,8 +1,8 @@
 import { beforeEach, expect, it } from 'vitest';
 import {
   parseManagedMarker,
-  saveManagedMarker,
   removeManagedMarker,
+  saveManagedMarker,
 } from './managed-operation-marker';
 
 const marker = {

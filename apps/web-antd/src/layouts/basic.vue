@@ -65,9 +65,9 @@ async function handleLogout() {
     <template #user-dropdown>
       <UserDropdown
         :avatar
+        :description="userStore.userInfo?.email || userStore.userInfo?.username"
         :menus
         :text="userStore.userInfo?.realName || userStore.userInfo?.username"
-        :description="userStore.userInfo?.email || userStore.userInfo?.username"
         @logout="handleLogout"
       />
     </template>
@@ -79,8 +79,8 @@ async function handleLogout() {
         v-model:open="accessStore.loginExpired"
         :avatar
         :loading="loginLoading"
-        password-placeholder="请输入密码"
         :username-placeholder="userStore.userInfo?.username || '请输入账号'"
+        password-placeholder="请输入密码"
         @submit="authStore.authLogin"
       />
     </template>

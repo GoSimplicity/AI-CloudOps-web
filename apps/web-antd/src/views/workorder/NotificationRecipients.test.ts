@@ -5,7 +5,7 @@ import {
   type VueWrapper,
 } from '@vue/test-utils';
 import Antd, { message, Modal } from 'ant-design-vue';
-import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Notification from './Notification.vue';
 
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts

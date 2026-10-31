@@ -4,15 +4,15 @@ import type {
   RouteLocationNormalizedLoadedGeneric,
 } from 'vue-router';
 
-import { computed, ref, watch, type VNode } from 'vue';
+import { computed, ref, type VNode, watch } from 'vue';
 import { RouterView } from 'vue-router';
 
 import { preferences, usePreferences } from '@vben/preferences';
 import {
   storeToRefs,
+  useAccessStore,
   useTabbarStore,
   useUserStore,
-  useAccessStore,
 } from '@vben/stores';
 
 import { IFrameRouterView } from '../../iframe';

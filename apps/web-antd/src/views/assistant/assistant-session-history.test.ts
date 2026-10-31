@@ -1,4 +1,4 @@
-import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { reactive } from 'vue';
 import Antd from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

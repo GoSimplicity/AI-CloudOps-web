@@ -4,38 +4,38 @@ import { onMounted, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import { usePodPage } from './Pod';
 import {
-  namespacedResourceKey,
-  formatK8sTime,
   formatDateTime,
+  formatK8sTime,
   getRelativeTime,
+  namespacedResourceKey,
 } from '../shared/utils';
 import {
-  PlusOutlined,
-  ReloadOutlined,
-  FilterOutlined,
-  DeleteOutlined,
-  ContainerOutlined,
   AppstoreOutlined,
-  EyeOutlined,
-  TagsOutlined,
-  SearchOutlined,
-  FileTextOutlined,
-  EditOutlined,
-  FileSearchOutlined,
-  CodeOutlined,
-  LinkOutlined,
-  FolderOutlined,
-  DatabaseOutlined,
-  ClearOutlined,
-  PlayCircleOutlined,
-  PauseCircleOutlined,
-  DisconnectOutlined,
-  QuestionCircleOutlined,
-  UploadOutlined,
-  DownloadOutlined,
-  FileAddOutlined,
-  FormatPainterOutlined,
   CheckCircleOutlined,
+  ClearOutlined,
+  CodeOutlined,
+  ContainerOutlined,
+  DatabaseOutlined,
+  DeleteOutlined,
+  DisconnectOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileAddOutlined,
+  FileSearchOutlined,
+  FileTextOutlined,
+  FilterOutlined,
+  FolderOutlined,
+  FormatPainterOutlined,
+  LinkOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
+  PlusOutlined,
+  QuestionCircleOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  TagsOutlined,
+  UploadOutlined,
 } from '@ant-design/icons-vue';
 
 import { usePermission } from '#/utils/permission';
@@ -648,21 +648,21 @@ const handleCloseFileManagerModal = () => {
 </script>
 
 <template>
-  <OpsPage title="Pod 管理" description="按集群和命名空间查询与维护 Pod">
+  <OpsPage description="按集群和命名空间查询与维护 Pod" title="Pod 管理">
     <!-- 页面头部 -->
     <template #actions>
       <a-button
+        :disabled="!filterClusterId"
         type="primary"
         @click="openCreateModal"
-        :disabled="!filterClusterId"
       >
         <template #icon><PlusOutlined aria-hidden="true" /></template>
         创建 Pod
       </a-button>
       <a-button
-        @click="fetchPods"
-        :loading="loading"
         :disabled="!filterClusterId"
+        :loading="loading"
+        @click="fetchPods"
       >
         <template #icon><ReloadOutlined aria-hidden="true" /></template>
         刷新数据
@@ -676,13 +676,13 @@ const handleCloseFileManagerModal = () => {
         <div class="k8s-filter-group">
           <a-select
             v-model:value="filterClusterId"
-            placeholder="选择集群"
+            :disabled="clustersLoading"
+            :loading="clustersLoading"
+            allow-clear
             aria-label="选择集群"
             class="k8s-cluster-selector"
-            allow-clear
+            placeholder="选择集群"
             @change="handleClusterChange"
-            :loading="clustersLoading"
-            :disabled="clustersLoading"
             @popup-scroll="handleClusterDropdownScroll"
           >
             <template #suffixIcon>
@@ -712,20 +712,20 @@ const handleCloseFileManagerModal = () => {
               disabled
               style="text-align: center; color: #999"
             >
-              <a-spin size="small" :spinning="clustersLoading" />
+              <a-spin :spinning="clustersLoading" size="small" />
               <span v-if="!clustersLoading">滚动加载更多...</span>
             </a-select-option>
           </a-select>
 
           <a-select
             v-model:value="filterNamespace"
-            placeholder="选择命名空间"
-            aria-label="选择命名空间"
-            class="k8s-filter-select k8s-namespace-selector"
-            allow-clear
-            @change="handleFilterChange"
             :disabled="!filterClusterId"
             :loading="namespacesLoading"
+            allow-clear
+            aria-label="选择命名空间"
+            class="k8s-filter-select k8s-namespace-selector"
+            placeholder="选择命名空间"
+            @change="handleFilterChange"
           >
             <template #suffixIcon>
               <AppstoreOutlined aria-hidden="true" />
@@ -746,10 +746,10 @@ const handleCloseFileManagerModal = () => {
               style="text-align: center; color: #999"
             >
               <a-button
-                type="link"
-                size="small"
-                @click.stop="loadMoreNamespaces"
                 :loading="namespacesLoading"
+                size="small"
+                type="link"
+                @click.stop="loadMoreNamespaces"
               >
                 加载更多...
               </a-button>
@@ -758,9 +758,9 @@ const handleCloseFileManagerModal = () => {
 
           <a-select
             v-model:value="filterStatus"
-            placeholder="状态筛选"
-            class="k8s-filter-select"
             allow-clear
+            class="k8s-filter-select"
+            placeholder="状态筛选"
             @change="handleFilterChange"
           >
             <template #suffixIcon>
@@ -784,9 +784,9 @@ const handleCloseFileManagerModal = () => {
           <!-- 标签过滤器 -->
           <div class="pod-labels-filter">
             <a-button
+              class="k8s-toolbar-btn"
               type="dashed"
               @click="openLabelsFilter"
-              class="k8s-toolbar-btn"
             >
               <template #icon><TagsOutlined aria-hidden="true" /></template>
               标签过滤
@@ -808,10 +808,10 @@ const handleCloseFileManagerModal = () => {
                 v-for="(value, key) in filterLabels"
                 :key="key"
                 closable
-                @close="removeFilterLabel(key)"
                 color="blue"
                 size="small"
                 style="margin-right: 4px; margin-bottom: 4px"
+                @close="removeFilterLabel(key)"
               >
                 {{ key }}: {{ value }}
               </a-tag>
@@ -822,11 +822,11 @@ const handleCloseFileManagerModal = () => {
         <div class="k8s-search-group">
           <a-input
             v-model:value="searchText"
-            placeholder="搜索 Pod 名称"
-            class="k8s-search-input"
-            @pressEnter="onSearch"
-            @input="onSearch"
             allow-clear
+            class="k8s-search-input"
+            placeholder="搜索 Pod 名称"
+            @input="onSearch"
+            @pressEnter="onSearch"
           >
             <template #suffix>
               <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
@@ -855,10 +855,10 @@ const handleCloseFileManagerModal = () => {
           </a-button>
 
           <a-button
-            @click="openCreateYamlModal"
             :disabled="!filterClusterId"
             class="k8s-toolbar-btn"
             title="通过YAML创建Pod"
+            @click="openCreateYamlModal"
           >
             <template #icon><FileTextOutlined aria-hidden="true" /></template>
             YAML 创建
@@ -881,16 +881,16 @@ const handleCloseFileManagerModal = () => {
     </template>
 
     <!-- 数据展示区域 -->
-    <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
+    <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
         <a-button size="small" @click="fetchPods">重试</a-button>
       </template>
     </a-alert>
     <a-alert
       v-if="clustersError"
-      type="error"
       :message="clustersError"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button size="small" @click="() => fetchClusters(true)">
@@ -900,9 +900,9 @@ const handleCloseFileManagerModal = () => {
     </a-alert>
     <a-alert
       v-if="namespacesError"
-      type="error"
       :message="namespacesError"
       show-icon
+      type="error"
     >
       <template #action>
         <a-button size="small" @click="() => fetchNamespaces(true)">
@@ -914,9 +914,7 @@ const handleCloseFileManagerModal = () => {
       <a-table
         :columns="columns"
         :data-source="filteredPods"
-        :row-selection="rowSelection"
         :loading="loading"
-        :row-key="namespacedResourceKey"
         :pagination="{
           current: currentPage,
           pageSize: pageSize,
@@ -927,9 +925,11 @@ const handleCloseFileManagerModal = () => {
             `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
           pageSizeOptions: ['10', '20', '30', '50'],
         }"
-        @change="handleTableChange"
-        class="k8s-table pod-table"
+        :row-key="namespacedResourceKey"
+        :row-selection="rowSelection"
         :scroll="{ x: 2000 }"
+        class="k8s-table pod-table"
+        @change="handleTableChange"
       >
         <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'status'">
@@ -1112,27 +1112,27 @@ const handleCloseFileManagerModal = () => {
               </a-tooltip>
               <a-tooltip v-if="can('k8s.pod.exec')" title="执行命令">
                 <a-button
+                  :disabled="record.status !== 'Running'"
                   title="执行命令"
                   @click="showExecModal(record)"
-                  :disabled="record.status !== 'Running'"
                 >
                   <template #icon><CodeOutlined aria-hidden="true" /></template>
                 </a-button>
               </a-tooltip>
               <a-tooltip title="端口转发">
                 <a-button
+                  :disabled="record.status !== 'Running'"
                   title="端口转发"
                   @click="showPortForwardModal(record)"
-                  :disabled="record.status !== 'Running'"
                 >
                   <template #icon><LinkOutlined aria-hidden="true" /></template>
                 </a-button>
               </a-tooltip>
               <a-tooltip title="文件管理">
                 <a-button
+                  :disabled="record.status !== 'Running'"
                   title="文件管理"
                   @click="showFileManagerModal(record)"
-                  :disabled="record.status !== 'Running'"
                 >
                   <template #icon>
                     <FolderOutlined aria-hidden="true" />
@@ -1145,7 +1145,7 @@ const handleCloseFileManagerModal = () => {
                 </a-button>
               </a-tooltip>
               <a-tooltip v-if="can('k8s.pod.delete')" title="删除">
-                <a-button title="删除" danger @click="deletePod(record)">
+                <a-button danger title="删除" @click="deletePod(record)">
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
                   </template>
@@ -1168,32 +1168,32 @@ const handleCloseFileManagerModal = () => {
     <!-- 创建 Pod 模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      title="创建 Pod"
-      @ok="submitCreateForm"
-      @cancel="closeCreateModal"
       :confirmLoading="submitLoading"
-      width="900px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="创建"
-      cancelText="取消"
+      title="创建 Pod"
+      width="900px"
+      @cancel="closeCreateModal"
+      @ok="submitCreateForm"
     >
       <a-form
         ref="formRef"
         :model="createFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="createFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
         <!-- 基础配置 -->
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="Pod 名称" name="name" :required="true">
+            <a-form-item :required="true" label="Pod 名称" name="name">
               <a-input
                 v-model:value="createFormModel.name"
-                placeholder="请输入 Pod 名称（例如：my-pod）"
-                class="k8s-form-input"
                 :maxlength="63"
+                class="k8s-form-input"
+                placeholder="请输入 Pod 名称（例如：my-pod）"
               />
               <div style="color: #999; font-size: 12px; margin-top: 4px">
                 只能包含小写字母、数字和连字符，且不能以连字符开头或结尾
@@ -1201,12 +1201,12 @@ const handleCloseFileManagerModal = () => {
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="命名空间" name="namespace" :required="true">
+            <a-form-item :required="true" label="命名空间" name="namespace">
               <a-select
                 v-model:value="createFormModel.namespace"
-                placeholder="请选择命名空间"
-                class="k8s-form-input"
                 :disabled="!filterClusterId"
+                class="k8s-form-input"
+                placeholder="请选择命名空间"
               >
                 <a-select-option
                   v-for="ns in namespaces"
@@ -1221,7 +1221,7 @@ const handleCloseFileManagerModal = () => {
         </a-row>
 
         <!-- 容器配置 -->
-        <a-form-item label="容器配置" :required="true">
+        <a-form-item :required="true" label="容器配置">
           <div class="pod-containers-config">
             <div
               v-for="(container, index) in createFormModel.containers"
@@ -1231,12 +1231,12 @@ const handleCloseFileManagerModal = () => {
               <div class="container-header">
                 <span>容器 {{ index + 1 }}</span>
                 <a-button
-                  type="text"
-                  danger
-                  @click="removeContainerField(index)"
                   :disabled="createFormModel.containers.length <= 1"
-                  size="small"
                   class="k8s-remove-btn"
+                  danger
+                  size="small"
+                  type="text"
+                  @click="removeContainerField(index)"
                 >
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
@@ -1293,11 +1293,11 @@ const handleCloseFileManagerModal = () => {
                       style="width: 45%"
                     />
                     <a-button
-                      type="text"
-                      danger
-                      @click="removeEnvField(index, envIndex)"
-                      size="small"
                       class="k8s-remove-btn"
+                      danger
+                      size="small"
+                      type="text"
+                      @click="removeEnvField(index, envIndex)"
                     >
                       <template #icon>
                         <DeleteOutlined aria-hidden="true" />
@@ -1305,9 +1305,9 @@ const handleCloseFileManagerModal = () => {
                     </a-button>
                   </div>
                   <a-button
+                    style="width: 100%; margin-top: 8px"
                     type="dashed"
                     @click="addEnvField(index)"
-                    style="width: 100%; margin-top: 8px"
                   >
                     <template #icon>
                       <PlusOutlined aria-hidden="true" />
@@ -1332,9 +1332,9 @@ const handleCloseFileManagerModal = () => {
                     />
                     <a-input-number
                       v-model:value="port.container_port"
-                      placeholder="端口号"
-                      :min="1"
                       :max="65535"
+                      :min="1"
+                      placeholder="端口号"
                       style="width: 30%"
                     />
                     <a-select
@@ -1346,11 +1346,11 @@ const handleCloseFileManagerModal = () => {
                       <a-select-option value="UDP">UDP</a-select-option>
                     </a-select>
                     <a-button
-                      type="text"
-                      danger
-                      @click="removePortField(index, portIndex)"
-                      size="small"
                       class="k8s-remove-btn"
+                      danger
+                      size="small"
+                      type="text"
+                      @click="removePortField(index, portIndex)"
                     >
                       <template #icon>
                         <DeleteOutlined aria-hidden="true" />
@@ -1358,9 +1358,9 @@ const handleCloseFileManagerModal = () => {
                     </a-button>
                   </div>
                   <a-button
+                    style="width: 100%; margin-top: 8px"
                     type="dashed"
                     @click="addPortField(index)"
-                    style="width: 100%; margin-top: 8px"
                   >
                     <template #icon>
                       <PlusOutlined aria-hidden="true" />
@@ -1412,9 +1412,9 @@ const handleCloseFileManagerModal = () => {
             </div>
 
             <a-button
+              style="width: 100%; margin-top: 16px"
               type="dashed"
               @click="addContainerField"
-              style="width: 100%; margin-top: 16px"
             >
               <template #icon><PlusOutlined aria-hidden="true" /></template>
               添加容器
@@ -1488,23 +1488,23 @@ const handleCloseFileManagerModal = () => {
               class="k8s-key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`标签键: ${key}`"
-                disabled
+                :value="key"
                 class="k8s-form-input"
+                disabled
               />
               <a-input
                 v-model:value="createFormModel.labels[key]"
-                placeholder="标签值"
-                class="k8s-form-input"
                 :maxlength="200"
+                class="k8s-form-input"
+                placeholder="标签值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeLabelField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeLabelField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -1546,23 +1546,23 @@ const handleCloseFileManagerModal = () => {
               class="k8s-key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`注解键: ${key}`"
-                disabled
+                :value="key"
                 class="k8s-form-input"
+                disabled
               />
               <a-input
                 v-model:value="createFormModel.annotations[key]"
-                placeholder="注解值"
-                class="k8s-form-input"
                 :maxlength="500"
+                class="k8s-form-input"
+                placeholder="注解值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeAnnotationField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeAnnotationField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -1591,22 +1591,22 @@ const handleCloseFileManagerModal = () => {
     <!-- 通过 YAML 创建 Pod 模态框 -->
     <a-modal
       v-model:open="isCreateYamlModalVisible"
-      title="通过 YAML 创建 Pod"
-      @ok="submitCreateYamlForm"
-      @cancel="closeCreateYamlModal"
       :confirmLoading="submitLoading"
-      width="900px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="创建"
-      cancelText="取消"
+      title="通过 YAML 创建 Pod"
+      width="900px"
+      @cancel="closeCreateYamlModal"
+      @ok="submitCreateYamlForm"
     >
       <a-form
         ref="createYamlFormRef"
         :model="createYamlFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="createYamlFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
@@ -1645,9 +1645,9 @@ const handleCloseFileManagerModal = () => {
           </div>
           <a-textarea
             v-model:value="createYamlFormModel.yaml"
-            placeholder="请输入 Pod YAML 内容，或点击【插入模板】使用默认模板"
             :rows="20"
             class="k8s-config-textarea"
+            placeholder="请输入 Pod YAML 内容，或点击【插入模板】使用默认模板"
           />
         </a-form-item>
       </a-form>
@@ -1656,18 +1656,18 @@ const handleCloseFileManagerModal = () => {
     <!-- 详情模态框 -->
     <a-modal
       v-model:open="isDetailModalVisible"
-      title="Pod 详情"
       :footer="null"
-      @cancel="closeDetailModal"
-      width="1200px"
       :maskClosable="false"
       destroyOnClose
+      title="Pod 详情"
+      width="1200px"
+      @cancel="closeDetailModal"
     >
       <a-spin :spinning="detailLoading">
         <div v-if="currentPodDetail" class="k8s-detail-content">
           <a-row :gutter="[24, 16]">
-            <a-col :xs="24" :lg="12">
-              <a-card title="基本信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="基本信息">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">Pod 名称:</span>
                   <span class="k8s-detail-value">{{
@@ -1708,8 +1708,8 @@ const handleCloseFileManagerModal = () => {
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="运行信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="运行信息">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">节点名称:</span>
                   <span class="k8s-detail-value">{{
@@ -1755,8 +1755,8 @@ const handleCloseFileManagerModal = () => {
           </a-row>
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px">
-            <a-col :xs="24" :lg="12">
-              <a-card title="配置信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="配置信息">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">服务账户:</span>
                   <span class="k8s-detail-value">{{
@@ -1790,8 +1790,8 @@ const handleCloseFileManagerModal = () => {
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="时间信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="时间信息">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">创建时间:</span>
                   <span class="k8s-detail-value">{{
@@ -1815,8 +1815,8 @@ const handleCloseFileManagerModal = () => {
           </a-row>
 
           <a-row :gutter="[24, 16]" style="margin-top: 16px">
-            <a-col :xs="24" :lg="12">
-              <a-card title="标签信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="标签信息">
                 <div class="k8s-labels-display">
                   <a-tooltip
                     v-for="label in currentPodDetail.labels || []"
@@ -1850,8 +1850,8 @@ const handleCloseFileManagerModal = () => {
               </a-card>
             </a-col>
 
-            <a-col :xs="24" :lg="12">
-              <a-card title="注解信息" class="k8s-detail-card" size="small">
+            <a-col :lg="12" :xs="24">
+              <a-card class="k8s-detail-card" size="small" title="注解信息">
                 <div class="k8s-annotations-display">
                   <a-tooltip
                     v-for="annotation in currentPodDetail.annotations || []"
@@ -1889,20 +1889,20 @@ const handleCloseFileManagerModal = () => {
           <!-- 容器信息 -->
           <a-row :gutter="[24, 16]" style="margin-top: 16px">
             <a-col :span="24">
-              <a-card title="容器信息" class="k8s-detail-card" size="small">
+              <a-card class="k8s-detail-card" size="small" title="容器信息">
                 <a-table
                   :data-source="currentPodDetail.containers || []"
                   :pagination="false"
-                  size="small"
                   class="k8s-table"
+                  size="small"
                 >
                   <a-table-column
-                    title="容器名称"
-                    dataIndex="name"
                     key="name"
+                    dataIndex="name"
+                    title="容器名称"
                   />
-                  <a-table-column title="镜像" dataIndex="image" key="image" />
-                  <a-table-column title="状态" dataIndex="ready" key="ready">
+                  <a-table-column key="image" dataIndex="image" title="镜像" />
+                  <a-table-column key="ready" dataIndex="ready" title="状态">
                     <template #default="{ text }">
                       <a-tag :color="text ? 'success' : 'error'">
                         {{ text ? '就绪' : '未就绪' }}
@@ -1910,9 +1910,9 @@ const handleCloseFileManagerModal = () => {
                     </template>
                   </a-table-column>
                   <a-table-column
-                    title="重启次数"
-                    dataIndex="restart_count"
                     key="restart_count"
+                    dataIndex="restart_count"
+                    title="重启次数"
                   />
                 </a-table>
               </a-card>
@@ -1925,22 +1925,22 @@ const handleCloseFileManagerModal = () => {
     <!-- YAML 模态框 -->
     <a-modal
       v-model:open="isYamlModalVisible"
-      :title="`查看/编辑 ${currentOperationPod?.name} YAML`"
-      @ok="submitYamlForm"
-      @cancel="closeYamlModal"
       :confirmLoading="submitLoading"
-      width="900px"
       :maskClosable="false"
+      :title="`查看/编辑 ${currentOperationPod?.name} YAML`"
+      cancelText="取消"
       destroyOnClose
       okText="保存修改"
-      cancelText="取消"
+      width="900px"
+      @cancel="closeYamlModal"
+      @ok="submitYamlForm"
     >
       <a-form
         ref="yamlFormRef"
         :model="yamlFormModel"
-        layout="vertical"
-        class="k8s-form"
         :rules="yamlFormRules"
+        class="k8s-form"
+        layout="vertical"
       >
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
@@ -1965,9 +1965,9 @@ const handleCloseFileManagerModal = () => {
           </div>
           <a-textarea
             v-model:value="yamlFormModel.yaml"
-            placeholder="YAML 内容"
             :rows="20"
             class="k8s-config-textarea"
+            placeholder="YAML 内容"
           />
         </a-form-item>
       </a-form>
@@ -1976,28 +1976,28 @@ const handleCloseFileManagerModal = () => {
     <!-- 编辑 Pod 模态框 -->
     <a-modal
       v-model:open="isEditModalVisible"
-      title="编辑 Pod"
-      @ok="submitEditForm"
-      @cancel="closeEditModal"
       :confirmLoading="submitLoading"
-      width="800px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="保存"
-      cancelText="取消"
+      title="编辑 Pod"
+      width="800px"
+      @cancel="closeEditModal"
+      @ok="submitEditForm"
     >
       <a-form
         ref="formRef"
         :model="editFormModel"
-        layout="vertical"
         class="k8s-form"
+        layout="vertical"
       >
         <a-alert
-          message="编辑提示"
           description="Pod 创建后只能编辑标签和注解信息，其他配置需要重新创建 Pod。"
-          type="info"
+          message="编辑提示"
           show-icon
           style="margin-bottom: 24px"
+          type="info"
         />
 
         <!-- 标签配置 -->
@@ -2018,23 +2018,23 @@ const handleCloseFileManagerModal = () => {
               class="k8s-key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`标签键: ${key}`"
-                disabled
+                :value="key"
                 class="k8s-form-input"
+                disabled
               />
               <a-input
                 v-model:value="editFormModel.labels[key]"
-                placeholder="标签值"
-                class="k8s-form-input"
                 :maxlength="200"
+                class="k8s-form-input"
+                placeholder="标签值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeEditLabelField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeEditLabelField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -2076,23 +2076,23 @@ const handleCloseFileManagerModal = () => {
               class="k8s-key-value-row"
             >
               <a-input
-                :value="key"
                 :placeholder="`注解键: ${key}`"
-                disabled
+                :value="key"
                 class="k8s-form-input"
+                disabled
               />
               <a-input
                 v-model:value="editFormModel.annotations[key]"
-                placeholder="注解值"
-                class="k8s-form-input"
                 :maxlength="500"
+                class="k8s-form-input"
+                placeholder="注解值"
               />
               <a-button
-                type="text"
-                danger
-                @click="removeEditAnnotationField(key)"
-                size="small"
                 class="k8s-remove-btn"
+                danger
+                size="small"
+                type="text"
+                @click="removeEditAnnotationField(key)"
               >
                 <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
@@ -2121,12 +2121,12 @@ const handleCloseFileManagerModal = () => {
     <!-- 日志查看模态框 -->
     <a-modal
       v-model:open="isLogsModalVisible"
-      :title="`${currentOperationPod?.name} 日志`"
       :footer="null"
-      @cancel="closeLogsModal"
-      width="1000px"
       :maskClosable="false"
+      :title="`${currentOperationPod?.name} 日志`"
       destroyOnClose
+      width="1000px"
+      @cancel="closeLogsModal"
     >
       <div class="pod-logs-content">
         <div class="logs-controls">
@@ -2148,9 +2148,9 @@ const handleCloseFileManagerModal = () => {
             <a-col :span="4">
               <a-input-number
                 v-model:value="logsFormModel.tail_lines"
-                placeholder="行数"
-                :min="1"
                 :max="10000"
+                :min="1"
+                placeholder="行数"
               />
             </a-col>
             <a-col :span="6">
@@ -2168,24 +2168,24 @@ const handleCloseFileManagerModal = () => {
               <!-- 实时流按钮 -->
               <a-button
                 v-if="!isLogsStreaming"
+                :disabled="!logsFormModel.container"
+                :loading="logsLoading"
                 type="primary"
                 @click="fetchPodLogs"
-                :loading="logsLoading"
-                :disabled="!logsFormModel.container"
               >
                 <template #icon>
                   <PlayCircleOutlined aria-hidden="true" />
                 </template>
                 开始实时流
               </a-button>
-              <a-button v-else type="primary" danger @click="stopLogsStream">
+              <a-button v-else danger type="primary" @click="stopLogsStream">
                 <template #icon>
                   <PauseCircleOutlined aria-hidden="true" />
                 </template>
                 停止实时流
               </a-button>
 
-              <a-button @click="podLogs = ''" style="margin-left: 8px">
+              <a-button style="margin-left: 8px" @click="podLogs = ''">
                 <template #icon><ClearOutlined aria-hidden="true" /></template>
                 清空
               </a-button>
@@ -2195,7 +2195,7 @@ const handleCloseFileManagerModal = () => {
 
         <!-- 连接状态栏 -->
         <div class="logs-status-bar">
-          <a-row justify="space-between" align="middle">
+          <a-row align="middle" justify="space-between">
             <a-col>
               <a-space>
                 <a-badge
@@ -2237,25 +2237,25 @@ const handleCloseFileManagerModal = () => {
     <!-- 执行命令模态框 - 终端版本 -->
     <a-modal
       v-model:open="isExecModalVisible"
-      title="Pod 终端"
-      @cancel="closeExecModal"
-      width="1200px"
-      :maskClosable="false"
-      destroyOnClose
       :footer="null"
+      :maskClosable="false"
       class="terminal-modal"
+      destroyOnClose
+      title="Pod 终端"
+      width="1200px"
+      @cancel="closeExecModal"
     >
       <div class="terminal-container">
         <!-- 连接配置区域 -->
-        <div class="terminal-config" v-if="!isTerminalConnected">
+        <div v-if="!isTerminalConnected" class="terminal-config">
           <a-form
             ref="execFormRef"
             :model="execFormModel"
-            layout="inline"
-            class="k8s-form"
             :rules="execFormRules"
+            class="k8s-form"
+            layout="inline"
           >
-            <a-form-item label="容器" name="container" :required="true">
+            <a-form-item :required="true" label="容器" name="container">
               <a-select
                 v-model:value="execFormModel.container"
                 placeholder="选择容器"
@@ -2299,10 +2299,10 @@ const handleCloseFileManagerModal = () => {
 
         <!-- 连接状态栏 -->
         <div
-          class="terminal-status-bar"
           v-if="isTerminalConnected || terminalLoading"
+          class="terminal-status-bar"
         >
-          <a-row justify="space-between" align="middle">
+          <a-row align="middle" justify="space-between">
             <a-col>
               <a-space>
                 <a-badge
@@ -2334,10 +2334,10 @@ const handleCloseFileManagerModal = () => {
               <a-space>
                 <a-button
                   v-if="isTerminalConnected"
-                  type="text"
-                  size="small"
-                  @click="disconnectTerminal"
                   danger
+                  size="small"
+                  type="text"
+                  @click="disconnectTerminal"
                 >
                   <template #icon>
                     <DisconnectOutlined aria-hidden="true" />
@@ -2347,7 +2347,7 @@ const handleCloseFileManagerModal = () => {
                 <a-tooltip
                   title="终端支持完整的Shell交互，包括vi/nano编辑器、tab补全等"
                 >
-                  <a-button type="text" size="small">
+                  <a-button size="small" type="text">
                     <template #icon>
                       <QuestionCircleOutlined aria-hidden="true" />
                     </template>
@@ -2361,9 +2361,9 @@ const handleCloseFileManagerModal = () => {
         <!-- 终端显示区域 -->
         <div class="terminal-display">
           <div
+            v-show="isTerminalConnected || terminalLoading"
             id="terminal-container"
             class="terminal-wrapper"
-            v-show="isTerminalConnected || terminalLoading"
           ></div>
 
           <!-- 未连接状态提示 -->
@@ -2394,15 +2394,15 @@ const handleCloseFileManagerModal = () => {
     <!-- 端口转发模态框 -->
     <a-modal
       v-model:open="isPortForwardModalVisible"
-      title="端口转发"
-      @ok="submitPortForward"
-      @cancel="closePortForwardModal"
       :confirmLoading="submitLoading"
-      width="600px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="设置转发"
-      cancelText="取消"
+      title="端口转发"
+      width="600px"
+      @cancel="closePortForwardModal"
+      @ok="submitPortForward"
     >
       <div class="port-forward-config">
         <div
@@ -2412,34 +2412,34 @@ const handleCloseFileManagerModal = () => {
         >
           <a-input-number
             v-model:value="port.local_port"
-            placeholder="本地端口"
-            :min="1"
             :max="65535"
+            :min="1"
+            placeholder="本地端口"
             style="width: 40%"
           />
           <span style="margin: 0 16px">→</span>
           <a-input-number
             v-model:value="port.remote_port"
-            placeholder="容器端口"
-            :min="1"
             :max="65535"
+            :min="1"
+            placeholder="容器端口"
             style="width: 40%"
           />
           <a-button
-            type="text"
-            danger
-            @click="removePortForwardField(index)"
             :disabled="portForwardFormModel.ports.length <= 1"
-            size="small"
             class="k8s-remove-btn"
+            danger
+            size="small"
+            type="text"
+            @click="removePortForwardField(index)"
           >
             <template #icon><DeleteOutlined aria-hidden="true" /></template>
           </a-button>
         </div>
         <a-button
+          style="width: 100%; margin-top: 16px"
           type="dashed"
           @click="addPortForwardField"
-          style="width: 100%; margin-top: 16px"
         >
           <template #icon><PlusOutlined aria-hidden="true" /></template>
           添加端口转发
@@ -2450,20 +2450,20 @@ const handleCloseFileManagerModal = () => {
     <!-- 文件管理模态框 -->
     <a-modal
       v-model:open="isFileManagerModalVisible"
-      title="文件管理"
       :footer="null"
-      @cancel="handleCloseFileManagerModal"
-      width="900px"
       :maskClosable="false"
       destroyOnClose
+      title="文件管理"
+      width="900px"
+      @cancel="handleCloseFileManagerModal"
     >
       <div class="file-manager-content">
         <a-alert
-          message="文件管理功能"
           description="此功能需要在 Pod 运行状态下使用，支持文件上传和下载操作。"
-          type="info"
+          message="文件管理功能"
           show-icon
           style="margin-bottom: 16px"
+          type="info"
         />
 
         <!-- 容器选择 -->
@@ -2474,9 +2474,9 @@ const handleCloseFileManagerModal = () => {
           <h4 style="margin-bottom: 12px">选择容器</h4>
           <a-select
             v-model:value="fileManagerContainer"
+            :disabled="!podContainers || podContainers.length === 0"
             placeholder="请选择容器"
             style="width: 100%"
-            :disabled="!podContainers || podContainers.length === 0"
             @change="handleContainerChange"
           >
             <a-select-option
@@ -2504,15 +2504,15 @@ const handleCloseFileManagerModal = () => {
         </div>
 
         <!-- 文件上传区域 -->
-        <div class="file-upload-section" v-if="fileManagerContainer">
+        <div v-if="fileManagerContainer" class="file-upload-section">
           <h4 style="margin-bottom: 12px">文件上传</h4>
 
           <a-form layout="vertical" style="margin-bottom: 16px">
             <a-form-item label="目标路径" required>
               <a-input
                 v-model:value="uploadFilePath"
-                placeholder="请输入文件上传的目标路径，如：/tmp 或 /app/data"
                 :maxlength="500"
+                placeholder="请输入文件上传的目标路径，如：/tmp 或 /app/data"
               />
               <div style="color: #999; font-size: 12px; margin-top: 4px">
                 文件将上传到容器中的此路径下，请确保路径存在且有写入权限
@@ -2522,13 +2522,13 @@ const handleCloseFileManagerModal = () => {
 
           <!-- 文件上传组件 -->
           <a-upload-dragger
-            :file-list="fileList"
             :before-upload="beforeUpload"
-            :remove="handleRemoveFile"
-            :multiple="true"
             :disabled="
               !uploadFilePath || !fileManagerContainer || uploadLoading
             "
+            :file-list="fileList"
+            :multiple="true"
+            :remove="handleRemoveFile"
             style="margin-bottom: 16px"
           >
             <p class="ant-upload-drag-icon">
@@ -2546,23 +2546,23 @@ const handleCloseFileManagerModal = () => {
           <!-- 上传按钮 -->
           <div style="text-align: center; margin-bottom: 24px">
             <a-button
-              type="primary"
-              size="large"
-              :loading="uploadLoading"
               :disabled="
                 fileList.length === 0 ||
                 !uploadFilePath ||
                 !fileManagerContainer
               "
+              :loading="uploadLoading"
+              size="large"
+              type="primary"
               @click="handleUploadFiles"
             >
               <template #icon><UploadOutlined aria-hidden="true" /></template>
               上传文件 ({{ fileList.length }})
             </a-button>
             <a-button
+              :disabled="fileList.length === 0 || uploadLoading"
               style="margin-left: 8px"
               @click="clearFileList"
-              :disabled="fileList.length === 0 || uploadLoading"
             >
               <template #icon><ClearOutlined aria-hidden="true" /></template>
               清空列表
@@ -2582,8 +2582,8 @@ const handleCloseFileManagerModal = () => {
             </div>
             <a-progress
               :percent="uploadProgress.percent"
-              :status="uploadProgress.status"
               :show-info="true"
+              :status="uploadProgress.status"
             />
             <div
               v-if="uploadProgress.currentFile"
@@ -2595,7 +2595,7 @@ const handleCloseFileManagerModal = () => {
         </div>
 
         <!-- 文件下载区域 -->
-        <div class="file-download-section" v-if="fileManagerContainer">
+        <div v-if="fileManagerContainer" class="file-download-section">
           <a-divider />
           <h4 style="margin-bottom: 12px">文件下载</h4>
 
@@ -2603,16 +2603,16 @@ const handleCloseFileManagerModal = () => {
             <a-form-item label="文件路径">
               <a-input
                 v-model:value="downloadFilePath"
+                :maxlength="500"
                 placeholder="请输入要下载的文件完整路径，如：/tmp/file.txt"
                 style="width: 400px"
-                :maxlength="500"
               />
             </a-form-item>
             <a-form-item>
               <a-button
-                type="primary"
-                :loading="downloadLoading"
                 :disabled="!downloadFilePath || !fileManagerContainer"
+                :loading="downloadLoading"
+                type="primary"
                 @click="handleDownloadFile"
               >
                 <template #icon>
@@ -2642,14 +2642,14 @@ const handleCloseFileManagerModal = () => {
     <!-- 标签过滤模态框 -->
     <a-modal
       v-model:open="isLabelsFilterModalVisible"
-      title="标签过滤设置"
-      @ok="applyLabelsFilter"
-      @cancel="closeLabelsFilterModal"
-      width="550px"
       :maskClosable="false"
+      cancelText="取消"
       destroyOnClose
       okText="应用过滤"
-      cancelText="取消"
+      title="标签过滤设置"
+      width="550px"
+      @cancel="closeLabelsFilterModal"
+      @ok="applyLabelsFilter"
     >
       <div class="labels-filter-form">
         <div
@@ -2662,18 +2662,18 @@ const handleCloseFileManagerModal = () => {
               v-for="(value, key) in filterLabels"
               :key="key"
               closable
-              @close="removeFilterLabel(key)"
               color="blue"
               style="margin-right: 8px; margin-bottom: 8px"
+              @close="removeFilterLabel(key)"
             >
               {{ key }}: {{ value }}
             </a-tag>
           </div>
           <a-button
-            type="link"
             danger
-            @click="clearFilterLabels"
             style="padding: 0; margin-bottom: 16px"
+            type="link"
+            @click="clearFilterLabels"
           >
             清除所有过滤条件
           </a-button>

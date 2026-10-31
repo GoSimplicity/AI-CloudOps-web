@@ -1,22 +1,22 @@
 <template>
   <OpsPage
-    title="工单实例"
-    description="筛选、创建与处理工单，状态摘要为当前页记录"
     class="instance-management-container"
+    description="筛选、创建与处理工单，状态摘要为当前页记录"
+    title="工单实例"
   >
     <template #actions>
       <a-button
-        aria-label="刷新工单"
         :loading="listLoading"
+        aria-label="刷新工单"
         @click="loadInstances"
       >
         刷新
       </a-button>
       <a-button
-        type="primary"
         aria-label="创建工单"
-        @click="handleCreateInstance"
         class="btn-create"
+        type="primary"
+        @click="handleCreateInstance"
       >
         <template #icon>
           <PlusOutlined />
@@ -24,8 +24,8 @@
         创建工单
       </a-button>
       <a-button
-        type="default"
         aria-label="从模板创建工单"
+        type="default"
         @click="handleCreateFromTemplate"
       >
         <template #icon>
@@ -43,19 +43,19 @@
     <template #filters>
       <div class="search-filters">
         <a-input-search
-          aria-label="搜索工单"
           v-model:value="searchQuery"
-          placeholder="搜索工单标题或编号..."
-          class="search-input"
-          @search="handleSearch"
           allow-clear
+          aria-label="搜索工单"
+          class="search-input"
+          placeholder="搜索工单标题或编号..."
+          @search="handleSearch"
         />
 
         <a-select
           v-model:value="statusFilter"
-          placeholder="状态"
           aria-label="工单状态筛选"
           class="status-filter"
+          placeholder="状态"
           @change="handleStatusChange"
         >
           <a-select-option :value="undefined">全部状态</a-select-option>
@@ -78,9 +78,9 @@
         </a-select>
         <a-select
           v-model:value="priorityFilter"
-          placeholder="优先级"
           aria-label="工单优先级筛选"
           class="priority-filter"
+          placeholder="优先级"
           @change="handlePriorityChange"
         >
           <a-select-option :value="undefined">全部优先级</a-select-option>
@@ -90,9 +90,9 @@
         </a-select>
         <a-select
           v-model:value="processFilter"
-          placeholder="流程"
           aria-label="工单流程筛选"
           class="process-filter"
+          placeholder="流程"
           @change="handleProcessChange"
         >
           <a-select-option :value="undefined">全部流程</a-select-option>
@@ -104,7 +104,7 @@
             {{ process.name }}
           </a-select-option>
         </a-select>
-        <a-button @click="resetFilters" aria-label="重置工单筛选">
+        <a-button aria-label="重置工单筛选" @click="resetFilters">
           重置
         </a-button>
       </div>
@@ -113,8 +113,8 @@
       <div class="stats-grid stats-row">
         <a-card class="stats-card">
           <a-statistic
-            title="匹配工单数"
             :value="loadError ? '未知' : stats.total"
+            title="匹配工单数"
           >
             <template #prefix>
               <FileTextOutlined />
@@ -124,8 +124,8 @@
 
         <a-card class="stats-card">
           <a-statistic
-            title="本页待处理"
             :value="loadError ? '未知' : stats.pending"
+            title="本页待处理"
           >
             <template #prefix>
               <ClockCircleOutlined />
@@ -135,8 +135,8 @@
 
         <a-card class="stats-card">
           <a-statistic
-            title="本页处理中"
             :value="loadError ? '未知' : stats.processing"
+            title="本页处理中"
           >
             <template #prefix>
               <PlayCircleOutlined />
@@ -146,8 +146,8 @@
 
         <a-card class="stats-card">
           <a-statistic
-            title="本页完成"
             :value="loadError ? '未知' : stats.completed"
+            title="本页完成"
           >
             <template #prefix>
               <CheckCircleOutlined />
@@ -158,26 +158,26 @@
     </template>
     <a-alert
       v-if="loadError"
-      class="list-error"
-      type="error"
-      show-icon
       :message="loadError"
+      class="list-error"
       role="alert"
+      show-icon
+      type="error"
     >
       <template #action>
-        <a-button @click="loadInstances" size="small">重试</a-button>
+        <a-button size="small" @click="loadInstances">重试</a-button>
       </template>
     </a-alert>
     <div class="table-container">
       <a-card>
         <a-table
-          :data-source="instanceList"
           :columns="columns"
-          :pagination="paginationConfig"
+          :data-source="instanceList"
           :loading="listLoading"
-          row-key="id"
-          bordered
+          :pagination="paginationConfig"
           :scroll="{ x: 1400 }"
+          bordered
+          row-key="id"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -221,7 +221,7 @@
             </template>
 
             <template v-if="column.key === 'assignee'">
-              <div class="assignee-info" v-if="record.assignee_id">
+              <div v-if="record.assignee_id" class="assignee-info">
                 <a-avatar
                   size="small"
                   :style="{
@@ -258,8 +258,8 @@
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
                 <a-button
-                  type="primary"
                   size="small"
+                  type="primary"
                   @click="handleViewInstance(record)"
                 >
                   查看
@@ -392,7 +392,7 @@
                       </a-menu-item>
                     </a-menu>
                   </template>
-                  <a-button size="small" aria-label="工单更多操作">
+                  <a-button aria-label="工单更多操作" size="small">
                     更多
                     <DownOutlined />
                   </a-button>
@@ -406,14 +406,14 @@
 
     <!-- 工单创建/编辑对话框 -->
     <a-modal
+      :confirm-loading="loading"
+      :destroy-on-close="true"
       :open="instanceDialog.visible"
       :title="instanceDialog.isEdit ? '编辑工单' : '创建工单'"
       :width="formDialogWidth"
-      @ok="saveInstance"
-      @cancel="closeInstanceForm"
-      :destroy-on-close="true"
       class="responsive-modal instance-form-modal"
-      :confirm-loading="loading"
+      @cancel="closeInstanceForm"
+      @ok="saveInstance"
     >
       <a-form
         ref="formRef"
@@ -449,11 +449,8 @@
             <a-form-item label="关联流程" name="process_id">
               <a-select
                 v-model:value="instanceDialog.form.process_id"
-                placeholder="请选择流程"
-                style="width: 100%"
-                show-search
                 :filter-option="false"
-                option-label-prop="children"
+                :loading="processSelectorLoading"
                 :not-found-content="
                   processSelectorLoading
                     ? undefined
@@ -461,12 +458,15 @@
                       ? '无搜索结果'
                       : '无数据'
                 "
-                @search="handleProcessSearch"
+                allow-clear
+                option-label-prop="children"
+                placeholder="请选择流程"
+                show-search
+                style="width: 100%"
+                @change="handleProcessSelectChange"
                 @dropdown-visible-change="handleProcessDropdownChange"
                 @popup-scroll="handleProcessScroll"
-                allow-clear
-                :loading="processSelectorLoading"
-                @change="handleProcessSelectChange"
+                @search="handleProcessSearch"
               >
                 <template #notFoundContent>
                   <div v-if="processSelectorLoading" class="selector-loading">
@@ -494,18 +494,18 @@
                 <a-select-option
                   v-if="processPagination.hasMore"
                   :value="'__load_more_process__'"
-                  disabled
                   class="load-more-option"
+                  disabled
                 >
                   <div
                     class="load-more-content"
                     @click.stop="loadMoreProcesses"
                   >
                     <a-button
-                      type="link"
-                      size="small"
                       :loading="processSelectorLoading"
+                      size="small"
                       style="padding: 0; height: auto; font-size: 12px"
+                      type="link"
                     >
                       <template v-if="!processSelectorLoading">
                         加载更多 ({{ processPagination.current }}/{{
@@ -524,11 +524,8 @@
               <a-select
                 v-model:value="instanceDialog.form.assignee_id"
                 :disabled="instanceDialog.isEdit"
-                placeholder="请选择处理人"
-                style="width: 100%"
-                show-search
                 :filter-option="false"
-                option-label-prop="children"
+                :loading="userSelectorLoading"
                 :not-found-content="
                   userSelectorLoading
                     ? undefined
@@ -536,12 +533,15 @@
                       ? '无搜索结果'
                       : '无数据'
                 "
-                @search="handleUserSearch"
+                allow-clear
+                option-label-prop="children"
+                placeholder="请选择处理人"
+                show-search
+                style="width: 100%"
+                @change="handleAssigneeChange"
                 @dropdown-visible-change="handleUserDropdownChange"
                 @popup-scroll="handleUserScroll"
-                @change="handleAssigneeChange"
-                allow-clear
-                :loading="userSelectorLoading"
+                @search="handleUserSearch"
               >
                 <template #notFoundContent>
                   <div v-if="userSelectorLoading" class="selector-loading">
@@ -577,15 +577,15 @@
                 <a-select-option
                   v-if="userPagination.hasMore"
                   :value="'__load_more_user__'"
-                  disabled
                   class="load-more-option"
+                  disabled
                 >
                   <div class="load-more-content" @click.stop="loadMoreUsers">
                     <a-button
-                      type="link"
-                      size="small"
                       :loading="userSelectorLoading"
+                      size="small"
                       style="padding: 0; height: auto; font-size: 12px"
+                      type="link"
                     >
                       <template v-if="!userSelectorLoading">
                         加载更多 ({{ userPagination.current }}/{{
@@ -606,15 +606,15 @@
             <a-form-item label="截止时间" name="due_date">
               <a-date-picker
                 v-model:value="instanceDialog.form.due_date"
-                placeholder="请选择截止时间"
-                style="width: 100%"
-                format="YYYY-MM-DD HH:mm:ss"
-                show-time
-                :show-today="false"
                 :disabled-date="
                   (current: any) =>
                     current && current < new Date().setHours(0, 0, 0, 0)
                 "
+                :show-today="false"
+                format="YYYY-MM-DD HH:mm:ss"
+                placeholder="请选择截止时间"
+                show-time
+                style="width: 100%"
               />
             </a-form-item>
           </a-col>
@@ -622,12 +622,12 @@
             <a-form-item label="标签" name="tags">
               <a-select
                 v-model:value="instanceDialog.form.tags"
-                mode="tags"
-                placeholder="请输入标签"
-                style="width: 100%"
                 :max-tag-count="5"
                 :max-tag-text-length="20"
                 allow-clear
+                mode="tags"
+                placeholder="请输入标签"
+                style="width: 100%"
               />
             </a-form-item>
           </a-col>
@@ -642,9 +642,9 @@
         </a-form-item>
 
         <a-form-item
+          v-if="instanceDialog.form.process_id"
           label="表单数据"
           name="form_data"
-          v-if="instanceDialog.form.process_id"
         >
           <div class="form-data-section">
             <div class="section-header">
@@ -656,21 +656,21 @@
                     { label: '可视化编辑', value: 'visual' },
                     { label: 'JSON模式', value: 'json' },
                   ]"
-                  @change="handleModeSwitch"
                   size="small"
+                  @change="handleModeSwitch"
                 />
                 <template v-if="formEditMode === 'json'">
                   <a-button
+                    :disabled="!instanceDialog.form.form_data_json"
                     size="small"
                     @click="formatFormDataJson"
-                    :disabled="!instanceDialog.form.form_data_json"
                   >
                     格式化
                   </a-button>
                   <a-button
+                    :disabled="!instanceDialog.form.form_data_json"
                     size="small"
                     @click="validateFormDataJson"
-                    :disabled="!instanceDialog.form.form_data_json"
                   >
                     验证
                   </a-button>
@@ -862,9 +862,9 @@
                           />
                           <div class="field-type-warning">
                             <a-alert
-                              type="warning"
                               :message="`未知字段类型: ${field.type}`"
                               size="small"
+                              type="warning"
                             />
                           </div>
                         </a-form-item>
@@ -875,8 +875,8 @@
 
                 <div v-else-if="!formDesignLoading" class="no-form-design">
                   <a-empty
-                    description="该流程暂无表单设计或表单字段为空"
                     :image="false"
+                    description="该流程暂无表单设计或表单字段为空"
                   >
                     <template #extra>
                       <a-button
@@ -903,20 +903,20 @@
 
               <div v-if="formDataValidationError" class="json-error-message">
                 <a-alert
-                  type="error"
                   :message="formDataValidationError"
-                  show-icon
                   closable
+                  show-icon
+                  type="error"
                   @close="formDataValidationError = ''"
                 />
               </div>
 
               <div class="json-help">
                 <a-alert
-                  type="info"
-                  message="表单数据说明"
                   description='请输入符合流程表单字段的JSON数据，例如：{"name": "张三", "email": "zhangsan@example.com"}'
+                  message="表单数据说明"
                   show-icon
+                  type="info"
                 />
               </div>
             </div>
@@ -927,15 +927,15 @@
 
     <!-- 详情对话框 -->
     <a-modal
-      :open="detailDialog.visible"
-      title="工单详情"
-      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeInstanceDetail"
+      :open="detailDialog.visible"
+      :width="previewDialogWidth"
       class="detail-dialog responsive-modal"
+      title="工单详情"
+      @cancel="closeInstanceDetail"
     >
       <a-skeleton v-if="detailLoading" active />
-      <a-alert v-if="detailError" :message="detailError" type="error" show-icon>
+      <a-alert v-if="detailError" :message="detailError" show-icon type="error">
         <template #action>
           <a-button @click="retryInstanceDetail">重试</a-button>
         </template>
@@ -972,8 +972,8 @@
 
         <!-- 当前步骤信息 -->
         <div
-          class="current-step-section"
           v-if="detailDialog.currentStep || detailDialog.stepLoading"
+          class="current-step-section"
         >
           <div class="step-header">
             <div class="step-title-wrapper">
@@ -983,7 +983,7 @@
               </div>
               <h3 class="step-title">当前步骤</h3>
             </div>
-            <div class="step-status-badge" v-if="detailDialog.currentStep">
+            <div v-if="detailDialog.currentStep" class="step-status-badge">
               <a-tag
                 :color="getStepStatusColor(detailDialog.currentStep.type)"
                 class="step-status-tag"
@@ -1005,8 +1005,8 @@
 
                 <div class="step-details-grid">
                   <div
-                    class="step-detail-item"
                     v-if="detailDialog.currentStep.id"
+                    class="step-detail-item"
                   >
                     <div class="detail-icon">
                       <NumberOutlined />
@@ -1039,8 +1039,8 @@
                   </div>
 
                   <div
-                    class="step-detail-item"
                     v-if="detailDialog.currentStep.assignee"
+                    class="step-detail-item"
                   >
                     <div class="detail-icon">
                       <UserOutlined />
@@ -1054,8 +1054,8 @@
                   </div>
 
                   <div
-                    class="step-detail-item"
                     v-if="detailDialog.currentStep.deadline"
+                    class="step-detail-item"
                   >
                     <div
                       class="detail-icon"
@@ -1186,8 +1186,8 @@
 
               <!-- 步骤进度指示器 -->
               <div
-                class="step-progress"
                 v-if="detailDialog.allSteps.length > 0"
+                class="step-progress"
               >
                 <div class="progress-bar">
                   <div
@@ -1209,7 +1209,7 @@
           </div>
         </div>
 
-        <a-descriptions bordered :column="2" :labelStyle="{ width: '120px' }">
+        <a-descriptions :column="2" :labelStyle="{ width: '120px' }" bordered>
           <a-descriptions-item label="工单ID">
             {{ detailDialog.instance.id }}
           </a-descriptions-item>
@@ -1237,26 +1237,26 @@
             {{ formatFullDateTime(detailDialog.instance.updated_at || '') }}
           </a-descriptions-item>
           <a-descriptions-item
-            label="完成时间"
-            :span="2"
             v-if="detailDialog.instance.completed_at"
+            :span="2"
+            label="完成时间"
           >
             {{ formatFullDateTime(detailDialog.instance.completed_at) }}
           </a-descriptions-item>
           <a-descriptions-item
-            label="截止时间"
-            :span="2"
             v-if="detailDialog.instance.due_date"
+            :span="2"
+            label="截止时间"
           >
             {{ formatFullDateTime(detailDialog.instance.due_date) }}
           </a-descriptions-item>
           <a-descriptions-item
-            label="标签"
-            :span="2"
             v-if="
               detailDialog.instance.tags &&
               detailDialog.instance.tags.length > 0
             "
+            :span="2"
+            label="标签"
           >
             <a-tag
               v-for="tag in detailDialog.instance.tags"
@@ -1266,15 +1266,15 @@
               {{ tag }}
             </a-tag>
           </a-descriptions-item>
-          <a-descriptions-item label="关联流程" :span="2">
+          <a-descriptions-item :span="2" label="关联流程">
             {{ getProcessName(detailDialog.instance.process_id) || '无' }}
           </a-descriptions-item>
-          <a-descriptions-item label="描述" :span="2">
+          <a-descriptions-item :span="2" label="描述">
             {{ detailDialog.instance.description || '无描述' }}
           </a-descriptions-item>
         </a-descriptions>
 
-        <div class="form-data-preview" v-if="detailDialog.instance.form_data">
+        <div v-if="detailDialog.instance.form_data" class="form-data-preview">
           <h3>表单数据</h3>
           <div class="form-data-content">
             <pre class="json-content">{{
@@ -1285,13 +1285,13 @@
 
         <!-- 可用动作 -->
         <div
-          class="available-actions-section"
           v-if="
             (detailDialog.availableActions.length > 0 ||
               detailDialog.actionsLoading) &&
             detailDialog.instance?.status !== InstanceStatus.Completed &&
             detailDialog.instance?.status !== InstanceStatus.Rejected
           "
+          class="available-actions-section"
         >
           <h3>可用操作</h3>
           <a-spin :spinning="detailDialog.actionsLoading">
@@ -1424,18 +1424,18 @@
 
     <!-- 通知记录对话框 -->
     <a-modal
-      :open="notificationLogsDialog.visible"
-      title="通知发送记录"
-      :width="800"
       :footer="null"
-      @cancel="handleCloseNotificationLogsDialog"
+      :open="notificationLogsDialog.visible"
+      :width="800"
       class="notification-logs-dialog"
+      title="通知发送记录"
+      @cancel="handleCloseNotificationLogsDialog"
     >
       <a-alert
         v-if="notificationLogsError"
         :message="notificationLogsError"
-        type="error"
         show-icon
+        type="error"
       >
         <template #action>
           <a-button @click="loadNotificationLogs()">重试</a-button>
@@ -1469,11 +1469,11 @@
                           formatDateTime(item.send_at)
                         }}</span>
                       </div>
-                      <div class="meta-item" v-if="item.recipient_addr">
+                      <div v-if="item.recipient_addr" class="meta-item">
                         <span class="label">收件人：</span>
                         <span class="value">{{ item.recipient_addr }}</span>
                       </div>
-                      <div class="meta-item" v-if="item.recipient_name">
+                      <div v-if="item.recipient_name" class="meta-item">
                         <span class="label">收件人姓名：</span>
                         <span class="value">{{ item.recipient_name }}</span>
                       </div>
@@ -1494,8 +1494,8 @@
                 <div v-if="item.error_message" class="error-message">
                   <a-alert
                     :message="item.error_message"
-                    type="error"
                     show-icon
+                    type="error"
                   />
                 </div>
               </a-list-item>
@@ -1525,31 +1525,28 @@
 
     <!-- 分配处理人对话框 -->
     <a-modal
+      :destroy-on-close="true"
       :open="assignDialog.visible"
-      title="分配处理人"
       :width="dialogWidth"
-      @ok="saveAssign"
+      class="responsive-modal"
+      title="分配处理人"
       @cancel="
         () => {
           assignDialog.visible = false;
         }
       "
-      :destroy-on-close="true"
-      class="responsive-modal"
+      @ok="saveAssign"
     >
       <a-form :model="assignDialog.form" layout="vertical">
         <a-form-item
+          :rules="[{ required: true, message: '请选择处理人' }]"
           label="选择处理人"
           name="assignee_id"
-          :rules="[{ required: true, message: '请选择处理人' }]"
         >
           <a-select
             v-model:value="assignDialog.form.assignee_id"
-            placeholder="请选择处理人"
-            style="width: 100%"
-            show-search
             :filter-option="false"
-            option-label-prop="children"
+            :loading="userSelectorLoading"
             :not-found-content="
               userSelectorLoading
                 ? undefined
@@ -1557,10 +1554,13 @@
                   ? '无搜索结果'
                   : '无数据'
             "
-            @search="handleUserSearch"
-            @dropdown-visible-change="handleUserDropdownChange"
             allow-clear
-            :loading="userSelectorLoading"
+            option-label-prop="children"
+            placeholder="请选择处理人"
+            show-search
+            style="width: 100%"
+            @dropdown-visible-change="handleUserDropdownChange"
+            @search="handleUserSearch"
           >
             <template #notFoundContent>
               <div v-if="userSelectorLoading" class="selector-loading">
@@ -1597,24 +1597,24 @@
 
     <!-- 从模板创建工单对话框 -->
     <a-modal
+      :confirm-loading="loading"
+      :destroy-on-close="true"
       :open="templateDialog.visible"
-      title="从模板创建工单"
       :width="formDialogWidth"
-      @ok="handleTemplateSubmit"
+      class="responsive-modal"
+      title="从模板创建工单"
       @cancel="
         () => {
           templateDialog.visible = false;
         }
       "
-      :destroy-on-close="true"
-      class="responsive-modal"
-      :confirm-loading="loading"
+      @ok="handleTemplateSubmit"
     >
       <a-alert
         v-if="templateListError"
         :message="templateListError"
-        type="error"
         show-icon
+        type="error"
       >
         <template #action>
           <a-button @click="loadTemplates()">重试</a-button>
@@ -1622,17 +1622,14 @@
       </a-alert>
       <a-form :model="templateDialog.form" layout="vertical">
         <a-form-item
+          :rules="[{ required: true, message: '请选择模板' }]"
           label="选择模板"
           name="template_id"
-          :rules="[{ required: true, message: '请选择模板' }]"
         >
           <a-select
             v-model:value="templateDialog.form.template_id"
-            placeholder="请选择工单模板"
-            style="width: 100%"
-            show-search
             :filter-option="false"
-            option-label-prop="children"
+            :loading="templateSelectorLoading"
             :not-found-content="
               templateSelectorLoading
                 ? undefined
@@ -1640,12 +1637,15 @@
                   ? '无搜索结果'
                   : '无数据'
             "
-            @search="handleTemplateSearch"
+            allow-clear
+            option-label-prop="children"
+            placeholder="请选择工单模板"
+            show-search
+            style="width: 100%"
             @dropdown-visible-change="
               (open: boolean) => open && loadTemplates()
             "
-            allow-clear
-            :loading="templateSelectorLoading"
+            @search="handleTemplateSearch"
           >
             <template #notFoundContent>
               <div v-if="templateSelectorLoading" class="selector-loading">
@@ -1673,9 +1673,9 @@
         </a-form-item>
 
         <a-form-item
+          :rules="[{ required: true, message: '请输入工单标题' }]"
           label="工单标题"
           name="title"
-          :rules="[{ required: true, message: '请输入工单标题' }]"
         >
           <a-input
             v-model:value="templateDialog.form.title"
@@ -1700,15 +1700,15 @@
             <a-form-item label="截止时间" name="due_date">
               <a-date-picker
                 v-model:value="templateDialog.form.due_date"
-                placeholder="请选择截止时间"
-                style="width: 100%"
-                format="YYYY-MM-DD HH:mm:ss"
-                show-time
-                :show-today="false"
                 :disabled-date="
                   (current: any) =>
                     current && current < new Date().setHours(0, 0, 0, 0)
                 "
+                :show-today="false"
+                format="YYYY-MM-DD HH:mm:ss"
+                placeholder="请选择截止时间"
+                show-time
+                style="width: 100%"
               />
             </a-form-item>
           </a-col>
@@ -1717,12 +1717,12 @@
         <a-form-item label="标签" name="tags">
           <a-select
             v-model:value="templateDialog.form.tags"
-            mode="tags"
-            placeholder="请输入标签"
-            style="width: 100%"
             :max-tag-count="5"
             :max-tag-text-length="20"
             allow-clear
+            mode="tags"
+            placeholder="请输入标签"
+            style="width: 100%"
           />
         </a-form-item>
 
@@ -1765,21 +1765,21 @@
       <a-form :model="approvalDialog.form" layout="vertical">
         <a-form-item
           :label="approvalDialog.type === 'approve' ? '审批意见' : '拒绝理由'"
-          name="comment"
           :rules="
             approvalDialog.type === 'reject'
               ? [{ required: true, message: '请输入拒绝理由' }]
               : []
           "
+          name="comment"
         >
           <a-textarea
             v-model:value="approvalDialog.form.comment"
-            :rows="4"
             :placeholder="
               approvalDialog.type === 'approve'
                 ? '请输入审批意见(可选)'
                 : '请输入拒绝理由'
             "
+            :rows="4"
           />
         </a-form-item>
       </a-form>
@@ -1822,69 +1822,69 @@
 <script setup lang="ts">
 import { downloadCsv } from '#/utils/export-csv';
 import {
-  ref,
-  reactive,
-  onMounted,
+  computed,
+  h,
   onBeforeUnmount,
   onDeactivated,
-  computed,
+  onMounted,
+  reactive,
+  ref,
   watch,
-  h,
 } from 'vue';
 import { useAccessStore } from '@vben/stores';
 import { useWindowSize } from '@vueuse/core';
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  PlusOutlined,
-  FileTextOutlined,
-  ClockCircleOutlined,
   CheckCircleOutlined,
+  ClockCircleOutlined,
   DownOutlined,
-  MessageOutlined,
-  HistoryOutlined,
-  PlayCircleOutlined,
-  InfoCircleOutlined,
-  FileAddOutlined,
   ExportOutlined,
-  UserOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
+  HistoryOutlined,
   InboxOutlined,
-  NumberOutlined,
-  MoreOutlined,
+  InfoCircleOutlined,
   LeftOutlined,
+  MessageOutlined,
+  MoreOutlined,
+  NumberOutlined,
+  PlayCircleOutlined,
+  PlusOutlined,
   RightOutlined,
+  UserOutlined,
 } from '@ant-design/icons-vue';
 
 import {
-  type WorkorderInstanceItem,
-  type CreateWorkorderInstanceReq,
-  type UpdateWorkorderInstanceReq,
-  type DeleteWorkorderInstanceReq,
-  type ListWorkorderInstanceReq,
-  type DetailWorkorderInstanceReq,
-  type SubmitWorkorderInstanceReq,
-  type AssignWorkorderInstanceReq,
-  type ApproveWorkorderInstanceReq,
-  type RejectWorkorderInstanceReq,
-  type CancelWorkorderInstanceReq,
-  type CompleteWorkorderInstanceReq,
-  type ReturnWorkorderInstanceReq,
-  InstanceStatus,
-  Priority,
-  listWorkorderInstance,
-  detailWorkorderInstance,
-  createWorkorderInstance,
-  updateWorkorderInstance,
-  deleteWorkorderInstance,
-  submitWorkorderInstance,
-  assignWorkorderInstance,
   approveWorkorderInstance,
-  rejectWorkorderInstance,
+  type ApproveWorkorderInstanceReq,
+  assignWorkorderInstance,
+  type AssignWorkorderInstanceReq,
   cancelWorkorderInstance,
+  type CancelWorkorderInstanceReq,
   completeWorkorderInstance,
-  returnWorkorderInstance,
+  type CompleteWorkorderInstanceReq,
+  createWorkorderInstance,
+  type CreateWorkorderInstanceReq,
+  deleteWorkorderInstance,
+  type DeleteWorkorderInstanceReq,
+  detailWorkorderInstance,
+  type DetailWorkorderInstanceReq,
   getAvailableActions,
   getCurrentStep,
+  InstanceStatus,
+  listWorkorderInstance,
+  type ListWorkorderInstanceReq,
+  Priority,
+  rejectWorkorderInstance,
+  type RejectWorkorderInstanceReq,
+  returnWorkorderInstance,
+  type ReturnWorkorderInstanceReq,
+  submitWorkorderInstance,
+  type SubmitWorkorderInstanceReq,
+  updateWorkorderInstance,
+  type UpdateWorkorderInstanceReq,
+  type WorkorderInstanceItem,
 } from '#/api/core/workorder/workorder_instance';
 
 // 导入新的组件
@@ -1892,7 +1892,7 @@ import WorkorderComments from './components/WorkorderComments.vue';
 import WorkorderTimeline from './components/WorkorderTimeline.vue';
 import WorkorderFlow from './components/WorkorderFlow.vue';
 
-import { type GetUserListReq, getUserList } from '#/api/core/system/user';
+import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 
 interface UserListItem {
   id: number;
@@ -1901,35 +1901,35 @@ interface UserListItem {
 }
 
 import {
-  type WorkorderProcessItem,
-  type ListWorkorderProcessReq,
-  type DetailWorkorderProcessReq,
-  type ProcessStep,
-  type ProcessDefinition,
-  listWorkorderProcess,
   detailWorkorderProcess,
+  type DetailWorkorderProcessReq,
+  listWorkorderProcess,
+  type ListWorkorderProcessReq,
+  type ProcessDefinition,
+  type ProcessStep,
+  type WorkorderProcessItem,
 } from '#/api/core/workorder/workorder_process';
 
 import {
-  type WorkorderFormDesignItem,
+  detailWorkorderFormDesign,
   type DetailWorkorderFormDesignReq,
   type FormField,
   FormFieldType,
-  detailWorkorderFormDesign,
+  type WorkorderFormDesignItem,
 } from '#/api/core/workorder/workorder_form_design';
 
 import {
-  type WorkorderTemplateItem,
-  listWorkorderTemplate,
   detailWorkorderTemplate,
+  listWorkorderTemplate,
+  type WorkorderTemplateItem,
 } from '#/api/core/workorder/workorder_template';
 
 // 导入通知相关API
 import {
-  type NotificationLog,
-  type ListSendLogReq,
   getSendLogs,
   getNotificationSendStatus as getSendStatus,
+  type ListSendLogReq,
+  type NotificationLog,
 } from '#/api/core/workorder/workorder_notification';
 
 import { usePermission } from '#/utils/permission';

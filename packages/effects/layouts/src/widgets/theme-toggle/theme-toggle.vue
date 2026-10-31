@@ -29,9 +29,9 @@ const PRESETS = [
     <ToggleGroupItem
       v-for="item in PRESETS"
       :key="item.name"
-      :value="item.name"
       :aria-label="item.title"
       :title="item.title"
+      :value="item.name"
     >
       <component :is="item.icon" class="size-5" />
     </ToggleGroupItem>

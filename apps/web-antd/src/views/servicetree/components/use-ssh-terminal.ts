@@ -1,7 +1,7 @@
-import { onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref, type Ref, watch } from 'vue';
 import { useAccessStore } from '@vben/stores';
 import { useAppConfig } from '@vben/hooks';
-import { Terminal, type IDisposable } from 'xterm';
+import { type IDisposable, Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { websocketProtocols, websocketUrl } from '#/utils/websocket-url';
 
