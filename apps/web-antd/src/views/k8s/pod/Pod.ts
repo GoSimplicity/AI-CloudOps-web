@@ -1782,7 +1782,6 @@ export function usePodPage() {
               'Could not dispose an addon that has not been loaded',
             )
           ) {
-          } else {
           }
           // 强制重置状态
           terminal.value = null;
@@ -2149,7 +2148,6 @@ export function usePodPage() {
         for (const chunk of utf8Chunks(command)) {
           socket.send(JSON.stringify({ op: 'stdin', data: chunk }));
         }
-      } else {
       }
     };
 
@@ -2317,7 +2315,6 @@ export function usePodPage() {
               'Could not dispose an addon that has not been loaded',
             )
           ) {
-          } else {
           }
           // 强制重置状态，无论是否有错误
           terminal.value = null;

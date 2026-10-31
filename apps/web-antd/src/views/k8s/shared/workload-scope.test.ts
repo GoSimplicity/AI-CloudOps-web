@@ -201,7 +201,7 @@ const selectorCases = [
   { name: 'Pod', create: () => usePodPage() },
 ];
 for (const testCase of selectorCases) {
-  describe(`FE-02b 拍板 3：${testCase.name} 集群 / 命名空间下拉被取消不写错误状态`, () => {
+  describe(`fE-02b 拍板 3：${testCase.name} 集群 / 命名空间下拉被取消不写错误状态`, () => {
     it.each([
       [
         'CanceledError',

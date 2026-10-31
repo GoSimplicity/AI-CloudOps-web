@@ -14,6 +14,14 @@ import { markRequestLayerNotice } from '#/utils/permission/request-notice';
 
 vi.mock('#/utils/export-csv', () => ({ downloadCsv: vi.fn() }));
 
+/** 必须存在的页面、DOM 和调用缺失时立即失败，保留原非空断言的测试前提。 */
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('Expected cloud contract fixture to exist');
+  }
+  return value;
+}
+
 const permissions = vi.hoisted(() => ({
   check: vi.fn((_code: string) => true),
 }));
@@ -176,7 +184,7 @@ async function button(text: string, selector = 'button') {
     ...document.querySelectorAll<HTMLButtonElement>(selector),
   ].find((element) => element.textContent?.replace(/\s/g, '') === text);
   expect(target).toBeDefined();
-  target!.click();
+  required(target).click();
   await flushPromises();
 }
 async function open() {
@@ -187,7 +195,7 @@ async function open() {
 async function select(id: string, label: string) {
   const input = document.getElementById(id);
   expect(input).not.toBeNull();
-  await new DOMWrapper(input!.closest('.ant-select')!)
+  await new DOMWrapper(required(required(input).closest('.ant-select')))
     .find('.ant-select-selector')
     .trigger('mousedown');
   await flushPromises();
@@ -197,7 +205,7 @@ async function select(id: string, label: string) {
     ),
   ].find((element) => element.textContent?.includes(label));
   expect(option).toBeDefined();
-  option!.click();
+  required(option).click();
   await flushPromises();
 }
 describe('云资源真实控件合同', () => {
@@ -208,7 +216,9 @@ describe('云资源真实控件合同', () => {
   ])('缺少 %s 权限时不开放同步入口', async (missing) => {
     permissions.check.mockImplementation((code: string) => code !== missing);
     await start();
-    expect(wrapper!.find('[aria-label="同步资源"]').exists()).toBe(false);
+    expect(required(wrapper).find('[aria-label="同步资源"]').exists()).toBe(
+      false,
+    );
     if (missing === '/api/tree/cloud/account/list') {
       expect(
         client.get.mock.calls.some(
@@ -225,7 +235,7 @@ describe('云资源真实控件合同', () => {
         code !== '/api/tree/cloud/account/:id/detail' || allowed.value,
     );
     const late = Promise.withResolvers<unknown>();
-    const original = client.get.getMockImplementation()!;
+    const original = required(client.get.getMockImplementation());
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
       path === '/tree/cloud/account/7/detail'
         ? late.promise
@@ -236,14 +246,16 @@ describe('云资源真实控件合同', () => {
     await flushPromises();
     late.resolve(account());
     await flushPromises();
-    expect(wrapper!.find('[aria-label="同步资源"]').exists()).toBe(false);
+    expect(required(wrapper).find('[aria-label="同步资源"]').exists()).toBe(
+      false,
+    );
     expect(
       document.querySelector('.cloud-sync-form')?.textContent ?? '',
     ).not.toContain('杭州');
     expect(client.post).not.toHaveBeenCalled();
   });
   it('展示真实币种并将缺失费用标为未知', async () => {
-    const original = client.get.getMockImplementation()!;
+    const original = required(client.get.getMockImplementation());
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
       path === '/tree/cloud/list'
         ? Promise.resolve({
@@ -267,30 +279,32 @@ describe('云资源真实控件合同', () => {
         : original(path, ...rest),
     );
     await start();
-    const rows = wrapper!.findAll('tbody tr.ant-table-row');
-    expect(rows[0]!.text()).toContain('USD');
-    expect(rows[0]!.text()).not.toContain('¥');
-    expect(rows[1]!.text()).toContain('未知');
+    const rows = required(wrapper).findAll('tbody tr.ant-table-row');
+    expect(required(rows[0]).text()).toContain('USD');
+    expect(required(rows[0]).text()).not.toContain('¥');
+    expect(required(rows[1]).text()).toContain('未知');
   });
   it('导出不将未知资源数据当成零成本', async () => {
     await start();
-    const instance = wrapper!.vm as unknown as {
+    const instance = required(wrapper).vm as unknown as {
       $: { setupState: { handleExportCurrent: () => void } };
     };
     instance.$.setupState.handleExportCurrent();
     await flushPromises();
     expect(downloadCsv).toHaveBeenCalledOnce();
-    const rows = vi.mocked(downloadCsv).mock.calls[0]![1];
-    const costIndex = rows[0]!.indexOf('月成本');
-    expect(rows[1]![costIndex]).toBe('未知');
+    const rows = required(vi.mocked(downloadCsv).mock.calls[0])[1];
+    const costIndex = required(rows[0]).indexOf('月成本');
+    expect(required(rows[1])[costIndex]).toBe('未知');
   });
   it('普通资源分页使用size，节点资源专用分页才使用page_size', async () => {
     await start();
-    await wrapper!.find('.ant-pagination-item-2 a').trigger('click');
+    await required(wrapper).find('.ant-pagination-item-2 a').trigger('click');
     await flushPromises();
-    const params = client.get.mock.calls
-      .filter((call) => call[0] === '/tree/cloud/list')
-      .at(-1)![1].params;
+    const params = required(
+      client.get.mock.calls
+        .filter((call) => call[0] === '/tree/cloud/list')
+        .at(-1),
+    )[1].params;
     expect(params).toEqual(expect.objectContaining({ page: 2, size: 10 }));
     expect(params).not.toHaveProperty('page_size');
     await getTreeNodeCloudResourcesApi(3, { page: 2, page_size: 20 });
@@ -321,7 +335,9 @@ describe('云资源真实控件合同', () => {
         sync_mode: 'incremental',
       }),
     );
-    expect(client.post.mock.calls[0]![1]).not.toHaveProperty('regions');
+    expect(required(client.post.mock.calls[0])[1]).not.toHaveProperty(
+      'regions',
+    );
     expect(
       client.get.mock.calls.every(
         (call) => !String(call[0]).includes('available-regions'),
@@ -355,7 +371,7 @@ describe('云资源真实控件合同', () => {
       '.cloud-sync-form input[type="radio"][value="full"]',
     );
     expect(radio?.disabled).toBe(false);
-    radio!.click();
+    required(radio).click();
     await flushPromises();
     await button('开始同步', '.ant-modal-footer button');
     expect(client.post).toHaveBeenCalledWith(
@@ -373,9 +389,9 @@ describe('云资源真实控件合同', () => {
     await button('开始同步', '.ant-modal-footer button');
     expect(client.post).not.toHaveBeenCalled();
     await select('cloud-sync-regions', '深圳');
-    const input = document.querySelector<HTMLInputElement>(
-      '#cloud-sync-instance-ids',
-    )!;
+    const input = required(
+      document.querySelector<HTMLInputElement>('#cloud-sync-instance-ids'),
+    );
     expect(input).toBeTruthy();
     await new DOMWrapper(input).setValue(
       '12345678-1234-1234-1234-123456789abc',
@@ -413,9 +429,9 @@ describe('云资源真实控件合同', () => {
     await button('开始同步', '.ant-modal-footer button');
     expect(client.post).not.toHaveBeenCalled();
     await select('cloud-sync-regions', '深圳');
-    const input = document.querySelector<HTMLInputElement>(
-      '#cloud-sync-instance-ids',
-    )!;
+    const input = required(
+      document.querySelector<HTMLInputElement>('#cloud-sync-instance-ids'),
+    );
     await new DOMWrapper(input).setValue(instance);
     const enter = new KeyboardEvent('keydown', {
       key: 'Enter',
@@ -444,9 +460,9 @@ describe('云资源真实控件合同', () => {
     await open();
     await select('cloud-sync-account', 'GCP账户');
     await select('cloud-sync-regions', '深圳');
-    const input = document.querySelector<HTMLInputElement>(
-      '#cloud-sync-instance-ids',
-    )!;
+    const input = required(
+      document.querySelector<HTMLInputElement>('#cloud-sync-instance-ids'),
+    );
     await new DOMWrapper(input).setValue(instance);
     const enter = new KeyboardEvent('keydown', {
       key: 'Enter',
@@ -538,7 +554,7 @@ describe('云资源真实控件合同', () => {
   });
   it('同步取消不发送请求，迟到的旧账户地域不能污染新账户', async () => {
     const late = Promise.withResolvers<unknown>();
-    const original = client.get.getMockImplementation()!;
+    const original = required(client.get.getMockImplementation());
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
       path === '/tree/cloud/account/7/detail'
         ? late.promise
@@ -580,7 +596,7 @@ describe('云资源真实控件合同', () => {
     );
   });
   it('读取地域失败阻止同步，可重试恢复且不发送停用地域', async () => {
-    const original = client.get.getMockImplementation()!;
+    const original = required(client.get.getMockImplementation());
     let fail = true;
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
       path === '/tree/cloud/account/7/detail' && fail
@@ -601,7 +617,11 @@ describe('云资源真实控件合同', () => {
     fail = false;
     await button('重试读取地域');
     await new DOMWrapper(
-      document.getElementById('cloud-sync-regions')!.closest('.ant-select')!,
+      required(
+        required(document.getElementById('cloud-sync-regions')).closest(
+          '.ant-select',
+        ),
+      ),
     )
       .find('.ant-select-selector')
       .trigger('mousedown');
@@ -612,7 +632,9 @@ describe('云资源真实控件合同', () => {
       ),
     ).toBe(false);
     await button('开始同步', '.ant-modal-footer button');
-    expect(client.post.mock.calls[0]![1].cloud_account_region_ids).toEqual([]);
+    expect(
+      required(client.post.mock.calls[0])[1].cloud_account_region_ids,
+    ).toEqual([]);
   });
   it('提交期间冻结表单、重复确认只写一次，失败保留选择', async () => {
     const pending = Promise.withResolvers<unknown>();
@@ -689,7 +711,7 @@ describe('云资源真实控件合同', () => {
     ).toBe(true);
   });
   it('不支持的云厂商及非ECS存量只读，开放腾讯和AWS同步账户', async () => {
-    const original = client.get.getMockImplementation()!;
+    const original = required(client.get.getMockImplementation());
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
       path === '/tree/cloud/list'
         ? Promise.resolve({
@@ -707,24 +729,28 @@ describe('云资源真实控件合同', () => {
         : original(path, ...rest),
     );
     await open();
-    const row = wrapper!.find('tbody tr.ant-table-row');
+    const row = required(wrapper).find('tbody tr.ant-table-row');
     expect(row.text()).toContain('未知厂商存量资源');
     expect(
       row
         .findAll('button')
         .filter((button) => button.attributes('disabled') !== undefined).length,
     ).toBeGreaterThanOrEqual(3);
-    const rds = wrapper!
+    const rds = required(wrapper)
       .findAll('tbody tr.ant-table-row')
       .find((row) => row.text().includes('阿里存量RDS'));
     expect(rds).toBeDefined();
     expect(
-      rds!
+      required(rds)
         .findAll('button')
         .filter((button) => button.attributes('disabled') !== undefined).length,
     ).toBeGreaterThanOrEqual(2);
     await new DOMWrapper(
-      document.getElementById('cloud-sync-account')!.closest('.ant-select')!,
+      required(
+        required(document.getElementById('cloud-sync-account')).closest(
+          '.ant-select',
+        ),
+      ),
     )
       .find('.ant-select-selector')
       .trigger('mousedown');
@@ -742,7 +768,7 @@ describe('云资源真实控件合同', () => {
     expect(client.post).not.toHaveBeenCalled();
   });
   it('账户列表读取失败展示重试，不误报需要创建账户', async () => {
-    const original = client.get.getMockImplementation()!;
+    const original = required(client.get.getMockImplementation());
     let fail = true;
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
       path === '/tree/cloud/account/list' && fail
@@ -750,7 +776,7 @@ describe('云资源真实控件合同', () => {
         : original(path, ...rest),
     );
     await start();
-    expect(wrapper!.text()).toContain('读取云账户失败');
+    expect(required(wrapper).text()).toContain('读取云账户失败');
     await button('同步资源');
     expect(document.querySelector('.ant-modal')).toBeNull();
     expect(

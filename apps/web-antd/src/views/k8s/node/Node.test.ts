@@ -164,7 +164,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
+describe('fE-02 污点弹窗权限（c-1..c-9）', () => {
   it('c-1 常量文件中 k8s.node.taintAdd 与清单 v4 第 6 节一致（v2 引入）', () => {
     expect(PERMISSION_CODES['k8s.node.taintAdd']).toBe(
       '/api/k8s/node/:cluster_id/:node_name/taints/add',
@@ -364,7 +364,7 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     expect(message.success).toHaveBeenCalledWith('节点污点更新成功');
   });
 
-  it('P3-3 只有 add 码：已有污点行没有删除按钮，本次新增、未保存的行可以删除（只改表单，不调删除接口）', async () => {
+  it('p3-3 只有 add 码：已有污点行没有删除按钮，本次新增、未保存的行可以删除（只改表单，不调删除接口）', async () => {
     setSubject([ADD]);
     await mountPage();
     await openTaintModal();
@@ -387,7 +387,7 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     expect(api.deleteK8sNodeTaints).not.toHaveBeenCalled();
   });
 
-  it('P3-4 先删后加同一个 key：重新添加的行计入添加，先删再加各发一次', async () => {
+  it('p3-4 先删后加同一个 key：重新添加的行计入添加，先删再加各发一次', async () => {
     setSubject([ADD, DELETE]);
     await mountPage();
     await openTaintModal();
@@ -421,7 +421,7 @@ describe('FE-02 污点弹窗权限（c-1..c-9）', () => {
     ['只有 delete 码', (): string[] => [DELETE]],
     ['只有 add 码', (): string[] => [ADD]],
   ])(
-    'P3-4 先删后加同一个 key 需要两个码：%s 时整单不发请求，提示无权限',
+    'p3-4 先删后加同一个 key 需要两个码：%s 时整单不发请求，提示无权限',
     async (_label, codes) => {
       setSubject(codes());
       await mountPage();
@@ -623,7 +623,7 @@ describe('复审 v4 P3-1 / P3-2：污点按 key 整组提交', () => {
   it.each([
     ['只有 add 码', [ADD]],
     ['add + delete 码', [ADD, DELETE]],
-  ])('P3-1 %s：已保存行的 key 输入框只读，新增行可编辑', async (_l, codes) => {
+  ])('p3-1 %s：已保存行的 key 输入框只读，新增行可编辑', async (_l, codes) => {
     setSubject(codes);
     await mountPage();
     await openTaintModal();
@@ -637,7 +637,7 @@ describe('复审 v4 P3-1 / P3-2：污点按 key 整组提交', () => {
     ).toBe(false);
   });
 
-  it('P3-1 兜底，add + delete 码：已保存行的 key 被改（a→b）不删行，保存时先删 a 再加 b，不留孤儿', async () => {
+  it('p3-1 兜底，add + delete 码：已保存行的 key 被改（a→b）不删行，保存时先删 a 再加 b，不留孤儿', async () => {
     setSubject([ADD, DELETE]);
     await mountPage();
     await openTaintModal();
@@ -653,7 +653,7 @@ describe('复审 v4 P3-1 / P3-2：污点按 key 整组提交', () => {
     );
   });
 
-  it('P3-1 兜底，只有 add 码：已保存行的 key 被改，需要删除原 key → 整单不发、提示无权限', async () => {
+  it('p3-1 兜底，只有 add 码：已保存行的 key 被改，需要删除原 key → 整单不发、提示无权限', async () => {
     setSubject([ADD]);
     await mountPage();
     await openTaintModal();
@@ -667,7 +667,7 @@ describe('复审 v4 P3-1 / P3-2：污点按 key 整组提交', () => {
     });
   });
 
-  it('P3-2 只有 add 码：同 key 两个 effect，只改其中一行的 value，两行一起发', async () => {
+  it('p3-2 只有 add 码：同 key 两个 effect，只改其中一行的 value，两行一起发', async () => {
     savedTaints([EXISTING, NO_EXECUTE]);
     setSubject([ADD]);
     await mountPage();
@@ -683,7 +683,7 @@ describe('复审 v4 P3-1 / P3-2：污点按 key 整组提交', () => {
     );
   });
 
-  it('P3-2 add + delete 码：同 key 两个 effect 删掉一行，先按 key 删除再把剩下的一行加回', async () => {
+  it('p3-2 add + delete 码：同 key 两个 effect 删掉一行，先按 key 删除再把剩下的一行加回', async () => {
     savedTaints([EXISTING, NO_EXECUTE]);
     setSubject([ADD, DELETE]);
     await mountPage();
@@ -701,7 +701,7 @@ describe('复审 v4 P3-1 / P3-2：污点按 key 整组提交', () => {
     );
   });
 
-  it('P3-2：新增一个无关 key，只发这一行，不带上其他 key', async () => {
+  it('p3-2：新增一个无关 key，只发这一行，不带上其他 key', async () => {
     setSubject([ADD]);
     await mountPage();
     await openTaintModal();

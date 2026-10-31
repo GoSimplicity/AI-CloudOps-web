@@ -1595,7 +1595,7 @@ const handleClusterChange = () => {
   if (filterClusterId.value) {
     fetchNamespaces(true);
     fetchRoleBindings();
-  } else {}
+  }
 };
 
 const handleTableChange = (pagination: {

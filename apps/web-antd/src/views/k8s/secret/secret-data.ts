@@ -230,7 +230,7 @@ function leadingWidth(line: string) {
  * 键分支不能以 `- ` 开头（`- ` 只归列表项前缀），避免与列表项前缀重叠回溯（同 BLOCK_SCALAR_HEADER_PATTERN）。
  */
 const VALUE_ON_NEXT_LINE_KEY_PATTERN =
-  /^([ \t]*)(?:-[ \t]+)*(?:"[^"\n]*"|'[^'\n]*'|(?:[^\s#'"-]|-(?=\S))[^:\n]*):(?:[ \t]+[!&]\S*)*[ \t]*(?:#.*)?$/;
+  /^[ \t]*(?:-[ \t]+)*(?:"[^"\n]*"|'[^'\n]*'|(?:[^\s#'"-]|-(?=\S))[^:\n]*):(?:[ \t]+[!&]\S*)*[ \t]*(?:#.*)?$/;
 
 /** 下一行整行是带引号的占位符（可带标签 / 锚点与行尾注释） */
 const NEXT_LINE_QUOTED_REDACTED_PATTERN =
@@ -255,8 +255,9 @@ function yamlHasNextLineQuotedRedacted(yamlText: string) {
       }
       keyIndent = null;
     }
-    const key = VALUE_ON_NEXT_LINE_KEY_PATTERN.exec(line);
-    if (key) keyIndent = key[1]!.length;
+    if (VALUE_ON_NEXT_LINE_KEY_PATTERN.test(line)) {
+      keyIndent = leadingWidth(line);
+    }
   }
   return false;
 }
@@ -280,7 +281,7 @@ export function yamlHasQuotedRedacted(yamlText: string) {
  * 60KB 的 `- - - …` 单行要回溯约 1.5s（平方级），改后约 1ms。以 `-` 开头的键（如 `-k:`）仍可匹配。
  */
 const BLOCK_SCALAR_HEADER_PATTERN =
-  /^([ \t]*)(?:-[ \t]+)*(?:(?:"[^"\n]*"|'[^'\n]*'|(?:[^\s#'"-]|-(?=\S))[^:\n]*):[ \t]*)?(?:[!&]\S*[ \t]+)*[|>](?:[1-9][+-]?|[+-][1-9]?)?[ \t]*(?:#.*)?$/;
+  /^[ \t]*(?:-[ \t]+)*(?:(?:"[^"\n]*"|'[^'\n]*'|(?:[^\s#'"-]|-(?=\S))[^:\n]*):[ \t]*)?(?:[!&]\S*[ \t]+)*[|>](?:[1-9][+-]?|[+-][1-9]?)?[ \t]*(?:#.*)?$/;
 
 /**
  * YAML 文本里是否有块标量里单独一行的占位符：块内任一行去掉首尾空白后**恰好等于** `<redacted>` 即算；
@@ -298,8 +299,9 @@ export function yamlHasBlockScalarRedacted(yamlText: string) {
       }
       blockParentIndent = null;
     }
-    const header = BLOCK_SCALAR_HEADER_PATTERN.exec(line);
-    if (header) blockParentIndent = header[1]!.length;
+    if (BLOCK_SCALAR_HEADER_PATTERN.test(line)) {
+      blockParentIndent = leadingWidth(line);
+    }
   }
   return false;
 }
@@ -380,7 +382,11 @@ export function createDataSectionLocator(
     let hi = ranges.length - 1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      const [from, to] = ranges[mid]!;
+      const range = ranges[mid];
+      if (range === undefined) {
+        throw new Error('无法确认 Secret YAML 数据范围');
+      }
+      const [from, to] = range;
       if (offset < from) hi = mid - 1;
       else if (offset >= to) lo = mid + 1;
       else return true;
@@ -469,7 +475,14 @@ function decodeLiteralBlock(content: string) {
   const lines = content.split('\n');
   if (endsWithNewline) lines.pop();
   let last = lines.length;
-  while (last > 0 && lines[last - 1]!.trim() === '') last -= 1;
+  while (last > 0) {
+    const line = lines[last - 1];
+    if (line === undefined) {
+      throw new Error('无法确认 Secret YAML 块内容');
+    }
+    if (line.trim() !== '') break;
+    last -= 1;
+  }
   const body = lines.slice(0, last);
   const first = body.find((line) => line.trim() !== '');
   const width = first ? leadingWidth(first) : 0;
@@ -656,11 +669,12 @@ export function getYamlDataFormatError(yamlText: string): null | string {
       } else {
         // incr8 P2-1：`Data:` / `StringData:` / `"Data":` 等非规范键名
         const keyMatch = TOP_LEVEL_KEY_PATTERN.exec(line);
-        const key = keyMatch
-          ? (keyMatch[1] ?? keyMatch[2] ?? keyMatch[3]!)
-          : '';
-        if (isNonCanonicalSecretFieldKey(key)) {
-          return yamlNonCanonicalFieldMessage(key);
+        if (keyMatch) {
+          const key = keyMatch[1] ?? keyMatch[2] ?? keyMatch[3];
+          if (key === undefined) return yamlInvalidMessage(index + 1);
+          if (isNonCanonicalSecretFieldKey(key)) {
+            return yamlNonCanonicalFieldMessage(key);
+          }
         }
         // `data :`（冒号前有空格）：编码器不认，值不会被编码
         if (/^data[ \t]+:/.test(line))
@@ -695,7 +709,10 @@ export function getYamlDataFormatError(yamlText: string): null | string {
     const content = line.slice(width);
     const keyMatch = /^([\w.-]+):/.exec(content);
     if (!keyMatch) return yamlDataUnsupportedMessage(`第 ${index + 1} 行`);
-    currentKey = keyMatch[1]!;
+    const key = keyMatch[1];
+    if (key === undefined)
+      return yamlDataUnsupportedMessage(`第 ${index + 1} 行`);
+    currentKey = key;
     const after = content.slice(keyMatch[0].length);
     if (after !== '' && !/^[ \t]/.test(after)) {
       return yamlDataMissingSpaceMessage(currentKey);
@@ -711,7 +728,8 @@ export function getYamlDataFormatError(yamlText: string): null | string {
       continue;
     }
     state = 'value';
-    const first = value[0]!;
+    const first = value[0];
+    if (first === undefined) return yamlDataUnsupportedMessage(currentKey);
     if (first === '"') {
       if (!SUPPORTED_QUOTED_VALUE_PATTERN.test(value)) {
         return yamlDataUnsupportedMessage(currentKey);
@@ -749,7 +767,8 @@ function keyOfLineAt(text: string, offset: number) {
   const lineEnd = text.indexOf('\n', offset);
   const line = text.slice(lineStart, lineEnd === -1 ? text.length : lineEnd);
   const key = /^[ \t]*(?:-[ \t]+)*["']?([\w.-]+)["']?[ \t]*:/.exec(line);
-  if (key) return key[1]!;
+  const keyName = key?.[1];
+  if (keyName !== undefined) return keyName;
   let lineNumber = 1;
   for (
     let i = text.indexOf('\n');
@@ -891,10 +910,10 @@ export function getYamlDataPayloadError(yamlText: string): null | string {
 /** token 扫描：全文任何 ≥16 字符的 base64 片段解码后是占位符 → 拦截文案（只含键名 / 行号） */
 function findEncodedRedactedToken(yamlText: string): null | string {
   for (const token of yamlText.matchAll(BASE64_TOKEN_PATTERN)) {
+    const offset = token.index;
+    if (offset === undefined) return yamlInvalidMessage();
     if (decodesToRedacted(token[0])) {
-      return yamlDataEncodedRedactedMessage(
-        keyOfLineAt(yamlText, token.index!),
-      );
+      return yamlDataEncodedRedactedMessage(keyOfLineAt(yamlText, offset));
     }
   }
   return null;

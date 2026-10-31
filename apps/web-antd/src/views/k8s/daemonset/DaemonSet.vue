@@ -1757,7 +1757,6 @@ const handleClusterChange = () => {
   if (filterClusterId.value) {
     fetchNamespaces(true); // 重置命名空间分页
     fetchDaemonSets();
-  } else {
   }
 };
 

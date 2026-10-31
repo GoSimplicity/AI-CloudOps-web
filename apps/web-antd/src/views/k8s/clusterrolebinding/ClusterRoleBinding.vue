@@ -1531,7 +1531,6 @@ const handleClusterChange = () => {
 
   if (filterClusterId.value) {
     fetchClusterRoleBindings();
-  } else {
   }
 };
 

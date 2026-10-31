@@ -1907,7 +1907,6 @@ const handleClusterChange = () => {
   if (filterClusterId.value) {
     fetchNamespaces(true);
     fetchRoles();
-  } else {
   }
 };
 

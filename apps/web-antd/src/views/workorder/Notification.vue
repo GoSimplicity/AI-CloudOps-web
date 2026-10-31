@@ -2626,7 +2626,7 @@ const saveNotification = async (): Promise<void> => {
   recipientError.value = '';
   try {
     await formRef.value?.validate();
-  } catch (error) {
+  } catch {
     return;
   }
 

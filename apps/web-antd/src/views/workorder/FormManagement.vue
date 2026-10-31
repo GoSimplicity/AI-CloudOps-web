@@ -1088,26 +1088,6 @@ const initPreviewFormData = (schema: FormSchema): void => {
       }
       case FormFieldType.Select:
       case FormFieldType.Radio:
-        {
-        }
-        {
-        }
-        {
-        }
-        {
-        }
-        {
-        }
-        {
-        }
-        {
-        }
-        {
-        }
-        {
-        }
-        {
-        }
         data[field.name] = field.default || undefined;
         break;
       case FormFieldType.Checkbox: {

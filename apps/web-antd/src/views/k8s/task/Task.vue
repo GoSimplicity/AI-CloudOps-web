@@ -931,7 +931,7 @@ const handleClusterChange = () => {
   if (filterClusterId.value) {
     fetchTemplates(true); // 重置模板分页
     fetchTasks();
-  } else {}
+  }
 };
 
 const handleTableChange = (pagination: {

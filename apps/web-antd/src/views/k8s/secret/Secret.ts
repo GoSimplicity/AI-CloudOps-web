@@ -1,4 +1,4 @@
-import { computed, h, ref } from 'vue';
+import { computed, h, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 import yaml from 'js-yaml';
@@ -977,8 +977,9 @@ export function useSecretPage() {
   };
 
   const addEditDataRow = (key = '') => {
-    editDataRows.value.push(createNewDataRow(key.trim()));
-    return editDataRows.value[editDataRows.value.length - 1]!;
+    const row = reactive(createNewDataRow(key.trim()));
+    editDataRows.value.push(row);
+    return row;
   };
 
   const getEditDataRowError = (row: SecretDataRow) => getDataRowError(row);

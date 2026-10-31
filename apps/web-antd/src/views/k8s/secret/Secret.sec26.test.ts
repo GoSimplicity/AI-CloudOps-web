@@ -1,3 +1,5 @@
+import { computed } from 'vue';
+
 import { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -497,7 +499,11 @@ describe('规则 2：更新 Secret 的 data', () => {
   it('新增键：发 base64', async () => {
     const page = await openEdit();
     const row = page.addEditDataRow('gamma');
+    expect(page.editDataRows.value.at(-1)).toBe(row);
+    const renderedValue = computed(() => row.value);
+    expect(renderedValue.value).toBe('');
     page.setEditDataValue(row, FAKE);
+    expect(renderedValue.value).toBe(FAKE);
     await page.submitEditForm();
     expect(lastPayload().data).toEqual({
       alpha: '',

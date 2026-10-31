@@ -262,21 +262,21 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('Node 批量禁用调度（逐个调用单节点 cordon）', () => {
+describe('node 批量禁用调度（逐个调用单节点 cordon）', () => {
   it('权限码 k8s.node.batchCordon 取单节点 cordon 路由模板，属 S1b（清单 v4 #87），始终按码判断', () => {
     expect(BATCH_CORDON).toBe('/api/k8s/node/:cluster_id/:node_name/cordon');
     expect('k8s.node.batchCordon' in PERMISSION_CODES).toBe(false);
     expect('k8s.node.batchCordon' in U3_PERMISSION_CODES).toBe(false);
   });
 
-  it('U3 未获批（默认）：没有 cordon 码时选中节点也隐藏批量按钮（P2-A，与 a21af97 一致）', async () => {
+  it('u3 未获批（默认）：没有 cordon 码时选中节点也隐藏批量按钮（P2-A，与 a21af97 一致）', async () => {
     setSubject([]);
     await mountPage();
     await selectRows(2);
     expect(batchButton()).toBeNull();
   });
 
-  it('U3 未获批（默认）且有 cordon 码：选中后显示批量按钮', async () => {
+  it('u3 未获批（默认）且有 cordon 码：选中后显示批量按钮', async () => {
     setSubject([BATCH_CORDON]);
     await mountPage();
     expect(batchButton()).toBeNull();
@@ -463,7 +463,7 @@ describe('Node 批量禁用调度（逐个调用单节点 cordon）', () => {
   });
 });
 
-describe('U3 获批（开关打开）后按码收紧', () => {
+describe('u3 获批（开关打开）后按码收紧', () => {
   beforeEach(() => {
     u3.override = true;
   });
@@ -623,7 +623,7 @@ describe('测试账号 A / B / C（U3 未获批）：Node 调度按钮', () => {
     });
   });
 
-  describe('A（61 个码）', () => {
+  describe('a（61 个码）', () => {
     beforeEach(() => {
       setSubject(getAccountPermissionCodes());
     });

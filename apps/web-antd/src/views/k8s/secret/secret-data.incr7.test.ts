@@ -307,6 +307,20 @@ describe('incr7：「是否在 data 下」按位置判断（原来 indexOf(match
     expect(inData(text.indexOf('  b:'))).toBe(true);
     expect(inData(text.indexOf('  c:'))).toBe(false);
     expect(inData(text.indexOf('kind'))).toBe(false);
+    expect(inData(-1)).toBe(false);
+    expect(inData(text.length)).toBe(false);
+  });
+
+  it('locator：多段 data 文本的范围边界不越过段头或后续顶格字段', () => {
+    const text =
+      'data:\n  first: fake-a\nkind: Secret\ndata:\n  second: fake-b\n';
+    const inData = sd.createDataSectionLocator(text);
+    expect(inData(0)).toBe(false);
+    expect(inData(text.indexOf('  first:'))).toBe(true);
+    expect(inData(text.indexOf('kind:'))).toBe(false);
+    expect(inData(text.lastIndexOf('data:'))).toBe(false);
+    expect(inData(text.indexOf('  second:'))).toBe(true);
+    expect(inData(text.length)).toBe(false);
   });
 });
 

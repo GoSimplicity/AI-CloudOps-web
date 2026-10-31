@@ -227,7 +227,9 @@
                   <a-tag :color="getActionColor(rec.action)">
                     {{ getActionText(rec.action) }}
                   </a-tag>
-                  <span class="rec-confidence">置信度: {{ formatProbability(rec.confidence) }}</span>
+                  <span class="rec-confidence"
+                    >置信度: {{ formatProbability(rec.confidence) }}</span
+                  >
                 </div>
                 <div class="rec-details">
                   <div class="rec-time">{{ formatTime(rec.trigger_time) }}</div>
@@ -440,8 +442,8 @@ const getCurrentValueUnit = () => {
     }
     case 'cpu':
     case 'memory':
-    case 'disk': {
-    } {} {} {} {} {} {} {} {} {} return '%';
+    case 'disk':
+      return '%';
     default: {
       return '';
     }
@@ -455,8 +457,8 @@ const getCurrentValueMax = () => {
     }
     case 'cpu':
     case 'memory':
-    case 'disk': {
-    } {} {} {} {} {} {} {} {} {} return 100;
+    case 'disk':
+      return 100;
     default: {
       return 100;
     }

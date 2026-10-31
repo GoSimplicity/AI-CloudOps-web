@@ -9,6 +9,14 @@ import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CloudManagedResources from './CloudManagedResources.vue';
 
+/** 必须存在的页面、DOM 和调用缺失时立即失败，保留原非空断言的测试前提。 */
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('Expected cloud contract fixture to exist');
+  }
+  return value;
+}
+
 const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const api = vi.hoisted(() => ({
   getManagedPermissions: vi.fn(),
@@ -115,10 +123,13 @@ const historical = (status = 'success') => ({
   retry_safe: status === 'unknown' ? false : undefined,
 });
 const deferred = () => {
-  let resolve!: (v: any) => void;
-  const promise = new Promise((done) => {
+  let resolve: ((value: unknown) => void) | undefined;
+  const promise = new Promise<unknown>((done) => {
     resolve = done;
   });
+  if (resolve === undefined) {
+    throw new Error('Deferred cloud fixture resolver was not initialized');
+  }
   return { promise, resolve };
 };
 let wrapper: VueWrapper | undefined;
@@ -132,7 +143,7 @@ async function start() {
 async function choose(aria: string, text: string) {
   const field = document.querySelector<HTMLElement>(`[aria-label="${aria}"]`);
   expect(field).not.toBeNull();
-  await new DOMWrapper(field!.closest('.ant-select')!)
+  await new DOMWrapper(required(required(field).closest('.ant-select')))
     .find('.ant-select-selector')
     .trigger('mousedown');
   await flushPromises();
@@ -140,7 +151,7 @@ async function choose(aria: string, text: string) {
     ...document.querySelectorAll<HTMLElement>('.ant-select-item-option'),
   ].find((item) => item.textContent?.trim() === text);
   expect(option, `missing ${text}`).toBeDefined();
-  option!.click();
+  required(option).click();
   await flushPromises();
 }
 async function selectScope() {
@@ -152,7 +163,7 @@ async function click(text: string) {
     (b) => b.textContent?.replace(/\s/g, '') === text,
   );
   expect(el, `missing ${text}`).toBeDefined();
-  el!.click();
+  required(el).click();
   await flushPromises();
 }
 async function fillIDs(value: string) {
@@ -160,12 +171,14 @@ async function fillIDs(value: string) {
     '#managed-resource-ids',
   );
   expect(input).not.toBeNull();
-  await new DOMWrapper(input!).setValue(value);
+  await new DOMWrapper(required(input)).setValue(value);
 }
 const syncButton = () =>
-  [...document.querySelectorAll<HTMLButtonElement>('button')].find(
-    (b) => b.textContent?.replace(/\s/g, '') === '同步指定ID',
-  )!;
+  required(
+    [...document.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.textContent?.replace(/\s/g, '') === '同步指定ID',
+    ),
+  );
 beforeEach(() => {
   vi.resetAllMocks();
   localStorage.clear();
@@ -236,8 +249,8 @@ it('仅提供阿里账户及本账户地域，展示独立 RDS 字段', async ()
     page: 1,
     size: 20,
   });
-  expect(wrapper!.text()).toContain('数据库');
-  expect(wrapper!.text()).not.toContain('private-ssh-marker');
+  expect(required(wrapper).text()).toContain('数据库');
+  expect(required(wrapper).text()).not.toContain('private-ssh-marker');
   await click('详情');
   expect(document.body.textContent).toContain('数据库引擎：MySQL');
   expect(document.body.textContent).not.toContain('private-ssh-marker');
@@ -265,7 +278,7 @@ it('无精确授权和伪造通配符不得加载账户或同步', async () => {
   await start();
   expect(api.getCloudAccountListApi).not.toHaveBeenCalled();
   expect(api.syncManagedResources).not.toHaveBeenCalled();
-  expect(wrapper!.text()).toContain('缺少账户或地域读取权限');
+  expect(required(wrapper).text()).toContain('缺少账户或地域读取权限');
 });
 it('确认前撤销 POST 权限不会派发同步', async () => {
   api.getManagedPermissions
@@ -292,8 +305,8 @@ it('结果未知会跨关闭和重开持续阻止同范围盲重试', async () =
   await fillIDs('rm-one');
   await click('同步指定ID');
   expect(syncButton().disabled).toBe(true);
-  expect(wrapper!.text()).toContain('不能直接重试');
-  wrapper!.unmount();
+  expect(required(wrapper).text()).toContain('不能直接重试');
+  required(wrapper).unmount();
   wrapper = undefined;
   await start();
   await selectScope();
@@ -321,7 +334,7 @@ it('历史总数超过扫描上限时 fail closed', async () => {
   await start();
   await selectScope();
   expect(syncButton().disabled).toBe(true);
-  expect(wrapper!.text()).toContain('无法完整核对同步历史');
+  expect(required(wrapper).text()).toContain('无法完整核对同步历史');
 });
 it('缺少历史权限或状态存储不可用时不允许同步', async () => {
   api.getManagedPermissions.mockResolvedValue(
@@ -340,7 +353,7 @@ it('状态存储不可用时不会派发同步', async () => {
   await selectScope();
   await fillIDs('rm-one');
   expect(syncButton().disabled).toBe(true);
-  expect(wrapper!.text()).toContain('本机同步状态不可用');
+  expect(required(wrapper).text()).toContain('本机同步状态不可用');
   expect(api.syncManagedResources).not.toHaveBeenCalled();
 });
 it('审计不可用结果会锁定范围并避免声称已保存历史', async () => {
@@ -358,7 +371,7 @@ it('审计不可用结果会锁定范围并避免声称已保存历史', async (
   await fillIDs('rm-one');
   await click('同步指定ID');
   expect(syncButton().disabled).toBe(true);
-  expect(wrapper!.text()).toContain('没有可确认的持久历史记录');
+  expect(required(wrapper).text()).toContain('没有可确认的持久历史记录');
 });
 it('提交网络故障保守锁定且不泄露错误', async () => {
   api.syncManagedResources.mockRejectedValue(
@@ -369,7 +382,7 @@ it('提交网络故障保守锁定且不泄露错误', async () => {
   await fillIDs('rm-one');
   await click('同步指定ID');
   expect(syncButton().disabled).toBe(true);
-  expect(wrapper!.text()).toContain('同步结果未确认');
+  expect(required(wrapper).text()).toContain('同步结果未确认');
   expect(document.body.textContent).not.toContain('private-upstream-canary');
 });
 it('重复或非法 ID 不到达后端', async () => {
@@ -394,7 +407,7 @@ it('账户切换清除数据并拒绝迟到详情', async () => {
   pending.resolve(row());
   await flushPromises();
   expect(document.body.textContent).not.toContain('数据库引擎：MySQL');
-  expect(wrapper!.text()).not.toContain('rm-one');
+  expect(required(wrapper).text()).not.toContain('rm-one');
 });
 it('同账户令牌轮换不解除在途锁', async () => {
   const pending = deferred();
@@ -439,7 +452,7 @@ it('切换账户时保存已派发操作的保守锁，旧回包不会写入新�
     retry_safe: false,
   });
   await flushPromises();
-  expect(wrapper!.text()).not.toContain('历史记录 33');
+  expect(required(wrapper).text()).not.toContain('历史记录 33');
   account.user.userInfo = { userId: '1' };
   account.access.accessToken = 'token';
   await flushPromises();
@@ -459,7 +472,7 @@ it('切换类型时旧历史回包不能解除新范围的未知锁', async () =
   old.resolve({ items: [], total: 0 });
   await flushPromises();
   expect(syncButton().disabled).toBe(true);
-  expect(wrapper!.text()).toContain('不能直接重试');
+  expect(required(wrapper).text()).toContain('不能直接重试');
 });
 it('aPI 方法与后端范围合同一致', async () => {
   const actual = await vi.importActual<
@@ -539,13 +552,15 @@ it('aPI 方法与后端范围合同一致', async () => {
 
 async function fillReview(reason = '已经核对云端资源及本地记录的实际状态') {
   await click('记录人工核对');
-  const input = document.querySelector<HTMLTextAreaElement>(
-    '#managed-review-reason',
-  )!;
+  const input = required(
+    document.querySelector<HTMLTextAreaElement>('#managed-review-reason'),
+  );
   await new DOMWrapper(input).setValue(reason);
-  const checkbox = document.querySelector<HTMLInputElement>(
-    '.ant-modal input[type="checkbox"]',
-  )!;
+  const checkbox = required(
+    document.querySelector<HTMLInputElement>(
+      '.ant-modal input[type="checkbox"]',
+    ),
+  );
   await new DOMWrapper(checkbox).setValue(true);
 }
 const reviewed = () => ({
@@ -566,7 +581,7 @@ it('人工核对需要独立精确权限', async () => {
   });
   await start();
   await selectScope();
-  expect(wrapper!.text()).not.toContain('记录人工核对');
+  expect(required(wrapper).text()).not.toContain('记录人工核对');
   expect(api.resolveManagedHistory).not.toHaveBeenCalled();
 });
 it('核对原始结果与操作依据后保存，且只清除对应历史的本地标记', async () => {
@@ -593,8 +608,8 @@ it('核对原始结果与操作依据后保存，且只清除对应历史的本�
     resources_verified: true,
     reason: '已经核对云端资源及本地记录的实际状态',
   });
-  expect(wrapper!.text()).toContain('结果未知');
-  expect(wrapper!.text()).toContain('已人工核对');
+  expect(required(wrapper).text()).toContain('结果未知');
+  expect(required(wrapper).text()).toContain('已人工核对');
   expect(syncButton().disabled).toBe(false);
   expect(
     localStorage.getItem('cloudops-managed-unconfirmed:1:7:11:rds'),
@@ -630,17 +645,25 @@ it('没有明确确认或理由过短时不提交核对', async () => {
   await start();
   await selectScope();
   await click('记录人工核对');
-  const button = [
-    ...document.querySelectorAll<HTMLButtonElement>('.ant-modal-footer button'),
-  ].find((b) => b.textContent?.replace(/\s/g, '') === '保存核对记录')!;
+  const button = required(
+    [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '.ant-modal-footer button',
+      ),
+    ].find((b) => b.textContent?.replace(/\s/g, '') === '保存核对记录'),
+  );
   expect(button.disabled).toBe(true);
   await new DOMWrapper(
-    document.querySelector<HTMLInputElement>(
-      '.ant-modal input[type="checkbox"]',
-    )!,
+    required(
+      document.querySelector<HTMLInputElement>(
+        '.ant-modal input[type="checkbox"]',
+      ),
+    ),
   ).setValue(true);
   await new DOMWrapper(
-    document.querySelector<HTMLTextAreaElement>('#managed-review-reason')!,
+    required(
+      document.querySelector<HTMLTextAreaElement>('#managed-review-reason'),
+    ),
   ).setValue('短');
   await click('保存核对记录');
   expect(api.resolveManagedHistory).not.toHaveBeenCalled();
@@ -660,9 +683,13 @@ it('核对响应中断后保持阻断并禁止在对话框重复提交', async (
   expect(api.resolveManagedHistory).toHaveBeenCalledTimes(1);
   expect(document.body.textContent).toContain('核对结果未确认');
   expect(document.body.textContent).not.toContain('private-review-canary');
-  const button = [
-    ...document.querySelectorAll<HTMLButtonElement>('.ant-modal-footer button'),
-  ].find((b) => b.textContent?.replace(/\s/g, '') === '保存核对记录')!;
+  const button = required(
+    [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '.ant-modal-footer button',
+      ),
+    ].find((b) => b.textContent?.replace(/\s/g, '') === '保存核对记录'),
+  );
   expect(button.disabled).toBe(true);
   expect(syncButton().disabled).toBe(true);
 });
@@ -686,7 +713,7 @@ it('核对在途令牌刷新不解锁，身份变化后丢弃迟到结果', asyn
   pending.resolve(null);
   await flushPromises();
   expect(document.querySelector('#managed-review-reason')).toBeNull();
-  expect(wrapper!.text()).not.toContain('已人工核对');
+  expect(required(wrapper).text()).not.toContain('已人工核对');
 });
 it('保存前撤销核对权限会清除对话框且不提交', async () => {
   api.getManagedSyncHistory.mockResolvedValue({
@@ -715,7 +742,9 @@ it('核对前账户读取权限撤销后不会遗留在途锁', async () => {
   await click('保存核对记录');
   expect(api.resolveManagedHistory).not.toHaveBeenCalled();
   const state = (
-    wrapper!.vm as unknown as { $: { setupState: { reviewing: boolean } } }
+    required(wrapper).vm as unknown as {
+      $: { setupState: { reviewing: boolean } };
+    }
   ).$.setupState;
   expect(state.reviewing).toBe(false);
 });
@@ -780,12 +809,12 @@ it('同步响应操作ID不匹配时保持原请求指针而不是伪造成功',
   await fillIDs('rm-one');
   await click('同步指定ID');
   expect(syncButton().disabled).toBe(true);
-  expect(wrapper!.text()).toContain('同步结果未确认');
+  expect(required(wrapper).text()).toContain('同步结果未确认');
   const marker = JSON.parse(
-    localStorage.getItem('cloudops-managed-unconfirmed:1:7:11:rds')!,
+    required(localStorage.getItem('cloudops-managed-unconfirmed:1:7:11:rds')),
   );
   expect(marker.operation_id).toBe(
-    api.syncManagedResources.mock.calls[0]![0].operation_id,
+    required(api.syncManagedResources.mock.calls[0])[0].operation_id,
   );
   expect(marker.operation_id).not.toBe('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
 });
@@ -809,7 +838,7 @@ it('迟到操作结果不能清除另一用户的指针', async () => {
   expect(localStorage.getItem('cloudops-managed-unconfirmed:1:7:11:rds')).toBe(
     raw,
   );
-  expect(wrapper!.text()).not.toContain('待核对操作');
+  expect(required(wrapper).text()).not.toContain('待核对操作');
 });
 it('停用地域可以查询历史但不能同步', async () => {
   await start();
@@ -817,7 +846,7 @@ it('停用地域可以查询历史但不能同步', async () => {
   await choose('托管资源地域', 'cn-disabled（已停用）');
   await fillIDs('rm-one');
   expect(syncButton().disabled).toBe(true);
-  expect(wrapper!.text()).toContain('该范围已停用');
+  expect(required(wrapper).text()).toContain('该范围已停用');
   expect(api.getManagedSyncHistory).toHaveBeenCalledWith(
     expect.objectContaining({ cloud_account_region_id: 12 }),
   );
@@ -836,7 +865,7 @@ it('停用账户可以恢复其操作但不重新启用账户', async () => {
   await choose('托管资源账户', '禁用阿里（已停用）');
   await choose('托管资源地域', '杭州');
   expect(syncButton().disabled).toBe(true);
-  expect(wrapper!.text()).toContain('该范围已停用');
+  expect(required(wrapper).text()).toContain('该范围已停用');
   expect(api.syncManagedResources).not.toHaveBeenCalled();
 });
 it('服务端范围仍阻断时即使本人列表为空也不能同步', async () => {
@@ -849,7 +878,7 @@ it('服务端范围仍阻断时即使本人列表为空也不能同步', async (
   await selectScope();
   await fillIDs('rm-one');
   expect(syncButton().disabled).toBe(true);
-  expect(wrapper!.text()).toContain('联系超级管理员');
+  expect(required(wrapper).text()).toContain('联系超级管理员');
   expect(api.syncManagedResources).not.toHaveBeenCalled();
 });
 it('列表查询故障不得被空列表或旧汇总状态掩盖', async () => {
@@ -859,7 +888,7 @@ it('列表查询故障不得被空列表或旧汇总状态掩盖', async () => {
   await start();
   await selectScope();
   expect(syncButton().disabled).toBe(true);
-  expect(wrapper!.text()).toContain('范围状态读取失败');
+  expect(required(wrapper).text()).toContain('范围状态读取失败');
   expect(document.body.textContent).not.toContain('private-scope-canary');
 });
 it('超管核对其他owner同UUID操作不清除本人的本地指针', async () => {
@@ -887,28 +916,37 @@ it('超管核对其他owner同UUID操作不清除本人的本地指针', async (
   }));
   await start();
   await selectScope();
-  const allOwners = [
-    ...document.querySelectorAll<HTMLLabelElement>('.ant-checkbox-wrapper'),
-  ].find((el) => el.textContent?.includes('超级管理员：查看所有用户'))!;
-  await new DOMWrapper(allOwners.querySelector('input')!).setValue(true);
+  const allOwners = required(
+    [
+      ...document.querySelectorAll<HTMLLabelElement>('.ant-checkbox-wrapper'),
+    ].find((el) => el.textContent?.includes('超级管理员：查看所有用户')),
+  );
+  await new DOMWrapper(required(allOwners.querySelector('input'))).setValue(
+    true,
+  );
   await flushPromises();
   await click('查看或核对');
   api.getManagedOperation.mockResolvedValue(other);
-  const list = wrapper!.find('[aria-label="托管操作列表"]');
-  await list
-    .findAll('button')
-    .find((b) => b.text().replace(/\s/g, '') === '查询本次操作')!
-    .trigger('click');
+  const list = required(wrapper).find('[aria-label="托管操作列表"]');
+  await required(
+    list
+      .findAll('button')
+      .find((b) => b.text().replace(/\s/g, '') === '查询本次操作'),
+  ).trigger('click');
   await flushPromises();
   await click('核对并阻断旧请求');
   await new DOMWrapper(
-    document.querySelector<HTMLTextAreaElement>(
-      '#managed-operation-review-reason',
-    )!,
+    required(
+      document.querySelector<HTMLTextAreaElement>(
+        '#managed-operation-review-reason',
+      ),
+    ),
   ).setValue('已经核对用户2的实际资源与本地状态');
-  document
-    .querySelector<HTMLInputElement>('.ant-modal input[type="checkbox"]')!
-    .click();
+  required(
+    document.querySelector<HTMLInputElement>(
+      '.ant-modal input[type="checkbox"]',
+    ),
+  ).click();
   await flushPromises();
   const audited = {
     ...other,
@@ -920,9 +958,11 @@ it('超管核对其他owner同UUID操作不清除本人的本地指针', async (
   };
   api.reviewManagedOperation.mockResolvedValue(audited);
   api.getManagedOperation.mockResolvedValue(audited);
-  document
-    .querySelector<HTMLButtonElement>('.ant-modal-footer .ant-btn-primary')!
-    .click();
+  required(
+    document.querySelector<HTMLButtonElement>(
+      '.ant-modal-footer .ant-btn-primary',
+    ),
+  ).click();
   await flushPromises();
   expect(api.reviewManagedOperation).toHaveBeenCalledWith(
     id,
@@ -941,7 +981,9 @@ it.each([
   api.getCloudAccountDetailApi.mockRejectedValue({ code });
   await start();
   await choose('托管资源账户', '阿里账户');
-  expect(wrapper!.text().includes('读取账户地域失败，请重试')).toBe(visible);
+  expect(required(wrapper).text().includes('读取账户地域失败，请重试')).toBe(
+    visible,
+  );
 });
 it.each([
   ['ERR_CANCELED', false],
@@ -951,5 +993,5 @@ it.each([
   await start();
   await selectScope();
   await click('详情');
-  expect(wrapper!.text().includes('资源详情读取失败')).toBe(visible);
+  expect(required(wrapper).text().includes('资源详情读取失败')).toBe(visible);
 });

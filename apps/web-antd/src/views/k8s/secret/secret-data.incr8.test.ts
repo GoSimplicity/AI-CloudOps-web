@@ -266,7 +266,7 @@ describe('incr8 取舍 5：data 值为 null / ~ → 提示「空值请删除该�
 });
 
 describe('incr8 P3-4：杀掉存活变异体', () => {
-  it('M02（:575）`"data":` / `\'data\':` 引号头 → 精确返回 data 不支持的写法', () => {
+  it('m02（:575）`"data":` / `\'data\':` 引号头 → 精确返回 data 不支持的写法', () => {
     expect(
       sd.getYamlDataFormatError(`kind: Secret\n"data":\n  k: "fake-plain"\n`),
     ).toBe(sd.yamlDataUnsupportedMessage('data'));

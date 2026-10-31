@@ -633,7 +633,7 @@ const handleClusterChange = () => {
 
   if (filterClusterId.value) {
     fetchTemplates();
-  } else {}
+  }
 };
 
 const handleTableChange = (pagination: {

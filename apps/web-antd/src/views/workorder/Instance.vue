@@ -2647,26 +2647,6 @@ const initializeVisualFormData = (): void => {
           case FormFieldType.Textarea:
           case FormFieldType.Select:
           case FormFieldType.Radio:
-            {
-            }
-            {
-            }
-            {
-            }
-            {
-            }
-            {
-            }
-            {
-            }
-            {
-            }
-            {
-            }
-            {
-            }
-            {
-            }
             newData[field.name] = '';
             break;
           case FormFieldType.Number: {

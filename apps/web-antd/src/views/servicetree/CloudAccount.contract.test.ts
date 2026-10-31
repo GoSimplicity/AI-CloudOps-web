@@ -10,6 +10,14 @@ import { ref } from 'vue';
 import CloudAccountManagement from './CloudAccountManagement.vue';
 import AccountRegionsEditor from './cloudaccountmanagement/AccountRegionsEditor.vue';
 
+/** 必须存在的页面、DOM 和调用缺失时立即失败，保留原非空断言的测试前提。 */
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('Expected cloud contract fixture to exist');
+  }
+  return value;
+}
+
 const permissions = vi.hoisted(() => ({
   allowed: null as null | string[],
   allowedRef: null as null | { value: null | string[] },
@@ -112,7 +120,7 @@ async function action(text: string, selector = 'button') {
     ...document.querySelectorAll<HTMLButtonElement>(selector),
   ].find((item) => item.textContent?.replace(/\s/g, '') === text);
   expect(found, `missing action ${text}`).toBeDefined();
-  found!.click();
+  required(found).click();
   await flushPromises();
 }
 async function fill(placeholder: string, value: string) {
@@ -120,10 +128,10 @@ async function fill(placeholder: string, value: string) {
     `input[placeholder="${placeholder}"]`,
   );
   expect(input).not.toBeNull();
-  await new DOMWrapper(input!).setValue(value);
+  await new DOMWrapper(required(input)).setValue(value);
 }
 async function edit() {
-  const icon = wrapper!.find('[aria-label="edit"]');
+  const icon = required(wrapper).find('[aria-label="edit"]');
   expect(icon.exists()).toBe(true);
   (icon.element.closest('button') as HTMLButtonElement).click();
   await flushPromises();
@@ -133,34 +141,38 @@ async function addRegion(code: string) {
     '#account-region-codes',
   );
   expect(input).not.toBeNull();
-  await new DOMWrapper(input!.closest('.ant-select')!)
+  await new DOMWrapper(required(required(input).closest('.ant-select')))
     .find('.ant-select-selector')
     .trigger('mousedown');
   await flushPromises();
-  await new DOMWrapper(input!).setValue(code);
+  await new DOMWrapper(required(input)).setValue(code);
   await flushPromises();
   const option = [
     ...document.querySelectorAll<HTMLElement>('.ant-select-item-option'),
   ].find((item) => item.getAttribute('title') === code);
   expect(option).toBeDefined();
-  option!.click();
+  required(option).click();
   await flushPromises();
 }
 describe('云账户真实表单合同', () => {
   it('可创建停用账户，不触发验证或同步', async () => {
     await start();
     await action('添加账户');
-    const status = document
-      .querySelector('#cloud-account-create-status')!
-      .closest('.ant-select')!;
-    expect(status.textContent).toContain('启用');
-    await new DOMWrapper(status.querySelector('.ant-select-selector')!).trigger(
-      'mousedown',
+    const status = required(
+      required(document.querySelector('#cloud-account-create-status')).closest(
+        '.ant-select',
+      ),
     );
+    expect(status.textContent).toContain('启用');
+    await new DOMWrapper(
+      required(status.querySelector('.ant-select-selector')),
+    ).trigger('mousedown');
     await flushPromises();
-    [...document.querySelectorAll<HTMLElement>('.ant-select-item-option')]
-      .find((item) => item.textContent?.trim() === '停用（仅保存）')!
-      .click();
+    required(
+      [
+        ...document.querySelectorAll<HTMLElement>('.ant-select-item-option'),
+      ].find((item) => item.textContent?.trim() === '停用（仅保存）'),
+    ).click();
     await flushPromises();
     await fill('请输入云账户名称', '先保存停用配置');
     await fill('请输入 Access Key', 'offline-access-key');
@@ -179,9 +191,11 @@ describe('云账户真实表单合同', () => {
     ).toBe(false);
     await action('添加账户');
     expect(
-      document
-        .querySelector('#cloud-account-create-status')!
-        .closest('.ant-select')!.textContent,
+      required(
+        required(
+          document.querySelector('#cloud-account-create-status'),
+        ).closest('.ant-select'),
+      ).textContent,
     ).toContain('启用');
   });
 
@@ -215,7 +229,7 @@ describe('云账户真实表单合同', () => {
         ],
       }),
     ]);
-    expect(client.post.mock.calls[0]![1]).not.toHaveProperty('region');
+    expect(required(client.post.mock.calls[0])[1]).not.toHaveProperty('region');
     expect(client.delete).not.toHaveBeenCalled();
     expect(document.body.textContent).not.toContain('验证并添加');
   });
@@ -232,16 +246,20 @@ describe('云账户真实表单合同', () => {
     await fill('请输入云账户名称', '只改名称');
     await action('更新', '.ant-modal-footer button');
     expect(client.put).toHaveBeenCalledTimes(1);
-    expect(client.put.mock.calls[0]![1]).not.toHaveProperty('regions');
-    expect(client.put.mock.calls[0]![1]).not.toHaveProperty('access_key');
-    expect(client.put.mock.calls[0]![1]).not.toHaveProperty('secret_key');
+    expect(required(client.put.mock.calls[0])[1]).not.toHaveProperty('regions');
+    expect(required(client.put.mock.calls[0])[1]).not.toHaveProperty(
+      'access_key',
+    );
+    expect(required(client.put.mock.calls[0])[1]).not.toHaveProperty(
+      'secret_key',
+    );
   });
   it('增加地域时提交完整选中集合，原地域元数据不丢失', async () => {
     await start();
     await edit();
     await addRegion('cn-beijing');
     await action('更新', '.ant-modal-footer button');
-    const payload = client.put.mock.calls[0]![1];
+    const payload = required(client.put.mock.calls[0])[1];
     expect(payload.regions).toEqual([
       {
         region: 'cn-hangzhou',
@@ -276,7 +294,7 @@ describe('云账户真实表单合同', () => {
         ? late.promise
         : Promise.resolve({ items: [record()], total: 30 }),
     );
-    const icon = wrapper!.find('[aria-label="edit"]');
+    const icon = required(wrapper).find('[aria-label="edit"]');
     (icon.element.closest('button') as HTMLButtonElement).click();
     await flushPromises();
     await action('取消', '.ant-modal-footer button');
@@ -287,11 +305,13 @@ describe('云账户真实表单合同', () => {
   });
   it('普通账户分页使用size且不发送伪region筛选', async () => {
     await start();
-    await wrapper!.find('.ant-pagination-item-2 a').trigger('click');
+    await required(wrapper).find('.ant-pagination-item-2 a').trigger('click');
     await flushPromises();
-    const params = client.get.mock.calls
-      .filter((call) => call[0] === '/tree/cloud/account/list')
-      .at(-1)![1].params;
+    const params = required(
+      client.get.mock.calls
+        .filter((call) => call[0] === '/tree/cloud/account/list')
+        .at(-1),
+    )[1].params;
     expect(params).toEqual(expect.objectContaining({ page: 2, size: 10 }));
     expect(params).not.toHaveProperty('page_size');
     expect(params).not.toHaveProperty('region');
@@ -300,7 +320,7 @@ describe('云账户真实表单合同', () => {
 
 it('凭据验证必须显式确认，失败也不删除已创建账户', async () => {
   await start();
-  const verify = wrapper!.find('[aria-label="safety-certificate"]');
+  const verify = required(wrapper).find('[aria-label="safety-certificate"]');
   expect(verify.exists()).toBe(true);
   (verify.element.closest('button') as HTMLButtonElement).click();
   await flushPromises();
@@ -312,7 +332,7 @@ it('凭据验证必须显式确认，失败也不删除已创建账户', async (
   await action('开始验证', '.ant-modal-confirm-btns button');
   expect(client.post.mock.calls).toEqual([['/tree/cloud/account/7/verify']]);
   expect(client.delete).not.toHaveBeenCalled();
-  expect(wrapper!.text()).toContain('已有账户');
+  expect(required(wrapper).text()).toContain('已有账户');
 });
 
 it('重复点击提交只创建一次，错误保留表单便于重试', async () => {
@@ -324,9 +344,13 @@ it('重复点击提交只创建一次，错误保留表单便于重试', async (
   await addRegion('cn-hangzhou');
   const pending = Promise.withResolvers<unknown>();
   client.post.mockReturnValue(pending.promise);
-  const submit = [
-    ...document.querySelectorAll<HTMLButtonElement>('.ant-modal-footer button'),
-  ].find((button) => button.textContent?.replace(/\s/g, '') === '添加')!;
+  const submit = required(
+    [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '.ant-modal-footer button',
+      ),
+    ].find((button) => button.textContent?.replace(/\s/g, '') === '添加'),
+  );
   submit.click();
   submit.click();
   await flushPromises();
@@ -346,10 +370,10 @@ it('重复点击提交只创建一次，错误保留表单便于重试', async (
 it.each([2, 3, 4])('已支持的云厂商 %i 可读取并编辑账户', async (provider) => {
   selectedProvider = provider;
   await start();
-  expect(wrapper!.find('.account-table').text()).toContain(
+  expect(required(wrapper).find('.account-table').text()).toContain(
     provider === 2 ? '腾讯云' : provider === 3 ? 'AWS' : '华为云',
   );
-  const button = wrapper!
+  const button = required(wrapper)
     .find('[aria-label="edit"]')
     .element.closest('button') as HTMLButtonElement;
   expect(button.disabled).toBe(false);
@@ -368,7 +392,7 @@ it.each([2, 3, 4])('已支持的云厂商 %i 可读取并编辑账户', async (p
 it.each([7])('未知厂商 %i 账户保持只读', async (provider) => {
   selectedProvider = provider;
   await start();
-  const button = wrapper!
+  const button = required(wrapper)
     .find('[aria-label="edit"]')
     .element.closest('button') as HTMLButtonElement;
   expect(button.disabled).toBe(true);
@@ -379,13 +403,13 @@ it.each([7])('未知厂商 %i 账户保持只读', async (provider) => {
 async function chooseProvider(name: string) {
   const select = document.querySelector('.account-form .ant-select-selector');
   expect(select).not.toBeNull();
-  await new DOMWrapper(select!).trigger('mousedown');
+  await new DOMWrapper(required(select)).trigger('mousedown');
   await flushPromises();
   const option = [
     ...document.querySelectorAll<HTMLElement>('.ant-select-item-option'),
   ].find((item) => item.textContent?.trim() === name);
   expect(option, `missing provider ${name}`).toBeDefined();
-  option!.click();
+  required(option).click();
   await flushPromises();
 }
 
@@ -394,7 +418,7 @@ async function chooseCredential(name: string) {
     '#cloud-credential-type',
   );
   expect(input).not.toBeNull();
-  await new DOMWrapper(input!.closest('.ant-select')!)
+  await new DOMWrapper(required(required(input).closest('.ant-select')))
     .find('.ant-select-selector')
     .trigger('mousedown');
   await flushPromises();
@@ -404,7 +428,7 @@ async function chooseCredential(name: string) {
     ),
   ].find((item) => item.textContent?.trim() === name);
   expect(option, `missing credential type ${name}`).toBeDefined();
-  option!.click();
+  required(option).click();
   await flushPromises();
 }
 
@@ -523,7 +547,9 @@ it('临时凭据完整轮换、切换长期凭据与关闭清理', async () => {
       secret_key: 'long-secret-canary',
     }),
   );
-  expect(client.put.mock.calls.at(-1)![1]).not.toHaveProperty('session_token');
+  expect(required(client.put.mock.calls.at(-1))[1]).not.toHaveProperty(
+    'session_token',
+  );
   await edit();
   await fill('请输入 Session Token', 'discard-token-canary');
   await action('取消', '.ant-modal-footer button');
@@ -559,7 +585,7 @@ it('临时账户编辑权限撤销时关闭并清除敏感输入', async () => {
   permissions.allowedRef.value = ['/api/tree/cloud/account/:id/detail'];
   await flushPromises();
   const state = (
-    wrapper!.vm as unknown as {
+    required(wrapper).vm as unknown as {
       $: {
         setupState: {
           modalVisible: boolean;
@@ -609,9 +635,11 @@ it('华为账户每个地域填写项目 ID，新增地域保留其他项目映�
   await action('添加', '.ant-modal-footer button');
   expect(client.post).not.toHaveBeenCalled();
   await new DOMWrapper(
-    document.querySelector<HTMLInputElement>(
-      'input[aria-label="cn-north-4 项目 ID"]',
-    )!,
+    required(
+      document.querySelector<HTMLInputElement>(
+        'input[aria-label="cn-north-4 项目 ID"]',
+      ),
+    ),
   ).setValue('project_one');
   await addRegion('cn-east-3');
   expect(
@@ -622,9 +650,11 @@ it('华为账户每个地域填写项目 ID，新增地域保留其他项目映�
     ).value,
   ).toBe('project_one');
   await new DOMWrapper(
-    document.querySelector<HTMLInputElement>(
-      'input[aria-label="cn-east-3 项目 ID"]',
-    )!,
+    required(
+      document.querySelector<HTMLInputElement>(
+        'input[aria-label="cn-east-3 项目 ID"]',
+      ),
+    ),
   ).setValue('project_two');
   await action('添加', '.ant-modal-footer button');
   expect(client.post).toHaveBeenCalledWith(
@@ -666,14 +696,18 @@ it('华为编辑保留旧项目映射，仅变更时提交完整地域集合', a
   await edit();
   await fill('请输入云账户名称', '华为新名称');
   await action('更新', '.ant-modal-footer button');
-  expect(client.put.mock.calls.at(-1)![1]).not.toHaveProperty('regions');
+  expect(required(client.put.mock.calls.at(-1))[1]).not.toHaveProperty(
+    'regions',
+  );
   client.put.mockClear();
   await edit();
   await addRegion('cn-east-3');
   await new DOMWrapper(
-    document.querySelector<HTMLInputElement>(
-      'input[aria-label="cn-east-3 项目 ID"]',
-    )!,
+    required(
+      document.querySelector<HTMLInputElement>(
+        'input[aria-label="cn-east-3 项目 ID"]',
+      ),
+    ),
   ).setValue('project_two');
   await action('更新', '.ant-modal-footer button');
   expect(client.put).toHaveBeenCalledWith(
@@ -735,12 +769,13 @@ it('缺少权限隐藏相关操作，禁用账户不验证', async () => {
   selectedProvider = 3;
   await start();
   expect(document.body.textContent).not.toContain('添加账户');
-  expect(wrapper!.find('[aria-label="edit"]').exists()).toBe(false);
-  expect(wrapper!.find('[aria-label="safety-certificate"]').exists()).toBe(
-    false,
-  );
+  expect(required(wrapper).find('[aria-label="edit"]').exists()).toBe(false);
   expect(
-    (wrapper!.find('.ant-switch').element as HTMLButtonElement).disabled,
+    required(wrapper).find('[aria-label="safety-certificate"]').exists(),
+  ).toBe(false);
+  expect(
+    (required(wrapper).find('.ant-switch').element as HTMLButtonElement)
+      .disabled,
   ).toBe(true);
 });
 
@@ -750,7 +785,7 @@ it('已禁用账户不允许发起真实凭据验证', async () => {
     total: 1,
   });
   await start();
-  const button = wrapper!
+  const button = required(wrapper)
     .find('[aria-label="safety-certificate"]')
     .element.closest('button') as HTMLButtonElement;
   expect(button.disabled).toBe(true);
@@ -768,7 +803,7 @@ it.each([
   async (provider, label) => {
     selectedProvider = provider;
     await start();
-    const verify = wrapper!
+    const verify = required(wrapper)
       .find('[aria-label="safety-certificate"]')
       .element.closest('button') as HTMLButtonElement;
     verify.click();
@@ -777,13 +812,13 @@ it.each([
     expect(client.post).not.toHaveBeenCalled();
     await action('开始验证', '.ant-modal-confirm-btns button');
     expect(client.post).toHaveBeenCalledWith('/tree/cloud/account/7/verify');
-    await wrapper!.find('.ant-switch').trigger('click');
+    await required(wrapper).find('.ant-switch').trigger('click');
     await flushPromises();
     expect(client.put).toHaveBeenCalledWith('/tree/cloud/account/7/status', {
       status: 2,
     });
     (
-      wrapper!
+      required(wrapper)
         .find('[aria-label="delete"]')
         .element.closest('button') as HTMLButtonElement
     ).click();
@@ -895,7 +930,7 @@ it('缺少地域权限时不出现查询入口', async () => {
 it('删除确认期间撤销权限不会发送请求', async () => {
   await start();
   (
-    wrapper!
+    required(wrapper)
       .find('[aria-label="delete"]')
       .element.closest('button') as HTMLButtonElement
   ).click();
@@ -927,7 +962,7 @@ it.each(['create', 'edit'])(
         (operation === 'edit' ? '更新' : '添加'),
     );
     expect(button).toBeDefined();
-    button!.click();
+    required(button).click();
     permissions.allowed = [];
     await flushPromises();
     expect(client.post).not.toHaveBeenCalled();
@@ -943,7 +978,7 @@ it('详情读取期间撤销权限不展示迟到数据', async () => {
       : Promise.resolve({ items: [record()], total: 1 }),
   );
   await start();
-  const icon = wrapper!.find('[aria-label="edit"]');
+  const icon = required(wrapper).find('[aria-label="edit"]');
   (icon.element.closest('button') as HTMLButtonElement).click();
   await flushPromises();
   permissions.allowed = [];
@@ -969,7 +1004,11 @@ it('地域读取期间撤销权限不展示迟到结果', async () => {
   });
   await flushPromises();
   await new DOMWrapper(
-    document.querySelector('#account-region-codes')!.closest('.ant-select')!,
+    required(
+      required(document.querySelector('#account-region-codes')).closest(
+        '.ant-select',
+      ),
+    ),
   )
     .find('.ant-select-selector')
     .trigger('mousedown');
@@ -1015,7 +1054,11 @@ it('切换厂商后不采纳旧地域请求的迟到结果', async () => {
   });
   await flushPromises();
   await new DOMWrapper(
-    document.querySelector('#account-region-codes')!.closest('.ant-select')!,
+    required(
+      required(document.querySelector('#account-region-codes')).closest(
+        '.ant-select',
+      ),
+    ),
   )
     .find('.ant-select-selector')
     .trigger('mousedown');
@@ -1075,7 +1118,7 @@ it.each([
     await addRegion(region);
     await action('添加', '.ant-modal-footer button');
     expect(client.post).toHaveBeenCalledTimes(1);
-    const [path, body] = client.post.mock.calls[0]!;
+    const [path, body] = required(client.post.mock.calls[0]);
     expect(path).toBe('/tree/cloud/account/create');
     expect(body.provider).toBe(provider);
     expect(body.regions).toEqual([expect.objectContaining({ region })]);
@@ -1122,7 +1165,7 @@ it.each([
     await edit();
     expect(document.body.textContent).toContain('已保存凭据不会回显');
     await action('更新', '.ant-modal-footer button');
-    expect(client.put.mock.calls.at(-1)![1]).not.toHaveProperty(
+    expect(required(client.put.mock.calls.at(-1))[1]).not.toHaveProperty(
       'provider_credentials',
     );
     client.put.mockClear();
@@ -1136,7 +1179,7 @@ it.each([
     if (provider === 5) await fillAzure();
     else await fillGCP();
     await action('更新', '.ant-modal-footer button');
-    const body = client.put.mock.calls.at(-1)![1];
+    const body = required(client.put.mock.calls.at(-1))[1];
     expect(body).toHaveProperty('provider_credentials');
     expect(body).not.toHaveProperty('access_key');
     expect(body).not.toHaveProperty('secret_key');
@@ -1206,7 +1249,7 @@ it('取消、切换厂商或撤销权限均清除专用凭据', async () => {
   await fillAzure();
   permissions.allowedRef.value = [];
   await flushPromises();
-  const state = (wrapper!.vm as any).$.setupState;
+  const state = (required(wrapper).vm as any).$.setupState;
   expect(state.modalVisible).toBe(false);
   expect(
     Object.values(state.providerCredentialDraft).every((value) => value === ''),
@@ -1238,7 +1281,7 @@ it('azure 创建请求失败时保留可重试输入，但不显示错误原文�
   await action('取消', '.ant-modal-footer button');
   expect(
     Object.values(
-      (wrapper!.vm as any).$.setupState.providerCredentialDraft,
+      (required(wrapper).vm as any).$.setupState.providerCredentialDraft,
     ).every((value) => value === ''),
   ).toBe(true);
 });
@@ -1257,13 +1300,13 @@ it('azure 异步表单校验时撤销权限不会提交专用凭据', async () =
     ),
   ].find((item) => item.textContent?.replace(/\s/g, '') === '添加');
   expect(button).toBeDefined();
-  button!.click();
+  required(button).click();
   permissions.allowedRef.value = [];
   await flushPromises();
   expect(client.post).not.toHaveBeenCalled();
   expect(
     Object.values(
-      (wrapper!.vm as any).$.setupState.providerCredentialDraft,
+      (required(wrapper).vm as any).$.setupState.providerCredentialDraft,
     ).every((value) => value === ''),
   ).toBe(true);
 });
