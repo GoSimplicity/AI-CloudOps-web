@@ -15,5 +15,13 @@ export async function prettier(): Promise<Linter.Config[]> {
         'prettier/prettier': 'error',
       },
     },
+    {
+      files: ['**/*.vue'],
+      rules: {
+        // Prettier owns bracket placement to preserve inline whitespace.
+        // The Vue fixer otherwise fights Prettier's already-formatted output.
+        'vue/html-closing-bracket-newline': 'off',
+      },
+    },
   ];
 }
