@@ -472,8 +472,8 @@ const rollbackToVersion = (revision: number) => {
         message.success(`Deployment 回滚到版本 ${revision} 成功`);
         closeHistoryModal();
         await fetchDeployments();
-      } catch (err) {
-        if (shouldNotifyPageError(err))
+      } catch (error) {
+        if (shouldNotifyPageError(error))
           message.error(`Deployment 回滚到版本 ${revision} 失败`);
       }
     },
@@ -825,7 +825,8 @@ onMounted(async () => {
                   !record.max_surge
                 "
                 class="k8s-no-data"
-                >-</span>
+                >-</span
+              >
             </div>
           </template>
           <template v-else-if="column.key === 'images'">
@@ -851,7 +852,8 @@ onMounted(async () => {
               <span
                 v-if="!text || !Array.isArray(text) || text.length === 0"
                 class="k8s-no-data"
-                >-</span>
+                >-</span
+              >
             </div>
           </template>
           <template v-else-if="column.key === 'labels'">
@@ -902,7 +904,9 @@ onMounted(async () => {
                     {{ Object.keys(text).length }} 个标签
                   </a-tag>
                 </a-tooltip>
-                <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
+                <span v-if="Object.keys(text).length === 0" class="k8s-no-data"
+                  >-</span
+                >
               </template>
               <template v-else>
                 <span class="k8s-no-data">-</span>

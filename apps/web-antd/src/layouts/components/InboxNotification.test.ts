@@ -260,7 +260,7 @@ it('未读筛选与分页参数一致，旧请求不会覆盖新结果', async (
     unread: true,
   });
 });
-it('API方法不接受用户ID，操作主体由服务端JWT确定', async () => {
+it('aPI方法不接受用户ID，操作主体由服务端JWT确定', async () => {
   const actual = await vi.importActual<
     typeof import('#/api/core/workorder/inbox')
   >('#/api/core/workorder/inbox');

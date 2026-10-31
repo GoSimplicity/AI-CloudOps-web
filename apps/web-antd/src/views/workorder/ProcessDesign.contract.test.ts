@@ -129,7 +129,7 @@ describe('流程设计真实控件合同', () => {
     await remove.trigger('click');
     expect(wrapper!.get('.process-step.active').text()).toBe(selected);
   });
-  it('JSON修改必须显式应用，损坏结构不污染图且预览取消不保存', async () => {
+  it('jSON修改必须显式应用，损坏结构不污染图且预览取消不保存', async () => {
     await draft();
     await tab('JSON编辑');
     await wrapper!

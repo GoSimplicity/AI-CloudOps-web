@@ -72,8 +72,8 @@ export async function runWithConcurrency<T, R>(
           status: 'fulfilled',
           value: await worker(items[index] as T, index),
         };
-      } catch (reason) {
-        results[index] = { status: 'rejected', reason };
+      } catch (error) {
+        results[index] = { status: 'rejected', reason: error };
       }
     }
   };
@@ -306,16 +306,16 @@ export function useNodePage() {
           await fetchNodes();
         }
       }
-    } catch (err) {
+    } catch (error) {
       if (clustersPage.value === 1) {
         clusters.value = [];
         clustersTotal.value = 0;
         filterClusterId.value = undefined;
         clearNodes();
       }
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -402,8 +402,8 @@ export function useNodePage() {
           : [],
       };
       currentNodeDetail.value = nodeDetailWithDefaults;
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('获取节点详情失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error)) message.error('获取节点详情失败');
 
       currentNodeDetail.value = {
         ...record,
@@ -454,8 +454,8 @@ export function useNodePage() {
       message.success('节点标签保存成功');
       isLabelModalVisible.value = false;
       await fetchNodes();
-    } catch (err: unknown) {
-      if (shouldNotifyPageError(err)) message.error('标签保存失败');
+    } catch (error: unknown) {
+      if (shouldNotifyPageError(error)) message.error('标签保存失败');
     } finally {
       submitLoading.value = false;
     }
@@ -482,7 +482,7 @@ export function useNodePage() {
 
       resetTaintForm(taints);
       isTaintModalVisible.value = true;
-    } catch (err) {
+    } catch {
       // 如果获取失败，使用记录中的污点数据
       const taints = Array.isArray(record.taints) ? record.taints : [];
       resetTaintForm(taints);
@@ -650,7 +650,7 @@ export function useNodePage() {
       message.success('节点污点更新成功');
       isTaintModalVisible.value = false;
       await fetchNodes();
-    } catch (err: unknown) {
+    } catch (error: unknown) {
       if (deleted && !added) {
         // c-9：删除已生效、添加失败 → 部分成功，刷新列表，不提示整体成功
         message.warning(
@@ -658,7 +658,7 @@ export function useNodePage() {
         );
         isTaintModalVisible.value = false;
         await fetchNodes();
-      } else if (shouldNotifyPageError(err)) {
+      } else if (shouldNotifyPageError(error)) {
         // c-8：403、HTTP / 网络错误已由请求层提示，取消类静默；只有 shouldNotifyPageError 时才弹通用失败
         message.error('污点更新失败');
       }
@@ -686,8 +686,8 @@ export function useNodePage() {
       await checkK8sNodeTaintYaml(params);
       message.success('YAML配置验证通过');
       return true;
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('YAML配置验证失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error)) message.error('YAML配置验证失败');
 
       return false;
     }
@@ -752,8 +752,8 @@ export function useNodePage() {
 
           message.success(`节点调度已${action}`);
           await fetchNodes();
-        } catch (err) {
-          if (shouldNotifyPageError(err))
+        } catch (error) {
+          if (shouldNotifyPageError(error))
             message.error(`${action}节点调度失败`);
         }
       },
@@ -794,13 +794,13 @@ export function useNodePage() {
       message.success('节点驱逐操作已启动');
       isDrainModalVisible.value = false;
       await fetchNodes();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('节点驱逐失败');
+      if (shouldNotifyPageError(error)) message.error('节点驱逐失败');
     } finally {
       submitLoading.value = false;
     }

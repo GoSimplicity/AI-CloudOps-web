@@ -17,7 +17,7 @@ vi.mock('#/api/core/aiops/rca', () => ({
   getErrorSummary: vi.fn(),
 }));
 
-describe('RCA真实ECharts按需注册', () => {
+describe('rCA真实ECharts按需注册', () => {
   it('实际柱图和饼图可渲染，不依赖未注册图表的空画布', () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     // jsdom没有Canvas字体测量，图表仍使用真实ECharts/SVG渲染

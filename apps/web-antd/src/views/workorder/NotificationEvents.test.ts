@@ -418,7 +418,7 @@ it('权限接口格式错误时关闭数据和操作', async () => {
   expect(document.body.textContent).toContain('无法确认当前用户权限');
 });
 
-it('API 按后端合同发送精确路径和请求体', async () => {
+it('aPI 按后端合同发送精确路径和请求体', async () => {
   const actual = await vi.importActual<
     typeof import('#/api/core/workorder/notification-events')
   >('#/api/core/workorder/notification-events');

@@ -398,7 +398,7 @@ export function useIngressPage() {
           await fetchIngresses();
         }
       }
-    } catch (err) {
+    } catch (error) {
       if (clustersPage.value === 1) {
         clusters.value = [];
         clustersTotal.value = 0;
@@ -406,9 +406,9 @@ export function useIngressPage() {
         clearNamespaces();
         clearIngresses();
       }
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -446,7 +446,7 @@ export function useIngressPage() {
         namespaces.value = [...namespaces.value, ...(res?.items || [])];
       }
       namespacesTotal.value = res?.total || 0;
-    } catch (err) {
+    } catch (error) {
       if (
         requestId !== namespaceRequestId ||
         filterClusterId.value !== clusterId
@@ -454,9 +454,9 @@ export function useIngressPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         namespacesError.value = '获取命名空间列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
+      if (shouldNotifyPageError(error)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -584,8 +584,8 @@ export function useIngressPage() {
           };
 
       currentIngressDetail.value = processedDetail;
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('获取 Ingress 详情失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error)) message.error('获取 Ingress 详情失败');
 
       // 错误时使用原始记录数据
       const fallbackDetail = {
@@ -621,8 +621,8 @@ export function useIngressPage() {
       currentYamlContent.value = res?.yaml || '';
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('获取 Ingress YAML 失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error)) message.error('获取 Ingress YAML 失败');
     } finally {
       submitLoading.value = false;
     }
@@ -653,13 +653,14 @@ export function useIngressPage() {
       message.success('🎉 Ingress YAML 更新成功');
       isYamlModalVisible.value = false;
       await fetchIngresses();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('❌ Ingress YAML 更新失败');
+      if (shouldNotifyPageError(error))
+        message.error('❌ Ingress YAML 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -744,13 +745,13 @@ export function useIngressPage() {
       message.success('🎉 Ingress 创建成功');
       isCreateModalVisible.value = false;
       await fetchIngresses();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('❌ Ingress 创建失败');
+      if (shouldNotifyPageError(error)) message.error('❌ Ingress 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -772,13 +773,14 @@ export function useIngressPage() {
       message.success('🎉 Ingress YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchIngresses();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('❌ Ingress YAML 创建失败');
+      if (shouldNotifyPageError(error))
+        message.error('❌ Ingress YAML 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -855,13 +857,13 @@ export function useIngressPage() {
       message.success('🎉 Ingress 更新成功');
       isEditModalVisible.value = false;
       await fetchIngresses();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('❌ Ingress 更新失败');
+      if (shouldNotifyPageError(error)) message.error('❌ Ingress 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -888,8 +890,9 @@ export function useIngressPage() {
           });
           message.success('✅ Ingress 删除成功');
           await fetchIngresses();
-        } catch (err) {
-          if (shouldNotifyPageError(err)) message.error('❌ Ingress 删除失败');
+        } catch (error) {
+          if (shouldNotifyPageError(error))
+            message.error('❌ Ingress 删除失败');
         }
       },
     });
@@ -950,8 +953,8 @@ export function useIngressPage() {
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchIngresses();
-        } catch (err) {
-          if (shouldNotifyPageError(err))
+        } catch (error) {
+          if (shouldNotifyPageError(error))
             message.error(`❌ 批量${operation}失败`);
         }
       },

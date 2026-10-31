@@ -109,7 +109,7 @@ describe('三个终端客户端的握手契约', () => {
     );
   });
 
-  it('Pod 终端通过实际连接入口遵守同一握手契约', async () => {
+  it('pod 终端通过实际连接入口遵守同一握手契约', async () => {
     const page = usePodPage();
     document.body.innerHTML = '<div id="terminal-container"></div>';
     page.currentOperationPod.value = {
@@ -202,7 +202,7 @@ describe('三个终端客户端的握手契约', () => {
     page.disconnectTerminal();
   });
 
-  it('Pod 页面作用域销毁时关闭终端与日志流', () => {
+  it('pod 页面作用域销毁时关闭终端与日志流', () => {
     const scope = effectScope();
     const page = scope.run(() => usePodPage())!;
     const closeTerminal = vi.fn();

@@ -144,7 +144,7 @@ for (const testCase of cases) {
       ],
       ['RequestOwnerChangedError', () => new RequestOwnerChangedError()],
     ])(
-      'FE-02b 拍板 3：列表请求被取消（%s）不写 loadError、不提示；真实失败照常写',
+      'fE-02b 拍板 3：列表请求被取消（%s）不写 loadError、不提示；真实失败照常写',
       async (_label, make) => {
         const page = testCase.create();
         page.state.filterClusterId.value = 1;
@@ -250,7 +250,7 @@ for (const testCase of selectorCases) {
 }
 
 describe('资源过滤请求契约', () => {
-  it('Service 状态、名称和命名空间发送到后端分页前过滤', async () => {
+  it('service 状态、名称和命名空间发送到后端分页前过滤', async () => {
     const state = useServicePage();
     state.filterClusterId.value = 1;
     state.filterNamespace.value = 'alpha';
@@ -266,7 +266,7 @@ describe('资源过滤请求契约', () => {
       }),
     });
   });
-  it('ConfigMap 名称、命名空间与数据键真实传给 API', async () => {
+  it('configMap 名称、命名空间与数据键真实传给 API', async () => {
     const state = useConfigMapPage();
     state.filterClusterId.value = 1;
     state.filterNamespace.value = 'alpha';

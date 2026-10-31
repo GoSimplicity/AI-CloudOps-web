@@ -687,11 +687,11 @@ async function sync() {
     else message.warning('同步未完成，请查看历史');
     await Promise.all([loadRecords(), loadHistory()]);
     operationRefresh.value++;
-  } catch (err) {
+  } catch (error_) {
     if (current(epoch, selectionAtStart)) {
       localBlocked.value = true;
       error.value = '同步结果未确认，请先核对历史，不能直接重试';
-      if (shouldNotifyPageError(err)) message.error(error.value);
+      if (shouldNotifyPageError(error_)) message.error(error.value);
     }
   } finally {
     if (current(epoch)) syncing.value = false;

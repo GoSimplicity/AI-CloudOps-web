@@ -1757,7 +1757,8 @@ const handleClusterChange = () => {
   if (filterClusterId.value) {
     fetchNamespaces(true); // 重置命名空间分页
     fetchDaemonSets();
-  } else {}
+  } else {
+  }
 };
 
 const handleTableChange = (pagination: {
@@ -1914,8 +1915,8 @@ const rollbackToVersion = (revision: number) => {
         message.success(`DaemonSet 回滚到版本 ${revision} 成功`);
         closeHistoryModal();
         await fetchDaemonSets();
-      } catch (err) {
-        if (shouldNotifyPageError(err))
+      } catch (error) {
+        if (shouldNotifyPageError(error))
           message.error(`DaemonSet 回滚到版本 ${revision} 失败`);
       }
     },

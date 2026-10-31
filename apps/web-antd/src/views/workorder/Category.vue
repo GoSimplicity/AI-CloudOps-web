@@ -663,7 +663,7 @@ const handleSubmit = async (): Promise<void> => {
 
   try {
     await formRef.value.validate();
-  } catch (error) {
+  } catch {
     return;
   }
 

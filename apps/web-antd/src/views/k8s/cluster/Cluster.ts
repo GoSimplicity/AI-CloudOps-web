@@ -201,7 +201,7 @@ export function useClusterPage() {
       if (requestId !== listRequestId) return;
       clusters.value = (res?.items || []).map(stripKubeConfig);
       total.value = res?.total || 0;
-    } catch (err) {
+    } catch {
       if (requestId !== listRequestId) return;
       clusters.value = [];
       total.value = 0;
@@ -303,7 +303,7 @@ export function useClusterPage() {
           } as UpdateClusterReq & { id?: number };
         }
       }
-    } catch (err) {
+    } catch {
       if (!isCurrentSession()) return;
       isModalVisible.value = false;
       message.error('获取集群详细信息失败，请重试后再编辑');
@@ -354,8 +354,8 @@ export function useClusterPage() {
       isModalVisible.value = false;
       clearKubeConfigInput();
       await fetchClusters();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         // 表单验证错误
         message.warning('请检查表单填写是否正确');
         return;
@@ -396,7 +396,7 @@ export function useClusterPage() {
         JSON.stringify(currentFormData.restrict_namespace || []);
 
       return resourceChanged || namespaceChanged;
-    } catch (error) {
+    } catch {
       return false;
     }
   };
@@ -441,7 +441,7 @@ export function useClusterPage() {
           await deleteClusterApi(record.id as number);
           message.success('集群删除成功');
           await fetchClusters();
-        } catch (err) {
+        } catch {
           message.error('集群删除失败');
         }
       },
@@ -477,7 +477,7 @@ export function useClusterPage() {
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchClusters();
-        } catch (err) {
+        } catch {
           message.error('批量删除失败');
         }
       },
@@ -489,7 +489,7 @@ export function useClusterPage() {
       await refreshClusterApi(id);
       message.success('已触发刷新');
       await fetchClusters();
-    } catch (err) {
+    } catch {
       message.error('刷新失败');
     }
   };
@@ -509,7 +509,7 @@ export function useClusterPage() {
       isDetailModalVisible.value = true;
       const res = await getClusterDetailApi(record.id as number);
       currentClusterDetail.value = stripKubeConfig(res || record);
-    } catch (err) {
+    } catch {
       message.error('获取集群详情失败');
 
       currentClusterDetail.value = stripKubeConfig(record); // 使用列表中的数据作为fallback

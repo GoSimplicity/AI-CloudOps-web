@@ -1994,7 +1994,8 @@ const handleClusterChange = () => {
   if (filterClusterId.value) {
     fetchNamespaces(true); // 重置命名空间分页
     fetchStatefulSets();
-  } else {}
+  } else {
+  }
 };
 
 const handleTableChange = (pagination: {
@@ -2166,8 +2167,8 @@ const rollbackToVersion = (revision: number) => {
         message.success(`StatefulSet 回滚到版本 ${revision} 成功`);
         closeHistoryModal();
         await fetchStatefulSets();
-      } catch (err) {
-        if (shouldNotifyPageError(err))
+      } catch (error) {
+        if (shouldNotifyPageError(error))
           message.error(`StatefulSet 回滚到版本 ${revision} 失败`);
       }
     },

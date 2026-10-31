@@ -12,7 +12,7 @@ import {
  * - :59 `k8sGroup.PUT("/secret/:cluster_id/:namespace/:name/update", h.UpdateSecret)`
  * 权限中间件按「完整路由模板」精确匹配，码写错一个字符，入口判断与后端鉴权就对不上。
  */
-describe('Secret 路由码与后端路由模板一致（incr7 m04）', () => {
+describe('secret 路由码与后端路由模板一致（incr7 m04）', () => {
   it('更新：PUT /api/k8s/secret/:cluster_id/:namespace/:name/update（secret.go:59）', () => {
     expect(SECRET_UPDATE_PERMISSION_CODE).toBe(
       '/api/k8s/secret/:cluster_id/:namespace/:name/update',

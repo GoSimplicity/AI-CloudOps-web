@@ -945,7 +945,7 @@ const formatJson = (): void => {
     const parsed = JSON.parse(definitionJsonString.value);
     definitionJsonString.value = JSON.stringify(parsed, null, 2);
     message.success('JSON已格式化');
-  } catch (e) {
+  } catch {
     message.error('JSON格式错误，无法格式化');
   }
 };

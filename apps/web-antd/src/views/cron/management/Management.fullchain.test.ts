@@ -210,7 +210,7 @@ describe('cron 开关关闭 × 业务错误只提示一次（真实请求链路�
   });
 });
 
-describe('HTTP 错误（带 response）只提示一次、不展示响应体原文（真实请求链路）', () => {
+describe('hTTP 错误（带 response）只提示一次、不展示响应体原文（真实请求链路）', () => {
   const BODY_MESSAGE = 'dial tcp 10.0.0.8:3306: connect: connection refused';
   beforeEach(() => {
     vi.clearAllMocks();
@@ -605,7 +605,7 @@ describe('列表加载：其他 4xx、ETIMEDOUT 只提示一次，取消类静�
  * SSH 资源列表（fetchSshResources）与任务列表同一口径：5xx、网络错误只由请求层提示一次，
  * 业务错误只弹后端原文一条
  */
-describe('SSH 资源列表加载失败只提示一次（真实请求链路）', () => {
+describe('sSH 资源列表加载失败只提示一次（真实请求链路）', () => {
   const SSH_PAGE_TEXT = '获取SSH资源列表失败，请稍后重试';
   beforeEach(() => {
     vi.clearAllMocks();
@@ -628,7 +628,7 @@ describe('SSH 资源列表加载失败只提示一次（真实请求链路）', 
     expect(notices.warning).not.toHaveBeenCalled();
   };
 
-  it('SSH 资源列表返回 HTTP 500：只弹请求层一条', async () => {
+  it('sSH 资源列表返回 HTTP 500：只弹请求层一条', async () => {
     route = () => ({
       status: 500,
       data: { code: 500, data: null, message: 'x' },
@@ -641,7 +641,7 @@ describe('SSH 资源列表加载失败只提示一次（真实请求链路）', 
     expect(page.sshResourcesLoading.value).toBe(false);
   });
 
-  it('SSH 资源列表网络错误：只弹请求层一条', async () => {
+  it('sSH 资源列表网络错误：只弹请求层一条', async () => {
     sshTransportError = (config) =>
       new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, {});
     const page = useCronJobPage();
@@ -651,7 +651,7 @@ describe('SSH 资源列表加载失败只提示一次（真实请求链路）', 
     expect(page.sshResources.value).toEqual([]);
   });
 
-  it('SSH 资源列表业务错误（HTTP 200 + code≠0）：只弹后端原文一条', async () => {
+  it('sSH 资源列表业务错误（HTTP 200 + code≠0）：只弹后端原文一条', async () => {
     const text = 'SSH 资源查询失败：树节点不存在';
     route = () => ({
       status: 200,
@@ -671,7 +671,7 @@ describe('SSH 资源列表加载失败只提示一次（真实请求链路）', 
  * 与列表同一口径：取消类静默；请求层已提示（HTTP 错误、网络错误 / 超时含 ETIMEDOUT、业务错误）
  * 页面不再叠加；业务错误只弹后端原文一条
  */
-describe('FE-02b：其余操作 catch 统一口径（真实请求链路）', () => {
+describe('fE-02b：其余操作 catch 统一口径（真实请求链路）', () => {
   const PAGE_TEXTS = [
     '获取任务详情失败',
     '定时任务删除失败',
@@ -776,7 +776,7 @@ describe('FE-02b：其余操作 catch 统一口径（真实请求链路）', () 
         match.test(config.url ?? '') ? make(config) : null;
     };
 
-    it('HTTP 500：只弹请求层一条，页面不叠加', async () => {
+    it('hTTP 500：只弹请求层一条，页面不叠加', async () => {
       const base = route;
       route = (config) =>
         match.test(config.url ?? '')

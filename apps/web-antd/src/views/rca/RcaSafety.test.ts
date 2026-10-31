@@ -91,7 +91,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('RCA请求与账户边界', () => {
+describe('rCA请求与账户边界', () => {
   it('挂载分析/诊断页不调用模型或诊断入口', async () => {
     render(RCAAnalysis);
     await flushPromises();
@@ -231,7 +231,7 @@ describe('RCA请求与账户边界', () => {
   });
 });
 
-describe('RCA采集状态', () => {
+describe('rCA采集状态', () => {
   const result = (status: string, coverage: number | null) => ({
     status,
     namespace: 'default',

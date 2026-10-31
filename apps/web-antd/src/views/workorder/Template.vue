@@ -977,7 +977,7 @@ const loadSelectorsForEdit = async (
       loadProcessForEdit(templateData),
       loadFormForEdit(templateData),
     ]);
-  } catch (error) {}
+  } catch {}
 };
 
 const loadCategoryForEdit = async (
@@ -1014,7 +1014,7 @@ const loadCategoryForEdit = async (
         ...dialogCategories.value.filter((c) => c.id !== categoryInfo.id),
       ];
     }
-  } catch (error) {}
+  } catch {}
 };
 
 const loadProcessForEdit = async (
@@ -1047,7 +1047,7 @@ const loadProcessForEdit = async (
         ...dialogProcesses.value.filter((p) => p.id !== processInfo.id),
       ];
     }
-  } catch (error) {}
+  } catch {}
 };
 
 const loadFormForEdit = async (
@@ -1082,7 +1082,7 @@ const loadFormForEdit = async (
         ...dialogForms.value.filter((f) => f.id !== formInfo.id),
       ];
     }
-  } catch (error) {}
+  } catch {}
 };
 
 // 初始化加载

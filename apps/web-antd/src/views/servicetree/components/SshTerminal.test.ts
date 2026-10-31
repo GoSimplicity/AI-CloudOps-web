@@ -101,7 +101,7 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
-describe('SSH PTY交互合同', () => {
+describe('sSH PTY交互合同', () => {
   it('干净URL声明PTY与初始尺寸，凭证仅在认证子协议，二进制输入保留控制按键', async () => {
     render();
     const [url, protocols] = transport.connections.mock.calls[0]!;

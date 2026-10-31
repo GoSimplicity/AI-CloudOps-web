@@ -310,7 +310,7 @@ export function useRolePage() {
           await fetchRoles();
         }
       }
-    } catch (err) {
+    } catch (error) {
       if (clustersPage.value === 1) {
         clusters.value = [];
         clustersTotal.value = 0;
@@ -318,9 +318,9 @@ export function useRolePage() {
         clearNamespaces();
         clearRoles();
       }
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -369,7 +369,7 @@ export function useRolePage() {
         namespaces.value = [...namespaces.value, ...(res?.items || [])];
       }
       namespacesTotal.value = res?.total || 0;
-    } catch (err) {
+    } catch (error) {
       if (
         requestId !== namespaceRequestId ||
         filterClusterId.value !== clusterId
@@ -377,9 +377,9 @@ export function useRolePage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         namespacesError.value = '获取命名空间列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
+      if (shouldNotifyPageError(error)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }

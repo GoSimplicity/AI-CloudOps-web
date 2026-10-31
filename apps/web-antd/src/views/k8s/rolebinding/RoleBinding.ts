@@ -78,7 +78,7 @@ const calculateAge = (creationTimestamp?: string): string => {
     } else {
       return '刚刚';
     }
-  } catch (error) {
+  } catch {
     return '-';
   }
 };
@@ -125,7 +125,7 @@ const parseRoleBindingData = (roleBinding: K8sRoleBinding): K8sRoleBinding => {
         }));
       }
     }
-  } catch (error) {}
+  } catch {}
 
   // 确保 subjects 不为 null
   if (!parsedRoleBinding.subjects) {
@@ -442,7 +442,7 @@ export function useRoleBindingPage() {
           await fetchRoleBindings();
         }
       }
-    } catch (err) {
+    } catch (error) {
       if (clustersPage.value === 1) {
         clusters.value = [];
         clustersTotal.value = 0;
@@ -450,9 +450,9 @@ export function useRoleBindingPage() {
         clearNamespaces();
         clearRoleBindings();
       }
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -501,7 +501,7 @@ export function useRoleBindingPage() {
         namespaces.value = [...namespaces.value, ...(res?.items || [])];
       }
       namespacesTotal.value = res?.total || 0;
-    } catch (err) {
+    } catch (error) {
       if (
         requestId !== namespaceRequestId ||
         filterClusterId.value !== clusterId
@@ -509,9 +509,9 @@ export function useRoleBindingPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         namespacesError.value = '获取命名空间列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
+      if (shouldNotifyPageError(error)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }

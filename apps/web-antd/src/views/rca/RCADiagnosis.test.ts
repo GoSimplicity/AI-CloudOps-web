@@ -32,7 +32,7 @@ vi.mock('echarts/core', () => ({
   }),
 }));
 
-describe('RCA unavailable service', () => {
+describe('rCA unavailable service', () => {
   it('removes a prior healthy result and reports failure when every endpoint fails', async () => {
     Object.values(api).forEach((fn) =>
       fn.mockRejectedValue(new Error('unavailable')),

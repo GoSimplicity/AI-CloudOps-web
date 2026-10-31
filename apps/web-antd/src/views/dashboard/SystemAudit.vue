@@ -153,7 +153,7 @@ const getUserInfo = async (userId: number) => {
     // 缓存用户信息
     userInfoCache.value.set(userId, userInfo);
     return userInfo;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -273,7 +273,7 @@ const fetchAuditTypes = async () => {
   try {
     const response = await getAuditTypesApi();
     auditTypes.value = response;
-  } catch (error: any) {}
+  } catch {}
 };
 
 const fetchLogDetail = async (id: number) => {

@@ -79,7 +79,7 @@ describe('冻结 / 不可扩展的错误对象（复审 P3-6）', () => {
 });
 
 describe('claim 认领（incr6 P3-3）', () => {
-  it('M3a：不是这条提示弹出者的错误不能认领（旧提示关闭后同 key 被别的错误重新弹出并已替换）', () => {
+  it('m3a：不是这条提示弹出者的错误不能认领（旧提示关闭后同 key 被别的错误重新弹出并已替换）', () => {
     const key = 'http-error:假的网络异常';
     const first = new Error('fake first failure');
     const firstNotice = closableHandle();
@@ -96,8 +96,8 @@ describe('claim 认领（incr6 P3-3）', () => {
   });
 });
 
-describe('NOTICE_STALE_MS 兜底过期（incr6 P3-3）', () => {
-  it('M5：onClose 没回调时，10s 内仍可认领，超过 10s 视为已关闭', () => {
+describe('nOTICE_STALE_MS 兜底过期（incr6 P3-3）', () => {
+  it('m5：onClose 没回调时，10s 内仍可认领，超过 10s 视为已关闭', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
     const key = 'http-error:假的服务器错误';

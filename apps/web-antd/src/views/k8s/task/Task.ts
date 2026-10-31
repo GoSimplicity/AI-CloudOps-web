@@ -256,7 +256,7 @@ export function useTaskPage() {
           await fetchTasks();
         }
       }
-    } catch (err) {
+    } catch (error) {
       if (clustersPage.value === 1) {
         clusters.value = [];
         clustersTotal.value = 0;
@@ -264,9 +264,9 @@ export function useTaskPage() {
         clearTasks();
         clearTemplates();
       }
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -378,8 +378,8 @@ export function useTaskPage() {
       };
       const res = await getYamlTaskDetail(params);
       currentTaskDetail.value = res || record;
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('获取任务详情失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error)) message.error('获取任务详情失败');
 
       currentTaskDetail.value = record;
     } finally {
@@ -427,13 +427,13 @@ export function useTaskPage() {
       message.success('任务创建成功');
       isCreateModalVisible.value = false;
       await fetchTasks();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('任务创建失败');
+      if (shouldNotifyPageError(error)) message.error('任务创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -477,13 +477,13 @@ export function useTaskPage() {
       message.success('任务更新成功');
       isEditModalVisible.value = false;
       await fetchTasks();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('任务更新失败');
+      if (shouldNotifyPageError(error)) message.error('任务更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -524,8 +524,8 @@ export function useTaskPage() {
       );
       isExecuteModalVisible.value = false;
       await fetchTasks();
-    } catch (err) {
-      if (shouldNotifyPageError(err))
+    } catch (error) {
+      if (shouldNotifyPageError(error))
         message.error(
           executeFormModel.value.dry_run ? '任务预检查失败' : '任务执行失败',
         );
@@ -555,8 +555,8 @@ export function useTaskPage() {
           await deleteYamlTask(params);
           message.success('任务删除成功');
           await fetchTasks();
-        } catch (err) {
-          if (shouldNotifyPageError(err)) message.error('任务删除失败');
+        } catch (error) {
+          if (shouldNotifyPageError(error)) message.error('任务删除失败');
         }
       },
     });
@@ -597,8 +597,9 @@ export function useTaskPage() {
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchTasks();
-        } catch (err) {
-          if (shouldNotifyPageError(err)) message.error(`批量${operation}失败`);
+        } catch (error) {
+          if (shouldNotifyPageError(error))
+            message.error(`批量${operation}失败`);
         }
       },
     });

@@ -833,7 +833,7 @@ const loadCategoryForEdit = async (
         ];
       }
     }
-  } catch (error) {
+  } catch {
     if (formData.category_id && formData.category?.name) {
       const categoryInfo: WorkorderCategoryItem = {
         id: formData.category_id,
@@ -1087,8 +1087,27 @@ const initPreviewFormData = (schema: FormSchema): void => {
         break;
       }
       case FormFieldType.Select:
-      case FormFieldType.Radio: {
-      } {} {} {} {} {} {} {} {} {}
+      case FormFieldType.Radio:
+        {
+        }
+        {
+        }
+        {
+        }
+        {
+        }
+        {
+        }
+        {
+        }
+        {
+        }
+        {
+        }
+        {
+        }
+        {
+        }
         data[field.name] = field.default || undefined;
         break;
       case FormFieldType.Checkbox: {

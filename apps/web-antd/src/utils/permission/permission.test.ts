@@ -68,7 +68,7 @@ describe('权限码常量（permission-codes.md v4 第 6 / 6.1 节）', () => {
     }
   });
 
-  it('S1 / S1b / S2 / S3 按钮数与码数和清单 v4 6.1 一致，四个码集两两不相交', () => {
+  it('s1 / S1b / S2 / S3 按钮数与码数和清单 v4 6.1 一致，四个码集两两不相交', () => {
     // S1：主表 #1–#77（含 6 个主范围待定按钮的临时码）
     expect(Object.keys(PERMISSION_CODES)).toHaveLength(77);
     expect(distinct(PERMISSION_CODES).size).toBe(57);
@@ -119,7 +119,7 @@ describe('权限码常量（permission-codes.md v4 第 6 / 6.1 节）', () => {
     });
   });
 
-  it('Node 调度三个按钮属于 S1b（清单 v4），码为单节点 cordon / uncordon；drain 仍属 S3', () => {
+  it('node 调度三个按钮属于 S1b（清单 v4），码为单节点 cordon / uncordon；drain 仍属 S3', () => {
     expect(S1B_PERMISSION_CODES).toEqual({
       'k8s.node.cordon': '/api/k8s/node/:cluster_id/:node_name/cordon',
       'k8s.node.uncordon': '/api/k8s/node/:cluster_id/:node_name/uncordon',
@@ -135,7 +135,7 @@ describe('权限码常量（permission-codes.md v4 第 6 / 6.1 节）', () => {
     );
   });
 
-  it('U3 开关默认关闭；测试账号 A 码集：U3 获批前 S1 ∪ S1b ∪ S2 = 61，获批后 75', () => {
+  it('u3 开关默认关闭；测试账号 A 码集：U3 获批前 S1 ∪ S1b ∪ S2 = 61，获批后 75', () => {
     expect(U3_SCOPE_APPROVED).toBe(false);
     expect(getAccountPermissionCodes()).toHaveLength(61);
     expect(getAccountPermissionCodes(false)).toHaveLength(61);
@@ -203,7 +203,7 @@ describe('权限码常量（permission-codes.md v4 第 6 / 6.1 节）', () => {
     ).toBe(true);
   });
 
-  it('U3 开关关闭时 S3 不按码判断，S1 / S1b / S2 仍判断；打开后全部判断', () => {
+  it('u3 开关关闭时 S3 不按码判断，S1 / S1b / S2 仍判断；打开后全部判断', () => {
     expect(U3_KEYS.some((key) => isPermissionEnforced(key))).toBe(false);
     expect(S1B_KEYS.every((key) => isPermissionEnforced(key))).toBe(true);
     expect(ALL_KEYS.every((key) => isPermissionEnforced(key))).toBe(true);
@@ -255,7 +255,7 @@ describe('checkPermission 纯函数', () => {
   });
 });
 
-describe('P3-2 / P3-4 / P3-1 边界', () => {
+describe('p3-2 / P3-4 / P3-1 边界', () => {
   it('roles 不是数组时不报错、不放行（仍可按用户名 admin 放行）', () => {
     for (const roles of ['admin', { 0: 'admin' }, 1] as any[]) {
       expect(isSuperAdmin({ roles, username: 'ops' })).toBe(false);
@@ -279,7 +279,7 @@ describe('P3-2 / P3-4 / P3-1 边界', () => {
     expect(isForbiddenResponse(createPermissionDeniedError())).toBe(true);
   });
 
-  it('HTTP 403 的错误即使标记丢失也视为已统一提示', () => {
+  it('hTTP 403 的错误即使标记丢失也视为已统一提示', () => {
     const wrapped = Object.defineProperty(new Error('Forbidden'), 'response', {
       value: { status: 403, data: 'Forbidden' },
     });
@@ -342,7 +342,7 @@ describe('usePermission 读取 store', () => {
     expect(can('k8s.pod.exec')).toBe(true);
   });
 
-  it('U3 未获批：普通账号无码时 S3 按钮保持现状可见，S1 按钮和 S1b（Node 调度）按钮隐藏', () => {
+  it('u3 未获批：普通账号无码时 S3 按钮保持现状可见，S1 按钮和 S1b（Node 调度）按钮隐藏', () => {
     const accessStore = useAccessStore();
     accessStore.setAccessCodes([]);
     useUserStore().setUserInfo({ roles: ['ops'], username: 'ops' } as any);
@@ -357,7 +357,7 @@ describe('usePermission 读取 store', () => {
     expect(can('k8s.node.uncordon')).toBe(false);
   });
 
-  it('U3 获批：无码隐藏、有码显示、admin 放行', () => {
+  it('u3 获批：无码隐藏、有码显示、admin 放行', () => {
     u3.override = true;
     const accessStore = useAccessStore();
     const userStore = useUserStore();

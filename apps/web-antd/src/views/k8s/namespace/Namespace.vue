@@ -319,8 +319,8 @@ const copyToClipboard = async (text: string) => {
   try {
     await navigator.clipboard.writeText(text);
     message.success('已复制到剪贴板');
-  } catch (err) {
-    if (shouldNotifyPageError(err)) message.error('复制失败');
+  } catch (error) {
+    if (shouldNotifyPageError(error)) message.error('复制失败');
   }
 };
 

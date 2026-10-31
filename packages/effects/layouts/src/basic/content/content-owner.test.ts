@@ -84,7 +84,7 @@ async function render() {
 }
 describe('页面与KeepAlive账户边界', () => {
   it.each([true, false])(
-    'KeepAlive=%s换UID后只显示当前账户',
+    'keepAlive=%s换UID后只显示当前账户',
     async (cached) => {
       state.keepAlive = cached;
       const router = await render();
@@ -116,7 +116,7 @@ describe('页面与KeepAlive账户边界', () => {
     expect(wrapper.find('.private-content').text()).toBe('private-2');
     expect(state.unmounts).toContain('OwnerPageA:1');
   });
-  it('UID缺失时清空缓存和iframe，登录弹窗不被隐藏', async () => {
+  it('uID缺失时清空缓存和iframe，登录弹窗不被隐藏', async () => {
     await render();
     state.user.userInfo = null;
     await nextTick();

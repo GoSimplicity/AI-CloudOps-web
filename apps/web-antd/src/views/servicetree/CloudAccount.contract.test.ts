@@ -718,7 +718,7 @@ it.each([
   ).toBe(false);
 });
 
-it('AWS 临时 Access Key 不能作为长期凭据提交', async () => {
+it('aWS 临时 Access Key 不能作为长期凭据提交', async () => {
   await start();
   await action('添加账户');
   await chooseProvider('AWS');
@@ -1214,7 +1214,7 @@ it('取消、切换厂商或撤销权限均清除专用凭据', async () => {
   expect(client.post).not.toHaveBeenCalled();
 });
 
-it('Azure 创建请求失败时保留可重试输入，但不显示错误原文或写入其他请求', async () => {
+it('azure 创建请求失败时保留可重试输入，但不显示错误原文或写入其他请求', async () => {
   client.post.mockRejectedValueOnce(new Error('azure-secret-canary'));
   await start();
   await action('添加账户');
@@ -1243,7 +1243,7 @@ it('Azure 创建请求失败时保留可重试输入，但不显示错误原文�
   ).toBe(true);
 });
 
-it('Azure 异步表单校验时撤销权限不会提交专用凭据', async () => {
+it('azure 异步表单校验时撤销权限不会提交专用凭据', async () => {
   permissions.allowedRef = ref<null | string[]>(null);
   await start();
   await action('添加账户');

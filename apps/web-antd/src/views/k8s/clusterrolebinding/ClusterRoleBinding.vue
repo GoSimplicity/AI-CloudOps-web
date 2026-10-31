@@ -1512,7 +1512,7 @@ const formatAge = (age: string, creationTimestamp?: string): string => {
     } else {
       return '刚刚';
     }
-  } catch (error) {
+  } catch {
     return '-';
   }
 };
@@ -1531,7 +1531,8 @@ const handleClusterChange = () => {
 
   if (filterClusterId.value) {
     fetchClusterRoleBindings();
-  } else {}
+  } else {
+  }
 };
 
 const handleTableChange = (pagination: {

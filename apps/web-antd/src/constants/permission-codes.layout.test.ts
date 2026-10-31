@@ -23,7 +23,7 @@ describe('permission-codes.ts 注释位置（复审 P3-5）', () => {
     );
   });
 
-  it('SECRET_DETAIL_PERMISSION_CODE 的说明块只有一个，上面不再叠着别的注释', () => {
+  it('sECRET_DETAIL_PERMISSION_CODE 的说明块只有一个，上面不再叠着别的注释', () => {
     const index = lines.findIndex((line) =>
       line.startsWith('export const SECRET_DETAIL_PERMISSION_CODE'),
     );

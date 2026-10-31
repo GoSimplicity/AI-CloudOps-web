@@ -171,7 +171,7 @@ const fetchApiStatistics = async () => {
   try {
     const response = await getApiStatisticsApi();
     apiStatistics.value = response;
-  } catch (error: any) {
+  } catch {
     // 不显示错误信息，因为这是后台请求
   }
 };

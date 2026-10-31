@@ -621,7 +621,7 @@ const persistState = () => {
       })),
       currentLocalSessionId: currentLocalSessionId.value,
     });
-  } catch (e) {}
+  } catch {}
 };
 
 const loadState = () => {
@@ -680,7 +680,7 @@ const loadState = () => {
     }
     // 覆盖旧版本本地对话副本，仅保留服务端会话指针。
     persistState();
-  } catch (e) {
+  } catch {
     initChatMessages();
   }
 };
@@ -1458,8 +1458,8 @@ const copyMessage = async (content) => {
   try {
     await navigator.clipboard.writeText(content);
     message.success('已复制到剪贴板');
-  } catch (err) {
-    if (shouldNotifyPageError(err)) message.error('复制失败');
+  } catch (error) {
+    if (shouldNotifyPageError(error)) message.error('复制失败');
   }
 };
 // 重新生成 AI 回答（基于上一条用户消息）
@@ -1824,7 +1824,7 @@ const renderMarkdown = (content) => {
       },
       ALLOW_DATA_ATTR: true,
     });
-  } catch (error) {
+  } catch {
     // 如果解析失败，返回原始内容（转义HTML）
     return escapeHtml(content).replace(/\n/g, '<br>');
   }

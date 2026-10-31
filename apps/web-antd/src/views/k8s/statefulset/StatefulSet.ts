@@ -468,7 +468,7 @@ export function useStatefulSetPage() {
           await fetchStatefulSets();
         }
       }
-    } catch (err) {
+    } catch (error) {
       if (clustersPage.value === 1) {
         clusters.value = [];
         clustersTotal.value = 0;
@@ -476,9 +476,9 @@ export function useStatefulSetPage() {
         clearNamespaces();
         clearStatefulSets();
       }
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -516,7 +516,7 @@ export function useStatefulSetPage() {
         namespaces.value = [...namespaces.value, ...(res?.items || [])];
       }
       namespacesTotal.value = res?.total || 0;
-    } catch (err) {
+    } catch (error) {
       if (
         requestId !== namespaceRequestId ||
         filterClusterId.value !== clusterId
@@ -524,9 +524,9 @@ export function useStatefulSetPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         namespacesError.value = '获取命名空间列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
+      if (shouldNotifyPageError(error)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -621,8 +621,8 @@ export function useStatefulSetPage() {
           };
 
       currentStatefulSetDetail.value = processedDetail;
-    } catch (err) {
-      if (shouldNotifyPageError(err))
+    } catch (error) {
+      if (shouldNotifyPageError(error))
         message.error('获取 StatefulSet 详情失败');
 
       // 错误时也要处理格式转换
@@ -659,8 +659,8 @@ export function useStatefulSetPage() {
       currentYamlContent.value = res?.yaml || '';
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
-    } catch (err) {
-      if (shouldNotifyPageError(err))
+    } catch (error) {
+      if (shouldNotifyPageError(error))
         message.error('获取 StatefulSet YAML 失败');
     } finally {
       submitLoading.value = false;
@@ -697,13 +697,13 @@ export function useStatefulSetPage() {
       message.success('StatefulSet YAML 更新成功');
       isYamlModalVisible.value = false;
       await fetchStatefulSets();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (shouldNotifyPageError(err))
+      if (shouldNotifyPageError(error))
         message.error('StatefulSet YAML 更新失败');
     } finally {
       submitLoading.value = false;
@@ -771,13 +771,13 @@ export function useStatefulSetPage() {
       message.success('StatefulSet 创建成功');
       isCreateModalVisible.value = false;
       await fetchStatefulSets();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('StatefulSet 创建失败');
+      if (shouldNotifyPageError(error)) message.error('StatefulSet 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -799,13 +799,13 @@ export function useStatefulSetPage() {
       message.success('StatefulSet YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchStatefulSets();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (shouldNotifyPageError(err))
+      if (shouldNotifyPageError(error))
         message.error('StatefulSet YAML 创建失败');
     } finally {
       submitLoading.value = false;
@@ -829,8 +829,9 @@ export function useStatefulSetPage() {
           await deleteStatefulSetApi(clusterId, record.namespace, record.name);
           message.success('StatefulSet 删除成功');
           await fetchStatefulSets();
-        } catch (err) {
-          if (shouldNotifyPageError(err)) message.error('StatefulSet 删除失败');
+        } catch (error) {
+          if (shouldNotifyPageError(error))
+            message.error('StatefulSet 删除失败');
         }
       },
     });
@@ -863,8 +864,9 @@ export function useStatefulSetPage() {
           );
           message.success('StatefulSet 重启成功');
           await fetchStatefulSets();
-        } catch (err) {
-          if (shouldNotifyPageError(err)) message.error('StatefulSet 重启失败');
+        } catch (error) {
+          if (shouldNotifyPageError(error))
+            message.error('StatefulSet 重启失败');
         }
       },
     });
@@ -939,13 +941,13 @@ export function useStatefulSetPage() {
       message.success('StatefulSet 更新成功');
       isEditModalVisible.value = false;
       await fetchStatefulSets();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('StatefulSet 更新失败');
+      if (shouldNotifyPageError(error)) message.error('StatefulSet 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -989,13 +991,13 @@ export function useStatefulSetPage() {
       message.success('StatefulSet 伸缩成功');
       isScaleModalVisible.value = false;
       await fetchStatefulSets();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('StatefulSet 伸缩失败');
+      if (shouldNotifyPageError(error)) message.error('StatefulSet 伸缩失败');
     } finally {
       submitLoading.value = false;
     }
@@ -1039,13 +1041,13 @@ export function useStatefulSetPage() {
       message.success('StatefulSet 回滚成功');
       isRollbackModalVisible.value = false;
       await fetchStatefulSets();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('StatefulSet 回滚失败');
+      if (shouldNotifyPageError(error)) message.error('StatefulSet 回滚失败');
     } finally {
       submitLoading.value = false;
     }
@@ -1066,8 +1068,8 @@ export function useStatefulSetPage() {
       );
       statefulSetPods.value = res?.items || [];
       isPodModalVisible.value = true;
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('获取 Pod 列表失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error)) message.error('获取 Pod 列表失败');
     } finally {
       submitLoading.value = false;
     }
@@ -1094,8 +1096,8 @@ export function useStatefulSetPage() {
       );
       statefulSetHistory.value = res?.items || [];
       isHistoryModalVisible.value = true;
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('获取版本历史失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error)) message.error('获取版本历史失败');
     } finally {
       submitLoading.value = false;
     }
@@ -1174,8 +1176,9 @@ export function useStatefulSetPage() {
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchStatefulSets();
-        } catch (err) {
-          if (shouldNotifyPageError(err)) message.error(`批量${operation}失败`);
+        } catch (error) {
+          if (shouldNotifyPageError(error))
+            message.error(`批量${operation}失败`);
         }
       },
     });

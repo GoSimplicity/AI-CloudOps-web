@@ -181,7 +181,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('Pod 日志 SSE：令牌刷新与重连', () => {
+describe('pod 日志 SSE：令牌刷新与重连', () => {
   it('令牌过期（401）：刷新一次，用新令牌重连成功', async () => {
     const { authorizations } = stubFetch((authorization) =>
       authorization === 'Bearer new-token'
@@ -320,7 +320,7 @@ describe('Pod 日志 SSE：令牌刷新与重连', () => {
   });
 });
 
-describe('Pod 终端 exec WS：令牌刷新与重连', () => {
+describe('pod 终端 exec WS：令牌刷新与重连', () => {
   it('握手失败：刷新一次，用新令牌重连成功', async () => {
     const cb = callbacks();
     const { execK8sPodWebSocket } = usePodPage();
@@ -570,7 +570,7 @@ describe('Pod 终端 exec WS：令牌刷新与重连', () => {
       expect(vi.getTimerCount()).toBe(0);
     });
 
-    describe('FE-02b：5 分钟边界与多轮重置', () => {
+    describe('fE-02b：5 分钟边界与多轮重置', () => {
       /** 当前连接收到 4401 后等刷新、重连完成 */
       async function receive4401() {
         lastSocket().onclose?.({ code: 4401, wasClean: true });

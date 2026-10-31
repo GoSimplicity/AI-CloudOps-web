@@ -21,7 +21,7 @@ import {
  */
 const REVEAL = '/api/k8s/secret/:cluster_id/:namespace/:name/reveal';
 
-describe('Secret reveal 权限码', () => {
+describe('secret reveal 权限码', () => {
   it('查看明文 / 复制明文改为 reveal 路由码，YAML 仍是 detail/yaml', () => {
     expect(SECRET_REVEAL_PERMISSION_CODE).toBe(REVEAL);
     expect(ALL_PERMISSION_CODES['k8s.secret.viewPlain']).toBe(REVEAL);

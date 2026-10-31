@@ -350,7 +350,7 @@ export function useServicePage() {
           await fetchServices();
         }
       }
-    } catch (err) {
+    } catch (error) {
       if (clustersPage.value === 1) {
         clusters.value = [];
         clustersTotal.value = 0;
@@ -358,9 +358,9 @@ export function useServicePage() {
         clearNamespaces();
         clearServices();
       }
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -398,7 +398,7 @@ export function useServicePage() {
         namespaces.value = [...namespaces.value, ...(res?.items || [])];
       }
       namespacesTotal.value = res?.total || 0;
-    } catch (err) {
+    } catch (error) {
       if (
         requestId !== namespaceRequestId ||
         filterClusterId.value !== clusterId
@@ -406,9 +406,9 @@ export function useServicePage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         namespacesError.value = '获取命名空间列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
+      if (shouldNotifyPageError(error)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -457,7 +457,7 @@ export function useServicePage() {
       );
       services.value = servicesWithClusterId;
       total.value = res?.total || 0;
-    } catch (err) {
+    } catch (error) {
       if (
         requestId !== resourceRequestId ||
         filterClusterId.value !== clusterId ||
@@ -465,9 +465,9 @@ export function useServicePage() {
       )
         return;
       clearServices();
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         loadError.value = '获取 Service 列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(loadError.value);
+      if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -499,8 +499,8 @@ export function useServicePage() {
           };
 
       currentServiceDetail.value = processedDetail;
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('获取 Service 详情失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error)) message.error('获取 Service 详情失败');
 
       // 错误时使用原始记录数据
       const fallbackDetail = {
@@ -534,8 +534,8 @@ export function useServicePage() {
       currentYamlContent.value = res?.yaml || '';
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('获取 Service YAML 失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error)) message.error('获取 Service YAML 失败');
     } finally {
       submitLoading.value = false;
     }
@@ -571,13 +571,14 @@ export function useServicePage() {
       message.success('🎉 Service YAML 更新成功');
       isYamlModalVisible.value = false;
       await fetchServices();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('❌ Service YAML 更新失败');
+      if (shouldNotifyPageError(error))
+        message.error('❌ Service YAML 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -643,13 +644,13 @@ export function useServicePage() {
       message.success('🎉 Service 创建成功');
       isCreateModalVisible.value = false;
       await fetchServices();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('❌ Service 创建失败');
+      if (shouldNotifyPageError(error)) message.error('❌ Service 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -671,13 +672,14 @@ export function useServicePage() {
       message.success('🎉 Service YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchServices();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('❌ Service YAML 创建失败');
+      if (shouldNotifyPageError(error))
+        message.error('❌ Service YAML 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -744,13 +746,13 @@ export function useServicePage() {
       message.success('🎉 Service 更新成功');
       isEditModalVisible.value = false;
       await fetchServices();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('❌ Service 更新失败');
+      if (shouldNotifyPageError(error)) message.error('❌ Service 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -773,8 +775,9 @@ export function useServicePage() {
           await deleteServiceApi(clusterId, record.namespace, record.name);
           message.success('✅ Service 删除成功');
           await fetchServices();
-        } catch (err) {
-          if (shouldNotifyPageError(err)) message.error('❌ Service 删除失败');
+        } catch (error) {
+          if (shouldNotifyPageError(error))
+            message.error('❌ Service 删除失败');
         }
       },
     });
@@ -795,8 +798,8 @@ export function useServicePage() {
       );
       serviceEndpoints.value = res || [];
       isEndpointsModalVisible.value = true;
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('获取 Service 端点失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error)) message.error('获取 Service 端点失败');
     } finally {
       submitLoading.value = false;
     }
@@ -863,8 +866,8 @@ export function useServicePage() {
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchServices();
-        } catch (err) {
-          if (shouldNotifyPageError(err))
+        } catch (error) {
+          if (shouldNotifyPageError(error))
             message.error(`❌ 批量${operation}失败`);
         }
       },

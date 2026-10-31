@@ -566,7 +566,7 @@ export function useCronJobPage() {
         minute: '2-digit',
         second: '2-digit',
       });
-    } catch (error) {
+    } catch {
       return dateTimeStr;
     }
   };

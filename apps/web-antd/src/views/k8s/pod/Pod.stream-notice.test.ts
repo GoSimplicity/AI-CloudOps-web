@@ -214,7 +214,7 @@ describe('终端：刷新失败只提示登录过期', () => {
     ]);
   });
 
-  it('P2-C：连上后反复 4401：只提示一次登录过期，不提示「终端连接已断开」', async () => {
+  it('p2-C：连上后反复 4401：只提示一次登录过期，不提示「终端连接已断开」', async () => {
     await openTerminal();
     for (let i = 0; i < 10; i++) {
       const socket = lastSocket();

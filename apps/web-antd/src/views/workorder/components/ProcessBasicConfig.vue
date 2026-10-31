@@ -266,7 +266,7 @@ const loadForms = async (search?: string): Promise<void> => {
     if (res && res.items) {
       forms.value = res.items || [];
     }
-  } catch (error: any) {
+  } catch {
     forms.value = [];
   } finally {
     formSelectorLoading.value = false;
@@ -289,7 +289,7 @@ const loadCategories = async (search?: string): Promise<void> => {
     if (res && res.items) {
       categories.value = res.items || [];
     }
-  } catch (error: any) {
+  } catch {
     categories.value = [];
   } finally {
     categorySelectorLoading.value = false;
@@ -332,7 +332,7 @@ const validate = async (): Promise<boolean> => {
   try {
     await formRef.value?.validate();
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 };

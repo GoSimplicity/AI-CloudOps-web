@@ -138,7 +138,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('Secret 详情与明文分层（第 4 条）', () => {
+describe('secret 详情与明文分层（第 4 条）', () => {
   it('只有详情码：能打开详情、只见脱敏内容、没有查看 / 复制按钮、不调 reveal', async () => {
     setSubject({ roles: ['ops'], username: 'ops' }, [
       SECRET_DETAIL_PERMISSION_CODE,

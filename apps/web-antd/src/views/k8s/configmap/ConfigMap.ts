@@ -319,7 +319,7 @@ export function useConfigMapPage() {
           await fetchConfigMaps();
         }
       }
-    } catch (err) {
+    } catch (error) {
       if (clustersPage.value === 1) {
         clusters.value = [];
         clustersTotal.value = 0;
@@ -327,9 +327,9 @@ export function useConfigMapPage() {
         clearNamespaces();
         clearConfigMaps();
       }
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -367,7 +367,7 @@ export function useConfigMapPage() {
         namespaces.value = [...namespaces.value, ...(res?.items || [])];
       }
       namespacesTotal.value = res?.total || 0;
-    } catch (err) {
+    } catch (error) {
       if (
         requestId !== namespaceRequestId ||
         filterClusterId.value !== clusterId
@@ -375,9 +375,9 @@ export function useConfigMapPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         namespacesError.value = '获取命名空间列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
+      if (shouldNotifyPageError(error)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -430,7 +430,7 @@ export function useConfigMapPage() {
 
       configMaps.value = configMapsWithClusterId;
       total.value = res?.total || 0;
-    } catch (err) {
+    } catch (error) {
       if (
         requestId !== resourceRequestId ||
         filterClusterId.value !== clusterId ||
@@ -438,9 +438,9 @@ export function useConfigMapPage() {
       )
         return;
       clearConfigMaps();
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         loadError.value = '获取 ConfigMap 列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(loadError.value);
+      if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -488,8 +488,9 @@ export function useConfigMapPage() {
           };
 
       currentConfigMapDetail.value = processedDetail;
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('获取 ConfigMap 详情失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error))
+        message.error('获取 ConfigMap 详情失败');
 
       try {
         const fallbackDetail = {
@@ -505,7 +506,7 @@ export function useConfigMapPage() {
           ),
         };
         currentConfigMapDetail.value = fallbackDetail;
-      } catch (fallbackError) {
+      } catch {
         currentConfigMapDetail.value = {
           ...record,
           cluster_id: clusterId,
@@ -543,8 +544,9 @@ export function useConfigMapPage() {
 
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('获取 ConfigMap YAML 失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error))
+        message.error('获取 ConfigMap YAML 失败');
     } finally {
       submitLoading.value = false;
     }
@@ -574,13 +576,14 @@ export function useConfigMapPage() {
       message.success('ConfigMap YAML 更新成功');
       isYamlModalVisible.value = false;
       await fetchConfigMaps();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('ConfigMap YAML 更新失败');
+      if (shouldNotifyPageError(error))
+        message.error('ConfigMap YAML 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -722,13 +725,13 @@ export function useConfigMapPage() {
       message.success('ConfigMap 创建成功');
       isCreateModalVisible.value = false;
       await fetchConfigMaps();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('ConfigMap 创建失败');
+      if (shouldNotifyPageError(error)) message.error('ConfigMap 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -750,13 +753,14 @@ export function useConfigMapPage() {
       message.success('ConfigMap YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchConfigMaps();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('ConfigMap YAML 创建失败');
+      if (shouldNotifyPageError(error))
+        message.error('ConfigMap YAML 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -818,13 +822,13 @@ export function useConfigMapPage() {
       message.success('ConfigMap 更新成功');
       isEditModalVisible.value = false;
       await fetchConfigMaps();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('ConfigMap 更新失败');
+      if (shouldNotifyPageError(error)) message.error('ConfigMap 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -852,8 +856,8 @@ export function useConfigMapPage() {
           await deleteConfigMapApi(params);
           message.success('ConfigMap 删除成功');
           await fetchConfigMaps();
-        } catch (err) {
-          if (shouldNotifyPageError(err)) message.error('ConfigMap 删除失败');
+        } catch (error) {
+          if (shouldNotifyPageError(error)) message.error('ConfigMap 删除失败');
         }
       },
     });
@@ -916,8 +920,9 @@ export function useConfigMapPage() {
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchConfigMaps();
-        } catch (err) {
-          if (shouldNotifyPageError(err)) message.error(`批量${operation}失败`);
+        } catch (error) {
+          if (shouldNotifyPageError(error))
+            message.error(`批量${operation}失败`);
         }
       },
     });

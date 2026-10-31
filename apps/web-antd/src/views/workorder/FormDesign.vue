@@ -1009,7 +1009,7 @@ const importConfig = (file: File) => {
       } else {
         message.error('文件格式不正确');
       }
-    } catch (error) {
+    } catch {
       message.error('文件解析失败');
     }
   };

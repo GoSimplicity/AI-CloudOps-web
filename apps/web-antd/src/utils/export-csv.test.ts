@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { encodeCsv } from './export-csv';
 
-describe('CSV exports', () => {
+describe('cSV exports', () => {
   it('preserves Chinese, commas, quotes and line breaks', () => {
     expect(encodeCsv([['标题', 'a,b', '"hello"', 'a\nb', null]])).toBe(
       '\uFEFF"标题","a,b","""hello""","a\nb",""',

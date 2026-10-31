@@ -149,7 +149,7 @@ describe('incr7 兜底：编码后 data 里任何值解码为占位符 → 拦�
       `  token: ${encodeUtf8ToBase64(` ${REDACTED_PLACEHOLDER}\n`)}\n`,
     ],
     ['!!binary', `  token: !!binary ${PH_B64}\n`],
-  ])('YAML 更新：%s → 拦截，不发请求', async (_, body) => {
+  ])('yAML 更新：%s → 拦截，不发请求', async (_, body) => {
     const page = yamlPage(`${HEAD}data:\n${body}`);
     await page.submitYamlForm();
     expect(api.updateByYaml).not.toHaveBeenCalled();
@@ -158,7 +158,7 @@ describe('incr7 兜底：编码后 data 里任何值解码为占位符 → 拦�
     expect(text).toContain('data.token');
   });
 
-  it('YAML 创建：data 值是占位符 base64 → 拦截，不发请求', async () => {
+  it('yAML 创建：data 值是占位符 base64 → 拦截，不发请求', async () => {
     const page = createYamlPage(`${HEAD}data:\n  token: ${PH_B64}\n`);
     await page.submitCreateYamlForm();
     expect(api.createByYaml).not.toHaveBeenCalled();
@@ -167,7 +167,7 @@ describe('incr7 兜底：编码后 data 里任何值解码为占位符 → 拦�
     );
   });
 
-  it('YAML 创建：data 值是明文（非 base64）→ 拦截，不发明文', async () => {
+  it('yAML 创建：data 值是明文（非 base64）→ 拦截，不发明文', async () => {
     const page = createYamlPage(`${HEAD}data:\n  token: "${FAKE}"\n`);
     await page.submitCreateYamlForm();
     expect(api.createByYaml).not.toHaveBeenCalled();
@@ -176,7 +176,7 @@ describe('incr7 兜底：编码后 data 里任何值解码为占位符 → 拦�
     );
   });
 
-  it('YAML 创建反例：正常 base64（带引号也行）与 stringData 明文照常提交', async () => {
+  it('yAML 创建反例：正常 base64（带引号也行）与 stringData 明文照常提交', async () => {
     const text = `${HEAD}data:\n  a: "${encodeUtf8ToBase64('fake-a')}"\n  b: ${encodeUtf8ToBase64('fake-b')}\nstringData:\n  s: fake-s\n`;
     const page = createYamlPage(text);
     await page.submitCreateYamlForm();
@@ -272,7 +272,7 @@ describe('incr7 总兜底：各种写法的明文都不会出现在发出的 YAM
     },
   );
 
-  it('JSON 写法（整份流式）：data 明文拦截', async () => {
+  it('jSON 写法（整份流式）：data 明文拦截', async () => {
     const page = yamlPage(
       JSON.stringify({ apiVersion: 'v1', kind: 'Secret', data: { k: FAKE } }),
     );

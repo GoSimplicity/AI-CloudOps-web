@@ -374,7 +374,7 @@ export function useSecretPage() {
           await fetchSecrets();
         }
       }
-    } catch (err) {
+    } catch (error) {
       if (clustersPage.value === 1) {
         clusters.value = [];
         clustersTotal.value = 0;
@@ -382,9 +382,9 @@ export function useSecretPage() {
         clearNamespaces();
         clearSecrets();
       }
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -422,7 +422,7 @@ export function useSecretPage() {
         namespaces.value = [...namespaces.value, ...(res?.items || [])];
       }
       namespacesTotal.value = res?.total || 0;
-    } catch (err) {
+    } catch (error) {
       if (
         requestId !== namespaceRequestId ||
         filterClusterId.value !== clusterId
@@ -430,9 +430,9 @@ export function useSecretPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         namespacesError.value = '获取命名空间列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(namespacesError.value);
+      if (shouldNotifyPageError(error)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
     }
@@ -541,9 +541,9 @@ export function useSecretPage() {
       const value = readRevealedValue(res, key);
       if (value === undefined) message.error('未获取到该键的明文');
       return value;
-    } catch (err) {
+    } catch (error) {
       // 复审 P3-3：请求层已弹过（403 / 业务错误 / 通用 http-error 含网络错误）就不再弹第二条
-      if (generation === revealGeneration && !isNotifiedByRequestLayer(err)) {
+      if (generation === revealGeneration && !isNotifiedByRequestLayer(error)) {
         message.error('获取明文失败');
       }
       return undefined;
@@ -618,8 +618,8 @@ export function useSecretPage() {
           };
 
       currentSecretDetail.value = processedDetail;
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('获取 Secret 详情失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error)) message.error('获取 Secret 详情失败');
 
       // 错误时也要处理格式转换
       try {
@@ -634,7 +634,7 @@ export function useSecretPage() {
           string_data: parseJsonField(record.string_data, {}),
         };
         currentSecretDetail.value = fallbackDetail;
-      } catch (fallbackError) {
+      } catch {
         // 最终的安全fallback
         currentSecretDetail.value = {
           ...record,
@@ -694,9 +694,9 @@ export function useSecretPage() {
       yamlFormModel.value.yaml = processedYaml;
 
       isYamlModalVisible.value = true;
-    } catch (err) {
+    } catch (error) {
       if (seq !== yamlOpenSeq) return;
-      if (shouldNotifyPageError(err)) message.error('获取 Secret YAML 失败');
+      if (shouldNotifyPageError(error)) message.error('获取 Secret YAML 失败');
     } finally {
       // 迟到的响应不动加载状态（后打开的那次还在加载）
       if (seq === yamlOpenSeq) {
@@ -767,12 +767,12 @@ export function useSecretPage() {
       // 请求期间已关闭 / 换成别的 Secret：不去关后来打开的弹窗
       if (seq === yamlOpenSeq) isYamlModalVisible.value = false;
       await fetchSecrets();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('Secret YAML 更新失败');
+      if (shouldNotifyPageError(error)) message.error('Secret YAML 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -853,12 +853,12 @@ export function useSecretPage() {
       message.success('Secret 创建成功');
       isCreateModalVisible.value = false;
       await fetchSecrets();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('Secret 创建失败');
+      if (shouldNotifyPageError(error)) message.error('Secret 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -888,12 +888,12 @@ export function useSecretPage() {
       message.success('Secret YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchSecrets();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         message.warning('请检查 YAML 格式是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('Secret YAML 创建失败');
+      if (shouldNotifyPageError(error)) message.error('Secret YAML 创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -944,10 +944,11 @@ export function useSecretPage() {
       editDataOriginalKeys.value = getSecretDataKeys(detail);
       editDataRows.value = createDataRows(editDataOriginalKeys.value);
       editDataLoading.value = false;
-    } catch (err) {
+    } catch (error) {
       if (seq !== editOpenSeq) return;
       closeEditModal();
-      if (!isNotifiedByRequestLayer(err)) message.error('获取 Secret 详情失败');
+      if (!isNotifiedByRequestLayer(error))
+        message.error('获取 Secret 详情失败');
     }
   };
 
@@ -1049,12 +1050,12 @@ export function useSecretPage() {
       message.success('Secret 更新成功');
       if (seq === editOpenSeq) closeEditModal();
       await fetchSecrets();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('Secret 更新失败');
+      if (shouldNotifyPageError(error)) message.error('Secret 更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -1082,8 +1083,8 @@ export function useSecretPage() {
           await deleteSecretApi(params);
           message.success('Secret 删除成功');
           await fetchSecrets();
-        } catch (err) {
-          if (shouldNotifyPageError(err)) message.error('Secret 删除失败');
+        } catch (error) {
+          if (shouldNotifyPageError(error)) message.error('Secret 删除失败');
         }
       },
     });
@@ -1146,8 +1147,9 @@ export function useSecretPage() {
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchSecrets();
-        } catch (err) {
-          if (shouldNotifyPageError(err)) message.error(`批量${operation}失败`);
+        } catch (error) {
+          if (shouldNotifyPageError(error))
+            message.error(`批量${operation}失败`);
         }
       },
     });

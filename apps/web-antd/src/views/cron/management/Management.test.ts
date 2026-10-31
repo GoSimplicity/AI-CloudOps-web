@@ -200,7 +200,7 @@ describe('定时任务请求与操作边界', () => {
   });
 });
 
-describe('SEC-03A 本地执行开关与错误提示', () => {
+describe('sEC-03A 本地执行开关与错误提示', () => {
   const disabledMsg =
     '本地命令/脚本任务已停用（cron.allow_local_exec=false），请改用 HTTP 或 SSH 任务';
   const passValidation = (page: ReturnType<typeof useCronJobPage>) => {

@@ -289,7 +289,7 @@ const loadCategories = async (): Promise<void> => {
     }
 
     categories.value = allCategories;
-  } catch (error: any) {
+  } catch {
     categories.value = [];
   }
 };
@@ -331,7 +331,7 @@ const loadFormDesigns = async (): Promise<void> => {
     }
 
     formDesigns.value = allForms;
-  } catch (error: any) {
+  } catch {
     formDesigns.value = [];
   }
 };
@@ -785,7 +785,7 @@ const formatDefinitionForDisplay = (definition: any): string => {
   if (typeof definition === 'string') {
     try {
       return JSON.stringify(JSON.parse(definition), null, 2);
-    } catch (e) {
+    } catch {
       return definition;
     }
   }

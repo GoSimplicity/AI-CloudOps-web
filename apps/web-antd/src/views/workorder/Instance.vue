@@ -2631,7 +2631,7 @@ const initializeVisualFormData = (): void => {
     try {
       const existingData = JSON.parse(instanceDialog.form.form_data_json);
       Object.assign(newData, existingData);
-    } catch (error) {}
+    } catch {}
   }
 
   // 根据表单字段设置默认值
@@ -2646,8 +2646,27 @@ const initializeVisualFormData = (): void => {
           case FormFieldType.Password:
           case FormFieldType.Textarea:
           case FormFieldType.Select:
-          case FormFieldType.Radio: {
-          } {} {} {} {} {} {} {} {} {}
+          case FormFieldType.Radio:
+            {
+            }
+            {
+            }
+            {
+            }
+            {
+            }
+            {
+            }
+            {
+            }
+            {
+            }
+            {
+            }
+            {
+            }
+            {
+            }
             newData[field.name] = '';
             break;
           case FormFieldType.Number: {
@@ -2690,7 +2709,7 @@ const handleModeSwitch = (mode: 'visual' | 'json'): void => {
         2,
       );
       formDataValidationError.value = '';
-    } catch (error) {
+    } catch {
       message.error('转换为JSON格式失败');
       return;
     }
@@ -2702,7 +2721,7 @@ const handleModeSwitch = (mode: 'visual' | 'json'): void => {
         visualFormData.value = { ...visualFormData.value, ...jsonData };
       }
       formDataValidationError.value = '';
-    } catch (error) {
+    } catch {
       message.error('JSON格式错误，无法切换到可视化模式');
       return;
     }
@@ -2722,7 +2741,7 @@ const handleVisualFormChange = (): void => {
         2,
       );
       formDataValidationError.value = '';
-    } catch (error) {}
+    } catch {}
   }
 };
 
@@ -2916,7 +2935,7 @@ const loadProcesses = async (search?: string): Promise<void> => {
     }
 
     processes.value = allProcesses;
-  } catch (error: any) {
+  } catch {
     processes.value = [];
   }
 };
@@ -3508,7 +3527,7 @@ const refreshInstanceData = async (instanceId: number) => {
       // 重新加载当前步骤
       await loadCurrentStep(instanceId, res);
     }
-  } catch (error) {}
+  } catch {}
 };
 
 // 步骤状态同步函数 - 在执行操作后调用
@@ -4233,7 +4252,7 @@ const saveInstance = async () => {
           formData = JSON.parse(instanceDialog.form.form_data_json);
         }
       }
-    } catch (error) {
+    } catch {
       message.error('表单数据格式错误');
       return;
     }
@@ -4323,7 +4342,7 @@ const loadSelectorsForEdit = async (): Promise<void> => {
 
     // 确保当前选中的处理人在用户列表中
     await ensureCurrentAssigneeInList();
-  } catch (error) {}
+  } catch {}
 };
 
 // 确保当前选中的处理人在用户列表中
@@ -4356,7 +4375,7 @@ const ensureCurrentAssigneeInList = async (): Promise<void> => {
           dialogUsers.value.unshift(assigneeUser);
         }
       }
-    } catch (error) {}
+    } catch {}
   }
 };
 

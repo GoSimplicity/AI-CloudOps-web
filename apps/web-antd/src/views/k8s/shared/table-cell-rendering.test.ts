@@ -108,8 +108,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('Ant Table bodyCell migration', () => {
-  it('Service dynamic ports retain named formatting and default/customRender fallbacks', () => {
+describe('ant Table bodyCell migration', () => {
+  it('service dynamic ports retain named formatting and default/customRender fallbacks', () => {
     const wrapper = mountCells(
       'k8s/service/Service.vue',
       1,
@@ -142,7 +142,7 @@ describe('Ant Table bodyCell migration', () => {
     ]);
   });
 
-  it('Cron combines record and text for last result and binds action to the same row', async () => {
+  it('cron combines record and text for last result and binds action to the same row', async () => {
     const showJobDetail = vi.fn();
     const record = {
       id: 7,
@@ -174,7 +174,7 @@ describe('Ant Table bodyCell migration', () => {
   });
 
   it.each([false, true])(
-    'Secret preserves explicit permission gate: detail allowed=%s',
+    'secret preserves explicit permission gate: detail allowed=%s',
     async (allowed) => {
       const detail = vi.fn();
       const record = { id: 1, name: 'fake-secret' };

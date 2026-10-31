@@ -88,10 +88,10 @@ const validationErrors = async (page: Page, fields: string[]) => {
   try {
     await page.formRef.value!.validateFields(fields);
     return [];
-  } catch (err) {
-    return (err as { errorFields: { errors: string[] }[] }).errorFields.flatMap(
-      (f) => f.errors,
-    );
+  } catch (error) {
+    return (
+      error as { errorFields: { errors: string[] }[] }
+    ).errorFields.flatMap((f) => f.errors);
   }
 };
 

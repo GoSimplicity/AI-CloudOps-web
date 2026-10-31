@@ -134,7 +134,7 @@ const SecretDetailLayer = defineComponent({
   </div>`,
 });
 
-describe('Secret 详情与明文分层渲染（SEC-25/26 第 4 条）', () => {
+describe('secret 详情与明文分层渲染（SEC-25/26 第 4 条）', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });

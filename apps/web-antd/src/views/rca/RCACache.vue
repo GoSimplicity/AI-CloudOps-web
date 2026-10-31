@@ -417,7 +417,7 @@ const formatTime = (timestamp?: string) => {
   try {
     const date = new Date(timestamp);
     return date.toLocaleString('zh-CN');
-  } catch (error) {
+  } catch {
     return timestamp;
   }
 };

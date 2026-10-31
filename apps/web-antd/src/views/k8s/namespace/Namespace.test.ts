@@ -93,7 +93,7 @@ describe('命名空间查询作用域', () => {
     expect(message.error).toHaveBeenCalledWith('获取命名空间列表失败，请重试');
   });
 
-  it('FE-02b：HTTP 错误、网络错误已由请求层提示，页面只保留错误状态；取消类静默且不写错误状态', async () => {
+  it('fE-02b：HTTP 错误、网络错误已由请求层提示，页面只保留错误状态；取消类静默且不写错误状态', async () => {
     const axios = (await import('axios')).default;
     const { AxiosError } = await import('axios');
     const { message } = await import('ant-design-vue');

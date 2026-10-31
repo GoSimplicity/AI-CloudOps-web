@@ -984,7 +984,7 @@ const getNotifyMethods = (record: MonitorSendGroup): string[] => {
             if (method.startsWith('[') && method.endsWith(']')) {
               try {
                 return JSON.parse(method);
-              } catch (e) {
+              } catch {
                 return method;
               }
             }
@@ -1000,13 +1000,13 @@ const getNotifyMethods = (record: MonitorSendGroup): string[] => {
       try {
         const parsed = JSON.parse(record.notify_methods);
         return Array.isArray(parsed) ? parsed : [record.notify_methods];
-      } catch (e) {
+      } catch {
         return [record.notify_methods];
       }
     }
 
     return [];
-  } catch (error) {
+  } catch {
     return [];
   }
 };
@@ -1069,7 +1069,7 @@ const loadSendGroupList = async (): Promise<void> => {
                   if (method.startsWith('[') && method.endsWith(']')) {
                     return JSON.parse(method);
                   }
-                } catch (e) {
+                } catch {
                   // ignore
                 }
               }

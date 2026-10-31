@@ -461,7 +461,7 @@ it('切换类型时旧历史回包不能解除新范围的未知锁', async () =
   expect(syncButton().disabled).toBe(true);
   expect(wrapper!.text()).toContain('不能直接重试');
 });
-it('API 方法与后端范围合同一致', async () => {
+it('aPI 方法与后端范围合同一致', async () => {
   const actual = await vi.importActual<
     typeof import('#/api/core/tree/tree_cloud')
   >('#/api/core/tree/tree_cloud');

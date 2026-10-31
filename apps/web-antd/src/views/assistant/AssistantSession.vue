@@ -606,7 +606,7 @@ const loadHistoryFromStorage = () => {
       ? stored.map(sessionMetadata)
       : [];
     if (Array.isArray(stored)) saveHistoryToStorage();
-  } catch (error) {}
+  } catch {}
 };
 
 watch(

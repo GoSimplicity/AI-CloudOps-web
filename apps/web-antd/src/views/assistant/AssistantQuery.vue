@@ -52,16 +52,16 @@
                 </div>
 
                 <div
-                  v-for="(message, index) in chatHistory"
+                  v-for="(chatMessage, index) in chatHistory"
                   :key="index"
                   class="message-item"
                 >
                   <!-- 用户消息 -->
-                  <div v-if="message.role === 'user'" class="user-message">
+                  <div v-if="chatMessage.role === 'user'" class="user-message">
                     <div class="message-content">
-                      <div class="message-text">{{ message.content }}</div>
+                      <div class="message-text">{{ chatMessage.content }}</div>
                       <div class="message-time">
-                        {{ formatTime(message.timestamp) }}
+                        {{ formatTime(chatMessage.timestamp) }}
                       </div>
                     </div>
                     <a-avatar
@@ -83,17 +83,17 @@
                     <div class="message-content">
                       <div
                         class="message-text"
-                        v-html="formatMarkdown(message.content)"
+                        v-html="formatMarkdown(chatMessage.content)"
                       ></div>
                       <div class="message-time">
-                        {{ formatTime(message.timestamp) }}
+                        {{ formatTime(chatMessage.timestamp) }}
                       </div>
 
                       <!-- 来源文档 -->
                       <div
                         v-if="
-                          message.sourceDocuments &&
-                          message.sourceDocuments.length > 0
+                          chatMessage.sourceDocuments &&
+                          chatMessage.sourceDocuments.length > 0
                         "
                         class="source-documents"
                       >
@@ -108,10 +108,9 @@
                         </div>
                         <div class="source-list">
                           <a-tag
-                            v-for="(doc, idx) in message.sourceDocuments.slice(
-                              0,
-                              3,
-                            )"
+                            v-for="(
+                              doc, idx
+                            ) in chatMessage.sourceDocuments.slice(0, 3)"
                             :key="idx"
                             color="blue"
                             class="source-tag"
@@ -125,8 +124,8 @@
                       <!-- 推荐问题 -->
                       <div
                         v-if="
-                          message.followUpQuestions &&
-                          message.followUpQuestions.length > 0
+                          chatMessage.followUpQuestions &&
+                          chatMessage.followUpQuestions.length > 0
                         "
                         class="follow-up-questions"
                       >
@@ -143,7 +142,7 @@
                           <a-button
                             v-for="(
                               question, idx
-                            ) in message.followUpQuestions.slice(0, 3)"
+                            ) in chatMessage.followUpQuestions.slice(0, 3)"
                             :key="idx"
                             type="link"
                             size="small"

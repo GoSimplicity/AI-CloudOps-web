@@ -222,7 +222,7 @@ describe('系统欢迎页真实采样合同', () => {
     expect(api.getSystemMetricsApi).toHaveBeenCalledTimes(1);
     expect(charts.instances).toHaveLength(before);
   });
-  it('KeepAlive离开停止poll，回到页面立即新采样，旧请求不能覆盖', async () => {
+  it('keepAlive离开停止poll，回到页面立即新采样，旧请求不能覆盖', async () => {
     const pending = deferred();
     api.getSystemMetricsApi
       .mockReturnValueOnce(pending.promise)

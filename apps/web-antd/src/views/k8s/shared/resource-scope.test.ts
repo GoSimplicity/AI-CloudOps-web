@@ -256,7 +256,7 @@ for (const testCase of cases) {
   });
 }
 
-describe('YAML 模板目录隔离', () => {
+describe('yAML 模板目录隔离', () => {
   it('切换集群后迟到目录不能污染新任务的模板选择', async () => {
     const state = useTaskPage();
     state.filterClusterId.value = 1;
@@ -280,7 +280,7 @@ describe('YAML 模板目录隔离', () => {
   });
 });
 
-it('YAML 任务名称搜索按真实 name 参数发送', async () => {
+it('yAML 任务名称搜索按真实 name 参数发送', async () => {
   const state = useTaskPage();
   state.filterClusterId.value = 1;
   state.searchText.value = 'task-name';

@@ -423,7 +423,7 @@ function realFiles(): [string, string][] {
   ]);
 }
 
-describe('FE-02b：views 页面 catch 不再使用旧守卫', () => {
+describe('fE-02b：views 页面 catch 不再使用旧守卫', () => {
   it('旧守卫 !isPermissionDeniedError(...) 零残留（incr3：Notification.vue 基线两处已收口，白名单清空）', () => {
     const offenders: Record<string, number> = {};
     for (const [rel, text] of realFiles()) {
@@ -433,7 +433,7 @@ describe('FE-02b：views 页面 catch 不再使用旧守卫', () => {
     expect(offenders).toEqual({});
   });
 
-  it('Notification.vue 删除 / 手动发送两处 catch 已改为 shouldNotifyPageError', () => {
+  it('notification.vue 删除 / 手动发送两处 catch 已改为 shouldNotifyPageError', () => {
     const file = 'workorder/Notification.vue';
     const text = stripComments(
       scriptOf(file, readFileSync(join(VIEWS_DIR, file), 'utf8')),
@@ -453,7 +453,7 @@ describe('FE-02b：views 页面 catch 不再使用旧守卫', () => {
   });
 });
 
-describe('FE-02b 拍板 3：取消类不写页面错误状态（静态扫描）', () => {
+describe('fE-02b 拍板 3：取消类不写页面错误状态（静态扫描）', () => {
   it('已改页面里 catch / .catch 写错误状态都经过 if (shouldRecordPageError(x))：逐文件快照 + 白名单精确相等', () => {
     const writes = realFiles()
       .filter(([, text]) => text.includes(NOTICE_IMPORT))
@@ -686,7 +686,7 @@ describe('incr3 P3-7：扫描器变异夹具', () => {
     }
   });
 
-  it('S5 白名单计数精确：多一条、少一条都报', () => {
+  it('s5 白名单计数精确：多一条、少一条都报', () => {
     const whitelisted = { 'demo/Demo.ts|jsonError.value': 1 };
     const one = `${BASE}\nfunction parse() {\n  try {\n    JSON.parse(x);\n  } catch {\n    jsonError.value = 'JSON 格式错误';\n  }\n}\n`;
     expect(
@@ -704,7 +704,7 @@ describe('incr3 P3-7：扫描器变异夹具', () => {
     ).toEqual(['未守卫写入 demo/Demo.ts|jsonError.value：实际 0，白名单 1']);
   });
 
-  it('T3 总数不变、分布挪动：逐文件快照报出（原总数断言抓不到）', () => {
+  it('t3 总数不变、分布挪动：逐文件快照报出（原总数断言抓不到）', () => {
     const snapshot = { 'demo/A.ts': 1, 'demo/B.ts': 1 };
     // A 的守卫被删掉（写入改成未守卫且被 A 自己吞到白名单里），B 多加一条守卫写入：总数仍是 2
     const a = BASE.replace(

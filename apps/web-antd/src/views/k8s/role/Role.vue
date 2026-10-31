@@ -1907,7 +1907,8 @@ const handleClusterChange = () => {
   if (filterClusterId.value) {
     fetchNamespaces(true);
     fetchRoles();
-  } else {}
+  } else {
+  }
 };
 
 const handleTableChange = (pagination: {
@@ -1962,7 +1963,7 @@ const getRulesFromRecord = (record: any): any[] => {
       if (config.rules && Array.isArray(config.rules)) {
         return config.rules;
       }
-    } catch (error) {}
+    } catch {}
   }
 
   return [];
@@ -1996,7 +1997,7 @@ const formatAge = (age: string, creationTimestamp?: string): string => {
     } else {
       return '刚刚';
     }
-  } catch (error) {
+  } catch {
     return '-';
   }
 };

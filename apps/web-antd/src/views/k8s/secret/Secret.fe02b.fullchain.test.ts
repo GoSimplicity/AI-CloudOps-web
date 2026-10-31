@@ -229,9 +229,9 @@ beforeEach(() => {
 });
 
 describe.each(operations)(
-  'Secret %s 失败提示（incr3 / SEC-26 遗留 21）',
+  'secret %s 失败提示（incr3 / SEC-26 遗留 21）',
   (_name, pageText, run, request) => {
-    it('HTTP 5xx：只有请求层一条，页面不叠加', async () => {
+    it('hTTP 5xx：只有请求层一条，页面不叠加', async () => {
       mode = 'server';
       await run(useSecretPage());
       const text = $t('fallback.http.internalServerError');
@@ -275,7 +275,7 @@ describe.each(operations)(
       ['badRequest', 400, 'fallback.http.badRequest'],
       ['unprocessable', 422, 'fallback.http.internalServerError'],
     ] as const)(
-      'HTTP %s（%s）：恰好一条请求层通用文案，任何提示都不含后端原文',
+      'hTTP %s（%s）：恰好一条请求层通用文案，任何提示都不含后端原文',
       async (m, _status, textKey) => {
         mode = m;
         await run(useSecretPage());

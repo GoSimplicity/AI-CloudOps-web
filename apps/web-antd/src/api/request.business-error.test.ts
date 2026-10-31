@@ -115,7 +115,7 @@ describe('业务错误（code≠0）统一提示 · 请求链路集成', () => {
           adapter: businessAdapter('private-event-canary'),
         },
       )
-      .catch((value) => value);
+      .catch((error_) => error_);
     expect(JSON.stringify(notices.error.mock.calls)).not.toContain(
       'private-event-canary',
     );
@@ -130,7 +130,7 @@ describe('业务错误（code≠0）统一提示 · 请求链路集成', () => {
     async (path) => {
       const error = await requestClient
         .post(path, {}, { adapter: businessAdapter('private-resource-canary') })
-        .catch((value) => value);
+        .catch((error_) => error_);
       expect(JSON.stringify(notices.error.mock.calls)).not.toContain(
         'private-resource-canary',
       );

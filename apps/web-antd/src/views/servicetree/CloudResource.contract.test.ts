@@ -347,7 +347,7 @@ describe('云资源真实控件合同', () => {
       }),
     );
   });
-  it('AWS 临时凭据可选择经过事务保护的全量同步', async () => {
+  it('aWS 临时凭据可选择经过事务保护的全量同步', async () => {
     await open();
     await select('cloud-sync-account', 'AWS临时账户');
     await select('cloud-sync-regions', '深圳');
@@ -440,7 +440,7 @@ describe('云资源真实控件合同', () => {
     ['18446744073709551615', true],
     ['18446744073709551616', false],
     ['0', false],
-  ])('GCP 数字 ID %s 按 uint64 上限校验', async (instance, allowed) => {
+  ])('gCP 数字 ID %s 按 uint64 上限校验', async (instance, allowed) => {
     await open();
     await select('cloud-sync-account', 'GCP账户');
     await select('cloud-sync-regions', '深圳');

@@ -214,7 +214,7 @@ function createWrapper() {
   return wrapper;
 }
 
-describe('AutoFixWorkflow.vue', () => {
+describe('autoFixWorkflow.vue', () => {
   beforeEach(() => {
     sessionStorage.clear();
     vi.clearAllMocks();

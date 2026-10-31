@@ -114,7 +114,7 @@ function expectSingleHttpNotice(text: string) {
   });
 }
 
-describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
+describe('fE-02b：409 / 429 / Request aborted 请求层文案', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     access.accessToken = 'token';
@@ -128,7 +128,7 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
       expect(text).not.toMatch(/\d{3}/);
   });
 
-  it('HTTP 409：只弹一条「数据已变化，请刷新后重试」，不弹内部服务器错误', async () => {
+  it('hTTP 409：只弹一条「数据已变化，请刷新后重试」，不弹内部服务器错误', async () => {
     const error = await call(
       adapterOf(409, { code: 409, data: null, message: 'version conflict' }),
     );
@@ -142,14 +142,14 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
     );
   });
 
-  it('HTTP 429：只弹一条「请求过于频繁，请稍后重试」', async () => {
+  it('hTTP 429：只弹一条「请求过于频繁，请稍后重试」', async () => {
     await call(
       adapterOf(429, { code: 429, data: null, message: 'rate limited' }),
     );
     expectSingleHttpNotice('请求过于频繁，请稍后重试');
   });
 
-  it('P3-C：浏览器中止请求（Request aborted / ECONNABORTED，无 response）：按网络异常提示一条', async () => {
+  it('p3-C：浏览器中止请求（Request aborted / ECONNABORTED，无 response）：按网络异常提示一条', async () => {
     await call(async (config) => {
       throw new AxiosError(
         'Request aborted',
@@ -189,7 +189,7 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
     },
   );
 
-  it('HTTP 403 不受影响：只有统一的无权限提示，不透出后端原文', async () => {
+  it('hTTP 403 不受影响：只有统一的无权限提示，不透出后端原文', async () => {
     await call(
       adapterOf(403, { code: 403, data: null, message: '后端原文 403' }),
     );
@@ -391,7 +391,7 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
       expectGeneric400();
     });
 
-    it('M14 autofix 400 响应体只有 error.message：也不透出', async () => {
+    it('m14 autofix 400 响应体只有 error.message：也不透出', async () => {
       await viaAiops('/autofix/workflow', ERROR_ONLY_BODY);
       expectGeneric400();
     });
@@ -419,12 +419,12 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
       ['P3-B .json 后缀', '/k8s/secret.json'],
       ['P3-B ; 参数', '/k8s/secret;v=1/1/list'],
       ['P3-B 尾随空格', '/k8s/secret '],
-    ])('Secret %s：400 只弹通用文案，不含后端原文', async (_label, url) => {
+    ])('secret %s：400 只弹通用文案，不含后端原文', async (_label, url) => {
       await viaMain(url);
       expectGeneric400();
     });
 
-    it('Secret 400 响应体只有 error.message：也不透出', async () => {
+    it('secret 400 响应体只有 error.message：也不透出', async () => {
       await viaMain('/k8s/secret/1/create', ERROR_ONLY_BODY);
       expectGeneric400();
     });
@@ -434,7 +434,7 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
       ['非法 UTF-8 序列', '/k8s/pod/%E0%A4%A/logs'],
       ['非法转义', '/x/%ZZ'],
     ])(
-      'P3-B 解码失败（%s）：fail closed，按敏感接口处理',
+      'p3-B 解码失败（%s）：fail closed，按敏感接口处理',
       async (_label, url) => {
         await viaMain(url);
         expectGeneric400();
@@ -515,7 +515,7 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
 
   describe('incr3 P3-2：浏览器中止请求不依赖 Request aborted 原文', () => {
     it.each(['Request aborted', 'aborted', 'The operation was aborted', ''])(
-      'ECONNABORTED、无 response、message=%j（不是超时）：按网络异常提示',
+      'eCONNABORTED、无 response、message=%j（不是超时）：按网络异常提示',
       async (text) => {
         await call(async (config) => {
           throw new AxiosError(text, AxiosError.ECONNABORTED, config, {});
@@ -584,7 +584,7 @@ describe('FE-02b：409 / 429 / Request aborted 请求层文案', () => {
       [429, HTTP_TOO_MANY_REQUESTS_MESSAGE],
       [500, $t('fallback.http.internalServerError')],
     ])(
-      'HTTP %s：包装后的错误带 http-error key 标记，页面不再弹',
+      'hTTP %s：包装后的错误带 http-error key 标记，页面不再弹',
       async (status, text) => {
         const error = await call(
           adapterOf(status, { code: status, data: null, message: 'x' }),

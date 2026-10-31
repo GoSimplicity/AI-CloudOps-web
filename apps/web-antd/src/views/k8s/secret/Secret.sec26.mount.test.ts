@@ -105,7 +105,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('Secret 详情：脱敏展示 + 按键 reveal', () => {
+describe('secret 详情：脱敏展示 + 按键 reveal', () => {
   it('打开时不出现明文；点「查看」后才调 reveal 并展示；隐藏 / 关闭后明文从页面消失', async () => {
     const vm = await mountSecret();
     vm.currentSecretDetail = { ...DETAIL };
@@ -138,7 +138,7 @@ describe('Secret 详情：脱敏展示 + 按键 reveal', () => {
   });
 });
 
-describe('Secret 编辑：data 行', () => {
+describe('secret 编辑：data 行', () => {
   it('原有键输入框为空；改成空值时表单内提示「不支持设为空值，请删除该键」', async () => {
     const vm = await mountSecret();
     await vm.openEditModal({ ...DETAIL });
@@ -162,7 +162,7 @@ describe('Secret 编辑：data 行', () => {
   });
 });
 
-describe('Secret 编辑：打开时重新拉详情（P2/P3-2）', () => {
+describe('secret 编辑：打开时重新拉详情（P2/P3-2）', () => {
   it('详情返回前：加密数据区加载中、不显示「暂无加密数据」、保存按钮禁用；返回后按最新键渲染', async () => {
     let resolve!: (value: unknown) => void;
     api.detail.mockReturnValueOnce(new Promise((done) => (resolve = done)));
@@ -194,7 +194,7 @@ describe('Secret 编辑：打开时重新拉详情（P2/P3-2）', () => {
   });
 });
 
-describe('Secret 编辑：详情加载中「添加」按钮禁用（incr5）', () => {
+describe('secret 编辑：详情加载中「添加」按钮禁用（incr5）', () => {
   it('加载中 data / string_data / 标签 / 注解的「添加」都禁用、点了不生效；加载完可用', async () => {
     let resolve!: (value: unknown) => void;
     api.detail.mockReturnValueOnce(new Promise((done) => (resolve = done)));
@@ -238,7 +238,7 @@ describe('Secret 编辑：详情加载中「添加」按钮禁用（incr5）', (
   });
 });
 
-describe('Secret 编辑：详情加载中回车也不能添加（incr6 遗留第 18 条）', () => {
+describe('secret 编辑：详情加载中回车也不能添加（incr6 遗留第 18 条）', () => {
   const pressEnter = (input: HTMLElement) =>
     input.dispatchEvent(
       new KeyboardEvent('keydown', {
@@ -285,7 +285,7 @@ describe('Secret 编辑：详情加载中回车也不能添加（incr6 遗留第
   });
 });
 
-describe('Secret YAML 编辑：脱敏说明（P2-1）', () => {
+describe('secret YAML 编辑：脱敏说明（P2-1）', () => {
   it('说明裸 <redacted> 保留原值、带引号会被拦截；不再提示「删除不改的键」', async () => {
     const vm = await mountSecret();
     vm.currentOperationSecret = { ...DETAIL };

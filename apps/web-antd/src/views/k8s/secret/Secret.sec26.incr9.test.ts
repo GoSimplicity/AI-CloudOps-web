@@ -192,7 +192,7 @@ describe('incr9 P3-D：查看 YAML 丢弃迟到的响应；加载中禁用按钮
     expect(page.isYamlModalVisible.value).toBe(true);
   });
 
-  it('A 的响应在 B 之前到（B 仍在加载）：A 的内容不写入，加载状态不提前结束', async () => {
+  it('a 的响应在 B 之前到（B 仍在加载）：A 的内容不写入，加载状态不提前结束', async () => {
     const page = useSecretPage();
     const a = deferred<unknown>();
     const b = deferred<unknown>();
@@ -214,7 +214,7 @@ describe('incr9 P3-D：查看 YAML 丢弃迟到的响应；加载中禁用按钮
     expect(page.submitLoading.value).toBe(false);
   });
 
-  it('A 晚到的是失败：不弹「获取 Secret YAML 失败」', async () => {
+  it('a 晚到的是失败：不弹「获取 Secret YAML 失败」', async () => {
     const page = useSecretPage();
     let rejectA!: (error: unknown) => void;
     const aFail = new Promise((_, reject) => {
@@ -269,7 +269,7 @@ describe('incr9 P3-D：查看 YAML 丢弃迟到的响应；加载中禁用按钮
     expect(page.isYamlModalVisible.value).toBe(false);
   });
 
-  it('Secret.vue：「查看 YAML」按钮绑定 :disabled="isYamlLoading"，且从 useSecretPage 取出 isYamlLoading', () => {
+  it('secret.vue：「查看 YAML」按钮绑定 :disabled="isYamlLoading"，且从 useSecretPage 取出 isYamlLoading', () => {
     const button = /<a-button\b[^>]*title="查看 YAML"[^>]*>/.exec(
       secretVueSource,
     )?.[0];

@@ -1676,7 +1676,7 @@ const validateYaml = (): void => {
       yamlError.value = errorMessage;
       yamlSuccess.value = false;
     }
-  } catch (error) {
+  } catch {
     yamlError.value = 'YAML格式错误';
     yamlSuccess.value = false;
   }
@@ -1744,7 +1744,7 @@ const formatYaml = (): void => {
     yamlError.value = '';
     yamlSuccess.value = true;
     message.success('YAML格式化完成');
-  } catch (error) {
+  } catch {
     message.error('YAML格式化失败');
   }
 };

@@ -210,7 +210,7 @@ describe('autofix 错误提示 · 请求链路集成', () => {
     expect(noticeContents()).toEqual([PERMISSION_DENIED_MESSAGE]);
   });
 
-  it('HTTP 200 + code≠0：只有业务错误提示一条', async () => {
+  it('hTTP 200 + code≠0：只有业务错误提示一条', async () => {
     const inline = await confirmWith(
       adapterOf(200, { code: 1, message: '业务失败', data: null }),
     );
@@ -289,7 +289,7 @@ describe('autofix 错误提示 · 共用 key 不串改', () => {
     expect(noticeContents()).toEqual([GENERIC(), GENERIC()]);
   });
 
-  it('Promise.all 真并发：非 autofix 的提示不被改写', async () => {
+  it('promise.all 真并发：非 autofix 的提示不被改写', async () => {
     const [autofixError] = await Promise.all([
       requestClientAIOps
         .post(

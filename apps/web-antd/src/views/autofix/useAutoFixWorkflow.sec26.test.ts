@@ -137,7 +137,7 @@ describe('confirmActions 直接调用（复审 P3-1 / M3b / M3d）', () => {
     });
   });
 
-  it('P3-1：approval 缺 pending_action_ids：没有可确认动作，直接调用也不发请求', async () => {
+  it('p3-1：approval 缺 pending_action_ids：没有可确认动作，直接调用也不发请求', async () => {
     const vm = await setup(pending(['a1', 'a2'], undefined));
     expect(vm.confirmableBlockedActions).toEqual([]);
     expect(vm.canConfirmAll).toBe(false);
@@ -147,7 +147,7 @@ describe('confirmActions 直接调用（复审 P3-1 / M3b / M3d）', () => {
     expect(api.confirmAutoFixWorkflow).not.toHaveBeenCalled();
   });
 
-  it('M3b：id 不在 pending_action_ids 里（含混在合法 id 中、未知 id）：不发请求', async () => {
+  it('m3b：id 不在 pending_action_ids 里（含混在合法 id 中、未知 id）：不发请求', async () => {
     const vm = await setup(pending(['a1', 'a2'], ['a1']));
     await vm.confirmActions(['a2']);
     await vm.confirmActions(['a1', 'a2']);
@@ -156,7 +156,7 @@ describe('confirmActions 直接调用（复审 P3-1 / M3b / M3d）', () => {
     expect(api.confirmAutoFixWorkflow).not.toHaveBeenCalled();
   });
 
-  it('M3d：请求返回前连调两次 confirmActions：只发一个请求', async () => {
+  it('m3d：请求返回前连调两次 confirmActions：只发一个请求', async () => {
     const vm = await setup(pending(['a1', 'a2'], ['a1', 'a2']));
     let resolve!: (value: unknown) => void;
     api.confirmAutoFixWorkflow.mockReturnValueOnce(

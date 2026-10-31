@@ -587,7 +587,7 @@ const formatShortTime = (timestamp: string) => {
       hour: '2-digit',
       minute: '2-digit',
     });
-  } catch (error) {
+  } catch {
     return timestamp;
   }
 };
@@ -735,7 +735,7 @@ const initCharts = () => {
   try {
     initErrorTrendsChart();
     initErrorCategoriesChart();
-  } catch (error) {
+  } catch {
     message.warning('图表渲染失败，但不影响诊断结果');
   }
 };

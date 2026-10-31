@@ -1772,7 +1772,7 @@ const formatAge = (age?: string) => {
     } else {
       return `${Math.floor(seconds)}秒`;
     }
-  } catch (error) {
+  } catch {
     return age; // 如果解析失败，返回原始值
   }
 };

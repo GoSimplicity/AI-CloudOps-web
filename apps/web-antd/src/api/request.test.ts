@@ -58,7 +58,7 @@ describe('请求层 403 统一提示', () => {
     vi.clearAllMocks();
   });
 
-  it('HTTP 403 只弹一次统一提示', async () => {
+  it('hTTP 403 只弹一次统一提示', async () => {
     const error = await requestClient
       .delete('/k8s/pod/delete', {
         adapter: replyWith(403, {
@@ -77,7 +77,7 @@ describe('请求层 403 统一提示', () => {
     });
   });
 
-  it('HTTP 200 + 业务码 403 也统一提示一次', async () => {
+  it('hTTP 200 + 业务码 403 也统一提示一次', async () => {
     const error = await requestClient
       .post('/x', {}, { adapter: replyWith(200, { code: 403, message: 'no' }) })
       .catch((error_) => error_);

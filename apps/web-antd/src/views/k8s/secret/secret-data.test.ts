@@ -95,7 +95,7 @@ describe('buildSecretDataPayload', () => {
     expect(buildSecretDataPayload(original, current)).toEqual({ b: '' });
   });
 
-  it('UTF-8 值按字节编码', () => {
+  it('uTF-8 值按字节编码', () => {
     const current = rows(['a']);
     current[0]!.value = '测试假值';
     current[0]!.modified = true;
@@ -177,7 +177,7 @@ describe('findRedactedPlaceholder（最终防线）', () => {
     expect(findRedactedPlaceholder({ data: null })).toBeNull();
   });
 
-  it('P2-1：裸 <redacted> 合法（后端 RestoreRedactedSecretYAML 还原原值），不拦截', () => {
+  it('p2-1：裸 <redacted> 合法（后端 RestoreRedactedSecretYAML 还原原值），不拦截', () => {
     expect(yamlHasQuotedRedacted('data:\n  a: <redacted>\n')).toBe(false);
     expect(
       yamlHasQuotedRedacted(
@@ -189,7 +189,7 @@ describe('findRedactedPlaceholder（最终防线）', () => {
     expect(yamlHasQuotedRedacted('data:\n  a: "x <redacted> y"\n')).toBe(false);
   });
 
-  it('P2-1：带引号的占位符（双引号 / 单引号，data 与 stringData）拦截', () => {
+  it('p2-1：带引号的占位符（双引号 / 单引号，data 与 stringData）拦截', () => {
     expect(yamlHasQuotedRedacted('data:\n  a: "<redacted>"\n')).toBe(true);
     expect(yamlHasQuotedRedacted("data:\n  a: '<redacted>'\n")).toBe(true);
     expect(
@@ -198,7 +198,7 @@ describe('findRedactedPlaceholder（最终防线）', () => {
     expect(yamlHasQuotedRedacted('data:\n  a: "<redacted>"')).toBe(true);
   });
 
-  it('P2-1：拦截文案准确，不再让用户删除不改的键（YAML 更新是整体覆盖）', () => {
+  it('p2-1：拦截文案准确，不再让用户删除不改的键（YAML 更新是整体覆盖）', () => {
     expect(YAML_QUOTED_REDACTED_MESSAGE).toContain('去掉引号');
     expect(YAML_QUOTED_REDACTED_MESSAGE).not.toContain('删除');
   });

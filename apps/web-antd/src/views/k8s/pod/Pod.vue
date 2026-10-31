@@ -617,7 +617,7 @@ const handleDownloadFile = async () => {
       downloadFilePath.value.trim(),
       fileManagerContainer.value,
     );
-  } catch (error) {
+  } catch {
     // 错误已经在downloadFile函数中处理，这里不需要额外的错误消息
   } finally {
     downloadLoading.value = false;
@@ -1023,7 +1023,9 @@ const handleCloseFileManagerModal = () => {
                     {{ Object.keys(text).length }} 个标签
                   </a-tag>
                 </a-tooltip>
-                <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
+                <span v-if="Object.keys(text).length === 0" class="k8s-no-data"
+                  >-</span
+                >
               </template>
               <template v-else>
                 <span class="k8s-no-data">-</span>
@@ -2221,7 +2223,8 @@ const handleCloseFileManagerModal = () => {
             class="logs-content"
             :class="{ 'streaming-logs': isLogsStreaming }"
             v-show="podLogs || isLogsStreaming"
-            >{{ podLogs || '正在连接...' }}</pre>
+            >{{ podLogs || '正在连接...' }}</pre
+          >
 
           <!-- 空状态提示 -->
           <div v-show="!podLogs && !isLogsStreaming" class="logs-empty-state">
@@ -2576,9 +2579,11 @@ const handleCloseFileManagerModal = () => {
             style="margin-bottom: 16px"
           >
             <div style="margin-bottom: 8px">
-              <span>上传进度: {{ uploadProgress.current }}/{{
+              <span
+                >上传进度: {{ uploadProgress.current }}/{{
                   uploadProgress.total
-                }}</span>
+                }}</span
+              >
             </div>
             <a-progress
               :percent="uploadProgress.percent"

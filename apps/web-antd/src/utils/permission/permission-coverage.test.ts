@@ -62,13 +62,13 @@ describe('权限码门禁覆盖（静态）', () => {
     ['k8s.node.cordon', 'views/k8s/node/Node.vue'],
     ['k8s.node.uncordon', 'views/k8s/node/Node.vue'],
     ['k8s.node.batchCordon', 'views/k8s/node/Node.vue'],
-  ])('S1b %s 已接到按钮（清单 v4：始终按码判断）', (key, file) => {
+  ])('s1b %s 已接到按钮（清单 v4：始终按码判断）', (key, file) => {
     expect(key in S1B_PERMISSION_CODES).toBe(true);
     expect(key in U3_PERMISSION_CODES).toBe(false);
     expect(gatedIn(key)).toContain(file);
   });
 
-  it('S1b 三个 key 就是上面逐个核对的三个', () => {
+  it('s1b 三个 key 就是上面逐个核对的三个', () => {
     expect(Object.keys(S1B_PERMISSION_CODES).sort()).toEqual([
       'k8s.node.batchCordon',
       'k8s.node.cordon',

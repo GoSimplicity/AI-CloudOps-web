@@ -13,9 +13,8 @@ import {
 /**
  * SEC-26 incr7（窝窝头 review-incr6）：YAML 编辑路径的编码器 / 展示 / 格式检查 / 提交前兜底。
  * 只用明显的假值（fake-*）；`<redacted>` 是占位符本身，不是凭据。
- * 新导出通过 `sd.xxx` 访问：实现前这些用例逐条红（xxx 为 undefined），而不是整个文件加载失败。
+ * 直接访问已实现的类型化导出；函数缺失时由类型检查和对应回归明确失败。
  */
-const api = sd as unknown as Record<string, (...args: any[]) => any>;
 const b64 = (text: string) => sd.encodeUtf8ToBase64(text);
 const PH_B64 = b64(REDACTED_PLACEHOLDER);
 
@@ -74,10 +73,10 @@ describe('incr7 P2-A：`token:|`（冒号后无空格）不是块标量，编码
   it.each(BLOCK_INDICATORS)(
     '格式检查：data 下 token:%s（无空格）→ 提示冒号后缺空格，文案只含键名',
     (indicator) => {
-      const error = api.getYamlDataFormatError!(
+      const error = sd.getYamlDataFormatError(
         `data:\n  token:${indicator}\n    fake-line\n`,
       );
-      expect(error).toBe(api.yamlDataMissingSpaceMessage!('token'));
+      expect(error).toBe(sd.yamlDataMissingSpaceMessage('token'));
       expect(error).not.toContain('fake-line');
     },
   );
@@ -88,8 +87,8 @@ describe('incr7 P2-A：`token:|`（冒号后无空格）不是块标量，编码
     ['token:fake-q', 'token'],
     [`token:${b64('fake-q')}`, 'token'],
   ])('格式检查：data 下 %s（冒号后无空格）→ 缺空格提示', (line, key) => {
-    expect(api.getYamlDataFormatError!(`data:\n  ${line}\n`)).toBe(
-      api.yamlDataMissingSpaceMessage!(key),
+    expect(sd.getYamlDataFormatError(`data:\n  ${line}\n`)).toBe(
+      sd.yamlDataMissingSpaceMessage(key),
     );
   });
 
@@ -111,51 +110,51 @@ describe('incr7 P2-A 兜底：编码后、发请求前 data 里任何值 base64 
   ])(
     '%s：data.token 的值解码为占位符 → 返回兜底文案（只含键名）',
     (_, value) => {
-      const error = api.getYamlDataPayloadError!(`data:\n  token: ${value}\n`);
-      expect(error).toBe(api.yamlDataEncodedRedactedMessage!('token'));
+      const error = sd.getYamlDataPayloadError(`data:\n  token: ${value}\n`);
+      expect(error).toBe(sd.yamlDataEncodedRedactedMessage('token'));
     },
   );
 
   it('base64 被拆成多行（| 块里 Go 会忽略换行）也能识别', () => {
     const half = PH_B64.length / 2;
     expect(
-      api.getYamlDataPayloadError!(
+      sd.getYamlDataPayloadError(
         `data:\n  token: |\n    ${PH_B64.slice(0, half)}\n    ${PH_B64.slice(half)}\n`,
       ),
-    ).toBe(api.yamlDataEncodedRedactedMessage!('token'));
+    ).toBe(sd.yamlDataEncodedRedactedMessage('token'));
   });
 
   it('!!binary 标签的值解出来是占位符 → 拦截', () => {
     expect(
-      api.getYamlDataPayloadError!(`data:\n  token: !!binary ${PH_B64}\n`),
-    ).toBe(api.yamlDataEncodedRedactedMessage!('token'));
+      sd.getYamlDataPayloadError(`data:\n  token: !!binary ${PH_B64}\n`),
+    ).toBe(sd.yamlDataEncodedRedactedMessage('token'));
   });
 
-  it('YAML 解析失败时仍按 token 扫描兜底（不依赖解析成功）', () => {
+  it('yAML 解析失败时仍按 token 扫描兜底（不依赖解析成功）', () => {
     expect(
-      api.getYamlDataPayloadError!(
+      sd.getYamlDataPayloadError(
         `data:\n  token: ${PH_B64}\n  bad: [unclosed\n`,
       ),
-    ).toBe(api.yamlDataEncodedRedactedMessage!('token'));
+    ).toBe(sd.yamlDataEncodedRedactedMessage('token'));
   });
 
-  it('JSON 写法（流式映射）里的明文：不是 base64 → 拦截，文案不含值', () => {
-    const error = api.getYamlDataPayloadError!(
+  it('jSON 写法（流式映射）里的明文：不是 base64 → 拦截，文案不含值', () => {
+    const error = sd.getYamlDataPayloadError(
       `{"apiVersion": "v1", "kind": "Secret", "data": {"token": "fake-plain-json"}}`,
     );
-    expect(error).toBe(api.yamlDataNotBase64Message!('token'));
+    expect(error).toBe(sd.yamlDataNotBase64Message('token'));
     expect(error).not.toContain('fake-plain-json');
   });
 
   it('数字等非字符串值（明文 PIN 之类）→ 不是 base64 拦截', () => {
-    expect(api.getYamlDataPayloadError!(`data:\n  pin: 1234\n`)).toBe(
-      api.yamlDataNotBase64Message!('pin'),
+    expect(sd.getYamlDataPayloadError(`data:\n  pin: 1234\n`)).toBe(
+      sd.yamlDataNotBase64Message('pin'),
     );
   });
 
   it('反例：裸 <redacted>、正常 base64、空值、stringData 明文 → 放行', () => {
     expect(
-      api.getYamlDataPayloadError!(
+      sd.getYamlDataPayloadError(
         `data:\n  a: ${REDACTED_PLACEHOLDER}\n  b: ${b64('fake-b')}\n  c: "${b64('fake-c')}"\n  d:\nstringData:\n  s: fake-plain-string-data\n`,
       ),
     ).toBeNull();
@@ -163,9 +162,9 @@ describe('incr7 P2-A 兜底：编码后、发请求前 data 里任何值 base64 
 
   it('反例：没有 data 的 YAML 放行；data 为空映射放行', () => {
     expect(
-      api.getYamlDataPayloadError!(`kind: Secret\nstringData:\n  s: x\n`),
+      sd.getYamlDataPayloadError(`kind: Secret\nstringData:\n  s: x\n`),
     ).toBeNull();
-    expect(api.getYamlDataPayloadError!(`kind: Secret\ndata: {}\n`)).toBeNull();
+    expect(sd.getYamlDataPayloadError(`kind: Secret\ndata: {}\n`)).toBeNull();
   });
 });
 
@@ -177,17 +176,15 @@ describe('incr7 P3-C：data 下值写在下一行 / 编码器不支持的写法 
     ['看起来像 base64 的明文', 'fakeabcd'],
     ['块标量', '|\n      fake-line'],
   ])('`token:` 换行后%s → 请写在同一行', (_, next) => {
-    const error = api.getYamlDataFormatError!(`data:\n  token:\n    ${next}\n`);
-    expect(error).toBe(api.yamlDataNextLineMessage!('token'));
+    const error = sd.getYamlDataFormatError(`data:\n  token:\n    ${next}\n`);
+    expect(error).toBe(sd.yamlDataNextLineMessage('token'));
     expect(error).not.toContain('fake');
   });
 
   it('中间夹空行与注释也一样', () => {
     expect(
-      api.getYamlDataFormatError!(
-        `data:\n  token:\n\n    # c\n    "fakeabcd"\n`,
-      ),
-    ).toBe(api.yamlDataNextLineMessage!('token'));
+      sd.getYamlDataFormatError(`data:\n  token:\n\n    # c\n    "fakeabcd"\n`),
+    ).toBe(sd.yamlDataNextLineMessage('token'));
   });
 
   it.each([
@@ -204,29 +201,29 @@ describe('incr7 P3-C：data 下值写在下一行 / 编码器不支持的写法 
     ['| 带注释', `  token: | # c\n    fake-q`, 'token'],
     ['同行值后的续行', `  token: ${b64('fake-q')}\n    more`, 'token'],
   ])('不支持的写法（%s）→ 提示改写', (_, line, where) => {
-    expect(api.getYamlDataFormatError!(`data:\n${line}\n`)).toBe(
-      api.yamlDataUnsupportedMessage!(where),
+    expect(sd.getYamlDataFormatError(`data:\n${line}\n`)).toBe(
+      sd.yamlDataUnsupportedMessage(where),
     );
   });
 
   it('data 写成同行流式映射（非 {}）→ 不支持', () => {
     expect(
-      api.getYamlDataFormatError!(`kind: Secret\ndata: {token: "fake-q"}\n`),
-    ).toBe(api.yamlDataUnsupportedMessage!('data'));
-    expect(api.getYamlDataFormatError!(`kind: Secret\ndata: {}\n`)).toBeNull();
+      sd.getYamlDataFormatError(`kind: Secret\ndata: {token: "fake-q"}\n`),
+    ).toBe(sd.yamlDataUnsupportedMessage('data'));
+    expect(sd.getYamlDataFormatError(`kind: Secret\ndata: {}\n`)).toBeNull();
   });
 
   it('同行未加引号、又不是 base64 的明文 → 提示加双引号，文案不含值', () => {
-    const error = api.getYamlDataFormatError!(
+    const error = sd.getYamlDataFormatError(
       `data:\n  token: fake-plain-value\n`,
     );
-    expect(error).toBe(api.yamlDataNotBase64Message!('token'));
+    expect(error).toBe(sd.yamlDataNotBase64Message('token'));
     expect(error).not.toContain('fake-plain-value');
   });
 
   it('反例：展示路径生成的写法全部放行（双引号明文、| 多行、裸占位符、base64、行尾注释、空行）', () => {
     expect(
-      api.getYamlDataFormatError!(
+      sd.getYamlDataFormatError(
         `apiVersion: v1\nkind: Secret\ndata:\n  a: "fake-a"  # c\n  b: |\n    fake-b1\n\n    fake-b2\n  c: ${REDACTED_PLACEHOLDER}\n\n  # 注释\n  d: ${b64('fake-d')}\n  e: "fa\\"ke\\\\e"\nmetadata:\n  name: x\n  annotations:\n    "fake.io/k": 'v'\nstringData:\n  s: 'fake-s'\n  t:\n    "fake-t"\n`,
       ),
     ).toBeNull();
@@ -236,7 +233,7 @@ describe('incr7 P3-C：data 下值写在下一行 / 编码器不支持的写法 
     const shown = processSecretYaml(
       `apiVersion: v1\nkind: Secret\ndata:\n  a: ${b64('fake-a')}\n  b: ${b64('fake-l1\nfake-l2')}\n  c: ${b64('fa"ke\\c')}\n  r: ${REDACTED_PLACEHOLDER}\n`,
     );
-    expect(api.getYamlDataFormatError!(shown)).toBeNull();
+    expect(sd.getYamlDataFormatError(shown)).toBeNull();
   });
 });
 
@@ -305,7 +302,7 @@ describe('incr7：「是否在 data 下」按位置判断（原来 indexOf(match
 
   it('locator：data 段从头行之后到下一个顶格非空、非注释行为止', () => {
     const text = `kind: Secret\ndata:\n  a: x\n# 顶格注释\n\n  b: y\nstringData:\n  c: z\n`;
-    const inData = api.createDataSectionLocator!(text);
+    const inData = sd.createDataSectionLocator(text);
     expect(inData(text.indexOf('  a:'))).toBe(true);
     expect(inData(text.indexOf('  b:'))).toBe(true);
     expect(inData(text.indexOf('  c:'))).toBe(false);

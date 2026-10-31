@@ -46,7 +46,7 @@ function updatedModel(view: VueWrapper): UpdateCronJobReq {
 const base = { id: 1, name: 'job', schedule: '@every 1h' };
 
 describe('已有任务的执行配置', () => {
-  it('HTTP可编辑地址、方法、请求体及请求头，敏感值默认遮挡且不修改原对象', async () => {
+  it('hTTP可编辑地址、方法、请求体及请求头，敏感值默认遮挡且不修改原对象', async () => {
     const original: UpdateCronJobReq = {
       ...base,
       job_type: CronJobType.HTTP,
@@ -93,7 +93,7 @@ describe('已有任务的执行配置', () => {
     ]);
   });
 
-  it('SSH可编辑命令、目录及环境变量，未改的资源ID保持不变', async () => {
+  it('sSH可编辑命令、目录及环境变量，未改的资源ID保持不变', async () => {
     const view = start({
       ...base,
       job_type: CronJobType.SSH,

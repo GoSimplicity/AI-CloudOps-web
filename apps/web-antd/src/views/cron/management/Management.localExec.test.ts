@@ -92,7 +92,7 @@ async function openJobTypeOptions() {
   );
 }
 
-describe('SEC-03A 本地命令/脚本开关（真实页面）', () => {
+describe('sEC-03A 本地命令/脚本开关（真实页面）', () => {
   it('开关关闭：新建表单禁用命令行/脚本选项并给出说明，默认类型为 HTTP', async () => {
     await start(false);
     const options = await openJobTypeOptions();

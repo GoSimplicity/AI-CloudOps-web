@@ -983,7 +983,7 @@ const loadPoolOptions = async (): Promise<void> => {
         id: item.id!,
         name: item.name,
       }));
-  } catch (error: any) {
+  } catch {
     poolOptions.value = [];
   }
 };

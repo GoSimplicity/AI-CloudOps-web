@@ -324,7 +324,7 @@ describe('高危按钮挂载级门禁（非 admin 账号）', () => {
   });
 });
 
-describe('Secret 查看详情与明文分层（SEC-25/26 第 4 条）', () => {
+describe('secret 查看详情与明文分层（SEC-25/26 第 4 条）', () => {
   it('只有 reveal 码（viewPlain/copyPlain）：不渲染「查看详情」', async () => {
     setSubject(['k8s.secret.viewPlain', 'k8s.secret.copyPlain']);
     await mountPage('Secret');

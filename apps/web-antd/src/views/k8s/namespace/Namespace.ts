@@ -311,16 +311,16 @@ export function useNamespacePage() {
           await fetchNamespaces();
         }
       }
-    } catch (err) {
+    } catch (error) {
       if (clustersPage.value === 1) {
         clusters.value = [];
         clustersTotal.value = 0;
         filterClusterId.value = undefined;
         clearNamespaces();
       }
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(clustersError.value);
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
     }
@@ -366,16 +366,16 @@ export function useNamespacePage() {
       );
       namespaces.value = namespacesWithClusterId;
       total.value = res?.total || 0;
-    } catch (err) {
+    } catch (error) {
       if (
         requestId !== namespaceRequestId ||
         filterClusterId.value !== clusterId
       )
         return;
       clearNamespaces();
-      if (shouldRecordPageError(err))
+      if (shouldRecordPageError(error))
         loadError.value = '获取命名空间列表失败，请重试';
-      if (shouldNotifyPageError(err)) message.error(loadError.value);
+      if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === namespaceRequestId) loading.value = false;
     }
@@ -394,8 +394,8 @@ export function useNamespacePage() {
         ...record,
         cluster_id: clusterId,
       };
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('获取命名空间详情失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error)) message.error('获取命名空间详情失败');
 
       currentNamespaceDetail.value = { ...record, cluster_id: clusterId };
     } finally {
@@ -446,13 +446,13 @@ export function useNamespacePage() {
       message.success('命名空间创建成功');
       isCreateModalVisible.value = false;
       await fetchNamespaces();
-    } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err))
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
         return;
       }
-      if (shouldNotifyPageError(err)) message.error('命名空间创建失败');
+      if (shouldNotifyPageError(error)) message.error('命名空间创建失败');
     } finally {
       submitLoading.value = false;
     }
@@ -500,8 +500,8 @@ export function useNamespacePage() {
       message.success('命名空间标签/注解更新成功');
       isLabelModalVisible.value = false;
       await fetchNamespaces();
-    } catch (err: unknown) {
-      if (shouldNotifyPageError(err)) message.error('标签/注解更新失败');
+    } catch (error: unknown) {
+      if (shouldNotifyPageError(error)) message.error('标签/注解更新失败');
     } finally {
       submitLoading.value = false;
     }
@@ -543,8 +543,8 @@ export function useNamespacePage() {
       message.success('命名空间删除成功');
       isDeleteModalVisible.value = false;
       await fetchNamespaces();
-    } catch (err) {
-      if (shouldNotifyPageError(err)) message.error('命名空间删除失败');
+    } catch (error) {
+      if (shouldNotifyPageError(error)) message.error('命名空间删除失败');
     } finally {
       submitLoading.value = false;
     }
@@ -575,8 +575,9 @@ export function useNamespacePage() {
           await deleteNamespaceApi(clusterId, record.name, params);
           message.success('命名空间强制删除成功');
           await fetchNamespaces();
-        } catch (err) {
-          if (shouldNotifyPageError(err)) message.error('命名空间强制删除失败');
+        } catch (error) {
+          if (shouldNotifyPageError(error))
+            message.error('命名空间强制删除失败');
         }
       },
     });
@@ -647,8 +648,9 @@ export function useNamespacePage() {
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchNamespaces();
-        } catch (err) {
-          if (shouldNotifyPageError(err)) message.error(`批量${operation}失败`);
+        } catch (error) {
+          if (shouldNotifyPageError(error))
+            message.error(`批量${operation}失败`);
         }
       },
     });

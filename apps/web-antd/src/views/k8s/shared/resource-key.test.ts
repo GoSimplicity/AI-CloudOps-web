@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { clusterResourceKey, namespacedResourceKey } from './utils';
 
-describe('Kubernetes 表格资源身份', () => {
+describe('kubernetes 表格资源身份', () => {
   it('集群级同名资源仍使用不同选择键', () => {
     expect(clusterResourceKey({ cluster_id: 1, name: 'node' })).not.toBe(
       clusterResourceKey({ cluster_id: 2, name: 'node' }),

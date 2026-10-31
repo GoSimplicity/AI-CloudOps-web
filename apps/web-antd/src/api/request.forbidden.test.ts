@@ -143,7 +143,7 @@ describe('403 统一提示 · 请求链路集成', () => {
     expectSinglePermissionNotice();
   });
 
-  it('HTTP 200 + 业务码 403：完整链路只弹一次统一提示，页面守卫跳过自身提示', async () => {
+  it('hTTP 200 + 业务码 403：完整链路只弹一次统一提示，页面守卫跳过自身提示', async () => {
     const { adapter } = sequence([
       200,
       { code: 403, data: null, message: '无权限访问该接口' },
@@ -198,7 +198,7 @@ describe('403 统一提示 · 请求链路集成', () => {
     },
   );
 
-  it('HTTP 500 响应体里带 code 403 不当作无权限（只在 2xx / 403 时认业务码）', async () => {
+  it('hTTP 500 响应体里带 code 403 不当作无权限（只在 2xx / 403 时认业务码）', async () => {
     const { adapter } = sequence([500, { code: 403, message: 'upstream' }]);
     const error = await requestClient
       .get('/x', { adapter })
