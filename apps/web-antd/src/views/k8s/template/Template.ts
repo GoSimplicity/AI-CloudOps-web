@@ -1,4 +1,6 @@
 import { computed, ref } from 'vue';
+
+import { useUserStore } from '@vben/stores';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 import yaml from 'js-yaml';
@@ -23,6 +25,7 @@ import {
   type K8sCluster,
   type ListClustersReq,
 } from '#/api/core/k8s/k8s_cluster';
+import { useAuthStore } from '#/store';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
@@ -175,6 +178,27 @@ export function useTemplatePage() {
     return filterClusterId.value;
   };
 
+  const operationOwner = () =>
+    JSON.stringify([
+      useUserStore().userInfo?.userId ?? '',
+      useAuthStore().getAuthGeneration(),
+    ]);
+
+  const validateTemplateId = (record: K8sYamlTemplate): number | undefined => {
+    const id = record.id;
+    if (typeof id !== 'number' || !Number.isSafeInteger(id) || id <= 0) {
+      message.warning('模板标识缺失或无效，请刷新列表后重试');
+      return undefined;
+    }
+    return id;
+  };
+  let editOwner: string | undefined;
+  let editRevision = 0;
+  let submitRevision = 0;
+  let submitMode: 'create' | 'edit' | undefined;
+  let detailRevision = 0;
+  let createOwner: string | undefined;
+
   const getEnvText = (env?: Env | string) => {
     if (env === undefined || env === null) return '未知环境';
     const value = typeof env === 'string' ? parseInt(env) : env;
@@ -304,25 +328,40 @@ export function useTemplatePage() {
   const showTemplateDetail = async (record: K8sYamlTemplate) => {
     const clusterId = validateClusterId();
     if (!clusterId) return;
+    const id = validateTemplateId(record);
+    if (id === undefined) return;
+    const owner = operationOwner();
+    const revision = ++detailRevision;
+    const current = () =>
+      detailRevision === revision &&
+      isDetailModalVisible.value &&
+      record.id === id &&
+      filterClusterId.value === clusterId &&
+      operationOwner() === owner;
 
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
+      currentTemplateDetail.value = null;
       const res = await getYamlTemplateDetail({
-        id: record.id!,
+        id,
         cluster_id: clusterId,
       });
+      if (!current()) return;
       currentTemplateDetail.value = res || record;
     } catch (error: any) {
+      if (!current()) return;
       if (shouldNotifyPageError(error))
         message.error('获取模板详情失败：' + (error.message || '未知错误'));
       currentTemplateDetail.value = record;
     } finally {
-      detailLoading.value = false;
+      if (current()) detailLoading.value = false;
     }
   };
 
   const closeDetailModal = () => {
+    detailRevision++;
+    detailLoading.value = false;
     isDetailModalVisible.value = false;
     currentTemplateDetail.value = null;
   };
@@ -342,6 +381,10 @@ export function useTemplatePage() {
 
   // 创建模板
   const openCreateModal = () => {
+    submitMode = 'create';
+    submitRevision++;
+    submitLoading.value = false;
+    createOwner = operationOwner();
     createFormModel.value = {
       name: '',
       content: '',
@@ -350,17 +393,37 @@ export function useTemplatePage() {
   };
 
   const closeCreateModal = () => {
+    if (submitMode === 'create') {
+      submitRevision++;
+      submitLoading.value = false;
+      submitMode = undefined;
+    }
+    createOwner = undefined;
     isCreateModalVisible.value = false;
   };
 
   const submitCreateForm = async () => {
-    if (!formRef.value) return;
+    const form = formRef.value;
+    const model = createFormModel.value;
+    const owner = createOwner;
+    if (!form || owner !== operationOwner()) return;
 
     const clusterId = validateClusterId();
     if (!clusterId) return;
+    const submission = ++submitRevision;
+    submitMode = 'create';
+    const current = () =>
+      submitRevision === submission &&
+      formRef.value === form &&
+      createFormModel.value === model &&
+      isCreateModalVisible.value &&
+      filterClusterId.value === clusterId &&
+      createOwner === owner &&
+      operationOwner() === owner;
 
     try {
-      await formRef.value.validate();
+      await form.validate();
+      if (!current()) return;
       submitLoading.value = true;
 
       const params: YamlTemplateCreateReq = {
@@ -370,20 +433,27 @@ export function useTemplatePage() {
       };
 
       await createYamlTemplate(params);
+      if (!current()) return;
       message.success('模板创建成功');
       isCreateModalVisible.value = false;
       await fetchTemplates();
     } catch (error: any) {
+      if (!current()) return;
       if (error.errorFields) return;
       if (shouldNotifyPageError(error))
         message.error('创建模板失败：' + (error.message || '未知错误'));
     } finally {
-      submitLoading.value = false;
+      if (submitRevision === submission) submitLoading.value = false;
     }
   };
 
   // 编辑模板
   const openEditModal = (record: K8sYamlTemplate) => {
+    submitMode = 'edit';
+    submitRevision++;
+    submitLoading.value = false;
+    editOwner = operationOwner();
+    editRevision++;
     currentOperationTemplate.value = record;
     editFormModel.value = {
       name: record.name,
@@ -393,37 +463,65 @@ export function useTemplatePage() {
   };
 
   const closeEditModal = () => {
+    if (submitMode === 'edit') {
+      submitRevision++;
+      submitLoading.value = false;
+      submitMode = undefined;
+    }
+    editOwner = undefined;
+    editRevision++;
     isEditModalVisible.value = false;
     currentOperationTemplate.value = null;
   };
 
   const submitEditForm = async () => {
-    if (!editFormRef.value || !currentOperationTemplate.value) return;
+    const form = editFormRef.value;
+    const record = currentOperationTemplate.value;
+    const owner = editOwner;
+    const revision = editRevision;
+    if (!form || !record || owner !== operationOwner()) return;
 
     const clusterId = validateClusterId();
     if (!clusterId) return;
+    const id = validateTemplateId(record);
+    if (id === undefined) return;
+    const submission = ++submitRevision;
+    submitMode = 'edit';
+    const current = () =>
+      submitRevision === submission &&
+      editFormRef.value === form &&
+      isEditModalVisible.value &&
+      currentOperationTemplate.value === record &&
+      record.id === id &&
+      filterClusterId.value === clusterId &&
+      editOwner === owner &&
+      editRevision === revision &&
+      operationOwner() === owner;
 
     try {
-      await editFormRef.value.validate();
+      await form.validate();
+      if (!current()) return;
       submitLoading.value = true;
 
       const params: YamlTemplateUpdateReq = {
-        id: currentOperationTemplate.value.id!,
+        id,
         name: editFormModel.value.name,
         content: editFormModel.value.content,
         cluster_id: clusterId,
       };
 
       await updateYamlTemplate(params);
+      if (!current()) return;
       message.success('模板更新成功');
       isEditModalVisible.value = false;
       await fetchTemplates();
     } catch (error: any) {
+      if (!current()) return;
       if (error.errorFields) return;
       if (shouldNotifyPageError(error))
         message.error('更新模板失败：' + (error.message || '未知错误'));
     } finally {
-      submitLoading.value = false;
+      if (submitRevision === submission) submitLoading.value = false;
     }
   };
 
@@ -464,6 +562,13 @@ export function useTemplatePage() {
   const deleteTemplate = (record: K8sYamlTemplate) => {
     const clusterId = validateClusterId();
     if (!clusterId) return;
+    const id = validateTemplateId(record);
+    if (id === undefined) return;
+    const owner = operationOwner();
+    const current = () =>
+      record.id === id &&
+      filterClusterId.value === clusterId &&
+      operationOwner() === owner;
 
     Modal.confirm({
       title: '删除模板',
@@ -473,15 +578,18 @@ export function useTemplatePage() {
       cancelText: '取消',
       centered: true,
       onOk: async () => {
+        if (!current()) return;
         try {
           const params: YamlTemplateDeleteReq = {
-            id: record.id!,
+            id,
             cluster_id: clusterId,
           };
           await deleteYamlTemplate(params);
+          if (!current()) return;
           message.success('模板删除成功');
           await fetchTemplates();
         } catch (error: any) {
+          if (!current()) return;
           if (shouldNotifyPageError(error))
             message.error('删除模板失败：' + (error.message || '未知错误'));
         }
@@ -495,6 +603,25 @@ export function useTemplatePage() {
 
     const clusterId = validateClusterId();
     if (!clusterId) return;
+    const owner = operationOwner();
+    const selection = selectedRows.value;
+    const selectedKeys = selectedRowKeys.value;
+    const keySnapshot = [...selectedKeys];
+    const ids: number[] = [];
+    for (const record of selection) {
+      const id = validateTemplateId(record);
+      if (id === undefined) return;
+      ids.push(id);
+    }
+    const current = () =>
+      filterClusterId.value === clusterId &&
+      operationOwner() === owner &&
+      selectedRows.value === selection &&
+      selectedRowKeys.value === selectedKeys &&
+      selectedKeys.length === keySnapshot.length &&
+      selectedKeys.every((key, index) => key === keySnapshot[index]) &&
+      selection.length === ids.length &&
+      selection.every((record, index) => record.id === ids[index]);
 
     Modal.confirm({
       title: `批量${operation}`,
@@ -504,21 +631,25 @@ export function useTemplatePage() {
       cancelText: '取消',
       centered: true,
       onOk: async () => {
+        if (!current()) return;
         try {
-          for (const template of selectedRows.value) {
+          for (const id of ids) {
+            if (!current()) return;
             if (operation === '删除') {
               const params: YamlTemplateDeleteReq = {
-                id: template.id!,
+                id,
                 cluster_id: clusterId,
               };
               await deleteYamlTemplate(params);
             }
           }
+          if (!current()) return;
           message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchTemplates();
         } catch (error: any) {
+          if (!current()) return;
           if (shouldNotifyPageError(error))
             message.error(
               `批量${operation}失败：` + (error.message || '未知错误'),

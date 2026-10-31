@@ -53,9 +53,10 @@ export function confidenceValues(
   data: PredictionDataPoint[],
   field: 'confidence_lower' | 'confidence_upper',
 ) {
-  return data.map((point) =>
-    Number.isFinite(point[field]) ? point[field]! : null,
-  );
+  return data.map((point) => {
+    const value = point[field];
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  });
 }
 
 /** 各序列按同一实际时间轴对齐，缺失为null，不插值、补零或制造当前时间 */
@@ -66,9 +67,10 @@ export function alignForecasts(cache: Record<string, PredictionResponse>) {
     memory: '内存',
     disk: '磁盘',
   };
-  const available = Object.keys(labels).flatMap((type) =>
-    cache[type] ? [{ type, points: forecastPoints(cache[type]!) }] : [],
-  );
+  const available = Object.entries(labels).flatMap(([type, name]) => {
+    const response = cache[type];
+    return response ? [{ type, name, points: forecastPoints(response) }] : [];
+  });
   const timeline = [
     ...new Set(
       available.flatMap((item) => item.points.map((point) => point.time)),
@@ -85,7 +87,7 @@ export function alignForecasts(cache: Record<string, PredictionResponse>) {
         );
         return {
           type: item.type,
-          name: labels[item.type]!,
+          name: item.name,
           yAxisIndex: item.type === 'qps' ? 0 : 1,
           data: timeline.map((time) => values.get(time) ?? null),
         };

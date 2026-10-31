@@ -10,6 +10,7 @@ import { useAccessStore } from '@vben/stores';
 import { usePermission } from '#/utils/permission';
 import { message } from 'ant-design-vue';
 import {
+  type AutoFixAction,
   type AutoFixInfoResponse,
   type AutoFixOperation,
   type AutoFixReadyResponse,
@@ -131,17 +132,20 @@ export function useAutoFixWorkflow() {
     return new Set(Array.isArray(ids) ? ids : []);
   });
   const confirmableBlockedActions = computed(() =>
-    (workflowResult.value?.blocked_actions || []).filter((action) => {
-      const risk = action.risk_assessment;
-      return (
-        !!action.action_id &&
-        pendingActionIds.value.has(action.action_id) &&
-        action.executable === true &&
-        risk?.namespace_allowed === true &&
-        risk.permission_allowed === true &&
-        risk.resource_exists === true
-      );
-    }),
+    (workflowResult.value?.blocked_actions || []).filter(
+      (action): action is { action_id: string } & AutoFixAction => {
+        const risk = action.risk_assessment;
+        return (
+          typeof action.action_id === 'string' &&
+          !!action.action_id &&
+          pendingActionIds.value.has(action.action_id) &&
+          action.executable === true &&
+          risk?.namespace_allowed === true &&
+          risk.permission_allowed === true &&
+          risk.resource_exists === true
+        );
+      },
+    ),
   );
   const approvalIssue = computed(() => {
     if (!workflowResult.value) return '';
@@ -181,7 +185,7 @@ export function useAutoFixWorkflow() {
   );
   const canConfirmAll = computed(() =>
     canConfirmActions(
-      confirmableBlockedActions.value.map((action) => action.action_id!),
+      confirmableBlockedActions.value.map((action) => action.action_id),
     ),
   );
 
@@ -693,7 +697,7 @@ export function useAutoFixWorkflow() {
   }
   function confirmAllActions() {
     return confirmActions(
-      confirmableBlockedActions.value.map((action) => action.action_id!),
+      confirmableBlockedActions.value.map((action) => action.action_id),
     );
   }
   let timer: ReturnType<typeof setInterval> | undefined;

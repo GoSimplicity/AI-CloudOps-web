@@ -34,6 +34,7 @@ export function createRequestOwnerScope(current: () => RequestOwnerContext) {
     const expected = (config as OwnedRequest | undefined)?.__requestOwner;
     if (!expected) throw new RequestOwnerChangedError();
     assert(expected);
+    return expected;
   };
   const bindRequest = <T extends AxiosRequestConfig>(config: T): T => {
     const owned = config as OwnedRequest;
@@ -62,8 +63,7 @@ export function createRequestOwnerScope(current: () => RequestOwnerContext) {
       return !!(config as OwnedRequest).__requestOwner?.authenticated;
     },
     refreshKey(config: AxiosRequestConfig) {
-      assertRequest(config);
-      const expected = (config as OwnedRequest).__requestOwner!;
+      const expected = assertRequest(config);
       return JSON.stringify([
         expected.generation,
         expected.uid || current().uid,

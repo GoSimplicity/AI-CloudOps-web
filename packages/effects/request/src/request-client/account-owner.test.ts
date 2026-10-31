@@ -212,3 +212,19 @@ describe('真实应用请求客户端账户归属', () => {
     expect(state.revision).toBe(0);
   });
 });
+
+it('refreshKey只读取并使用已经验证的归属快照', async () => {
+  const { createRequestOwnerScope } = await import('./owner-scope');
+  const owner = { authenticated: true, generation: 4, uid: 'one' };
+  const scope = createRequestOwnerScope(() => owner);
+  let reads = 0;
+  const config = {};
+  Object.defineProperty(config, '__requestOwner', {
+    get() {
+      reads++;
+      return reads === 1 ? owner : { ...owner, uid: 'another' };
+    },
+  });
+  expect(JSON.parse(scope.refreshKey(config))).toEqual([4, 'one', true]);
+  expect(reads).toBe(1);
+});

@@ -29,13 +29,15 @@ export function buildNotificationSchedule(
   const trigger = form.triggerType as NotificationTriggerType;
   const payload: NotificationSchedulePayload = { trigger_type: trigger };
   if (trigger === NotificationTrigger.DELAYED) {
+    const delayMinutes = form.delayMinutes;
     if (
-      !Number.isInteger(form.delayMinutes) ||
-      form.delayMinutes! < 1 ||
-      form.delayMinutes! > 10080
+      typeof delayMinutes !== 'number' ||
+      !Number.isInteger(delayMinutes) ||
+      delayMinutes < 1 ||
+      delayMinutes > 10080
     )
       throw new Error('延迟分钟须为1至10080的整数');
-    payload.delay_minutes = form.delayMinutes;
+    payload.delay_minutes = delayMinutes;
   } else if (trigger === NotificationTrigger.SCHEDULED) {
     if (!form.scheduledTime?.isValid())
       throw new Error('请选择有效的定时发送时间');

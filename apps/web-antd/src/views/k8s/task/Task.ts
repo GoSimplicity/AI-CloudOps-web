@@ -1,4 +1,6 @@
 import { computed, ref } from 'vue';
+
+import { useUserStore } from '@vben/stores';
 import { message, Modal } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 import { formatK8sTime } from '../shared/utils';
@@ -26,6 +28,7 @@ import {
   type K8sCluster,
   type ListClustersReq,
 } from '#/api/core/k8s/k8s_cluster';
+import { useAuthStore } from '#/store';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
@@ -164,6 +167,29 @@ export function useTaskPage() {
     }
     return filterClusterId.value;
   };
+
+  const operationOwner = () =>
+    JSON.stringify([
+      useUserStore().userInfo?.userId ?? '',
+      useAuthStore().getAuthGeneration(),
+    ]);
+
+  const validateTaskId = (record: K8sYamlTask): number | undefined => {
+    const id = record.id;
+    if (typeof id !== 'number' || !Number.isSafeInteger(id) || id <= 0) {
+      message.warning('任务标识缺失或无效，请刷新列表后重试');
+      return undefined;
+    }
+    return id;
+  };
+  let editOwner: string | undefined;
+  let editRevision = 0;
+  let submitRevision = 0;
+  let submitMode: 'create' | 'edit' | undefined;
+  let detailRevision = 0;
+  let createOwner: string | undefined;
+  let executeOwner: string | undefined;
+  let executeRevision = 0;
 
   const getEnvText = (env?: Env | string) => {
     if (env === undefined || env === null) return '未知环境';
@@ -368,32 +394,51 @@ export function useTaskPage() {
   const showTaskDetail = async (record: K8sYamlTask) => {
     const clusterId = validateClusterId();
     if (!clusterId) return;
+    const id = validateTaskId(record);
+    if (id === undefined) return;
+    const owner = operationOwner();
+    const revision = ++detailRevision;
+    const current = () =>
+      detailRevision === revision &&
+      isDetailModalVisible.value &&
+      record.id === id &&
+      filterClusterId.value === clusterId &&
+      operationOwner() === owner;
 
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
+      currentTaskDetail.value = null;
       const params: YamlTaskDetailReq = {
-        id: record.id!,
+        id,
         cluster_id: clusterId,
       };
       const res = await getYamlTaskDetail(params);
+      if (!current()) return;
       currentTaskDetail.value = res || record;
     } catch (error) {
+      if (!current()) return;
       if (shouldNotifyPageError(error)) message.error('获取任务详情失败');
 
       currentTaskDetail.value = record;
     } finally {
-      detailLoading.value = false;
+      if (current()) detailLoading.value = false;
     }
   };
 
   const closeDetailModal = () => {
+    detailRevision++;
+    detailLoading.value = false;
     isDetailModalVisible.value = false;
     currentTaskDetail.value = null;
   };
 
   // 创建任务
   const openCreateModal = () => {
+    submitMode = 'create';
+    submitRevision++;
+    submitLoading.value = false;
+    createOwner = operationOwner();
     createFormModel.value = {
       name: '',
       template_id: undefined,
@@ -403,31 +448,62 @@ export function useTaskPage() {
   };
 
   const closeCreateModal = () => {
+    if (submitMode === 'create') {
+      submitRevision++;
+      submitLoading.value = false;
+      submitMode = undefined;
+    }
+    createOwner = undefined;
     isCreateModalVisible.value = false;
   };
 
   const submitCreateForm = async () => {
-    if (!formRef.value) return;
+    const form = formRef.value;
+    const model = createFormModel.value;
+    const owner = createOwner;
+    if (!form || owner !== operationOwner()) return;
 
     const clusterId = validateClusterId();
     if (!clusterId) return;
+    const submission = ++submitRevision;
+    submitMode = 'create';
+    const current = () =>
+      submitRevision === submission &&
+      formRef.value === form &&
+      createFormModel.value === model &&
+      isCreateModalVisible.value &&
+      filterClusterId.value === clusterId &&
+      createOwner === owner &&
+      operationOwner() === owner;
 
     try {
-      await formRef.value.validate();
+      await form.validate();
+      if (!current()) return;
+      const templateId = model.template_id;
+      if (
+        typeof templateId !== 'number' ||
+        !Number.isSafeInteger(templateId) ||
+        templateId <= 0
+      ) {
+        message.warning('请选择任务模板');
+        return;
+      }
       submitLoading.value = true;
 
       const params: YamlTaskCreateReq = {
         name: createFormModel.value.name,
-        template_id: createFormModel.value.template_id!,
+        template_id: templateId,
         cluster_id: clusterId,
         variables: createFormModel.value.variables.filter((v) => v.trim()),
       };
 
       await createYamlTask(params);
+      if (!current()) return;
       message.success('任务创建成功');
       isCreateModalVisible.value = false;
       await fetchTasks();
     } catch (error: unknown) {
+      if (!current()) return;
       if (error && typeof error === 'object' && 'errorFields' in error) {
         if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
@@ -435,12 +511,17 @@ export function useTaskPage() {
       }
       if (shouldNotifyPageError(error)) message.error('任务创建失败');
     } finally {
-      submitLoading.value = false;
+      if (submitRevision === submission) submitLoading.value = false;
     }
   };
 
   // 编辑任务
   const openEditModal = (record: K8sYamlTask) => {
+    submitMode = 'edit';
+    submitRevision++;
+    submitLoading.value = false;
+    editOwner = operationOwner();
+    editRevision++;
     currentOperationTask.value = record;
     editFormModel.value = {
       name: record.name,
@@ -451,22 +532,48 @@ export function useTaskPage() {
   };
 
   const closeEditModal = () => {
+    if (submitMode === 'edit') {
+      submitRevision++;
+      submitLoading.value = false;
+      submitMode = undefined;
+    }
+    editOwner = undefined;
+    editRevision++;
     isEditModalVisible.value = false;
     currentOperationTask.value = null;
   };
 
   const submitEditForm = async () => {
-    if (!editFormRef.value || !currentOperationTask.value) return;
+    const form = editFormRef.value;
+    const record = currentOperationTask.value;
+    const owner = editOwner;
+    const revision = editRevision;
+    if (!form || !record || owner !== operationOwner()) return;
 
     const clusterId = validateClusterId();
     if (!clusterId) return;
+    const id = validateTaskId(record);
+    if (id === undefined) return;
+    const submission = ++submitRevision;
+    submitMode = 'edit';
+    const current = () =>
+      submitRevision === submission &&
+      editFormRef.value === form &&
+      isEditModalVisible.value &&
+      currentOperationTask.value === record &&
+      record.id === id &&
+      filterClusterId.value === clusterId &&
+      editOwner === owner &&
+      editRevision === revision &&
+      operationOwner() === owner;
 
     try {
-      await editFormRef.value.validate();
+      await form.validate();
+      if (!current()) return;
       submitLoading.value = true;
 
       const params: YamlTaskUpdateReq = {
-        id: currentOperationTask.value.id!,
+        id,
         name: editFormModel.value.name,
         template_id: editFormModel.value.template_id,
         cluster_id: clusterId,
@@ -474,10 +581,12 @@ export function useTaskPage() {
       };
 
       await updateYamlTask(params);
+      if (!current()) return;
       message.success('任务更新成功');
       isEditModalVisible.value = false;
       await fetchTasks();
     } catch (error: unknown) {
+      if (!current()) return;
       if (error && typeof error === 'object' && 'errorFields' in error) {
         if (shouldNotifyPageError(error))
           message.warning('请检查表单填写是否正确');
@@ -485,12 +594,15 @@ export function useTaskPage() {
       }
       if (shouldNotifyPageError(error)) message.error('任务更新失败');
     } finally {
-      submitLoading.value = false;
+      if (submitRevision === submission) submitLoading.value = false;
     }
   };
 
   // 执行任务
   const openExecuteModal = (record: K8sYamlTask) => {
+    executeRevision++;
+    executeLoading.value = false;
+    executeOwner = operationOwner();
     currentOperationTask.value = record;
     executeFormModel.value = {
       dry_run: false,
@@ -499,38 +611,56 @@ export function useTaskPage() {
   };
 
   const closeExecuteModal = () => {
+    executeRevision++;
+    executeLoading.value = false;
+    executeOwner = undefined;
     isExecuteModalVisible.value = false;
     currentOperationTask.value = null;
   };
 
   const submitExecuteForm = async () => {
-    if (!currentOperationTask.value) return;
+    const record = currentOperationTask.value;
+    const owner = executeOwner;
+    if (!record || owner !== operationOwner()) return;
 
     const clusterId = validateClusterId();
     if (!clusterId) return;
+    const id = validateTaskId(record);
+    if (id === undefined) return;
+    const revision = ++executeRevision;
+    const current = () =>
+      executeRevision === revision &&
+      isExecuteModalVisible.value &&
+      currentOperationTask.value === record &&
+      record.id === id &&
+      filterClusterId.value === clusterId &&
+      executeOwner === owner &&
+      operationOwner() === owner;
 
     try {
       executeLoading.value = true;
 
       const params: YamlTaskExecuteReq = {
-        id: currentOperationTask.value.id!,
+        id,
         cluster_id: clusterId,
         dry_run: executeFormModel.value.dry_run,
       };
 
       await applyYamlTask(params);
+      if (!current()) return;
       message.success(
         executeFormModel.value.dry_run ? '任务预检查成功' : '任务执行成功',
       );
       isExecuteModalVisible.value = false;
       await fetchTasks();
     } catch (error) {
+      if (!current()) return;
       if (shouldNotifyPageError(error))
         message.error(
           executeFormModel.value.dry_run ? '任务预检查失败' : '任务执行失败',
         );
     } finally {
-      executeLoading.value = false;
+      if (executeRevision === revision) executeLoading.value = false;
     }
   };
 
@@ -538,6 +668,13 @@ export function useTaskPage() {
   const deleteTask = (record: K8sYamlTask) => {
     const clusterId = validateClusterId();
     if (!clusterId) return;
+    const id = validateTaskId(record);
+    if (id === undefined) return;
+    const owner = operationOwner();
+    const current = () =>
+      record.id === id &&
+      filterClusterId.value === clusterId &&
+      operationOwner() === owner;
 
     Modal.confirm({
       title: '删除任务',
@@ -547,15 +684,18 @@ export function useTaskPage() {
       cancelText: '取消',
       centered: true,
       onOk: async () => {
+        if (!current()) return;
         try {
           const params: YamlTaskDeleteReq = {
-            id: record.id!,
+            id,
             cluster_id: clusterId,
           };
           await deleteYamlTask(params);
+          if (!current()) return;
           message.success('任务删除成功');
           await fetchTasks();
         } catch (error) {
+          if (!current()) return;
           if (shouldNotifyPageError(error)) message.error('任务删除失败');
         }
       },
@@ -568,6 +708,25 @@ export function useTaskPage() {
 
     const clusterId = validateClusterId();
     if (!clusterId) return;
+    const owner = operationOwner();
+    const selection = selectedRows.value;
+    const selectedKeys = selectedRowKeys.value;
+    const keySnapshot = [...selectedKeys];
+    const ids: number[] = [];
+    for (const record of selection) {
+      const id = validateTaskId(record);
+      if (id === undefined) return;
+      ids.push(id);
+    }
+    const current = () =>
+      filterClusterId.value === clusterId &&
+      operationOwner() === owner &&
+      selectedRows.value === selection &&
+      selectedRowKeys.value === selectedKeys &&
+      selectedKeys.length === keySnapshot.length &&
+      selectedKeys.every((key, index) => key === keySnapshot[index]) &&
+      selection.length === ids.length &&
+      selection.every((record, index) => record.id === ids[index]);
 
     Modal.confirm({
       title: `批量${operation}`,
@@ -577,27 +736,31 @@ export function useTaskPage() {
       cancelText: '取消',
       centered: true,
       onOk: async () => {
+        if (!current()) return;
         try {
-          for (const task of selectedRows.value) {
+          for (const id of ids) {
+            if (!current()) return;
             if (operation === '删除') {
               const params: YamlTaskDeleteReq = {
-                id: task.id!,
+                id,
                 cluster_id: clusterId,
               };
               await deleteYamlTask(params);
             } else if (operation === '执行') {
               await applyYamlTask({
-                id: task.id!,
+                id,
                 cluster_id: clusterId,
                 dry_run: false,
               });
             }
           }
+          if (!current()) return;
           message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchTasks();
         } catch (error) {
+          if (!current()) return;
           if (shouldNotifyPageError(error))
             message.error(`批量${operation}失败`);
         }

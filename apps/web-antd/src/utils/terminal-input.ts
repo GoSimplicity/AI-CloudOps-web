@@ -8,7 +8,8 @@ export function utf8Chunks(input: string, maxBytes = 64 * 1024): string[] {
   let offset = 0;
   let bytes = 0;
   for (const character of input) {
-    const codePoint = character.codePointAt(0)!;
+    const codePoint = character.codePointAt(0);
+    if (codePoint === undefined) throw new RangeError('无法确定输入码点');
     const length =
       codePoint <= 0x7f
         ? 1

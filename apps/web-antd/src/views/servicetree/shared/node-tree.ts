@@ -24,7 +24,8 @@ export function flattenNodeTree<T extends NodeShape>(nodes: T[]): T[] {
   const seen = new Set<number>();
   const pending: NodeShape[] = [...nodes];
   while (pending.length) {
-    const node = pending.pop()!;
+    const node = pending.pop();
+    if (node === undefined) throw new Error('服务树节点缺失');
     if (seen.has(node.id)) continue;
     seen.add(node.id);
     result.push(node as T);

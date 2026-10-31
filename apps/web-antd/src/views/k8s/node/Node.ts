@@ -150,9 +150,11 @@ export function useNodePage() {
     // originalTaints 存副本：行内编辑不能改到原始值，否则检测不到 value/effect 的修改
     const originalTaints = taints.map((taint: CoreTaint) => ({ ...taint }));
     savedTaintOrigins = new WeakMap();
-    rows.forEach((row, index) =>
-      savedTaintOrigins.set(row, originalTaints[index]!),
-    );
+    rows.forEach((row, index) => {
+      const original = originalTaints[index];
+      if (original === undefined) throw new Error('节点污点原始记录缺失');
+      savedTaintOrigins.set(row, original);
+    });
     taintFormModel.value = { taints: rows, originalTaints, taintsToDelete: [] };
   };
 

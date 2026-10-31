@@ -147,6 +147,17 @@ describe('confirmActions 直接调用（复审 P3-1 / M3b / M3d）', () => {
     expect(api.confirmAutoFixWorkflow).not.toHaveBeenCalled();
   });
 
+  it('数值型动作ID即使出现在待审批集合里也不能确认执行', async () => {
+    const result = pending([], []);
+    result.blocked_actions = [{ ...action('fixture'), action_id: 42 }];
+    result.approval.pending_action_ids = [42];
+    const vm = await setup(result);
+    expect(vm.confirmableBlockedActions).toEqual([]);
+    expect(vm.canConfirmAll).toBe(false);
+    await vm.confirmAllActions();
+    expect(api.confirmAutoFixWorkflow).not.toHaveBeenCalled();
+  });
+
   it('m3b：id 不在 pending_action_ids 里（含混在合法 id 中、未知 id）：不发请求', async () => {
     const vm = await setup(pending(['a1', 'a2'], ['a1']));
     await vm.confirmActions(['a2']);

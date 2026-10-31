@@ -127,3 +127,67 @@ describe('requestClient', () => {
     expect(res.data).toBeInstanceOf(Blob);
   });
 });
+
+describe('请求错误标记保留', () => {
+  it('已确认的Symbol描述符保持，不附带请求凭据', async () => {
+    const marker = Symbol('notice-fixture');
+    const failure = { response: { data: { code: 403 }, status: 403 } };
+    Object.defineProperty(failure, marker, { value: true });
+    const client = new RequestClient();
+    client.addResponseInterceptor({
+      rejected() {
+        throw failure;
+      },
+    });
+    const adapter = new MockAdapter(axios);
+    try {
+      adapter.onGet('/notice-fixture').reply(403);
+      const error: unknown = await client
+        .get('/notice-fixture')
+        .catch((error: unknown) => error);
+      if (error === null || typeof error !== 'object')
+        throw new Error('Expected request failure');
+      expect(Object.getOwnPropertyDescriptor(error, marker)).toMatchObject({
+        enumerable: false,
+        value: true,
+      });
+      expect(error).toMatchObject({ response: { status: 403 } });
+    } finally {
+      adapter.restore();
+    }
+  });
+
+  it('无法确认的Symbol描述符以静态错误拒绝，不返回原始请求或响应内容', async () => {
+    const marker = Symbol('notice-fixture');
+    const privateMarker = 'fixture-private-response';
+    const failure = new Proxy(
+      { response: { data: { privateMarker }, status: 403 } },
+      {
+        getOwnPropertyDescriptor(): undefined {
+          // 模拟枚举后无法确认属性描述符。
+        },
+        ownKeys: () => [marker],
+      },
+    );
+    const client = new RequestClient();
+    client.addResponseInterceptor({
+      rejected() {
+        throw failure;
+      },
+    });
+    const adapter = new MockAdapter(axios);
+    try {
+      adapter.onGet('/notice-fixture').reply(403);
+      const error: unknown = await client
+        .get('/notice-fixture')
+        .catch((error: unknown) => error);
+      expect(error).toBeInstanceOf(Error);
+      if (!(error instanceof Error))
+        throw new Error('Expected static request error');
+      expect(error.message).toBe('请求错误标记不可确认');
+      expect(error.message).not.toContain(privateMarker);
+    } finally {
+      adapter.restore();
+    }
+  });
+});

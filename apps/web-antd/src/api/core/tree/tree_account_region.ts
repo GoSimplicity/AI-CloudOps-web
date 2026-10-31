@@ -160,12 +160,17 @@ export async function getAvailableRegions(params: GetAvailableRegionsReq) {
       : { provider: params.provider };
   if (
     'cloud_account_id' in query &&
-    (!Number.isSafeInteger(query.cloud_account_id) ||
-      query.cloud_account_id! <= 0)
+    (typeof query.cloud_account_id !== 'number' ||
+      !Number.isSafeInteger(query.cloud_account_id) ||
+      query.cloud_account_id <= 0)
   ) {
     throw new Error('云账户ID无效');
   }
-  if ('provider' in query && ![1, 2, 3, 4].includes(query.provider!)) {
+  if (
+    'provider' in query &&
+    (typeof query.provider !== 'number' ||
+      ![1, 2, 3, 4].includes(query.provider))
+  ) {
     throw new Error('当前云厂商不可查询地域');
   }
   return requestClient.get<GetAvailableRegionsResp>(

@@ -61,6 +61,7 @@ describe('通知排期合同', () => {
   });
   it('拒绝不完整或越界排期并识别配置变更', () => {
     for (const form of [
+      { ...base, triggerType: 'delayed' },
       { ...base, triggerType: 'delayed', delayMinutes: 0 },
       { ...base, repeatInterval: 1 },
       { ...base, repeatInterval: 1, repeatCount: 101 },

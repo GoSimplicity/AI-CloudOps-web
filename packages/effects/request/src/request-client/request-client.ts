@@ -138,11 +138,11 @@ class RequestClient {
       // 否则响应体不是对象时包装成 new Error(data) 会丢掉标记
       for (const key of Object.getOwnPropertySymbols(error)) {
         if (!Object.prototype.hasOwnProperty.call(failure, key)) {
-          Object.defineProperty(
-            failure,
-            key,
-            Object.getOwnPropertyDescriptor(error, key)!,
-          );
+          const descriptor = Object.getOwnPropertyDescriptor(error, key);
+          if (descriptor === undefined) {
+            throw new Error('请求错误标记不可确认');
+          }
+          Object.defineProperty(failure, key, descriptor);
         }
       }
       throw failure;
