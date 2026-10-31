@@ -4,6 +4,14 @@ import { useAccessStore } from '@vben/stores';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Instance from './Instance.vue';
 
+/** 必须存在的工单页面、DOM 或调用缺失时立即失败，保留原测试前提。 */
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('Expected workorder contract fixture to exist');
+  }
+  return value;
+}
+
 const permissions = vi.hoisted(() => ({ edit: true }));
 vi.mock('@vben/stores', async (original) => {
   const actual = await original<typeof import('@vben/stores')>();
@@ -181,9 +189,9 @@ describe('工单实例真实控件', () => {
       const view = wrapper
         .findAll('.action-buttons button')
         .filter((button) => button.text().replace(/\s/g, '') === '查看');
-      await view[0]!.trigger('click');
+      await required(view[0]).trigger('click');
       await flushPromises();
-      await view[1]!.trigger('click');
+      await required(view[1]).trigger('click');
       await flushPromises();
       if (outcome === 'success') pending.resolve({ ...row, title: '旧详情' });
       else pending.reject(new Error('old unavailable'));
@@ -218,9 +226,11 @@ describe('工单实例真实控件', () => {
     await vi.waitFor(() =>
       expect(document.querySelector('.ant-dropdown-menu-item')).not.toBeNull(),
     );
-    [...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item')]
-      .find((el) => el.textContent?.includes('通知发送记录'))!
-      .click();
+    required(
+      [
+        ...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item'),
+      ].find((el) => el.textContent?.includes('通知发送记录')),
+    ).click();
     await flushPromises();
     expect(
       document.querySelector('.notification-logs-dialog')?.textContent,
@@ -228,13 +238,13 @@ describe('工单实例真实控件', () => {
     expect(
       document.querySelector('.notification-logs-dialog')?.textContent,
     ).toContain('safe@example.test');
-    [
-      ...document.querySelectorAll<HTMLButtonElement>(
-        '.notification-logs-dialog button',
-      ),
-    ]
-      .find((button) => button.textContent?.replace(/\s/g, '') === '查看详情')!
-      .click();
+    required(
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '.notification-logs-dialog button',
+        ),
+      ].find((button) => button.textContent?.replace(/\s/g, '') === '查看详情'),
+    ).click();
     await flushPromises();
     await vi.waitFor(() =>
       expect(
@@ -262,14 +272,17 @@ describe('工单实例真实控件', () => {
     await query('draft');
     await wrapper.get('.ant-dropdown-trigger').trigger('click');
     await flushPromises();
-    [...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item')]
-      .find((item) => item.textContent?.trim() === '编辑')!
-      .click();
+    required(
+      [
+        ...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item'),
+      ].find((item) => item.textContent?.trim() === '编辑'),
+    ).click();
     await flushPromises();
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text().replace(/\s/g, '') === '创建工单')!
-      .trigger('click');
+    await required(
+      wrapper
+        .findAll('button')
+        .find((button) => button.text().replace(/\s/g, '') === '创建工单'),
+    ).trigger('click');
     await flushPromises();
     pending.resolve({ ...row, title: '旧编辑内容', status: 1 });
     await flushPromises();
@@ -300,14 +313,17 @@ describe('工单实例真实控件', () => {
             })
           : response(url, options),
       );
-      await wrapper
-        .findAll('button')
-        .find((button) => button.text().replace(/\s/g, '') === '创建工单')!
-        .trigger('click');
+      await required(
+        wrapper
+          .findAll('button')
+          .find((button) => button.text().replace(/\s/g, '') === '创建工单'),
+      ).trigger('click');
       await flushPromises();
-      const select = wrapper
-        .findAllComponents(Select)
-        .find((component) => component.props('placeholder') === placeholder)!;
+      const select = required(
+        wrapper
+          .findAllComponents(Select)
+          .find((component) => component.props('placeholder') === placeholder),
+      );
       select.vm.$emit('dropdownVisibleChange', true);
       await flushPromises();
       select.vm.$emit('popupScroll', {
@@ -335,16 +351,19 @@ describe('工单实例真实控件', () => {
           })
         : response(url, options),
     );
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text().replace(/\s/g, '') === '从模板创建')!
-      .trigger('click');
+    await required(
+      wrapper
+        .findAll('button')
+        .find((button) => button.text().replace(/\s/g, '') === '从模板创建'),
+    ).trigger('click');
     await flushPromises();
-    const select = wrapper
-      .findAllComponents(Select)
-      .find(
-        (component) => component.props('placeholder') === '请选择工单模板',
-      )!;
+    const select = required(
+      wrapper
+        .findAllComponents(Select)
+        .find(
+          (component) => component.props('placeholder') === '请选择工单模板',
+        ),
+    );
     await select.get('.ant-select-selector').trigger('mousedown');
     await flushPromises();
     await vi.waitFor(() =>
@@ -372,26 +391,30 @@ describe('工单实例真实控件', () => {
     await query('draft');
     await wrapper.get('.ant-dropdown-trigger').trigger('click');
     await flushPromises();
-    [...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item')]
-      .find((item) => item.textContent?.trim() === '编辑')!
-      .click();
+    required(
+      [
+        ...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item'),
+      ].find((item) => item.textContent?.trim() === '编辑'),
+    ).click();
     await flushPromises();
-    const assignee = wrapper
-      .findAllComponents(Select)
-      .find((component) => component.props('placeholder') === '请选择处理人')!;
+    const assignee = required(
+      wrapper
+        .findAllComponents(Select)
+        .find((component) => component.props('placeholder') === '请选择处理人'),
+    );
     expect(assignee.props('disabled')).toBe(true);
-    document
-      .querySelector<HTMLButtonElement>(
+    required(
+      document.querySelector<HTMLButtonElement>(
         '.instance-form-modal .ant-modal-footer .ant-btn-primary',
-      )!
-      .click();
+      ),
+    ).click();
     await flushPromises();
     const update = client.put.mock.calls.find(
       ([url]) => url === '/workorder/instance/update/7',
     );
     expect(update).toBeDefined();
-    expect(update![1]).not.toHaveProperty('assignee_id');
-    expect(update![1]).not.toHaveProperty('status');
+    expect(required(update)[1]).not.toHaveProperty('assignee_id');
+    expect(required(update)[1]).not.toHaveProperty('status');
   });
   it('服务端授权的步骤审批不因实例assignee字段为空而被前端隐藏', async () => {
     await flushPromises();
@@ -402,16 +425,17 @@ describe('工单实例真实控件', () => {
         return Promise.resolve(['approve']);
       return response(url, options);
     });
-    await wrapper
-      .findAll('.action-buttons button')
-      .find((button) => button.text().replace(/\s/g, '') === '查看')!
-      .trigger('click');
+    await required(
+      wrapper
+        .findAll('.action-buttons button')
+        .find((button) => button.text().replace(/\s/g, '') === '查看'),
+    ).trigger('click');
     await flushPromises();
     const approve = [
       ...document.querySelectorAll<HTMLButtonElement>('.detail-dialog button'),
     ].find((button) => button.textContent?.replace(/\s/g, '') === '审批通过');
     expect(approve).toBeDefined();
-    approve!.click();
+    required(approve).click();
     await flushPromises();
     expect(
       [...document.querySelectorAll('.ant-modal-title')].some((title) =>
@@ -422,22 +446,24 @@ describe('工单实例真实控件', () => {
   });
   it('创建工单使用真实表单，取消不写入', async () => {
     await flushPromises();
-    [...wrapper.findAll('button')]
-      .find((button) => button.text().replace(/\s/g, '') === '创建工单')!
-      .trigger('click');
+    required(
+      [...wrapper.findAll('button')].find(
+        (button) => button.text().replace(/\s/g, '') === '创建工单',
+      ),
+    ).trigger('click');
     await flushPromises();
     expect(document.querySelector('.ant-modal-title')?.textContent).toBe(
       '创建工单',
     );
-    [
-      ...document.querySelectorAll<HTMLButtonElement>(
-        '.ant-modal-footer button',
-      ),
-    ]
-      .find((button) =>
+    required(
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '.ant-modal-footer button',
+        ),
+      ].find((button) =>
         /^(取消|Cancel)$/.test(button.textContent?.replace(/\s/g, '') || ''),
-      )!
-      .click();
+      ),
+    ).click();
     await flushPromises();
     expect(client.post).not.toHaveBeenCalled();
     expect(client.put).not.toHaveBeenCalled();
@@ -495,10 +521,11 @@ describe('列表按需读取当前用户可用动作', () => {
     expect(currentMenu()?.textContent).toContain('拒绝工单');
     expect(currentMenu()?.textContent).not.toContain('审批通过');
     await closeMenu();
-    await wrapper
-      .findAll('.action-buttons button')
-      .find((button) => button.text().replace(/\s/g, '') === '查看')!
-      .trigger('click');
+    await required(
+      wrapper
+        .findAll('.action-buttons button')
+        .find((button) => button.text().replace(/\s/g, '') === '查看'),
+    ).trigger('click');
     await flushPromises();
     const detail = document.querySelector('.detail-dialog');
     expect(detail?.textContent?.replace(/\s/g, '')).toContain('拒绝');
@@ -514,10 +541,11 @@ describe('列表按需读取当前用户可用动作', () => {
       return response(url, options);
     });
     await flushPromises();
-    await wrapper
-      .findAll('.action-buttons button')
-      .find((button) => button.text().replace(/\s/g, '') === '查看')!
-      .trigger('click');
+    await required(
+      wrapper
+        .findAll('.action-buttons button')
+        .find((button) => button.text().replace(/\s/g, '') === '查看'),
+    ).trigger('click');
     await flushPromises();
     expect(
       document.querySelector('.detail-dialog')?.textContent?.replace(/\s/g, ''),
@@ -542,10 +570,11 @@ describe('列表按需读取当前用户可用动作', () => {
     expect(currentMenu()?.textContent).toContain('提交工单');
     expect(currentMenu()?.textContent).not.toContain('编辑');
     await closeMenu();
-    await wrapper
-      .findAll('.action-buttons button')
-      .find((button) => button.text().replace(/\s/g, '') === '查看')!
-      .trigger('click');
+    await required(
+      wrapper
+        .findAll('.action-buttons button')
+        .find((button) => button.text().replace(/\s/g, '') === '查看'),
+    ).trigger('click');
     await flushPromises();
     expect(document.querySelector('.detail-dialog')?.textContent).not.toContain(
       '编辑',
@@ -589,16 +618,18 @@ describe('列表按需读取当前用户可用动作', () => {
     });
     await flushPromises();
     const view = () =>
-      wrapper
-        .findAll('.action-buttons button')
-        .find((button) => button.text().replace(/\s/g, '') === '查看')!;
+      required(
+        wrapper
+          .findAll('.action-buttons button')
+          .find((button) => button.text().replace(/\s/g, '') === '查看'),
+      );
     await view().trigger('click');
     await flushPromises();
     const close = [
       ...document.querySelectorAll<HTMLButtonElement>('.detail-dialog button'),
     ].find((button) => button.textContent?.replace(/\s/g, '') === '关闭');
     expect(close).toBeTruthy();
-    close!.click();
+    required(close).click();
     await flushPromises();
     await view().trigger('click');
     await flushPromises();
@@ -627,7 +658,7 @@ describe('列表按需读取当前用户可用动作', () => {
       ...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item'),
     ].find((item) => item.textContent?.includes('审批通过'));
     expect(approval).toBeTruthy();
-    approval!.click();
+    required(approval).click();
     await flushPromises();
     useAccessStore().accessToken = 'user-b';
     pending.resolve(['approve']);

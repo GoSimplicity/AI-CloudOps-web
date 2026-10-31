@@ -8,6 +8,14 @@ import Antd, { message, Modal } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import FormDesign from './FormDesign.vue';
 
+/** 必须存在的工单页面、DOM 或调用缺失时立即失败，保留原测试前提。 */
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('Expected workorder contract fixture to exist');
+  }
+  return value;
+}
+
 const client = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 let wrapper: VueWrapper | undefined;
@@ -52,12 +60,12 @@ async function button(text: string) {
     ...document.querySelectorAll<HTMLButtonElement>('button'),
   ].find((el) => el.textContent?.replace(/\s/g, '') === text);
   expect(target).toBeDefined();
-  target!.click();
+  required(target).click();
   await flushPromises();
 }
 async function draft() {
   await start();
-  await wrapper!
+  await required(wrapper)
     .get('input[placeholder="请输入表单名称"]')
     .setValue('隔离表单');
   await button('文本框');
@@ -92,11 +100,11 @@ describe('表单设计真实控件合同', () => {
     await flushPromises();
     expect(
       (
-        wrapper!.get('input[placeholder="请输入表单名称"]')
+        required(wrapper).get('input[placeholder="请输入表单名称"]')
           .element as HTMLInputElement
       ).value,
     ).toBe('隔离表单');
-    expect(wrapper!.text()).toContain('文本框1');
+    expect(required(wrapper).text()).toContain('文本框1');
     client.post.mockResolvedValue(undefined);
     await button('保存设计');
     expect(
@@ -108,14 +116,14 @@ describe('表单设计真实控件合同', () => {
   it('删除后添加同类字段仍然有唯一字段名', async () => {
     await draft();
     await button('文本框');
-    const remove = wrapper!
+    const remove = required(wrapper)
       .findAll('button')
       .filter((button) => button.attributes('aria-label') === '删除字段');
     expect(remove.length).toBe(2);
-    await remove[0]!.trigger('click');
+    await required(remove[0]).trigger('click');
     await button('文本框');
     await button('保存设计');
-    const fields = client.post.mock.calls[0]![1].schema.fields;
+    const fields = required(client.post.mock.calls[0])[1].schema.fields;
     expect(
       new Set(fields.map((field: { name: string }) => field.name)).size,
     ).toBe(2);
@@ -125,7 +133,7 @@ describe('表单设计真实控件合同', () => {
     await button('清空表单');
     expect(document.querySelector('.ant-modal-confirm')).not.toBeNull();
     await button('取消');
-    expect(wrapper!.text()).toContain('文本框1');
+    expect(required(wrapper).text()).toContain('文本框1');
     await button('预览表单');
     await button('校验预览');
     expect(
@@ -135,11 +143,11 @@ describe('表单设计真实控件合同', () => {
     ).toContain('未创建工单');
     expect(client.post).not.toHaveBeenCalled();
     await button('返回设计');
-    expect(wrapper!.text()).toContain('文本框1');
+    expect(required(wrapper).text()).toContain('文本框1');
   });
   it('分类搜索乱序不覆盖新结果，取消不保存', async () => {
     await start();
-    await wrapper!.get('.category-trigger').trigger('click');
+    await required(wrapper).get('.category-trigger').trigger('click');
     await flushPromises();
     const old = Promise.withResolvers<unknown>();
     client.get.mockImplementation(
@@ -149,17 +157,19 @@ describe('表单设计真实控件合同', () => {
           : Promise.resolve({ items: [{ id: 3, name: '新分类' }], total: 1 }),
     );
     const search = new DOMWrapper(
-      document.querySelector<HTMLInputElement>('.category-modal input')!,
+      required(
+        document.querySelector<HTMLInputElement>('.category-modal input'),
+      ),
     );
     await search.setValue('old');
-    document
-      .querySelector<HTMLButtonElement>('.category-search button')!
-      .click();
+    required(
+      document.querySelector<HTMLButtonElement>('.category-search button'),
+    ).click();
     await flushPromises();
     await search.setValue('new');
-    document
-      .querySelector<HTMLButtonElement>('.category-search button')!
-      .click();
+    required(
+      document.querySelector<HTMLButtonElement>('.category-search button'),
+    ).click();
     await flushPromises();
     old.resolve({ items: [{ id: 2, name: '旧分类' }], total: 1 });
     await flushPromises();
@@ -169,9 +179,11 @@ describe('表单设计真实控件合同', () => {
     expect(
       document.querySelector('.category-modal')?.textContent,
     ).not.toContain('旧分类');
-    const close = document.querySelector<HTMLButtonElement>(
-      '.category-modal .ant-modal-close',
-    )!;
+    const close = required(
+      document.querySelector<HTMLButtonElement>(
+        '.category-modal .ant-modal-close',
+      ),
+    );
     close.click();
     await flushPromises();
     expect(client.post).not.toHaveBeenCalled();
@@ -191,7 +203,9 @@ describe('表单设计真实控件合同', () => {
     ])
       await button(type);
     await button('预览表单');
-    expect(wrapper!.findAll('.dynamic-form .form-field')).toHaveLength(9);
+    expect(required(wrapper).findAll('.dynamic-form .form-field')).toHaveLength(
+      9,
+    );
     await button('校验预览');
     expect(client.post).not.toHaveBeenCalled();
     expect(

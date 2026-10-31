@@ -13,6 +13,14 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
   usePermission: () => ({ can: () => true, hasPerm: () => true }),
 }));
+/** 必须存在的工单页面、DOM 或调用缺失时立即失败，保留原测试前提。 */
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('Expected workorder contract fixture to exist');
+  }
+  return value;
+}
+
 const client = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
@@ -38,36 +46,43 @@ const fixture = {
 };
 let wrapper: VueWrapper;
 const checkbox = (name: string) =>
-  [
-    ...document.querySelectorAll<HTMLLabelElement>(
-      '.ant-modal .ant-checkbox-wrapper',
-    ),
-  ].find((label) => label.textContent?.trim() === name)!;
+  required(
+    [
+      ...document.querySelectorAll<HTMLLabelElement>(
+        '.ant-modal .ant-checkbox-wrapper',
+      ),
+    ].find((label) => label.textContent?.trim() === name),
+  );
 const setInput = async (selector: string, value: string) => {
-  const input = document.querySelector<HTMLInputElement>(selector)!;
+  const input = required(document.querySelector<HTMLInputElement>(selector));
   expect(input).not.toBeNull();
   input.value = value;
   input.dispatchEvent(new Event('input', { bubbles: true }));
   await flushPromises();
 };
 const button = (name: string) =>
-  [...document.querySelectorAll<HTMLButtonElement>('.ant-modal button')].find(
-    (button) => button.textContent?.replace(/\s/g, '') === name,
-  )!;
+  required(
+    [...document.querySelectorAll<HTMLButtonElement>('.ant-modal button')].find(
+      (button) => button.textContent?.replace(/\s/g, '') === name,
+    ),
+  );
 const save = async () => {
-  document
-    .querySelector<HTMLButtonElement>('.ant-modal-footer .ant-btn-primary')!
-    .click();
+  required(
+    document.querySelector<HTMLButtonElement>(
+      '.ant-modal-footer .ant-btn-primary',
+    ),
+  ).click();
   await flushPromises();
 };
 const edit = async (record: object) => {
   client.get.mockResolvedValueOnce({ items: [record], total: 1 });
   await wrapper.get('.ant-input-search-button').trigger('click');
   await flushPromises();
-  await wrapper
-    .findAll('.action-buttons button')
-    .find((button) => button.text().replace(/\s/g, '') === '编辑')!
-    .trigger('click');
+  await required(
+    wrapper
+      .findAll('.action-buttons button')
+      .find((button) => button.text().replace(/\s/g, '') === '编辑'),
+  ).trigger('click');
   await flushPromises();
 };
 const copy = async () => {
@@ -76,9 +91,11 @@ const copy = async () => {
   await vi.waitFor(() =>
     expect(document.querySelector('.ant-dropdown-menu-item')).not.toBeNull(),
   );
-  [...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item')]
-    .find((item) => item.textContent?.includes('复制配置'))!
-    .click();
+  required(
+    [...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item')].find(
+      (item) => item.textContent?.includes('复制配置'),
+    ),
+  ).click();
   await flushPromises();
 };
 beforeEach(() => {
@@ -122,11 +139,13 @@ describe('通知接收范围与状态合同', () => {
     await wrapper.get('[aria-label="创建通知配置"]').trigger('click');
     await flushPromises();
     await new DOMWrapper(
-      document.querySelector<HTMLInputElement>(
-        'input[placeholder="请输入通知配置名称"]',
-      )!,
+      required(
+        document.querySelector<HTMLInputElement>(
+          'input[placeholder="请输入通知配置名称"]',
+        ),
+      ),
     ).setValue('站内测试');
-    checkbox('站内消息').querySelector('input')!.click();
+    required(checkbox('站内消息').querySelector('input')).click();
     await flushPromises();
     await save();
     await vi.waitFor(() => expect(client.post).toHaveBeenCalledTimes(1));
@@ -152,15 +171,17 @@ describe('通知接收范围与状态合同', () => {
     await wrapper.get('[aria-label="创建通知配置"]').trigger('click');
     await flushPromises();
     await new DOMWrapper(
-      document.querySelector<HTMLInputElement>(
-        'input[placeholder="请输入通知配置名称"]',
-      )!,
+      required(
+        document.querySelector<HTMLInputElement>(
+          'input[placeholder="请输入通知配置名称"]',
+        ),
+      ),
     ).setValue('站内测试');
-    checkbox('站内消息').querySelector('input')!.click();
+    required(checkbox('站内消息').querySelector('input')).click();
     await flushPromises();
-    checkbox('工单创建人').querySelector('input')!.click();
+    required(checkbox('工单创建人').querySelector('input')).click();
     await flushPromises();
-    checkbox('自定义地址').querySelector('input')!.click();
+    required(checkbox('自定义地址').querySelector('input')).click();
     await flushPromises();
     await save();
     expect(client.post).not.toHaveBeenCalled();
@@ -331,9 +352,11 @@ describe('通知接收范围与状态合同', () => {
     const pending = Promise.withResolvers<any>();
     client.post.mockReturnValueOnce(pending.promise);
     try {
-      const confirm = document.querySelector<HTMLButtonElement>(
-        '.ant-modal-footer .ant-btn-primary',
-      )!;
+      const confirm = required(
+        document.querySelector<HTMLButtonElement>(
+          '.ant-modal-footer .ant-btn-primary',
+        ),
+      );
       confirm.click();
       confirm.click();
       await flushPromises();
@@ -347,9 +370,11 @@ describe('通知接收范围与状态合同', () => {
   it('创建延迟通知将延迟与有限重复参数发送到后端', async () => {
     await flushPromises();
     await copy();
-    const delayed = document.querySelector<HTMLInputElement>(
-      '.ant-modal input[type="radio"][value="delayed"]',
-    )!;
+    const delayed = required(
+      document.querySelector<HTMLInputElement>(
+        '.ant-modal input[type="radio"][value="delayed"]',
+      ),
+    );
     delayed.click();
     await flushPromises();
     await setInput('#notification-delay-minutes', '15');
@@ -357,7 +382,7 @@ describe('通知接收范围与状态合同', () => {
     await setInput('#notification-repeat-count', '3');
     await save();
     await vi.waitFor(() => expect(client.post).toHaveBeenCalledTimes(1));
-    expect(client.post.mock.calls[0]![1]).toEqual(
+    expect(required(client.post.mock.calls[0])[1]).toEqual(
       expect.objectContaining({
         trigger_type: 'delayed',
         delay_minutes: 15,
@@ -385,7 +410,7 @@ describe('通知接收范围与状态合同', () => {
     );
     await save();
     await vi.waitFor(() => expect(client.put).toHaveBeenCalledTimes(1));
-    const payload = client.put.mock.calls[0]![1];
+    const payload = required(client.put.mock.calls[0])[1];
     expect(payload).not.toHaveProperty('status');
     expect(payload).not.toHaveProperty('trigger_type');
     expect(payload).not.toHaveProperty('scheduled_time');
@@ -401,7 +426,7 @@ describe('通知接收范围与状态合同', () => {
     });
     await save();
     await vi.waitFor(() => expect(client.put).toHaveBeenCalledTimes(1));
-    const payload = client.put.mock.calls[0]![1];
+    const payload = required(client.put.mock.calls[0])[1];
     for (const key of [
       'trigger_type',
       'scheduled_time',
@@ -423,7 +448,7 @@ describe('通知接收范围与状态合同', () => {
     await flushPromises();
     await save();
     await vi.waitFor(() => expect(client.put).toHaveBeenCalledTimes(1));
-    expect(client.put.mock.calls[0]![1].channels).toEqual(['email']);
+    expect(required(client.put.mock.calls[0])[1].channels).toEqual(['email']);
   });
   it.each(['0', '1e3'])('部门ID %s不被数值转换误当有效ID', async (id) => {
     await flushPromises();

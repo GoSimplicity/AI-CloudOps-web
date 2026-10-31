@@ -3,6 +3,14 @@ import Antd, { message, Modal } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ProcessDesign from './ProcessDesign.vue';
 
+/** 必须存在的工单页面、DOM 或调用缺失时立即失败，保留原测试前提。 */
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('Expected workorder contract fixture to exist');
+  }
+  return value;
+}
+
 const client = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 const definition = () => ({
@@ -64,26 +72,28 @@ async function button(text: string) {
     ...document.querySelectorAll<HTMLButtonElement>('button'),
   ].find((el) => el.textContent?.replace(/\s/g, '') === text);
   expect(target).toBeDefined();
-  target!.click();
+  required(target).click();
   await flushPromises();
 }
 async function tab(text: string) {
-  const target = wrapper!
+  const target = required(wrapper)
     .findAll('.ant-tabs-tab')
     .find((el) => el.text() === text);
   expect(target).toBeDefined();
-  await target!.trigger('click');
+  await required(target).trigger('click');
   await flushPromises();
 }
 async function draft() {
   await start();
-  await wrapper!
+  await required(wrapper)
     .get('input[placeholder="请输入流程名称"]')
     .setValue('隔离流程');
-  const select = wrapper!.find('.basic-info-form .ant-select');
+  const select = required(wrapper).find('.basic-info-form .ant-select');
   await select.find('.ant-select-selector').trigger('mousedown');
   await flushPromises();
-  document.querySelector<HTMLElement>('.ant-select-item-option')!.click();
+  required(
+    document.querySelector<HTMLElement>('.ant-select-item-option'),
+  ).click();
   await flushPromises();
 }
 describe('流程设计真实控件合同', () => {
@@ -108,11 +118,11 @@ describe('流程设计真实控件合同', () => {
     await flushPromises();
     expect(
       (
-        wrapper!.get('input[placeholder="请输入流程名称"]')
+        required(wrapper).get('input[placeholder="请输入流程名称"]')
           .element as HTMLInputElement
       ).value,
     ).toBe('隔离流程');
-    expect(wrapper!.text()).toContain('保存失败');
+    expect(required(wrapper).text()).toContain('保存失败');
   });
   it('同毫秒新增步骤ID唯一，删除前序步骤不切换当前编辑对象', async () => {
     await start();
@@ -120,19 +130,21 @@ describe('流程设计真实控件合同', () => {
     vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 60_000);
     await button('添加步骤');
     await button('添加步骤');
-    const latest = wrapper!
-      .emitted('update:modelValue')!
-      .at(-1)![0] as ReturnType<typeof definition>;
+    const latest = required(
+      required(required(wrapper).emitted('update:modelValue')).at(-1),
+    )[0] as ReturnType<typeof definition>;
     expect(new Set(latest.steps.map((step) => step.id)).size).toBe(4);
-    const selected = wrapper!.get('.process-step.active').text();
-    const remove = wrapper!.findAll('.process-step button')[0]!;
+    const selected = required(wrapper).get('.process-step.active').text();
+    const remove = required(
+      required(wrapper).findAll('.process-step button')[0],
+    );
     await remove.trigger('click');
-    expect(wrapper!.get('.process-step.active').text()).toBe(selected);
+    expect(required(wrapper).get('.process-step.active').text()).toBe(selected);
   });
   it('jSON修改必须显式应用，损坏结构不污染图且预览取消不保存', async () => {
     await draft();
     await tab('JSON编辑');
-    await wrapper!
+    await required(wrapper)
       .get('textarea[placeholder="请输入或粘贴流程定义JSON"]')
       .setValue('{"steps":[null],"connections":[]}');
     await button('应用到可视化');
@@ -143,17 +155,21 @@ describe('流程设计真实控件合同', () => {
     await button('保存流程');
     expect(client.post).not.toHaveBeenCalled();
     await tab('JSON编辑');
-    await wrapper!.get('textarea').setValue(JSON.stringify(definition()));
+    await required(wrapper)
+      .get('textarea')
+      .setValue(JSON.stringify(definition()));
     await button('应用到可视化');
     await tab('可视化设计');
     await button('预览流程');
     expect(document.querySelector('.ant-modal')?.textContent).toContain('开始');
-    document.querySelector<HTMLButtonElement>('.ant-modal-close')!.click();
+    required(
+      document.querySelector<HTMLButtonElement>('.ant-modal-close'),
+    ).click();
     await flushPromises();
     expect(client.post).not.toHaveBeenCalled();
   });
   it('加载已发布表单失败可重试，不能伪装空列表', async () => {
-    const original = client.get.getMockImplementation()!;
+    const original = required(client.get.getMockImplementation());
     let fail = true;
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
       path === '/workorder/form-design/list' && fail
@@ -161,10 +177,10 @@ describe('流程设计真实控件合同', () => {
         : original(path, ...rest),
     );
     await start();
-    expect(wrapper!.text()).toContain('读取已发布表单失败');
+    expect(required(wrapper).text()).toContain('读取已发布表单失败');
     fail = false;
     await button('重试表单');
-    const select = wrapper!.find('.basic-info-form .ant-select');
+    const select = required(wrapper).find('.basic-info-form .ant-select');
     await select.find('.ant-select-selector').trigger('mousedown');
     await flushPromises();
     expect(
@@ -173,7 +189,7 @@ describe('流程设计真实控件合同', () => {
     expect(client.post).not.toHaveBeenCalled();
   });
   it('切换步骤时迟到的旧用户结果不覆盖当前步骤', async () => {
-    const original = client.get.getMockImplementation()!;
+    const original = required(client.get.getMockImplementation());
     const late = Promise.withResolvers<unknown>();
     let requests = 0;
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
@@ -188,16 +204,22 @@ describe('流程设计真实控件合同', () => {
     );
     await start();
     await tab('可视化设计');
-    await wrapper!.findAll('.process-step')[0]!.trigger('click');
+    await required(required(wrapper).findAll('.process-step')[0]).trigger(
+      'click',
+    );
     await flushPromises();
-    await wrapper!.findAll('.process-step')[1]!.trigger('click');
+    await required(required(wrapper).findAll('.process-step')[1]).trigger(
+      'click',
+    );
     await flushPromises();
     late.resolve({ items: [{ id: 77, username: '迟到旧用户' }], total: 1 });
     await flushPromises();
-    await wrapper!.find('.ant-select').trigger('blur');
-    const user = wrapper!
-      .findAll('.ant-select')
-      .find((select) => select.find('#process-assignees').exists())!;
+    await required(wrapper).find('.ant-select').trigger('blur');
+    const user = required(
+      required(wrapper)
+        .findAll('.ant-select')
+        .find((select) => select.find('#process-assignees').exists()),
+    );
     await user.find('.ant-select-selector').trigger('mousedown');
     await flushPromises();
     expect(
