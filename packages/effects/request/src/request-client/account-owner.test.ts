@@ -74,7 +74,9 @@ afterEach(() => {
 describe('真实应用请求客户端账户归属', () => {
   it('同一tick切换账户前发起的写请求不得使用新账户凭证', async () => {
     mock.onPost('/queued-write').reply(200, { code: 0, data: 'sent' });
-    const result = client.post('/queued-write', { owner: 'one' }).catch((error) => error);
+    const result = client
+      .post('/queued-write', { owner: 'one' })
+      .catch((error) => error);
     switchAccount('2', 'credential-two');
     expect(axios.isCancel(await result)).toBe(true);
     expect(mock.history.post).toHaveLength(0);
@@ -91,7 +93,9 @@ describe('真实应用请求客户端账户归属', () => {
     pending.resolve([200, { code: 0, data: { private: 'owner-one' } }]);
     const settled = await result;
     expect(settled).toHaveProperty('error');
-    expect(axios.isCancel('error' in settled ? settled.error : undefined)).toBe(true);
+    expect(axios.isCancel('error' in settled ? settled.error : undefined)).toBe(
+      true,
+    );
     expect(JSON.stringify(settled)).not.toContain('owner-one');
     expect(state.access.accessToken).toBe('credential-two');
   });

@@ -3,130 +3,138 @@
     <!-- 页面标题 -->
     <template #actions>
       <a-button type="primary" @click="showAddModal" class="btn-create">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          <span class="btn-text">新增记录</span>
-        </a-button>
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        <span class="btn-text">新增记录</span>
+      </a-button>
     </template>
     <template #filters>
       <div class="search-filters">
-          <a-input-search 
-            v-model:value="searchText" 
-            placeholder="搜索记录名称..." 
-            class="search-input" 
-            @search="handleSearch"
-            @change="handleSearchChange" 
-            allow-clear 
-          />
-          <a-select 
-            v-model:value="enabledFilter" 
-            placeholder="启用状态" 
-            class="filter-select"
-            @change="handleEnabledFilterChange" 
-            allow-clear
-          >
-            <a-select-option :value="undefined">全部</a-select-option>
-            <a-select-option :value="1">已启用</a-select-option>
-            <a-select-option :value="2">已禁用</a-select-option>
-          </a-select>
-          <a-button @click="handleReset" class="reset-btn">
-            重置
-          </a-button>
-        </div>
+        <a-input-search
+          v-model:value="searchText"
+          placeholder="搜索记录名称..."
+          class="search-input"
+          @search="handleSearch"
+          @change="handleSearchChange"
+          allow-clear
+        />
+        <a-select
+          v-model:value="enabledFilter"
+          placeholder="启用状态"
+          class="filter-select"
+          @change="handleEnabledFilterChange"
+          allow-clear
+        >
+          <a-select-option :value="undefined">全部</a-select-option>
+          <a-select-option :value="1">已启用</a-select-option>
+          <a-select-option :value="2">已禁用</a-select-option>
+        </a-select>
+        <a-button @click="handleReset" class="reset-btn"> 重置 </a-button>
+      </div>
     </template>
 
     <!-- 统计卡片 -->
     <template #summary>
       <div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="总记录" 
-              :value="loadError ? '未知' : stats.total"
-              :value-style="{ color: '#3f8600' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:data-table" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="本页已启用"
-              :value="loadError ? '未知' : stats.enabled"
-              :value-style="{ color: '#52c41a' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:check-mark" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="本页已禁用"
-              :value="loadError ? '未知' : stats.disabled"
-              :value-style="{ color: '#faad14' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:close-filled" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="本页实例池"
-              :value="loadError ? '未知' : stats.pools"
-              :value-style="{ color: '#cf1322' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:server" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div>
+        <a-row :gutter="[16, 16]">
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="总记录"
+                :value="loadError ? '未知' : stats.total"
+                :value-style="{ color: '#3f8600' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:data-table" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页已启用"
+                :value="loadError ? '未知' : stats.enabled"
+                :value-style="{ color: '#52c41a' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:check-mark" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页已禁用"
+                :value="loadError ? '未知' : stats.disabled"
+                :value-style="{ color: '#faad14' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:close-filled" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页实例池"
+                :value="loadError ? '未知' : stats.pools"
+                :value-style="{ color: '#cf1322' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:server" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
     </template>
 
-    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
-      <template #action><a-button size="small" :loading="loading" @click="fetchRecordRules">重试</a-button></template>
+    <a-alert
+      v-if="loadError"
+      type="error"
+      show-icon
+      :message="loadError"
+      role="alert"
+    >
+      <template #action>
+        <a-button size="small" :loading="loading" @click="fetchRecordRules">
+          重试
+        </a-button>
+      </template>
     </a-alert>
 
     <!-- 表格容器 -->
     <div class="table-container">
       <a-card>
-        <a-table 
-          :data-source="data" 
-          :columns="columns" 
-          :pagination="paginationConfig" 
+        <a-table
+          :data-source="data"
+          :columns="columns"
+          :pagination="paginationConfig"
           :loading="loading"
-          row-key="id" 
-          bordered 
-          :scroll="{ x: 1500 }" 
+          row-key="id"
+          bordered
+          :scroll="{ x: 1500 }"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="pool-name-cell">
-                <div class="pool-badge" :class="getRecordStatusClass(record)"></div>
+                <div
+                  class="pool-badge"
+                  :class="getRecordStatusClass(record)"
+                ></div>
                 <span class="pool-name-text">{{ record.name }}</span>
               </div>
             </template>
 
             <template v-if="column.key === 'pool_name'">
               <div class="tag-container">
-                <a-tag 
-                  v-if="record.pool_name" 
-                  class="tech-tag prometheus-tag"
-                >
+                <a-tag v-if="record.pool_name" class="tech-tag prometheus-tag">
                   {{ record.pool_name }}
                 </a-tag>
                 <span v-else class="empty-text">无关联池</span>
@@ -145,15 +153,21 @@
 
             <template v-if="column.key === 'expr'">
               <div class="expr-content">
-                <span class="expr-text" :title="record.expr">{{ truncateText(record.expr, 50) }}</span>
+                <span class="expr-text" :title="record.expr">{{
+                  truncateText(record.expr, 50)
+                }}</span>
               </div>
             </template>
 
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
-                <a-avatar 
-                  size="small" 
-                  :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
+                <a-avatar
+                  size="small"
+                  :style="{
+                    backgroundColor: getAvatarColor(
+                      record.create_user_name || '',
+                    ),
+                  }"
                 >
                   {{ getInitials(record.create_user_name) }}
                 </a-avatar>
@@ -170,18 +184,36 @@
 
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
-                <a-button type="primary" size="small" @click="handleViewRecord(record)">
+                <a-button
+                  type="primary"
+                  size="small"
+                  @click="handleViewRecord(record)"
+                >
                   查看
                 </a-button>
-                <a-button type="default" size="small" @click="showEditModal(record)">
+                <a-button
+                  type="default"
+                  size="small"
+                  @click="showEditModal(record)"
+                >
                   编辑
                 </a-button>
                 <a-dropdown>
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
-                      <a-menu-item key="enable" v-if="record.enable === 2">启用</a-menu-item>
-                      <a-menu-item key="disable" v-if="record.enable === 1">禁用</a-menu-item>
-                      <a-menu-item v-if="can('monitor.recordRule.delete')" key="delete" danger>删除</a-menu-item>
+                      <a-menu-item key="enable" v-if="record.enable === 2">
+                        启用
+                      </a-menu-item>
+                      <a-menu-item key="disable" v-if="record.enable === 1">
+                        禁用
+                      </a-menu-item>
+                      <a-menu-item
+                        v-if="can('monitor.recordRule.delete')"
+                        key="delete"
+                        danger
+                      >
+                        删除
+                      </a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
@@ -197,33 +229,30 @@
     </div>
 
     <!-- 新增记录规则模态框 -->
-    <a-modal 
-      :open="isAddModalVisible" 
-      title="新增记录规则" 
+    <a-modal
+      :open="isAddModalVisible"
+      title="新增记录规则"
       :width="formDialogWidth"
-      @ok="handleAdd" 
-      @cancel="closeAddModal" 
-      :confirm-loading="submitLoading" 
-      :destroy-on-close="true" 
+      @ok="handleAdd"
+      @cancel="closeAddModal"
+      :confirm-loading="submitLoading"
+      :destroy-on-close="true"
       class="responsive-modal scrape-pool-modal"
     >
-      <a-form 
-        ref="addFormRef" 
-        :model="addForm" 
-        :rules="formRules" 
+      <a-form
+        ref="addFormRef"
+        :model="addForm"
+        :rules="formRules"
         layout="vertical"
       >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="记录名称" 
-                name="name"
-              >
-                <a-input 
-                  v-model:value="addForm.name" 
-                  placeholder="请输入记录名称" 
+              <a-form-item label="记录名称" name="name">
+                <a-input
+                  v-model:value="addForm.name"
+                  placeholder="请输入记录名称"
                 />
               </a-form-item>
             </a-col>
@@ -231,20 +260,21 @@
 
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="Prometheus 实例池" 
-                name="pool_id"
-              >
-                <a-select 
-                  v-model:value="addForm.pool_id" 
-                  placeholder="请选择实例池" 
+              <a-form-item label="Prometheus 实例池" name="pool_id">
+                <a-select
+                  v-model:value="addForm.pool_id"
+                  placeholder="请选择实例池"
                   class="full-width"
                   show-search
                   :filter-option="false"
                   @search="handlePoolSearch"
                   @dropdown-visible-change="handlePoolDropdownChange"
                 >
-                  <a-select-option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
+                  <a-select-option
+                    v-for="pool in poolOptions"
+                    :key="pool.id"
+                    :value="pool.id"
+                  >
                     {{ pool.name }}
                   </a-select-option>
                 </a-select>
@@ -265,13 +295,10 @@
 
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="IP地址" 
-                name="ip_address"
-              >
-                <a-input 
-                  v-model:value="addForm.ip_address" 
-                  placeholder="例如: 192.168.1.100:9090 或 localhost:9090" 
+              <a-form-item label="IP地址" name="ip_address">
+                <a-input
+                  v-model:value="addForm.ip_address"
+                  placeholder="例如: 192.168.1.100:9090 或 localhost:9090"
                 />
               </a-form-item>
             </a-col>
@@ -282,36 +309,31 @@
           <div class="section-title">规则配置</div>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="是否启用" 
-                name="enable"
-              >
-                <a-switch 
+              <a-form-item label="是否启用" name="enable">
+                <a-switch
                   :checked="addForm.enable === 1"
-                  @change="(checked: boolean) => addForm.enable = checked ? 1 : 2" 
-                  class="tech-switch" 
+                  @change="
+                    (checked: boolean) => (addForm.enable = checked ? 1 : 2)
+                  "
+                  class="tech-switch"
                 />
               </a-form-item>
             </a-col>
-
           </a-row>
 
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="表达式" 
-                name="expr"
-              >
-                <a-textarea 
-                  v-model:value="addForm.expr" 
-                  placeholder="请输入表达式" 
+              <a-form-item label="表达式" name="expr">
+                <a-textarea
+                  v-model:value="addForm.expr"
+                  placeholder="请输入表达式"
                   :rows="3"
                 />
               </a-form-item>
               <a-form-item>
-                <a-button 
-                  type="primary" 
-                  class="validate-button" 
+                <a-button
+                  type="primary"
+                  class="validate-button"
                   @click="validateAddExpression"
                   :loading="validatingExpr"
                 >
@@ -328,33 +350,30 @@
     </a-modal>
 
     <!-- 编辑记录规则模态框 -->
-    <a-modal 
-      :open="isEditModalVisible" 
-      title="编辑记录规则" 
+    <a-modal
+      :open="isEditModalVisible"
+      title="编辑记录规则"
       :width="formDialogWidth"
-      @ok="handleUpdate" 
-      @cancel="closeEditModal" 
-      :confirm-loading="submitLoading" 
-      :destroy-on-close="true" 
+      @ok="handleUpdate"
+      @cancel="closeEditModal"
+      :confirm-loading="submitLoading"
+      :destroy-on-close="true"
       class="responsive-modal scrape-pool-modal"
     >
-      <a-form 
-        ref="editFormRef" 
-        :model="editForm" 
-        :rules="formRules" 
+      <a-form
+        ref="editFormRef"
+        :model="editForm"
+        :rules="formRules"
         layout="vertical"
       >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="记录名称" 
-                name="name"
-              >
-                <a-input 
-                  v-model:value="editForm.name" 
-                  placeholder="请输入记录名称" 
+              <a-form-item label="记录名称" name="name">
+                <a-input
+                  v-model:value="editForm.name"
+                  placeholder="请输入记录名称"
                 />
               </a-form-item>
             </a-col>
@@ -362,20 +381,21 @@
 
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="Prometheus 实例池" 
-                name="pool_id"
-              >
-                <a-select 
-                  v-model:value="editForm.pool_id" 
-                  placeholder="请选择实例池" 
+              <a-form-item label="Prometheus 实例池" name="pool_id">
+                <a-select
+                  v-model:value="editForm.pool_id"
+                  placeholder="请选择实例池"
                   class="full-width"
                   show-search
                   :filter-option="false"
                   @search="handlePoolSearch"
                   @dropdown-visible-change="handlePoolDropdownChange"
                 >
-                  <a-select-option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
+                  <a-select-option
+                    v-for="pool in poolOptions"
+                    :key="pool.id"
+                    :value="pool.id"
+                  >
                     {{ pool.name }}
                   </a-select-option>
                 </a-select>
@@ -396,13 +416,10 @@
 
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="IP地址" 
-                name="ip_address"
-              >
-                <a-input 
-                  v-model:value="editForm.ip_address" 
-                  placeholder="例如: 192.168.1.100:9090 或 localhost:9090" 
+              <a-form-item label="IP地址" name="ip_address">
+                <a-input
+                  v-model:value="editForm.ip_address"
+                  placeholder="例如: 192.168.1.100:9090 或 localhost:9090"
                 />
               </a-form-item>
             </a-col>
@@ -413,36 +430,31 @@
           <div class="section-title">规则配置</div>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="是否启用" 
-                name="enable"
-              >
-                <a-switch 
+              <a-form-item label="是否启用" name="enable">
+                <a-switch
                   :checked="editForm.enable === 1"
-                  @change="(checked: boolean) => editForm.enable = checked ? 1 : 2" 
-                  class="tech-switch" 
+                  @change="
+                    (checked: boolean) => (editForm.enable = checked ? 1 : 2)
+                  "
+                  class="tech-switch"
                 />
               </a-form-item>
             </a-col>
-
           </a-row>
 
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="表达式" 
-                name="expr"
-              >
-                <a-textarea 
-                  v-model:value="editForm.expr" 
-                  placeholder="请输入表达式" 
+              <a-form-item label="表达式" name="expr">
+                <a-textarea
+                  v-model:value="editForm.expr"
+                  placeholder="请输入表达式"
                   :rows="3"
                 />
               </a-form-item>
               <a-form-item>
-                <a-button 
-                  type="primary" 
-                  class="validate-button" 
+                <a-button
+                  type="primary"
+                  class="validate-button"
                   @click="validateEditExpression"
                   :loading="validatingExpr"
                 >
@@ -459,47 +471,65 @@
     </a-modal>
 
     <!-- 详情对话框 -->
-    <a-modal 
-      :open="detailDialogVisible" 
-      title="记录规则详情" 
-      :width="previewDialogWidth" 
+    <a-modal
+      :open="detailDialogVisible"
+      title="记录规则详情"
+      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeDetailDialog" 
+      @cancel="closeDetailDialog"
       class="detail-dialog"
     >
       <div v-if="detailDialog.form" class="pool-details">
         <div class="detail-header">
           <h2>{{ detailDialog.form.name }}</h2>
           <div class="detail-badges">
-            <a-tag :color="detailDialog.form.enable === 1 ? 'success' : 'default'">
+            <a-tag
+              :color="detailDialog.form.enable === 1 ? 'success' : 'default'"
+            >
               {{ detailDialog.form.enable === 1 ? '已启用' : '已禁用' }}
             </a-tag>
           </div>
         </div>
 
         <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
-          <a-descriptions-item label="ID">{{ detailDialog.form.id }}</a-descriptions-item>
-          <a-descriptions-item label="记录名称">{{ detailDialog.form.name }}</a-descriptions-item>
-          <a-descriptions-item label="关联实例池">{{ detailDialog.form.pool_name || '无关联池' }}</a-descriptions-item>
-          <a-descriptions-item label="IP地址">{{ detailDialog.form.ip_address || '' }}</a-descriptions-item>
-          <a-descriptions-item label="是否启用">{{ detailDialog.form.enable === 1 ? '启用' : '禁用' }}</a-descriptions-item>
+          <a-descriptions-item label="ID">
+            {{ detailDialog.form.id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="记录名称">
+            {{ detailDialog.form.name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="关联实例池">
+            {{ detailDialog.form.pool_name || '无关联池' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="IP地址">
+            {{ detailDialog.form.ip_address || '' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="是否启用">
+            {{ detailDialog.form.enable === 1 ? '启用' : '禁用' }}
+          </a-descriptions-item>
           <a-descriptions-item label="表达式">
             <div class="expr-detail">{{ detailDialog.form.expr }}</div>
           </a-descriptions-item>
-          <a-descriptions-item label="创建人">{{ detailDialog.form.create_user_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form?.created_at || '') }}</a-descriptions-item>
+          <a-descriptions-item label="创建人">
+            {{ detailDialog.form.create_user_name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{ formatFullDateTime(detailDialog.form?.created_at || '') }}
+          </a-descriptions-item>
         </a-descriptions>
 
         <div class="detail-footer">
           <a-button @click="closeDetailDialog">关闭</a-button>
-          <a-button 
-            v-if="detailDialog.form.enable === 2" 
-            type="primary" 
+          <a-button
+            v-if="detailDialog.form.enable === 2"
+            type="primary"
             @click="handleEnableRecord(detailDialog.form)"
           >
             启用
           </a-button>
-          <a-button type="primary" @click="showEditModal(detailDialog.form)">编辑</a-button>
+          <a-button type="primary" @click="showEditModal(detailDialog.form)">
+            编辑
+          </a-button>
         </div>
       </div>
     </a-modal>
@@ -559,14 +589,37 @@ const previewDialogWidth = computed(() => {
 
 // 列定义
 const columns = [
-  { title: '记录名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
+  {
+    title: '记录名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 200,
+    fixed: 'left',
+  },
   { title: '关联实例池', dataIndex: 'pool_name', key: 'pool_name', width: 180 },
   { title: 'IP地址', dataIndex: 'ip_address', key: 'ip_address', width: 200 },
-  { title: '是否启用', dataIndex: 'enable', key: 'enable', width: 100, align: 'center' as const },
+  {
+    title: '是否启用',
+    dataIndex: 'enable',
+    key: 'enable',
+    width: 100,
+    align: 'center' as const,
+  },
   { title: '表达式', dataIndex: 'expr', key: 'expr', width: 250 },
-  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
+  {
+    title: '创建人',
+    dataIndex: 'create_user_name',
+    key: 'creator',
+    width: 120,
+  },
   { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
-  { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
+  {
+    title: '操作',
+    key: 'action',
+    width: 200,
+    align: 'center' as const,
+    fixed: 'right',
+  },
 ];
 
 // 状态数据
@@ -596,7 +649,7 @@ const paginationConfig = reactive({
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
-  size: 'default' as const
+  size: 'default' as const,
 });
 
 // Prometheus实例池分页配置
@@ -604,7 +657,7 @@ const poolPagination = reactive({
   current: 1,
   pageSize: 10,
   total: 0,
-  search: ''
+  search: '',
 });
 
 // 统计数据
@@ -612,7 +665,7 @@ const stats = reactive({
   total: 0,
   enabled: 0,
   disabled: 0,
-  pools: 0
+  pools: 0,
 });
 
 // 对话框状态
@@ -647,45 +700,47 @@ const editForm = reactive({
 
 // 详情对话框数据
 const detailDialog = reactive({
-  form: null as MonitorRecordRule | null
+  form: null as MonitorRecordRule | null,
 });
 
 // 表单验证规则
 const formRules = {
   name: [
     { required: true, message: '请输入记录名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' }
+    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
   ],
-  pool_id: [
-    { required: true, message: '请选择实例池', trigger: 'change' }
-  ],
+  pool_id: [{ required: true, message: '请选择实例池', trigger: 'change' }],
   ip_address: [
     { required: true, message: '请输入IP地址', trigger: 'blur' },
-    { validator: (_rule: any, value: string) => {
-      if (!value) {
-        return Promise.reject('请输入IP地址');
-      }
-      // 支持 IP:PORT 格式，如 192.168.1.100:9090 或 localhost:9090
-      const ipPortPattern = /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])(:[0-9]+)?$/;
-      if (!ipPortPattern.test(value)) {
-        return Promise.reject('请输入有效的IP地址，如 192.168.1.100:9090 或 localhost:9090');
-      }
-      // 如果包含端口，验证端口范围
-      if (value.includes(':')) {
-        const portStr = value.split(':')[1];
-        if (portStr) {
-          const port = parseInt(portStr);
-          if (port < 1 || port > 65535) {
-            return Promise.reject('端口必须在1-65535之间');
+    {
+      validator: (_rule: any, value: string) => {
+        if (!value) {
+          return Promise.reject('请输入IP地址');
+        }
+        // 支持 IP:PORT 格式，如 192.168.1.100:9090 或 localhost:9090
+        const ipPortPattern =
+          /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])(:[0-9]+)?$/;
+        if (!ipPortPattern.test(value)) {
+          return Promise.reject(
+            '请输入有效的IP地址，如 192.168.1.100:9090 或 localhost:9090',
+          );
+        }
+        // 如果包含端口，验证端口范围
+        if (value.includes(':')) {
+          const portStr = value.split(':')[1];
+          if (portStr) {
+            const port = parseInt(portStr);
+            if (port < 1 || port > 65535) {
+              return Promise.reject('端口必须在1-65535之间');
+            }
           }
         }
-      }
-      return Promise.resolve();
-    }, trigger: 'blur' }
+        return Promise.resolve();
+      },
+      trigger: 'blur',
+    },
   ],
-  expr: [
-    { required: true, message: '请输入表达式', trigger: 'blur' }
-  ],
+  expr: [{ required: true, message: '请输入表达式', trigger: 'blur' }],
 };
 
 const getRecordStatusClass = (record: MonitorRecordRule): string => {
@@ -693,7 +748,16 @@ const getRecordStatusClass = (record: MonitorRecordRule): string => {
 };
 
 const getAvatarColor = (name: string): string => {
-  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
+  const colors = [
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
+  ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -708,12 +772,16 @@ const getInitials = (name: string): string => {
 
 const formatDate = (timestamp: number | string): string => {
   if (!timestamp) return '';
-  return new Date(typeof timestamp === 'string' ? timestamp : timestamp * 1000).toLocaleDateString('zh-CN');
+  return new Date(
+    typeof timestamp === 'string' ? timestamp : timestamp * 1000,
+  ).toLocaleDateString('zh-CN');
 };
 
 const formatTime = (timestamp: number | string): string => {
   if (!timestamp) return '';
-  return new Date(typeof timestamp === 'string' ? timestamp : timestamp * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  return new Date(
+    typeof timestamp === 'string' ? timestamp : timestamp * 1000,
+  ).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 };
 
 const formatFullDateTime = (timestamp: string): string => {
@@ -729,9 +797,9 @@ const truncateText = (text: string, maxLength: number): string => {
 // 更新统计数据
 const updateStats = () => {
   stats.total = paginationConfig.total;
-  stats.enabled = data.value.filter(item => item.enable === 1).length;
-  stats.disabled = data.value.filter(item => item.enable === 2).length;
-  stats.pools = new Set(data.value.map(item => item.pool_id)).size;
+  stats.enabled = data.value.filter((item) => item.enable === 1).length;
+  stats.disabled = data.value.filter((item) => item.enable === 2).length;
+  stats.pools = new Set(data.value.map((item) => item.pool_id)).size;
 };
 
 // 数据加载
@@ -749,7 +817,6 @@ const fetchRecordRules = async (): Promise<void> => {
     paginationConfig.total = response.total || 0;
     updateStats();
   } catch (error: any) {
-
     if (!request.fail(error, '加载记录规则列表失败')) return;
     data.value = [];
     paginationConfig.total = 0;
@@ -766,13 +833,13 @@ const loadPools = async () => {
     const response = await getMonitorScrapePoolListApi({
       page: poolPagination.current,
       size: poolPagination.pageSize,
-      search: poolPagination.search
+      search: poolPagination.search,
     });
     poolOptions.value = response.items;
     poolPagination.total = response.total;
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取实例池数据失败，请稍后重试');
-
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取实例池数据失败，请稍后重试');
   }
 };
 
@@ -837,23 +904,26 @@ const handleViewRecord = async (record: MonitorRecordRule): Promise<void> => {
     detailDialog.form = response;
     detailDialogVisible.value = true;
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取记录详情失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取记录详情失败');
   }
 };
 
 // 菜单点击处理
 const handleMenuClick = (command: string, record: MonitorRecordRule): void => {
   switch (command) {
-    case 'enable':
+    case 'enable': {
       handleEnableRecord(record);
       break;
-    case 'disable':
+    }
+    case 'disable': {
       handleDisableRecord(record);
       break;
-    case 'delete':
+    }
+    case 'delete': {
       handleDelete(record);
       break;
+    }
   }
 };
 
@@ -876,13 +946,15 @@ const handleEnableRecord = async (record: MonitorRecordRule): Promise<void> => {
       detailDialog.form!.enable = 1;
     }
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '启用记录规则失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '启用记录规则失败');
   }
 };
 
 // 禁用记录
-const handleDisableRecord = async (record: MonitorRecordRule): Promise<void> => {
+const handleDisableRecord = async (
+  record: MonitorRecordRule,
+): Promise<void> => {
   try {
     const payload = {
       id: record.id!,
@@ -897,8 +969,8 @@ const handleDisableRecord = async (record: MonitorRecordRule): Promise<void> => 
     message.success(`记录规则 "${record.name}" 已禁用`);
     fetchRecordRules();
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '禁用记录规则失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '禁用记录规则失败');
   }
 };
 
@@ -964,8 +1036,8 @@ const handleAdd = async (): Promise<void> => {
     fetchRecordRules();
     closeAddModal();
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '新增记录失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '新增记录失败');
   } finally {
     submitLoading.value = false;
   }
@@ -992,8 +1064,8 @@ const handleUpdate = async (): Promise<void> => {
     fetchRecordRules();
     closeEditModal();
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '更新记录规则失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '更新记录规则失败');
   } finally {
     submitLoading.value = false;
   }
@@ -1013,8 +1085,8 @@ const handleDelete = (record: MonitorRecordRule) => {
         message.success('记录规则已删除');
         fetchRecordRules();
       } catch (error: any) {
-
-        if (shouldNotifyPageError(error)) message.error(error.message || '删除记录规则失败');
+        if (shouldNotifyPageError(error))
+          message.error(error.message || '删除记录规则失败');
       }
     },
   });
@@ -1032,8 +1104,8 @@ const validateAddExpression = async () => {
     await promqlExprCheckApi(payload);
     message.success('表达式验证成功');
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(error.message || '表达式验证失败，请稍后重试');
-
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '表达式验证失败，请稍后重试');
   } finally {
     validatingExpr.value = false;
   }
@@ -1051,8 +1123,8 @@ const validateEditExpression = async () => {
     await promqlExprCheckApi(payload);
     message.success('表达式验证成功');
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(error.message || '表达式验证失败，请稍后重试');
-
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '表达式验证失败，请稍后重试');
   } finally {
     validatingExpr.value = false;
   }
@@ -1066,11 +1138,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-
-
-
-
-
 .search-input {
   width: 250px;
   min-width: 200px;
@@ -1295,9 +1362,6 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-
-
-
   .search-input {
     width: 100%;
     min-width: auto;
@@ -1307,8 +1371,6 @@ onMounted(() => {
     width: 100%;
     min-width: auto;
   }
-
-
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
@@ -1360,7 +1422,6 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-
   .stats-card {
     text-align: center;
   }

@@ -96,7 +96,11 @@ function transformComponent(
 
 <template>
   <div class="relative h-full">
-    <div v-if="contentOwner" :key="`${contentOwner}:${ownerEpoch}`" class="h-full">
+    <div
+      v-if="contentOwner"
+      :key="`${contentOwner}:${ownerEpoch}`"
+      class="h-full"
+    >
       <IFrameRouterView />
       <RouterView v-slot="{ Component, route }">
         <Transition :name="getTransitionName(route)" appear mode="out-in">

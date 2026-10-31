@@ -56,26 +56,50 @@ export function getCurrentPermissions() {
   return requestClient.get<CurrentPermissions>('/user/permissions');
 }
 
-export function listNotificationEvents(params: { page: number; size: number; status?: string }) {
-  return requestClient.get<{ items: NotificationEvent[]; total: number }>('/workorder/notification/events', { params });
+export function listNotificationEvents(params: {
+  page: number;
+  size: number;
+  status?: string;
+}) {
+  return requestClient.get<{ items: NotificationEvent[]; total: number }>(
+    '/workorder/notification/events',
+    { params },
+  );
 }
 
 export function getNotificationDeliveries(id: number) {
-  return requestClient.get<NotificationDelivery[]>(`/workorder/notification/events/${id}/deliveries`);
+  return requestClient.get<NotificationDelivery[]>(
+    `/workorder/notification/events/${id}/deliveries`,
+  );
 }
 
 export function getNotificationResolutions(id: number) {
-  return requestClient.get<NotificationResolution[]>(`/workorder/notification/events/${id}/resolutions`);
+  return requestClient.get<NotificationResolution[]>(
+    `/workorder/notification/events/${id}/resolutions`,
+  );
 }
 
 export function cancelNotificationEvent(id: number, reason: string) {
-  return requestClient.post(`/workorder/notification/events/${id}/cancel`, { reason });
+  return requestClient.post(`/workorder/notification/events/${id}/cancel`, {
+    reason,
+  });
 }
 
 export function retryNotificationEvent(id: number, reason: string) {
-  return requestClient.post(`/workorder/notification/events/${id}/retry`, { reason });
+  return requestClient.post(`/workorder/notification/events/${id}/retry`, {
+    reason,
+  });
 }
 
-export function resolveNotificationDelivery(id: number, deliveryId: number, action: 'delivered' | 'retry', reason: string) {
-  return requestClient.post(`/workorder/notification/events/${id}/resolve`, { delivery_id: deliveryId, action, reason });
+export function resolveNotificationDelivery(
+  id: number,
+  deliveryId: number,
+  action: 'delivered' | 'retry',
+  reason: string,
+) {
+  return requestClient.post(`/workorder/notification/events/${id}/resolve`, {
+    delivery_id: deliveryId,
+    action,
+    reason,
+  });
 }

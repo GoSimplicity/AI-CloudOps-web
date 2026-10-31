@@ -2,11 +2,11 @@ import { requestClient } from '#/api/request';
 
 // 告警事件状态枚举
 export enum MonitorAlertEventStatus {
-  FIRING = 1,    // 告警触发
-  SILENCED = 2,  // 告警静默
-  CLAIMED = 3,   // 告警认领
-  RESOLVED = 4,  // 告警恢复
-  UPGRADED = 5,  // 告警升级
+  FIRING = 1, // 告警触发
+  SILENCED = 2, // 告警静默
+  CLAIMED = 3, // 告警认领
+  RESOLVED = 4, // 告警恢复
+  UPGRADED = 5, // 告警升级
 }
 
 // 告警事件模型
@@ -58,7 +58,9 @@ export interface EventAlertUnSilenceReq {
 }
 
 // 获取告警事件列表
-export async function getMonitorAlertEventListApi(data: GetMonitorAlertEventListReq) {
+export async function getMonitorAlertEventListApi(
+  data: GetMonitorAlertEventListReq,
+) {
   return requestClient.get(`/monitor/alert_events/list`, { params: data });
 }
 
@@ -70,7 +72,7 @@ export async function eventAlertSilenceApi(data: EventAlertSilenceReq) {
   });
 }
 
-  // 认领告警事件
+// 认领告警事件
 export async function eventAlertClaimApi(data: EventAlertClaimReq) {
   return requestClient.post(`/monitor/alert_events/claim/${data.id}`);
 }

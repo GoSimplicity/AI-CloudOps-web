@@ -26,7 +26,7 @@ async function bootstrap(namespace: string) {
 
   // 配置路由及路由守卫
   app.use(router);
-  app.use(Antd)
+  app.use(Antd);
   app.mount('#app');
 }
 

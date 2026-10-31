@@ -526,9 +526,9 @@ onMounted(async () => {
             :disabled="clustersLoading"
             @popup-scroll="handleClusterDropdownScroll"
           >
-            <template #suffixIcon
-              ><DeploymentUnitOutlined aria-hidden="true"
-            /></template>
+            <template #suffixIcon>
+              <DeploymentUnitOutlined aria-hidden="true" />
+            </template>
             <a-select-option
               v-for="cluster in clusters"
               :key="cluster.id"
@@ -542,9 +542,9 @@ onMounted(async () => {
                 "
               >
                 <span>{{ cluster.name }}</span>
-                <a-tag color="blue" size="small">{{
-                  getEnvText(cluster.env)
-                }}</a-tag>
+                <a-tag color="blue" size="small">
+                  {{ getEnvText(cluster.env) }}
+                </a-tag>
               </div>
             </a-select-option>
             <a-select-option
@@ -568,9 +568,9 @@ onMounted(async () => {
             :disabled="!filterClusterId"
             :loading="namespacesLoading"
           >
-            <template #suffixIcon
-              ><AppstoreOutlined aria-hidden="true"
-            /></template>
+            <template #suffixIcon>
+              <AppstoreOutlined aria-hidden="true" />
+            </template>
             <a-select-option
               v-for="ns in namespaces"
               :key="ns.name"
@@ -604,21 +604,21 @@ onMounted(async () => {
             allow-clear
             @change="handleFilterChange"
           >
-            <template #suffixIcon
-              ><FilterOutlined aria-hidden="true"
-            /></template>
-            <a-select-option :value="K8sDeploymentStatus.Running"
-              >运行中</a-select-option
-            >
-            <a-select-option :value="K8sDeploymentStatus.Stopped"
-              >已停止</a-select-option
-            >
-            <a-select-option :value="K8sDeploymentStatus.Paused"
-              >已暂停</a-select-option
-            >
-            <a-select-option :value="K8sDeploymentStatus.Error"
-              >异常</a-select-option
-            >
+            <template #suffixIcon>
+              <FilterOutlined aria-hidden="true" />
+            </template>
+            <a-select-option :value="K8sDeploymentStatus.Running">
+              运行中
+            </a-select-option>
+            <a-select-option :value="K8sDeploymentStatus.Stopped">
+              已停止
+            </a-select-option>
+            <a-select-option :value="K8sDeploymentStatus.Paused">
+              已暂停
+            </a-select-option>
+            <a-select-option :value="K8sDeploymentStatus.Error">
+              异常
+            </a-select-option>
           </a-select>
 
           <!-- 标签过滤器 -->
@@ -733,11 +733,9 @@ onMounted(async () => {
 
     <!-- 数据展示区域 -->
     <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
-      <template #action
-        ><a-button size="small" @click="fetchDeployments"
-          >重试</a-button
-        ></template
-      >
+      <template #action>
+        <a-button size="small" @click="fetchDeployments"> 重试 </a-button>
+      </template>
     </a-alert>
     <a-alert
       v-if="clustersError"
@@ -745,11 +743,11 @@ onMounted(async () => {
       :message="clustersError"
       show-icon
     >
-      <template #action
-        ><a-button size="small" @click="() => fetchClusters(true)"
-          >重试集群列表</a-button
-        ></template
-      >
+      <template #action>
+        <a-button size="small" @click="() => fetchClusters(true)">
+          重试集群列表
+        </a-button>
+      </template>
     </a-alert>
     <a-alert
       v-if="namespacesError"
@@ -757,11 +755,11 @@ onMounted(async () => {
       :message="namespacesError"
       show-icon
     >
-      <template #action
-        ><a-button size="small" @click="() => fetchNamespaces(true)"
-          >重试命名空间</a-button
-        ></template
-      >
+      <template #action>
+        <a-button size="small" @click="() => fetchNamespaces(true)">
+          重试命名空间
+        </a-button>
+      </template>
     </a-alert>
     <div class="k8s-data-display table-container">
       <a-table
@@ -786,7 +784,10 @@ onMounted(async () => {
       >
         <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'status'">
-            <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
+            <a-badge
+              :status="getStatusColor(text)"
+              :text="getStatusText(text)"
+            />
           </template>
           <template v-else-if="column.key === 'strategyDetails'">
             <div
@@ -806,9 +807,9 @@ onMounted(async () => {
                 style="display: flex; align-items: center; gap: 4px"
               >
                 <span style="color: #999">不可用:</span>
-                <a-tag color="orange" size="small">{{
-                  record.max_unavailable
-                }}</a-tag>
+                <a-tag color="orange" size="small">
+                  {{ record.max_unavailable }}
+                </a-tag>
               </div>
               <div
                 v-if="record.max_surge"
@@ -819,20 +820,21 @@ onMounted(async () => {
               </div>
               <span
                 v-if="
-                  !record.strategy && !record.max_unavailable && !record.max_surge
+                  !record.strategy &&
+                  !record.max_unavailable &&
+                  !record.max_surge
                 "
                 class="k8s-no-data"
-                >-</span
-              >
+                >-</span>
             </div>
           </template>
           <template v-else-if="column.key === 'images'">
             <div class="k8s-images-display">
               <a-tag
-                v-for="(image, index) in (Array.isArray(text) ? text : []).slice(
-                  0,
-                  2,
-                )"
+                v-for="(image, index) in (Array.isArray(text)
+                  ? text
+                  : []
+                ).slice(0, 2)"
                 :key="index"
                 class="k8s-image-tag"
               >
@@ -849,8 +851,7 @@ onMounted(async () => {
               <span
                 v-if="!text || !Array.isArray(text) || text.length === 0"
                 class="k8s-no-data"
-                >-</span
-              >
+                >-</span>
             </div>
           </template>
           <template v-else-if="column.key === 'labels'">
@@ -874,7 +875,9 @@ onMounted(async () => {
                       .join('\n')
                   "
                 >
-                  <a-tag class="k8s-label-item"> {{ text.length }} 个标签 </a-tag>
+                  <a-tag class="k8s-label-item">
+                    {{ text.length }} 个标签
+                  </a-tag>
                 </a-tooltip>
                 <span v-if="text.length === 0" class="k8s-no-data">-</span>
               </template>
@@ -899,9 +902,7 @@ onMounted(async () => {
                     {{ Object.keys(text).length }} 个标签
                   </a-tag>
                 </a-tooltip>
-                <span v-if="Object.keys(text).length === 0" class="k8s-no-data"
-                  >-</span
-                >
+                <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
               </template>
               <template v-else>
                 <span class="k8s-no-data">-</span>
@@ -992,7 +993,10 @@ onMounted(async () => {
           <template v-else-if="column.key === 'actions'">
             <div class="k8s-action-column">
               <a-tooltip title="查看详情">
-                <a-button title="查看详情" @click="showDeploymentDetail(record)">
+                <a-button
+                  title="查看详情"
+                  @click="showDeploymentDetail(record)"
+                >
                   <template #icon><EyeOutlined aria-hidden="true" /></template>
                 </a-button>
               </a-tooltip>
@@ -1003,14 +1007,16 @@ onMounted(async () => {
               </a-tooltip>
               <a-tooltip title="查看 YAML">
                 <a-button title="查看 YAML" @click="showYamlModal(record)">
-                  <template #icon
-                    ><FileTextOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <FileTextOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
               <a-tooltip title="伸缩">
                 <a-button title="伸缩" @click="openScaleModal(record)">
-                  <template #icon><ExpandOutlined aria-hidden="true" /></template>
+                  <template #icon>
+                    <ExpandOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
               <a-tooltip title="重启">
@@ -1023,9 +1029,9 @@ onMounted(async () => {
                 title="暂停"
               >
                 <a-button title="暂停" @click="pauseDeployment(record)">
-                  <template #icon
-                    ><PauseCircleOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <PauseCircleOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
               <a-tooltip
@@ -1033,28 +1039,30 @@ onMounted(async () => {
                 title="恢复"
               >
                 <a-button title="恢复" @click="resumeDeployment(record)">
-                  <template #icon
-                    ><PlayCircleOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <PlayCircleOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
               <a-tooltip title="查看 Pod">
                 <a-button title="查看 Pod" @click="showPodModal(record)">
-                  <template #icon
-                    ><ContainerOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <ContainerOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
               <a-tooltip title="版本历史">
                 <a-button title="版本历史" @click="showHistoryModal(record)">
-                  <template #icon
-                    ><HistoryOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <HistoryOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
               <a-tooltip v-if="can('k8s.deployment.delete')" title="删除">
                 <a-button title="删除" danger @click="deleteDeployment(record)">
-                  <template #icon><DeleteOutlined aria-hidden="true" /></template>
+                  <template #icon>
+                    <DeleteOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
             </div>
@@ -1195,9 +1203,9 @@ onMounted(async () => {
                   size="small"
                   class="k8s-remove-btn"
                 >
-                  <template #icon
-                    ><DeleteOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <DeleteOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </div>
               <div class="add-input-row" style="margin-top: 8px">
@@ -1256,9 +1264,9 @@ onMounted(async () => {
                   size="small"
                   class="k8s-remove-btn"
                 >
-                  <template #icon
-                    ><DeleteOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <DeleteOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </div>
               <div class="add-input-row" style="margin-top: 8px">
@@ -1429,9 +1437,9 @@ onMounted(async () => {
                   size="small"
                   class="k8s-remove-btn"
                 >
-                  <template #icon
-                    ><DeleteOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <DeleteOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </div>
               <div class="add-input-row" style="margin-top: 8px">
@@ -1490,9 +1498,9 @@ onMounted(async () => {
                   size="small"
                   class="k8s-remove-btn"
                 >
-                  <template #icon
-                    ><DeleteOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <DeleteOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </div>
               <div class="add-input-row" style="margin-top: 8px">
@@ -1550,18 +1558,18 @@ onMounted(async () => {
               class="yaml-toolbar-btn yaml-btn-format"
               @click="formatYaml"
             >
-              <template #icon
-                ><FormatPainterOutlined aria-hidden="true"
-              /></template>
+              <template #icon>
+                <FormatPainterOutlined aria-hidden="true" />
+              </template>
               格式化
             </a-button>
             <a-button
               class="yaml-toolbar-btn yaml-btn-validate"
               @click="validateYaml"
             >
-              <template #icon
-                ><CheckCircleOutlined aria-hidden="true"
-              /></template>
+              <template #icon>
+                <CheckCircleOutlined aria-hidden="true" />
+              </template>
               检查格式
             </a-button>
             <a-button
@@ -1856,18 +1864,18 @@ onMounted(async () => {
               class="yaml-toolbar-btn yaml-btn-format"
               @click="formatEditYaml"
             >
-              <template #icon
-                ><FormatPainterOutlined aria-hidden="true"
-              /></template>
+              <template #icon>
+                <FormatPainterOutlined aria-hidden="true" />
+              </template>
               格式化
             </a-button>
             <a-button
               class="yaml-toolbar-btn yaml-btn-validate"
               @click="validateEditYaml"
             >
-              <template #icon
-                ><CheckCircleOutlined aria-hidden="true"
-              /></template>
+              <template #icon>
+                <CheckCircleOutlined aria-hidden="true" />
+              </template>
               检查格式
             </a-button>
           </div>

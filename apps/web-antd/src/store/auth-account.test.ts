@@ -3,6 +3,7 @@ import { reactive } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from './auth';
 import { resetAllStores } from '@vben/stores';
+
 const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const navigation = vi.hoisted(() => ({
   replace: vi.fn(),

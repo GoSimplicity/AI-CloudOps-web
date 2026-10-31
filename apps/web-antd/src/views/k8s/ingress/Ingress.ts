@@ -105,23 +105,27 @@ export function useIngressPage() {
     name: '',
     namespace: '',
     ingress_class_name: '',
-    rules: [{
-      host: '',
-      http: {
-        paths: [{
-          path: '/',
-          path_type: 'Prefix',
-          backend: {
-            service: {
-              name: '',
-              port: {
-                number: 80
-              }
-            }
-          }
-        } as IngressHTTPIngressPath]
-      } as IngressHTTPRuleValue
-    }],
+    rules: [
+      {
+        host: '',
+        http: {
+          paths: [
+            {
+              path: '/',
+              path_type: 'Prefix',
+              backend: {
+                service: {
+                  name: '',
+                  port: {
+                    number: 80,
+                  },
+                },
+              },
+            } as IngressHTTPIngressPath,
+          ],
+        } as IngressHTTPRuleValue,
+      },
+    ],
     tls: [],
     labels: {},
     annotations: {},
@@ -139,23 +143,27 @@ export function useIngressPage() {
     name: '',
     namespace: '',
     ingress_class_name: '',
-    rules: [{
-      host: '',
-      http: {
-        paths: [{
-          path: '/',
-          path_type: 'Prefix',
-          backend: {
-            service: {
-              name: '',
-              port: {
-                number: 80
-              }
-            }
-          }
-        } as IngressHTTPIngressPath]
-      } as IngressHTTPRuleValue
-    }],
+    rules: [
+      {
+        host: '',
+        http: {
+          paths: [
+            {
+              path: '/',
+              path_type: 'Prefix',
+              backend: {
+                service: {
+                  name: '',
+                  port: {
+                    number: 80,
+                  },
+                },
+              },
+            } as IngressHTTPIngressPath,
+          ],
+        } as IngressHTTPRuleValue,
+      },
+    ],
     tls: [],
     labels: {},
     annotations: {},
@@ -177,37 +185,47 @@ export function useIngressPage() {
   const createFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入 Ingress 名称', trigger: 'blur' },
-      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'Ingress 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
-      { max: 63, message: 'Ingress 名称长度不能超过63个字符', trigger: 'blur' }
+      {
+        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        message:
+          'Ingress 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        trigger: 'blur',
+      },
+      { max: 63, message: 'Ingress 名称长度不能超过63个字符', trigger: 'blur' },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' }
-    ]
+      { required: true, message: '请选择命名空间', trigger: 'change' },
+    ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   const editFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入 Ingress 名称', trigger: 'blur' },
-      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'Ingress 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
-      { max: 63, message: 'Ingress 名称长度不能超过63个字符', trigger: 'blur' }
+      {
+        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        message:
+          'Ingress 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        trigger: 'blur',
+      },
+      { max: 63, message: 'Ingress 名称长度不能超过63个字符', trigger: 'blur' },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' }
-    ]
+      { required: true, message: '请选择命名空间', trigger: 'change' },
+    ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   // computed
@@ -234,9 +252,11 @@ export function useIngressPage() {
   };
 
   // 解析负载均衡器信息
-  const parseLoadBalancerInfo = (loadBalancer?: IngressLoadBalancer): string[] => {
+  const parseLoadBalancerInfo = (
+    loadBalancer?: IngressLoadBalancer,
+  ): string[] => {
     if (!loadBalancer || !loadBalancer.ingress) return [];
-    
+
     const info: string[] = [];
     loadBalancer.ingress.forEach((lb: IngressLoadBalancerIngress) => {
       if (lb.ip) {
@@ -257,7 +277,7 @@ export function useIngressPage() {
   // 解析HTTP路径信息
   const parseHTTPPaths = (httpRule?: IngressHTTPRuleValue): string[] => {
     if (!httpRule || !httpRule.paths) return [];
-    
+
     return httpRule.paths.map((path: IngressHTTPIngressPath) => {
       const pathType = path.path_type || 'Prefix';
       return `${path.path} (${pathType})`;
@@ -296,27 +316,37 @@ export function useIngressPage() {
   };
 
   // 转换函数：Record<string, string> -> KeyValueList
-  const recordToKeyValueList = (record: Record<string, string>): KeyValueList => {
-    return Object.entries(record).map(([key, value]: [string, string]) => ({ key, value }));
+  const recordToKeyValueList = (
+    record: Record<string, string>,
+  ): KeyValueList => {
+    return Object.entries(record).map(([key, value]: [string, string]) => ({
+      key,
+      value,
+    }));
   };
 
   // 转换函数：KeyValueList 或对象 -> Record<string, string>
-  const keyValueListToRecord = (data?: KeyValueList | Record<string, string>): Record<string, string> => {
+  const keyValueListToRecord = (
+    data?: KeyValueList | Record<string, string>,
+  ): Record<string, string> => {
     if (!data) return {};
-    
+
     // 如果已经是对象格式，直接返回
     if (typeof data === 'object' && !Array.isArray(data)) {
       return data as Record<string, string>;
     }
-    
+
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce((acc, { key, value }) => {
-        acc[key] = value;
-        return acc;
-      }, {} as Record<string, string>);
+      return data.reduce(
+        (acc, { key, value }) => {
+          acc[key] = value;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
     }
-    
+
     return {};
   };
 
@@ -376,7 +406,8 @@ export function useIngressPage() {
         clearNamespaces();
         clearIngresses();
       }
-      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err))
+        clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -423,7 +454,8 @@ export function useIngressPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldRecordPageError(err))
+        namespacesError.value = '获取命名空间列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
@@ -434,7 +466,10 @@ export function useIngressPage() {
   const fetchIngresses = async () => {
     const clusterId = filterClusterId.value;
     const namespace = filterNamespace.value;
-    if (!clusterId) { clearIngresses(); return; }
+    if (!clusterId) {
+      clearIngresses();
+      return;
+    }
     const requestId = ++resourceRequestId;
     try {
       loading.value = true;
@@ -446,26 +481,42 @@ export function useIngressPage() {
         namespace: namespace || undefined,
         search: searchText.value || undefined,
         status: filterStatus.value || undefined,
-        labels: Object.keys(filterLabels.value).length > 0 ? filterLabels.value : undefined,
+        labels:
+          Object.keys(filterLabels.value).length > 0
+            ? filterLabels.value
+            : undefined,
         page: currentPage.value,
         size: pageSize.value,
       };
       const res = await getK8sIngressList(params);
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
       // 确保每个ingress对象都有正确的cluster_id
-      const ingressesWithClusterId = (res?.items || []).map((ingress: K8sIngress) => ({
-        ...ingress,
-        cluster_id: ingress.cluster_id || clusterId || 0,
-        // 计算前端使用的字段
-        age: calculateAge(ingress.created_at),
-        hosts: extractHosts(ingress.rules),
-      }));
+      const ingressesWithClusterId = (res?.items || []).map(
+        (ingress: K8sIngress) => ({
+          ...ingress,
+          cluster_id: ingress.cluster_id || clusterId || 0,
+          // 计算前端使用的字段
+          age: calculateAge(ingress.created_at),
+          hosts: extractHosts(ingress.rules),
+        }),
+      );
       ingresses.value = ingressesWithClusterId;
       total.value = res?.total || 0;
     } catch (error) {
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
       clearIngresses();
-      if (shouldRecordPageError(error)) loadError.value = '获取 Ingress 列表失败，请重试';
+      if (shouldRecordPageError(error))
+        loadError.value = '获取 Ingress 列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
@@ -475,21 +526,25 @@ export function useIngressPage() {
   // 提取主机列表
   const extractHosts = (rules?: IngressRule[]): string[] => {
     if (!rules || rules.length === 0) return [];
-    return rules.map(rule => rule.host).filter(host => host && host.trim() !== '');
+    return rules
+      .map((rule) => rule.host)
+      .filter((host) => host && host.trim() !== '');
   };
 
   // 计算年龄
   const calculateAge = (createdAt?: string): string => {
     if (!createdAt) return '-';
-    
+
     const created = new Date(createdAt);
     const now = new Date();
     const diffMs = now.getTime() - created.getTime();
-    
+
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const diffHours = Math.floor(
+      (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+    );
     const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (diffDays > 0) {
       return `${diffDays}d ${diffHours}h`;
     } else if (diffHours > 0) {
@@ -503,36 +558,38 @@ export function useIngressPage() {
   const showIngressDetail = async (record: K8sIngress) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
       const res = await getK8sIngressDetails({
         cluster_id: clusterId,
         namespace: record.namespace,
-        name: record.name
+        name: record.name,
       });
-      
+
       // 直接使用详情数据，不需要转换格式
-      const processedDetail = res ? {
-        ...res,
-        cluster_id: clusterId,
-        age: calculateAge(res.created_at),
-        hosts: extractHosts(res.rules),
-      } : { 
-        ...record, 
-        cluster_id: clusterId,
-        age: calculateAge(record.created_at),
-        hosts: extractHosts(record.rules),
-      };
-      
+      const processedDetail = res
+        ? {
+            ...res,
+            cluster_id: clusterId,
+            age: calculateAge(res.created_at),
+            hosts: extractHosts(res.rules),
+          }
+        : {
+            ...record,
+            cluster_id: clusterId,
+            age: calculateAge(record.created_at),
+            hosts: extractHosts(record.rules),
+          };
+
       currentIngressDetail.value = processedDetail;
     } catch (err) {
       if (shouldNotifyPageError(err)) message.error('获取 Ingress 详情失败');
 
       // 错误时使用原始记录数据
-      const fallbackDetail = { 
-        ...record, 
+      const fallbackDetail = {
+        ...record,
         cluster_id: clusterId,
         age: calculateAge(record.created_at),
         hosts: extractHosts(record.rules),
@@ -552,21 +609,20 @@ export function useIngressPage() {
   const showYamlModal = async (record: K8sIngress) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       submitLoading.value = true;
       currentOperationIngress.value = { ...record, cluster_id: clusterId };
       const res = await getK8sIngressYaml({
         cluster_id: clusterId,
         namespace: record.namespace,
-        name: record.name
+        name: record.name,
       });
       currentYamlContent.value = res?.yaml || '';
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (err) {
       if (shouldNotifyPageError(err)) message.error('获取 Ingress YAML 失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -581,29 +637,29 @@ export function useIngressPage() {
 
   const submitYamlForm = async () => {
     if (!yamlFormRef.value || !currentOperationIngress.value) return;
-    
+
     try {
       await yamlFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: UpdateIngressByYamlReq = {
         cluster_id: currentOperationIngress.value.cluster_id,
         namespace: currentOperationIngress.value.namespace,
         name: currentOperationIngress.value.name,
         yaml: yamlFormModel.value.yaml,
       };
-      
+
       await updateK8sIngressByYaml(params);
       message.success('🎉 Ingress YAML 更新成功');
       isYamlModalVisible.value = false;
       await fetchIngresses();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查 YAML 格式是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查 YAML 格式是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('❌ Ingress YAML 更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -615,23 +671,27 @@ export function useIngressPage() {
       name: '',
       namespace: '',
       ingress_class_name: '',
-      rules: [{
-        host: '',
-        http: {
-          paths: [{
-            path: '/',
-            path_type: 'Prefix',
-            backend: {
-              service: {
-                name: '',
-                port: {
-                  number: 80
-                }
-              }
-            }
-          }]
-        }
-      }],
+      rules: [
+        {
+          host: '',
+          http: {
+            paths: [
+              {
+                path: '/',
+                path_type: 'Prefix',
+                backend: {
+                  service: {
+                    name: '',
+                    port: {
+                      number: 80,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
       tls: [],
       labels: {},
       annotations: {},
@@ -656,33 +716,41 @@ export function useIngressPage() {
 
   const submitCreateForm = async () => {
     if (!formRef.value || !filterClusterId.value) return;
-    
+
     try {
       await formRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: CreateIngressReq = {
         cluster_id: filterClusterId.value,
         name: createFormModel.value.name,
         namespace: createFormModel.value.namespace,
-        ingress_class_name: createFormModel.value.ingress_class_name || undefined,
+        ingress_class_name:
+          createFormModel.value.ingress_class_name || undefined,
         rules: createFormModel.value.rules,
-        tls: createFormModel.value.tls.length > 0 ? createFormModel.value.tls : [],
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : {},
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : {},
+        tls:
+          createFormModel.value.tls.length > 0 ? createFormModel.value.tls : [],
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : {},
+        annotations:
+          Object.keys(createFormModel.value.annotations).length > 0
+            ? createFormModel.value.annotations
+            : {},
       };
-      
+
       await createK8sIngress(params);
       message.success('🎉 Ingress 创建成功');
       isCreateModalVisible.value = false;
       await fetchIngresses();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('❌ Ingress 创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -690,27 +758,27 @@ export function useIngressPage() {
 
   const submitCreateYamlForm = async () => {
     if (!createYamlFormRef.value || !filterClusterId.value) return;
-    
+
     try {
       await createYamlFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: CreateIngressByYamlReq = {
         cluster_id: filterClusterId.value,
         yaml: createYamlFormModel.value.yaml,
       };
-      
+
       await createK8sIngressByYaml(params);
       message.success('🎉 Ingress YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchIngresses();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查 YAML 格式是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查 YAML 格式是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('❌ Ingress YAML 创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -723,23 +791,27 @@ export function useIngressPage() {
       name: record.name,
       namespace: record.namespace,
       ingress_class_name: record.ingress_class_name || '',
-      rules: record.rules || [{
-        host: '',
-        http: {
-          paths: [{
-            path: '/',
-            path_type: 'Prefix',
-            backend: {
-              service: {
-                name: '',
-                port: {
-                  number: 80
-                }
-              }
-            }
-          }]
-        }
-      }],
+      rules: record.rules || [
+        {
+          host: '',
+          http: {
+            paths: [
+              {
+                path: '/',
+                path_type: 'Prefix',
+                backend: {
+                  service: {
+                    name: '',
+                    port: {
+                      number: 80,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
       tls: record.tls || [],
       labels: record.labels || {},
       annotations: record.annotations || {},
@@ -757,11 +829,11 @@ export function useIngressPage() {
 
   const submitEditForm = async () => {
     if (!editFormRef.value || !currentOperationIngress.value) return;
-    
+
     try {
       await editFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: UpdateIngressReq = {
         cluster_id: currentOperationIngress.value.cluster_id,
         namespace: currentOperationIngress.value.namespace,
@@ -769,21 +841,27 @@ export function useIngressPage() {
         ingress_class_name: editFormModel.value.ingress_class_name || undefined,
         rules: editFormModel.value.rules,
         tls: editFormModel.value.tls.length > 0 ? editFormModel.value.tls : [],
-        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : {},
-        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : {},
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : {},
+        annotations:
+          Object.keys(editFormModel.value.annotations).length > 0
+            ? editFormModel.value.annotations
+            : {},
       };
-      
+
       await updateK8sIngress(params);
       message.success('🎉 Ingress 更新成功');
       isEditModalVisible.value = false;
       await fetchIngresses();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('❌ Ingress 更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -793,7 +871,7 @@ export function useIngressPage() {
   const deleteIngress = (record: K8sIngress) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     Modal.confirm({
       title: '删除 Ingress',
       content: `确定要删除 Ingress "${record.name}" 吗？此操作不可逆！`,
@@ -806,13 +884,12 @@ export function useIngressPage() {
           await deleteK8sIngress({
             cluster_id: clusterId,
             namespace: record.namespace,
-            name: record.name
+            name: record.name,
           });
           message.success('✅ Ingress 删除成功');
           await fetchIngresses();
         } catch (err) {
           if (shouldNotifyPageError(err)) message.error('❌ Ingress 删除失败');
-
         }
       },
     });
@@ -842,7 +919,7 @@ export function useIngressPage() {
   // 批量操作
   const batchOperation = (operation: string) => {
     if (!selectedRows.value.length) return;
-    
+
     Modal.confirm({
       title: `批量${operation}`,
       content: `确定要对选中的 ${selectedRows.value.length} 个 Ingress 执行${operation}操作吗？`,
@@ -855,15 +932,17 @@ export function useIngressPage() {
           for (const ingress of selectedRows.value) {
             const clusterId = ingress.cluster_id || filterClusterId.value;
             if (!clusterId) {
-              message.error(`Ingress "${ingress.name}" 缺少有效的集群ID，跳过操作`);
+              message.error(
+                `Ingress "${ingress.name}" 缺少有效的集群ID，跳过操作`,
+              );
               continue;
             }
-            
+
             if (operation === '删除') {
               await deleteK8sIngress({
                 cluster_id: clusterId,
                 namespace: ingress.namespace,
-                name: ingress.name
+                name: ingress.name,
               });
             }
           }
@@ -872,8 +951,8 @@ export function useIngressPage() {
           selectedRows.value = [];
           await fetchIngresses();
         } catch (err) {
-          if (shouldNotifyPageError(err)) message.error(`❌ 批量${operation}失败`);
-
+          if (shouldNotifyPageError(err))
+            message.error(`❌ 批量${operation}失败`);
         }
       },
     });
@@ -926,19 +1005,21 @@ export function useIngressPage() {
     createFormModel.value.rules.push({
       host: '',
       http: {
-        paths: [{
-          path: '/',
-          path_type: 'Prefix',
-          backend: {
-            service: {
-              name: '',
-              port: {
-                number: 80
-              }
-            }
-          }
-        } as IngressHTTPIngressPath]
-      } as IngressHTTPRuleValue
+        paths: [
+          {
+            path: '/',
+            path_type: 'Prefix',
+            backend: {
+              service: {
+                name: '',
+                port: {
+                  number: 80,
+                },
+              },
+            },
+          } as IngressHTTPIngressPath,
+        ],
+      } as IngressHTTPRuleValue,
     });
   };
 
@@ -951,7 +1032,7 @@ export function useIngressPage() {
   const addTlsField = () => {
     createFormModel.value.tls.push({
       secret_name: '',
-      hosts: []
+      hosts: [],
     });
   };
 
@@ -964,19 +1045,21 @@ export function useIngressPage() {
     editFormModel.value.rules.push({
       host: '',
       http: {
-        paths: [{
-          path: '/',
-          path_type: 'Prefix',
-          backend: {
-            service: {
-              name: '',
-              port: {
-                number: 80
-              }
-            }
-          }
-        } as IngressHTTPIngressPath]
-      } as IngressHTTPRuleValue
+        paths: [
+          {
+            path: '/',
+            path_type: 'Prefix',
+            backend: {
+              service: {
+                name: '',
+                port: {
+                  number: 80,
+                },
+              },
+            },
+          } as IngressHTTPIngressPath,
+        ],
+      } as IngressHTTPRuleValue,
     });
   };
 
@@ -989,7 +1072,7 @@ export function useIngressPage() {
   const addEditTlsField = () => {
     editFormModel.value.tls.push({
       secret_name: '',
-      hosts: []
+      hosts: [],
     });
   };
 
@@ -1064,13 +1147,13 @@ export function useIngressPage() {
     namespacesTotal,
     namespacesPage,
     namespacesSize,
-    
+
     // form refs
     formRef,
     editFormRef,
     yamlFormRef,
     createYamlFormRef,
-    
+
     // modal state
     isCreateModalVisible,
     isCreateYamlModalVisible,
@@ -1079,28 +1162,28 @@ export function useIngressPage() {
     isYamlModalVisible,
     submitLoading,
     detailLoading,
-    
+
     // operation targets
     currentOperationIngress,
     currentIngressDetail,
     currentYamlContent,
-    
+
     // form models
     createFormModel,
     editFormModel,
     yamlFormModel,
     createYamlFormModel,
-    
+
     // form rules
     createFormRules,
     editFormRules,
     yamlFormRules,
     createYamlFormRules,
-    
+
     // computed
     filteredIngresses,
     rowSelection,
-    
+
     // helpers
     validateClusterId,
     getEnvText,
@@ -1112,7 +1195,7 @@ export function useIngressPage() {
     calculateAge,
     parseLoadBalancerInfo,
     parseHTTPPaths,
-    
+
     // operations
     fetchClusters,
     fetchNamespaces,
@@ -1121,16 +1204,16 @@ export function useIngressPage() {
     clearNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
-    
+
     // detail operations
     showIngressDetail,
     closeDetailModal,
-    
+
     // YAML operations
     showYamlModal,
     closeYamlModal,
     submitYamlForm,
-    
+
     // create operations
     openCreateModal,
     closeCreateModal,
@@ -1138,27 +1221,27 @@ export function useIngressPage() {
     openCreateYamlModal,
     closeCreateYamlModal,
     submitCreateYamlForm,
-    
+
     // edit operations
     openEditModal,
     closeEditModal,
     submitEditForm,
-    
+
     // ingress operations
     deleteIngress,
-    
+
     // filter operations
     addFilterLabel,
     removeFilterLabel,
     clearFilterLabels,
-    
+
     // batch operations
     batchOperation,
-    
-    // pagination operations  
+
+    // pagination operations
     resetClusters,
     handlePageChange,
-    
+
     // form field operations
     addRuleField,
     removeRuleField,
@@ -1166,7 +1249,7 @@ export function useIngressPage() {
     removeTlsField,
     removeLabelField,
     removeAnnotationField,
-    
+
     // edit form field operations
     addEditRuleField,
     removeEditRuleField,
@@ -1176,11 +1259,11 @@ export function useIngressPage() {
     removeEditLabelField,
     addNewEditAnnotation,
     removeEditAnnotationField,
-    
+
     // edit form helper variables
     newEditLabelKey,
     newEditAnnotationKey,
-    
+
     // constants
     K8sIngressStatus,
   };

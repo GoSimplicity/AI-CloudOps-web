@@ -1,14 +1,23 @@
 <template>
-  <OpsPage title="知识库管理" description="上传 UTF-8 文档并管理知识索引" class="knowledge-container">
+  <OpsPage
+    title="知识库管理"
+    description="上传 UTF-8 文档并管理知识索引"
+    class="knowledge-container"
+  >
     <!-- 页面头部 -->
     <template #actions>
-<a-button v-if="can('aiops.assistant.refreshKnowledge')" type="primary" @click="refreshKnowledge" :loading="refreshing">
-            <template #icon><ReloadOutlined /></template>
-            重建知识索引
-          </a-button>
+      <a-button
+        v-if="can('aiops.assistant.refreshKnowledge')"
+        type="primary"
+        @click="refreshKnowledge"
+        :loading="refreshing"
+      >
+        <template #icon><ReloadOutlined /></template>
+        重建知识索引
+      </a-button>
     </template>
     <template #summary>
-<div class="stats-grid">
+      <div class="stats-grid">
         <a-card class="stat-card">
           <a-statistic
             title="文档数量"
@@ -39,11 +48,18 @@
       </div>
     </template>
 
-    <a-alert v-if="loadError" :message="loadError" type="error" show-icon role="alert" />
-    <p class="index-note">重建会重新索引全库并调用嵌入模型；上传和添加仅索引当前文档</p>
+    <a-alert
+      v-if="loadError"
+      :message="loadError"
+      type="error"
+      show-icon
+      role="alert"
+    />
+    <p class="index-note">
+      重建会重新索引全库并调用嵌入模型；上传和添加仅索引当前文档
+    </p>
     <div class="knowledge-content">
       <!-- 统计卡片 -->
-
 
       <!-- 功能区域 -->
       <div class="function-area">
@@ -61,7 +77,9 @@
                   class="upload-dragger"
                 >
                   <p class="ant-upload-drag-icon">
-                    <InboxOutlined style="font-size: 48px; color: var(--ops-accent);" />
+                    <InboxOutlined
+                      style="font-size: 48px; color: var(--ops-accent)"
+                    />
                   </p>
                   <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
                   <p class="ant-upload-hint">
@@ -77,28 +95,28 @@
             <a-card title="手动添加文档" class="function-card">
               <a-form layout="vertical" :model="documentForm">
                 <a-form-item label="文档标题" name="title">
-                  <a-input 
-                    v-model:value="documentForm.title" 
+                  <a-input
+                    v-model:value="documentForm.title"
                     placeholder="请输入文档标题"
                   />
                 </a-form-item>
                 <a-form-item label="文件名" name="file_name">
-                  <a-input 
-                    v-model:value="documentForm.file_name" 
+                  <a-input
+                    v-model:value="documentForm.file_name"
                     placeholder="例如: document.txt"
                   />
                 </a-form-item>
                 <a-form-item label="文档内容" name="content">
-                  <a-textarea 
-                    v-model:value="documentForm.content" 
+                  <a-textarea
+                    v-model:value="documentForm.content"
                     placeholder="请输入文档内容"
                     :rows="6"
                   />
                 </a-form-item>
                 <a-form-item>
-                  <a-button 
-                    type="primary" 
-                    @click="addDocument" 
+                  <a-button
+                    type="primary"
+                    @click="addDocument"
                     :loading="adding"
                     block
                   >
@@ -118,11 +136,14 @@
             <a-empty description="暂无操作记录" />
           </div>
           <div v-else class="log-list">
-            <div 
-              v-for="(log, index) in operationLogs" 
-              :key="index" 
+            <div
+              v-for="(log, index) in operationLogs"
+              :key="index"
               class="log-item"
-              :class="{ 'success': log.type === 'success', 'error': log.type === 'error' }"
+              :class="{
+                success: log.type === 'success',
+                error: log.type === 'error',
+              }"
             >
               <div class="log-icon">
                 <CheckCircleOutlined v-if="log.type === 'success'" />
@@ -153,16 +174,16 @@ import {
   InboxOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
 } from '@ant-design/icons-vue';
-import { 
-  refreshKnowledgeBase, 
-  uploadKnowledgeFile, 
+import {
+  refreshKnowledgeBase,
+  uploadKnowledgeFile,
   addDocument as addDocumentAPI,
   type AddDocumentRequest,
   type RefreshKnowledgeResponse,
   type UploadKnowledgeResponse,
-  type AddDocumentResponse
+  type AddDocumentResponse,
 } from '#/api/core/aiops/assistant';
 import { usePermission } from '#/utils/permission';
 import {
@@ -171,7 +192,6 @@ import {
 } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
-
 
 // 响应式数据
 const refreshing = ref(false);
@@ -184,14 +204,14 @@ const fileList = ref<any[]>([]);
 const knowledgeStats = reactive({
   documents_count: 0,
   vector_count: 0,
-  last_update: '暂无数据'
+  last_update: '暂无数据',
 });
 
 // 文档表单
 const documentForm = reactive<AddDocumentRequest>({
   title: '',
   content: '',
-  file_name: ''
+  file_name: '',
 });
 
 // 操作日志
@@ -208,7 +228,7 @@ const addLog = (type: OperationLog['type'], message: string) => {
   operationLogs.value.unshift({
     type,
     message,
-    timestamp: new Date().toLocaleString()
+    timestamp: new Date().toLocaleString(),
   });
   // 保持最多显示 50 条日志
   if (operationLogs.value.length > 50) {
@@ -239,9 +259,12 @@ const refreshKnowledge = async () => {
     statsKnown.value = false;
     knowledgeStats.documents_count = 0;
     knowledgeStats.vector_count = 0;
-    if (shouldRecordPageError(error)) loadError.value = error instanceof Error ? error.message : '知识库重建失败';
+    if (shouldRecordPageError(error))
+      loadError.value =
+        error instanceof Error ? error.message : '知识库重建失败';
     knowledgeStats.last_update = '重建失败';
-    if (shouldNotifyPageError(error)) message.error(`刷新知识库失败: ${loadError.value}`);
+    if (shouldNotifyPageError(error))
+      message.error(`刷新知识库失败: ${loadError.value}`);
     addLog('error', `刷新知识库失败: ${error.message}`);
   } finally {
     refreshing.value = false;
@@ -250,8 +273,8 @@ const refreshKnowledge = async () => {
 
 // 文件上传前处理
 const beforeUpload = (file: File) => {
-  const isValidType = ['txt', 'md'].some(ext =>
-    file.name.toLowerCase().endsWith(`.${ext}`)
+  const isValidType = ['txt', 'md'].some((ext) =>
+    file.name.toLowerCase().endsWith(`.${ext}`),
   );
   if (!isValidType) {
     message.error('仅支持 UTF-8 的 .txt 与 .md 文件');
@@ -268,20 +291,28 @@ const beforeUpload = (file: File) => {
 };
 
 // 处理文件上传
-const handleUpload: NonNullable<UploadProps['customRequest']> = async (options) => {
+const handleUpload: NonNullable<UploadProps['customRequest']> = async (
+  options,
+) => {
   try {
     if (!(options.file instanceof File)) throw new Error('请选择有效文件');
-    const data = await uploadKnowledgeFile(options.file) as UploadKnowledgeResponse;
+    const data = (await uploadKnowledgeFile(
+      options.file,
+    )) as UploadKnowledgeResponse;
     if (!data.uploaded) throw new Error(data.message || '文件索引失败');
     options.onSuccess?.(data);
     statsKnown.value = false;
     knowledgeStats.last_update = '统计待重建';
     message.success(`文件 ${data.filename} 已上传并索引`);
-    addLog('success', `文件索引完成: ${data.filename} (${data.file_size} 字节)`);
+    addLog(
+      'success',
+      `文件索引完成: ${data.filename} (${data.file_size} 字节)`,
+    );
   } catch (error) {
     const failure = error instanceof Error ? error : new Error('文件上传失败');
     options.onError?.(failure);
-    if (shouldNotifyPageError(error)) message.error(`文件上传失败: ${failure.message}`);
+    if (shouldNotifyPageError(error))
+      message.error(`文件上传失败: ${failure.message}`);
     addLog('error', `文件上传失败: ${failure.message}`);
   }
 };
@@ -312,7 +343,10 @@ const addDocument = async () => {
 
     if (data.added) {
       message.success('文档添加成功');
-      addLog('success', `文档添加成功: ${documentForm.title} (ID: ${data.document_id})`);
+      addLog(
+        'success',
+        `文档添加成功: ${documentForm.title} (ID: ${data.document_id})`,
+      );
 
       // 清空表单
       documentForm.title = '';
@@ -326,7 +360,8 @@ const addDocument = async () => {
       addLog('error', `文档添加失败: ${data.message}`);
     }
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(`添加文档失败: ${error.message}`);
+    if (shouldNotifyPageError(error))
+      message.error(`添加文档失败: ${error.message}`);
     addLog('error', `添加文档失败: ${error.message}`);
   } finally {
     adding.value = false;
@@ -346,15 +381,7 @@ onMounted(() => {
   line-height: 1.6;
 }
 
-
 /* 页面头部 */
-
-
-
-
-
-
-
 
 .knowledge-content {
   .stats-grid {
@@ -492,13 +519,11 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-
   .knowledge-header {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
   }
-
 
   .stats-grid {
     grid-template-columns: 1fr;

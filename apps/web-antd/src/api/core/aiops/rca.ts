@@ -1,5 +1,9 @@
 import { requestClientAIOps } from '../../request';
-import type { ServiceConfigResponse, ServiceInfoResponse, ServiceReadyResponse } from '../common';
+import type {
+  ServiceConfigResponse,
+  ServiceInfoResponse,
+  ServiceReadyResponse,
+} from '../common';
 
 /**
  * 严重程度级别枚举
@@ -397,16 +401,16 @@ export async function clearAllCache(): Promise<RCAClearCacheResponse> {
 }
 
 // 清理指定命名空间缓存API
-export async function clearNamespaceCache(
-  request: { namespace: string },
-): Promise<RCAClearCacheResponse> {
+export async function clearNamespaceCache(request: {
+  namespace: string;
+}): Promise<RCAClearCacheResponse> {
   return requestClientAIOps.post('/rca/cache/clear/namespace', request);
 }
 
 // 清理指定操作缓存API
-export async function clearOperationCache(
-  request: { operation: string },
-): Promise<RCAClearCacheResponse> {
+export async function clearOperationCache(request: {
+  operation: string;
+}): Promise<RCAClearCacheResponse> {
   return requestClientAIOps.post('/rca/cache/clear/operation', request);
 }
 

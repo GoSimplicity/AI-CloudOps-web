@@ -78,7 +78,10 @@ export async function createWorkorderInstanceTimeline(
 export async function updateWorkorderInstanceTimeline(
   data: UpdateWorkorderInstanceTimelineReq,
 ) {
-  return requestClient.put(`/workorder/instance/timeline/update/${data.id}`, data);
+  return requestClient.put(
+    `/workorder/instance/timeline/update/${data.id}`,
+    data,
+  );
 }
 
 export async function deleteWorkorderInstanceTimeline(

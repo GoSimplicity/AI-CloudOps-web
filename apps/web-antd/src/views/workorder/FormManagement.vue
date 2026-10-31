@@ -884,21 +884,26 @@ const handleMenuClick = (
   record: WorkorderFormDesignItem,
 ): void => {
   switch (command) {
-    case 'preview':
+    case 'preview': {
       handlePreviewForm(record);
       break;
-    case 'publish':
+    }
+    case 'publish': {
       publishForm(record);
       break;
-    case 'archive':
+    }
+    case 'archive': {
       archiveForm(record);
       break;
-    case 'unarchive':
+    }
+    case 'unarchive': {
       unarchiveForm(record);
       break;
-    case 'delete':
+    }
+    case 'delete': {
       confirmDelete(record);
       break;
+    }
   }
 };
 
@@ -1069,27 +1074,34 @@ const initPreviewFormData = (schema: FormSchema): void => {
     switch (field.type) {
       case FormFieldType.Text:
       case FormFieldType.Password:
-      case FormFieldType.Textarea:
+      case FormFieldType.Textarea: {
         data[field.name] = field.default || '';
         break;
-      case FormFieldType.Number:
+      }
+      case FormFieldType.Number: {
         data[field.name] = field.default || undefined;
         break;
-      case FormFieldType.Date:
+      }
+      case FormFieldType.Date: {
         data[field.name] = field.default || undefined;
         break;
+      }
       case FormFieldType.Select:
-      case FormFieldType.Radio:
+      case FormFieldType.Radio: {
+      } {} {} {} {} {} {} {} {} {}
         data[field.name] = field.default || undefined;
         break;
-      case FormFieldType.Checkbox:
+      case FormFieldType.Checkbox: {
         data[field.name] = field.default || [];
         break;
-      case FormFieldType.Switch:
+      }
+      case FormFieldType.Switch: {
         data[field.name] = field.default || false;
         break;
-      default:
+      }
+      default: {
         data[field.name] = field.default || '';
+      }
     }
   });
 
@@ -1137,8 +1149,8 @@ onMounted(() => {
         <span class="btn-text">创建新表单</span>
       </a-button>
     </template>
-    <template #filters
-      ><div class="search-filters">
+    <template #filters>
+      <div class="search-filters">
         <a-input-search
           v-model:value="searchQuery"
           placeholder="搜索表单..."
@@ -1189,11 +1201,11 @@ onMounted(() => {
         <a-button @click="handleResetFilters" class="reset-btn">
           重置
         </a-button>
-      </div></template
-    >
+      </div>
+    </template>
 
-    <template #summary
-      ><div class="stats-row">
+    <template #summary>
+      <div class="stats-row">
         <a-row :gutter="[16, 16]">
           <a-col :xs="12" :sm="12" :md="6" :lg="6">
             <a-card class="stats-card">
@@ -1247,15 +1259,14 @@ onMounted(() => {
               </a-statistic>
             </a-card>
           </a-col>
-        </a-row></div
-    ></template>
+        </a-row>
+      </div>
+    </template>
 
     <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
-      <template #action
-        ><a-button size="small" @click="loadFormDesigns"
-          >重试</a-button
-        ></template
-      >
+      <template #action>
+        <a-button size="small" @click="loadFormDesigns"> 重试 </a-button>
+      </template>
     </a-alert>
 
     <div class="table-container">
@@ -1282,8 +1293,9 @@ onMounted(() => {
                   v-if="record.is_template === 1"
                   color="purple"
                   size="small"
-                  >模板</a-tag
                 >
+                  模板
+                </a-tag>
               </div>
             </template>
 
@@ -1350,9 +1362,9 @@ onMounted(() => {
                       </a-tag>
                     </div>
                   </template>
-                  <a-tag size="small" color="default"
-                    >+{{ (record.tags || []).length - 2 }}</a-tag
-                  >
+                  <a-tag size="small" color="default">
+                    +{{ (record.tags || []).length - 2 }}
+                  </a-tag>
                 </a-popover>
               </div>
             </template>
@@ -1387,15 +1399,15 @@ onMounted(() => {
                         <EyeOutlined /> 预览
                       </a-menu-item>
                       <a-menu-divider />
-                      <a-menu-item key="publish" v-if="record.status === 1"
-                        >发布</a-menu-item
-                      >
-                      <a-menu-item key="archive" v-if="record.status === 2"
-                        >归档</a-menu-item
-                      >
-                      <a-menu-item key="unarchive" v-if="record.status === 3"
-                        >取消归档</a-menu-item
-                      >
+                      <a-menu-item key="publish" v-if="record.status === 1">
+                        发布
+                      </a-menu-item>
+                      <a-menu-item key="archive" v-if="record.status === 2">
+                        归档
+                      </a-menu-item>
+                      <a-menu-item key="unarchive" v-if="record.status === 3">
+                        取消归档
+                      </a-menu-item>
                       <a-menu-divider
                         v-if="can('workorder.formDesign.delete')"
                       />
@@ -1403,8 +1415,9 @@ onMounted(() => {
                         v-if="can('workorder.formDesign.delete')"
                         key="delete"
                         danger
-                        >删除</a-menu-item
                       >
+                        删除
+                      </a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
@@ -1530,8 +1543,7 @@ onMounted(() => {
             style="width: 100%"
             :max-tag-count="5"
             :max-tag-text-length="10"
-          >
-          </a-select>
+          />
         </a-form-item>
 
         <a-form-item label="是否为模板" name="is_template">
@@ -1631,21 +1643,21 @@ onMounted(() => {
         <a-tabs>
           <a-tab-pane key="simple" tab="简单示例">
             <pre class="json-example">{{ simpleFieldsExample }}</pre>
-            <a-button @click="copyExample(simpleFieldsExample)" size="small"
-              >复制到编辑器</a-button
-            >
+            <a-button @click="copyExample(simpleFieldsExample)" size="small">
+              复制到编辑器
+            </a-button>
           </a-tab-pane>
           <a-tab-pane key="complex" tab="复杂示例">
             <pre class="json-example">{{ complexFieldsExample }}</pre>
-            <a-button @click="copyExample(complexFieldsExample)" size="small"
-              >复制到编辑器</a-button
-            >
+            <a-button @click="copyExample(complexFieldsExample)" size="small">
+              复制到编辑器
+            </a-button>
           </a-tab-pane>
           <a-tab-pane key="all-types" tab="所有字段类型">
             <pre class="json-example">{{ allTypesFieldsExample }}</pre>
-            <a-button @click="copyExample(allTypesFieldsExample)" size="small"
-              >复制到编辑器</a-button
-            >
+            <a-button @click="copyExample(allTypesFieldsExample)" size="small">
+              复制到编辑器
+            </a-button>
           </a-tab-pane>
         </a-tabs>
       </div>
@@ -1837,31 +1849,31 @@ onMounted(() => {
             <a-tag :color="getStatusColor(detailDialog.form.status)">
               {{ getStatusText(detailDialog.form.status) }}
             </a-tag>
-            <a-tag v-if="detailDialog.form.is_template === 1" color="purple"
-              >模板</a-tag
-            >
+            <a-tag v-if="detailDialog.form.is_template === 1" color="purple">
+              模板
+            </a-tag>
           </div>
         </div>
 
         <a-descriptions bordered :column="1" :labelStyle="{ width: '120px' }">
-          <a-descriptions-item label="ID">{{
-            detailDialog.form.id
-          }}</a-descriptions-item>
+          <a-descriptions-item label="ID">
+            {{ detailDialog.form.id }}
+          </a-descriptions-item>
           <a-descriptions-item label="分类">
             <a-tag v-if="detailDialog.form.category" color="blue">
               {{ detailDialog.form.category.name }}
             </a-tag>
             <span v-else class="text-gray">未分类</span>
           </a-descriptions-item>
-          <a-descriptions-item label="操作人">{{
-            detailDialog.form.operator_name || '系统'
-          }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{
-            formatFullDateTime(detailDialog.form.created_at || '')
-          }}</a-descriptions-item>
-          <a-descriptions-item label="更新时间">{{
-            formatFullDateTime(detailDialog.form.updated_at || '')
-          }}</a-descriptions-item>
+          <a-descriptions-item label="操作人">
+            {{ detailDialog.form.operator_name || '系统' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{ formatFullDateTime(detailDialog.form.created_at || '') }}
+          </a-descriptions-item>
+          <a-descriptions-item label="更新时间">
+            {{ formatFullDateTime(detailDialog.form.updated_at || '') }}
+          </a-descriptions-item>
           <a-descriptions-item
             label="标签"
             v-if="detailDialog.form.tags && detailDialog.form.tags.length"
@@ -1871,13 +1883,14 @@ onMounted(() => {
                 v-for="tag in detailDialog.form.tags"
                 :key="tag"
                 size="small"
-                >{{ tag }}</a-tag
               >
+                {{ tag }}
+              </a-tag>
             </div>
           </a-descriptions-item>
-          <a-descriptions-item label="描述">{{
-            detailDialog.form.description || '无描述'
-          }}</a-descriptions-item>
+          <a-descriptions-item label="描述">
+            {{ detailDialog.form.description || '无描述' }}
+          </a-descriptions-item>
         </a-descriptions>
 
         <div class="schema-preview">
@@ -1906,12 +1919,15 @@ onMounted(() => {
 
         <div class="detail-footer">
           <a-button @click="closeDetailDialog">关闭</a-button>
-          <a-button type="primary" @click="handleEditForm(detailDialog.form)"
-            >编辑</a-button
+          <a-button type="primary" @click="handleEditForm(detailDialog.form)">
+            编辑
+          </a-button>
+          <a-button
+            type="default"
+            @click="handlePreviewForm(detailDialog.form)"
           >
-          <a-button type="default" @click="handlePreviewForm(detailDialog.form)"
-            >预览</a-button
-          >
+            预览
+          </a-button>
         </div>
       </div>
     </a-modal>

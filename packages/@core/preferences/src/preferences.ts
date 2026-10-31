@@ -169,7 +169,11 @@ class PreferenceManager {
 
     // 加载并合并当前存储的偏好设置
     const cachedPreferences = this.loadCachedPreferences();
-    const mergedPreference = merge({}, overrides, cachedPreferences || defaultPreferences);
+    const mergedPreference = merge(
+      {},
+      overrides,
+      cachedPreferences || defaultPreferences,
+    );
     // App overrides define the initial theme, not a forced choice on every reload.
     if (cachedPreferences?.theme?.mode) {
       mergedPreference.theme.mode = cachedPreferences.theme.mode;

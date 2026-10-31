@@ -126,7 +126,10 @@ export async function createTreeLocal(data: CreateTreeLocalResourceReq) {
   return requestClient.post('/tree/local/create', data);
 }
 
-export async function updateTreeLocal(id: number, data: UpdateTreeLocalResourceReq) {
+export async function updateTreeLocal(
+  id: number,
+  data: UpdateTreeLocalResourceReq,
+) {
   return requestClient.put(`/tree/local/update/${id}`, data);
 }
 
@@ -134,10 +137,16 @@ export async function deleteTreeLocal(id: number) {
   return requestClient.delete(`/tree/local/delete/${id}`);
 }
 
-export async function bindTreeLocal(id: number, data: BindTreeLocalResourceReq) {
+export async function bindTreeLocal(
+  id: number,
+  data: BindTreeLocalResourceReq,
+) {
   return requestClient.post(`/tree/local/bind/${id}`, data);
 }
 
-export async function unbindTreeLocal(id: number, data: UnBindTreeLocalResourceReq) {
+export async function unbindTreeLocal(
+  id: number,
+  data: UnBindTreeLocalResourceReq,
+) {
   return requestClient.post(`/tree/local/unbind/${id}`, data);
 }

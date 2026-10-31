@@ -1,5 +1,9 @@
 <template>
-  <OpsPage title="服务信息" description="查看初始化状态、能力说明与服务配置" class="info-container">
+  <OpsPage
+    title="服务信息"
+    description="查看初始化状态、能力说明与服务配置"
+    class="info-container"
+  >
     <!-- 页面头部 -->
     <template #actions>
       <a-button
@@ -8,25 +12,46 @@
         :disabled="clearingCache"
         title="清除服务查询缓存，保留知识文档与会话记录"
         @click="clearServiceCache"
-      >清除服务缓存</a-button>
-<a-button type="primary" @click="refreshInfo" :loading="loading || configLoading">
-            <template #icon>
-              <ReloadOutlined />
-            </template>
-            刷新信息
-          </a-button>
+      >
+        清除服务缓存
+      </a-button>
+      <a-button
+        type="primary"
+        @click="refreshInfo"
+        :loading="loading || configLoading"
+      >
+        <template #icon>
+          <ReloadOutlined />
+        </template>
+        刷新信息
+      </a-button>
     </template>
 
-    <a-alert v-if="loadError" :message="loadError" type="error" show-icon role="alert">
-      <template #action><a-button @click="refreshInfo" :loading="loading || configLoading">重试</a-button></template>
+    <a-alert
+      v-if="loadError"
+      :message="loadError"
+      type="error"
+      show-icon
+      role="alert"
+    >
+      <template #action>
+        <a-button @click="refreshInfo" :loading="loading || configLoading">
+          重试
+        </a-button>
+      </template>
     </a-alert>
     <div class="info-content">
       <!-- 服务状态概览 -->
       <div class="status-overview">
         <a-card class="status-card">
           <div class="status-item">
-            <div class="status-icon" :class="{ 'online': serviceInfo.status === 'initialized' }">
-              <CheckCircleOutlined v-if="serviceInfo.status === 'initialized'" />
+            <div
+              class="status-icon"
+              :class="{ online: serviceInfo.status === 'initialized' }"
+            >
+              <CheckCircleOutlined
+                v-if="serviceInfo.status === 'initialized'"
+              />
               <CloseCircleOutlined v-else />
             </div>
             <div class="status-content">
@@ -53,7 +78,11 @@
           </a-descriptions-item>
           <a-descriptions-item label="约束条件">
             <div v-if="serviceInfo.constraints">
-              <a-tag v-for="(value, key) in serviceInfo.constraints" :key="key" class="constraint-tag">
+              <a-tag
+                v-for="(value, key) in serviceInfo.constraints"
+                :key="key"
+                class="constraint-tag"
+              >
                 {{ key }}: {{ value }}
               </a-tag>
             </div>
@@ -64,8 +93,15 @@
 
       <!-- 服务能力 -->
       <a-card title="服务能力" class="info-card" :loading="loading">
-        <div v-if="serviceInfo.capabilities && serviceInfo.capabilities.length > 0" class="capabilities-grid">
-          <div v-for="capability in serviceInfo.capabilities" :key="capability" class="capability-item">
+        <div
+          v-if="serviceInfo.capabilities && serviceInfo.capabilities.length > 0"
+          class="capabilities-grid"
+        >
+          <div
+            v-for="capability in serviceInfo.capabilities"
+            :key="capability"
+            class="capability-item"
+          >
             <div class="capability-icon">
               <ThunderboltOutlined />
             </div>
@@ -79,8 +115,17 @@
 
       <!-- API 端点 -->
       <a-card title="API 端点" class="info-card" :loading="loading">
-        <div v-if="serviceInfo.endpoints && Object.keys(serviceInfo.endpoints).length > 0">
-          <div v-for="(url, name) in serviceInfo.endpoints" :key="name" class="endpoint-item">
+        <div
+          v-if="
+            serviceInfo.endpoints &&
+            Object.keys(serviceInfo.endpoints).length > 0
+          "
+        >
+          <div
+            v-for="(url, name) in serviceInfo.endpoints"
+            :key="name"
+            class="endpoint-item"
+          >
             <div class="endpoint-header">
               <a-tag color="purple">{{ name }}</a-tag>
               <a-button type="link" size="small" @click="copyToClipboard(url)">
@@ -100,9 +145,15 @@
 
       <!-- 配置信息 -->
       <a-card title="配置参数" class="info-card" :loading="configLoading">
-        <div v-if="configInfo.config && Object.keys(configInfo.config).length > 0">
+        <div
+          v-if="configInfo.config && Object.keys(configInfo.config).length > 0"
+        >
           <a-collapse v-model:activeKey="activeConfigKeys" ghost>
-            <a-collapse-panel v-for="(value, key) in configInfo.config" :key="key" :header="key">
+            <a-collapse-panel
+              v-for="(value, key) in configInfo.config"
+              :key="key"
+              :header="key"
+            >
               <div class="config-content">
                 <pre class="config-value">{{ formatConfigValue(value) }}</pre>
               </div>
@@ -113,7 +164,10 @@
           <a-empty description="暂无配置信息" />
         </div>
 
-        <div v-if="configInfo.version || configInfo.timestamp" class="config-meta">
+        <div
+          v-if="configInfo.version || configInfo.timestamp"
+          class="config-meta"
+        >
           <a-divider />
           <div class="meta-info">
             <span v-if="configInfo.version" class="meta-item">
@@ -142,7 +196,7 @@ import {
   ThunderboltOutlined,
   CopyOutlined,
   CalendarOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
 } from '@ant-design/icons-vue';
 import {
   clearAssistantCache,
@@ -150,7 +204,7 @@ import {
   getAssistantConfig,
   type ClearCacheResponse,
   type ServiceInfoResponse,
-  type ServiceConfigResponse
+  type ServiceConfigResponse,
 } from '#/api/core/aiops/assistant';
 import { usePermission } from '#/utils/permission';
 import { useAiRequestScope } from './useAiRequestScope';
@@ -161,16 +215,23 @@ import {
 
 const { can } = usePermission();
 const clearingCache = ref(false);
-const cacheScope = useAiRequestScope(() => { clearingCache.value = false; });
+const cacheScope = useAiRequestScope(() => {
+  clearingCache.value = false;
+});
 const cacheLane = cacheScope.createLane();
 
 // 这是独立的服务缓存维护操作，不删除知识文档或持久化会话。
 const clearServiceCache = async () => {
-  if (!can('aiops.assistant.clearCache') || !cacheScope.owner.value || clearingCache.value) return;
+  if (
+    !can('aiops.assistant.clearCache') ||
+    !cacheScope.owner.value ||
+    clearingCache.value
+  )
+    return;
   const ticket = cacheLane.begin();
   clearingCache.value = true;
   try {
-    const result = await clearAssistantCache() as ClearCacheResponse;
+    const result = (await clearAssistantCache()) as ClearCacheResponse;
     if (!cacheLane.current(ticket)) return;
     if (result?.cleared !== true) throw new Error('缓存清理未确认');
     message.success('服务缓存已清除');
@@ -192,7 +253,11 @@ const loadError = computed(() => infoError.value || configError.value);
 let infoRequest = 0;
 let configRequest = 0;
 let disposed = false;
-onBeforeUnmount(() => { disposed = true; infoRequest += 1; configRequest += 1; });
+onBeforeUnmount(() => {
+  disposed = true;
+  infoRequest += 1;
+  configRequest += 1;
+});
 const activeConfigKeys = ref<string[]>([]);
 
 // 服务信息
@@ -203,7 +268,7 @@ const serviceInfo = ref<Partial<ServiceInfoResponse>>({
   capabilities: [],
   endpoints: {},
   constraints: {},
-  status: ''
+  status: '',
 });
 
 // 配置信息
@@ -211,18 +276,18 @@ const configInfo = ref<Partial<ServiceConfigResponse>>({
   service: '',
   config: {},
   version: '',
-  timestamp: ''
+  timestamp: '',
 });
 
 // 获取状态文本
 const getStatusText = (status: string) => {
   const statusMap: Record<string, string> = {
-    'initialized': '已初始化',
-    'not_initialized': '未初始化',
-    'online': '在线',
-    'offline': '离线',
-    'error': '错误',
-    'maintenance': '维护中'
+    initialized: '已初始化',
+    not_initialized: '未初始化',
+    online: '在线',
+    offline: '离线',
+    error: '错误',
+    maintenance: '维护中',
   };
   return statusMap[status] || '未知';
 };
@@ -265,7 +330,9 @@ const fetchServiceInfo = async () => {
   } catch (error: any) {
     if (disposed || request !== infoRequest) return;
     serviceInfo.value = {};
-    if (shouldRecordPageError(error)) infoError.value = error instanceof Error ? error.message : '获取服务信息失败';
+    if (shouldRecordPageError(error))
+      infoError.value =
+        error instanceof Error ? error.message : '获取服务信息失败';
   } finally {
     if (!disposed && request === infoRequest) loading.value = false;
   }
@@ -287,7 +354,9 @@ const fetchConfigInfo = async () => {
     if (disposed || request !== configRequest) return;
     configInfo.value = {};
     activeConfigKeys.value = [];
-    if (shouldRecordPageError(error)) configError.value = error instanceof Error ? error.message : '获取配置信息失败';
+    if (shouldRecordPageError(error))
+      configError.value =
+        error instanceof Error ? error.message : '获取配置信息失败';
   } finally {
     if (!disposed && request === configRequest) configLoading.value = false;
   }
@@ -295,10 +364,7 @@ const fetchConfigInfo = async () => {
 
 // 刷新所有信息
 const refreshInfo = async () => {
-  await Promise.all([
-    fetchServiceInfo(),
-    fetchConfigInfo()
-  ]);
+  await Promise.all([fetchServiceInfo(), fetchConfigInfo()]);
 };
 
 // 页面初始化
@@ -308,15 +374,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-
 /* 页面头部 */
-
-
-
-
-
-
-
 
 .info-content {
   .status-overview {
@@ -524,13 +582,6 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-
-
-
-
-
-
-
   .status-card {
     .status-item {
       gap: 16px;

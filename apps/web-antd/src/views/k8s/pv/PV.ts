@@ -101,7 +101,7 @@ export function usePVPage() {
     reclaim_policy: string;
     storage_class: string;
     volume_mode: string;
-    volume_type: string;  // 卷类型
+    volume_type: string; // 卷类型
     volume_source: Record<string, any>;
     node_affinity: Record<string, any>;
     labels: Record<string, string>;
@@ -113,7 +113,7 @@ export function usePVPage() {
     reclaim_policy: 'Retain',
     storage_class: '',
     volume_mode: 'Filesystem',
-    volume_type: 'hostPath',  // 默认使用 hostPath
+    volume_type: 'hostPath', // 默认使用 hostPath
     volume_source: {},
     node_affinity: {},
     labels: {},
@@ -147,43 +147,52 @@ export function usePVPage() {
   const yamlFormModel = ref<{
     yaml: string;
   }>({
-    yaml: ''
+    yaml: '',
   });
 
   const createYamlFormModel = ref<{
     yaml: string;
   }>({
-    yaml: ''
+    yaml: '',
   });
 
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入 PV 名称', trigger: 'blur' },
-      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'PV 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
-      { max: 253, message: 'PV 名称长度不能超过253个字符', trigger: 'blur' }
+      {
+        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        message:
+          'PV 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        trigger: 'blur',
+      },
+      { max: 253, message: 'PV 名称长度不能超过253个字符', trigger: 'blur' },
     ],
     capacity: [
       { required: true, message: '请输入存储容量', trigger: 'blur' },
-      { pattern: /^[0-9]+[KMGTPE]i?$/, message: '请输入有效的存储容量，如: 1Gi, 100Mi', trigger: 'blur' }
+      {
+        pattern: /^[0-9]+[KMGTPE]i?$/,
+        message: '请输入有效的存储容量，如: 1Gi, 100Mi',
+        trigger: 'blur',
+      },
     ],
     access_modes: [
-      { required: true, message: '请选择访问模式', trigger: 'change' }
-    ]
+      { required: true, message: '请选择访问模式', trigger: 'change' },
+    ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   // computed
@@ -249,10 +258,10 @@ export function usePVPage() {
   // 获取访问模式显示文本
   const getAccessModeText = (mode: string): string => {
     const modeMap: Record<string, string> = {
-      'ReadWriteOnce': 'RWO',
-      'ReadOnlyMany': 'ROX',
-      'ReadWriteMany': 'RWX',
-      'ReadWriteOncePod': 'RWOP',
+      ReadWriteOnce: 'RWO',
+      ReadOnlyMany: 'ROX',
+      ReadWriteMany: 'RWX',
+      ReadWriteOncePod: 'RWOP',
     };
     return modeMap[mode] || mode;
   };
@@ -309,7 +318,8 @@ export function usePVPage() {
         filterClusterId.value = undefined;
         clearPVs();
       }
-      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err))
+        clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -318,7 +328,10 @@ export function usePVPage() {
 
   const fetchPVs = async () => {
     const clusterId = filterClusterId.value;
-    if (!clusterId) { clearPVs(); return; }
+    if (!clusterId) {
+      clearPVs();
+      return;
+    }
     const requestId = ++resourceRequestId;
     try {
       loading.value = true;
@@ -336,19 +349,28 @@ export function usePVPage() {
       };
 
       const res = await getK8sPVList(params);
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
-      
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+
       // 确保每个PV对象都有正确的cluster_id
       const pvsWithClusterId = (res?.items || []).map((pv: K8sPV) => ({
         ...pv,
-        cluster_id: pv.cluster_id || clusterId || 0
+        cluster_id: pv.cluster_id || clusterId || 0,
       }));
       pvs.value = pvsWithClusterId;
       total.value = res?.total || 0;
     } catch (error) {
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       clearPVs();
-      if (shouldRecordPageError(error)) loadError.value = '获取 PV 列表失败，请重试';
+      if (shouldRecordPageError(error))
+        loadError.value = '获取 PV 列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
@@ -375,13 +397,13 @@ export function usePVPage() {
       };
 
       const response = await getK8sPVDetails(params);
-      
+
       if (response) {
         currentPVDetail.value = response;
       }
     } catch (error: any) {
-
-      if (shouldNotifyPageError(error)) message.error(error?.message || '获取PV详情失败');
+      if (shouldNotifyPageError(error))
+        message.error(error?.message || '获取PV详情失败');
     } finally {
       detailLoading.value = false;
     }
@@ -398,13 +420,13 @@ export function usePVPage() {
       };
 
       const response = await getK8sPVYaml(params);
-      
+
       if (response && response.yaml) {
         currentYamlContent.value = response.yaml;
       }
     } catch (error: any) {
-
-      if (shouldNotifyPageError(error)) message.error(error?.message || '获取PV YAML失败');
+      if (shouldNotifyPageError(error))
+        message.error(error?.message || '获取PV YAML失败');
     }
   };
 
@@ -423,7 +445,10 @@ export function usePVPage() {
         return;
       }
 
-      if (!createFormModel.value.volume_source || Object.keys(createFormModel.value.volume_source).length === 0) {
+      if (
+        !createFormModel.value.volume_source ||
+        Object.keys(createFormModel.value.volume_source).length === 0
+      ) {
         message.error('卷源配置不能为空，请至少添加一项配置');
         return;
       }
@@ -442,31 +467,41 @@ export function usePVPage() {
 
       const required = requiredFields[createFormModel.value.volume_type] || [];
       const missingFields: string[] = [];
-      
+
       for (const field of required) {
-        if (!createFormModel.value.volume_source[field] || createFormModel.value.volume_source[field].trim() === '') {
+        if (
+          !createFormModel.value.volume_source[field] ||
+          createFormModel.value.volume_source[field].trim() === ''
+        ) {
           missingFields.push(field);
         }
       }
 
       if (missingFields.length > 0) {
-        message.error(`请填写 ${createFormModel.value.volume_type} 的必需字段: ${missingFields.join(', ')}`);
+        message.error(
+          `请填写 ${createFormModel.value.volume_type} 的必需字段: ${missingFields.join(', ')}`,
+        );
         return;
       }
 
       submitLoading.value = true;
 
       // 过滤掉空值字段
-      const filteredVolumeSource = Object.entries(createFormModel.value.volume_source)
+      const filteredVolumeSource = Object.entries(
+        createFormModel.value.volume_source,
+      )
         .filter(([_, value]) => value && value.trim() !== '')
-        .reduce((acc, [key, value]) => {
-          acc[key] = value;
-          return acc;
-        }, {} as Record<string, any>);
+        .reduce(
+          (acc, [key, value]) => {
+            acc[key] = value;
+            return acc;
+          },
+          {} as Record<string, any>,
+        );
 
       // 根据卷类型构造正确的 volume_source 结构
       const volumeSource: Record<string, any> = {
-        [createFormModel.value.volume_type]: filteredVolumeSource
+        [createFormModel.value.volume_type]: filteredVolumeSource,
       };
 
       const params: CreatePVReq = {
@@ -477,7 +512,7 @@ export function usePVPage() {
         reclaim_policy: createFormModel.value.reclaim_policy,
         storage_class: createFormModel.value.storage_class || '',
         volume_mode: createFormModel.value.volume_mode || 'Filesystem',
-        volume_source: volumeSource,  // 使用正确结构的 volume_source
+        volume_source: volumeSource, // 使用正确结构的 volume_source
         node_affinity: createFormModel.value.node_affinity || {},
         labels: createFormModel.value.labels || {},
         annotations: createFormModel.value.annotations || {},
@@ -489,8 +524,8 @@ export function usePVPage() {
       resetCreateForm();
       await fetchPVs();
     } catch (error: any) {
-
-      if (shouldNotifyPageError(error)) message.error(error?.message || '创建PV失败');
+      if (shouldNotifyPageError(error))
+        message.error(error?.message || '创建PV失败');
     } finally {
       submitLoading.value = false;
     }
@@ -517,8 +552,8 @@ export function usePVPage() {
       resetCreateYamlForm();
       await fetchPVs();
     } catch (error: any) {
-
-      if (shouldNotifyPageError(error)) message.error(error?.message || '通过YAML创建PV失败');
+      if (shouldNotifyPageError(error))
+        message.error(error?.message || '通过YAML创建PV失败');
     } finally {
       submitLoading.value = false;
     }
@@ -538,14 +573,29 @@ export function usePVPage() {
         cluster_id: clusterId,
         name: currentOperationPV.value.name,
         capacity: editFormModel.value.capacity || undefined,
-        access_modes: editFormModel.value.access_modes.length > 0 ? editFormModel.value.access_modes : undefined,
+        access_modes:
+          editFormModel.value.access_modes.length > 0
+            ? editFormModel.value.access_modes
+            : undefined,
         reclaim_policy: editFormModel.value.reclaim_policy || undefined,
         storage_class: editFormModel.value.storage_class || undefined,
         volume_mode: editFormModel.value.volume_mode || undefined,
-        volume_source: Object.keys(editFormModel.value.volume_source).length > 0 ? editFormModel.value.volume_source : undefined,
-        node_affinity: Object.keys(editFormModel.value.node_affinity).length > 0 ? editFormModel.value.node_affinity : undefined,
-        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
-        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
+        volume_source:
+          Object.keys(editFormModel.value.volume_source).length > 0
+            ? editFormModel.value.volume_source
+            : undefined,
+        node_affinity:
+          Object.keys(editFormModel.value.node_affinity).length > 0
+            ? editFormModel.value.node_affinity
+            : undefined,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(editFormModel.value.annotations).length > 0
+            ? editFormModel.value.annotations
+            : undefined,
       };
 
       await updateK8sPV(params);
@@ -554,8 +604,8 @@ export function usePVPage() {
       resetEditForm();
       await fetchPVs();
     } catch (error: any) {
-
-      if (shouldNotifyPageError(error)) message.error(error?.message || '更新PV失败');
+      if (shouldNotifyPageError(error))
+        message.error(error?.message || '更新PV失败');
     } finally {
       submitLoading.value = false;
     }
@@ -583,8 +633,8 @@ export function usePVPage() {
       resetYamlForm();
       await fetchPVs();
     } catch (error: any) {
-
-      if (shouldNotifyPageError(error)) message.error(error?.message || '通过YAML更新PV失败');
+      if (shouldNotifyPageError(error))
+        message.error(error?.message || '通过YAML更新PV失败');
     } finally {
       submitLoading.value = false;
     }
@@ -596,7 +646,9 @@ export function usePVPage() {
 
     Modal.confirm({
       title: `确认删除PV "${record.name}"?`,
-      content: force ? '这将强制删除PV，此操作不可恢复！' : '此操作不可恢复，请确认！',
+      content: force
+        ? '这将强制删除PV，此操作不可恢复！'
+        : '此操作不可恢复，请确认！',
       okText: '确认删除',
       cancelText: '取消',
       okType: 'danger',
@@ -610,19 +662,20 @@ export function usePVPage() {
 
           await deleteK8sPV(params);
           message.success(`删除PV "${record.name}" 成功`);
-          
+
           // 清除选中状态
           selectedRowKeys.value = [];
           selectedRows.value = [];
-          
+
           // 如果当前页没有数据了，返回上一页
           if (pvs.value.length === 1 && currentPage.value > 1) {
             currentPage.value--;
           }
-          
+
           await fetchPVs();
         } catch (error: any) {
-          if (shouldNotifyPageError(error)) message.error(error?.message || '删除PV失败');
+          if (shouldNotifyPageError(error))
+            message.error(error?.message || '删除PV失败');
         }
       },
     });
@@ -646,11 +699,12 @@ export function usePVPage() {
 
           await reclaimK8sPV(params);
           message.success(`回收PV "${record.name}" 成功`);
-          
+
           // 刷新数据
           await fetchPVs();
         } catch (error: any) {
-          if (shouldNotifyPageError(error)) message.error(error?.message || '回收PV失败');
+          if (shouldNotifyPageError(error))
+            message.error(error?.message || '回收PV失败');
         }
       },
     });
@@ -686,20 +740,21 @@ export function usePVPage() {
 
           await Promise.all(promises);
           message.success(`成功删除 ${deleteCount} 个PV`);
-          
+
           // 清除选中状态
           selectedRowKeys.value = [];
           selectedRows.value = [];
-          
+
           // 如果当前页删除后没有数据了，返回上一页
           if (pvs.value.length <= deleteCount && currentPage.value > 1) {
             currentPage.value--;
           }
-          
+
           // 刷新数据
           await fetchPVs();
         } catch (error: any) {
-          if (shouldNotifyPageError(error)) message.error(error?.message || '批量删除PV失败');
+          if (shouldNotifyPageError(error))
+            message.error(error?.message || '批量删除PV失败');
           // 即使失败也刷新一次，因为可能部分删除成功
           await fetchPVs();
         }
@@ -769,7 +824,7 @@ export function usePVPage() {
       storage_class: '',
       volume_mode: 'Filesystem',
       volume_type: 'hostPath',
-      volume_source: { path: '', type: '' },  // 默认 hostPath 的必需字段
+      volume_source: { path: '', type: '' }, // 默认 hostPath 的必需字段
       node_affinity: {},
       labels: {},
       annotations: {},
@@ -789,14 +844,14 @@ export function usePVPage() {
       glusterfs: ['endpoints', 'path'],
       rbd: ['monitors', 'image'],
     };
-    
+
     return requiredFields[volumeType]?.includes(fieldKey) || false;
   };
 
   // 卷类型变化时的处理
   const handleVolumeTypeChange = (type: string) => {
     createFormModel.value.volume_type = type;
-    
+
     // 根据卷类型自动填充必需字段（带空值，用户需要填写）
     const defaultConfigs: Record<string, Record<string, string>> = {
       hostPath: { path: '', type: '' },
@@ -808,10 +863,10 @@ export function usePVPage() {
       glusterfs: { endpoints: '', path: '' },
       rbd: { monitors: '', image: '', pool: '' },
     };
-    
+
     // 自动填充该类型的必需配置字段
     createFormModel.value.volume_source = defaultConfigs[type] || {};
-    
+
     message.info(`已切换到 ${type} 卷类型，请填写必需的配置参数`);
   };
 
@@ -833,14 +888,14 @@ export function usePVPage() {
 
   const resetYamlForm = () => {
     yamlFormModel.value = {
-      yaml: ''
+      yaml: '',
     };
     yamlFormRef.value?.resetFields();
   };
 
   const resetCreateYamlForm = () => {
     createYamlFormModel.value = {
-      yaml: ''
+      yaml: '',
     };
     createYamlFormRef.value?.resetFields();
   };
@@ -876,7 +931,10 @@ export function usePVPage() {
   const handleClusterDropdownScroll = (e: Event) => {
     const target = e.target as HTMLElement;
     if (target.scrollTop + target.offsetHeight === target.scrollHeight) {
-      if (clusters.value.length < clustersTotal.value && !clustersLoading.value) {
+      if (
+        clusters.value.length < clustersTotal.value &&
+        !clustersLoading.value
+      ) {
         clustersPage.value += 1;
         fetchClusters(false);
       }
@@ -886,7 +944,7 @@ export function usePVPage() {
   // label/annotation helpers for create form
   const newLabelKey = ref('');
   const newAnnotationKey = ref('');
-  
+
   const addNewLabel = () => {
     if (newLabelKey.value && newLabelKey.value.trim()) {
       if (createFormModel.value.labels[newLabelKey.value.trim()]) {
@@ -924,7 +982,7 @@ export function usePVPage() {
   // label/annotation helpers for edit form
   const newEditLabelKey = ref('');
   const newEditAnnotationKey = ref('');
-  
+
   const addNewEditLabel = () => {
     if (newEditLabelKey.value && newEditLabelKey.value.trim()) {
       if (editFormModel.value.labels[newEditLabelKey.value.trim()]) {
@@ -962,14 +1020,17 @@ export function usePVPage() {
   // volume source helpers for create form
   const newVolumeSourceKey = ref('');
   const newVolumeSourceValue = ref('');
-  
+
   const addNewVolumeSource = () => {
     if (newVolumeSourceKey.value && newVolumeSourceKey.value.trim()) {
-      if (createFormModel.value.volume_source[newVolumeSourceKey.value.trim()]) {
+      if (
+        createFormModel.value.volume_source[newVolumeSourceKey.value.trim()]
+      ) {
         message.warning('该配置键已存在');
         return;
       }
-      createFormModel.value.volume_source[newVolumeSourceKey.value.trim()] = newVolumeSourceValue.value || '';
+      createFormModel.value.volume_source[newVolumeSourceKey.value.trim()] =
+        newVolumeSourceValue.value || '';
       newVolumeSourceKey.value = '';
       newVolumeSourceValue.value = '';
     } else {
@@ -984,14 +1045,17 @@ export function usePVPage() {
   // volume source helpers for edit form
   const newEditVolumeSourceKey = ref('');
   const newEditVolumeSourceValue = ref('');
-  
+
   const addNewEditVolumeSource = () => {
     if (newEditVolumeSourceKey.value && newEditVolumeSourceKey.value.trim()) {
-      if (editFormModel.value.volume_source[newEditVolumeSourceKey.value.trim()]) {
+      if (
+        editFormModel.value.volume_source[newEditVolumeSourceKey.value.trim()]
+      ) {
         message.warning('该配置键已存在');
         return;
       }
-      editFormModel.value.volume_source[newEditVolumeSourceKey.value.trim()] = newEditVolumeSourceValue.value || '';
+      editFormModel.value.volume_source[newEditVolumeSourceKey.value.trim()] =
+        newEditVolumeSourceValue.value || '';
       newEditVolumeSourceKey.value = '';
       newEditVolumeSourceValue.value = '';
     } else {
@@ -1005,7 +1069,10 @@ export function usePVPage() {
 
   // YAML 操作
   const insertYamlTemplate = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认操作',
         content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
@@ -1054,7 +1121,7 @@ export function usePVPage() {
 
     try {
       const parsed = yaml.load(yamlContent);
-      
+
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
         return;
@@ -1088,12 +1155,15 @@ export function usePVPage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -1103,12 +1173,24 @@ export function usePVPage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
@@ -1116,7 +1198,10 @@ export function usePVPage() {
   };
 
   const clearYaml = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认清空',
         content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
@@ -1166,7 +1251,7 @@ export function usePVPage() {
 
     try {
       const parsed = yaml.load(yamlContent);
-      
+
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
         return;
@@ -1200,12 +1285,15 @@ export function usePVPage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -1215,12 +1303,24 @@ export function usePVPage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
@@ -1247,12 +1347,12 @@ export function usePVPage() {
     total,
     clustersPage,
     clustersSize,
-    
+
     // form refs
     formRef,
     yamlFormRef,
     createYamlFormRef,
-    
+
     // modal state
     isCreateModalVisible,
     isCreateYamlModalVisible,
@@ -1261,33 +1361,33 @@ export function usePVPage() {
     isYamlModalVisible,
     submitLoading,
     detailLoading,
-    
+
     // current operation
     currentOperationPV,
     currentPVDetail,
     currentYamlContent,
-    
+
     // form models
     createFormModel,
     editFormModel,
     yamlFormModel,
     createYamlFormModel,
-    
+
     // form rules
     createFormRules,
     yamlFormRules,
     createYamlFormRules,
-    
+
     // computed
     filteredPVs,
     rowSelection,
-    
+
     // helpers
     getEnvText,
     getPVStatusText,
     getPVStatusColor,
     getAccessModeText,
-    
+
     // operations
     fetchClusters,
     fetchPVs,
@@ -1296,7 +1396,7 @@ export function usePVPage() {
     clearPVs,
     loadMoreClusters,
     resetClusters,
-    
+
     // crud operations
     createPV,
     createPVByYaml,
@@ -1305,14 +1405,14 @@ export function usePVPage() {
     deletePV,
     reclaimPV,
     deleteBatchPVs,
-    
+
     // modal handlers
     openCreateModal,
     openCreateYamlModal,
     openEditModal,
     openDetailModal,
     openYamlModal,
-    
+
     // form helpers
     resetCreateForm,
     resetEditForm,
@@ -1320,14 +1420,14 @@ export function usePVPage() {
     resetCreateYamlForm,
     handleVolumeTypeChange,
     isRequiredField,
-    
+
     // filter handlers
     handleClusterChange,
     handleFilterChange,
     handleSearch,
     handlePageChange,
     handleClusterDropdownScroll,
-    
+
     // label/annotation helpers
     newLabelKey,
     newAnnotationKey,
@@ -1341,7 +1441,7 @@ export function usePVPage() {
     removeEditLabelField,
     addNewEditAnnotation,
     removeEditAnnotationField,
-    
+
     // volume source helpers
     newVolumeSourceKey,
     newVolumeSourceValue,
@@ -1351,7 +1451,7 @@ export function usePVPage() {
     newEditVolumeSourceValue,
     addNewEditVolumeSource,
     removeEditVolumeSourceField,
-    
+
     // yaml operations
     insertYamlTemplate,
     formatYaml,
@@ -1359,10 +1459,10 @@ export function usePVPage() {
     clearYaml,
     formatEditYaml,
     validateEditYaml,
-    
+
     // constants
     K8sPVStatus,
-    
+
     // additional required properties
     clustersTotal,
   };

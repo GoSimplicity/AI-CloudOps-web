@@ -1,5 +1,5 @@
 import { requestClient } from '#/api/request';
-import type { User } from '#/api/core/system/user'
+import type { User } from '#/api/core/system/user';
 
 // 发送组配置接口
 export interface MonitorSendGroup {
@@ -85,7 +85,9 @@ export interface GetMonitorSendGroupReq {
 }
 
 // 获取发送组列表
-export async function getMonitorSendGroupListApi(data: GetMonitorSendGroupListReq) {
+export async function getMonitorSendGroupListApi(
+  data: GetMonitorSendGroupListReq,
+) {
   return requestClient.get('/monitor/send_groups/list', { params: data });
 }
 
@@ -95,12 +97,16 @@ export async function getMonitorSendGroupDetailApi(id: number) {
 }
 
 // 创建发送组
-export async function createMonitorSendGroupApi(data: CreateMonitorSendGroupReq) {
+export async function createMonitorSendGroupApi(
+  data: CreateMonitorSendGroupReq,
+) {
   return requestClient.post('/monitor/send_groups/create', data);
 }
 
 // 更新发送组
-export async function updateMonitorSendGroupApi(data: UpdateMonitorSendGroupReq) {
+export async function updateMonitorSendGroupApi(
+  data: UpdateMonitorSendGroupReq,
+) {
   return requestClient.put(`/monitor/send_groups/update/${data.id}`, data);
 }
 

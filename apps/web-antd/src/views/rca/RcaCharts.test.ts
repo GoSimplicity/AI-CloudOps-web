@@ -4,6 +4,7 @@ import { SVGRenderer } from 'echarts/renderers';
 import { shallowMount } from '@vue/test-utils';
 import RCAAnalysis from './RCAAnalysis.vue';
 import RCADiagnosis from './RCADiagnosis.vue';
+
 vi.mock('@vben/stores', () => ({
   useUserStore: () => ({ userInfo: { userId: '1' } }),
   useAccessStore: () => ({ accessToken: 'offline' }),

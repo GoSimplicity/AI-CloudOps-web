@@ -96,9 +96,8 @@ const adapter: AxiosAdapter = async (config) => {
 axios.defaults.adapter = adapter;
 const { looksNotifiedByRequestLayer, useCronJobPage } =
   await import('./Management');
-const { HTTP_ERROR_MESSAGE_KEY_PREFIX, requestClient } = await import(
-  '#/api/request'
-);
+const { HTTP_ERROR_MESSAGE_KEY_PREFIX, requestClient } =
+  await import('#/api/request');
 
 const job = (id: number, job_type: number) =>
   ({
@@ -345,7 +344,12 @@ describe('网络错误 / 超时（有 request 无 response）只提示一次（�
     const viaClient = await requestClient
       .get('/boundary', {
         adapter: async (config) => {
-          throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, {});
+          throw new AxiosError(
+            'Network Error',
+            AxiosError.ERR_NETWORK,
+            config,
+            {},
+          );
         },
       })
       .catch((error: unknown) => error);
@@ -429,7 +433,12 @@ describe('列表加载失败只提示一次（真实请求链路）', () => {
 
   // incr3 P2-2：400 有后端 message 时请求层弹该 message（见下一条用例），这里 400 用空 message 走通用文案
   it.each([
-    [500, 'x', 'fallback.http.internalServerError', '服务器内部错误，请稍后重试'],
+    [
+      500,
+      'x',
+      'fallback.http.internalServerError',
+      '服务器内部错误，请稍后重试',
+    ],
     [400, '', 'fallback.http.badRequest', '请求参数错误，请检查筛选条件'],
   ])(
     '列表加载返回 HTTP %s：只弹请求层一条，页面保留错误状态',

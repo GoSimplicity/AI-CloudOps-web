@@ -2,6 +2,57 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
-const root=process.cwd();const dir=path.join(root,'apps/web-antd/src/router/routes/modules');const entries=[];
-for(const name of fs.readdirSync(dir).filter(x=>x.endsWith('.ts'))){const file=path.join(dir,name);const source=ts.createSourceFile(file,fs.readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true);function visit(node){if(ts.isObjectLiteralExpression(node)){const props=node.properties.filter(ts.isPropertyAssignment);const find=n=>props.find(p=>p.name.getText(source)===n);const route=find('path'),component=find('component');const view=component?.initializer.getText(source).match(/import\(['"]#\/views\/([^'"]+)['"]\)/)?.[1];if(route&&view&&ts.isStringLiteral(route.initializer)){const target=path.join(root,'apps/web-antd/src/views',view);const text=fs.existsSync(target)?fs.readFileSync(target,'utf8'):'';entries.push({route:route.initializer.text,view,sharedPage:text.includes('<OpsPage '),inlineStyles:(text.match(/\sstyle=/g)||[]).length,scopedStyle:text.includes('<style scoped')||text.includes(' scoped>')});}}ts.forEachChild(node,visit);}visit(source);}
-entries.sort((a,b)=>a.route.localeCompare(b.route));const report={routes:entries.length,migratedShells:entries.filter(e=>e.sharedPage).length,entries};fs.mkdirSync(path.join(root,'docs/release'),{recursive:true});fs.writeFileSync(path.join(root,'docs/release/layout-inventory.json'),JSON.stringify(report,null,2)+'\n');console.log(`${report.routes} routed components; ${report.migratedShells} consume OpsPage. This counts structure, not business acceptance.`);
+
+const root = process.cwd();
+const dir = path.join(root, 'apps/web-antd/src/router/routes/modules');
+const entries = [];
+for (const name of fs.readdirSync(dir).filter((x) => x.endsWith('.ts'))) {
+  const file = path.join(dir, name);
+  const source = ts.createSourceFile(
+    file,
+    fs.readFileSync(file, 'utf8'),
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  function visit(node) {
+    if (ts.isObjectLiteralExpression(node)) {
+      const props = node.properties.filter(ts.isPropertyAssignment);
+      const find = (n) => props.find((p) => p.name.getText(source) === n);
+      const route = find('path'),
+        component = find('component');
+      const view = component?.initializer
+        .getText(source)
+        .match(/import\(['"]#\/views\/([^'"]+)['"]\)/)?.[1];
+      if (route && view && ts.isStringLiteral(route.initializer)) {
+        const target = path.join(root, 'apps/web-antd/src/views', view);
+        const text = fs.existsSync(target)
+          ? fs.readFileSync(target, 'utf8')
+          : '';
+        entries.push({
+          route: route.initializer.text,
+          view,
+          sharedPage: text.includes('<OpsPage '),
+          inlineStyles: (text.match(/\sstyle=/g) || []).length,
+          scopedStyle:
+            text.includes('<style scoped') || text.includes(' scoped>'),
+        });
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+}
+entries.sort((a, b) => a.route.localeCompare(b.route));
+const report = {
+  routes: entries.length,
+  migratedShells: entries.filter((e) => e.sharedPage).length,
+  entries,
+};
+fs.mkdirSync(path.join(root, 'docs/release'), { recursive: true });
+fs.writeFileSync(
+  path.join(root, 'docs/release/layout-inventory.json'),
+  JSON.stringify(report, null, 2) + '\n',
+);
+console.log(
+  `${report.routes} routed components; ${report.migratedShells} consume OpsPage. This counts structure, not business acceptance.`,
+);

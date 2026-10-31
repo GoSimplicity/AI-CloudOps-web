@@ -48,7 +48,8 @@ import {
 export const BATCH_CORDON_CONCURRENCY = 5;
 
 /** 新增行与已保存污点同 key、但没有删除权限 */
-export const TAINT_KEY_EXISTS_MESSAGE = '该 key 已存在，修改需先删除（需删除权限）';
+export const TAINT_KEY_EXISTS_MESSAGE =
+  '该 key 已存在，修改需先删除（需删除权限）';
 /** 同一 key + effect 出现多行 */
 export const TAINT_DUPLICATE_EFFECT_MESSAGE =
   '同一污点 key 的同一 effect 只能有一条，请修改原有的那一行';
@@ -67,7 +68,10 @@ export async function runWithConcurrency<T, R>(
     while (next < items.length) {
       const index = next++;
       try {
-        results[index] = { status: 'fulfilled', value: await worker(items[index] as T, index) };
+        results[index] = {
+          status: 'fulfilled',
+          value: await worker(items[index] as T, index),
+        };
       } catch (reason) {
         results[index] = { status: 'rejected', reason };
       }
@@ -98,7 +102,7 @@ export function useNodePage() {
   const clustersTotal = ref(0); // 用于集群下拉选择
   const clustersPage = ref(1);
   const clustersSize = ref(50); // 集群下拉选择每页数量
-  
+
   // form refs
   const labelFormRef = ref<FormInstance>();
   const taintFormRef = ref<FormInstance>();
@@ -109,15 +113,15 @@ export function useNodePage() {
   const isTaintModalVisible = ref(false);
   const isDrainModalVisible = ref(false);
   const submitLoading = ref(false);
-  
+
   // detail modal state
   const isDetailModalVisible = ref(false);
   const detailLoading = ref(false);
   const currentNodeDetail = ref<K8sNode | null>(null);
-  
+
   // current node for operations
   const currentOperationNode = ref<K8sNode | null>(null);
-  
+
   // 标签表单模型
   const labelFormModel = ref<{
     labels: Record<string, string>;
@@ -146,7 +150,9 @@ export function useNodePage() {
     // originalTaints 存副本：行内编辑不能改到原始值，否则检测不到 value/effect 的修改
     const originalTaints = taints.map((taint: CoreTaint) => ({ ...taint }));
     savedTaintOrigins = new WeakMap();
-    rows.forEach((row, index) => savedTaintOrigins.set(row, originalTaints[index]!));
+    rows.forEach((row, index) =>
+      savedTaintOrigins.set(row, originalTaints[index]!),
+    );
     taintFormModel.value = { taints: rows, originalTaints, taintsToDelete: [] };
   };
 
@@ -176,11 +182,23 @@ export function useNodePage() {
 
   const drainFormRules: Record<string, Rule[]> = {
     grace_period_seconds: [
-      { type: 'number', min: 0, max: 3600, message: '优雅关闭时间应在0-3600秒之间', trigger: 'blur' }
+      {
+        type: 'number',
+        min: 0,
+        max: 3600,
+        message: '优雅关闭时间应在0-3600秒之间',
+        trigger: 'blur',
+      },
     ],
     timeout_seconds: [
-      { type: 'number', min: 30, max: 7200, message: '超时时间应在30-7200秒之间', trigger: 'blur' }
-    ]
+      {
+        type: 'number',
+        min: 30,
+        max: 7200,
+        message: '超时时间应在30-7200秒之间',
+        trigger: 'blur',
+      },
+    ],
   };
 
   // computed
@@ -295,7 +313,8 @@ export function useNodePage() {
         filterClusterId.value = undefined;
         clearNodes();
       }
-      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err))
+        clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -305,7 +324,10 @@ export function useNodePage() {
   // crud operations
   const fetchNodes = async () => {
     const clusterId = filterClusterId.value;
-    if (!clusterId) { clearNodes(); return; }
+    if (!clusterId) {
+      clearNodes();
+      return;
+    }
     const requestId = ++resourceRequestId;
     try {
       loading.value = true;
@@ -317,10 +339,15 @@ export function useNodePage() {
         page: currentPage.value,
         size: pageSize.value,
         search: searchText.value || undefined,
-        status: filterStatus.value !== undefined ? [filterStatus.value] : undefined,
+        status:
+          filterStatus.value !== undefined ? [filterStatus.value] : undefined,
       };
       const res = await getK8sNodeList(params);
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       // 确保每个node对象都有正确的cluster_id和防御性字段
       const nodesWithClusterId = (res?.items || []).map((node: any) => ({
         ...node,
@@ -328,14 +355,19 @@ export function useNodePage() {
         taints: Array.isArray(node.taints) ? node.taints : [],
         labels: node.labels || {},
         roles: Array.isArray(node.roles) ? node.roles : [],
-        conditions: Array.isArray(node.conditions) ? node.conditions : []
+        conditions: Array.isArray(node.conditions) ? node.conditions : [],
       }));
       nodes.value = nodesWithClusterId;
       total.value = res?.total || 0;
     } catch (error) {
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       clearNodes();
-      if (shouldRecordPageError(error)) loadError.value = '获取 节点列表失败，请重试';
+      if (shouldRecordPageError(error))
+        loadError.value = '获取 节点列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
@@ -346,7 +378,7 @@ export function useNodePage() {
   const showNodeDetail = async (record: K8sNode) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
@@ -358,10 +390,16 @@ export function useNodePage() {
       const nodeDetailWithDefaults = {
         ...(res || record),
         cluster_id: clusterId,
-        taints: Array.isArray((res || record).taints) ? (res || record).taints : [],
+        taints: Array.isArray((res || record).taints)
+          ? (res || record).taints
+          : [],
         labels: (res || record).labels || {},
-        roles: Array.isArray((res || record).roles) ? (res || record).roles : [],
-        conditions: Array.isArray((res || record).conditions) ? (res || record).conditions : []
+        roles: Array.isArray((res || record).roles)
+          ? (res || record).roles
+          : [],
+        conditions: Array.isArray((res || record).conditions)
+          ? (res || record).conditions
+          : [],
       };
       currentNodeDetail.value = nodeDetailWithDefaults;
     } catch (err) {
@@ -373,7 +411,7 @@ export function useNodePage() {
         taints: Array.isArray(record.taints) ? record.taints : [],
         labels: record.labels || {},
         roles: Array.isArray(record.roles) ? record.roles : [],
-        conditions: Array.isArray(record.conditions) ? record.conditions : []
+        conditions: Array.isArray(record.conditions) ? record.conditions : [],
       };
     } finally {
       detailLoading.value = false;
@@ -401,10 +439,10 @@ export function useNodePage() {
 
   const submitLabelForm = async () => {
     if (!labelFormRef.value || !currentOperationNode.value) return;
-    
+
     try {
       submitLoading.value = true;
-      
+
       // 使用覆盖式更新，直接发送当前所有标签（会完全覆盖现有标签）
       const params: UpdateNodeLabelsReq = {
         cluster_id: currentOperationNode.value.cluster_id,
@@ -412,13 +450,12 @@ export function useNodePage() {
         labels: labelFormModel.value.labels, // 直接发送当前标签，实现增删改的聚合操作
       };
       await updateK8sNodeLabels(params);
-      
+
       message.success('节点标签保存成功');
       isLabelModalVisible.value = false;
       await fetchNodes();
     } catch (err: unknown) {
       if (shouldNotifyPageError(err)) message.error('标签保存失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -429,7 +466,7 @@ export function useNodePage() {
     currentOperationNode.value = record;
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       // 从服务器获取最新的污点信息
       const params: GetK8sNodeTaintsReq = {
@@ -437,8 +474,12 @@ export function useNodePage() {
         node_name: record.name,
       };
       const res = await getK8sNodeTaints(params);
-      const taints = Array.isArray(res?.taints) ? res.taints : (Array.isArray(record.taints) ? record.taints : []);
-      
+      const taints = Array.isArray(res?.taints)
+        ? res.taints
+        : Array.isArray(record.taints)
+          ? record.taints
+          : [];
+
       resetTaintForm(taints);
       isTaintModalVisible.value = true;
     } catch (err) {
@@ -446,7 +487,6 @@ export function useNodePage() {
       const taints = Array.isArray(record.taints) ? record.taints : [];
       resetTaintForm(taints);
       isTaintModalVisible.value = true;
-
     }
   };
 
@@ -467,7 +507,11 @@ export function useNodePage() {
     const taint = taintFormModel.value.taints[index];
     // 只有由已保存污点生成的行才加入删除列表（按它原始的 key）；本次新增的行只是撤销，即使 key 与已保存污点相同
     const origin = taint && savedOriginOf(taint);
-    if (origin && origin.key && !taintFormModel.value.taintsToDelete.includes(origin.key)) {
+    if (
+      origin &&
+      origin.key &&
+      !taintFormModel.value.taintsToDelete.includes(origin.key)
+    ) {
       taintFormModel.value.taintsToDelete.push(origin.key);
     }
     // 从当前污点列表中删除
@@ -487,7 +531,11 @@ export function useNodePage() {
     // 复审 P3-1 兜底：已保存的行 key 输入框只读；万一 key 被改了，当作先删原 key 再加新 key，不留下原 key 的孤儿
     for (const row of rows) {
       const origin = savedOriginOf(row);
-      if (origin?.key && origin.key !== row.key && !deleteKeys.includes(origin.key)) {
+      if (
+        origin?.key &&
+        origin.key !== row.key &&
+        !deleteKeys.includes(origin.key)
+      ) {
         deleteKeys.push(origin.key);
       }
     }
@@ -503,7 +551,8 @@ export function useNodePage() {
       // 已保存的行和自己的原始值比较（行身份）
       const origin = savedOriginOf(row);
       if (origin && origin.key === row.key) {
-        if (origin.value !== row.value || origin.effect !== row.effect) dirtyKeys.add(row.key);
+        if (origin.value !== row.value || origin.effect !== row.effect)
+          dirtyKeys.add(row.key);
         continue;
       }
       // 新增行：key 与仍保留的已保存污点相同，等于修改已有污点（窝窝头答复 2），需要删除权限
@@ -624,10 +673,10 @@ export function useNodePage() {
       message.error('未选择节点');
       return false;
     }
-    
+
     const clusterId = validateClusterId(currentOperationNode.value);
     if (!clusterId) return false;
-    
+
     try {
       const params: CheckTaintYamlReq = {
         cluster_id: clusterId,
@@ -646,7 +695,9 @@ export function useNodePage() {
 
   // S1b（清单 v4 #84 / #85 / #87）始终按码判断：除了按钮不渲染，函数入口也拦截，
   // 没有码时不弹确认、不发 cordon / uncordon 请求（验收标准 v3 FE-02「包括直接调用对应函数」）
-  const denyWithoutCode = (key: 'k8s.node.batchCordon' | 'k8s.node.cordon' | 'k8s.node.uncordon') => {
+  const denyWithoutCode = (
+    key: 'k8s.node.batchCordon' | 'k8s.node.cordon' | 'k8s.node.uncordon',
+  ) => {
     if (usePermission().can(key)) return false;
     message.error({
       content: PERMISSION_DENIED_MESSAGE,
@@ -661,8 +712,9 @@ export function useNodePage() {
     // schedulable === 2 表示不可调度，需要启用调度（uncordon）
     const needCordon = record.schedulable === 1;
     const action = needCordon ? '禁用' : '启用';
-    if (denyWithoutCode(needCordon ? 'k8s.node.cordon' : 'k8s.node.uncordon')) return;
-    
+    if (denyWithoutCode(needCordon ? 'k8s.node.cordon' : 'k8s.node.uncordon'))
+      return;
+
     Modal.confirm({
       title: `${action}节点调度`,
       content: `确定要${action}节点 "${record.name}" 的调度吗？`,
@@ -671,14 +723,17 @@ export function useNodePage() {
       centered: true,
       onOk: async () => {
         // 复审 P3-4：确认框打开期间权限可能被收回，点确定时再复核一次
-        if (denyWithoutCode(needCordon ? 'k8s.node.cordon' : 'k8s.node.uncordon')) return;
+        if (
+          denyWithoutCode(needCordon ? 'k8s.node.cordon' : 'k8s.node.uncordon')
+        )
+          return;
         try {
           const clusterId = record.cluster_id || filterClusterId.value;
           if (!clusterId || clusterId === 0) {
             message.error('无效的集群ID，请重新选择集群');
             return;
           }
-          
+
           if (needCordon) {
             // 禁用调度
             const params: K8sNodeCordonReq = {
@@ -694,12 +749,12 @@ export function useNodePage() {
             };
             await uncordonK8sNode(params);
           }
-          
+
           message.success(`节点调度已${action}`);
           await fetchNodes();
         } catch (err) {
-          if (shouldNotifyPageError(err)) message.error(`${action}节点调度失败`);
-
+          if (shouldNotifyPageError(err))
+            message.error(`${action}节点调度失败`);
         }
       },
     });
@@ -725,10 +780,10 @@ export function useNodePage() {
 
   const submitDrainForm = async () => {
     if (!drainFormRef.value || !currentOperationNode.value) return;
-    
+
     try {
       await drainFormRef.value.validate();
-      
+
       submitLoading.value = true;
       const params: DrainK8sNodeReq = {
         cluster_id: currentOperationNode.value.cluster_id,
@@ -741,11 +796,11 @@ export function useNodePage() {
       await fetchNodes();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('节点驱逐失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -759,8 +814,9 @@ export function useNodePage() {
   // 批量操作
   const batchOperation = (operation: string) => {
     if (!selectedRows.value.length) return;
-    if (operation === '禁用调度' && denyWithoutCode('k8s.node.batchCordon')) return;
-    
+    if (operation === '禁用调度' && denyWithoutCode('k8s.node.batchCordon'))
+      return;
+
     Modal.confirm({
       title: `批量${operation}`,
       content: `确定要对选中的 ${selectedRows.value.length} 个节点执行${operation}操作吗？`,
@@ -769,7 +825,8 @@ export function useNodePage() {
       centered: true,
       onOk: async () => {
         // 复审 P3-4：确认框打开期间权限可能被收回，点确定时再复核一次
-        if (operation === '禁用调度' && denyWithoutCode('k8s.node.batchCordon')) return;
+        if (operation === '禁用调度' && denyWithoutCode('k8s.node.batchCordon'))
+          return;
         // 后端只有单节点 cordon（POST /api/k8s/node/:cluster_id/:node_name/cordon），没有批量接口，
         // 这里逐个节点调用单节点接口，再汇总成功/失败
         if (operation !== '禁用调度') {
@@ -785,7 +842,9 @@ export function useNodePage() {
           ? `，跳过 ${skipped.length} 个已禁用调度的节点（${skipped.map((record) => record.name).join('、')}）`
           : '';
         if (targets.length === 0) {
-          message.info(`选中的 ${selected.length} 个节点均已禁用调度，无需操作`);
+          message.info(
+            `选中的 ${selected.length} 个节点均已禁用调度，无需操作`,
+          );
           return;
         }
         // 每个节点一个请求，最多 BATCH_CORDON_CONCURRENCY 个同时进行
@@ -802,12 +861,16 @@ export function useNodePage() {
             return cordonK8sNode(params);
           },
         );
-        const failed = targets.filter((_, index) => results[index]?.status === 'rejected');
+        const failed = targets.filter(
+          (_, index) => results[index]?.status === 'rejected',
+        );
         const failedNames = failed.map((record) => record.name).join('、');
         const successCount = targets.length - failed.length;
 
         if (failed.length === 0) {
-          message.success(`批量${operation}完成：${successCount} 个节点已${operation}${skippedText}`);
+          message.success(
+            `批量${operation}完成：${successCount} 个节点已${operation}${skippedText}`,
+          );
         } else if (successCount > 0) {
           message.warning(
             `批量${operation}部分成功：成功 ${successCount} 个，失败 ${failed.length} 个（${failedNames}）${skippedText}`,
@@ -815,10 +878,14 @@ export function useNodePage() {
         } else {
           // 全部失败且每个失败都已有统一提示（403 / 业务错误原文）时不再叠加
           const allNotified = results.every(
-            (result) => result.status === 'rejected' && isPermissionDeniedError(result.reason),
+            (result) =>
+              result.status === 'rejected' &&
+              isPermissionDeniedError(result.reason),
           );
           if (!allNotified) {
-            message.error(`批量${operation}失败：${failed.length} 个节点均未成功（${failedNames}）${skippedText}`);
+            message.error(
+              `批量${operation}失败：${failed.length} 个节点均未成功（${failedNames}）${skippedText}`,
+            );
           }
         }
 
@@ -833,7 +900,10 @@ export function useNodePage() {
           selectedRowKeys.value = failedKeys;
           selectedRows.value = failed.map(
             (record) =>
-              nodes.value.find((node) => clusterResourceKey(node) === clusterResourceKey(record)) ?? record,
+              nodes.value.find(
+                (node) =>
+                  clusterResourceKey(node) === clusterResourceKey(record),
+              ) ?? record,
           );
         }
       },
@@ -883,57 +953,57 @@ export function useNodePage() {
     clustersTotal,
     clustersPage,
     clustersSize,
-    
+
     // form refs
     labelFormRef,
     taintFormRef,
     drainFormRef,
-    
+
     // modal state
     isLabelModalVisible,
     isTaintModalVisible,
     isDrainModalVisible,
     submitLoading,
-    
+
     // detail modal
     isDetailModalVisible,
     detailLoading,
     currentNodeDetail,
-    
+
     // form models
     labelFormModel,
     taintFormModel,
     drainFormModel,
-    
+
     // form rules
     labelFormRules,
     taintFormRules,
     drainFormRules,
-    
+
     // computed
     filteredNodes,
     rowSelection,
-    
+
     // helpers
     getEnvText,
     getStatusText,
     getStatusColor,
     getSchedulableText,
     getSchedulableColor,
-    
+
     // operations
     fetchClusters,
     fetchNodes,
     clearNodes,
     showNodeDetail,
     closeDetailModal,
-    
+
     // label operations
     openEditLabelModal,
     closeLabelModal,
     submitLabelForm,
     removeLabelField,
-    
+
     // taint operations
     openTaintModal,
     closeTaintModal,
@@ -943,23 +1013,23 @@ export function useNodePage() {
     submitTaintForm,
     hasTaintChanges,
     validateTaintYaml,
-    
+
     // schedule operations
     toggleNodeSchedule,
-    
+
     // drain operations
     openDrainModal,
     closeDrainModal,
     submitDrainForm,
-    
+
     // batch operations
     batchOperation,
-    
+
     // cluster pagination
     loadMoreClusters,
     resetClusters,
     handlePageChange,
-    
+
     // constants
     NodeStatus,
   };

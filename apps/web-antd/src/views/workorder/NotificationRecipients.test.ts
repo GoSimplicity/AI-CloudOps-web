@@ -1,4 +1,9 @@
-import { DOMWrapper, flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import {
+  DOMWrapper,
+  flushPromises,
+  mount,
+  type VueWrapper,
+} from '@vue/test-utils';
 import Antd, { message, Modal } from 'ant-design-vue';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import Notification from './Notification.vue';
@@ -116,23 +121,52 @@ describe('通知接收范围与状态合同', () => {
     await flushPromises();
     await wrapper.get('[aria-label="创建通知配置"]').trigger('click');
     await flushPromises();
-    await new DOMWrapper(document.querySelector<HTMLInputElement>('input[placeholder="请输入通知配置名称"]')!).setValue('站内测试');
-    checkbox('站内消息').querySelector('input')!.click(); await flushPromises();
+    await new DOMWrapper(
+      document.querySelector<HTMLInputElement>(
+        'input[placeholder="请输入通知配置名称"]',
+      )!,
+    ).setValue('站内测试');
+    checkbox('站内消息').querySelector('input')!.click();
+    await flushPromises();
     await save();
     await vi.waitFor(() => expect(client.post).toHaveBeenCalledTimes(1));
-    expect(client.post).toHaveBeenCalledWith('/workorder/notification/create', expect.objectContaining({ channels: ['in_app'], recipient_types: ['creator'], event_types: ['instance_created', 'instance_submitted'] }));
-    expect(client.post.mock.calls.some(([url]) => String(url).includes('/test/send') || String(url).endsWith('/notification/send'))).toBe(false);
+    expect(client.post).toHaveBeenCalledWith(
+      '/workorder/notification/create',
+      expect.objectContaining({
+        channels: ['in_app'],
+        recipient_types: ['creator'],
+        event_types: ['instance_created', 'instance_submitted'],
+      }),
+    );
+    expect(
+      client.post.mock.calls.some(
+        ([url]) =>
+          String(url).includes('/test/send') ||
+          String(url).endsWith('/notification/send'),
+      ),
+    ).toBe(false);
   });
   it('站内消息不能仅选择自定义外部地址', async () => {
     const notify = vi.spyOn(message, 'error');
     await flushPromises();
-    await wrapper.get('[aria-label="创建通知配置"]').trigger('click'); await flushPromises();
-    await new DOMWrapper(document.querySelector<HTMLInputElement>('input[placeholder="请输入通知配置名称"]')!).setValue('站内测试');
-    checkbox('站内消息').querySelector('input')!.click(); await flushPromises();
-    checkbox('工单创建人').querySelector('input')!.click(); await flushPromises();
-    checkbox('自定义地址').querySelector('input')!.click(); await flushPromises(); await save();
+    await wrapper.get('[aria-label="创建通知配置"]').trigger('click');
+    await flushPromises();
+    await new DOMWrapper(
+      document.querySelector<HTMLInputElement>(
+        'input[placeholder="请输入通知配置名称"]',
+      )!,
+    ).setValue('站内测试');
+    checkbox('站内消息').querySelector('input')!.click();
+    await flushPromises();
+    checkbox('工单创建人').querySelector('input')!.click();
+    await flushPromises();
+    checkbox('自定义地址').querySelector('input')!.click();
+    await flushPromises();
+    await save();
     expect(client.post).not.toHaveBeenCalled();
-    expect(notify).toHaveBeenCalledWith('站内消息必须选择系统用户、创建人、处理人、角色或部门');
+    expect(notify).toHaveBeenCalledWith(
+      '站内消息必须选择系统用户、创建人、处理人、角色或部门',
+    );
   });
   it('复制禁用配置后创建请求保留禁用状态', async () => {
     await flushPromises();
@@ -313,7 +347,9 @@ describe('通知接收范围与状态合同', () => {
   it('创建延迟通知将延迟与有限重复参数发送到后端', async () => {
     await flushPromises();
     await copy();
-    const delayed = document.querySelector<HTMLInputElement>('.ant-modal input[type="radio"][value="delayed"]')!;
+    const delayed = document.querySelector<HTMLInputElement>(
+      '.ant-modal input[type="radio"][value="delayed"]',
+    )!;
     delayed.click();
     await flushPromises();
     await setInput('#notification-delay-minutes', '15');
@@ -321,13 +357,32 @@ describe('通知接收范围与状态合同', () => {
     await setInput('#notification-repeat-count', '3');
     await save();
     await vi.waitFor(() => expect(client.post).toHaveBeenCalledTimes(1));
-    expect(client.post.mock.calls[0]![1]).toEqual(expect.objectContaining({ trigger_type: 'delayed', delay_minutes: 15, repeat_interval: 10, repeat_count: 3 }));
+    expect(client.post.mock.calls[0]![1]).toEqual(
+      expect.objectContaining({
+        trigger_type: 'delayed',
+        delay_minutes: 15,
+        repeat_interval: 10,
+        repeat_count: 3,
+      }),
+    );
   });
   it('历史高级配置未更改触发参数时不会偷偷重新提交排期或状态', async () => {
     await flushPromises();
-    await edit({ ...fixture, status: 1, trigger_type: 'scheduled', scheduled_time: '2030-01-01T00:00:00Z', trigger_version: 0 });
-    expect(document.querySelector<HTMLInputElement>('.ant-modal input[type="radio"][value="scheduled"]')?.disabled).toBe(false);
-    expect(document.querySelector('.ant-modal')?.textContent).toContain('历史高级规则尚未验证');
+    await edit({
+      ...fixture,
+      status: 1,
+      trigger_type: 'scheduled',
+      scheduled_time: '2030-01-01T00:00:00Z',
+      trigger_version: 0,
+    });
+    expect(
+      document.querySelector<HTMLInputElement>(
+        '.ant-modal input[type="radio"][value="scheduled"]',
+      )?.disabled,
+    ).toBe(false);
+    expect(document.querySelector('.ant-modal')?.textContent).toContain(
+      '历史高级规则尚未验证',
+    );
     await save();
     await vi.waitFor(() => expect(client.put).toHaveBeenCalledTimes(1));
     const payload = client.put.mock.calls[0]![1];
@@ -338,11 +393,23 @@ describe('通知接收范围与状态合同', () => {
   });
   it('未修改旧触发参数时普通编辑不会悄悄清除历史字段', async () => {
     await flushPromises();
-    await edit({ ...fixture, scheduled_time: '2030-01-01T00:00:00Z', repeat_interval: 30, trigger_condition: { previous: true } });
+    await edit({
+      ...fixture,
+      scheduled_time: '2030-01-01T00:00:00Z',
+      repeat_interval: 30,
+      trigger_condition: { previous: true },
+    });
     await save();
     await vi.waitFor(() => expect(client.put).toHaveBeenCalledTimes(1));
     const payload = client.put.mock.calls[0]![1];
-    for (const key of ['trigger_type', 'scheduled_time', 'repeat_interval', 'trigger_condition', 'clear_trigger']) expect(payload).not.toHaveProperty(key);
+    for (const key of [
+      'trigger_type',
+      'scheduled_time',
+      'repeat_interval',
+      'trigger_condition',
+      'clear_trigger',
+    ])
+      expect(payload).not.toHaveProperty(key);
   });
   it('历史未支持渠道不能在编辑时被悄悄删除，需明确移除后保存', async () => {
     await flushPromises();

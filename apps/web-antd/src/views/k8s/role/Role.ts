@@ -110,12 +110,14 @@ export function useRolePage() {
   }>({
     name: '',
     namespace: '',
-    rules: [{
-      verbs: [],
-      api_groups: [],
-      resources: [],
-      resource_names: [],
-    }],
+    rules: [
+      {
+        verbs: [],
+        api_groups: [],
+        resources: [],
+        resource_names: [],
+      },
+    ],
     labels: {},
     annotations: {},
   });
@@ -150,10 +152,10 @@ export function useRolePage() {
   const createFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入 Role 名称', trigger: 'blur' },
-      { 
-        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, 
-        message: '名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', 
-        trigger: 'blur' 
+      {
+        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        message: '名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        trigger: 'blur',
       },
       { max: 63, message: '名称长度不能超过63个字符', trigger: 'blur' },
     ],
@@ -163,9 +165,7 @@ export function useRolePage() {
   };
 
   const editFormRules: Record<string, Rule[]> = {
-    name: [
-      { required: true, message: '请输入 Role 名称', trigger: 'blur' },
-    ],
+    name: [{ required: true, message: '请输入 Role 名称', trigger: 'blur' }],
     namespace: [
       { required: true, message: '请选择命名空间', trigger: 'change' },
     ],
@@ -174,14 +174,14 @@ export function useRolePage() {
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
     ],
   };
 
@@ -189,12 +189,10 @@ export function useRolePage() {
   const filteredRoles = computed(() => {
     // 如果有标签过滤，在前端进行过滤（但不改变 total，因为会导致分页不准确）
     if (Object.keys(filterLabels.value).length > 0) {
-      return roles.value.filter(item => {
+      return roles.value.filter((item) => {
         if (!item.labels) return false;
         return Object.entries(filterLabels.value).every(([key, value]) => {
-          const itemLabels = typeof item.labels === 'object' 
-            ? item.labels 
-            : {};
+          const itemLabels = typeof item.labels === 'object' ? item.labels : {};
           return itemLabels[key] === value;
         });
       });
@@ -209,14 +207,27 @@ export function useRolePage() {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
-    onSelectAll: (selected: boolean, _rows: K8sRole[], changeRows: K8sRole[]) => {
+    onSelectAll: (
+      selected: boolean,
+      _rows: K8sRole[],
+      changeRows: K8sRole[],
+    ) => {
       if (selected) {
-        selectedRowKeys.value = [...selectedRowKeys.value, ...changeRows.map(row => `${row.namespace}/${row.name}`)];
+        selectedRowKeys.value = [
+          ...selectedRowKeys.value,
+          ...changeRows.map((row) => `${row.namespace}/${row.name}`),
+        ];
         selectedRows.value = [...selectedRows.value, ...changeRows];
       } else {
-        const changeKeys = changeRows.map(row => `${row.namespace}/${row.name}`);
-        selectedRowKeys.value = selectedRowKeys.value.filter(key => !changeKeys.includes(key));
-        selectedRows.value = selectedRows.value.filter(row => !changeKeys.includes(`${row.namespace}/${row.name}`));
+        const changeKeys = changeRows.map(
+          (row) => `${row.namespace}/${row.name}`,
+        );
+        selectedRowKeys.value = selectedRowKeys.value.filter(
+          (key) => !changeKeys.includes(key),
+        );
+        selectedRows.value = selectedRows.value.filter(
+          (row) => !changeKeys.includes(`${row.namespace}/${row.name}`),
+        );
       }
     },
   }));
@@ -307,7 +318,8 @@ export function useRolePage() {
         clearNamespaces();
         clearRoles();
       }
-      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err))
+        clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -315,7 +327,10 @@ export function useRolePage() {
   };
 
   const loadMoreClusters = async () => {
-    if (clustersPage.value * clustersSize.value >= clustersTotal.value || clustersLoading.value) {
+    if (
+      clustersPage.value * clustersSize.value >= clustersTotal.value ||
+      clustersLoading.value
+    ) {
       return;
     }
     clustersPage.value += 1;
@@ -362,7 +377,8 @@ export function useRolePage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldRecordPageError(err))
+        namespacesError.value = '获取命名空间列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
@@ -370,7 +386,10 @@ export function useRolePage() {
   };
 
   const loadMoreNamespaces = async () => {
-    if (namespacesPage.value * namespacesSize.value >= namespacesTotal.value || namespacesLoading.value) {
+    if (
+      namespacesPage.value * namespacesSize.value >= namespacesTotal.value ||
+      namespacesLoading.value
+    ) {
       return;
     }
     namespacesPage.value += 1;
@@ -388,7 +407,10 @@ export function useRolePage() {
   const fetchRoles = async () => {
     const clusterId = filterClusterId.value;
     const namespace = filterNamespace.value;
-    if (!clusterId) { clearRoles(); return; }
+    if (!clusterId) {
+      clearRoles();
+      return;
+    }
     const requestId = ++resourceRequestId;
     try {
       loading.value = true;
@@ -404,13 +426,27 @@ export function useRolePage() {
       };
 
       const response = await getRoleListApi(params);
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
-      roles.value = (response?.items || []).map((record: K8sRole) => ({ ...record, cluster_id: record.cluster_id || clusterId }));
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
+      roles.value = (response?.items || []).map((record: K8sRole) => ({
+        ...record,
+        cluster_id: record.cluster_id || clusterId,
+      }));
       total.value = response?.total || 0;
     } catch (error) {
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
       clearRoles();
-      if (shouldRecordPageError(error)) loadError.value = '获取 Role 列表失败，请重试';
+      if (shouldRecordPageError(error))
+        loadError.value = '获取 Role 列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
@@ -436,8 +472,8 @@ export function useRolePage() {
       const response = await getRoleDetailsApi(params);
       currentRoleDetail.value = response || role;
     } catch (error: any) {
-
-      if (shouldNotifyPageError(error)) message.error('获取 Role 详情失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error))
+        message.error('获取 Role 详情失败：' + (error.message || '未知错误'));
       currentRoleDetail.value = role;
     } finally {
       detailLoading.value = false;
@@ -470,8 +506,8 @@ export function useRolePage() {
       yamlFormModel.value.yaml = response?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (error: any) {
-
-      if (shouldNotifyPageError(error)) message.error('获取 Role YAML 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error))
+        message.error('获取 Role YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -486,7 +522,7 @@ export function useRolePage() {
 
   const submitYamlForm = async () => {
     if (!yamlFormRef.value || !currentOperationRole.value) return;
-    
+
     const clusterId = validateClusterId(currentOperationRole.value);
     if (!clusterId) return;
 
@@ -508,7 +544,8 @@ export function useRolePage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (shouldNotifyPageError(error)) message.error('更新 Role YAML 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error))
+        message.error('更新 Role YAML 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -534,12 +571,14 @@ export function useRolePage() {
     createFormModel.value = {
       name: '',
       namespace: filterNamespace.value || '',
-      rules: [{
-        verbs: [],
-        api_groups: [],
-        resources: [],
-        resource_names: [],
-      }],
+      rules: [
+        {
+          verbs: [],
+          api_groups: [],
+          resources: [],
+          resource_names: [],
+        },
+      ],
       labels: {},
       annotations: {},
     };
@@ -555,28 +594,33 @@ export function useRolePage() {
 
       // 清理并过滤 rules
       const cleanedRules = createFormModel.value.rules
-        .filter(rule => 
-          rule.verbs.length > 0 && 
-          (rule.resources || []).some(resource => resource && resource.trim())
+        .filter(
+          (rule) =>
+            rule.verbs.length > 0 &&
+            (rule.resources || []).some(
+              (resource) => resource && resource.trim(),
+            ),
         )
-        .map(rule => {
+        .map((rule) => {
           // 清理 api_groups
           const rawApiGroups = (rule.api_groups || [])
-            .map(group => typeof group === 'string' ? group.trim() : '')
-            .filter(group => group !== null && group !== undefined);
-          
+            .map((group) => (typeof group === 'string' ? group.trim() : ''))
+            .filter((group) => group !== null && group !== undefined);
+
           // 如果同时有空字符串和非空值，去掉空字符串（很可能是意外产生的）
           // 如果只有空字符串，保留它（代表 core API group）
-          const hasNonEmpty = rawApiGroups.some(group => group !== '');
-          const cleanedApiGroups = hasNonEmpty 
-            ? rawApiGroups.filter(group => group !== '')
+          const hasNonEmpty = rawApiGroups.some((group) => group !== '');
+          const cleanedApiGroups = hasNonEmpty
+            ? rawApiGroups.filter((group) => group !== '')
             : rawApiGroups;
-          
+
           // 清理 resources：只保留非空字符串
           const cleanedResources = (rule.resources || [])
-            .map(resource => typeof resource === 'string' ? resource.trim() : '')
-            .filter(resource => resource);
-          
+            .map((resource) =>
+              typeof resource === 'string' ? resource.trim() : '',
+            )
+            .filter((resource) => resource);
+
           return {
             verbs: rule.verbs,
             api_groups: cleanedApiGroups,
@@ -590,8 +634,14 @@ export function useRolePage() {
         namespace: createFormModel.value.namespace,
         name: createFormModel.value.name,
         rules: cleanedRules,
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(createFormModel.value.annotations).length > 0
+            ? createFormModel.value.annotations
+            : undefined,
       };
 
       await createRoleApi(params);
@@ -601,7 +651,8 @@ export function useRolePage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (shouldNotifyPageError(error)) message.error('创建 Role 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error))
+        message.error('创建 Role 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -612,7 +663,7 @@ export function useRolePage() {
     if (!clusterId) return;
 
     currentOperationRole.value = role;
-    
+
     // 获取详细信息
     try {
       submitLoading.value = true;
@@ -621,9 +672,9 @@ export function useRolePage() {
         namespace: role.namespace,
         name: role.name,
       };
-      
+
       const response = await getRoleDetailsApi(params);
-      
+
       // 填充表单
       editFormModel.value = {
         name: response.name,
@@ -637,10 +688,11 @@ export function useRolePage() {
         labels: response.labels || {},
         annotations: response.annotations || {},
       };
-      
+
       isEditModalVisible.value = true;
     } catch (error: any) {
-      if (shouldNotifyPageError(error)) message.error('获取 Role 详情失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error))
+        message.error('获取 Role 详情失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -670,26 +722,31 @@ export function useRolePage() {
 
       // 清理并过滤 rules
       const cleanedRules = editFormModel.value.rules
-        .filter(rule => 
-          rule.verbs.length > 0 && 
-          (rule.resources || []).some(resource => resource && resource.trim())
+        .filter(
+          (rule) =>
+            rule.verbs.length > 0 &&
+            (rule.resources || []).some(
+              (resource) => resource && resource.trim(),
+            ),
         )
-        .map(rule => {
+        .map((rule) => {
           // 清理 api_groups
           const rawApiGroups = (rule.api_groups || [])
-            .map(group => typeof group === 'string' ? group.trim() : '')
-            .filter(group => group !== null && group !== undefined);
-          
-          const hasNonEmpty = rawApiGroups.some(group => group !== '');
-          const cleanedApiGroups = hasNonEmpty 
-            ? rawApiGroups.filter(group => group !== '')
+            .map((group) => (typeof group === 'string' ? group.trim() : ''))
+            .filter((group) => group !== null && group !== undefined);
+
+          const hasNonEmpty = rawApiGroups.some((group) => group !== '');
+          const cleanedApiGroups = hasNonEmpty
+            ? rawApiGroups.filter((group) => group !== '')
             : rawApiGroups;
-          
+
           // 清理 resources
           const cleanedResources = (rule.resources || [])
-            .map(resource => typeof resource === 'string' ? resource.trim() : '')
-            .filter(resource => resource);
-          
+            .map((resource) =>
+              typeof resource === 'string' ? resource.trim() : '',
+            )
+            .filter((resource) => resource);
+
           return {
             verbs: rule.verbs,
             api_groups: cleanedApiGroups,
@@ -703,8 +760,14 @@ export function useRolePage() {
         namespace: currentOperationRole.value.namespace,
         name: currentOperationRole.value.name,
         rules: cleanedRules,
-        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
-        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(editFormModel.value.annotations).length > 0
+            ? editFormModel.value.annotations
+            : undefined,
       };
 
       await updateRoleApi(params);
@@ -714,7 +777,8 @@ export function useRolePage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (shouldNotifyPageError(error)) message.error('更新 Role 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error))
+        message.error('更新 Role 失败：' + (error.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -754,7 +818,10 @@ export function useRolePage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (shouldNotifyPageError(error)) message.error('通过 YAML 创建 Role 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error))
+        message.error(
+          '通过 YAML 创建 Role 失败：' + (error.message || '未知错误'),
+        );
     } finally {
       submitLoading.value = false;
     }
@@ -784,8 +851,8 @@ export function useRolePage() {
           message.success('Role 删除成功');
           await fetchRoles();
         } catch (error: any) {
-
-          if (shouldNotifyPageError(error)) message.error('删除 Role 失败：' + (error.message || '未知错误'));
+          if (shouldNotifyPageError(error))
+            message.error('删除 Role 失败：' + (error.message || '未知错误'));
         }
       },
     });
@@ -817,8 +884,10 @@ export function useRolePage() {
       return;
     }
 
-    const names = selectedRows.value.map(item => `${item.namespace}/${item.name}`).join('、');
-    
+    const names = selectedRows.value
+      .map((item) => `${item.namespace}/${item.name}`)
+      .join('、');
+
     if (operation === '删除') {
       Modal.confirm({
         title: '批量删除确认',
@@ -828,10 +897,10 @@ export function useRolePage() {
         cancelText: '取消',
         centered: true,
         onOk: async () => {
-          const deletePromises = selectedRows.value.map(role => {
+          const deletePromises = selectedRows.value.map((role) => {
             const clusterId = validateClusterId(role);
             if (!clusterId) return Promise.resolve();
-            
+
             const params: DeleteRoleReq = {
               cluster_id: clusterId,
               namespace: role.namespace,
@@ -847,8 +916,10 @@ export function useRolePage() {
             selectedRows.value = [];
             await fetchRoles();
           } catch (error: any) {
-
-            if (shouldNotifyPageError(error)) message.error('批量删除部分 Role 失败：' + (error.message || '未知错误'));
+            if (shouldNotifyPageError(error))
+              message.error(
+                '批量删除部分 Role 失败：' + (error.message || '未知错误'),
+              );
             await fetchRoles();
           }
         },
@@ -867,7 +938,9 @@ export function useRolePage() {
 
   // form field operations (支持create和edit两种模式)
   const getCurrentFormModel = () => {
-    return isEditModalVisible.value ? editFormModel.value : createFormModel.value;
+    return isEditModalVisible.value
+      ? editFormModel.value
+      : createFormModel.value;
   };
 
   const addRuleField = () => {
@@ -904,7 +977,10 @@ export function useRolePage() {
         formModel.rules[ruleIndex].api_groups = [];
       }
     }
-    if (apiGroup !== undefined && !formModel.rules[ruleIndex]?.api_groups?.includes(apiGroup)) {
+    if (
+      apiGroup !== undefined &&
+      !formModel.rules[ruleIndex]?.api_groups?.includes(apiGroup)
+    ) {
       formModel.rules[ruleIndex]?.api_groups?.push(apiGroup);
     }
   };
@@ -920,7 +996,10 @@ export function useRolePage() {
         formModel.rules[ruleIndex].resources = [];
       }
     }
-    if (resource && !formModel.rules[ruleIndex]?.resources?.includes(resource)) {
+    if (
+      resource &&
+      !formModel.rules[ruleIndex]?.resources?.includes(resource)
+    ) {
       formModel.rules[ruleIndex]?.resources?.push(resource);
     }
   };
@@ -941,7 +1020,10 @@ export function useRolePage() {
 
   // YAML 操作辅助函数
   const insertYamlTemplate = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认操作',
         content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
@@ -973,7 +1055,7 @@ export function useRolePage() {
       const formatted = yaml.dump(parsed, {
         indent: 2,
         lineWidth: -1, // 不限制行宽
-        noRefs: true,  // 不使用引用
+        noRefs: true, // 不使用引用
         sortKeys: false, // 保持原有顺序
       });
       createYamlFormModel.value.yaml = formatted;
@@ -993,7 +1075,7 @@ export function useRolePage() {
     try {
       // 尝试解析 YAML
       const parsed = yaml.load(yamlContent);
-      
+
       // 检查是否是有效的对象
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
@@ -1027,12 +1109,15 @@ export function useRolePage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -1042,12 +1127,24 @@ export function useRolePage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
@@ -1055,7 +1152,10 @@ export function useRolePage() {
   };
 
   const clearYaml = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认清空',
         content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
@@ -1105,7 +1205,7 @@ export function useRolePage() {
 
     try {
       const parsed = yaml.load(yamlContent);
-      
+
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
         return;
@@ -1137,12 +1237,15 @@ export function useRolePage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -1152,12 +1255,24 @@ export function useRolePage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
@@ -1185,7 +1300,7 @@ export function useRolePage() {
     total,
     clustersTotal,
     namespacesTotal,
-    
+
     // modal state
     isCreateModalVisible,
     isCreateYamlModalVisible,
@@ -1194,37 +1309,37 @@ export function useRolePage() {
     isYamlModalVisible,
     submitLoading,
     detailLoading,
-    
+
     // operation targets
     currentOperationRole,
     currentRoleDetail,
-    
+
     // form models
     createFormModel,
     editFormModel,
     createYamlFormModel,
     yamlFormModel,
-    
+
     // form refs
     formRef,
     editFormRef,
     yamlFormRef,
     createYamlFormRef,
-    
+
     // form rules
     createFormRules,
     editFormRules,
     createYamlFormRules,
     yamlFormRules,
-    
+
     // computed
     filteredRoles,
     rowSelection,
-    
+
     // helpers
     validateClusterId,
     getEnvText,
-    
+
     // operations
     fetchClusters,
     fetchNamespaces,
@@ -1233,16 +1348,16 @@ export function useRolePage() {
     clearNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
-    
+
     // detail operations
     showRoleDetail,
     closeDetailModal,
-    
+
     // YAML operations
     showYamlModal,
     closeYamlModal,
     submitYamlForm,
-    
+
     // create operations
     openCreateModal,
     closeCreateModal,
@@ -1250,26 +1365,26 @@ export function useRolePage() {
     openCreateYamlModal,
     closeCreateYamlModal,
     submitCreateYamlForm,
-    
+
     // edit operations
     openEditModal,
     closeEditModal,
     submitEditForm,
-    
+
     // role operations
     deleteRole,
-    
+
     // filter operations
     addFilterLabel,
     removeFilterLabel,
     clearFilterLabels,
-    
+
     // batch operations
     batchOperation,
-    
+
     // pagination operations
     handlePageChange,
-    
+
     // form field operations
     addRuleField,
     removeRuleField,
@@ -1281,7 +1396,7 @@ export function useRolePage() {
     removeResourceFromRule,
     removeLabelField,
     removeAnnotationField,
-    
+
     // YAML utility functions
     insertYamlTemplate,
     formatYaml,

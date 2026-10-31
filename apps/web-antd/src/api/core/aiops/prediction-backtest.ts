@@ -29,5 +29,8 @@ export interface PredictionBacktestResult {
 }
 
 export function runPredictionBacktest(records: ForecastObservation[]) {
-  return requestClientAIOps.post<PredictionBacktestResult>('/predict/backtest', { records });
+  return requestClientAIOps.post<PredictionBacktestResult>(
+    '/predict/backtest',
+    { records },
+  );
 }

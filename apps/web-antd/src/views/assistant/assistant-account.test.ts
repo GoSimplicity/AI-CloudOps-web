@@ -37,7 +37,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.user = reactive({ userInfo: { userId: '1' } });
   state.access = reactive({ accessToken: 'credential' });
-  api.createAssistantSession.mockImplementation(async () => ({ session_id: state.user.userInfo?.userId === '2' ? 'fresh' : 'old' }));
+  api.createAssistantSession.mockImplementation(async () => ({
+    session_id: state.user.userInfo?.userId === '2' ? 'fresh' : 'old',
+  }));
   vi.stubGlobal(
     'matchMedia',
     vi.fn(() => ({
@@ -63,7 +65,11 @@ describe('独立助手页面账户隔离', () => {
     await flushPromises();
     expect(api.assistantQuery).not.toHaveBeenCalled();
     expect(wrapper.find('[role="switch"]').exists()).toBe(false);
-    expect(wrapper.findAll('button').map(button => button.text().replace(/\s+/g, ''))).toContain('发送');
+    expect(
+      wrapper
+        .findAll('button')
+        .map((button) => button.text().replace(/\s+/g, '')),
+    ).toContain('发送');
     wrapper.unmount();
     mountScreen(AssistantSession);
     await flushPromises();
@@ -72,14 +78,21 @@ describe('独立助手页面账户隔离', () => {
   });
   it('读取失败的原因保持可见，明确重试后更新且不发送查询成功提示', async () => {
     const toast = vi.spyOn(message, 'success');
-    api.getSessionInfo.mockRejectedValueOnce(new Error('会话已过期，请重新创建'));
+    api.getSessionInfo.mockRejectedValueOnce(
+      new Error('会话已过期，请重新创建'),
+    );
     mountScreen(AssistantSession);
     await wrapper.find('input').setValue('expired-id');
-    const button = wrapper.findAll('button').find(item => item.text() === '搜索')!;
+    const button = wrapper
+      .findAll('button')
+      .find((item) => item.text() === '搜索')!;
     await button.trigger('click');
     await flushPromises();
     expect(wrapper.find('[role="alert"]').text()).toContain('会话已过期');
-    api.getSessionInfo.mockResolvedValueOnce({ session_id: 'owned', status: 'active' });
+    api.getSessionInfo.mockResolvedValueOnce({
+      session_id: 'owned',
+      status: 'active',
+    });
     await button.trigger('click');
     await flushPromises();
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
@@ -90,7 +103,10 @@ describe('独立助手页面账户隔离', () => {
     api.getSessionInfo.mockRejectedValueOnce(new Error('账户1私有错误原因'));
     mountScreen(AssistantSession);
     await wrapper.find('input').setValue('one-private-id');
-    await wrapper.findAll('button').find(item => item.text() === '搜索')!.trigger('click');
+    await wrapper
+      .findAll('button')
+      .find((item) => item.text() === '搜索')!
+      .trigger('click');
     await flushPromises();
     expect(wrapper.text()).toContain('账户1私有错误原因');
     state.user.userInfo = { userId: '2' };
@@ -168,11 +184,19 @@ describe('独立助手页面账户隔离', () => {
     setup().questionInput = 'two';
     const freshTask = setup().sendMessage();
     await flushPromises();
-    old.resolve({ answer: 'one private response', session_id: 'old', turn_id: api.assistantQuery.mock.calls[0]![0].turn_id });
+    old.resolve({
+      answer: 'one private response',
+      session_id: 'old',
+      turn_id: api.assistantQuery.mock.calls[0]![0].turn_id,
+    });
     await oldTask;
     expect(setup().isLoading).toBe(true);
     expect(setup().currentSessionId).toBe('fresh');
-    fresh.resolve({ answer: 'two response', session_id: 'fresh', turn_id: api.assistantQuery.mock.calls[1]![0].turn_id });
+    fresh.resolve({
+      answer: 'two response',
+      session_id: 'fresh',
+      turn_id: api.assistantQuery.mock.calls[1]![0].turn_id,
+    });
     await freshTask;
     expect(setup().currentSessionId).toBe('fresh');
     expect(JSON.stringify(setup().chatHistory)).not.toContain('one private');
@@ -185,7 +209,11 @@ describe('独立助手页面账户隔离', () => {
     async (status) => {
       api.assistantQuery
         .mockRejectedValueOnce({ response: { status }, message: 'invalid' })
-        .mockImplementationOnce(async (req) => ({ answer: 'new', session_id: req.session_id, turn_id: req.turn_id }));
+        .mockImplementationOnce(async (req) => ({
+          answer: 'new',
+          session_id: req.session_id,
+          turn_id: req.turn_id,
+        }));
       mountScreen(AssistantQuery);
       setup().currentSessionId = 'invalid';
       setup().questionInput = 'old';
@@ -201,8 +229,14 @@ describe('独立助手页面账户隔离', () => {
     },
   );
   it('查询状态未知时不重发，确认完成后用同一 turn_id 读取结果', async () => {
-    api.assistantQuery.mockReset().mockRejectedValueOnce(new Error('interrupted'))
-      .mockImplementationOnce(async (req) => ({ answer: '已恢复', session_id: req.session_id, turn_id: req.turn_id }));
+    api.assistantQuery
+      .mockReset()
+      .mockRejectedValueOnce(new Error('interrupted'))
+      .mockImplementationOnce(async (req) => ({
+        answer: '已恢复',
+        session_id: req.session_id,
+        turn_id: req.turn_id,
+      }));
     mountScreen(AssistantQuery);
     setup().questionInput = '核对问题';
     await setup().sendMessage();
@@ -210,10 +244,17 @@ describe('独立助手页面账户隔离', () => {
     expect(request.session_id).toBe('old');
     expect(request.turn_id).toBeTruthy();
     expect(setup().pendingTurn.turnId).toBe(request.turn_id);
-    api.getSessionInfo.mockResolvedValueOnce({ session_id: 'old', status: 'unknown' });
+    api.getSessionInfo.mockResolvedValueOnce({
+      session_id: 'old',
+      status: 'unknown',
+    });
     await setup().recoverTurn();
     expect(api.assistantQuery).toHaveBeenCalledTimes(1);
-    api.getSessionInfo.mockResolvedValueOnce({ session_id: 'old', status: 'idle', last_turn_id: request.turn_id });
+    api.getSessionInfo.mockResolvedValueOnce({
+      session_id: 'old',
+      status: 'idle',
+      last_turn_id: request.turn_id,
+    });
     await setup().recoverTurn();
     expect(api.assistantQuery).toHaveBeenCalledTimes(2);
     expect(api.assistantQuery.mock.calls[1]![0].turn_id).toBe(request.turn_id);
@@ -224,9 +265,16 @@ describe('独立助手页面账户隔离', () => {
     const scope = createAssistantAccountScope(localStorage);
     scope.setOwner('1');
     scope.write('query-session', { sessionId: 'owned-session' });
-    api.getSessionInfo.mockResolvedValueOnce({ session_id: 'owned-session', status: 'unknown', mode: 1, last_activity: '2026-01-01T00:00:00Z',
+    api.getSessionInfo.mockResolvedValueOnce({
+      session_id: 'owned-session',
+      status: 'unknown',
+      mode: 1,
+      last_activity: '2026-01-01T00:00:00Z',
       conversation_history: [{ q: '之前的问题', a: '之前的回答', mode: 1 }],
-      active_turn_id: 'turn-id', active_question: '未确认问题', active_mode: 1 });
+      active_turn_id: 'turn-id',
+      active_question: '未确认问题',
+      active_mode: 1,
+    });
     mountScreen(AssistantQuery);
     await flushPromises();
     expect(wrapper.text()).toContain('之前的回答');
@@ -243,8 +291,14 @@ describe('独立助手页面账户隔离', () => {
     const scope = createAssistantAccountScope(localStorage);
     scope.setOwner('1');
     scope.write('query-session', { sessionId: 'retry-session' });
-    api.getSessionInfo.mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValueOnce({ session_id: 'retry-session', status: 'idle', mode: 1, conversation_history: [] });
+    api.getSessionInfo
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({
+        session_id: 'retry-session',
+        status: 'idle',
+        mode: 1,
+        conversation_history: [],
+      });
     mountScreen(AssistantQuery);
     await flushPromises();
     expect(setup().currentSessionId).toBe('retry-session');
@@ -254,5 +308,4 @@ describe('独立助手页面账户隔离', () => {
     expect(setup().sessionNotice).toBe('');
     expect(api.assistantQuery).not.toHaveBeenCalled();
   });
-
 });

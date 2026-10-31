@@ -7,10 +7,9 @@ import {
 } from '#/api/core/cron/cron';
 import CronKeyValueFields from './CronKeyValueFields.vue';
 
-const model = defineModel<UpdateCronJobReq>({ required: true });
 defineProps<{ resources: TreeLocalResource[]; loading: boolean }>();
 const emit = defineEmits<{ search: [value: string]; openResources: [] }>();
-
+const model = defineModel<UpdateCronJobReq>({ required: true });
 function setField<K extends keyof UpdateCronJobReq>(
   key: K,
   value: UpdateCronJobReq[K],
@@ -60,8 +59,9 @@ function removeArg(index: number) {
               danger
               size="small"
               @click="removeArg(index)"
-              >删除</a-button
             >
+              删除
+            </a-button>
           </div>
           <a-button
             type="dashed"
@@ -103,8 +103,9 @@ function removeArg(index: number) {
           v-for="method in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD']"
           :key="method"
           :value="method"
-          >{{ method }}</a-select-option
         >
+          {{ method }}
+        </a-select-option>
       </a-select>
     </a-form-item>
     <a-form-item label="请求URL" name="http_url" has-feedback>
@@ -178,10 +179,9 @@ function removeArg(index: number) {
           v-for="resource in resources"
           :key="resource.id"
           :value="resource.id"
-          >{{ resource.name }}（{{ resource.ip_addr }}:{{
-            resource.port
-          }}）</a-select-option
         >
+          {{ resource.name }}（{{ resource.ip_addr }}:{{ resource.port }}）
+        </a-select-option>
       </a-select>
     </a-form-item>
     <a-form-item label="远程命令" name="ssh_command" has-feedback>

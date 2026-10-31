@@ -2,13 +2,13 @@ import { requestClient } from '#/api/request';
 
 // 工单状态流转动作类型常量
 export const FlowAction = {
-  Submit: 'submit',   // 提交工单
+  Submit: 'submit', // 提交工单
   Approve: 'approve', // 审批通过
-  Reject: 'reject',   // 审批拒绝
-  Assign: 'assign',   // 指派处理人
-  Cancel: 'cancel',   // 取消工单
+  Reject: 'reject', // 审批拒绝
+  Assign: 'assign', // 指派处理人
+  Cancel: 'cancel', // 取消工单
   Complete: 'complete', // 完成工单
-  Return: 'return',   // 退回工单
+  Return: 'return', // 退回工单
 } as const;
 
 // WorkorderInstanceFlow 工单状态流转记录

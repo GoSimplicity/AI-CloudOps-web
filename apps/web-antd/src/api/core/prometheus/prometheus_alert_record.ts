@@ -66,15 +66,21 @@ export interface EnableSwitchMonitorRecordRuleReq {
   id: number;
 }
 
-export async function getMonitorRecordRuleListApi(data: GetMonitorRecordRuleListReq) {
+export async function getMonitorRecordRuleListApi(
+  data: GetMonitorRecordRuleListReq,
+) {
   return requestClient.get('/monitor/record_rules/list', { params: data });
 }
 
-export async function createMonitorRecordRuleApi(data: CreateMonitorRecordRuleReq) {
+export async function createMonitorRecordRuleApi(
+  data: CreateMonitorRecordRuleReq,
+) {
   return requestClient.post('/monitor/record_rules/create', data);
 }
 
-export async function updateMonitorRecordRuleApi(data: UpdateMonitorRecordRuleReq) {
+export async function updateMonitorRecordRuleApi(
+  data: UpdateMonitorRecordRuleReq,
+) {
   return requestClient.put(`/monitor/record_rules/update/${data.id}`, data);
 }
 

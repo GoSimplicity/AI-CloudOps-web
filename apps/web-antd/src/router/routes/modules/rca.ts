@@ -24,7 +24,7 @@ const routes: RouteRecordRaw[] = [
       },
       {
         name: 'RCADiagnosis',
-        path: '/rca/diagnosis',/*  */
+        path: '/rca/diagnosis' /*  */,
         component: () => import('#/views/rca/RCADiagnosis.vue'),
         meta: {
           icon: 'lucide:stethoscope',

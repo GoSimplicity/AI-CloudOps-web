@@ -179,9 +179,7 @@ test('disabled HTTP cron persists create and execution-field edits without runni
     await dialog
       .getByPlaceholder('POST/PUT请求的数据体')
       .fill('{"fixture":true}');
-    await dialog
-      .getByRole('spinbutton', { name: /^超时时间/ })
-      .fill('120');
+    await dialog.getByRole('spinbutton', { name: /^超时时间/ }).fill('120');
     const updated = page.waitForResponse(
       (response) =>
         new URL(response.url()).pathname === `/api/cron/job/${id}/update`,

@@ -113,7 +113,12 @@ const resourcePermissions = {
   unbind: '/api/tree/cloud/:id/unbind',
   status: '/api/tree/cloud/:id/status',
 } as const;
-const canSync = computed(() => hasPerm(resourcePermissions.sync) && hasPerm(resourcePermissions.accountList) && hasPerm(resourcePermissions.accountDetail));
+const canSync = computed(
+  () =>
+    hasPerm(resourcePermissions.sync) &&
+    hasPerm(resourcePermissions.accountList) &&
+    hasPerm(resourcePermissions.accountDetail),
+);
 
 const loadError = ref<string | null>(null);
 let listRequest = 0;
@@ -131,7 +136,6 @@ const syncRegionsLoading = ref(false);
 const syncRegionError = ref<string | null>(null);
 const accountsLoading = ref(false);
 const accountLoadError = ref<string | null>(null);
-
 
 // ========== 状态定义 ==========
 const router = useRouter();
@@ -524,7 +528,8 @@ const fetchCloudAccounts = async (): Promise<void> => {
   } catch (error) {
     if (ticket === accountListRequest) {
       cloudAccounts.value = [];
-      if (shouldRecordPageError(error)) accountLoadError.value = '读取云账户失败，请重试';
+      if (shouldRecordPageError(error))
+        accountLoadError.value = '读取云账户失败，请重试';
     }
   } finally {
     if (ticket === accountListRequest) accountsLoading.value = false;
@@ -558,7 +563,8 @@ const fetchResources = async (): Promise<void> => {
     pagination.total = data.total || 0;
   } catch (error) {
     if (ticket !== listRequest) return;
-    if (shouldRecordPageError(error)) loadError.value = '获取云资源列表失败，请重试';
+    if (shouldRecordPageError(error))
+      loadError.value = '获取云资源列表失败，请重试';
     if (shouldNotifyPageError(error)) message.error('获取资源列表失败');
     resources.value = [];
     pagination.total = 0;
@@ -634,8 +640,15 @@ const resetFilter = (): void => {
 };
 
 const supportsResource = (record: TreeCloudResource): boolean => {
-  const provider = record.cloud_account?.provider ?? cloudAccounts.value.find((account) => account.id === record.cloud_account_id)?.provider;
-  return isSupportedAccountProvider(provider ?? 0) && record.resource_type === CloudResourceType.ECS;
+  const provider =
+    record.cloud_account?.provider ??
+    cloudAccounts.value.find(
+      (account) => account.id === record.cloud_account_id,
+    )?.provider;
+  return (
+    isSupportedAccountProvider(provider ?? 0) &&
+    record.resource_type === CloudResourceType.ECS
+  );
 };
 const requireSupportedResource = (record: TreeCloudResource): boolean => {
   if (supportsResource(record)) return true;
@@ -643,10 +656,16 @@ const requireSupportedResource = (record: TreeCloudResource): boolean => {
   return false;
 };
 const requiresInstanceIds = (provider?: CloudProvider): boolean =>
-  provider === CloudProvider.HuaweiCloud || provider === CloudProvider.Azure || provider === CloudProvider.GCP;
-const syncAccounts = computed(() => cloudAccounts.value.filter(
-  (account) => isSupportedAccountProvider(account.provider) && account.status === CloudAccountStatus.Enabled,
-));
+  provider === CloudProvider.HuaweiCloud ||
+  provider === CloudProvider.Azure ||
+  provider === CloudProvider.GCP;
+const syncAccounts = computed(() =>
+  cloudAccounts.value.filter(
+    (account) =>
+      isSupportedAccountProvider(account.provider) &&
+      account.status === CloudAccountStatus.Enabled,
+  ),
+);
 const loadSyncRegions = async (id: number): Promise<void> => {
   const ticket = ++syncRegionRequest;
   syncRegions.value = [];
@@ -661,18 +680,38 @@ const loadSyncRegions = async (id: number): Promise<void> => {
   syncRegionError.value = null;
   try {
     const account = await getCloudAccountDetailApi(id);
-    if (ticket !== syncRegionRequest || !syncModalVisible.value || !canSync.value) return;
-    if (account.id !== id || !isSupportedAccountProvider(account.provider) || account.status !== CloudAccountStatus.Enabled) {
+    if (
+      ticket !== syncRegionRequest ||
+      !syncModalVisible.value ||
+      !canSync.value
+    )
+      return;
+    if (
+      account.id !== id ||
+      !isSupportedAccountProvider(account.provider) ||
+      account.status !== CloudAccountStatus.Enabled
+    ) {
       throw new Error('Account unavailable');
     }
     syncAccount.value = account;
-    if (requiresInstanceIds(account.provider)) syncForm.sync_mode = SyncMode.INCREMENTAL;
-    syncRegions.value = (account.regions ?? []).filter((region) =>
-      region.status === 1 && (account.provider !== CloudProvider.HuaweiCloud || !!region.project_id?.trim()),
+    if (requiresInstanceIds(account.provider))
+      syncForm.sync_mode = SyncMode.INCREMENTAL;
+    syncRegions.value = (account.regions ?? []).filter(
+      (region) =>
+        region.status === 1 &&
+        (account.provider !== CloudProvider.HuaweiCloud ||
+          !!region.project_id?.trim()),
     );
-    if (!syncRegions.value.length) syncRegionError.value = '此账户没有已启用的授权地域，请先在云账户中配置';
+    if (!syncRegions.value.length)
+      syncRegionError.value = '此账户没有已启用的授权地域，请先在云账户中配置';
   } catch (error) {
-    if (ticket === syncRegionRequest && syncModalVisible.value && canSync.value && shouldRecordPageError(error)) syncRegionError.value = '读取账户地域失败，请重试';
+    if (
+      ticket === syncRegionRequest &&
+      syncModalVisible.value &&
+      canSync.value &&
+      shouldRecordPageError(error)
+    )
+      syncRegionError.value = '读取账户地域失败，请重试';
   } finally {
     if (ticket === syncRegionRequest) syncRegionsLoading.value = false;
   }
@@ -749,7 +788,6 @@ const handleViewDetail = async (record: TreeCloudResource): Promise<void> => {
   detailVisible.value = true;
   detailLoading.value = true;
 
-
   try {
     const response = await getTreeCloudResourceDetailApi(record.id);
     if (ticket !== detailRequest || !detailVisible.value) return;
@@ -825,29 +863,61 @@ const handleUpdate = async (): Promise<void> => {
 const handleSync = async (): Promise<void> => {
   if (!canSync.value || syncOutcomeUnknown.value) return;
   if (syncLoading.value || syncRegionsLoading.value) return;
-  if (!syncAccounts.value.some((account) => account.id === syncForm.cloud_account_id) || syncRegionError.value || !syncRegions.value.length) {
+  if (
+    !syncAccounts.value.some(
+      (account) => account.id === syncForm.cloud_account_id,
+    ) ||
+    syncRegionError.value ||
+    !syncRegions.value.length
+  ) {
     message.warning('请选择已启用的云账户并读取授权地域');
     return;
   }
   const regionIds = [...(syncForm.cloud_account_region_ids ?? [])];
-  if (regionIds.length > 100 || regionIds.some((id) => !Number.isSafeInteger(id) || !syncRegions.value.some((region) => region.id === id))) {
+  if (
+    regionIds.length > 100 ||
+    regionIds.some(
+      (id) =>
+        !Number.isSafeInteger(id) ||
+        !syncRegions.value.some((region) => region.id === id),
+    )
+  ) {
     message.warning('所选地域已失效，请重新选择');
     return;
   }
   const account = syncAccount.value;
-  if (!account || account.id !== syncForm.cloud_account_id) { message.warning('请重新读取账户地域'); return; }
-  const ids = (syncForm.instance_ids ?? []).map((value) => value.trim()).filter(Boolean);
-  if (ids.length > 100 || new Set(ids).size !== ids.length) { message.warning('实例ID不能重复且最多100个'); return; }
+  if (!account || account.id !== syncForm.cloud_account_id) {
+    message.warning('请重新读取账户地域');
+    return;
+  }
+  const ids = (syncForm.instance_ids ?? [])
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (ids.length > 100 || new Set(ids).size !== ids.length) {
+    message.warning('实例ID不能重复且最多100个');
+    return;
+  }
   if (requiresInstanceIds(account.provider)) {
-    const validId = (id: string): boolean => account.provider === CloudProvider.GCP
-      ? /^[1-9]\d{0,19}$/.test(id) && (id.length < 20 || id <= '18446744073709551615')
-      : /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    if (syncForm.sync_mode === SyncMode.FULL || regionIds.length !== 1 || !ids.length || ids.some((id) => !validId(id))) {
-      message.warning('该云厂商仅支持选择一个地域并输入有效实例ID进行增量同步'); return;
+    const validId = (id: string): boolean =>
+      account.provider === CloudProvider.GCP
+        ? /^[1-9]\d{0,19}$/.test(id) &&
+          (id.length < 20 || id <= '18446744073709551615')
+        : /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            id,
+          );
+    if (
+      syncForm.sync_mode === SyncMode.FULL ||
+      regionIds.length !== 1 ||
+      !ids.length ||
+      ids.some((id) => !validId(id))
+    ) {
+      message.warning('该云厂商仅支持选择一个地域并输入有效实例ID进行增量同步');
+      return;
     }
   }
   if (syncForm.sync_mode === SyncMode.FULL && ids.length) {
-    message.warning('指定实例ID时不能进行全量同步'); return;
+    message.warning('指定实例ID时不能进行全量同步');
+    return;
   }
   if (syncForm.auto_bind && !syncForm.bind_node_id) {
     message.warning('请选择自动绑定的服务树节点');
@@ -868,7 +938,13 @@ const handleSync = async (): Promise<void> => {
   try {
     const result = await syncTreeCloudResourceApi(payload);
     if (ticket !== syncOperationRequest) return;
-    const counts = [result?.total_count, result?.new_count, result?.update_count, result?.delete_count, result?.failed_count];
+    const counts = [
+      result?.total_count,
+      result?.new_count,
+      result?.update_count,
+      result?.delete_count,
+      result?.failed_count,
+    ];
     if (counts.some((count) => !Number.isSafeInteger(count) || count < 0)) {
       syncOutcomeUnknown.value = true;
       message.error(SYNC_FAILURE_MESSAGE);
@@ -876,16 +952,25 @@ const handleSync = async (): Promise<void> => {
     }
     const summary = `新增${result.new_count}，更新${result.update_count}，删除${result.delete_count}，失败${result.failed_count}`;
     syncRegionResults.value = result.regions ?? [];
-    if (result.status === 'unknown' || syncRegionResults.value.some((region) => region.retry_safe === false)) {
+    if (
+      result.status === 'unknown' ||
+      syncRegionResults.value.some((region) => region.retry_safe === false)
+    ) {
       syncOutcomeUnknown.value = true;
       message.warning('同步结果不确定，请先核对资源和同步历史，不要盲目重试');
       await fetchResources();
       return;
     }
     if (result.status === 'failed') message.error(`同步失败：${summary}`);
-    else if (result.status === 'partial' || result.failed_count > 0) message.warning(`同步部分完成：${summary}`);
-    else if (result.status === undefined || result.status === 'success') message.success(`同步完成：${summary}`);
-    else { syncOutcomeUnknown.value = true; message.error(SYNC_FAILURE_MESSAGE); return; }
+    else if (result.status === 'partial' || result.failed_count > 0)
+      message.warning(`同步部分完成：${summary}`);
+    else if (result.status === undefined || result.status === 'success')
+      message.success(`同步完成：${summary}`);
+    else {
+      syncOutcomeUnknown.value = true;
+      message.error(SYNC_FAILURE_MESSAGE);
+      return;
+    }
     if (result.status !== 'success' && syncRegionResults.value.length) {
       await fetchResources();
       return;
@@ -900,8 +985,10 @@ const handleSync = async (): Promise<void> => {
       // incr3 P3-4：保留「检查同步历史」的引导——请求层已弹过通用错误（http-error），用同一个 key 换成带引导的文案，
       // 仍只有一条；403 / 已提示的业务错误不覆盖；其余（非请求错误等）照常弹
       const noticeKey = getRequestLayerNoticeKey(error);
-      if (noticeKey) message.error({ content: SYNC_FAILURE_MESSAGE, key: noticeKey });
-      else if (shouldNotifyPageError(error)) message.error(SYNC_FAILURE_MESSAGE);
+      if (noticeKey)
+        message.error({ content: SYNC_FAILURE_MESSAGE, key: noticeKey });
+      else if (shouldNotifyPageError(error))
+        message.error(SYNC_FAILURE_MESSAGE);
     }
   } finally {
     if (ticket === syncOperationRequest) syncLoading.value = false;
@@ -1008,7 +1095,8 @@ const handleUpdateStatus = async (
   record: TreeCloudResource,
   newStatus: CloudResourceStatus,
 ): Promise<void> => {
-  if (!hasPerm(resourcePermissions.status) || !requireSupportedResource(record)) return;
+  if (!hasPerm(resourcePermissions.status) || !requireSupportedResource(record))
+    return;
   try {
     await updateCloudResourceStatusApi(record.id, { status: newStatus });
     message.success('状态更新成功');
@@ -1045,7 +1133,8 @@ const handleConnectTerminal = (record: TreeCloudResource): void => {
 
 // 删除资源
 const handleDelete = async (record: TreeCloudResource): Promise<void> => {
-  if (!can('tree.cloudResource.delete') || !requireSupportedResource(record)) return;
+  if (!can('tree.cloudResource.delete') || !requireSupportedResource(record))
+    return;
   Modal.confirm({
     title: '确认删除',
     content: `确定要删除资源 "${record.name}" 吗？此操作不可恢复。`,
@@ -1099,8 +1188,15 @@ const exportToExcel = (data: TreeCloudResource[]) => {
     私网IP: item.private_ip || '-',
     操作系统: item.os_name || '-',
     计费方式:
-      item.charge_type === ChargeType.PRE_PAID ? '包年包月' : item.charge_type === ChargeType.POST_PAID ? '按量付费' : '未知',
-    月成本: item.monthly_cost > 0 ? `${item.monthly_cost} ${item.currency || '币种未知'}` : '未知',
+      item.charge_type === ChargeType.PRE_PAID
+        ? '包年包月'
+        : item.charge_type === ChargeType.POST_PAID
+          ? '按量付费'
+          : '未知',
+    月成本:
+      item.monthly_cost > 0
+        ? `${item.monthly_cost} ${item.currency || '币种未知'}`
+        : '未知',
     到期时间: item.expire_time ? formatDateTime(item.expire_time) : '-',
     服务树节点: item.tree_nodes?.map((n) => n.name).join(', ') || '-',
     创建人: item.create_user_name || '-',
@@ -1115,7 +1211,10 @@ const exportToExcel = (data: TreeCloudResource[]) => {
     .replace(/[:.]/g, '-')
     .substring(0, 19);
   const filename = `云资源列表_${timestamp}.csv`;
-  downloadCsv(filename, [Object.keys(exportData[0]!), ...exportData.map(row => Object.values(row))]);
+  downloadCsv(filename, [
+    Object.keys(exportData[0]!),
+    ...exportData.map((row) => Object.values(row)),
+  ]);
   message.success(`导出成功：${filename}`);
 };
 
@@ -1130,7 +1229,13 @@ onMounted(async () => {
     if (shouldNotifyPageError(error)) message.error('页面加载失败');
   }
 });
-onBeforeUnmount(() => { listRequest++; detailRequest++; syncRegionRequest++; accountListRequest++; syncOperationRequest++; });
+onBeforeUnmount(() => {
+  listRequest++;
+  detailRequest++;
+  syncRegionRequest++;
+  accountListRequest++;
+  syncOperationRequest++;
+});
 const closeDetails = () => {
   detailRequest++;
   detailVisible.value = false;
@@ -1140,201 +1245,218 @@ const closeDetails = () => {
 </script>
 
 <template>
-  <OpsPage title="云资源" description="管理已接入云厂商的计算实例，其他存量资源可查看" class="cmdb-console cloud-resource-manager">
+  <OpsPage
+    title="云资源"
+    description="管理已接入云厂商的计算实例，其他存量资源可查看"
+    class="cmdb-console cloud-resource-manager"
+  >
     <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
-      <template #action><a-button @click="fetchResources()">重试</a-button></template>
+      <template #action>
+        <a-button @click="fetchResources()">重试</a-button>
+      </template>
     </a-alert>
-    <a-alert v-if="accountLoadError" :message="accountLoadError" type="error" show-icon>
-      <template #action><a-button :loading="accountsLoading" @click="fetchCloudAccounts()">重试读取账户</a-button></template>
+    <a-alert
+      v-if="accountLoadError"
+      :message="accountLoadError"
+      type="error"
+      show-icon
+    >
+      <template #action>
+        <a-button :loading="accountsLoading" @click="fetchCloudAccounts()">
+          重试读取账户
+        </a-button>
+      </template>
     </a-alert>
     <!-- 页面头部 -->
-    <template #actions><a-button aria-label="托管资源" @click="showManaged = !showManaged">{{ showManaged ? '关闭托管资源' : '托管资源' }}</a-button><a-button v-if="canSync" type="primary" aria-label="同步资源" :loading="accountsLoading" :disabled="accountsLoading" @click="showSyncModal" class="btn-create">
-          <template #icon><sync-outlined /></template>
-          <span class="btn-text">同步资源</span>
-        </a-button><a-button @click="handleRefresh" class="btn-action">
-          <template #icon><reload-outlined /></template>
-          <span class="btn-text">刷新</span>
-        </a-button><a-dropdown>
-          <a-button> 更多 <down-outlined /> </a-button>
-          <template #overlay>
-            <a-menu>
-              <a-menu-item key="history" @click="showSyncHistoryModal">
-                <history-outlined /> 同步历史
+    <template #actions>
+      <a-button aria-label="托管资源" @click="showManaged = !showManaged">
+        {{ showManaged ? '关闭托管资源' : '托管资源' }} </a-button
+      ><a-button
+        v-if="canSync"
+        type="primary"
+        aria-label="同步资源"
+        :loading="accountsLoading"
+        :disabled="accountsLoading"
+        @click="showSyncModal"
+        class="btn-create"
+      >
+        <template #icon><sync-outlined /></template>
+        <span class="btn-text">同步资源</span> </a-button
+      ><a-button @click="handleRefresh" class="btn-action">
+        <template #icon><reload-outlined /></template>
+        <span class="btn-text">刷新</span> </a-button
+      ><a-dropdown>
+        <a-button> 更多 <down-outlined /> </a-button>
+        <template #overlay>
+          <a-menu>
+            <a-menu-item key="history" @click="showSyncHistoryModal">
+              <history-outlined /> 同步历史
+            </a-menu-item>
+            <a-menu-item key="changelog" @click="showChangeLogModal">
+              <file-text-outlined /> 变更日志
+            </a-menu-item>
+            <a-menu-divider />
+            <a-sub-menu key="export" title="导出数据">
+              <template #icon><export-outlined /></template>
+              <a-menu-item key="export-current" @click="handleExportCurrent">
+                <file-excel-outlined /> 导出当前页
               </a-menu-item>
-              <a-menu-item key="changelog" @click="showChangeLogModal">
-                <file-text-outlined /> 变更日志
-              </a-menu-item>
-              <a-menu-divider />
-              <a-sub-menu key="export" title="导出数据">
-                <template #icon><export-outlined /></template>
-                <a-menu-item key="export-current" @click="handleExportCurrent">
-                  <file-excel-outlined /> 导出当前页
-                </a-menu-item>
-              </a-sub-menu>
-            </a-menu>
-          </template>
-        </a-dropdown><a-button @click="fetchResources()" :loading="loading">刷新</a-button></template>
+            </a-sub-menu>
+          </a-menu>
+        </template> </a-dropdown
+      ><a-button @click="fetchResources()" :loading="loading"> 刷新 </a-button>
+    </template>
 
     <!-- 统计卡片区 -->
-    <template #summary><div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="匹配资源数"
-              :value="stats.total"
-            >
-              <template #prefix>
-                <cloud-server-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="本页运行中"
-              :value="stats.running"
-            >
-              <template #prefix>
-                <check-circle-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="本页云服务器"
-              :value="stats.ecs"
-            >
-              <template #prefix>
-                <desktop-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="本页已绑定"
-              :value="stats.bound"
-            >
-              <template #prefix>
-                <apartment-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div></template>
+    <template #summary>
+      <div class="stats-row">
+        <a-row :gutter="[16, 16]">
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic title="匹配资源数" :value="stats.total">
+                <template #prefix>
+                  <cloud-server-outlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic title="本页运行中" :value="stats.running">
+                <template #prefix>
+                  <check-circle-outlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic title="本页云服务器" :value="stats.ecs">
+                <template #prefix>
+                  <desktop-outlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic title="本页已绑定" :value="stats.bound">
+                <template #prefix>
+                  <apartment-outlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
+    </template>
     <CloudManagedResources v-if="showManaged" />
 
     <!-- 搜索筛选区 -->
-    <template #filters><a-form layout="inline" class="filter-form">
-          <a-form-item>
-            <a-input
-              v-model:value="filterForm.search"
-              placeholder="搜索资源名称/实例ID/IP地址"
-              allow-clear
-              style="width: 280px"
-              @pressEnter="handleSearch"
+    <template #filters>
+      <a-form layout="inline" class="filter-form">
+        <a-form-item>
+          <a-input
+            v-model:value="filterForm.search"
+            placeholder="搜索资源名称/实例ID/IP地址"
+            allow-clear
+            style="width: 280px"
+            @pressEnter="handleSearch"
+          >
+            <template #prefix><search-outlined /></template>
+          </a-input>
+        </a-form-item>
+        <a-form-item label="云账户">
+          <a-select
+            v-model:value="filterForm.cloud_account_id"
+            placeholder="全部账户"
+            allow-clear
+            style="width: 180px"
+            @change="handleSearch"
+          >
+            <a-select-option
+              v-for="account in cloudAccounts"
+              :key="account.id"
+              :value="account.id"
             >
-              <template #prefix><search-outlined /></template>
-            </a-input>
-          </a-form-item>
-          <a-form-item label="云账户">
-            <a-select
-              v-model:value="filterForm.cloud_account_id"
-              placeholder="全部账户"
-              allow-clear
-              style="width: 180px"
-              @change="handleSearch"
-            >
-              <a-select-option
-                v-for="account in cloudAccounts"
-                :key="account.id"
-                :value="account.id"
-              >
-                <cloud-outlined /> {{ account.name }}
-              </a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="资源类型">
-            <a-select
-              v-model:value="filterForm.resource_type"
-              placeholder="全部类型"
-              allow-clear
-              style="width: 140px"
-              @change="handleSearch"
-            >
-              <a-select-option :value="CloudResourceType.ECS">
-                <desktop-outlined /> 云服务器
-              </a-select-option>
-              <a-select-option :value="CloudResourceType.RDS">
-                <database-outlined /> 云数据库
-              </a-select-option>
-              <a-select-option :value="CloudResourceType.SLB">
-                <cluster-outlined /> 负载均衡
-              </a-select-option>
-              <a-select-option :value="CloudResourceType.OSS">
-                <cloud-upload-outlined /> 对象存储
-              </a-select-option>
-              <a-select-option :value="CloudResourceType.VPC">
-                <global-outlined /> 虚拟私有云
-              </a-select-option>
-              <a-select-option :value="CloudResourceType.OTHER">
-                其他资源
-              </a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="状态">
-            <a-select
-              v-model:value="filterForm.status"
-              placeholder="全部状态"
-              allow-clear
-              style="width: 130px"
-              @change="handleSearch"
-            >
-              <a-select-option :value="CloudResourceStatus.RUNNING"
-                >运行中</a-select-option
-              >
-              <a-select-option :value="CloudResourceStatus.STOPPED"
-                >已停止</a-select-option
-              >
-              <a-select-option :value="CloudResourceStatus.STARTING"
-                >启动中</a-select-option
-              >
-              <a-select-option :value="CloudResourceStatus.STOPPING"
-                >停止中</a-select-option
-              >
-            </a-select>
-          </a-form-item>
-          <a-form-item label="环境">
-            <a-select
-              v-model:value="filterForm.environment"
-              placeholder="全部环境"
-              allow-clear
-              style="width: 120px"
-              @change="handleSearch"
-            >
-              <a-select-option value="dev">开发</a-select-option>
-              <a-select-option value="test">测试</a-select-option>
-              <a-select-option value="staging">预发布</a-select-option>
-              <a-select-option value="prod">生产</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item>
-            <a-space>
-              <a-button type="primary" @click="handleSearch">
-                <search-outlined /> 查询
-              </a-button>
-              <a-button @click="resetFilter">
-                <clear-outlined /> 重置
-              </a-button>
-            </a-space>
-          </a-form-item>
-        </a-form></template>
+              <cloud-outlined /> {{ account.name }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="资源类型">
+          <a-select
+            v-model:value="filterForm.resource_type"
+            placeholder="全部类型"
+            allow-clear
+            style="width: 140px"
+            @change="handleSearch"
+          >
+            <a-select-option :value="CloudResourceType.ECS">
+              <desktop-outlined /> 云服务器
+            </a-select-option>
+            <a-select-option :value="CloudResourceType.RDS">
+              <database-outlined /> 云数据库
+            </a-select-option>
+            <a-select-option :value="CloudResourceType.SLB">
+              <cluster-outlined /> 负载均衡
+            </a-select-option>
+            <a-select-option :value="CloudResourceType.OSS">
+              <cloud-upload-outlined /> 对象存储
+            </a-select-option>
+            <a-select-option :value="CloudResourceType.VPC">
+              <global-outlined /> 虚拟私有云
+            </a-select-option>
+            <a-select-option :value="CloudResourceType.OTHER">
+              其他资源
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="状态">
+          <a-select
+            v-model:value="filterForm.status"
+            placeholder="全部状态"
+            allow-clear
+            style="width: 130px"
+            @change="handleSearch"
+          >
+            <a-select-option :value="CloudResourceStatus.RUNNING">
+              运行中
+            </a-select-option>
+            <a-select-option :value="CloudResourceStatus.STOPPED">
+              已停止
+            </a-select-option>
+            <a-select-option :value="CloudResourceStatus.STARTING">
+              启动中
+            </a-select-option>
+            <a-select-option :value="CloudResourceStatus.STOPPING">
+              停止中
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="环境">
+          <a-select
+            v-model:value="filterForm.environment"
+            placeholder="全部环境"
+            allow-clear
+            style="width: 120px"
+            @change="handleSearch"
+          >
+            <a-select-option value="dev">开发</a-select-option>
+            <a-select-option value="test">测试</a-select-option>
+            <a-select-option value="staging">预发布</a-select-option>
+            <a-select-option value="prod">生产</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item>
+          <a-space>
+            <a-button type="primary" @click="handleSearch">
+              <search-outlined /> 查询
+            </a-button>
+            <a-button @click="resetFilter"> <clear-outlined /> 重置 </a-button>
+          </a-space>
+        </a-form-item>
+      </a-form>
+    </template>
 
     <!-- 资源列表表格 -->
     <div class="table-section">
@@ -1461,14 +1583,19 @@ const closeDetails = () => {
                 <span
                   v-if="!record.public_ip && !record.private_ip"
                   class="empty-text"
-                  >-</span
-                >
+                  >-</span>
               </div>
             </template>
 
             <!-- 状态列 -->
             <template v-else-if="column.key === 'status'">
-              <a-dropdown :trigger="['click']" :disabled="!supportsResource(record) || !hasPerm(resourcePermissions.status)">
+              <a-dropdown
+                :trigger="['click']"
+                :disabled="
+                  !supportsResource(record) ||
+                  !hasPerm(resourcePermissions.status)
+                "
+              >
                 <a-badge
                   :status="getStatusBadgeType(record.status)"
                   :text="getStatusText(record.status)"
@@ -1541,7 +1668,9 @@ const closeDetails = () => {
             <!-- 费用列 -->
             <template v-else-if="column.key === 'cost'">
               <div v-if="record.monthly_cost" class="cost-cell">
-                <span class="cost-symbol">{{ record.currency || '币种未知' }}</span>
+                <span class="cost-symbol">{{
+                  record.currency || '币种未知'
+                }}</span>
                 <span class="cost-amount">{{
                   formatCost(record.monthly_cost)
                 }}</span>
@@ -1562,7 +1691,10 @@ const closeDetails = () => {
                     <eye-outlined />
                   </a-button>
                 </a-tooltip>
-                <a-tooltip v-if="hasPerm(resourcePermissions.update)" title="编辑">
+                <a-tooltip
+                  v-if="hasPerm(resourcePermissions.update)"
+                  title="编辑"
+                >
                   <a-button
                     type="text"
                     size="small"
@@ -1572,7 +1704,10 @@ const closeDetails = () => {
                     <edit-outlined />
                   </a-button>
                 </a-tooltip>
-                <a-tooltip v-if="hasPerm(resourcePermissions.bind)" title="绑定服务树">
+                <a-tooltip
+                  v-if="hasPerm(resourcePermissions.bind)"
+                  title="绑定服务树"
+                >
                   <a-button
                     type="text"
                     size="small"
@@ -1583,7 +1718,10 @@ const closeDetails = () => {
                   </a-button>
                 </a-tooltip>
                 <a-tooltip
-                  v-if="can('tree.cloudResource.terminal') && (record.resource_type === CloudResourceType.ECS)"
+                  v-if="
+                    can('tree.cloudResource.terminal') &&
+                    record.resource_type === CloudResourceType.ECS
+                  "
                   title="连接终端"
                 >
                   <a-button
@@ -1606,17 +1744,20 @@ const closeDetails = () => {
                         v-if="hasPerm(resourcePermissions.unbind)"
                         @click="showUnbindModal(record)"
                         :disabled="
-                          !supportsResource(record) || !record.tree_nodes || record.tree_nodes.length === 0
+                          !supportsResource(record) ||
+                          !record.tree_nodes ||
+                          record.tree_nodes.length === 0
                         "
                       >
                         <disconnect-outlined /> 解绑节点
                       </a-menu-item>
                       <a-menu-divider v-if="can('tree.cloudResource.delete')" />
-                      <a-menu-item v-if="can('tree.cloudResource.delete')"
+                      <a-menu-item
+                        v-if="can('tree.cloudResource.delete')"
                         key="delete"
                         danger
                         :disabled="!supportsResource(record)"
-                    @click="handleDelete(record)"
+                        @click="handleDelete(record)"
                       >
                         <delete-outlined /> 删除资源
                       </a-menu-item>
@@ -1765,8 +1906,7 @@ const closeDetails = () => {
               @close="removeTag(index)"
               class="tag-item"
             >
-              <strong>{{ tag.key }}</strong
-              >: {{ tag.value }}
+              <strong>{{ tag.key }}</strong>: {{ tag.value }}
             </a-tag>
           </div>
           <div class="tag-input-group">
@@ -1797,7 +1937,13 @@ const closeDetails = () => {
       @cancel="closeSyncModal"
       ok-text="开始同步"
       cancel-text="取消"
-      :ok-button-props="{ disabled: syncRegionsLoading || !!syncRegionError || !syncRegions.length || syncOutcomeUnknown }"
+      :ok-button-props="{
+        disabled:
+          syncRegionsLoading ||
+          !!syncRegionError ||
+          !syncRegions.length ||
+          syncOutcomeUnknown,
+      }"
       :cancel-button-props="{ disabled: syncLoading }"
       :closable="!syncLoading"
       :mask-closable="!syncLoading"
@@ -1843,12 +1989,32 @@ const closeDetails = () => {
             mode="multiple"
             :disabled="syncLoading || syncRegionsLoading || !!syncRegionError"
             :loading="syncRegionsLoading"
-            :options="syncRegions.map((region) => ({ value: region.id, label: region.region_name ? `${region.region_name} (${region.region})` : region.region }))"
+            :options="
+              syncRegions.map((region) => ({
+                value: region.id,
+                label: region.region_name
+                  ? `${region.region_name} (${region.region})`
+                  : region.region,
+              }))
+            "
             placeholder="不选择则同步此账户全部已启用地域"
           />
-          <a-alert v-if="syncRegionError" type="error" :message="syncRegionError" show-icon />
-          <a-button v-if="syncRegionError" type="link" @click="loadSyncRegions(syncForm.cloud_account_id)">重试读取地域</a-button>
-          <div v-else class="form-tip">仅使用账户中已启用的授权地域，未选择表示全部</div>
+          <a-alert
+            v-if="syncRegionError"
+            type="error"
+            :message="syncRegionError"
+            show-icon
+          />
+          <a-button
+            v-if="syncRegionError"
+            type="link"
+            @click="loadSyncRegions(syncForm.cloud_account_id)"
+          >
+            重试读取地域
+          </a-button>
+          <div v-else class="form-tip">
+            仅使用账户中已启用的授权地域，未选择表示全部
+          </div>
         </a-form-item>
 
         <a-form-item label="资源类型">
@@ -1888,19 +2054,59 @@ const closeDetails = () => {
           <div class="form-tip">当前仅支持 ECS，其他类型保留展示</div>
         </a-form-item>
 
-        <a-form-item v-if="requiresInstanceIds(syncAccount?.provider)" :label="syncAccount?.provider === CloudProvider.GCP ? 'GCP 实例数字 ID' : '实例 UUID'">
-          <a-select id="cloud-sync-instance-ids" v-model:value="syncForm.instance_ids" mode="tags" :disabled="syncLoading" :token-separators="[',', ' ']" placeholder="输入实例 ID，按回车添加" aria-label="实例ID" />
-          <div class="form-tip">必须选择一个授权地域并指定实例ID；不提供全量或无ID同步</div>
+        <a-form-item
+          v-if="requiresInstanceIds(syncAccount?.provider)"
+          :label="
+            syncAccount?.provider === CloudProvider.GCP
+              ? 'GCP 实例数字 ID'
+              : '实例 UUID'
+          "
+        >
+          <a-select
+            id="cloud-sync-instance-ids"
+            v-model:value="syncForm.instance_ids"
+            mode="tags"
+            :disabled="syncLoading"
+            :token-separators="[',', ' ']"
+            placeholder="输入实例 ID，按回车添加"
+            aria-label="实例ID"
+          />
+          <div class="form-tip">
+            必须选择一个授权地域并指定实例ID；不提供全量或无ID同步
+          </div>
         </a-form-item>
-        <a-alert v-if="syncOutcomeUnknown" type="warning" show-icon message="结果不确定或审计不可用，请先核对资源和同步历史，不能直接重试" />
+        <a-alert
+          v-if="syncOutcomeUnknown"
+          type="warning"
+          show-icon
+          message="结果不确定或审计不可用，请先核对资源和同步历史，不能直接重试"
+        />
         <ul v-if="syncRegionResults.length" aria-label="地域同步结果">
           <li v-for="region in syncRegionResults" :key="region.region_id">
-            {{ region.region }}：{{ region.status === 'success' ? '成功' : region.status === 'failed' ? '失败' : region.status === 'cancelled' ? '已取消' : '结果不确定' }}；历史记录 {{ region.history_id ?? '不可用' }}；{{ region.retry_safe === false ? '不可直接重试' : '请核对后重试' }}
+            {{ region.region }}：{{
+              region.status === 'success'
+                ? '成功'
+                : region.status === 'failed'
+                  ? '失败'
+                  : region.status === 'cancelled'
+                    ? '已取消'
+                    : '结果不确定'
+            }}；历史记录 {{ region.history_id ?? '不可用' }}；{{
+              region.retry_safe === false ? '不可直接重试' : '请核对后重试'
+            }}
           </li>
         </ul>
         <a-form-item label="同步模式">
-          <a-radio-group v-model:value="syncForm.sync_mode" :disabled="syncLoading" size="large">
-            <a-radio :value="SyncMode.FULL" :disabled="requiresInstanceIds(syncAccount?.provider)" class="sync-mode-radio">
+          <a-radio-group
+            v-model:value="syncForm.sync_mode"
+            :disabled="syncLoading"
+            size="large"
+          >
+            <a-radio
+              :value="SyncMode.FULL"
+              :disabled="requiresInstanceIds(syncAccount?.provider)"
+              class="sync-mode-radio"
+            >
               <div class="radio-content">
                 <div class="radio-title"><sync-outlined /> 全量同步</div>
                 <div class="radio-desc">替换所选地域的本地 ECS 记录</div>
@@ -1918,10 +2124,11 @@ const closeDetails = () => {
         <a-form-item label="自动绑定服务树">
           <a-row align="middle">
             <a-col flex="auto">
-              <a-switch v-model:checked="syncForm.auto_bind" :disabled="syncLoading" />
-              <span style="margin-left: 12px"
-                >自动将同步的资源绑定到指定节点</span
-              >
+              <a-switch
+                v-model:checked="syncForm.auto_bind"
+                :disabled="syncLoading"
+              />
+              <span style="margin-left: 12px">自动将同步的资源绑定到指定节点</span>
             </a-col>
           </a-row>
         </a-form-item>
@@ -2054,22 +2261,42 @@ const closeDetails = () => {
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'sync_status'">
             <a-badge
-              :status="record.sync_status === 'success' ? 'success' : record.sync_status === 'running' ? 'processing' : record.sync_status === 'partial' ? 'warning' : 'error'"
-              :text="record.sync_status === 'success' ? '成功' : record.sync_status === 'running' ? '进行中' : record.sync_status === 'partial' ? '部分完成' : record.sync_status === 'unknown' ? '结果不确定' : record.sync_status === 'cancelled' ? '已取消' : '失败'"
+              :status="
+                record.sync_status === 'success'
+                  ? 'success'
+                  : record.sync_status === 'running'
+                    ? 'processing'
+                    : record.sync_status === 'partial'
+                      ? 'warning'
+                      : 'error'
+              "
+              :text="
+                record.sync_status === 'success'
+                  ? '成功'
+                  : record.sync_status === 'running'
+                    ? '进行中'
+                    : record.sync_status === 'partial'
+                      ? '部分完成'
+                      : record.sync_status === 'unknown'
+                        ? '结果不确定'
+                        : record.sync_status === 'cancelled'
+                          ? '已取消'
+                          : '失败'
+              "
             />
           </template>
           <template v-else-if="column.key === 'stats'">
             <a-space>
-              <a-tag color="green"
-                ><plus-outlined /> 新增: {{ record.new_count }}</a-tag
-              >
-              <a-tag color="blue"
-                ><sync-outlined /> 更新: {{ record.update_count }}</a-tag
-              >
-              <a-tag color="red" v-if="record.failed_count > 0"
-                ><close-circle-outlined /> 失败:
-                {{ record.failed_count }}</a-tag
-              >
+              <a-tag color="green">
+                <plus-outlined /> 新增: {{ record.new_count }}
+              </a-tag>
+              <a-tag color="blue">
+                <sync-outlined /> 更新: {{ record.update_count }}
+              </a-tag>
+              <a-tag color="red" v-if="record.failed_count > 0">
+                <close-circle-outlined /> 失败:
+                {{ record.failed_count }}
+              </a-tag>
             </a-space>
           </template>
           <template v-else-if="column.key === 'sync_mode'">
@@ -2116,12 +2343,10 @@ const closeDetails = () => {
                 <tag-outlined /> <strong>字段：</strong>{{ record.field_name }}
               </div>
               <div v-if="record.old_value" class="change-old">
-                <arrow-left-outlined /> <strong>旧值：</strong
-                >{{ record.old_value }}
+                <arrow-left-outlined /> <strong>旧值：</strong>{{ record.old_value }}
               </div>
               <div v-if="record.new_value" class="change-new">
-                <arrow-right-outlined /> <strong>新值：</strong
-                >{{ record.new_value }}
+                <arrow-right-outlined /> <strong>新值：</strong>{{ record.new_value }}
               </div>
             </div>
           </template>
@@ -2151,7 +2376,10 @@ const closeDetails = () => {
       class="detail-drawer"
     >
       <a-skeleton :loading="detailLoading" active>
-        <a-empty v-if="!detailLoading && !currentDetail" description="详情加载失败，请关闭后重试" />
+        <a-empty
+          v-if="!detailLoading && !currentDetail"
+          description="详情加载失败，请关闭后重试"
+        />
         <template v-if="currentDetail">
           <div class="detail-content">
             <div class="detail-header">
@@ -2300,7 +2528,9 @@ const closeDetails = () => {
                 {{
                   currentDetail.charge_type === ChargeType.PRE_PAID
                     ? '包年包月'
-                    : currentDetail.charge_type === ChargeType.POST_PAID ? '按量付费' : '未知'
+                    : currentDetail.charge_type === ChargeType.POST_PAID
+                      ? '按量付费'
+                      : '未知'
                 }}
               </a-descriptions-item>
               <a-descriptions-item label="月度费用" :span="1">
@@ -2356,8 +2586,7 @@ const closeDetails = () => {
                     color="blue"
                     class="detail-tag"
                   >
-                    <strong>{{ tag.key }}</strong
-                    >: {{ tag.value }}
+                    <strong>{{ tag.key }}</strong>: {{ tag.value }}
                   </a-tag>
                 </template>
                 <a-empty
@@ -2398,23 +2627,35 @@ const closeDetails = () => {
             <!-- 操作按钮 -->
             <div class="drawer-actions">
               <a-button-group>
-                <a-button v-if="can('tree.cloudResource.terminal')"
+                <a-button
+                  v-if="can('tree.cloudResource.terminal')"
                   type="primary"
                   @click="handleConnectTerminal(currentDetail)"
-                  :disabled="
-                    !supportsResource(currentDetail)
-                  "
+                  :disabled="!supportsResource(currentDetail)"
                 >
                   <code-outlined /> 连接终端
                 </a-button>
-                <a-button v-if="hasPerm(resourcePermissions.update)" :disabled="!supportsResource(currentDetail)" @click="handleEdit(currentDetail)">
+                <a-button
+                  v-if="hasPerm(resourcePermissions.update)"
+                  :disabled="!supportsResource(currentDetail)"
+                  @click="handleEdit(currentDetail)"
+                >
                   <edit-outlined /> 编辑
                 </a-button>
-                <a-button v-if="hasPerm(resourcePermissions.bind)" :disabled="!supportsResource(currentDetail)" @click="showBindModal(currentDetail)">
+                <a-button
+                  v-if="hasPerm(resourcePermissions.bind)"
+                  :disabled="!supportsResource(currentDetail)"
+                  @click="showBindModal(currentDetail)"
+                >
                   <apartment-outlined /> 绑定节点
                 </a-button>
               </a-button-group>
-              <a-button v-if="can('tree.cloudResource.delete')" danger :disabled="!supportsResource(currentDetail)" @click="handleDelete(currentDetail)">
+              <a-button
+                v-if="can('tree.cloudResource.delete')"
+                danger
+                :disabled="!supportsResource(currentDetail)"
+                @click="handleDelete(currentDetail)"
+              >
                 <delete-outlined /> 删除
               </a-button>
             </div>
@@ -2424,8 +2665,6 @@ const closeDetails = () => {
     </a-drawer>
   </OpsPage>
 </template>
-
-
 
 <style scoped lang="scss">
 .cloud-resource-manager {

@@ -14,7 +14,7 @@ export enum TreeNodeMemberType {
 
 // 叶子节点标识常量
 export const IsLeafYes = 1; // 是叶子节点
-export const IsLeafNo = 2;  // 不是叶子节点
+export const IsLeafNo = 2; // 不是叶子节点
 
 // 树节点接口
 export interface TreeNode {
@@ -191,7 +191,10 @@ export async function addNodeMember(data: AddTreeNodeMemberReq) {
 }
 
 // 移除节点成员
-export async function removeNodeMember(id: number, data: RemoveTreeNodeMemberReq) {
+export async function removeNodeMember(
+  id: number,
+  data: RemoveTreeNodeMemberReq,
+) {
   return requestClient.delete(`/tree/node/member/remove/${id}`, { data });
 }
 

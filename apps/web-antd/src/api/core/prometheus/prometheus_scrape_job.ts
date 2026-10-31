@@ -4,7 +4,7 @@ import { requestClient } from '#/api/request';
 export enum ServiceDiscoveryType {
   K8s = 1,
   Http = 2,
-  Static = 3
+  Static = 3,
 }
 
 // 监控采集任务配置
@@ -105,15 +105,21 @@ export interface GetMonitorScrapeJobDetailReq {
   id: number;
 }
 
-export async function getMonitorScrapeJobListApi(data: GetMonitorScrapeJobListReq) {
+export async function getMonitorScrapeJobListApi(
+  data: GetMonitorScrapeJobListReq,
+) {
   return requestClient.get(`/monitor/scrape_jobs/list`, { params: data });
 }
 
-export async function createMonitorScrapeJobApi(data: CreateMonitorScrapeJobReq) {
+export async function createMonitorScrapeJobApi(
+  data: CreateMonitorScrapeJobReq,
+) {
   return requestClient.post(`/monitor/scrape_jobs/create`, data);
 }
 
-export async function updateMonitorScrapeJobApi(data: UpdateMonitorScrapeJobReq) {
+export async function updateMonitorScrapeJobApi(
+  data: UpdateMonitorScrapeJobReq,
+) {
   return requestClient.put(`/monitor/scrape_jobs/update/${data.id}`, data);
 }
 

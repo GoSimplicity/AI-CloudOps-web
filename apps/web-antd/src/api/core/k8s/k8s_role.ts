@@ -110,12 +110,16 @@ export async function getRoleListApi(params: GetRoleListReq) {
 
 // 获取Role详情
 export async function getRoleDetailsApi(params: GetRoleDetailsReq) {
-  return requestClient.get(`/k8s/role/${params.cluster_id}/${params.namespace}/${params.name}/detail`);
+  return requestClient.get(
+    `/k8s/role/${params.cluster_id}/${params.namespace}/${params.name}/detail`,
+  );
 }
 
 // 获取Role YAML
 export async function getRoleYamlApi(params: GetRoleYamlReq) {
-  return requestClient.get(`/k8s/role/${params.cluster_id}/${params.namespace}/${params.name}/detail/yaml`);
+  return requestClient.get(
+    `/k8s/role/${params.cluster_id}/${params.namespace}/${params.name}/detail/yaml`,
+  );
 }
 
 // 创建Role
@@ -125,20 +129,31 @@ export async function createRoleApi(params: CreateRoleReq) {
 
 // 通过YAML创建Role
 export async function createRoleByYamlApi(params: CreateRoleByYamlReq) {
-  return requestClient.post(`/k8s/role/${params.cluster_id}/create/yaml`, params);
+  return requestClient.post(
+    `/k8s/role/${params.cluster_id}/create/yaml`,
+    params,
+  );
 }
 
 // 更新Role
 export async function updateRoleApi(params: UpdateRoleReq) {
-  return requestClient.put(`/k8s/role/${params.cluster_id}/${params.namespace}/${params.name}/update`, params);
+  return requestClient.put(
+    `/k8s/role/${params.cluster_id}/${params.namespace}/${params.name}/update`,
+    params,
+  );
 }
 
 // 通过YAML更新Role
 export async function updateRoleYamlApi(params: UpdateRoleByYamlReq) {
-  return requestClient.put(`/k8s/role/${params.cluster_id}/${params.namespace}/${params.name}/update/yaml`, params);
+  return requestClient.put(
+    `/k8s/role/${params.cluster_id}/${params.namespace}/${params.name}/update/yaml`,
+    params,
+  );
 }
 
 // 删除Role
 export async function deleteRoleApi(params: DeleteRoleReq) {
-  return requestClient.delete(`/k8s/role/${params.cluster_id}/${params.namespace}/${params.name}/delete`);
+  return requestClient.delete(
+    `/k8s/role/${params.cluster_id}/${params.namespace}/${params.name}/delete`,
+  );
 }

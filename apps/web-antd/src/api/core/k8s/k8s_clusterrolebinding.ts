@@ -89,47 +89,84 @@ export interface DeleteClusterRoleBindingReq {
 }
 
 // 获取ClusterRoleBinding列表
-export async function getClusterRoleBindingListApi(params: GetClusterRoleBindingListReq) {
-  return requestClient.get(`/k8s/clusterrolebinding/${params.cluster_id}/list`, {
-    params: {
-      search: params.search,
-      page: params.page,
-      size: params.size,
+export async function getClusterRoleBindingListApi(
+  params: GetClusterRoleBindingListReq,
+) {
+  return requestClient.get(
+    `/k8s/clusterrolebinding/${params.cluster_id}/list`,
+    {
+      params: {
+        search: params.search,
+        page: params.page,
+        size: params.size,
+      },
     },
-  });
+  );
 }
 
 // 获取ClusterRoleBinding详情
-export async function getClusterRoleBindingDetailsApi(params: GetClusterRoleBindingDetailsReq) {
-  return requestClient.get(`/k8s/clusterrolebinding/${params.cluster_id}/${params.name}/detail`);
+export async function getClusterRoleBindingDetailsApi(
+  params: GetClusterRoleBindingDetailsReq,
+) {
+  return requestClient.get(
+    `/k8s/clusterrolebinding/${params.cluster_id}/${params.name}/detail`,
+  );
 }
 
 // 获取ClusterRoleBinding YAML
-export async function getClusterRoleBindingYamlApi(params: GetClusterRoleBindingYamlReq) {
-  return requestClient.get(`/k8s/clusterrolebinding/${params.cluster_id}/${params.name}/detail/yaml`);
+export async function getClusterRoleBindingYamlApi(
+  params: GetClusterRoleBindingYamlReq,
+) {
+  return requestClient.get(
+    `/k8s/clusterrolebinding/${params.cluster_id}/${params.name}/detail/yaml`,
+  );
 }
 
 // 创建ClusterRoleBinding
-export async function createClusterRoleBindingApi(params: CreateClusterRoleBindingReq) {
-  return requestClient.post(`/k8s/clusterrolebinding/${params.cluster_id}/create`, params);
+export async function createClusterRoleBindingApi(
+  params: CreateClusterRoleBindingReq,
+) {
+  return requestClient.post(
+    `/k8s/clusterrolebinding/${params.cluster_id}/create`,
+    params,
+  );
 }
 
 // 通过YAML创建ClusterRoleBinding
-export async function createClusterRoleBindingByYamlApi(params: CreateClusterRoleBindingByYamlReq) {
-  return requestClient.post(`/k8s/clusterrolebinding/${params.cluster_id}/create/yaml`, params);
+export async function createClusterRoleBindingByYamlApi(
+  params: CreateClusterRoleBindingByYamlReq,
+) {
+  return requestClient.post(
+    `/k8s/clusterrolebinding/${params.cluster_id}/create/yaml`,
+    params,
+  );
 }
 
 // 更新ClusterRoleBinding
-export async function updateClusterRoleBindingApi(params: UpdateClusterRoleBindingReq) {
-  return requestClient.put(`/k8s/clusterrolebinding/${params.cluster_id}/${params.name}/update`, params);
+export async function updateClusterRoleBindingApi(
+  params: UpdateClusterRoleBindingReq,
+) {
+  return requestClient.put(
+    `/k8s/clusterrolebinding/${params.cluster_id}/${params.name}/update`,
+    params,
+  );
 }
 
 // 通过YAML更新ClusterRoleBinding
-export async function updateClusterRoleBindingYamlApi(params: UpdateClusterRoleBindingByYamlReq) {
-  return requestClient.put(`/k8s/clusterrolebinding/${params.cluster_id}/${params.name}/update/yaml`, params);
+export async function updateClusterRoleBindingYamlApi(
+  params: UpdateClusterRoleBindingByYamlReq,
+) {
+  return requestClient.put(
+    `/k8s/clusterrolebinding/${params.cluster_id}/${params.name}/update/yaml`,
+    params,
+  );
 }
 
 // 删除ClusterRoleBinding
-export async function deleteClusterRoleBindingApi(params: DeleteClusterRoleBindingReq) {
-  return requestClient.delete(`/k8s/clusterrolebinding/${params.cluster_id}/${params.name}/delete`);
+export async function deleteClusterRoleBindingApi(
+  params: DeleteClusterRoleBindingReq,
+) {
+  return requestClient.delete(
+    `/k8s/clusterrolebinding/${params.cluster_id}/${params.name}/delete`,
+  );
 }

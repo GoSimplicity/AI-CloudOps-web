@@ -145,39 +145,48 @@ export function useConfigMapPage() {
   const yamlFormModel = ref<{
     yaml: string;
   }>({
-    yaml: ''
+    yaml: '',
   });
 
   const createYamlFormModel = ref<{
     yaml: string;
   }>({
-    yaml: ''
+    yaml: '',
   });
 
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入 ConfigMap 名称', trigger: 'blur' },
-      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'ConfigMap 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
-      { max: 63, message: 'ConfigMap 名称长度不能超过63个字符', trigger: 'blur' }
+      {
+        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        message:
+          'ConfigMap 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        trigger: 'blur',
+      },
+      {
+        max: 63,
+        message: 'ConfigMap 名称长度不能超过63个字符',
+        trigger: 'blur',
+      },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' }
-    ]
+      { required: true, message: '请选择命名空间', trigger: 'change' },
+    ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   // computed
@@ -216,27 +225,37 @@ export function useConfigMapPage() {
     return map[value] || '未知环境';
   };
 
-  const recordToKeyValueList = (record: Record<string, string> | null | undefined): KeyValueList => {
+  const recordToKeyValueList = (
+    record: Record<string, string> | null | undefined,
+  ): KeyValueList => {
     if (!record || typeof record !== 'object') {
       return [];
     }
-    return Object.entries(record).map(([key, value]: [string, string]) => ({ key, value }));
+    return Object.entries(record).map(([key, value]: [string, string]) => ({
+      key,
+      value,
+    }));
   };
 
-  const keyValueListToRecord = (data?: KeyValueList | Record<string, string>): Record<string, string> => {
+  const keyValueListToRecord = (
+    data?: KeyValueList | Record<string, string>,
+  ): Record<string, string> => {
     if (!data) return {};
-    
+
     if (typeof data === 'object' && !Array.isArray(data)) {
       return data as Record<string, string>;
     }
-    
+
     if (Array.isArray(data)) {
-      return data.reduce((acc, { key, value }) => {
-        acc[key] = value;
-        return acc;
-      }, {} as Record<string, string>);
+      return data.reduce(
+        (acc, { key, value }) => {
+          acc[key] = value;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
     }
-    
+
     return {};
   };
 
@@ -308,7 +327,8 @@ export function useConfigMapPage() {
         clearNamespaces();
         clearConfigMaps();
       }
-      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err))
+        clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -355,7 +375,8 @@ export function useConfigMapPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldRecordPageError(err))
+        namespacesError.value = '获取命名空间列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
@@ -383,30 +404,43 @@ export function useConfigMapPage() {
         data_key: filterDataKey.value || undefined,
         page: currentPage.value,
         size: pageSize.value,
-        labels: Object.keys(filterLabels.value).length > 0 
-          ? filterLabels.value 
-          : undefined,
+        labels:
+          Object.keys(filterLabels.value).length > 0
+            ? filterLabels.value
+            : undefined,
       };
       const res = await getConfigMapListApi(params);
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
-      
-      const configMapsWithClusterId = (res?.items || []).map((configMap: K8sConfigMap) => ({
-        ...configMap,
-        cluster_id: configMap.cluster_id || clusterId,
-        data: parseJsonField(configMap.data, {}),
-        binary_data: parseJsonField(configMap.binary_data, {}),
-        labels: parseJsonField(configMap.labels, {}),
-        annotations: parseJsonField(configMap.annotations, {}),
-      }));
-      
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
+
+      const configMapsWithClusterId = (res?.items || []).map(
+        (configMap: K8sConfigMap) => ({
+          ...configMap,
+          cluster_id: configMap.cluster_id || clusterId,
+          data: parseJsonField(configMap.data, {}),
+          binary_data: parseJsonField(configMap.binary_data, {}),
+          labels: parseJsonField(configMap.labels, {}),
+          annotations: parseJsonField(configMap.annotations, {}),
+        }),
+      );
+
       configMaps.value = configMapsWithClusterId;
       total.value = res?.total || 0;
     } catch (err) {
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
       clearConfigMaps();
-      if (shouldRecordPageError(err)) loadError.value = '获取 ConfigMap 列表失败，请重试';
+      if (shouldRecordPageError(err))
+        loadError.value = '获取 ConfigMap 列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(loadError.value);
-
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -416,45 +450,59 @@ export function useConfigMapPage() {
   const showConfigMapDetail = async (record: K8sConfigMap) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
       const params: GetConfigMapDetailsReq = {
         cluster_id: clusterId,
         namespace: record.namespace,
-        name: record.name
+        name: record.name,
       };
       const res = await getConfigMapDetailsApi(params);
-      
-      const processedDetail = res ? {
-        ...res,
-        cluster_id: clusterId,
-        labels: recordToKeyValueList(parseJsonField(res.labels, {})),
-        annotations: recordToKeyValueList(parseJsonField(res.annotations, {})),
-        data: parseJsonField(res.data, {}),
-        binary_data: convertBinaryDataToForm(parseJsonField(res.binary_data, {})),
-      } : { 
-        ...record, 
-        cluster_id: clusterId,
-        labels: recordToKeyValueList(parseJsonField(record.labels, {})),
-        annotations: recordToKeyValueList(parseJsonField(record.annotations, {})),
-        data: parseJsonField(record.data, {}),
-        binary_data: convertBinaryDataToForm(parseJsonField(record.binary_data, {})),
-      };
-      
+
+      const processedDetail = res
+        ? {
+            ...res,
+            cluster_id: clusterId,
+            labels: recordToKeyValueList(parseJsonField(res.labels, {})),
+            annotations: recordToKeyValueList(
+              parseJsonField(res.annotations, {}),
+            ),
+            data: parseJsonField(res.data, {}),
+            binary_data: convertBinaryDataToForm(
+              parseJsonField(res.binary_data, {}),
+            ),
+          }
+        : {
+            ...record,
+            cluster_id: clusterId,
+            labels: recordToKeyValueList(parseJsonField(record.labels, {})),
+            annotations: recordToKeyValueList(
+              parseJsonField(record.annotations, {}),
+            ),
+            data: parseJsonField(record.data, {}),
+            binary_data: convertBinaryDataToForm(
+              parseJsonField(record.binary_data, {}),
+            ),
+          };
+
       currentConfigMapDetail.value = processedDetail;
     } catch (err) {
       if (shouldNotifyPageError(err)) message.error('获取 ConfigMap 详情失败');
 
       try {
-        const fallbackDetail = { 
-          ...record, 
+        const fallbackDetail = {
+          ...record,
           cluster_id: clusterId,
           labels: recordToKeyValueList(parseJsonField(record.labels, {})),
-          annotations: recordToKeyValueList(parseJsonField(record.annotations, {})),
+          annotations: recordToKeyValueList(
+            parseJsonField(record.annotations, {}),
+          ),
           data: parseJsonField(record.data, {}),
-          binary_data: convertBinaryDataToForm(parseJsonField(record.binary_data, {})),
+          binary_data: convertBinaryDataToForm(
+            parseJsonField(record.binary_data, {}),
+          ),
         };
         currentConfigMapDetail.value = fallbackDetail;
       } catch (fallbackError) {
@@ -481,23 +529,22 @@ export function useConfigMapPage() {
   const showYamlModal = async (record: K8sConfigMap) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       submitLoading.value = true;
       currentOperationConfigMap.value = { ...record, cluster_id: clusterId };
       const params: GetConfigMapYamlReq = {
         cluster_id: clusterId,
         namespace: record.namespace,
-        name: record.name
+        name: record.name,
       };
-      
+
       const res = await getConfigMapYamlApi(params);
-      
+
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (err) {
       if (shouldNotifyPageError(err)) message.error('获取 ConfigMap YAML 失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -511,29 +558,29 @@ export function useConfigMapPage() {
 
   const submitYamlForm = async () => {
     if (!yamlFormRef.value || !currentOperationConfigMap.value) return;
-    
+
     try {
       await yamlFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: UpdateConfigMapByYamlReq = {
         cluster_id: currentOperationConfigMap.value.cluster_id,
         namespace: currentOperationConfigMap.value.namespace,
         name: currentOperationConfigMap.value.name,
         yaml: yamlFormModel.value.yaml,
       };
-      
+
       await updateConfigMapByYamlApi(params);
       message.success('ConfigMap YAML 更新成功');
       isYamlModalVisible.value = false;
       await fetchConfigMaps();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查 YAML 格式是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查 YAML 格式是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('ConfigMap YAML 更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -568,19 +615,26 @@ export function useConfigMapPage() {
     createYamlFormModel.value.yaml = '';
   };
 
-  const convertBinaryData = (binaryDataForm: Record<string, string>): Record<string, string> | undefined => {
+  const convertBinaryData = (
+    binaryDataForm: Record<string, string>,
+  ): Record<string, string> | undefined => {
     if (!binaryDataForm || typeof binaryDataForm !== 'object') return undefined;
-    
+
     const entries = Object.entries(binaryDataForm);
     if (entries.length === 0) {
       return undefined;
     }
-    
+
     const result: Record<string, string> = {};
     const invalidKeys: string[] = [];
-    
+
     for (const [key, value] of entries) {
-      if (key && typeof key === 'string' && value !== undefined && value !== null) {
+      if (
+        key &&
+        typeof key === 'string' &&
+        value !== undefined &&
+        value !== null
+      ) {
         if (typeof value === 'string') {
           const trimmedValue = value.trim();
           if (trimmedValue === '') {
@@ -602,20 +656,29 @@ export function useConfigMapPage() {
         }
       }
     }
-    
+
     if (invalidKeys.length > 0) {
-      message.warning(`以下二进制数据键包含无效的 base64 字符，已被跳过：${invalidKeys.join(', ')}`);
+      message.warning(
+        `以下二进制数据键包含无效的 base64 字符，已被跳过：${invalidKeys.join(', ')}`,
+      );
     }
-    
+
     return Object.keys(result).length > 0 ? result : undefined;
   };
 
-  const convertBinaryDataToForm = (binaryData: Record<string, string> | any): Record<string, string> => {
+  const convertBinaryDataToForm = (
+    binaryData: Record<string, string> | any,
+  ): Record<string, string> => {
     if (!binaryData || typeof binaryData !== 'object') return {};
-    
+
     const result: Record<string, string> = {};
     for (const [key, value] of Object.entries(binaryData)) {
-      if (key && typeof key === 'string' && value !== undefined && value !== null) {
+      if (
+        key &&
+        typeof key === 'string' &&
+        value !== undefined &&
+        value !== null
+      ) {
         if (typeof value === 'string') {
           result[key] = value;
         }
@@ -626,35 +689,46 @@ export function useConfigMapPage() {
 
   const submitCreateForm = async () => {
     if (!formRef.value || !filterClusterId.value) return;
-    
+
     try {
       await formRef.value.validate();
       submitLoading.value = true;
-      
-      const convertedBinaryData = convertBinaryData(createFormModel.value.binary_data);
-      
+
+      const convertedBinaryData = convertBinaryData(
+        createFormModel.value.binary_data,
+      );
+
       const params: CreateConfigMapReq = {
         cluster_id: filterClusterId.value,
         namespace: createFormModel.value.namespace,
         name: createFormModel.value.name,
-        data: Object.keys(createFormModel.value.data).length > 0 ? createFormModel.value.data : undefined,
+        data:
+          Object.keys(createFormModel.value.data).length > 0
+            ? createFormModel.value.data
+            : undefined,
         binary_data: convertedBinaryData,
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(createFormModel.value.annotations).length > 0
+            ? createFormModel.value.annotations
+            : undefined,
         immutable: createFormModel.value.immutable,
       };
-      
+
       await createConfigMapApi(params);
       message.success('ConfigMap 创建成功');
       isCreateModalVisible.value = false;
       await fetchConfigMaps();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('ConfigMap 创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -662,27 +736,27 @@ export function useConfigMapPage() {
 
   const submitCreateYamlForm = async () => {
     if (!createYamlFormRef.value || !filterClusterId.value) return;
-    
+
     try {
       await createYamlFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: CreateConfigMapByYamlReq = {
         cluster_id: filterClusterId.value,
         yaml: createYamlFormModel.value.yaml,
       };
-      
+
       await createConfigMapByYamlApi(params);
       message.success('ConfigMap YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchConfigMaps();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查 YAML 格式是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查 YAML 格式是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('ConfigMap YAML 创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -695,7 +769,9 @@ export function useConfigMapPage() {
       name: record.name,
       namespace: record.namespace,
       data: parseJsonField(record.data, {}),
-      binary_data: convertBinaryDataToForm(parseJsonField(record.binary_data, {})),
+      binary_data: convertBinaryDataToForm(
+        parseJsonField(record.binary_data, {}),
+      ),
       labels: parseJsonField(record.labels, {}),
       annotations: parseJsonField(record.annotations, {}),
       immutable: false,
@@ -710,34 +786,45 @@ export function useConfigMapPage() {
 
   const submitEditForm = async () => {
     if (!formRef.value || !currentOperationConfigMap.value) return;
-    
+
     try {
       await formRef.value.validate();
       submitLoading.value = true;
-      
-      const convertedBinaryData = convertBinaryData(editFormModel.value.binary_data);
-      
+
+      const convertedBinaryData = convertBinaryData(
+        editFormModel.value.binary_data,
+      );
+
       const params: UpdateConfigMapReq = {
         cluster_id: currentOperationConfigMap.value.cluster_id,
         namespace: currentOperationConfigMap.value.namespace,
         name: currentOperationConfigMap.value.name,
-        data: Object.keys(editFormModel.value.data).length > 0 ? editFormModel.value.data : undefined,
+        data:
+          Object.keys(editFormModel.value.data).length > 0
+            ? editFormModel.value.data
+            : undefined,
         binary_data: convertedBinaryData,
-        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
-        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(editFormModel.value.annotations).length > 0
+            ? editFormModel.value.annotations
+            : undefined,
       };
-      
+
       await updateConfigMapApi(params);
       message.success('ConfigMap 更新成功');
       isEditModalVisible.value = false;
       await fetchConfigMaps();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('ConfigMap 更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -747,7 +834,7 @@ export function useConfigMapPage() {
   const deleteConfigMap = (record: K8sConfigMap) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     Modal.confirm({
       title: '删除 ConfigMap',
       content: `确定要删除 ConfigMap "${record.name}" 吗？此操作不可逆！`,
@@ -767,7 +854,6 @@ export function useConfigMapPage() {
           await fetchConfigMaps();
         } catch (err) {
           if (shouldNotifyPageError(err)) message.error('ConfigMap 删除失败');
-
         }
       },
     });
@@ -797,7 +883,7 @@ export function useConfigMapPage() {
   // 批量操作
   const batchOperation = (operation: string) => {
     if (!selectedRows.value.length) return;
-    
+
     Modal.confirm({
       title: `批量${operation}`,
       content: `确定要对选中的 ${selectedRows.value.length} 个 ConfigMap 执行${operation}操作吗？`,
@@ -811,26 +897,27 @@ export function useConfigMapPage() {
             for (const configMap of selectedRows.value) {
               const clusterId = configMap.cluster_id || filterClusterId.value;
               if (!clusterId) {
-                message.error(`ConfigMap "${configMap.name}" 缺少有效的集群ID，跳过操作`);
+                message.error(
+                  `ConfigMap "${configMap.name}" 缺少有效的集群ID，跳过操作`,
+                );
                 continue;
               }
-              
+
               const params: DeleteConfigMapReq = {
                 cluster_id: clusterId,
                 namespace: configMap.namespace,
-                name: configMap.name
+                name: configMap.name,
               };
               await deleteConfigMapApi(params);
             }
           }
-          
+
           message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchConfigMaps();
         } catch (err) {
           if (shouldNotifyPageError(err)) message.error(`批量${operation}失败`);
-
         }
       },
     });
@@ -908,7 +995,10 @@ export function useConfigMapPage() {
 
   // YAML 操作辅助函数
   const insertYamlTemplate = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认操作',
         content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
@@ -940,7 +1030,7 @@ export function useConfigMapPage() {
       const formatted = yaml.dump(parsed, {
         indent: 2,
         lineWidth: -1, // 不限制行宽
-        noRefs: true,  // 不使用引用
+        noRefs: true, // 不使用引用
         sortKeys: false, // 保持原有顺序
       });
       createYamlFormModel.value.yaml = formatted;
@@ -960,7 +1050,7 @@ export function useConfigMapPage() {
     try {
       // 尝试解析 YAML
       const parsed = yaml.load(yamlContent);
-      
+
       // 检查是否是有效的对象
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
@@ -989,12 +1079,15 @@ export function useConfigMapPage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -1004,12 +1097,24 @@ export function useConfigMapPage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
@@ -1017,7 +1122,10 @@ export function useConfigMapPage() {
   };
 
   const clearYaml = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认清空',
         content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
@@ -1067,7 +1175,7 @@ export function useConfigMapPage() {
 
     try {
       const parsed = yaml.load(yamlContent);
-      
+
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
         return;
@@ -1095,12 +1203,15 @@ export function useConfigMapPage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -1110,12 +1221,24 @@ export function useConfigMapPage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
@@ -1149,12 +1272,12 @@ export function useConfigMapPage() {
     namespacesTotal,
     namespacesPage,
     namespacesSize,
-    
+
     // form refs
     formRef,
     yamlFormRef,
     createYamlFormRef,
-    
+
     // modal state
     isCreateModalVisible,
     isCreateYamlModalVisible,
@@ -1163,33 +1286,33 @@ export function useConfigMapPage() {
     isYamlModalVisible,
     submitLoading,
     detailLoading,
-    
+
     // operation targets
     currentOperationConfigMap,
     currentConfigMapDetail,
-    
+
     // form models
     createFormModel,
     editFormModel,
     yamlFormModel,
     createYamlFormModel,
-    
+
     // form rules
     createFormRules,
     yamlFormRules,
     createYamlFormRules,
-    
+
     // computed
     filteredConfigMaps,
     rowSelection,
-    
+
     // helpers
     validateClusterId,
     getEnvText,
     recordToKeyValueList,
     keyValueListToRecord,
     parseJsonField,
-    
+
     // operations
     fetchClusters,
     fetchNamespaces,
@@ -1198,16 +1321,16 @@ export function useConfigMapPage() {
     clearNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
-    
+
     // detail operations
     showConfigMapDetail,
     closeDetailModal,
-    
+
     // YAML operations
     showYamlModal,
     closeYamlModal,
     submitYamlForm,
-    
+
     // create operations
     openCreateModal,
     closeCreateModal,
@@ -1215,27 +1338,27 @@ export function useConfigMapPage() {
     openCreateYamlModal,
     closeCreateYamlModal,
     submitCreateYamlForm,
-    
+
     // edit operations
     openEditModal,
     closeEditModal,
     submitEditForm,
-    
+
     // configmap operations
     deleteConfigMap,
-    
+
     // filter operations
     addFilterLabel,
     removeFilterLabel,
     clearFilterLabels,
-    
+
     // batch operations
     batchOperation,
-    
+
     // pagination operations
     resetClusters,
     handlePageChange,
-    
+
     // form field operations
     removeDataField,
     removeEditDataField,
@@ -1245,7 +1368,7 @@ export function useConfigMapPage() {
     removeEditLabelField,
     removeAnnotationField,
     removeEditAnnotationField,
-    
+
     // yaml operations
     insertYamlTemplate,
     formatYaml,

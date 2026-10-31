@@ -2,132 +2,149 @@
   <OpsPage title="发送组" description="配置接收对象、通知方式与升级规则">
     <!-- 页面标题 -->
     <template #actions>
-      <a-button type="primary" @click="handleCreateSendGroup" class="btn-create">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          <span class="btn-text">创建发送组</span>
-        </a-button>
+      <a-button
+        type="primary"
+        @click="handleCreateSendGroup"
+        class="btn-create"
+      >
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        <span class="btn-text">创建发送组</span>
+      </a-button>
     </template>
     <template #filters>
       <div class="search-filters">
-          <a-input-search 
-            v-model:value="searchQuery" 
-            placeholder="搜索发送组名称..." 
-            class="search-input"
-            @search="handleSearch" 
-            @change="handleSearchChange" 
-            allow-clear 
-          />
-            <a-select 
-            v-model:value="enableFilter" 
-            placeholder="启用状态" 
-            class="filter-select" 
-            @change="handleEnableChange"
-            allow-clear
-          >
-            <a-select-option :value="undefined">全部</a-select-option>
-            <a-select-option :value="1">启用</a-select-option>
-            <a-select-option :value="2">禁用</a-select-option>
-          </a-select>
-            <a-select 
-            v-model:value="upgradeFilter" 
-            placeholder="升级配置" 
-            class="filter-select" 
-            @change="handleUpgradeChange"
-            allow-clear
-          >
-            <a-select-option :value="undefined">全部</a-select-option>
-            <a-select-option :value="1">需要升级</a-select-option>
-            <a-select-option :value="2">无需升级</a-select-option>
-          </a-select>
-          <a-button @click="handleResetFilters" class="reset-btn">
-            重置
-          </a-button>
-        </div>
+        <a-input-search
+          v-model:value="searchQuery"
+          placeholder="搜索发送组名称..."
+          class="search-input"
+          @search="handleSearch"
+          @change="handleSearchChange"
+          allow-clear
+        />
+        <a-select
+          v-model:value="enableFilter"
+          placeholder="启用状态"
+          class="filter-select"
+          @change="handleEnableChange"
+          allow-clear
+        >
+          <a-select-option :value="undefined">全部</a-select-option>
+          <a-select-option :value="1">启用</a-select-option>
+          <a-select-option :value="2">禁用</a-select-option>
+        </a-select>
+        <a-select
+          v-model:value="upgradeFilter"
+          placeholder="升级配置"
+          class="filter-select"
+          @change="handleUpgradeChange"
+          allow-clear
+        >
+          <a-select-option :value="undefined">全部</a-select-option>
+          <a-select-option :value="1">需要升级</a-select-option>
+          <a-select-option :value="2">无需升级</a-select-option>
+        </a-select>
+        <a-button @click="handleResetFilters" class="reset-btn">
+          重置
+        </a-button>
+      </div>
     </template>
 
     <!-- 统计卡片 -->
     <template #summary>
       <div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="总发送组" 
-              :value="loadError ? '未知' : stats.total"
-              :value-style="{ color: '#3f8600' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:send" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="本页启用中"
-              :value="loadError ? '未知' : stats.enabled"
-              :value-style="{ color: '#52c41a' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:checkmark" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="本页配置升级"
-              :value="loadError ? '未知' : stats.needUpgrade"
-              :value-style="{ color: '#faad14' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:upgrade" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="本页关联池数"
-              :value="loadError ? '未知' : stats.associatedPools"
-              :value-style="{ color: '#cf1322' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:link" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div>
+        <a-row :gutter="[16, 16]">
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="总发送组"
+                :value="loadError ? '未知' : stats.total"
+                :value-style="{ color: '#3f8600' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:send" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页启用中"
+                :value="loadError ? '未知' : stats.enabled"
+                :value-style="{ color: '#52c41a' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:checkmark" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页配置升级"
+                :value="loadError ? '未知' : stats.needUpgrade"
+                :value-style="{ color: '#faad14' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:upgrade" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页关联池数"
+                :value="loadError ? '未知' : stats.associatedPools"
+                :value-style="{ color: '#cf1322' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:link" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
     </template>
 
-    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
-      <template #action><a-button size="small" :loading="loading" @click="loadSendGroupList">重试</a-button></template>
+    <a-alert
+      v-if="loadError"
+      type="error"
+      show-icon
+      :message="loadError"
+      role="alert"
+    >
+      <template #action>
+        <a-button size="small" :loading="loading" @click="loadSendGroupList">
+          重试
+        </a-button>
+      </template>
     </a-alert>
 
     <!-- 表格容器 -->
     <div class="table-container">
       <a-card>
-        <a-table 
-          :data-source="sendGroupList" 
-          :columns="columns" 
-          :pagination="paginationConfig" 
+        <a-table
+          :data-source="sendGroupList"
+          :columns="columns"
+          :pagination="paginationConfig"
           :loading="loading"
-          row-key="id" 
-          bordered 
-          :scroll="{ x: 1400 }" 
+          row-key="id"
+          bordered
+          :scroll="{ x: 1400 }"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="pool-name-cell">
-                <div class="pool-badge" :class="getPoolStatusClass(record)"></div>
+                <div
+                  class="pool-badge"
+                  :class="getPoolStatusClass(record)"
+                ></div>
                 <span class="pool-name-text">{{ record.name }}</span>
               </div>
             </template>
@@ -142,35 +159,53 @@
 
             <template v-if="column.key === 'pool_config'">
               <div class="tag-container">
-                <a-tag 
-                  v-if="getPoolName(record.pool_id)" 
+                <a-tag
+                  v-if="getPoolName(record.pool_id)"
                   class="tech-tag prometheus-tag"
                 >
                   {{ getPoolName(record.pool_id) }}
                 </a-tag>
-                <a-tag 
-                  v-if="getOnDutyGroupName(record.on_duty_group_id)" 
+                <a-tag
+                  v-if="getOnDutyGroupName(record.on_duty_group_id)"
                   class="tech-tag alert-tag"
                 >
                   {{ getOnDutyGroupName(record.on_duty_group_id) }}
                 </a-tag>
-                <span v-if="!getPoolName(record.pool_id) && !getOnDutyGroupName(record.on_duty_group_id)" class="empty-text">无关联</span>
+                <span
+                  v-if="
+                    !getPoolName(record.pool_id) &&
+                    !getOnDutyGroupName(record.on_duty_group_id)
+                  "
+                  class="empty-text"
+                  >无关联</span
+                >
               </div>
             </template>
 
             <template v-if="column.key === 'static_receive_users'">
               <div class="tag-container">
-                <a-tag 
-                  v-for="(user, index) in record.static_receive_users" 
-                  :key="user?.id || index" 
+                <a-tag
+                  v-for="(user, index) in record.static_receive_users"
+                  :key="user?.id || index"
                   class="tech-tag label-tag"
                 >
-                  {{ user?.username || user?.name || (typeof user === 'string' ? user : '未命名用户') }}
+                  {{
+                    user?.username ||
+                    user?.name ||
+                    (typeof user === 'string' ? user : '未命名用户')
+                  }}
                 </a-tag>
-                <span v-if="!record.static_receive_users?.length && !record.static_receive_user_names?.length" class="empty-text">无用户</span>
-                <a-tag 
-                  v-for="(name, index) in record.static_receive_user_names" 
-                  :key="`name-${index}`" 
+                <span
+                  v-if="
+                    !record.static_receive_users?.length &&
+                    !record.static_receive_user_names?.length
+                  "
+                  class="empty-text"
+                  >无用户</span
+                >
+                <a-tag
+                  v-for="(name, index) in record.static_receive_user_names"
+                  :key="`name-${index}`"
                   class="tech-tag label-tag"
                 >
                   {{ name }}
@@ -180,14 +215,18 @@
 
             <template v-if="column.key === 'notify_methods'">
               <div class="tag-container">
-                <a-tag 
-                  v-for="method in getNotifyMethods(record)" 
-                  :key="method" 
+                <a-tag
+                  v-for="method in getNotifyMethods(record)"
+                  :key="method"
                   class="tech-tag alert-tag"
                 >
                   {{ method }}
                 </a-tag>
-                <span v-if="!getNotifyMethods(record)?.length" class="empty-text">无通知方式</span>
+                <span
+                  v-if="!getNotifyMethods(record)?.length"
+                  class="empty-text"
+                  >无通知方式</span
+                >
               </div>
             </template>
 
@@ -201,11 +240,15 @@
               <div class="config-info">
                 <div class="config-item">
                   <span class="config-label">重复间隔:</span>
-                  <span class="config-value">{{ record.repeat_interval || '30s' }}</span>
+                  <span class="config-value">{{
+                    record.repeat_interval || '30s'
+                  }}</span>
                 </div>
                 <div class="config-item">
                   <span class="config-label">发送恢复:</span>
-                  <span class="config-value">{{ record.send_resolved === 1 ? '是' : '否' }}</span>
+                  <span class="config-value">{{
+                    record.send_resolved === 1 ? '是' : '否'
+                  }}</span>
                 </div>
               </div>
             </template>
@@ -214,20 +257,28 @@
               <div class="config-info">
                 <div class="config-item">
                   <span class="config-label">需要升级:</span>
-                  <span class="config-value">{{ record.need_upgrade === 1 ? '是' : '否' }}</span>
+                  <span class="config-value">{{
+                    record.need_upgrade === 1 ? '是' : '否'
+                  }}</span>
                 </div>
                 <div class="config-item" v-if="record.need_upgrade === 1">
                   <span class="config-label">升级时间:</span>
-                  <span class="config-value">{{ record.upgrade_minutes }}分钟</span>
+                  <span class="config-value"
+                    >{{ record.upgrade_minutes }}分钟</span
+                  >
                 </div>
               </div>
             </template>
 
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
-                <a-avatar 
-                  size="small" 
-                  :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
+                <a-avatar
+                  size="small"
+                  :style="{
+                    backgroundColor: getAvatarColor(
+                      record.create_user_name || '',
+                    ),
+                  }"
                 >
                   {{ getInitials(record.create_user_name) }}
                 </a-avatar>
@@ -244,10 +295,18 @@
 
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
-                <a-button type="primary" size="small" @click="handleViewSendGroup(record)">
+                <a-button
+                  type="primary"
+                  size="small"
+                  @click="handleViewSendGroup(record)"
+                >
                   查看
                 </a-button>
-                <a-button type="default" size="small" @click="handleEditSendGroup(record)">
+                <a-button
+                  type="default"
+                  size="small"
+                  @click="handleEditSendGroup(record)"
+                >
                   编辑
                 </a-button>
                 <a-dropdown v-if="can('monitor.sendGroup.delete')">
@@ -269,45 +328,45 @@
     </div>
 
     <!-- 创建/编辑发送组对话框 -->
-    <a-modal 
-      :open="formDialogVisible" 
-      :title="formDialog.isEdit ? '编辑发送组' : '创建发送组'" 
+    <a-modal
+      :open="formDialogVisible"
+      :title="formDialog.isEdit ? '编辑发送组' : '创建发送组'"
       :width="formDialogWidth"
-      @ok="saveSendGroup" 
-      @cancel="closeFormDialog" 
-      :destroy-on-close="true" 
+      @ok="saveSendGroup"
+      @cancel="closeFormDialog"
+      :destroy-on-close="true"
       class="responsive-modal send-group-modal"
     >
-      <a-form 
-        ref="formRef" 
-        :model="formDialog.form" 
-        :rules="formRules" 
+      <a-form
+        ref="formRef"
+        :model="formDialog.form"
+        :rules="formRules"
         layout="vertical"
       >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="发送组名称" 
-                name="name" 
+              <a-form-item
+                label="发送组名称"
+                name="name"
                 :rules="[{ required: true, message: '请输入发送组名称' }]"
               >
-                <a-input 
-                  v-model:value="formDialog.form.name" 
-                  placeholder="请输入发送组名称" 
+                <a-input
+                  v-model:value="formDialog.form.name"
+                  placeholder="请输入发送组名称"
                 />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="发送组中文名称" 
-                name="name_zh" 
+              <a-form-item
+                label="发送组中文名称"
+                name="name_zh"
                 :rules="[{ required: true, message: '请输入发送组中文名称' }]"
               >
-                <a-input 
-                  v-model:value="formDialog.form.name_zh" 
-                  placeholder="请输入发送组中文名称" 
+                <a-input
+                  v-model:value="formDialog.form.name_zh"
+                  placeholder="请输入发送组中文名称"
                 />
               </a-form-item>
             </a-col>
@@ -319,10 +378,10 @@
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="关联采集池" name="pool_id">
-                <a-select 
-                  v-model:value="formDialog.form.pool_id" 
-                  placeholder="请搜索并选择采集池" 
-                  class="full-width" 
+                <a-select
+                  v-model:value="formDialog.form.pool_id"
+                  placeholder="请搜索并选择采集池"
+                  class="full-width"
                   show-search
                   :filter-option="false"
                   @search="handleDialogPoolSearch"
@@ -330,9 +389,9 @@
                   :loading="dialogPoolLoading"
                   allow-clear
                 >
-                  <a-select-option 
-                    v-for="pool in dialogPools" 
-                    :key="pool.id" 
+                  <a-select-option
+                    v-for="pool in dialogPools"
+                    :key="pool.id"
                     :value="pool.id"
                   >
                     {{ pool.name }}
@@ -342,9 +401,9 @@
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="关联值班组" name="on_duty_group_id">
-                <a-select 
-                  v-model:value="formDialog.form.on_duty_group_id" 
-                  placeholder="请搜索并选择值班组" 
+                <a-select
+                  v-model:value="formDialog.form.on_duty_group_id"
+                  placeholder="请搜索并选择值班组"
                   class="full-width"
                   show-search
                   :filter-option="false"
@@ -353,9 +412,9 @@
                   :loading="dialogOnDutyGroupLoading"
                   allow-clear
                 >
-                  <a-select-option 
-                    v-for="group in dialogOnDutyGroups" 
-                    :key="group.id" 
+                  <a-select-option
+                    v-for="group in dialogOnDutyGroups"
+                    :key="group.id"
                     :value="group.id"
                   >
                     {{ group.name }}
@@ -371,36 +430,48 @@
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="是否启用" name="enable">
-                <a-switch v-model:checked="formDialog.form.enable" class="tech-switch" />
+                <a-switch
+                  v-model:checked="formDialog.form.enable"
+                  class="tech-switch"
+                />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="发送恢复消息" name="send_resolved">
-                <a-switch v-model:checked="formDialog.form.send_resolved" class="tech-switch" />
+                <a-switch
+                  v-model:checked="formDialog.form.send_resolved"
+                  class="tech-switch"
+                />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="重复发送间隔" name="repeat_interval">
-                <a-input 
-                  v-model:value="formDialog.form.repeat_interval" 
-                  placeholder="例如：30s, 5m, 1h" 
+                <a-input
+                  v-model:value="formDialog.form.repeat_interval"
+                  placeholder="例如：30s, 5m, 1h"
                 />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="需要升级" name="need_upgrade">
-                <a-switch v-model:checked="formDialog.form.need_upgrade" class="tech-switch" />
+                <a-switch
+                  v-model:checked="formDialog.form.need_upgrade"
+                  class="tech-switch"
+                />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item label="飞书群机器人Token" name="fei_shu_qun_robot_token">
-                <a-input 
-                  v-model:value="formDialog.form.fei_shu_qun_robot_token" 
-                  placeholder="请输入飞书群机器人Token" 
+              <a-form-item
+                label="飞书群机器人Token"
+                name="fei_shu_qun_robot_token"
+              >
+                <a-input
+                  v-model:value="formDialog.form.fei_shu_qun_robot_token"
+                  placeholder="请输入飞书群机器人Token"
                 />
               </a-form-item>
             </a-col>
@@ -412,11 +483,11 @@
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="升级时间间隔(分钟)" name="upgrade_minutes">
-                <a-input-number 
-                  v-model:value="formDialog.form.upgrade_minutes" 
-                  :min="1" 
+                <a-input-number
+                  v-model:value="formDialog.form.upgrade_minutes"
+                  :min="1"
                   placeholder="请输入升级时间间隔"
-                  class="full-width" 
+                  class="full-width"
                 />
               </a-form-item>
             </a-col>
@@ -427,25 +498,25 @@
           <div class="section-title">接收用户配置</div>
           <!-- 静态接收用户 -->
           <a-form-item label="静态接收用户" name="static_receive_users">
-            <a-select 
-              v-model:value="formDialog.form.static_receive_users" 
-              mode="multiple" 
+            <a-select
+              v-model:value="formDialog.form.static_receive_users"
+              mode="multiple"
               placeholder="请搜索并选择静态接收用户"
-              class="full-width" 
+              class="full-width"
               show-search
               :filter-option="false"
               @search="handleDialogUserSearch"
               @popupScroll="handleDialogUserScroll"
               :loading="dialogUserLoading"
-              :options="dialogUsers" 
+              :options="dialogUsers"
             />
           </a-form-item>
 
           <!-- 通知方式 -->
           <a-form-item label="通知方式" name="notify_methods">
-            <a-select 
-              v-model:value="formDialog.form.notify_methods" 
-              mode="multiple" 
+            <a-select
+              v-model:value="formDialog.form.notify_methods"
+              mode="multiple"
               placeholder="请选择通知方式"
               class="full-width"
             >
@@ -457,34 +528,42 @@
           </a-form-item>
 
           <!-- 首次升级用户 -->
-          <a-form-item v-if="formDialog.form.need_upgrade" label="首次升级用户" name="first_upgrade_users">
-            <a-select 
-              v-model:value="formDialog.form.first_upgrade_users" 
-              mode="multiple" 
+          <a-form-item
+            v-if="formDialog.form.need_upgrade"
+            label="首次升级用户"
+            name="first_upgrade_users"
+          >
+            <a-select
+              v-model:value="formDialog.form.first_upgrade_users"
+              mode="multiple"
               placeholder="请搜索并选择首次升级用户"
-              class="full-width" 
+              class="full-width"
               show-search
               :filter-option="false"
               @search="handleDialogUserSearch"
               @popupScroll="handleDialogUserScroll"
               :loading="dialogUserLoading"
-              :options="dialogUsers" 
+              :options="dialogUsers"
             />
           </a-form-item>
 
           <!-- 二次升级用户 -->
-          <a-form-item v-if="formDialog.form.need_upgrade" label="二次升级用户" name="second_upgrade_users">
-            <a-select 
-              v-model:value="formDialog.form.second_upgrade_users" 
-              mode="multiple" 
+          <a-form-item
+            v-if="formDialog.form.need_upgrade"
+            label="二次升级用户"
+            name="second_upgrade_users"
+          >
+            <a-select
+              v-model:value="formDialog.form.second_upgrade_users"
+              mode="multiple"
               placeholder="请搜索并选择二次升级用户"
-              class="full-width" 
+              class="full-width"
               show-search
               :filter-option="false"
               @search="handleDialogUserSearch"
               @popupScroll="handleDialogUserScroll"
               :loading="dialogUserLoading"
-              :options="dialogUsers" 
+              :options="dialogUsers"
             />
           </a-form-item>
         </div>
@@ -492,50 +571,97 @@
     </a-modal>
 
     <!-- 详情对话框 -->
-    <a-modal 
-      :open="detailDialogVisible" 
-      title="发送组详情" 
-      :width="previewDialogWidth" 
+    <a-modal
+      :open="detailDialogVisible"
+      title="发送组详情"
+      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeDetailDialog" 
+      @cancel="closeDetailDialog"
       class="detail-dialog"
     >
       <div v-if="detailDialog.form" class="pool-details">
         <div class="detail-header">
           <h2>{{ detailDialog.form.name_zh || detailDialog.form.name }}</h2>
           <div class="detail-badges">
-            <a-tag :color="detailDialog.form.enable === 1 ? 'success' : 'default'">
+            <a-tag
+              :color="detailDialog.form.enable === 1 ? 'success' : 'default'"
+            >
               {{ detailDialog.form.enable === 1 ? '启用' : '禁用' }}
             </a-tag>
-            <a-tag :color="detailDialog.form.need_upgrade === 1 ? 'warning' : 'default'">
-              {{ detailDialog.form.need_upgrade === 1 ? '需要升级' : '无需升级' }}
+            <a-tag
+              :color="
+                detailDialog.form.need_upgrade === 1 ? 'warning' : 'default'
+              "
+            >
+              {{
+                detailDialog.form.need_upgrade === 1 ? '需要升级' : '无需升级'
+              }}
             </a-tag>
-            <a-tag :color="detailDialog.form.send_resolved === 1 ? 'success' : 'default'">
-              {{ detailDialog.form.send_resolved === 1 ? '发送恢复' : '不发送恢复' }}
+            <a-tag
+              :color="
+                detailDialog.form.send_resolved === 1 ? 'success' : 'default'
+              "
+            >
+              {{
+                detailDialog.form.send_resolved === 1
+                  ? '发送恢复'
+                  : '不发送恢复'
+              }}
             </a-tag>
           </div>
         </div>
 
         <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
-          <a-descriptions-item label="ID">{{ detailDialog.form.id }}</a-descriptions-item>
-          <a-descriptions-item label="发送组名称">{{ detailDialog.form.name }}</a-descriptions-item>
-          <a-descriptions-item label="中文名称">{{ detailDialog.form.name_zh }}</a-descriptions-item>
-          <a-descriptions-item label="关联采集池">{{ getPoolName(detailDialog.form.pool_id) || '未关联' }}</a-descriptions-item>
-          <a-descriptions-item label="关联值班组">{{ getOnDutyGroupName(detailDialog.form.on_duty_group_id) || '未关联' }}</a-descriptions-item>
-          <a-descriptions-item label="重复间隔">{{ detailDialog.form.repeat_interval || '30s' }}</a-descriptions-item>
+          <a-descriptions-item label="ID">
+            {{ detailDialog.form.id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="发送组名称">
+            {{ detailDialog.form.name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="中文名称">
+            {{ detailDialog.form.name_zh }}
+          </a-descriptions-item>
+          <a-descriptions-item label="关联采集池">
+            {{ getPoolName(detailDialog.form.pool_id) || '未关联' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="关联值班组">
+            {{
+              getOnDutyGroupName(detailDialog.form.on_duty_group_id) || '未关联'
+            }}
+          </a-descriptions-item>
+          <a-descriptions-item label="重复间隔">
+            {{ detailDialog.form.repeat_interval || '30s' }}
+          </a-descriptions-item>
           <a-descriptions-item label="升级时间">
-            {{ detailDialog.form.need_upgrade === 1 ? `${detailDialog.form.upgrade_minutes || 0}分钟` : '无需升级' }}
+            {{
+              detailDialog.form.need_upgrade === 1
+                ? `${detailDialog.form.upgrade_minutes || 0}分钟`
+                : '无需升级'
+            }}
           </a-descriptions-item>
           <a-descriptions-item label="飞书Token">
-            {{ detailDialog.form.fei_shu_qun_robot_token ? maskToken(detailDialog.form.fei_shu_qun_robot_token) : '未配置' }}
+            {{
+              detailDialog.form.fei_shu_qun_robot_token
+                ? maskToken(detailDialog.form.fei_shu_qun_robot_token)
+                : '未配置'
+            }}
           </a-descriptions-item>
-          <a-descriptions-item label="创建人">{{ detailDialog.form.create_user_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at) }}</a-descriptions-item>
+          <a-descriptions-item label="创建人">
+            {{ detailDialog.form.create_user_name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{ formatFullDateTime(detailDialog.form.created_at) }}
+          </a-descriptions-item>
         </a-descriptions>
 
         <div class="detail-footer">
           <a-button @click="closeDetailDialog">关闭</a-button>
-          <a-button type="primary" @click="handleEditSendGroup(detailDialog.form)">编辑</a-button>
+          <a-button
+            type="primary"
+            @click="handleEditSendGroup(detailDialog.form)"
+          >
+            编辑
+          </a-button>
         </div>
       </div>
     </a-modal>
@@ -547,10 +673,7 @@ import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
 import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import {
-  PlusOutlined,
-  DownOutlined
-} from '@ant-design/icons-vue';
+import { PlusOutlined, DownOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
   getMonitorSendGroupListApi,
@@ -561,11 +684,17 @@ import {
   type MonitorSendGroup,
   type GetMonitorSendGroupListReq,
   type CreateMonitorSendGroupReq,
-  type UpdateMonitorSendGroupReq
+  type UpdateMonitorSendGroupReq,
 } from '#/api/core/prometheus/prometheus_send_group';
 import { getUserList } from '#/api/core/system/user';
-import { getMonitorScrapePoolListApi, type MonitorScrapePool } from '#/api/core/prometheus/prometheus_scrape_pool';
-import { getMonitorOnDutyGroupListApi, type MonitorOnDutyGroup } from '#/api/core/prometheus/prometheus_onduty';
+import {
+  getMonitorScrapePoolListApi,
+  type MonitorScrapePool,
+} from '#/api/core/prometheus/prometheus_scrape_pool';
+import {
+  getMonitorOnDutyGroupListApi,
+  type MonitorOnDutyGroup,
+} from '#/api/core/prometheus/prometheus_onduty';
 
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
@@ -622,17 +751,50 @@ const previewDialogWidth = computed(() => {
 
 // 列定义
 const columns = [
-  { title: '发送组名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
+  {
+    title: '发送组名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 200,
+    fixed: 'left',
+  },
   { title: '中文名称', dataIndex: 'name_zh', key: 'name_zh', width: 180 },
   { title: '关联配置', key: 'pool_config', width: 180 },
-  { title: '静态接收用户', dataIndex: 'static_receive_users', key: 'static_receive_users', width: 200 },
-  { title: '通知方式', dataIndex: 'notify_methods', key: 'notify_methods', width: 180 },
-  { title: '启用状态', dataIndex: 'enable', key: 'enable', width: 100, align: 'center' as const },
+  {
+    title: '静态接收用户',
+    dataIndex: 'static_receive_users',
+    key: 'static_receive_users',
+    width: 200,
+  },
+  {
+    title: '通知方式',
+    dataIndex: 'notify_methods',
+    key: 'notify_methods',
+    width: 180,
+  },
+  {
+    title: '启用状态',
+    dataIndex: 'enable',
+    key: 'enable',
+    width: 100,
+    align: 'center' as const,
+  },
   { title: '通知配置', key: 'notification_config', width: 160 },
   { title: '升级配置', key: 'upgrade_config', width: 120 },
-  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
+  {
+    title: '创建人',
+    dataIndex: 'create_user_name',
+    key: 'creator',
+    width: 120,
+  },
   { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
+  {
+    title: '操作',
+    key: 'action',
+    width: 200,
+    align: 'center' as const,
+    fixed: 'right',
+  },
 ];
 
 // 状态数据
@@ -660,7 +822,7 @@ const paginationConfig = reactive({
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
-  size: 'default' as const
+  size: 'default' as const,
 });
 
 // 统计数据
@@ -668,7 +830,7 @@ const stats = reactive({
   total: 0,
   enabled: 0,
   needUpgrade: 0,
-  associatedPools: 0
+  associatedPools: 0,
 });
 
 // 对话框状态
@@ -722,25 +884,25 @@ const formDialog = reactive({
     static_receive_users: [] as number[],
     notify_methods: [] as string[],
     first_upgrade_users: [] as number[],
-    second_upgrade_users: [] as number[]
-  }
+    second_upgrade_users: [] as number[],
+  },
 });
 
 // 详情对话框数据
 const detailDialog = reactive({
-  form: null as MonitorSendGroup | null
+  form: null as MonitorSendGroup | null,
 });
 
 // 表单验证规则
 const formRules = {
   name: [
     { required: true, message: '请输入发送组名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度应为2到50个字符', trigger: 'blur' }
+    { min: 2, max: 50, message: '长度应为2到50个字符', trigger: 'blur' },
   ],
   name_zh: [
     { required: true, message: '请输入发送组中文名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度应为2到50个字符', trigger: 'blur' }
-  ]
+    { min: 2, max: 50, message: '长度应为2到50个字符', trigger: 'blur' },
+  ],
 };
 
 const getPoolStatusClass = (record: MonitorSendGroup): string => {
@@ -750,7 +912,16 @@ const getPoolStatusClass = (record: MonitorSendGroup): string => {
 };
 
 const getAvatarColor = (name: string): string => {
-  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
+  const colors = [
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
+  ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -771,13 +942,13 @@ const maskToken = (token: string): string => {
 // 通过ID获取名称
 const getPoolName = (poolId?: number): string => {
   if (!poolId) return '';
-  const pool = scrapePools.value.find(p => p.id === poolId);
+  const pool = scrapePools.value.find((p) => p.id === poolId);
   return pool?.name || '';
 };
 
 const getOnDutyGroupName = (groupId?: number): string => {
   if (!groupId) return '';
-  const group = onDutyGroups.value.find(g => g.id === groupId);
+  const group = onDutyGroups.value.find((g) => g.id === groupId);
   return group?.name || '';
 };
 
@@ -788,7 +959,10 @@ const formatDate = (dateString: string): string => {
 
 const formatTime = (dateString: string): string => {
   if (!dateString) return '';
-  return new Date(dateString).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  return new Date(dateString).toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 const formatFullDateTime = (dateString: string): string => {
@@ -802,21 +976,23 @@ const getNotifyMethods = (record: MonitorSendGroup): string[] => {
 
   try {
     if (Array.isArray(record.notify_methods)) {
-      return record.notify_methods.map(method => {
-        // 处理字符串类型的方法
-        if (typeof method === 'string') {
-          // 尝试解析可能是JSON字符串的方法
-          if (method.startsWith('[') && method.endsWith(']')) {
-            try {
-              return JSON.parse(method);
-            } catch (e) {
-              return method;
+      return record.notify_methods
+        .map((method) => {
+          // 处理字符串类型的方法
+          if (typeof method === 'string') {
+            // 尝试解析可能是JSON字符串的方法
+            if (method.startsWith('[') && method.endsWith(']')) {
+              try {
+                return JSON.parse(method);
+              } catch (e) {
+                return method;
+              }
             }
+            return method;
           }
           return method;
-        }
-        return method;
-      }).flat();
+        })
+        .flat();
     }
 
     // 如果是字符串，尝试解析为JSON
@@ -831,7 +1007,6 @@ const getNotifyMethods = (record: MonitorSendGroup): string[] => {
 
     return [];
   } catch (error) {
-
     return [];
   }
 };
@@ -839,9 +1014,15 @@ const getNotifyMethods = (record: MonitorSendGroup): string[] => {
 // 更新统计数据
 const updateStats = () => {
   stats.total = paginationConfig.total;
-  stats.enabled = sendGroupList.value.filter(item => item.enable === 1).length;
-  stats.needUpgrade = sendGroupList.value.filter(item => item.need_upgrade === 1).length;
-  stats.associatedPools = new Set(sendGroupList.value.map(item => item.pool_id).filter(Boolean)).size;
+  stats.enabled = sendGroupList.value.filter(
+    (item) => item.enable === 1,
+  ).length;
+  stats.needUpgrade = sendGroupList.value.filter(
+    (item) => item.need_upgrade === 1,
+  ).length;
+  stats.associatedPools = new Set(
+    sendGroupList.value.map((item) => item.pool_id).filter(Boolean),
+  ).size;
 };
 
 // 数据加载
@@ -852,17 +1033,21 @@ const loadSendGroupList = async (): Promise<void> => {
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
       search: searchQuery.value || undefined,
-      enable: enableFilter.value
+      enable: enableFilter.value,
     };
 
-    const response = await getMonitorSendGroupListApi(params) as ApiListResponse<MonitorSendGroup>;
+    const response = (await getMonitorSendGroupListApi(
+      params,
+    )) as ApiListResponse<MonitorSendGroup>;
     if (!request.isCurrent()) return;
     if (response) {
       let list = response.items || [];
 
       // 过滤升级配置
       if (upgradeFilter.value !== undefined) {
-        list = list.filter((item: MonitorSendGroup) => item.need_upgrade === upgradeFilter.value);
+        list = list.filter(
+          (item: MonitorSendGroup) => item.need_upgrade === upgradeFilter.value,
+        );
       }
 
       // 规范数据结构
@@ -901,7 +1086,6 @@ const loadSendGroupList = async (): Promise<void> => {
       updateStats();
     }
   } catch (error: any) {
-
     if (!request.fail(error, '加载发送组列表失败')) return;
     sendGroupList.value = [];
     paginationConfig.total = 0;
@@ -923,15 +1107,22 @@ const loadOptionsData = async (): Promise<void> => {
     let hasMoreData = true;
 
     while (hasMoreData) {
-      const scrapePoolResponse = await getMonitorScrapePoolListApi({
+      const scrapePoolResponse = (await getMonitorScrapePoolListApi({
         page: currentPage,
-        size: pageSize
-      }) as ApiListResponse<MonitorScrapePool>;
+        size: pageSize,
+      })) as ApiListResponse<MonitorScrapePool>;
 
-      if (scrapePoolResponse && scrapePoolResponse.items && scrapePoolResponse.items.length > 0) {
+      if (
+        scrapePoolResponse &&
+        scrapePoolResponse.items &&
+        scrapePoolResponse.items.length > 0
+      ) {
         allScrapePools = [...allScrapePools, ...scrapePoolResponse.items];
 
-        if (scrapePoolResponse.items.length < pageSize || allScrapePools.length >= (scrapePoolResponse.total || 0)) {
+        if (
+          scrapePoolResponse.items.length < pageSize ||
+          allScrapePools.length >= (scrapePoolResponse.total || 0)
+        ) {
           hasMoreData = false;
         } else {
           currentPage++;
@@ -948,15 +1139,22 @@ const loadOptionsData = async (): Promise<void> => {
     hasMoreData = true;
 
     while (hasMoreData) {
-      const onDutyGroupResponse = await getMonitorOnDutyGroupListApi({
+      const onDutyGroupResponse = (await getMonitorOnDutyGroupListApi({
         page: currentPage,
-        size: pageSize
-      }) as ApiListResponse<MonitorOnDutyGroup>;
+        size: pageSize,
+      })) as ApiListResponse<MonitorOnDutyGroup>;
 
-      if (onDutyGroupResponse && onDutyGroupResponse.items && onDutyGroupResponse.items.length > 0) {
+      if (
+        onDutyGroupResponse &&
+        onDutyGroupResponse.items &&
+        onDutyGroupResponse.items.length > 0
+      ) {
         allOnDutyGroups = [...allOnDutyGroups, ...onDutyGroupResponse.items];
 
-        if (onDutyGroupResponse.items.length < pageSize || allOnDutyGroups.length >= (onDutyGroupResponse.total || 0)) {
+        if (
+          onDutyGroupResponse.items.length < pageSize ||
+          allOnDutyGroups.length >= (onDutyGroupResponse.total || 0)
+        ) {
           hasMoreData = false;
         } else {
           currentPage++;
@@ -973,16 +1171,19 @@ const loadOptionsData = async (): Promise<void> => {
     hasMoreData = true;
 
     while (hasMoreData) {
-      const userResponse = await getUserList({
+      const userResponse = (await getUserList({
         page: currentPage,
         size: pageSize,
-        search: ''
-      }) as ApiListResponse<UserInfo>;
+        search: '',
+      })) as ApiListResponse<UserInfo>;
 
       if (userResponse && userResponse.items && userResponse.items.length > 0) {
         allUsers = [...allUsers, ...userResponse.items];
 
-        if (userResponse.items.length < pageSize || allUsers.length >= (userResponse.total || 0)) {
+        if (
+          userResponse.items.length < pageSize ||
+          allUsers.length >= (userResponse.total || 0)
+        ) {
           hasMoreData = false;
         } else {
           currentPage++;
@@ -994,10 +1195,9 @@ const loadOptionsData = async (): Promise<void> => {
 
     userOptions.value = allUsers.map((user: UserInfo) => ({
       label: user.username,
-      value: user.id
+      value: user.id,
     }));
   } catch (error: any) {
-
     if (shouldNotifyPageError(error)) message.error('加载选项数据失败');
   }
 };
@@ -1016,14 +1216,17 @@ const loadDialogPools = async (isNewSearch = false) => {
 
   dialogPoolLoading.value = true;
   try {
-    const response = await getMonitorScrapePoolListApi({
+    const response = (await getMonitorScrapePoolListApi({
       page: dialogPoolPage.value,
       size: 20,
       search: dialogPoolSearch.value,
-    }) as ApiListResponse<MonitorScrapePool>;
+    })) as ApiListResponse<MonitorScrapePool>;
 
     if (response && response.items && response.items.length > 0) {
-      const newPools = response.items.map((p: MonitorScrapePool) => ({ id: p.id!, name: p.name }));
+      const newPools = response.items.map((p: MonitorScrapePool) => ({
+        id: p.id!,
+        name: p.name,
+      }));
       dialogPools.value.push(...newPools);
       dialogPoolPage.value++;
       if (dialogPools.value.length >= (response.total || 0)) {
@@ -1033,7 +1236,8 @@ const loadDialogPools = async (isNewSearch = false) => {
       dialogPoolHasMore.value = false;
     }
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取采集池数据失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取采集池数据失败');
   } finally {
     dialogPoolLoading.value = false;
   }
@@ -1053,11 +1257,11 @@ const loadDialogOnDutyGroups = async (isNewSearch = false) => {
 
   dialogOnDutyGroupLoading.value = true;
   try {
-    const response = await getMonitorOnDutyGroupListApi({
+    const response = (await getMonitorOnDutyGroupListApi({
       page: dialogOnDutyGroupPage.value,
       size: 20,
       search: dialogOnDutyGroupSearch.value,
-    }) as ApiListResponse<MonitorOnDutyGroup>;
+    })) as ApiListResponse<MonitorOnDutyGroup>;
 
     if (response && response.items && response.items.length > 0) {
       dialogOnDutyGroups.value.push(...response.items);
@@ -1069,7 +1273,8 @@ const loadDialogOnDutyGroups = async (isNewSearch = false) => {
       dialogOnDutyGroupHasMore.value = false;
     }
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取值班组数据失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取值班组数据失败');
   } finally {
     dialogOnDutyGroupLoading.value = false;
   }
@@ -1089,19 +1294,20 @@ const loadDialogUsers = async (isNewSearch = false) => {
 
   dialogUserLoading.value = true;
   try {
-    const response = await getUserList({
+    const response = (await getUserList({
       page: dialogUserPage.value,
       size: 20,
       search: dialogUserSearch.value,
-    }) as ApiListResponse<UserInfo>;
+    })) as ApiListResponse<UserInfo>;
 
     if (response && response.items && response.items.length > 0) {
       const newUsers = response.items.map((user: UserInfo) => {
         // 优先使用username，如果没有则使用real_name或name
-        const displayName = user.username || user.real_name || user.name || `用户ID: ${user.id}`;
+        const displayName =
+          user.username || user.real_name || user.name || `用户ID: ${user.id}`;
         return {
           label: displayName,
-          value: user.id
+          value: user.id,
         };
       });
       dialogUsers.value.push(...newUsers);
@@ -1113,7 +1319,8 @@ const loadDialogUsers = async (isNewSearch = false) => {
       dialogUserHasMore.value = false;
     }
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取用户数据失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取用户数据失败');
   } finally {
     dialogUserLoading.value = false;
   }
@@ -1236,10 +1443,13 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
     need_upgrade: record.need_upgrade === 1,
     upgrade_minutes: record.upgrade_minutes || 0,
     fei_shu_qun_robot_token: record.fei_shu_qun_robot_token || '',
-    static_receive_users: (record.static_receive_users || []).map((user: any) => user.id) || [],
+    static_receive_users:
+      (record.static_receive_users || []).map((user: any) => user.id) || [],
     notify_methods: getNotifyMethods(record),
-    first_upgrade_users: (record.first_upgrade_users || []).map((user: any) => user.id) || [],
-    second_upgrade_users: (record.second_upgrade_users || []).map((user: any) => user.id) || []
+    first_upgrade_users:
+      (record.first_upgrade_users || []).map((user: any) => user.id) || [],
+    second_upgrade_users:
+      (record.second_upgrade_users || []).map((user: any) => user.id) || [],
   };
 
   // 重置并加载动态数据
@@ -1250,9 +1460,11 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
   // 加载动态数据
   loadDialogPools(true).then(() => {
     // 确保当前选中的采集池在列表中
-    const selectedPoolInList = dialogPools.value.some(p => p.id === record.pool_id);
+    const selectedPoolInList = dialogPools.value.some(
+      (p) => p.id === record.pool_id,
+    );
     if (!selectedPoolInList && record.pool_id) {
-      const pool = scrapePools.value.find(p => p.id === record.pool_id);
+      const pool = scrapePools.value.find((p) => p.id === record.pool_id);
       if (pool) {
         dialogPools.value.unshift({ id: pool.id!, name: pool.name });
       }
@@ -1261,9 +1473,13 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
 
   loadDialogOnDutyGroups(true).then(() => {
     // 确保当前选中的值班组在列表中
-    const selectedGroupInList = dialogOnDutyGroups.value.some(g => g.id === record.on_duty_group_id);
+    const selectedGroupInList = dialogOnDutyGroups.value.some(
+      (g) => g.id === record.on_duty_group_id,
+    );
     if (!selectedGroupInList && record.on_duty_group_id) {
-      const group = onDutyGroups.value.find(g => g.id === record.on_duty_group_id);
+      const group = onDutyGroups.value.find(
+        (g) => g.id === record.on_duty_group_id,
+      );
       if (group) {
         dialogOnDutyGroups.value.unshift(group);
       }
@@ -1275,15 +1491,15 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
     const selectedUserIds = [
       ...(record.static_receive_users?.map((u: any) => u.id) || []),
       ...(record.first_upgrade_users?.map((u: any) => u.id) || []),
-      ...(record.second_upgrade_users?.map((u: any) => u.id) || [])
+      ...(record.second_upgrade_users?.map((u: any) => u.id) || []),
     ];
 
     // 将已选用户添加到列表
-    selectedUserIds.forEach(userId => {
-      const userInList = dialogUsers.value.some(u => u.value === userId);
+    selectedUserIds.forEach((userId) => {
+      const userInList = dialogUsers.value.some((u) => u.value === userId);
       if (!userInList) {
         // 尝试从已有用户中获取用户信息
-        const user = userOptions.value.find(u => u.value === userId);
+        const user = userOptions.value.find((u) => u.value === userId);
         if (user) {
           dialogUsers.value.unshift(user);
         } else {
@@ -1291,14 +1507,18 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
           let username = '';
 
           // 尝试从static_receive_users中查找
-          const staticUser = record.static_receive_users?.find((u: any) => u.id === userId);
+          const staticUser = record.static_receive_users?.find(
+            (u: any) => u.id === userId,
+          );
           if (staticUser?.username) {
             username = staticUser.username;
           }
 
           // 尝试从first_upgrade_users中查找
           if (!username) {
-            const firstUpgradeUser = record.first_upgrade_users?.find((u: any) => u.id === userId);
+            const firstUpgradeUser = record.first_upgrade_users?.find(
+              (u: any) => u.id === userId,
+            );
             if (firstUpgradeUser?.username) {
               username = firstUpgradeUser.username;
             }
@@ -1306,7 +1526,9 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
 
           // 尝试从second_upgrade_users中查找
           if (!username) {
-            const secondUpgradeUser = record.second_upgrade_users?.find(u => u.id === userId);
+            const secondUpgradeUser = record.second_upgrade_users?.find(
+              (u) => u.id === userId,
+            );
             if (secondUpgradeUser?.username) {
               username = secondUpgradeUser.username;
             }
@@ -1316,13 +1538,13 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
           if (username) {
             dialogUsers.value.unshift({
               label: username,
-              value: userId
+              value: userId,
             });
           } else {
             // 如果没有找到用户名，则添加一个带有ID的占位符
             dialogUsers.value.unshift({
               label: `用户ID: ${userId}`,
-              value: userId
+              value: userId,
             });
           }
         }
@@ -1336,12 +1558,14 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
 
 const handleViewSendGroup = async (record: MonitorSendGroup): Promise<void> => {
   try {
-    const response = await getMonitorSendGroupDetailApi(record.id) as MonitorSendGroup;
+    const response = (await getMonitorSendGroupDetailApi(
+      record.id,
+    )) as MonitorSendGroup;
     detailDialog.form = response;
     detailDialogVisible.value = true;
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取发送组详情失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取发送组详情失败');
   }
 };
 
@@ -1358,8 +1582,8 @@ const handleDeleteClick = (record: MonitorSendGroup): void => {
         message.success(`发送组 "${record.name_zh || record.name}" 已删除`);
         await loadSendGroupList();
       } catch (error: any) {
-
-        if (shouldNotifyPageError(error)) message.error(error.message || '删除发送组失败');
+        if (shouldNotifyPageError(error))
+          message.error(error.message || '删除发送组失败');
       }
     },
   });
@@ -1386,31 +1610,37 @@ const saveSendGroup = async (): Promise<void> => {
       need_upgrade: formDialog.form.need_upgrade ? 1 : 2,
       // 修复：确保pool_id和on_duty_group_id不为null时才传递
       pool_id: formDialog.form.pool_id || 0,
-      on_duty_group_id: formDialog.form.on_duty_group_id || 0
+      on_duty_group_id: formDialog.form.on_duty_group_id || 0,
     };
 
     // 获取用户名映射，用于填充username字段
     const userIdToUsername = new Map<number, string>();
-    dialogUsers.value.forEach(user => {
+    dialogUsers.value.forEach((user) => {
       userIdToUsername.set(user.value, user.label);
     });
 
     if (formDialog.isEdit && formDialog.form.id) {
       // 准备用户数据，确保每个用户对象都有id和username
-      const staticReceiveUsers = formData.static_receive_users.map((id: number) => ({
-        id,
-        username: userIdToUsername.get(id) || ''
-      }));
+      const staticReceiveUsers = formData.static_receive_users.map(
+        (id: number) => ({
+          id,
+          username: userIdToUsername.get(id) || '',
+        }),
+      );
 
-      const firstUpgradeUsers = formData.first_upgrade_users.map((id: number) => ({
-        id,
-        username: userIdToUsername.get(id) || ''
-      }));
+      const firstUpgradeUsers = formData.first_upgrade_users.map(
+        (id: number) => ({
+          id,
+          username: userIdToUsername.get(id) || '',
+        }),
+      );
 
-      const secondUpgradeUsers = formData.second_upgrade_users.map((id: number) => ({
-        id,
-        username: userIdToUsername.get(id) || ''
-      }));
+      const secondUpgradeUsers = formData.second_upgrade_users.map(
+        (id: number) => ({
+          id,
+          username: userIdToUsername.get(id) || '',
+        }),
+      );
 
       const updateData: UpdateMonitorSendGroupReq = {
         id: formDialog.form.id,
@@ -1433,20 +1663,26 @@ const saveSendGroup = async (): Promise<void> => {
       message.success(`发送组 "${formDialog.form.name_zh}" 已更新`);
     } else {
       // 准备用户数据，确保每个用户对象都有id和username
-      const staticReceiveUsers = formData.static_receive_users.map((id: number) => ({
-        id,
-        username: userIdToUsername.get(id) || ''
-      }));
+      const staticReceiveUsers = formData.static_receive_users.map(
+        (id: number) => ({
+          id,
+          username: userIdToUsername.get(id) || '',
+        }),
+      );
 
-      const firstUpgradeUsers = formData.first_upgrade_users.map((id: number) => ({
-        id,
-        username: userIdToUsername.get(id) || ''
-      }));
+      const firstUpgradeUsers = formData.first_upgrade_users.map(
+        (id: number) => ({
+          id,
+          username: userIdToUsername.get(id) || '',
+        }),
+      );
 
-      const secondUpgradeUsers = formData.second_upgrade_users.map((id: number) => ({
-        id,
-        username: userIdToUsername.get(id) || ''
-      }));
+      const secondUpgradeUsers = formData.second_upgrade_users.map(
+        (id: number) => ({
+          id,
+          username: userIdToUsername.get(id) || '',
+        }),
+      );
 
       const createData: CreateMonitorSendGroupReq = {
         name: formData.name,
@@ -1471,8 +1707,8 @@ const saveSendGroup = async (): Promise<void> => {
     formDialogVisible.value = false;
     loadSendGroupList();
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '保存发送组失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '保存发送组失败');
   }
 };
 
@@ -1493,7 +1729,7 @@ const resetFormDialog = (): void => {
     static_receive_users: [],
     notify_methods: [],
     first_upgrade_users: [],
-    second_upgrade_users: []
+    second_upgrade_users: [],
   };
 };
 
@@ -1514,11 +1750,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-
-
-
-
-
 .search-input {
   width: 250px;
   min-width: 200px;
@@ -1738,9 +1969,6 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-
-
-
   .search-input {
     width: 100%;
     min-width: auto;
@@ -1750,8 +1978,6 @@ onMounted(() => {
     width: 100%;
     min-width: auto;
   }
-
-
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
@@ -1781,7 +2007,6 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-
   .stats-card {
     text-align: center;
   }

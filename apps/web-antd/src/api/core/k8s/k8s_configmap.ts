@@ -91,19 +91,16 @@ export interface DeleteConfigMapReq {
  * 获取ConfigMap列表
  */
 export async function getConfigMapListApi(params: GetConfigMapListReq) {
-  return requestClient.get(
-    `/k8s/configmap/${params.cluster_id}/list`,
-    {
-      params: {
-        namespace: params.namespace,
-        search: params.search,
-        data_key: params.data_key,
-        labels: params.labels,
-        page: params.page,
-        size: params.size,
-      },
+  return requestClient.get(`/k8s/configmap/${params.cluster_id}/list`, {
+    params: {
+      namespace: params.namespace,
+      search: params.search,
+      data_key: params.data_key,
+      labels: params.labels,
+      page: params.page,
+      size: params.size,
     },
-  );
+  });
 }
 
 /**
@@ -137,7 +134,9 @@ export async function createConfigMapApi(params: CreateConfigMapReq) {
 /**
  * 通过YAML创建ConfigMap
  */
-export async function createConfigMapByYamlApi(params: CreateConfigMapByYamlReq) {
+export async function createConfigMapByYamlApi(
+  params: CreateConfigMapByYamlReq,
+) {
   return requestClient.post(
     `/k8s/configmap/${params.cluster_id}/create/yaml`,
     params,
@@ -157,7 +156,9 @@ export async function updateConfigMapApi(params: UpdateConfigMapReq) {
 /**
  * 通过YAML更新ConfigMap
  */
-export async function updateConfigMapByYamlApi(params: UpdateConfigMapByYamlReq) {
+export async function updateConfigMapByYamlApi(
+  params: UpdateConfigMapByYamlReq,
+) {
   return requestClient.put(
     `/k8s/configmap/${params.cluster_id}/${params.namespace}/${params.name}/update/yaml`,
     params,

@@ -124,7 +124,9 @@ export function getDataRowError(row: SecretDataRow): null | string {
 }
 
 /** 提交前校验；返回第一条错误，没有错误返回 null */
-export function validateDataRows(rows: readonly SecretDataRow[]): null | string {
+export function validateDataRows(
+  rows: readonly SecretDataRow[],
+): null | string {
   const seen = new Set<string>();
   for (const row of rows) {
     const key = row.key.trim();

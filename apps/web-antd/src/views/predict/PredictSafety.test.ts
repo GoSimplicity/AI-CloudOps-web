@@ -1,4 +1,9 @@
-import { flushPromises, mount, shallowMount, type VueWrapper } from '@vue/test-utils';
+import {
+  flushPromises,
+  mount,
+  shallowMount,
+  type VueWrapper,
+} from '@vue/test-utils';
 import { reactive } from 'vue';
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -39,7 +44,11 @@ let wrapper: VueWrapper | undefined;
 const state = () => (wrapper!.vm as any).$.setupState;
 function render(component: any, actual = false) {
   wrapper = (actual ? mount : shallowMount)(component, {
-    global: { plugins: [Antd], stubs: { Icon: true }, config: { warnHandler: () => {} } },
+    global: {
+      plugins: [Antd],
+      stubs: { Icon: true },
+      config: { warnHandler: () => {} },
+    },
   });
   return wrapper;
 }
@@ -78,7 +87,14 @@ beforeEach(() => {
     fn.mockImplementation(async () => response()),
   );
   vi.spyOn(message, 'success');
-  vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn() })));
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn(() => ({
+      matches: false,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+    })),
+  );
 });
 afterEach(() => {
   wrapper?.unmount();
@@ -245,9 +261,23 @@ describe('预测显式调用与结果完整性', () => {
 
 describe('预测置信度与降级边界', () => {
   it('null 扩缩容置信度显示未知，失败的 AI 文本不会当作洞察', async () => {
-    api.predictQps.mockResolvedValueOnce({ ...response(), method: 'rule_based', fallback_mode: true,
-      fallback_reason: '预测模型不可用', ai_enhanced: false, ai_fallback_reason: 'AI分析未完成',
-      model_accuracy: null, scaling_recommendations: [{ action: 'scale_up', confidence: null, reason: '规则', trigger_time: '2026-10-23T00:00:00Z' }] });
+    api.predictQps.mockResolvedValueOnce({
+      ...response(),
+      method: 'rule_based',
+      fallback_mode: true,
+      fallback_reason: '预测模型不可用',
+      ai_enhanced: false,
+      ai_fallback_reason: 'AI分析未完成',
+      model_accuracy: null,
+      scaling_recommendations: [
+        {
+          action: 'scale_up',
+          confidence: null,
+          reason: '规则',
+          trigger_time: '2026-10-23T00:00:00Z',
+        },
+      ],
+    });
     render(PredictAnalysis, true);
     state().formData.currentValue = 0;
     await state().startAnalysis();
@@ -259,8 +289,19 @@ describe('预测置信度与降级边界', () => {
     expect(message.success).not.toHaveBeenCalled();
   });
   it('看板只汇总已完成的 AI 洞察，保留真实零置信度', async () => {
-    api.predictQps.mockResolvedValueOnce({ ...response(), ai_enhanced: false, ai_fallback_reason: 'AI分析未完成',
-      scaling_recommendations: [{ action: 'scale_up', confidence: 0, reason: '规则', trigger_time: '2026-10-23T00:00:00Z' }] });
+    api.predictQps.mockResolvedValueOnce({
+      ...response(),
+      ai_enhanced: false,
+      ai_fallback_reason: 'AI分析未完成',
+      scaling_recommendations: [
+        {
+          action: 'scale_up',
+          confidence: 0,
+          reason: '规则',
+          trigger_time: '2026-10-23T00:00:00Z',
+        },
+      ],
+    });
     render(PredictDashboard, true);
     fillDashboard();
     await state().refreshAllPredictions();

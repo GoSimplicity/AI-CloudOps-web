@@ -350,8 +350,8 @@ onMounted(() => {
     </template>
 
     <!-- 统计卡片 -->
-    <template #summary
-      ><div class="stats-grid">
+    <template #summary>
+      <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-number">{{ paginationConfig.total }}</div>
           <div class="stat-label">总API数</div>
@@ -364,12 +364,12 @@ onMounted(() => {
           <div class="stat-number">{{ apiStatistics.private_count || 0 }}</div>
           <div class="stat-label">私有API</div>
         </div>
-      </div></template
-    >
+      </div>
+    </template>
 
     <!-- 搜索筛选区域 -->
-    <template #filters
-      ><div class="ops-filter-row">
+    <template #filters>
+      <div class="ops-filter-row">
         <div class="search-left">
           <a-input
             v-model:value="searchParams.search"
@@ -411,8 +411,8 @@ onMounted(() => {
           <a-button type="primary" @click="handleSearch">搜索</a-button>
           <a-button @click="handleReset">重置</a-button>
         </div>
-      </div></template
-    >
+      </div>
+    </template>
 
     <!-- API表格 -->
     <div class="table-container">
@@ -445,9 +445,9 @@ onMounted(() => {
           </template>
 
           <template v-if="column.key === 'version'">
-            <a-tag v-if="record.version" color="blue">{{
-              record.version
-            }}</a-tag>
+            <a-tag v-if="record.version" color="blue">
+              {{ record.version }}
+            </a-tag>
             <span v-else class="no-version">-</span>
           </template>
 
@@ -473,12 +473,12 @@ onMounted(() => {
 
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
-              <a-button type="text" size="small" @click="handleView(record)"
-                >查看</a-button
-              >
-              <a-button type="text" size="small" @click="handleEdit(record)"
-                >编辑</a-button
-              >
+              <a-button type="text" size="small" @click="handleView(record)">
+                查看
+              </a-button>
+              <a-button type="text" size="small" @click="handleEdit(record)">
+                编辑
+              </a-button>
               <a-popconfirm
                 v-if="can('system.api.delete')"
                 title="确定要删除吗？"

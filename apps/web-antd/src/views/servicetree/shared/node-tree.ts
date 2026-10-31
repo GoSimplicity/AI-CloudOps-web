@@ -5,10 +5,13 @@ interface NodeShape {
 }
 
 // 搜索后代时保留祖先路径，匹配父节点时保留其完整分支
-export function filterNodeTree<T extends NodeShape>(nodes: T[], search: string): T[] {
+export function filterNodeTree<T extends NodeShape>(
+  nodes: T[],
+  search: string,
+): T[] {
   const needle = search.trim().toLowerCase();
   if (!needle) return nodes;
-  return nodes.flatMap(node => {
+  return nodes.flatMap((node) => {
     if (node.name.toLowerCase().includes(needle)) return [node];
     const children = filterNodeTree(node.children ?? [], needle);
     return children.length ? [{ ...node, children }] : [];

@@ -1,19 +1,35 @@
 <template>
-  <OpsPage title="根因分析" description="明确发起分析后汇总观测与根因证据" class="rca-analysis">
+  <OpsPage
+    title="根因分析"
+    description="明确发起分析后汇总观测与根因证据"
+    class="rca-analysis"
+  >
     <!-- 页面头部 -->
     <template #actions>
-<a-button
-            type="primary" 
-            size="large" 
-            @click="startAnalysis"
-            :loading="analyzing"
-            :disabled="!isFormValid || analyzing"
-          >
-            {{ analyzing ? '分析中...' : '开始分析' }}
-          </a-button>
+      <a-button
+        type="primary"
+        size="large"
+        @click="startAnalysis"
+        :loading="analyzing"
+        :disabled="!isFormValid || analyzing"
+      >
+        {{ analyzing ? '分析中...' : '开始分析' }}
+      </a-button>
     </template>
-    <a-alert v-if="analysisError" :message="analysisError" type="error" show-icon role="alert" />
-    <a-alert v-if="metricsError" :message="metricsError" type="warning" show-icon role="alert" />
+    <a-alert
+      v-if="analysisError"
+      :message="analysisError"
+      type="error"
+      show-icon
+      role="alert"
+    />
+    <a-alert
+      v-if="metricsError"
+      :message="metricsError"
+      type="warning"
+      show-icon
+      role="alert"
+    />
 
     <a-row :gutter="[24, 24]">
       <!-- 左侧配置面板 -->
@@ -22,7 +38,8 @@
           <a-form :model="formData" layout="vertical">
             <a-form-item label="Kubernetes命名空间" name="namespace" required>
               <a-input
-                v-model:value="formData.namespace" :disabled="analyzing"
+                v-model:value="formData.namespace"
+                :disabled="analyzing"
                 placeholder="输入要分析的K8s命名空间"
                 :status="!formData.namespace ? 'warning' : ''"
               />
@@ -33,7 +50,8 @@
 
             <a-form-item label="分析时间窗口" name="timeWindowHours">
               <a-slider
-                v-model:value="formData.timeWindowHours" :disabled="analyzing"
+                v-model:value="formData.timeWindowHours"
+                :disabled="analyzing"
                 :min="0.5"
                 :max="24"
                 :marks="timeMarks"
@@ -45,7 +63,8 @@
 
             <a-form-item label="Prometheus指标（可选）" name="metrics">
               <a-select
-                v-model:value="formData.metrics" :disabled="analyzing"
+                v-model:value="formData.metrics"
+                :disabled="analyzing"
                 mode="multiple"
                 placeholder="选择要分析的指标"
                 :loading="loadingMetrics"
@@ -56,10 +75,10 @@
                 allow-clear
               />
               <a-button
-                size="small" 
-                @click="loadAvailableMetrics" 
-                :loading="loadingMetrics" 
-                style="margin-top: 8px;"
+                size="small"
+                @click="loadAvailableMetrics"
+                :loading="loadingMetrics"
+                style="margin-top: 8px"
               >
                 刷新指标
               </a-button>
@@ -69,11 +88,18 @@
 
         <!-- 分析状态卡片 -->
         <a-card v-if="analysisResult" title="分析概览" class="status-card">
-          <CollectionSummary :status="analysisResult.status" :collection="analysisResult.collection" />
+          <CollectionSummary
+            :status="analysisResult.status"
+            :collection="analysisResult.collection"
+          />
           <a-statistic
             title="分析ID"
-            :value="analysisResult?.analysis_id ? analysisResult.analysis_id.substring(0, 8) + '…' : '未知'"
-            style="margin-bottom: 16px;"
+            :value="
+              analysisResult?.analysis_id
+                ? analysisResult.analysis_id.substring(0, 8) + '…'
+                : '未知'
+            "
+            style="margin-bottom: 16px"
           >
             <template #suffix>
               <a-tooltip :title="analysisResult?.analysis_id">
@@ -83,14 +109,27 @@
           </a-statistic>
 
           <a-statistic
-            v-if="analysisResult.status === 'completed' || analysisResult.status === 'degraded'"
+            v-if="
+              analysisResult.status === 'completed' ||
+              analysisResult.status === 'degraded'
+            "
             title="置信度"
-            :value="Number.isFinite(analysisResult?.confidence_score) ? (analysisResult.confidence_score * 100).toFixed(1) : '未知'"
-            :suffix="Number.isFinite(analysisResult?.confidence_score) ? '%' : ''"
-            :value-style="{ color: getConfidenceColor(analysisResult?.confidence_score || 0) }"
+            :value="
+              Number.isFinite(analysisResult?.confidence_score)
+                ? (analysisResult.confidence_score * 100).toFixed(1)
+                : '未知'
+            "
+            :suffix="
+              Number.isFinite(analysisResult?.confidence_score) ? '%' : ''
+            "
+            :value-style="{
+              color: getConfidenceColor(analysisResult?.confidence_score || 0),
+            }"
           >
             <template #prefix>
-              <CheckCircleOutlined v-if="(analysisResult?.confidence_score || 0) > 0.7" />
+              <CheckCircleOutlined
+                v-if="(analysisResult?.confidence_score || 0) > 0.7"
+              />
               <ExclamationCircleOutlined v-else />
             </template>
           </a-statistic>
@@ -100,20 +139,28 @@
       <!-- 右侧结果面板 -->
       <a-col :xs="24" :lg="17">
         <!-- 分析中的加载状态 -->
-        <a-card 
-          v-if="analyzing" 
-          class="loading-card"
-        >
-          <div  class="loading-container"><a-spin /><p>正在等待服务返回实际结果，请稍候</p></div>
+        <a-card v-if="analyzing" class="loading-card">
+          <div class="loading-container">
+            <a-spin />
+            <p>正在等待服务返回实际结果，请稍候</p>
+          </div>
         </a-card>
 
         <!-- 分析结果 -->
-        <a-card 
-          v-else-if="analysisResult && (analysisResult.status === 'completed' || analysisResult.status === 'degraded')"
+        <a-card
+          v-else-if="
+            analysisResult &&
+            (analysisResult.status === 'completed' ||
+              analysisResult.status === 'degraded')
+          "
           class="result-card"
           :body-style="{ padding: 0 }"
         >
-          <a-tabs v-model:activeKey="activeResultTab" @change="onResultTabChange" class="result-tabs">
+          <a-tabs
+            v-model:activeKey="activeResultTab"
+            @change="onResultTabChange"
+            class="result-tabs"
+          >
             <!-- 根因分析标签页 -->
             <a-tab-pane key="root-causes" tab="根因分析">
               <div class="tab-content">
@@ -123,19 +170,25 @@
                     <a-col :span="8">
                       <div class="meta-item">
                         <span class="meta-label">命名空间</span>
-                        <span class="meta-value">{{ analysisResult?.namespace }}</span>
+                        <span class="meta-value">{{
+                          analysisResult?.namespace
+                        }}</span>
                       </div>
                     </a-col>
                     <a-col :span="8">
                       <div class="meta-item">
                         <span class="meta-label">时间窗口</span>
-                        <span class="meta-value">{{ analysisResult?.time_window_hours }}小时</span>
+                        <span class="meta-value"
+                          >{{ analysisResult?.time_window_hours }}小时</span
+                        >
                       </div>
                     </a-col>
                     <a-col :span="8">
                       <div class="meta-item">
                         <span class="meta-label">分析时间</span>
-                        <span class="meta-value">{{ formatShortTime(analysisResult?.timestamp) }}</span>
+                        <span class="meta-value">{{
+                          formatShortTime(analysisResult?.timestamp)
+                        }}</span>
                       </div>
                     </a-col>
                   </a-row>
@@ -143,15 +196,23 @@
 
                 <!-- 根因列表 -->
                 <div class="root-causes-container">
-                  <div v-if="analysisResult?.root_causes?.length" class="root-causes-list">
-                    <div 
-                      v-for="(cause, index) in analysisResult?.root_causes || []" 
-                      :key="index" 
+                  <div
+                    v-if="analysisResult?.root_causes?.length"
+                    class="root-causes-list"
+                  >
+                    <div
+                      v-for="(cause, index) in analysisResult?.root_causes ||
+                      []"
+                      :key="index"
                       class="root-cause-card"
                     >
                       <div class="cause-header">
                         <div class="cause-title">
-                          <AlertOutlined :style="{ color: getConfidenceColor(cause.confidence) }" />
+                          <AlertOutlined
+                            :style="{
+                              color: getConfidenceColor(cause.confidence),
+                            }"
+                          />
                           <span class="cause-type">{{ cause.cause_type }}</span>
                         </div>
                         <a-tag :color="getConfidenceColor(cause.confidence)">
@@ -164,39 +225,57 @@
                       <!-- 证据展示 -->
                       <div v-if="cause.evidence" class="evidence-section">
                         <!-- 事件证据 -->
-                        <div v-if="cause.evidence.events?.length" class="evidence-block">
+                        <div
+                          v-if="cause.evidence.events?.length"
+                          class="evidence-block"
+                        >
                           <h5 class="evidence-title">
                             <FileTextOutlined />
                             关键事件
                           </h5>
                           <div class="events-list">
-                            <div 
-                              v-for="(event, idx) in cause.evidence.events.slice(0, 3)" 
+                            <div
+                              v-for="(
+                                event, idx
+                              ) in cause.evidence.events.slice(0, 3)"
                               :key="idx"
                               class="event-item"
                             >
-                              <a-tag color="orange" class="event-tag">{{ event.reason }}</a-tag>
-                              <span class="event-count">×{{ event.count }}</span>
+                              <a-tag color="orange" class="event-tag">
+                                {{ event.reason }}
+                              </a-tag>
+                              <span class="event-count"
+                                >×{{ event.count }}</span
+                              >
                               <a-tooltip :title="event.message">
-                                <span class="event-message">{{ truncateText(event.message, 60) }}</span>
+                                <span class="event-message">{{
+                                  truncateText(event.message, 60)
+                                }}</span>
                               </a-tooltip>
                             </div>
-                            <div v-if="cause.evidence.events.length > 3" class="more-indicator">
-                              还有 {{ cause.evidence.events.length - 3 }} 个事件...
+                            <div
+                              v-if="cause.evidence.events.length > 3"
+                              class="more-indicator"
+                            >
+                              还有
+                              {{ cause.evidence.events.length - 3 }} 个事件...
                             </div>
                           </div>
                         </div>
 
                         <!-- 日志证据 -->
-                        <div v-if="cause.evidence.logs?.length" class="evidence-block">
+                        <div
+                          v-if="cause.evidence.logs?.length"
+                          class="evidence-block"
+                        >
                           <h5 class="evidence-title">
                             <BugOutlined />
                             错误类型
                           </h5>
                           <div class="logs-tags">
-                            <a-tag 
-                              v-for="log in cause.evidence.logs" 
-                              :key="log" 
+                            <a-tag
+                              v-for="log in cause.evidence.logs"
+                              :key="log"
                               color="red"
                             >
                               {{ log }}
@@ -219,13 +298,17 @@
                   <a-row :gutter="[16, 16]">
                     <a-col :xs="12" :sm="6">
                       <div class="stat-card">
-                        <div class="stat-value">{{ getCriticalEventsCount() }}</div>
+                        <div class="stat-value">
+                          {{ getCriticalEventsCount() }}
+                        </div>
                         <div class="stat-label">关键事件</div>
                       </div>
                     </a-col>
                     <a-col :xs="12" :sm="6">
                       <div class="stat-card">
-                        <div class="stat-value">{{ getEventClustersCount() }}</div>
+                        <div class="stat-value">
+                          {{ getEventClustersCount() }}
+                        </div>
                         <div class="stat-label">事件集群</div>
                       </div>
                     </a-col>
@@ -256,13 +339,19 @@
                     <a-col :span="12">
                       <div class="chart-wrapper">
                         <h4 class="chart-title">集群分布</h4>
-                        <div ref="clustersChartRef" class="chart-container-small"></div>
+                        <div
+                          ref="clustersChartRef"
+                          class="chart-container-small"
+                        ></div>
                       </div>
                     </a-col>
                     <a-col :span="12">
                       <div class="chart-wrapper">
                         <h4 class="chart-title">错误频率</h4>
-                        <div ref="errorLogsChartRef" class="chart-container-small"></div>
+                        <div
+                          ref="errorLogsChartRef"
+                          class="chart-container-small"
+                        ></div>
                       </div>
                     </a-col>
                   </a-row>
@@ -271,7 +360,10 @@
                 <!-- 详细数据 -->
                 <div v-if="hasAnomalies" class="anomaly-details">
                   <!-- 关键事件表格 -->
-                  <div v-if="getCriticalEventsCount() > 0" class="detail-section">
+                  <div
+                    v-if="getCriticalEventsCount() > 0"
+                    class="detail-section"
+                  >
                     <h4 class="section-title">关键事件列表</h4>
                     <div class="table-wrapper">
                       <a-table
@@ -287,15 +379,20 @@
                   <div v-if="hasErrorFrequency()" class="detail-section">
                     <h4 class="section-title">错误频率统计</h4>
                     <div class="error-freq-list">
-                      <div 
-                        v-for="(count, key) in analysisResult?.anomalies?.logs?.error_frequency || {}" 
+                      <div
+                        v-for="(count, key) in analysisResult?.anomalies?.logs
+                          ?.error_frequency || {}"
                         :key="key"
                         class="error-freq-item"
                       >
-                        <span class="error-name">{{ truncateText(String(key), 40) }}</span>
-                        <a-progress 
-                          :percent="getErrorFrequencyPercent(count as number)" 
-                          :stroke-color="getErrorFrequencyColor(count as number)"
+                        <span class="error-name">{{
+                          truncateText(String(key), 40)
+                        }}</span>
+                        <a-progress
+                          :percent="getErrorFrequencyPercent(count as number)"
+                          :stroke-color="
+                            getErrorFrequencyColor(count as number)
+                          "
                           :show-info="false"
                           size="small"
                         />
@@ -313,9 +410,11 @@
             <a-tab-pane key="correlations" tab="相关性分析">
               <div class="tab-content">
                 <div v-if="hasCorrelations()" class="correlations-list">
-                  <div 
-                    v-for="(correlation, index) in analysisResult?.correlations || []" 
-                    :key="index" 
+                  <div
+                    v-for="(
+                      correlation, index
+                    ) in analysisResult?.correlations || []"
+                    :key="index"
                     class="correlation-card"
                   >
                     <div class="correlation-header">
@@ -323,7 +422,9 @@
                         <NodeIndexOutlined />
                         <span>{{ correlation.correlation_type }}</span>
                       </div>
-                      <a-tag :color="getConfidenceColor(correlation.confidence)">
+                      <a-tag
+                        :color="getConfidenceColor(correlation.confidence)"
+                      >
                         {{ (correlation.confidence * 100).toFixed(0) }}%
                       </a-tag>
                     </div>
@@ -331,9 +432,9 @@
                     <div class="correlation-evidence">
                       <h5>证据链</h5>
                       <div class="evidence-list">
-                        <a-tag 
-                          v-for="ev in correlation.evidence" 
-                          :key="ev" 
+                        <a-tag
+                          v-for="ev in correlation.evidence"
+                          :key="ev"
                           color="blue"
                         >
                           {{ ev }}
@@ -341,20 +442,33 @@
                       </div>
                     </div>
 
-                    <div v-if="correlation.timeline?.length" class="timeline-section">
+                    <div
+                      v-if="correlation.timeline?.length"
+                      class="timeline-section"
+                    >
                       <h5>时间线</h5>
                       <div class="timeline-list">
-                        <div 
-                          v-for="(event, idx) in correlation.timeline.slice(0, 5)" 
+                        <div
+                          v-for="(event, idx) in correlation.timeline.slice(
+                            0,
+                            5,
+                          )"
                           :key="idx"
                           class="timeline-item"
                         >
-                          <span class="timeline-time">{{ formatShortTime(event.timestamp) }}</span>
-                          <a-tag :color="getSeverityColor(event.severity)" size="small">
+                          <span class="timeline-time">{{
+                            formatShortTime(event.timestamp)
+                          }}</span>
+                          <a-tag
+                            :color="getSeverityColor(event.severity)"
+                            size="small"
+                          >
                             {{ event.type }}
                           </a-tag>
                           <a-tooltip :title="event.description">
-                            <span class="timeline-desc">{{ truncateText(event.description, 50) }}</span>
+                            <span class="timeline-desc">{{
+                              truncateText(event.description, 50)
+                            }}</span>
                           </a-tooltip>
                         </div>
                       </div>
@@ -368,9 +482,13 @@
             <!-- 修复建议标签页 -->
             <a-tab-pane key="recommendations" tab="修复建议">
               <div class="tab-content">
-                <div v-if="analysisResult?.recommendations?.length" class="recommendations-list">
-                  <div 
-                    v-for="(rec, index) in analysisResult?.recommendations || []" 
+                <div
+                  v-if="analysisResult?.recommendations?.length"
+                  class="recommendations-list"
+                >
+                  <div
+                    v-for="(rec, index) in analysisResult?.recommendations ||
+                    []"
                     :key="index"
                     class="recommendation-card"
                   >
@@ -402,7 +520,7 @@
         <a-card v-else class="empty-card">
           <a-empty description="请配置参数并开始分析">
             <template #image>
-              <PartitionOutlined style="font-size: 64px; color: #bfbfbf;" />
+              <PartitionOutlined style="font-size: 64px; color: #bfbfbf" />
             </template>
           </a-empty>
         </a-card>
@@ -420,14 +538,23 @@ import { ref, reactive, computed, onMounted, nextTick, onUnmounted } from 'vue';
 // 按需引入echarts，减少打包体积
 import * as echarts from 'echarts/core';
 import { BarChart, PieChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components';
+import {
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  TitleComponent,
+} from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
 // 注册必需的组件
 echarts.use([
-  BarChart, PieChart,
-  GridComponent, TooltipComponent, LegendComponent, TitleComponent,
-  CanvasRenderer
+  BarChart,
+  PieChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  TitleComponent,
+  CanvasRenderer,
 ]);
 import { message } from 'ant-design-vue';
 import {
@@ -439,13 +566,13 @@ import {
   CheckCircleOutlined,
   InfoCircleOutlined,
   FileTextOutlined,
-  BugOutlined
+  BugOutlined,
 } from '@ant-design/icons-vue';
 import {
   analyzeRootCause,
   getAllPrometheusMetrics,
   type RCAAnalyzeRequest,
-  type RCAAnalysisResponse
+  type RCAAnalysisResponse,
 } from '../../api/core/aiops/rca';
 
 // 响应式数据
@@ -455,7 +582,7 @@ const analyzing = ref(false);
 const loadingMetrics = ref(false);
 const activeResultTab = ref('root-causes');
 const analysisResult = ref<RCAAnalysisResponse | null>(null);
-const availableMetrics = ref<Array<{label: string, value: string}>>([]);
+const availableMetrics = ref<Array<{ label: string; value: string }>>([]);
 
 // 图表引用
 const eventsChartRef = ref<HTMLElement>();
@@ -469,22 +596,31 @@ let errorLogsChart: echarts.ECharts | null = null;
 const formData = reactive({
   namespace: 'default',
   timeWindowHours: 2,
-  metrics: [] as string[]
+  metrics: [] as string[],
 });
 
 const scope = useAiRequestScope(() => {
-  analysisLane.invalidate(); metricsLane.invalidate();
-  analyzing.value = false; loadingMetrics.value = false;
-  analysisResult.value = null; availableMetrics.value = [];
-  analysisError.value = ''; metricsError.value = '';
-  formData.namespace = 'default'; formData.metrics = [];
+  analysisLane.invalidate();
+  metricsLane.invalidate();
+  analyzing.value = false;
+  loadingMetrics.value = false;
+  analysisResult.value = null;
+  availableMetrics.value = [];
+  analysisError.value = '';
+  metricsError.value = '';
+  formData.namespace = 'default';
+  formData.metrics = [];
   disposeCharts();
 });
 const analysisLane = scope.createLane();
 const metricsLane = scope.createLane();
 function disposeCharts() {
-  eventsChart?.dispose(); clustersChart?.dispose(); errorLogsChart?.dispose();
-  eventsChart = null; clustersChart = null; errorLogsChart = null;
+  eventsChart?.dispose();
+  clustersChart?.dispose();
+  errorLogsChart?.dispose();
+  eventsChart = null;
+  clustersChart = null;
+  errorLogsChart = null;
 }
 
 // 时间标记
@@ -493,7 +629,7 @@ const timeMarks = {
   2: '2h',
   6: '6h',
   12: '12h',
-  24: '24h'
+  24: '24h',
 };
 
 // 关键事件表格列定义
@@ -504,33 +640,39 @@ const criticalEventsColumns = [
     key: 'timestamp',
     width: 150,
     ellipsis: true,
-    customRender: ({ text }: any) => formatShortTime(text)
+    customRender: ({ text }: any) => formatShortTime(text),
   },
   {
     title: '原因',
     dataIndex: 'reason',
     key: 'reason',
     width: 120,
-    ellipsis: true
+    ellipsis: true,
   },
   {
     title: '次数',
     dataIndex: 'count',
     key: 'count',
     width: 80,
-    sorter: (a: any, b: any) => a.count - b.count
+    sorter: (a: any, b: any) => a.count - b.count,
   },
   {
     title: '消息',
     dataIndex: 'message',
     key: 'message',
     ellipsis: true,
-    customRender: ({ text }: any) => truncateText(text, 100)
-  }
+    customRender: ({ text }: any) => truncateText(text, 100),
+  },
 ];
 
 // 计算属性
-useChartAppearance(() => { if (['completed', 'degraded'].includes(analysisResult.value?.status ?? '') && activeResultTab.value === 'anomalies') initCharts(); });
+useChartAppearance(() => {
+  if (
+    ['completed', 'degraded'].includes(analysisResult.value?.status ?? '') &&
+    activeResultTab.value === 'anomalies'
+  )
+    initCharts();
+});
 
 const isFormValid = computed(() => {
   return !!scope.owner.value && formData.namespace.trim() !== '';
@@ -558,17 +700,21 @@ const truncateText = (text: string, maxLength: number) => {
 const loadAvailableMetrics = async () => {
   if (!scope.owner.value) return;
   const ticket = metricsLane.begin();
-  loadingMetrics.value = true; metricsError.value = '';
+  loadingMetrics.value = true;
+  metricsError.value = '';
   try {
     const response = await getAllPrometheusMetrics();
     if (!metricsLane.current(ticket)) return;
     const metrics = response.data?.items || response.items || response || [];
     if (!Array.isArray(metrics)) throw new Error('指标目录响应格式无效');
-    availableMetrics.value = metrics.filter((metric: unknown): metric is string => typeof metric === 'string').map(metric => ({ label: metric, value: metric }));
+    availableMetrics.value = metrics
+      .filter((metric: unknown): metric is string => typeof metric === 'string')
+      .map((metric) => ({ label: metric, value: metric }));
   } catch (error) {
     if (!metricsLane.current(ticket)) return;
     availableMetrics.value = [];
-    metricsError.value = error instanceof Error ? error.message : '指标目录读取失败，可刷新重试';
+    metricsError.value =
+      error instanceof Error ? error.message : '指标目录读取失败，可刷新重试';
   } finally {
     if (metricsLane.current(ticket)) loadingMetrics.value = false;
   }
@@ -595,13 +741,16 @@ const startAnalysis = async () => {
   }
 
   const ticket = analysisLane.begin();
-  analyzing.value = true; analysisError.value = ''; analysisResult.value = null; disposeCharts();
+  analyzing.value = true;
+  analysisError.value = '';
+  analysisResult.value = null;
+  disposeCharts();
 
   try {
     const request: RCAAnalyzeRequest = {
       namespace,
       time_window_hours: formData.timeWindowHours,
-      metrics: formData.metrics.length > 0 ? [...formData.metrics] : undefined
+      metrics: formData.metrics.length > 0 ? [...formData.metrics] : undefined,
     };
 
     const response = await analyzeRootCause(request);
@@ -610,26 +759,39 @@ const startAnalysis = async () => {
 
     await nextTick();
     if (!analysisLane.current(ticket)) return;
-    if ((response.status === 'completed' || response.status === 'degraded') && activeResultTab.value === 'anomalies') {
+    if (
+      (response.status === 'completed' || response.status === 'degraded') &&
+      activeResultTab.value === 'anomalies'
+    ) {
       initCharts();
     }
 
-    if (response.status === 'completed') message.success('根因分析已完成，请按实际证据评估结果');
-    else if (response.status === 'degraded') message.warning('根因分析已降级，请检查采集状态');
-    else if (response.status === 'failed') message.error('根因分析失败，请检查采集状态');
+    if (response.status === 'completed')
+      message.success('根因分析已完成，请按实际证据评估结果');
+    else if (response.status === 'degraded')
+      message.warning('根因分析已降级，请检查采集状态');
+    else if (response.status === 'failed')
+      message.error('根因分析失败，请检查采集状态');
     else message.warning('根因分析状态未知，请检查采集状态');
 
     // 如果有根因结果，显示摘要
-    if ((response.status === 'completed' || response.status === 'degraded') && response?.root_causes?.length > 0) {
-      const criticalCount = response.root_causes.filter(cause => cause.confidence > 0.7).length;
+    if (
+      (response.status === 'completed' || response.status === 'degraded') &&
+      response?.root_causes?.length > 0
+    ) {
+      const criticalCount = response.root_causes.filter(
+        (cause) => cause.confidence > 0.7,
+      ).length;
       if (criticalCount > 0) {
         message.warning(`发现 ${criticalCount} 个高置信度根因，请及时查看`);
       }
     }
   } catch (error) {
     if (!analysisLane.current(ticket)) return;
-    analysisResult.value = null; disposeCharts();
-    analysisError.value = error instanceof Error ? error.message : '根因分析失败，请核对参数后重试';
+    analysisResult.value = null;
+    disposeCharts();
+    analysisError.value =
+      error instanceof Error ? error.message : '根因分析失败，请核对参数后重试';
   } finally {
     if (analysisLane.current(ticket)) analyzing.value = false;
   }
@@ -641,20 +803,30 @@ const getCriticalEventsCount = () => {
 };
 
 const getEventClustersCount = () => {
-  return Object.keys(analysisResult.value?.anomalies?.events?.event_clusters || {}).length;
+  return Object.keys(
+    analysisResult.value?.anomalies?.events?.event_clusters || {},
+  ).length;
 };
 
 const getErrorTypesCount = () => {
-  return Object.keys(analysisResult.value?.anomalies?.logs?.error_types || {}).length;
+  return Object.keys(analysisResult.value?.anomalies?.logs?.error_types || {})
+    .length;
 };
 
 const getTotalErrorCount = () => {
-  const errorFreq = analysisResult.value?.anomalies?.logs?.error_frequency || {};
-  return Object.values(errorFreq).reduce((sum: number, count: any) => sum + (count as number), 0);
+  const errorFreq =
+    analysisResult.value?.anomalies?.logs?.error_frequency || {};
+  return Object.values(errorFreq).reduce(
+    (sum: number, count: any) => sum + (count as number),
+    0,
+  );
 };
 
 const hasCorrelations = () => {
-  return analysisResult.value?.correlations && analysisResult.value.correlations.length > 0;
+  return (
+    analysisResult.value?.correlations &&
+    analysisResult.value.correlations.length > 0
+  );
 };
 
 const hasErrorFrequency = () => {
@@ -667,14 +839,16 @@ const getCriticalEventsTableData = () => {
   const events = analysisResult.value?.anomalies?.events?.critical_events || [];
   return events.map((event: any, index: number) => ({
     key: index,
-    ...event
+    ...event,
   }));
 };
 
 // 获取错误频率百分比
 const getErrorFrequencyPercent = (count: number) => {
-  const values = Object.values(analysisResult.value?.anomalies?.logs?.error_frequency || {});
-  const maxCount = Math.max(...values.map(v => v as number));
+  const values = Object.values(
+    analysisResult.value?.anomalies?.logs?.error_frequency || {},
+  );
+  const maxCount = Math.max(...values.map((v) => v as number));
   return maxCount > 0 ? (count / maxCount) * 100 : 0;
 };
 
@@ -704,47 +878,50 @@ const initEventsChart = () => {
   }
   eventsChart = echarts.init(eventsChartRef.value);
 
-  const criticalEvents = analysisResult.value.anomalies?.events?.critical_events || [];
-  const sortedEvents = [...criticalEvents].sort((a, b) => 
-    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  const criticalEvents =
+    analysisResult.value.anomalies?.events?.critical_events || [];
+  const sortedEvents = [...criticalEvents].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   );
 
   const option = {
     textStyle: { color: chartColors().text },
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
     grid: {
       left: '3%',
       right: '4%',
       bottom: '15%',
       top: '5%',
-      containLabel: true
+      containLabel: true,
     },
     tooltip: {
       trigger: 'axis',
       formatter: (params: any) => {
         const data = params[0];
         return `${data.name}<br/>事件数: ${data.value}`;
-      }
+      },
     },
     xAxis: {
       type: 'category',
-      data: sortedEvents.map(e => formatShortTime(e.timestamp)),
+      data: sortedEvents.map((e) => formatShortTime(e.timestamp)),
       axisLabel: {
         rotate: 45,
-        interval: Math.floor(sortedEvents.length / 8)
-      }
+        interval: Math.floor(sortedEvents.length / 8),
+      },
     },
     yAxis: {
       type: 'value',
-      name: '次数'
+      name: '次数',
     },
-    series: [{
-      data: sortedEvents.map(e => e.count),
-      type: 'bar',
-      itemStyle: {
-        color: chartColors().accent
-      }
-    }]
+    series: [
+      {
+        data: sortedEvents.map((e) => e.count),
+        type: 'bar',
+        itemStyle: {
+          color: chartColors().accent,
+        },
+      },
+    ],
   };
 
   eventsChart.setOption(option);
@@ -762,38 +939,40 @@ const initClustersChart = () => {
   const clusters = analysisResult.value.anomalies?.events?.event_clusters || {};
   const clusterData = Object.entries(clusters).map(([key, events]) => ({
     name: truncateText(key, 20),
-    value: (events as any[]).reduce((sum, e) => sum + (e.count ?? 0), 0)
+    value: (events as any[]).reduce((sum, e) => sum + (e.count ?? 0), 0),
   }));
 
   const option = {
     textStyle: { color: chartColors().text },
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      formatter: '{b}: {c} ({d}%)'
+      formatter: '{b}: {c} ({d}%)',
     },
-    series: [{
-      type: 'pie',
-      radius: ['40%', '70%'],
-      avoidLabelOverlap: false,
-      itemStyle: {
-        borderRadius: 10,
-        borderColor: chartColors().surface,
-        borderWidth: 2
-      },
-      label: {
-        show: false,
-        position: 'center'
-      },
-      emphasis: {
+    series: [
+      {
+        type: 'pie',
+        radius: ['40%', '70%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 10,
+          borderColor: chartColors().surface,
+          borderWidth: 2,
+        },
         label: {
-          show: true,
-          fontSize: 14,
-          fontWeight: 'bold'
-        }
+          show: false,
+          position: 'center',
+        },
+        emphasis: {
+          label: {
+            show: true,
+            fontSize: 14,
+            fontWeight: 'bold',
+          },
+        },
+        data: clusterData,
       },
-      data: clusterData
-    }]
+    ],
   };
 
   clustersChart.setOption(option);
@@ -808,49 +987,52 @@ const initErrorLogsChart = () => {
   }
   errorLogsChart = echarts.init(errorLogsChartRef.value);
 
-  const errorFrequency = analysisResult.value.anomalies?.logs?.error_frequency || {};
+  const errorFrequency =
+    analysisResult.value.anomalies?.logs?.error_frequency || {};
   const errorData = Object.entries(errorFrequency)
     .map(([key, value]) => ({
       name: truncateText(key.split('_')[1] || key, 15),
-      value: value as number
+      value: value as number,
     }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 10);
 
   const option = {
     textStyle: { color: chartColors().text },
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
     grid: {
       left: '3%',
       right: '4%',
       bottom: '20%',
       top: '5%',
-      containLabel: true
+      containLabel: true,
     },
     tooltip: {
       trigger: 'axis',
       axisPointer: {
-        type: 'shadow'
-      }
+        type: 'shadow',
+      },
     },
     xAxis: {
       type: 'category',
-      data: errorData.map(e => e.name),
+      data: errorData.map((e) => e.name),
       axisLabel: {
         rotate: 45,
-        interval: 0
-      }
+        interval: 0,
+      },
     },
     yAxis: {
-      type: 'value'
+      type: 'value',
     },
-    series: [{
-      data: errorData.map(e => e.value),
-      type: 'bar',
-      itemStyle: {
-        color: '#ff4d4f'
-      }
-    }]
+    series: [
+      {
+        data: errorData.map((e) => e.value),
+        type: 'bar',
+        itemStyle: {
+          color: '#ff4d4f',
+        },
+      },
+    ],
   };
 
   errorLogsChart.setOption(option);
@@ -878,11 +1060,11 @@ const getConfidenceColor = (confidence: number) => {
 // 获取严重程度颜色
 const getSeverityColor = (severity: string) => {
   const severityMap: Record<string, string> = {
-    'critical': '#ff4d4f',
-    'high': '#ff7875',
-    'medium': '#faad14',
-    'low': '#1890ff',
-    'info': '#52c41a'
+    critical: '#ff4d4f',
+    high: '#ff7875',
+    medium: '#faad14',
+    low: '#1890ff',
+    info: '#52c41a',
   };
   return severityMap[severity] || '#d9d9d9';
 };
@@ -897,7 +1079,7 @@ const formatShortTime = (timestamp?: string) => {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 };
 
@@ -932,15 +1114,7 @@ onUnmounted(() => {
 });
 </script>
 <style scoped>
-
 /* 页面头部 */
-
-
-
-
-
-
-
 
 /* 卡片样式 */
 .config-card,
@@ -1056,7 +1230,8 @@ onUnmounted(() => {
 
 /* 动画效果 */
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -1534,13 +1709,6 @@ onUnmounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-
-
-
-
-
-
-
   /* 加载状态响应式 */
   .loading-container {
     padding: 40px 20px;
@@ -1594,11 +1762,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 576px) {
-
-
-
-
-
   /* 小屏幕加载状态 */
   .loading-container {
     padding: 30px 16px;
@@ -1649,9 +1812,23 @@ onUnmounted(() => {
 }
 
 @media (max-width: 575px) {
-  .overview-grid, .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ops-space-sm); }
-  .overview-card, .metric-card { min-width: 0; padding: var(--ops-space-md); }
-  .card-value, .metric-value { overflow-wrap: anywhere; }
-  .section-header { flex-wrap: wrap; gap: var(--ops-space-sm); }
+  .overview-grid,
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ops-space-sm);
+  }
+  .overview-card,
+  .metric-card {
+    min-width: 0;
+    padding: var(--ops-space-md);
+  }
+  .card-value,
+  .metric-value {
+    overflow-wrap: anywhere;
+  }
+  .section-header {
+    flex-wrap: wrap;
+    gap: var(--ops-space-sm);
+  }
 }
 </style>

@@ -25,15 +25,15 @@
           @change="handleSearch"
           allow-clear
         >
-          <a-select-option :value="AlertRuleSeverity.Critical"
-            >Critical</a-select-option
-          >
-          <a-select-option :value="AlertRuleSeverity.Warning"
-            >Warning</a-select-option
-          >
-          <a-select-option :value="AlertRuleSeverity.Info"
-            >Info</a-select-option
-          >
+          <a-select-option :value="AlertRuleSeverity.Critical">
+            Critical
+          </a-select-option>
+          <a-select-option :value="AlertRuleSeverity.Warning">
+            Warning
+          </a-select-option>
+          <a-select-option :value="AlertRuleSeverity.Info">
+            Info
+          </a-select-option>
         </a-select>
         <a-select
           v-model:value="searchParams.enable"
@@ -50,66 +50,78 @@
     </template>
 
     <!-- 统计卡片 -->
-    <template #summary><div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="总规则"
-              :value="loadError ? '未知' : stats.total"
-              :value-style="{ color: '#3f8600' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:container-registry" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="本页Critical"
-              :value="loadError ? '未知' : stats.critical"
-              :value-style="{ color: '#cf1322' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:warning-alt" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="本页Warning"
-              :value="loadError ? '未知' : stats.warning"
-              :value-style="{ color: '#faad14' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:notification" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="本页已启用"
-              :value="loadError ? '未知' : stats.enabled"
-              :value-style="{ color: '#1890ff' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:checkmark-outline" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div></template>
+    <template #summary>
+      <div class="stats-row">
+        <a-row :gutter="[16, 16]">
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="总规则"
+                :value="loadError ? '未知' : stats.total"
+                :value-style="{ color: '#3f8600' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:container-registry" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页Critical"
+                :value="loadError ? '未知' : stats.critical"
+                :value-style="{ color: '#cf1322' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:warning-alt" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页Warning"
+                :value="loadError ? '未知' : stats.warning"
+                :value-style="{ color: '#faad14' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:notification" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页已启用"
+                :value="loadError ? '未知' : stats.enabled"
+                :value-style="{ color: '#1890ff' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:checkmark-outline" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
+    </template>
 
     <!-- 表格容器 -->
-    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
-      <template #action><a-button size="small" :loading="loading" @click="fetchAlertRules">重试</a-button></template>
+    <a-alert
+      v-if="loadError"
+      type="error"
+      show-icon
+      :message="loadError"
+      role="alert"
+    >
+      <template #action>
+        <a-button size="small" :loading="loading" @click="fetchAlertRules">
+          重试
+        </a-button>
+      </template>
     </a-alert>
 
     <div class="table-container">
@@ -179,9 +191,9 @@
                         </a-tag>
                       </div>
                     </template>
-                    <a-tag class="tech-tag more-tag"
-                      >+{{ record.labels.length - 2 }}</a-tag
-                    >
+                    <a-tag class="tech-tag more-tag">
+                      +{{ record.labels.length - 2 }}
+                    </a-tag>
                   </a-popover>
                 </template>
                 <span v-else class="empty-text">无标签</span>
@@ -234,9 +246,9 @@
                         </a-tag>
                       </div>
                     </template>
-                    <a-tag class="tech-tag more-tag"
-                      >+{{ record.annotations.length - 2 }}</a-tag
-                    >
+                    <a-tag class="tech-tag more-tag">
+                      +{{ record.annotations.length - 2 }}
+                    </a-tag>
                   </a-popover>
                 </template>
                 <span v-else class="empty-text">无注解</span>
@@ -453,15 +465,15 @@
                   v-model:value="addForm.severity"
                   placeholder="请选择严重性"
                 >
-                  <a-select-option :value="AlertRuleSeverity.Critical"
-                    >Critical</a-select-option
-                  >
-                  <a-select-option :value="AlertRuleSeverity.Warning"
-                    >Warning</a-select-option
-                  >
-                  <a-select-option :value="AlertRuleSeverity.Info"
-                    >Info</a-select-option
-                  >
+                  <a-select-option :value="AlertRuleSeverity.Critical">
+                    Critical
+                  </a-select-option>
+                  <a-select-option :value="AlertRuleSeverity.Warning">
+                    Warning
+                  </a-select-option>
+                  <a-select-option :value="AlertRuleSeverity.Info">
+                    Info
+                  </a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>
@@ -683,15 +695,15 @@
                   v-model:value="editForm.severity"
                   placeholder="请选择严重性"
                 >
-                  <a-select-option :value="AlertRuleSeverity.Critical"
-                    >Critical</a-select-option
-                  >
-                  <a-select-option :value="AlertRuleSeverity.Warning"
-                    >Warning</a-select-option
-                  >
-                  <a-select-option :value="AlertRuleSeverity.Info"
-                    >Info</a-select-option
-                  >
+                  <a-select-option :value="AlertRuleSeverity.Critical">
+                    Critical
+                  </a-select-option>
+                  <a-select-option :value="AlertRuleSeverity.Warning">
+                    Warning
+                  </a-select-option>
+                  <a-select-option :value="AlertRuleSeverity.Info">
+                    Info
+                  </a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>
@@ -810,18 +822,18 @@
         </div>
 
         <a-descriptions bordered :column="1" :label-style="{ width: '150px' }">
-          <a-descriptions-item label="ID">{{
-            currentRecord.id
-          }}</a-descriptions-item>
-          <a-descriptions-item label="表达式">{{
-            currentRecord.expr
-          }}</a-descriptions-item>
-          <a-descriptions-item label="持续时间">{{
-            currentRecord.for_time
-          }}</a-descriptions-item>
-          <a-descriptions-item label="目标地址">{{
-            currentRecord.ip_address
-          }}</a-descriptions-item>
+          <a-descriptions-item label="ID">
+            {{ currentRecord.id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="表达式">
+            {{ currentRecord.expr }}
+          </a-descriptions-item>
+          <a-descriptions-item label="持续时间">
+            {{ currentRecord.for_time }}
+          </a-descriptions-item>
+          <a-descriptions-item label="目标地址">
+            {{ currentRecord.ip_address }}
+          </a-descriptions-item>
           <a-descriptions-item label="实例池">
             {{ getPoolName(currentRecord.pool_id) }}
           </a-descriptions-item>
@@ -838,9 +850,9 @@
 
         <div class="detail-footer">
           <a-button @click="closeDetailModal">关闭</a-button>
-          <a-button type="primary" @click="showEditModal(currentRecord!)"
-            >编辑</a-button
-          >
+          <a-button type="primary" @click="showEditModal(currentRecord!)">
+            编辑
+          </a-button>
         </div>
       </div>
     </a-modal>
@@ -1523,7 +1535,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-
 .search-filters {
   display: flex;
   flex-wrap: wrap;
@@ -1811,7 +1822,8 @@ onMounted(() => {
   gap: 8px;
 }
 
-.label-key-input, .label-value-input {
+.label-key-input,
+.label-value-input {
   flex: 1;
 }
 
@@ -1876,7 +1888,6 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-
   .search-filters {
     width: 100%;
   }
@@ -1890,8 +1901,6 @@ onMounted(() => {
     width: 100%;
     min-width: auto;
   }
-
-
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
@@ -1921,7 +1930,6 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-
   .creator-info {
     flex-direction: column;
     gap: 4px;

@@ -3,153 +3,184 @@
     <!-- 页面标题 -->
     <template #actions>
       <a-button type="primary" @click="showAddModal" class="btn-create">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          <span class="btn-text">新增监控配置</span>
-        </a-button>
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        <span class="btn-text">新增监控配置</span>
+      </a-button>
     </template>
     <template #filters>
       <div class="search-filters">
-          <a-input-search 
-            v-model:value="searchText" 
-            placeholder="搜索配置名称..." 
-            class="search-input" 
-            @search="handleSearch"
-            @change="handleSearchChange" 
-            allow-clear 
-          />
-          <a-select 
-            v-model:value="searchPoolId" 
-            placeholder="实例池（本页）"
-            class="filter-select"
-            @change="handleFilterChange" 
-            allow-clear
+        <a-input-search
+          v-model:value="searchText"
+          placeholder="搜索配置名称..."
+          class="search-input"
+          @search="handleSearch"
+          @change="handleSearchChange"
+          allow-clear
+        />
+        <a-select
+          v-model:value="searchPoolId"
+          placeholder="实例池（本页）"
+          class="filter-select"
+          @change="handleFilterChange"
+          allow-clear
+        >
+          <a-select-option :value="undefined">全部实例池</a-select-option>
+          <a-select-option
+            v-for="pool in poolOptions"
+            :key="pool.id"
+            :value="pool.id"
           >
-            <a-select-option :value="undefined">全部实例池</a-select-option>
-            <a-select-option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
-              {{ pool.name }}
-            </a-select-option>
-          </a-select>
-          <a-select 
-            v-model:value="searchConfigType" 
-            placeholder="全部类型" 
-            class="filter-select"
-            @change="handleFilterChange" 
-            allow-clear
-          >
-            <a-select-option :value="undefined">全部类型</a-select-option>
-            <a-select-option :value="ConfigType.Prometheus">Prometheus配置</a-select-option>
-            <a-select-option :value="ConfigType.AlertManager">AlertManager配置</a-select-option>
-            <a-select-option :value="ConfigType.AlertRule">告警规则配置</a-select-option>
-            <a-select-option :value="ConfigType.RecordRule">预聚合规则配置</a-select-option>
-            <a-select-option :value="ConfigType.WebhookFile">Webhook文件</a-select-option>
-          </a-select>
-          <a-select 
-            v-model:value="searchStatus" 
-            placeholder="全部状态" 
-            class="filter-select"
-            @change="handleFilterChange" 
-            allow-clear
-          >
-            <a-select-option :value="undefined">全部状态</a-select-option>
-            <a-select-option :value="ConfigStatus.Active">激活</a-select-option>
-            <a-select-option :value="ConfigStatus.Inactive">非激活</a-select-option>
-          </a-select>
-          <a-button @click="handleReset" class="reset-btn">
-            重置
-          </a-button>
-        </div>
+            {{ pool.name }}
+          </a-select-option>
+        </a-select>
+        <a-select
+          v-model:value="searchConfigType"
+          placeholder="全部类型"
+          class="filter-select"
+          @change="handleFilterChange"
+          allow-clear
+        >
+          <a-select-option :value="undefined">全部类型</a-select-option>
+          <a-select-option :value="ConfigType.Prometheus">
+            Prometheus配置
+          </a-select-option>
+          <a-select-option :value="ConfigType.AlertManager">
+            AlertManager配置
+          </a-select-option>
+          <a-select-option :value="ConfigType.AlertRule">
+            告警规则配置
+          </a-select-option>
+          <a-select-option :value="ConfigType.RecordRule">
+            预聚合规则配置
+          </a-select-option>
+          <a-select-option :value="ConfigType.WebhookFile">
+            Webhook文件
+          </a-select-option>
+        </a-select>
+        <a-select
+          v-model:value="searchStatus"
+          placeholder="全部状态"
+          class="filter-select"
+          @change="handleFilterChange"
+          allow-clear
+        >
+          <a-select-option :value="undefined">全部状态</a-select-option>
+          <a-select-option :value="ConfigStatus.Active">激活</a-select-option>
+          <a-select-option :value="ConfigStatus.Inactive">
+            非激活
+          </a-select-option>
+        </a-select>
+        <a-button @click="handleReset" class="reset-btn"> 重置 </a-button>
+      </div>
     </template>
 
     <!-- 统计卡片 -->
     <template #summary>
       <div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="总配置数" 
-              :value="loadError ? '未知' : stats.total"
-              :value-style="{ color: '#3f8600' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:settings" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="本页激活配置"
-              :value="loadError ? '未知' : stats.active"
-              :value-style="{ color: '#52c41a' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:checkmark-filled" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="本页告警规则"
-              :value="loadError ? '未知' : stats.alertRules"
-              :value-style="{ color: '#faad14' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:warning-alt" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic 
-              title="本页实例数"
-              :value="loadError ? '未知' : stats.instances"
-              :value-style="{ color: '#cf1322' }"
-            >
-              <template #prefix>
-                <Icon icon="carbon:server" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div>
+        <a-row :gutter="[16, 16]">
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="总配置数"
+                :value="loadError ? '未知' : stats.total"
+                :value-style="{ color: '#3f8600' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:settings" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页激活配置"
+                :value="loadError ? '未知' : stats.active"
+                :value-style="{ color: '#52c41a' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:checkmark-filled" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页告警规则"
+                :value="loadError ? '未知' : stats.alertRules"
+                :value-style="{ color: '#faad14' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:warning-alt" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页实例数"
+                :value="loadError ? '未知' : stats.instances"
+                :value-style="{ color: '#cf1322' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:server" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
     </template>
 
     <!-- 表格容器 -->
-    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
-      <template #action><a-button size="small" :loading="loading" @click="fetchConfigs">重试</a-button></template>
+    <a-alert
+      v-if="loadError"
+      type="error"
+      show-icon
+      :message="loadError"
+      role="alert"
+    >
+      <template #action>
+        <a-button size="small" :loading="loading" @click="fetchConfigs">
+          重试
+        </a-button>
+      </template>
     </a-alert>
 
     <div class="table-container">
       <a-card>
-        <a-table 
-          :data-source="data" 
-          :columns="columns" 
-          :pagination="paginationConfig" 
+        <a-table
+          :data-source="data"
+          :columns="columns"
+          :pagination="paginationConfig"
           :loading="loading"
-          row-key="id" 
-          bordered 
-          :scroll="{ x: 1400 }" 
+          row-key="id"
+          bordered
+          :scroll="{ x: 1400 }"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="config-name-cell">
-                <div class="status-dot" :class="record.status === ConfigStatus.Active ? 'status-dot-active' : 'status-dot-inactive'"></div>
+                <div
+                  class="status-dot"
+                  :class="
+                    record.status === ConfigStatus.Active
+                      ? 'status-dot-active'
+                      : 'status-dot-inactive'
+                  "
+                ></div>
                 <span class="config-name">{{ record.name }}</span>
               </div>
             </template>
 
             <template v-if="column.key === 'config_type'">
-              <a-tag 
-                class="tech-tag" 
+              <a-tag
+                class="tech-tag"
                 :class="getConfigTypeColor(record.config_type)"
               >
                 {{ getConfigTypeName(record.config_type) }}
@@ -158,21 +189,33 @@
 
             <template v-if="column.key === 'instance_info'">
               <div class="instance-info">
-                <div class="instance-item">实例池: {{ getPoolName(record.pool_id) }}</div>
-                <div class="instance-item instance-ip">IP: {{ record.instance_ip }}</div>
+                <div class="instance-item">
+                  实例池: {{ getPoolName(record.pool_id) }}
+                </div>
+                <div class="instance-item instance-ip">
+                  IP: {{ record.instance_ip }}
+                </div>
               </div>
             </template>
 
             <template v-if="column.key === 'status'">
-              <a-tag :color="record.status === ConfigStatus.Active ? 'success' : 'default'">
+              <a-tag
+                :color="
+                  record.status === ConfigStatus.Active ? 'success' : 'default'
+                "
+              >
                 {{ record.status === ConfigStatus.Active ? '激活' : '非激活' }}
               </a-tag>
             </template>
 
             <template v-if="column.key === 'last_generated_time'">
               <div class="date-info">
-                <span class="date">{{ formatDate(record.last_generated_time) }}</span>
-                <span class="time">{{ formatTime(record.last_generated_time) }}</span>
+                <span class="date">{{
+                  formatDate(record.last_generated_time)
+                }}</span>
+                <span class="time">{{
+                  formatTime(record.last_generated_time)
+                }}</span>
               </div>
             </template>
 
@@ -185,17 +228,31 @@
 
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
-                <a-button type="primary" size="small" @click="handleViewDetail(record)">
+                <a-button
+                  type="primary"
+                  size="small"
+                  @click="handleViewDetail(record)"
+                >
                   查看
                 </a-button>
-                <a-button type="default" size="small" @click="showEditModal(record)">
+                <a-button
+                  type="default"
+                  size="small"
+                  @click="showEditModal(record)"
+                >
                   编辑
                 </a-button>
                 <a-dropdown>
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
                       <a-menu-item key="preview">预览配置</a-menu-item>
-                      <a-menu-item v-if="can('monitor.config.delete')" key="delete" danger>删除</a-menu-item>
+                      <a-menu-item
+                        v-if="can('monitor.config.delete')"
+                        key="delete"
+                        danger
+                      >
+                        删除
+                      </a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
@@ -211,81 +268,95 @@
     </div>
 
     <!-- 新增配置模态框 -->
-    <a-modal 
-      :open="isAddModalVisible" 
-      title="新增监控配置" 
+    <a-modal
+      :open="isAddModalVisible"
+      title="新增监控配置"
       :width="formDialogWidth"
-      @ok="handleAdd" 
-      @cancel="closeAddModal" 
-      :destroy-on-close="true" 
+      @ok="handleAdd"
+      @cancel="closeAddModal"
+      :destroy-on-close="true"
       class="responsive-modal config-modal"
     >
-      <a-form 
-        ref="addFormRef" 
-        :model="addForm" 
-        :rules="formRules" 
+      <a-form
+        ref="addFormRef"
+        :model="addForm"
+        :rules="formRules"
         layout="vertical"
       >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="配置名称" 
-                name="name" 
+              <a-form-item
+                label="配置名称"
+                name="name"
                 :rules="[{ required: true, message: '请输入配置名称' }]"
               >
-                <a-input 
-                  v-model:value="addForm.name" 
-                  placeholder="请输入配置名称" 
+                <a-input
+                  v-model:value="addForm.name"
+                  placeholder="请输入配置名称"
                 />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="配置类型" 
+              <a-form-item
+                label="配置类型"
                 name="config_type"
                 :rules="[{ required: true, message: '请选择配置类型' }]"
               >
-                <a-select 
-                  v-model:value="addForm.config_type" 
+                <a-select
+                  v-model:value="addForm.config_type"
                   placeholder="请选择配置类型"
                 >
-                  <a-select-option :value="ConfigType.Prometheus">Prometheus配置</a-select-option>
-                  <a-select-option :value="ConfigType.AlertManager">AlertManager配置</a-select-option>
-                  <a-select-option :value="ConfigType.AlertRule">告警规则配置</a-select-option>
-                  <a-select-option :value="ConfigType.RecordRule">预聚合规则配置</a-select-option>
-                  <a-select-option :value="ConfigType.WebhookFile">Webhook文件</a-select-option>
+                  <a-select-option :value="ConfigType.Prometheus">
+                    Prometheus配置
+                  </a-select-option>
+                  <a-select-option :value="ConfigType.AlertManager">
+                    AlertManager配置
+                  </a-select-option>
+                  <a-select-option :value="ConfigType.AlertRule">
+                    告警规则配置
+                  </a-select-option>
+                  <a-select-option :value="ConfigType.RecordRule">
+                    预聚合规则配置
+                  </a-select-option>
+                  <a-select-option :value="ConfigType.WebhookFile">
+                    Webhook文件
+                  </a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="实例池" 
+              <a-form-item
+                label="实例池"
                 name="pool_id"
                 :rules="[{ required: true, message: '请选择实例池' }]"
               >
-                <a-select 
-                  v-model:value="addForm.pool_id" 
+                <a-select
+                  v-model:value="addForm.pool_id"
                   placeholder="请选择实例池"
                 >
-                  <a-select-option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
+                  <a-select-option
+                    v-for="pool in poolOptions"
+                    :key="pool.id"
+                    :value="pool.id"
+                  >
                     {{ pool.name }}
                   </a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="实例IP" 
+              <a-form-item
+                label="实例IP"
                 name="instance_ip"
                 :rules="[{ required: true, message: '请输入实例IP' }]"
               >
-                <a-input 
-                  v-model:value="addForm.instance_ip" 
-                  placeholder="请输入实例IP" 
+                <a-input
+                  v-model:value="addForm.instance_ip"
+                  placeholder="请输入实例IP"
                 />
               </a-form-item>
             </a-col>
@@ -294,14 +365,14 @@
 
         <div class="form-section">
           <div class="section-title">配置内容</div>
-          <a-form-item 
-            label="配置内容" 
+          <a-form-item
+            label="配置内容"
             name="config_content"
             :rules="[{ required: true, message: '请输入配置内容' }]"
           >
-            <a-textarea 
-              v-model:value="addForm.config_content" 
-              :rows="12" 
+            <a-textarea
+              v-model:value="addForm.config_content"
+              :rows="12"
               placeholder="请输入配置内容"
             />
           </a-form-item>
@@ -310,13 +381,13 @@
         <div class="form-section">
           <div class="section-title">状态设置</div>
           <a-form-item label="状态" name="status">
-            <a-switch 
-              v-model:checked="addForm.status" 
+            <a-switch
+              v-model:checked="addForm.status"
               :checked-value="ConfigStatus.Active"
               :un-checked-value="ConfigStatus.Inactive"
               checked-children="激活"
               un-checked-children="非激活"
-              class="tech-switch" 
+              class="tech-switch"
             />
           </a-form-item>
         </div>
@@ -324,81 +395,95 @@
     </a-modal>
 
     <!-- 编辑配置模态框 -->
-    <a-modal 
-      :open="isEditModalVisible" 
-      title="编辑监控配置" 
+    <a-modal
+      :open="isEditModalVisible"
+      title="编辑监控配置"
       :width="formDialogWidth"
-      @ok="handleEdit" 
-      @cancel="closeEditModal" 
-      :destroy-on-close="true" 
+      @ok="handleEdit"
+      @cancel="closeEditModal"
+      :destroy-on-close="true"
       class="responsive-modal config-modal"
     >
-      <a-form 
-        ref="editFormRef" 
-        :model="editForm" 
-        :rules="formRules" 
+      <a-form
+        ref="editFormRef"
+        :model="editForm"
+        :rules="formRules"
         layout="vertical"
       >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="配置名称" 
-                name="name" 
+              <a-form-item
+                label="配置名称"
+                name="name"
                 :rules="[{ required: true, message: '请输入配置名称' }]"
               >
-                <a-input 
-                  v-model:value="editForm.name" 
-                  placeholder="请输入配置名称" 
+                <a-input
+                  v-model:value="editForm.name"
+                  placeholder="请输入配置名称"
                 />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="配置类型" 
+              <a-form-item
+                label="配置类型"
                 name="config_type"
                 :rules="[{ required: true, message: '请选择配置类型' }]"
               >
-                <a-select 
-                  v-model:value="editForm.config_type" 
+                <a-select
+                  v-model:value="editForm.config_type"
                   placeholder="请选择配置类型"
                 >
-                  <a-select-option :value="ConfigType.Prometheus">Prometheus配置</a-select-option>
-                  <a-select-option :value="ConfigType.AlertManager">AlertManager配置</a-select-option>
-                  <a-select-option :value="ConfigType.AlertRule">告警规则配置</a-select-option>
-                  <a-select-option :value="ConfigType.RecordRule">预聚合规则配置</a-select-option>
-                  <a-select-option :value="ConfigType.WebhookFile">Webhook文件</a-select-option>
+                  <a-select-option :value="ConfigType.Prometheus">
+                    Prometheus配置
+                  </a-select-option>
+                  <a-select-option :value="ConfigType.AlertManager">
+                    AlertManager配置
+                  </a-select-option>
+                  <a-select-option :value="ConfigType.AlertRule">
+                    告警规则配置
+                  </a-select-option>
+                  <a-select-option :value="ConfigType.RecordRule">
+                    预聚合规则配置
+                  </a-select-option>
+                  <a-select-option :value="ConfigType.WebhookFile">
+                    Webhook文件
+                  </a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="实例池" 
+              <a-form-item
+                label="实例池"
                 name="pool_id"
                 :rules="[{ required: true, message: '请选择实例池' }]"
               >
-                <a-select 
-                  v-model:value="editForm.pool_id" 
+                <a-select
+                  v-model:value="editForm.pool_id"
                   placeholder="请选择实例池"
                 >
-                  <a-select-option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
+                  <a-select-option
+                    v-for="pool in poolOptions"
+                    :key="pool.id"
+                    :value="pool.id"
+                  >
                     {{ pool.name }}
                   </a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="实例IP" 
+              <a-form-item
+                label="实例IP"
                 name="instance_ip"
                 :rules="[{ required: true, message: '请输入实例IP' }]"
               >
-                <a-input 
-                  v-model:value="editForm.instance_ip" 
-                  placeholder="请输入实例IP" 
+                <a-input
+                  v-model:value="editForm.instance_ip"
+                  placeholder="请输入实例IP"
                 />
               </a-form-item>
             </a-col>
@@ -407,14 +492,14 @@
 
         <div class="form-section">
           <div class="section-title">配置内容</div>
-          <a-form-item 
-            label="配置内容" 
+          <a-form-item
+            label="配置内容"
             name="config_content"
             :rules="[{ required: true, message: '请输入配置内容' }]"
           >
-            <a-textarea 
-              v-model:value="editForm.config_content" 
-              :rows="12" 
+            <a-textarea
+              v-model:value="editForm.config_content"
+              :rows="12"
               placeholder="请输入配置内容"
             />
           </a-form-item>
@@ -423,13 +508,13 @@
         <div class="form-section">
           <div class="section-title">状态设置</div>
           <a-form-item label="状态" name="status">
-            <a-switch 
-              v-model:checked="editForm.status" 
+            <a-switch
+              v-model:checked="editForm.status"
               :checked-value="ConfigStatus.Active"
               :un-checked-value="ConfigStatus.Inactive"
               checked-children="激活"
               un-checked-children="非激活"
-              class="tech-switch" 
+              class="tech-switch"
             />
           </a-form-item>
         </div>
@@ -437,20 +522,20 @@
     </a-modal>
 
     <!-- 配置预览模态框 -->
-    <a-modal 
-      :open="isPreviewModalVisible" 
-      title="配置内容预览" 
-      :width="previewDialogWidth" 
+    <a-modal
+      :open="isPreviewModalVisible"
+      title="配置内容预览"
+      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closePreviewModal" 
+      @cancel="closePreviewModal"
       class="detail-dialog"
     >
       <div v-if="previewConfig" class="config-preview">
         <div class="preview-header">
           <h3 class="preview-name">{{ previewConfig.name }}</h3>
           <div class="preview-badges">
-            <a-tag 
-              class="tech-tag" 
+            <a-tag
+              class="tech-tag"
               :class="getConfigTypeColor(previewConfig.config_type)"
             >
               {{ getConfigTypeName(previewConfig.config_type) }}
@@ -458,9 +543,9 @@
           </div>
         </div>
 
-        <a-textarea 
-          :value="previewConfig.config_content" 
-          readonly 
+        <a-textarea
+          :value="previewConfig.config_content"
+          readonly
           :rows="20"
           class="preview-textarea"
         />
@@ -472,45 +557,67 @@
     </a-modal>
 
     <!-- 详情模态框 -->
-    <a-modal 
-      :open="isDetailModalVisible" 
-      title="配置详情" 
-      :width="previewDialogWidth" 
+    <a-modal
+      :open="isDetailModalVisible"
+      title="配置详情"
+      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeDetailModal" 
+      @cancel="closeDetailModal"
       class="detail-dialog"
     >
       <div v-if="detailConfig" class="config-details">
         <div class="detail-header">
           <h2>{{ detailConfig.name }}</h2>
           <div class="detail-badges">
-            <a-tag 
-              class="tech-tag" 
+            <a-tag
+              class="tech-tag"
               :class="getConfigTypeColor(detailConfig.config_type)"
             >
               {{ getConfigTypeName(detailConfig.config_type) }}
             </a-tag>
-            <a-tag :color="detailConfig.status === ConfigStatus.Active ? 'success' : 'default'">
-              {{ detailConfig.status === ConfigStatus.Active ? '激活' : '非激活' }}
+            <a-tag
+              :color="
+                detailConfig.status === ConfigStatus.Active
+                  ? 'success'
+                  : 'default'
+              "
+            >
+              {{
+                detailConfig.status === ConfigStatus.Active ? '激活' : '非激活'
+              }}
             </a-tag>
           </div>
         </div>
 
         <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
-          <a-descriptions-item label="ID">{{ detailConfig.id }}</a-descriptions-item>
-          <a-descriptions-item label="实例池">{{ getPoolName(detailConfig.pool_id) }}</a-descriptions-item>
-          <a-descriptions-item label="实例IP">{{ detailConfig.instance_ip }}</a-descriptions-item>
-          <a-descriptions-item label="配置Hash">{{ detailConfig.config_hash }}</a-descriptions-item>
-          <a-descriptions-item label="最后生成时间">{{ formatFullDateTime(detailConfig.last_generated_time) }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailConfig.created_at) }}</a-descriptions-item>
-          <a-descriptions-item label="更新时间">{{ formatFullDateTime(detailConfig.updated_at) }}</a-descriptions-item>
+          <a-descriptions-item label="ID">
+            {{ detailConfig.id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="实例池">
+            {{ getPoolName(detailConfig.pool_id) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="实例IP">
+            {{ detailConfig.instance_ip }}
+          </a-descriptions-item>
+          <a-descriptions-item label="配置Hash">
+            {{ detailConfig.config_hash }}
+          </a-descriptions-item>
+          <a-descriptions-item label="最后生成时间">
+            {{ formatFullDateTime(detailConfig.last_generated_time) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{ formatFullDateTime(detailConfig.created_at) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="更新时间">
+            {{ formatFullDateTime(detailConfig.updated_at) }}
+          </a-descriptions-item>
         </a-descriptions>
 
         <div class="config-content-section">
           <h4 class="content-title">配置内容</h4>
-          <a-textarea 
-            :value="detailConfig.config_content" 
-            readonly 
+          <a-textarea
+            :value="detailConfig.config_content"
+            readonly
             :rows="15"
             class="preview-textarea"
           />
@@ -518,7 +625,12 @@
 
         <div class="detail-footer">
           <a-button @click="closeDetailModal">关闭</a-button>
-          <a-button type="primary" @click="showEditModalFromDetail(detailConfig)">编辑</a-button>
+          <a-button
+            type="primary"
+            @click="showEditModalFromDetail(detailConfig)"
+          >
+            编辑
+          </a-button>
         </div>
       </div>
     </a-modal>
@@ -530,10 +642,7 @@ import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
 import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import {
-  PlusOutlined,
-  DownOutlined
-} from '@ant-design/icons-vue';
+import { PlusOutlined, DownOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
   getMonitorConfigListApi,
@@ -546,12 +655,12 @@ import {
   type MonitorConfigItem,
   type GetMonitorConfigListParams,
   type CreateMonitorConfigParams,
-  type UpdateMonitorConfigParams
+  type UpdateMonitorConfigParams,
 } from '#/api/core/prometheus/prometheus_config';
 
 import {
   getMonitorScrapePoolListApi,
-  type MonitorScrapePool
+  type MonitorScrapePool,
 } from '#/api/core/prometheus/prometheus_scrape_pool';
 
 import { usePermission } from '#/utils/permission';
@@ -614,13 +723,46 @@ const previewDialogWidth = computed(() => {
 
 // 列定义
 const columns = [
-  { title: '配置名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
-  { title: '配置类型', dataIndex: 'config_type', key: 'config_type', width: 150 },
-  { title: '实例信息', dataIndex: 'instance_info', key: 'instance_info', width: 200 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
-  { title: '最后生成时间', dataIndex: 'last_generated_time', key: 'last_generated_time', width: 180 },
+  {
+    title: '配置名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 200,
+    fixed: 'left',
+  },
+  {
+    title: '配置类型',
+    dataIndex: 'config_type',
+    key: 'config_type',
+    width: 150,
+  },
+  {
+    title: '实例信息',
+    dataIndex: 'instance_info',
+    key: 'instance_info',
+    width: 200,
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 100,
+    align: 'center' as const,
+  },
+  {
+    title: '最后生成时间',
+    dataIndex: 'last_generated_time',
+    key: 'last_generated_time',
+    width: 180,
+  },
   { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
-  { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
+  {
+    title: '操作',
+    key: 'action',
+    width: 200,
+    align: 'center' as const,
+    fixed: 'right',
+  },
 ];
 
 // 实例池数据
@@ -637,7 +779,9 @@ const searchStatus = ref<ConfigStatus | undefined>(undefined);
 
 // 防抖处理
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-onBeforeUnmount(() => { if (searchTimeout) clearTimeout(searchTimeout); });
+onBeforeUnmount(() => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+});
 
 // 分页配置
 const paginationConfig = reactive<PaginationConfig>({
@@ -647,7 +791,7 @@ const paginationConfig = reactive<PaginationConfig>({
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
-  size: 'default'
+  size: 'default',
 });
 
 // 统计数据
@@ -655,7 +799,7 @@ const stats = reactive<Stats>({
   total: 0,
   active: 0,
   alertRules: 0,
-  instances: 0
+  instances: 0,
 });
 
 // 模态框状态
@@ -673,7 +817,7 @@ const addForm = reactive<ConfigForm>({
   instance_ip: '',
   config_type: undefined,
   config_content: '',
-  status: ConfigStatus.Active
+  status: ConfigStatus.Active,
 });
 
 const editForm = reactive<ConfigForm>({
@@ -683,27 +827,23 @@ const editForm = reactive<ConfigForm>({
   instance_ip: '',
   config_type: undefined,
   config_content: '',
-  status: ConfigStatus.Active
+  status: ConfigStatus.Active,
 });
 
 // 表单验证规则
 const formRules = {
   name: [
     { required: true, message: '请输入配置名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' }
+    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
   ],
   config_type: [
-    { required: true, message: '请选择配置类型', trigger: 'change' }
+    { required: true, message: '请选择配置类型', trigger: 'change' },
   ],
-  pool_id: [
-    { required: true, message: '请选择实例池', trigger: 'change' }
-  ],
-  instance_ip: [
-    { required: true, message: '请输入实例IP', trigger: 'blur' }
-  ],
+  pool_id: [{ required: true, message: '请选择实例池', trigger: 'change' }],
+  instance_ip: [{ required: true, message: '请输入实例IP', trigger: 'blur' }],
   config_content: [
-    { required: true, message: '请输入配置内容', trigger: 'blur' }
-  ]
+    { required: true, message: '请输入配置内容', trigger: 'blur' },
+  ],
 };
 
 const getConfigTypeName = (type: ConfigType): string => {
@@ -712,7 +852,7 @@ const getConfigTypeName = (type: ConfigType): string => {
     [ConfigType.AlertManager]: 'AlertManager',
     [ConfigType.AlertRule]: '告警规则',
     [ConfigType.RecordRule]: '预聚合规则',
-    [ConfigType.WebhookFile]: 'Webhook文件'
+    [ConfigType.WebhookFile]: 'Webhook文件',
   };
   return typeNames[type] || '未知';
 };
@@ -723,42 +863,39 @@ const getConfigTypeColor = (type: ConfigType): string => {
     [ConfigType.AlertManager]: 'alert-tag',
     [ConfigType.AlertRule]: 'rule-tag',
     [ConfigType.RecordRule]: 'record-tag',
-    [ConfigType.WebhookFile]: 'webhook-tag'
+    [ConfigType.WebhookFile]: 'webhook-tag',
   };
   return typeColors[type] || 'default-tag';
 };
 
 const getPoolName = (poolId: number): string => {
-  const pool = poolOptions.value.find(p => p.id === poolId);
+  const pool = poolOptions.value.find((p) => p.id === poolId);
   return pool?.name || `Pool-${poolId}`;
 };
 
 const formatDate = (input: number | string): string => {
   if (!input) return '';
-  const date = typeof input === 'number'
-    ? new Date(input * 1000)
-    : new Date(input);
+  const date =
+    typeof input === 'number' ? new Date(input * 1000) : new Date(input);
   if (isNaN(date.getTime())) return '';
   return date.toLocaleDateString('zh-CN');
 };
 
 const formatTime = (input: number | string): string => {
   if (!input) return '';
-  const date = typeof input === 'number'
-    ? new Date(input * 1000)
-    : new Date(input);
+  const date =
+    typeof input === 'number' ? new Date(input * 1000) : new Date(input);
   if (isNaN(date.getTime())) return '';
   return date.toLocaleTimeString('zh-CN', {
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 };
 
 const formatFullDateTime = (input: string | number): string => {
   if (!input) return '';
-  const date = typeof input === 'number'
-    ? new Date(input * 1000)
-    : new Date(input);
+  const date =
+    typeof input === 'number' ? new Date(input * 1000) : new Date(input);
   if (isNaN(date.getTime())) return '';
   return date.toLocaleString('zh-CN');
 };
@@ -766,9 +903,15 @@ const formatFullDateTime = (input: string | number): string => {
 // 更新统计数据
 const updateStats = (): void => {
   stats.total = paginationConfig.total;
-  stats.active = data.value.filter((item: MonitorConfigItem) => item.status === ConfigStatus.Active).length;
-  stats.alertRules = data.value.filter((item: MonitorConfigItem) => item.config_type === ConfigType.AlertRule).length;
-  stats.instances = new Set(data.value.map((item: MonitorConfigItem) => item.instance_ip)).size;
+  stats.active = data.value.filter(
+    (item: MonitorConfigItem) => item.status === ConfigStatus.Active,
+  ).length;
+  stats.alertRules = data.value.filter(
+    (item: MonitorConfigItem) => item.config_type === ConfigType.AlertRule,
+  ).length;
+  stats.instances = new Set(
+    data.value.map((item: MonitorConfigItem) => item.instance_ip),
+  ).size;
 };
 
 // 数据加载
@@ -780,7 +923,7 @@ const fetchConfigs = async (): Promise<void> => {
       size: paginationConfig.pageSize,
       search: searchText.value || undefined,
       config_type: searchConfigType.value,
-      status: searchStatus.value
+      status: searchStatus.value,
     };
 
     const response = await getMonitorConfigListApi(params);
@@ -789,7 +932,9 @@ const fetchConfigs = async (): Promise<void> => {
       let items: MonitorConfigItem[] = response.items || [];
       // 客户端按实例池过滤（后端参数未定义）
       if (searchPoolId.value !== undefined) {
-        items = items.filter((item: MonitorConfigItem) => item.pool_id === searchPoolId.value);
+        items = items.filter(
+          (item: MonitorConfigItem) => item.pool_id === searchPoolId.value,
+        );
       }
       data.value = items;
       paginationConfig.total = (response.total ?? items.length) as number;
@@ -815,16 +960,17 @@ const loadPoolOptions = async (): Promise<void> => {
     let hasMore = true;
 
     while (hasMore) {
-      const res = await getMonitorScrapePoolListApi({ 
-        page: currentPage, 
-        size: pageSize 
+      const res = await getMonitorScrapePoolListApi({
+        page: currentPage,
+        size: pageSize,
       });
 
       if (res?.items && res.items.length > 0) {
         allPools = allPools.concat(res.items);
 
         // 检查是否还有更多数据
-        hasMore = res.items.length === pageSize && allPools.length < (res.total || 0);
+        hasMore =
+          res.items.length === pageSize && allPools.length < (res.total || 0);
         currentPage++;
       } else {
         hasMore = false;
@@ -835,10 +981,9 @@ const loadPoolOptions = async (): Promise<void> => {
       .filter((item: MonitorScrapePool) => item.id !== undefined)
       .map((item: MonitorScrapePool) => ({
         id: item.id!,
-        name: item.name
+        name: item.name,
       }));
   } catch (error: any) {
-
     poolOptions.value = [];
   }
 };
@@ -881,12 +1026,14 @@ const handleReset = (): void => {
 
 const handleMenuClick = (command: string, record: MonitorConfigItem): void => {
   switch (command) {
-    case 'preview':
+    case 'preview': {
       showPreviewModal(record);
       break;
-    case 'delete':
+    }
+    case 'delete': {
       confirmDelete(record);
       break;
+    }
   }
 };
 
@@ -903,10 +1050,10 @@ const confirmDelete = (record: MonitorConfigItem): void => {
         message.success(`配置 "${record.name}" 已删除`);
         fetchConfigs();
       } catch (error: any) {
-
-        if (shouldNotifyPageError(error)) message.error(error.message || '删除配置失败');
+        if (shouldNotifyPageError(error))
+          message.error(error.message || '删除配置失败');
       }
-    }
+    },
   });
 };
 
@@ -918,7 +1065,7 @@ const resetAddForm = (): void => {
     instance_ip: '',
     config_type: undefined,
     config_content: '',
-    status: ConfigStatus.Active
+    status: ConfigStatus.Active,
   });
 };
 
@@ -939,7 +1086,7 @@ const handleAdd = async (): Promise<void> => {
       instance_ip: addForm.instance_ip,
       config_type: addForm.config_type!,
       config_content: addForm.config_content,
-      status: addForm.status
+      status: addForm.status,
     };
 
     await createMonitorConfigApi(params);
@@ -947,7 +1094,8 @@ const handleAdd = async (): Promise<void> => {
     fetchConfigs();
     message.success('新增配置成功');
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error('新增配置失败: ' + (error.message || '未知错误'));
+    if (shouldNotifyPageError(error))
+      message.error('新增配置失败: ' + (error.message || '未知错误'));
   }
 };
 
@@ -980,7 +1128,7 @@ const handleEdit = async (): Promise<void> => {
       instance_ip: editForm.instance_ip,
       config_type: editForm.config_type!,
       config_content: editForm.config_content,
-      status: editForm.status
+      status: editForm.status,
     };
 
     await updateMonitorConfigApi(params);
@@ -988,7 +1136,8 @@ const handleEdit = async (): Promise<void> => {
     fetchConfigs();
     message.success('更新配置成功');
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error('更新配置失败: ' + (error.message || '未知错误'));
+    if (shouldNotifyPageError(error))
+      message.error('更新配置失败: ' + (error.message || '未知错误'));
   }
 };
 
@@ -998,8 +1147,8 @@ const handleViewDetail = async (record: MonitorConfigItem): Promise<void> => {
     detailConfig.value = detail;
     isDetailModalVisible.value = true;
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error('获取配置详情失败: ' + (error.message || '未知错误'));
+    if (shouldNotifyPageError(error))
+      message.error('获取配置详情失败: ' + (error.message || '未知错误'));
   }
 };
 
@@ -1026,11 +1175,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-
-
-
-
-
 .search-input {
   width: 250px;
   min-width: 200px;
@@ -1258,9 +1402,6 @@ onMounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-
-
-
   .search-input {
     width: 100%;
     min-width: auto;
@@ -1270,8 +1411,6 @@ onMounted(() => {
     width: 100%;
     min-width: auto;
   }
-
-
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
@@ -1301,7 +1440,6 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-
   .stats-card {
     text-align: center;
   }

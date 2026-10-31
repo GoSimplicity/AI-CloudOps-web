@@ -1,22 +1,41 @@
 <template>
-  <OpsPage title="RCA 缓存管理" description="读取真实缓存状态；清理操作仅在明确提交后执行" class="rca-cache">
+  <OpsPage
+    title="RCA 缓存管理"
+    description="读取真实缓存状态；清理操作仅在明确提交后执行"
+    class="rca-cache"
+  >
     <!-- 页面头部 -->
     <template #actions>
-<a-button
-            type="primary" 
-            size="large" 
-            @click="refreshCacheStats"
-            :loading="loadingStats"
-            :disabled="loadingStats"
-          >
-            {{ loadingStats ? '获取中...' : '刷新状态' }}
-          </a-button>
+      <a-button
+        type="primary"
+        size="large"
+        @click="refreshCacheStats"
+        :loading="loadingStats"
+        :disabled="loadingStats"
+      >
+        {{ loadingStats ? '获取中...' : '刷新状态' }}
+      </a-button>
     </template>
-    <a-alert v-if="statsError" :message="statsError" type="error" show-icon role="alert" />
-    <a-alert v-if="operationError" :message="operationError" type="error" show-icon role="alert" />
+    <a-alert
+      v-if="statsError"
+      :message="statsError"
+      type="error"
+      show-icon
+      role="alert"
+    />
+    <a-alert
+      v-if="operationError"
+      :message="operationError"
+      type="error"
+      show-icon
+      role="alert"
+    />
 
     <!-- 加载状态 -->
-    <a-card v-if="loadingStats && !cacheStats" class="loading-container"><a-spin /><p>正在等待服务返回实际结果，请稍候</p></a-card>
+    <a-card v-if="loadingStats && !cacheStats" class="loading-container">
+      <a-spin />
+      <p>正在等待服务返回实际结果，请稍候</p>
+    </a-card>
 
     <!-- 缓存概览卡片 -->
     <div class="overview-grid" v-if="cacheStats">
@@ -27,8 +46,17 @@
         </div>
         <div class="card-content">
           <div class="card-title">缓存状态</div>
-          <div class="card-value" :class="cacheStats.healthy ? 'healthy' : 'unhealthy'">
-            {{ !cacheStats.available ? '不可用' : cacheStats.healthy ? '健康' : '异常' }}
+          <div
+            class="card-value"
+            :class="cacheStats.healthy ? 'healthy' : 'unhealthy'"
+          >
+            {{
+              !cacheStats.available
+                ? '不可用'
+                : cacheStats.healthy
+                  ? '健康'
+                  : '异常'
+            }}
           </div>
         </div>
       </div>
@@ -37,7 +65,9 @@
         <div class="card-icon"><Icon icon="lucide:key-round" /></div>
         <div class="card-content">
           <div class="card-title">缓存键数量</div>
-          <div class="card-value">{{ formatTotalKeys(cacheStats.total_keys) }}</div>
+          <div class="card-value">
+            {{ formatTotalKeys(cacheStats.total_keys) }}
+          </div>
         </div>
       </div>
 
@@ -53,7 +83,9 @@
         <div class="card-icon"><Icon icon="lucide:hard-drive" /></div>
         <div class="card-content">
           <div class="card-title">内存使用</div>
-          <div class="card-value">{{ formatMemoryUsage(cacheStats.memory_usage) }}</div>
+          <div class="card-value">
+            {{ formatMemoryUsage(cacheStats.memory_usage) }}
+          </div>
         </div>
       </div>
     </div>
@@ -76,12 +108,14 @@
           </div>
           <div class="operation-content">
             <a-input
-              v-model:value="clearNamespaceForm.namespace" :disabled="clearingCache"
+              v-model:value="clearNamespaceForm.namespace"
+              :disabled="clearingCache"
               placeholder="输入要清除缓存的命名空间"
               class="operation-input"
             />
-            <a-button v-if="can('aiops.rca.clearNamespace')"
-              type="primary" 
+            <a-button
+              v-if="can('aiops.rca.clearNamespace')"
+              type="primary"
               @click="handleClearNamespaceCache"
               :loading="clearingCache"
               :disabled="!clearNamespaceForm.namespace.trim()"
@@ -99,7 +133,8 @@
           </div>
           <div class="operation-content">
             <a-select
-              v-model:value="clearOperationForm.operation" :disabled="clearingCache"
+              v-model:value="clearOperationForm.operation"
+              :disabled="clearingCache"
               placeholder="选择要清除缓存的操作类型"
               class="operation-select"
             >
@@ -110,8 +145,9 @@
               <a-select-option value="metrics">指标数据</a-select-option>
               <a-select-option value="logs">日志数据</a-select-option>
             </a-select>
-            <a-button v-if="can('aiops.rca.clearOperation')"
-              type="primary" 
+            <a-button
+              v-if="can('aiops.rca.clearOperation')"
+              type="primary"
               @click="handleClearOperationCache"
               :loading="clearingCache"
               :disabled="!clearOperationForm.operation"
@@ -128,9 +164,10 @@
             <a-tag color="orange">批量处理</a-tag>
           </div>
           <div class="operation-content">
-            <a-space direction="vertical" style="width: 100%;">
-              <a-button v-if="can('aiops.rca.clearAll')"
-                type="primary" 
+            <a-space direction="vertical" style="width: 100%">
+              <a-button
+                v-if="can('aiops.rca.clearAll')"
+                type="primary"
                 danger
                 @click="showClearAllModal"
                 :loading="clearingCache"
@@ -177,7 +214,13 @@
             </a-descriptions-item>
             <a-descriptions-item label="健康状态">
               <a-tag :color="cacheStats.healthy ? 'green' : 'red'">
-                {{ !cacheStats.available ? '不可用' : cacheStats.healthy ? '健康' : '异常' }}
+                {{
+                  !cacheStats.available
+                    ? '不可用'
+                    : cacheStats.healthy
+                      ? '健康'
+                      : '异常'
+                }}
               </a-tag>
             </a-descriptions-item>
           </a-descriptions>
@@ -187,12 +230,19 @@
           <h4>性能指标</h4>
           <a-descriptions :column="1" bordered size="small">
             <a-descriptions-item label="命中率">
-              <a-progress v-if="Number.isFinite(cacheStats.hit_rate) && cacheStats.hit_rate! >= 0 && cacheStats.hit_rate! <= 100"
-                :percent="getHitRatePercent(cacheStats.hit_rate)" 
+              <a-progress
+                v-if="
+                  Number.isFinite(cacheStats.hit_rate) &&
+                  cacheStats.hit_rate! >= 0 &&
+                  cacheStats.hit_rate! <= 100
+                "
+                :percent="getHitRatePercent(cacheStats.hit_rate)"
                 :stroke-color="getHitRateColor(cacheStats.hit_rate)"
                 :show-info="false"
               />
-              <span style="margin-left: 8px;">{{ formatHitRate(cacheStats.hit_rate) }}</span>
+              <span style="margin-left: 8px">{{
+                formatHitRate(cacheStats.hit_rate)
+              }}</span>
             </a-descriptions-item>
             <a-descriptions-item label="缓存键数量">
               {{ formatTotalKeys(cacheStats.total_keys) }}
@@ -221,14 +271,12 @@
     <div class="history-section">
       <div class="section-header">
         <h2>操作历史</h2>
-        <a-button @click="clearHistory" size="small">
-          清空历史
-        </a-button>
+        <a-button @click="clearHistory" size="small"> 清空历史 </a-button>
       </div>
 
       <div class="history-list">
-        <div 
-          v-for="(record, index) in operationHistory" 
+        <div
+          v-for="(record, index) in operationHistory"
           :key="index"
           class="history-item"
         >
@@ -239,7 +287,9 @@
           <div class="history-content">
             <div class="history-title">{{ record.operation }}</div>
             <div class="history-details">
-              <span class="history-time">{{ formatTime(record.timestamp) }}</span>
+              <span class="history-time">{{
+                formatTime(record.timestamp)
+              }}</span>
               <span class="history-message">{{ record.message }}</span>
               <span v-if="record.cleared_count" class="history-count">
                 清除 {{ record.cleared_count }} 项
@@ -266,7 +316,9 @@
       ok-type="danger"
     >
       <div class="clear-all-warning">
-        <ExclamationCircleOutlined style="color: #ff4d4f; font-size: 24px; margin-right: 12px;" />
+        <ExclamationCircleOutlined
+          style="color: #ff4d4f; font-size: 24px; margin-right: 12px"
+        />
         <div>
           <p><strong>警告：</strong>此操作将清除所有RCA相关的缓存数据</p>
           <p>清除后，所有分析结果将需要重新计算，这可能会影响系统性能</p>
@@ -280,17 +332,38 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useRcaCache } from './useRcaCache';
-import { CheckCircleOutlined, ExclamationCircleOutlined, CloseCircleOutlined } from '@ant-design/icons-vue';
+import {
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  CloseCircleOutlined,
+} from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 
 import { usePermission } from '#/utils/permission';
 
 const { can } = usePermission();
-const { loadingStats, clearingCache, clearAllModalVisible, cacheStats, statsError, operationError, clearNamespaceForm, clearOperationForm, operationHistory, refreshCacheStats, handleClearNamespaceCache, handleClearOperationCache, showClearAllModal, confirmClearAllCache, clearHistory } = useRcaCache();
+const {
+  loadingStats,
+  clearingCache,
+  clearAllModalVisible,
+  cacheStats,
+  statsError,
+  operationError,
+  clearNamespaceForm,
+  clearOperationForm,
+  operationHistory,
+  refreshCacheStats,
+  handleClearNamespaceCache,
+  handleClearOperationCache,
+  showClearAllModal,
+  confirmClearAllCache,
+  clearHistory,
+} = useRcaCache();
 
 // 格式化命中率
 const formatHitRate = (hitRate?: number) => {
-  if (!Number.isFinite(hitRate) || hitRate! < 0 || hitRate! > 100) return '未知';
+  if (!Number.isFinite(hitRate) || hitRate! < 0 || hitRate! > 100)
+    return '未知';
   const percentage = hitRate!;
   return `${percentage.toFixed(1)}%`;
 };
@@ -354,21 +427,19 @@ const formatStatusMessage = (message?: string) => {
   if (!message) return '无';
   return message;
 };
-
 </script>
 
 <style scoped>
-
 /* 页面头部 */
 
 /* 加载状态 */
 .loading-state-card {
-margin-bottom: var(--ops-space-lg);
-border-radius: var(--ops-radius);
-box-shadow: none;
-border: 1px solid var(--ops-border);
-text-align: center;
-padding: 48px 24px;
+  margin-bottom: var(--ops-space-lg);
+  border-radius: var(--ops-radius);
+  box-shadow: none;
+  border: 1px solid var(--ops-border);
+  text-align: center;
+  padding: 48px 24px;
 }
 
 .cache-loading-content {
@@ -388,7 +459,8 @@ padding: 48px 24px;
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
@@ -483,13 +555,6 @@ padding: 48px 24px;
 .loading-tip {
   margin-top: 24px;
 }
-
-
-
-
-
-
-
 
 /* 概览卡片 */
 .overview-grid {
@@ -967,13 +1032,6 @@ padding: 48px 24px;
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-
-
-
-
-
-
-
   .overview-grid {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 16px;
@@ -991,10 +1049,6 @@ padding: 48px 24px;
 }
 
 @media (max-width: 576px) {
-
-
-
-
   .overview-grid {
     grid-template-columns: 1fr;
   }
@@ -1034,10 +1088,28 @@ padding: 48px 24px;
 }
 
 @media (max-width: 575px) {
-  .overview-grid, .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ops-space-sm); }
-  .overview-card, .metric-card { min-width: 0; padding: var(--ops-space-md); gap: var(--ops-space-sm); flex-wrap: wrap; }
-  .card-icon { font-size: 20px; }
-  .card-value, .metric-value { overflow-wrap: anywhere; }
-  .section-header { flex-wrap: wrap; gap: var(--ops-space-sm); }
+  .overview-grid,
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ops-space-sm);
+  }
+  .overview-card,
+  .metric-card {
+    min-width: 0;
+    padding: var(--ops-space-md);
+    gap: var(--ops-space-sm);
+    flex-wrap: wrap;
+  }
+  .card-icon {
+    font-size: 20px;
+  }
+  .card-value,
+  .metric-value {
+    overflow-wrap: anywhere;
+  }
+  .section-header {
+    flex-wrap: wrap;
+    gap: var(--ops-space-sm);
+  }
 }
 </style>

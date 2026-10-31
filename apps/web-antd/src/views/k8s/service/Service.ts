@@ -144,43 +144,53 @@ export function useServicePage() {
   const createFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入 Service 名称', trigger: 'blur' },
-      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'Service 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
-      { max: 63, message: 'Service 名称长度不能超过63个字符', trigger: 'blur' }
+      {
+        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        message:
+          'Service 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        trigger: 'blur',
+      },
+      { max: 63, message: 'Service 名称长度不能超过63个字符', trigger: 'blur' },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' }
+      { required: true, message: '请选择命名空间', trigger: 'change' },
     ],
     type: [
-      { required: true, message: '请选择 Service 类型', trigger: 'change' }
-    ]
+      { required: true, message: '请选择 Service 类型', trigger: 'change' },
+    ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   const editFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入 Service 名称', trigger: 'blur' },
-      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'Service 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
-      { max: 63, message: 'Service 名称长度不能超过63个字符', trigger: 'blur' }
+      {
+        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        message:
+          'Service 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        trigger: 'blur',
+      },
+      { max: 63, message: 'Service 名称长度不能超过63个字符', trigger: 'blur' },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' }
+      { required: true, message: '请选择命名空间', trigger: 'change' },
     ],
     type: [
-      { required: true, message: '请选择 Service 类型', trigger: 'change' }
-    ]
+      { required: true, message: '请选择 Service 类型', trigger: 'change' },
+    ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   // computed
@@ -239,46 +249,56 @@ export function useServicePage() {
 
   const getServiceTypeText = (type?: string) => {
     const map: Record<string, string> = {
-      'ClusterIP': 'ClusterIP',
-      'NodePort': 'NodePort',
-      'LoadBalancer': 'LoadBalancer',
-      'ExternalName': 'ExternalName',
+      ClusterIP: 'ClusterIP',
+      NodePort: 'NodePort',
+      LoadBalancer: 'LoadBalancer',
+      ExternalName: 'ExternalName',
     };
     return type ? map[type] || type : '-';
   };
 
   const getServiceTypeColor = (type?: string) => {
     const map: Record<string, string> = {
-      'ClusterIP': 'blue',
-      'NodePort': 'green',
-      'LoadBalancer': 'orange',
-      'ExternalName': 'purple',
+      ClusterIP: 'blue',
+      NodePort: 'green',
+      LoadBalancer: 'orange',
+      ExternalName: 'purple',
     };
     return type ? map[type] || 'default' : 'default';
   };
 
   // 转换函数：Record<string, string> -> KeyValueList
-  const recordToKeyValueList = (record: Record<string, string>): KeyValueList => {
-    return Object.entries(record).map(([key, value]: [string, string]) => ({ key, value }));
+  const recordToKeyValueList = (
+    record: Record<string, string>,
+  ): KeyValueList => {
+    return Object.entries(record).map(([key, value]: [string, string]) => ({
+      key,
+      value,
+    }));
   };
 
   // 转换函数：KeyValueList 或对象 -> Record<string, string>
-  const keyValueListToRecord = (data?: KeyValueList | Record<string, string>): Record<string, string> => {
+  const keyValueListToRecord = (
+    data?: KeyValueList | Record<string, string>,
+  ): Record<string, string> => {
     if (!data) return {};
-    
+
     // 如果已经是对象格式，直接返回
     if (typeof data === 'object' && !Array.isArray(data)) {
       return data as Record<string, string>;
     }
-    
+
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce((acc, { key, value }) => {
-        acc[key] = value;
-        return acc;
-      }, {} as Record<string, string>);
+      return data.reduce(
+        (acc, { key, value }) => {
+          acc[key] = value;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
     }
-    
+
     return {};
   };
 
@@ -338,7 +358,8 @@ export function useServicePage() {
         clearNamespaces();
         clearServices();
       }
-      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err))
+        clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -385,7 +406,8 @@ export function useServicePage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldRecordPageError(err))
+        namespacesError.value = '获取命名空间列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
@@ -414,23 +436,38 @@ export function useServicePage() {
         namespace: namespace || undefined,
         type: filterType.value || undefined,
         status: filterStatus.value || undefined,
-        labels: Object.keys(filterLabels.value).length > 0 ? filterLabels.value : undefined,
+        labels:
+          Object.keys(filterLabels.value).length > 0
+            ? filterLabels.value
+            : undefined,
       };
       const res = await getServiceListApi(clusterId, params);
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
       // 确保每个service对象都有正确的cluster_id
-      const servicesWithClusterId = (res?.items || []).map((service: K8sService) => ({
-        ...service,
-        cluster_id: service.cluster_id || clusterId
-      }));
+      const servicesWithClusterId = (res?.items || []).map(
+        (service: K8sService) => ({
+          ...service,
+          cluster_id: service.cluster_id || clusterId,
+        }),
+      );
       services.value = servicesWithClusterId;
       total.value = res?.total || 0;
     } catch (err) {
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
       clearServices();
-      if (shouldRecordPageError(err)) loadError.value = '获取 Service 列表失败，请重试';
+      if (shouldRecordPageError(err))
+        loadError.value = '获取 Service 列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(loadError.value);
-
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
     }
@@ -440,29 +477,35 @@ export function useServicePage() {
   const showServiceDetail = async (record: K8sService) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
-      const res = await getServiceDetailsApi(clusterId, record.namespace, record.name);
-      
+      const res = await getServiceDetailsApi(
+        clusterId,
+        record.namespace,
+        record.name,
+      );
+
       // 直接使用详情数据，不需要转换格式
-      const processedDetail = res ? {
-        ...res,
-        cluster_id: clusterId
-      } : { 
-        ...record, 
-        cluster_id: clusterId
-      };
-      
+      const processedDetail = res
+        ? {
+            ...res,
+            cluster_id: clusterId,
+          }
+        : {
+            ...record,
+            cluster_id: clusterId,
+          };
+
       currentServiceDetail.value = processedDetail;
     } catch (err) {
       if (shouldNotifyPageError(err)) message.error('获取 Service 详情失败');
 
       // 错误时使用原始记录数据
-      const fallbackDetail = { 
-        ...record, 
-        cluster_id: clusterId
+      const fallbackDetail = {
+        ...record,
+        cluster_id: clusterId,
       };
       currentServiceDetail.value = fallbackDetail;
     } finally {
@@ -479,17 +522,20 @@ export function useServicePage() {
   const showYamlModal = async (record: K8sService) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       submitLoading.value = true;
       currentOperationService.value = { ...record, cluster_id: clusterId };
-      const res = await getServiceYamlApi(clusterId, record.namespace, record.name);
+      const res = await getServiceYamlApi(
+        clusterId,
+        record.namespace,
+        record.name,
+      );
       currentYamlContent.value = res?.yaml || '';
       yamlFormModel.value.yaml = res?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (err) {
       if (shouldNotifyPageError(err)) message.error('获取 Service YAML 失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -504,34 +550,34 @@ export function useServicePage() {
 
   const submitYamlForm = async () => {
     if (!yamlFormRef.value || !currentOperationService.value) return;
-    
+
     try {
       await yamlFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: UpdateResourceByYamlReq = {
         cluster_id: currentOperationService.value.cluster_id,
         namespace: currentOperationService.value.namespace,
         name: currentOperationService.value.name,
         yaml: yamlFormModel.value.yaml,
       };
-      
+
       await updateServiceByYamlApi(
         currentOperationService.value.cluster_id,
         currentOperationService.value.namespace,
         currentOperationService.value.name,
-        params
+        params,
       );
       message.success('🎉 Service YAML 更新成功');
       isYamlModalVisible.value = false;
       await fetchServices();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查 YAML 格式是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查 YAML 格式是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('❌ Service YAML 更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -568,33 +614,42 @@ export function useServicePage() {
 
   const submitCreateForm = async () => {
     if (!formRef.value || !filterClusterId.value) return;
-    
+
     try {
       await formRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: CreateServiceReq = {
         cluster_id: filterClusterId.value,
         name: createFormModel.value.name,
         namespace: createFormModel.value.namespace,
         type: createFormModel.value.type,
         ports: createFormModel.value.ports,
-        selector: Object.keys(createFormModel.value.selector).length > 0 ? createFormModel.value.selector : undefined,
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
+        selector:
+          Object.keys(createFormModel.value.selector).length > 0
+            ? createFormModel.value.selector
+            : undefined,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(createFormModel.value.annotations).length > 0
+            ? createFormModel.value.annotations
+            : undefined,
       };
-      
+
       await createServiceApi(filterClusterId.value, params);
       message.success('🎉 Service 创建成功');
       isCreateModalVisible.value = false;
       await fetchServices();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('❌ Service 创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -602,27 +657,27 @@ export function useServicePage() {
 
   const submitCreateYamlForm = async () => {
     if (!createYamlFormRef.value || !filterClusterId.value) return;
-    
+
     try {
       await createYamlFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: CreateResourceByYamlReq = {
         cluster_id: filterClusterId.value,
         yaml: createYamlFormModel.value.yaml,
       };
-      
+
       await createServiceByYamlApi(filterClusterId.value, params);
       message.success('🎉 Service YAML 创建成功');
       isCreateYamlModalVisible.value = false;
       await fetchServices();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查 YAML 格式是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查 YAML 格式是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('❌ Service YAML 创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -635,7 +690,9 @@ export function useServicePage() {
       name: record.name,
       namespace: record.namespace,
       type: record.type,
-      ports: record.ports || [{ name: '', protocol: 'TCP', port: 80, target_port: 80 }],
+      ports: record.ports || [
+        { name: '', protocol: 'TCP', port: 80, target_port: 80 },
+      ],
       selector: record.selector || {},
       labels: record.labels || {},
       annotations: record.annotations || {},
@@ -653,38 +710,47 @@ export function useServicePage() {
 
   const submitEditForm = async () => {
     if (!editFormRef.value || !currentOperationService.value) return;
-    
+
     try {
       await editFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: UpdateServiceReq = {
         cluster_id: currentOperationService.value.cluster_id,
         namespace: currentOperationService.value.namespace,
         name: currentOperationService.value.name,
         type: editFormModel.value.type,
         ports: editFormModel.value.ports,
-        selector: Object.keys(editFormModel.value.selector).length > 0 ? editFormModel.value.selector : undefined,
-        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
-        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
+        selector:
+          Object.keys(editFormModel.value.selector).length > 0
+            ? editFormModel.value.selector
+            : undefined,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(editFormModel.value.annotations).length > 0
+            ? editFormModel.value.annotations
+            : undefined,
       };
-      
+
       await updateServiceApi(
         currentOperationService.value.cluster_id,
         currentOperationService.value.namespace,
         currentOperationService.value.name,
-        params
+        params,
       );
       message.success('🎉 Service 更新成功');
       isEditModalVisible.value = false;
       await fetchServices();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('❌ Service 更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -694,7 +760,7 @@ export function useServicePage() {
   const deleteService = (record: K8sService) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     Modal.confirm({
       title: '删除 Service',
       content: `确定要删除 Service "${record.name}" 吗？此操作不可逆！`,
@@ -709,7 +775,6 @@ export function useServicePage() {
           await fetchServices();
         } catch (err) {
           if (shouldNotifyPageError(err)) message.error('❌ Service 删除失败');
-
         }
       },
     });
@@ -719,16 +784,19 @@ export function useServicePage() {
   const showEndpointsModal = async (record: K8sService) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     try {
       submitLoading.value = true;
       currentOperationService.value = { ...record, cluster_id: clusterId };
-      const res = await getServiceEndpointsApi(clusterId, record.namespace, record.name);
+      const res = await getServiceEndpointsApi(
+        clusterId,
+        record.namespace,
+        record.name,
+      );
       serviceEndpoints.value = res || [];
       isEndpointsModalVisible.value = true;
     } catch (err) {
       if (shouldNotifyPageError(err)) message.error('获取 Service 端点失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -764,7 +832,7 @@ export function useServicePage() {
   // 批量操作
   const batchOperation = (operation: string) => {
     if (!selectedRows.value.length) return;
-    
+
     Modal.confirm({
       title: `批量${operation}`,
       content: `确定要对选中的 ${selectedRows.value.length} 个 Service 执行${operation}操作吗？`,
@@ -777,12 +845,18 @@ export function useServicePage() {
           for (const service of selectedRows.value) {
             const clusterId = service.cluster_id || filterClusterId.value;
             if (!clusterId) {
-              message.error(`Service "${service.name}" 缺少有效的集群ID，跳过操作`);
+              message.error(
+                `Service "${service.name}" 缺少有效的集群ID，跳过操作`,
+              );
               continue;
             }
-            
+
             if (operation === '删除') {
-              await deleteServiceApi(clusterId, service.namespace, service.name);
+              await deleteServiceApi(
+                clusterId,
+                service.namespace,
+                service.name,
+              );
             }
           }
           message.success(`✅ 批量${operation}操作已完成`);
@@ -790,8 +864,8 @@ export function useServicePage() {
           selectedRows.value = [];
           await fetchServices();
         } catch (err) {
-          if (shouldNotifyPageError(err)) message.error(`❌ 批量${operation}失败`);
-
+          if (shouldNotifyPageError(err))
+            message.error(`❌ 批量${operation}失败`);
         }
       },
     });
@@ -852,7 +926,7 @@ export function useServicePage() {
     currentPage.value = 1;
     clearNamespaces();
     clearServices();
-    
+
     if (filterClusterId.value) {
       fetchNamespaces(true); // 重置命名空间分页
       fetchServices();
@@ -862,9 +936,17 @@ export function useServicePage() {
   // 处理集群下拉选择的滚动事件
   const handleClusterDropdownScroll = (e: Event) => {
     const { target } = e;
-    if (target && 'scrollTop' in target && 'scrollHeight' in target && 'clientHeight' in target) {
+    if (
+      target &&
+      'scrollTop' in target &&
+      'scrollHeight' in target &&
+      'clientHeight' in target
+    ) {
       const scrollTarget = target as HTMLElement;
-      if (scrollTarget.scrollTop + scrollTarget.clientHeight >= scrollTarget.scrollHeight - 5) {
+      if (
+        scrollTarget.scrollTop + scrollTarget.clientHeight >=
+        scrollTarget.scrollHeight - 5
+      ) {
         loadMoreClusters();
       }
     }
@@ -877,7 +959,12 @@ export function useServicePage() {
 
   // 表单字段操作
   const addPortField = () => {
-    createFormModel.value.ports.push({ name: '', protocol: 'TCP', port: 80, target_port: 80 });
+    createFormModel.value.ports.push({
+      name: '',
+      protocol: 'TCP',
+      port: 80,
+      target_port: 80,
+    });
   };
 
   const removePortField = (index: number) => {
@@ -888,7 +975,12 @@ export function useServicePage() {
 
   // 编辑表单字段操作
   const addEditPortField = () => {
-    editFormModel.value.ports.push({ name: '', protocol: 'TCP', port: 80, target_port: 80 });
+    editFormModel.value.ports.push({
+      name: '',
+      protocol: 'TCP',
+      port: 80,
+      target_port: 80,
+    });
   };
 
   const removeEditPortField = (index: number) => {
@@ -997,13 +1089,13 @@ export function useServicePage() {
     namespacesTotal,
     namespacesPage,
     namespacesSize,
-    
+
     // form refs
     formRef,
     editFormRef,
     yamlFormRef,
     createYamlFormRef,
-    
+
     // modal state
     isCreateModalVisible,
     isCreateYamlModalVisible,
@@ -1013,29 +1105,29 @@ export function useServicePage() {
     isEndpointsModalVisible,
     submitLoading,
     detailLoading,
-    
+
     // operation targets
     currentOperationService,
     currentServiceDetail,
     currentYamlContent,
     serviceEndpoints,
-    
+
     // form models
     createFormModel,
     editFormModel,
     yamlFormModel,
     createYamlFormModel,
-    
+
     // form rules
     createFormRules,
     editFormRules,
     yamlFormRules,
     createYamlFormRules,
-    
+
     // computed
     filteredServices,
     rowSelection,
-    
+
     // helpers
     validateClusterId,
     getEnvText,
@@ -1045,7 +1137,7 @@ export function useServicePage() {
     getServiceTypeColor,
     recordToKeyValueList,
     keyValueListToRecord,
-    
+
     // operations
     fetchClusters,
     fetchNamespaces,
@@ -1054,16 +1146,16 @@ export function useServicePage() {
     clearNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
-    
+
     // detail operations
     showServiceDetail,
     closeDetailModal,
-    
+
     // YAML operations
     showYamlModal,
     closeYamlModal,
     submitYamlForm,
-    
+
     // create operations
     openCreateModal,
     closeCreateModal,
@@ -1071,35 +1163,35 @@ export function useServicePage() {
     openCreateYamlModal,
     closeCreateYamlModal,
     submitCreateYamlForm,
-    
+
     // edit operations
     openEditModal,
     closeEditModal,
     submitEditForm,
-    
+
     // service operations
     deleteService,
-    
+
     // endpoints operations
     showEndpointsModal,
     closeEndpointsModal,
-    
+
     // filter operations
     addFilterLabel,
     removeFilterLabel,
     clearFilterLabels,
-    
+
     // batch operations
     batchOperation,
-    
-    // pagination operations  
+
+    // pagination operations
     resetClusters,
     handlePageChange,
     onSearch,
     handleFilterChange,
     handleClusterChange,
     handleClusterDropdownScroll,
-    
+
     // form field operations
     addPortField,
     removePortField,
@@ -1109,7 +1201,7 @@ export function useServicePage() {
     removeAnnotationField,
     addSelectorField,
     removeSelectorField,
-    
+
     // edit form field operations
     addEditPortField,
     removeEditPortField,
@@ -1119,12 +1211,12 @@ export function useServicePage() {
     removeEditSelectorField,
     addNewEditAnnotation,
     removeEditAnnotationField,
-    
+
     // edit form helper variables
     newEditLabelKey,
     newEditSelectorKey,
     newEditAnnotationKey,
-    
+
     // constants
     K8sSvcStatus,
   };

@@ -1,54 +1,73 @@
 <template>
-  <OpsPage title="预测分析" description="明确开始后预测单个指标，保留真实时间、零值与缺失区间" class="predict-analysis">
+  <OpsPage
+    title="预测分析"
+    description="明确开始后预测单个指标，保留真实时间、零值与缺失区间"
+    class="predict-analysis"
+  >
     <!-- 页面头部 -->
     <template #actions>
-<a-space wrap><a-button @click="resetForm">
-            重置
-          </a-button>
-<a-button type="primary" @click="startAnalysis" :loading="analyzing" :disabled="!isFormValid || analyzing">
-            开始分析
-          </a-button></a-space>
+      <a-space wrap>
+        <a-button @click="resetForm"> 重置 </a-button>
+        <a-button
+          type="primary"
+          @click="startAnalysis"
+          :loading="analyzing"
+          :disabled="!isFormValid || analyzing"
+        >
+          开始分析
+        </a-button>
+      </a-space>
     </template>
-    <a-alert v-if="predictionError" :message="predictionError" type="error" show-icon role="alert" />
+    <a-alert
+      v-if="predictionError"
+      :message="predictionError"
+      type="error"
+      show-icon
+      role="alert"
+    />
 
     <a-row :gutter="[24, 24]">
       <a-col :xs="24" :lg="8">
         <a-card title="预测配置" class="config-card">
           <a-form :model="formData" layout="vertical">
             <a-form-item label="预测类型" name="predictionType">
-              <a-select 
-                v-model:value="formData.predictionType" 
+              <a-select
+                v-model:value="formData.predictionType"
                 @change="onPredictionTypeChange"
                 placeholder="选择预测类型"
               >
                 <a-select-option value="qps">
                   <div class="option-content">
-                    <ThunderboltOutlined style="color: #1890ff;" />
+                    <ThunderboltOutlined style="color: #1890ff" />
                     <span>QPS预测</span>
                   </div>
                 </a-select-option>
                 <a-select-option value="cpu">
                   <div class="option-content">
-                    <ApiOutlined style="color: #ff4d4f;" />
+                    <ApiOutlined style="color: #ff4d4f" />
                     <span>CPU预测</span>
                   </div>
                 </a-select-option>
                 <a-select-option value="memory">
                   <div class="option-content">
-                    <DatabaseOutlined style="color: #faad14;" />
+                    <DatabaseOutlined style="color: #faad14" />
                     <span>内存预测</span>
                   </div>
                 </a-select-option>
                 <a-select-option value="disk">
                   <div class="option-content">
-                    <HddOutlined style="color: #52c41a;" />
+                    <HddOutlined style="color: #52c41a" />
                     <span>磁盘预测</span>
                   </div>
                 </a-select-option>
               </a-select>
             </a-form-item>
 
-            <a-form-item :label="getCurrentValueLabel()" name="currentValue" required>
+            <a-form-item
+              :label="getCurrentValueLabel()"
+              name="currentValue"
+              required
+            >
               <a-input-number
                 v-model:value="formData.currentValue"
                 :min="0"
@@ -59,8 +78,12 @@
                 :addon-after="getCurrentValueUnit()"
                 :status="formData.currentValue === null ? 'warning' : ''"
               />
-              <div v-if="!isFormValid && formData.currentValue !== null" class="form-error">
-                请输入有效的数值范围: 0 - {{ getCurrentValueMax() }}{{ getCurrentValueUnit() }}
+              <div
+                v-if="!isFormValid && formData.currentValue !== null"
+                class="form-error"
+              >
+                请输入有效的数值范围: 0 - {{ getCurrentValueMax()
+                }}{{ getCurrentValueUnit() }}
               </div>
             </a-form-item>
 
@@ -75,7 +98,10 @@
             </a-form-item>
 
             <a-form-item label="时间粒度" name="granularity">
-              <a-radio-group v-model:value="formData.granularity" button-style="solid">
+              <a-radio-group
+                v-model:value="formData.granularity"
+                button-style="solid"
+              >
                 <a-radio-button value="minute">分钟</a-radio-button>
                 <a-radio-button value="hour">小时</a-radio-button>
                 <a-radio-button value="day">天</a-radio-button>
@@ -111,7 +137,9 @@
                 </a-form-item>
 
                 <a-form-item name="includeAnomalyDetection">
-                  <a-checkbox v-model:checked="formData.includeAnomalyDetection">
+                  <a-checkbox
+                    v-model:checked="formData.includeAnomalyDetection"
+                  >
                     异常检测
                   </a-checkbox>
                 </a-form-item>
@@ -124,7 +152,9 @@
               </a-collapse-panel>
             </a-collapse>
           </a-form>
-          <p class="request-note">仅点击开始分析时调用服务；重置或改参数不会取消已发出的预测。</p>
+          <p class="request-note">
+            仅点击开始分析时调用服务；重置或改参数不会取消已发出的预测。
+          </p>
         </a-card>
       </a-col>
 
@@ -133,7 +163,8 @@
           <template #extra>
             <a-space wrap>
               <a-tag :color="getAccuracyColor(predictionResult.model_accuracy)">
-                模型准确率: {{ formatProbability(predictionResult.model_accuracy) }}
+                模型准确率:
+                {{ formatProbability(predictionResult.model_accuracy) }}
               </a-tag>
               <a-button size="small" @click="exportResult">
                 <DownloadOutlined />
@@ -142,12 +173,19 @@
             </a-space>
           </template>
 
-          <PredictionProvenance :result="predictionResult" :ai-requested="formData.enableAiInsights" />
+          <PredictionProvenance
+            :result="predictionResult"
+            :ai-requested="formData.enableAiInsights"
+          />
           <a-tabs v-model:activeKey="activeChartTab" @change="onChartTabChange">
             <a-tab-pane key="trend" tab="趋势预测">
               <div ref="trendChartRef" class="chart-container"></div>
             </a-tab-pane>
-            <a-tab-pane key="confidence" tab="置信区间" v-if="formData.includeConfidence">
+            <a-tab-pane
+              key="confidence"
+              tab="置信区间"
+              v-if="formData.includeConfidence"
+            >
               <p v-if="!hasConfidenceBounds">当前响应未提供有效置信区间</p>
               <div ref="confidenceChartRef" class="chart-container"></div>
             </a-tab-pane>
@@ -157,19 +195,28 @@
         <a-card v-else class="empty-result-card">
           <a-empty description="暂无预测结果">
             <template #image>
-              <BarChartOutlined style="font-size: 64px; color: #bfbfbf;" />
+              <BarChartOutlined style="font-size: 64px; color: #bfbfbf" />
             </template>
-            <a-button type="primary" @click="startAnalysis" :loading="analyzing" :disabled="!isFormValid || analyzing">
+            <a-button
+              type="primary"
+              @click="startAnalysis"
+              :loading="analyzing"
+              :disabled="!isFormValid || analyzing"
+            >
               开始预测分析
             </a-button>
           </a-empty>
         </a-card>
 
-        <a-card title="扩缩容建议" class="recommendations-card" v-if="predictionResult?.scaling_recommendations?.length">
+        <a-card
+          title="扩缩容建议"
+          class="recommendations-card"
+          v-if="predictionResult?.scaling_recommendations?.length"
+        >
           <div class="recommendations-grid">
-            <div 
-              v-for="(rec, index) in predictionResult.scaling_recommendations" 
-              :key="index" 
+            <div
+              v-for="(rec, index) in predictionResult.scaling_recommendations"
+              :key="index"
               class="recommendation-item"
             >
               <div class="rec-icon">
@@ -191,9 +238,20 @@
           </div>
         </a-card>
 
-        <a-card title="AI智能洞察" class="insights-card" v-if="predictionResult?.ai_enhanced && predictionResult?.ai_insights?.length">
+        <a-card
+          title="AI智能洞察"
+          class="insights-card"
+          v-if="
+            predictionResult?.ai_enhanced &&
+            predictionResult?.ai_insights?.length
+          "
+        >
           <div class="insights-list">
-            <div v-for="(insight, index) in predictionResult.ai_insights" :key="index" class="insight-item">
+            <div
+              v-for="(insight, index) in predictionResult.ai_insights"
+              :key="index"
+              class="insight-item"
+            >
               <BulbOutlined class="insight-icon" />
               <div class="insight-text">{{ insight }}</div>
             </div>
@@ -212,19 +270,43 @@ import PredictionBacktest from './PredictionBacktest.vue';
 import { formatProbability } from './prediction-display';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
-import { forecastPoints, confidenceValues, formatPredictionTime } from './prediction-series';
-import { ref, reactive, computed, onMounted, nextTick, onUnmounted, watch } from 'vue';
+import {
+  forecastPoints,
+  confidenceValues,
+  formatPredictionTime,
+} from './prediction-series';
+import {
+  ref,
+  reactive,
+  computed,
+  onMounted,
+  nextTick,
+  onUnmounted,
+  watch,
+} from 'vue';
 // 按需引入echarts，减少打包体积
 import * as echarts from 'echarts/core';
 import { LineChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent, LegendComponent, TitleComponent, DataZoomComponent, MarkLineComponent } from 'echarts/components';
+import {
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  TitleComponent,
+  DataZoomComponent,
+  MarkLineComponent,
+} from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
 // 注册必需的组件
 echarts.use([
   LineChart,
-  GridComponent, TooltipComponent, LegendComponent, TitleComponent, DataZoomComponent, MarkLineComponent,
-  CanvasRenderer
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  TitleComponent,
+  DataZoomComponent,
+  MarkLineComponent,
+  CanvasRenderer,
 ]);
 import { message } from 'ant-design-vue';
 import {
@@ -234,7 +316,7 @@ import {
   HddOutlined,
   DownloadOutlined,
   BarChartOutlined,
-  BulbOutlined
+  BulbOutlined,
 } from '@ant-design/icons-vue';
 import {
   predictQps,
@@ -246,7 +328,7 @@ import {
   type CpuPredictionRequest,
   type MemoryPredictionRequest,
   type DiskPredictionRequest,
-  PredictionGranularity
+  PredictionGranularity,
 } from '#/api/core/aiops/predict';
 
 const analyzing = ref(false);
@@ -256,10 +338,17 @@ const predictionResult = ref<PredictionResponse | null>(null);
 
 const trendChartRef = ref<HTMLElement>();
 const confidenceChartRef = ref<HTMLElement>();
-const hasConfidenceBounds = computed(() => predictionResult.value?.predicted_data?.some(point =>
-  typeof point.confidence_lower === 'number' && Number.isFinite(point.confidence_lower) &&
-  typeof point.confidence_upper === 'number' && Number.isFinite(point.confidence_upper) && point.confidence_lower <= point.confidence_upper
-) ?? false);
+const hasConfidenceBounds = computed(
+  () =>
+    predictionResult.value?.predicted_data?.some(
+      (point) =>
+        typeof point.confidence_lower === 'number' &&
+        Number.isFinite(point.confidence_lower) &&
+        typeof point.confidence_upper === 'number' &&
+        Number.isFinite(point.confidence_upper) &&
+        point.confidence_lower <= point.confidence_upper,
+    ) ?? false,
+);
 let trendChart: echarts.ECharts | null = null;
 let confidenceChart: echarts.ECharts | null = null;
 
@@ -272,62 +361,113 @@ const formData = reactive({
   sensitivity: 0.5,
   includeConfidence: true,
   includeAnomalyDetection: true,
-  enableAiInsights: true
+  enableAiInsights: true,
 });
 
-const scope = useAiRequestScope(() => { analysisLane.invalidate(); analyzing.value = false; predictionError.value = ''; predictionResult.value = null; disposeCharts(); formData.currentValue = null; });
+const scope = useAiRequestScope(() => {
+  analysisLane.invalidate();
+  analyzing.value = false;
+  predictionError.value = '';
+  predictionResult.value = null;
+  disposeCharts();
+  formData.currentValue = null;
+});
 const analysisLane = scope.createLane();
-watch(formData, () => { analysisLane.invalidate(); analyzing.value = false; predictionError.value = ''; predictionResult.value = null; disposeCharts(); }, { flush: 'sync' });
-useChartAppearance(() => { if (predictionResult.value) initCharts(); });
-function disposeCharts() { trendChart?.dispose(); confidenceChart?.dispose(); trendChart = null; confidenceChart = null; }
+watch(
+  formData,
+  () => {
+    analysisLane.invalidate();
+    analyzing.value = false;
+    predictionError.value = '';
+    predictionResult.value = null;
+    disposeCharts();
+  },
+  { flush: 'sync' },
+);
+useChartAppearance(() => {
+  if (predictionResult.value) initCharts();
+});
+function disposeCharts() {
+  trendChart?.dispose();
+  confidenceChart?.dispose();
+  trendChart = null;
+  confidenceChart = null;
+}
 
 const timeMarks = {
   1: '1h',
   6: '6h',
   24: '1d',
   72: '3d',
-  168: '1w'
+  168: '1w',
 };
 
 // 表单验证
 const isFormValid = computed(() => {
-  return !!scope.owner.value && Number.isFinite(formData.currentValue) && formData.currentValue !== null &&
-         formData.currentValue >= 0 &&
-         formData.currentValue <= getCurrentValueMax();
+  return (
+    !!scope.owner.value &&
+    Number.isFinite(formData.currentValue) &&
+    formData.currentValue !== null &&
+    formData.currentValue >= 0 &&
+    formData.currentValue <= getCurrentValueMax()
+  );
 });
 
 const getCurrentValueLabel = () => {
   switch (formData.predictionType) {
-    case 'qps': return 'QPS';
-    case 'cpu': return 'CPU使用率';
-    case 'memory': return '内存使用率';
-    case 'disk': return '磁盘使用率';
-    default: return '当前值';
+    case 'qps': {
+      return 'QPS';
+    }
+    case 'cpu': {
+      return 'CPU使用率';
+    }
+    case 'memory': {
+      return '内存使用率';
+    }
+    case 'disk': {
+      return '磁盘使用率';
+    }
+    default: {
+      return '当前值';
+    }
   }
 };
 
 const getCurrentValueUnit = () => {
   switch (formData.predictionType) {
-    case 'qps': return '/s';
+    case 'qps': {
+      return '/s';
+    }
     case 'cpu':
     case 'memory':
-    case 'disk': return '%';
-    default: return '';
+    case 'disk': {
+    } {} {} {} {} {} {} {} {} {} return '%';
+    default: {
+      return '';
+    }
   }
 };
 
 const getCurrentValueMax = () => {
   switch (formData.predictionType) {
-    case 'qps': return 10000;
+    case 'qps': {
+      return 10000;
+    }
     case 'cpu':
     case 'memory':
-    case 'disk': return 100;
-    default: return 100;
+    case 'disk': {
+    } {} {} {} {} {} {} {} {} {} return 100;
+    default: {
+      return 100;
+    }
   }
 };
 
 const onPredictionTypeChange = () => {
-  analysisLane.invalidate(); analyzing.value = false; predictionError.value = ''; disposeCharts();
+  analysisLane.invalidate();
+  analyzing.value = false;
+  predictionError.value = '';
+  disposeCharts();
   // 清空当前值，让用户重新填写
   formData.currentValue = null;
   // 清空之前的预测结果
@@ -342,7 +482,10 @@ const startAnalysis = async () => {
   }
 
   const ticket = analysisLane.begin();
-  analyzing.value = true; predictionResult.value = null; predictionError.value = ''; disposeCharts();
+  analyzing.value = true;
+  predictionResult.value = null;
+  predictionError.value = '';
+  disposeCharts();
   try {
     let response: PredictionResponse;
 
@@ -353,36 +496,41 @@ const startAnalysis = async () => {
       include_anomaly_detection: formData.includeAnomalyDetection,
       target_utilization: formData.targetUtilization / 100, // 将百分比转换为小数
       sensitivity: formData.sensitivity,
-      enable_ai_insights: formData.enableAiInsights
+      enable_ai_insights: formData.enableAiInsights,
     };
 
     switch (formData.predictionType) {
-      case 'qps':
+      case 'qps': {
         response = await predictQps({
           ...baseRequest,
-          current_qps: formData.currentValue
+          current_qps: formData.currentValue,
         } as QpsPredictionRequest);
         break;
-      case 'cpu':
+      }
+      case 'cpu': {
         response = await predictCpu({
           ...baseRequest,
-          current_cpu_percent: formData.currentValue
+          current_cpu_percent: formData.currentValue,
         } as CpuPredictionRequest);
         break;
-      case 'memory':
+      }
+      case 'memory': {
         response = await predictMemory({
           ...baseRequest,
-          current_memory_percent: formData.currentValue
+          current_memory_percent: formData.currentValue,
         } as MemoryPredictionRequest);
         break;
-      case 'disk':
+      }
+      case 'disk': {
         response = await predictDisk({
           ...baseRequest,
-          current_disk_percent: formData.currentValue
+          current_disk_percent: formData.currentValue,
         } as DiskPredictionRequest);
         break;
-      default:
+      }
+      default: {
         throw new Error('不支持的预测类型');
+      }
     }
 
     if (!analysisLane.current(ticket)) return;
@@ -392,12 +540,21 @@ const startAnalysis = async () => {
     await nextTick();
     if (!analysisLane.current(ticket)) return;
     initCharts();
-    if (response.fallback_mode || response.method === 'rule_based' || response.ai_fallback_reason || (formData.enableAiInsights && response.ai_enhanced !== true) || response.analysis_failures?.length) message.warning('预测已返回，部分功能降级，请查看来源和状态');
+    if (
+      response.fallback_mode ||
+      response.method === 'rule_based' ||
+      response.ai_fallback_reason ||
+      (formData.enableAiInsights && response.ai_enhanced !== true) ||
+      response.analysis_failures?.length
+    )
+      message.warning('预测已返回，部分功能降级，请查看来源和状态');
     else message.success('预测分析完成');
   } catch (error) {
     if (!analysisLane.current(ticket)) return;
-    predictionResult.value = null; disposeCharts();
-    predictionError.value = error instanceof Error ? error.message : '预测分析失败，请核对输入后重试';
+    predictionResult.value = null;
+    disposeCharts();
+    predictionError.value =
+      error instanceof Error ? error.message : '预测分析失败，请核对输入后重试';
   } finally {
     if (analysisLane.current(ticket)) analyzing.value = false;
   }
@@ -416,37 +573,37 @@ const initTrendChart = () => {
   trendChart?.dispose();
   trendChart = echarts.init(trendChartRef.value);
 
-  const data = forecastPoints(predictionResult.value).map(item => item.point);
-  const xAxisData = data.map(point => formatTimeForChart(point.timestamp));
-  const predictedData = data.map(point => point.predicted_value);
+  const data = forecastPoints(predictionResult.value).map((item) => item.point);
+  const xAxisData = data.map((point) => formatTimeForChart(point.timestamp));
+  const predictedData = data.map((point) => point.predicted_value);
 
   const option = {
     textStyle: { color: chartColors().text },
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross' }
+      axisPointer: { type: 'cross' },
     },
     legend: {
       data: ['预测值', '当前值'],
-      textStyle: { color: chartColors().text }
+      textStyle: { color: chartColors().text },
     },
     grid: {
       left: '3%',
       right: '4%',
       bottom: '3%',
-      containLabel: true
+      containLabel: true,
     },
     xAxis: {
       type: 'category',
       data: xAxisData,
-      axisLine: { lineStyle: { color: chartColors().border } }
+      axisLine: { lineStyle: { color: chartColors().border } },
     },
     yAxis: {
       type: 'value',
       name: getCurrentValueLabel(),
       axisLine: { lineStyle: { color: chartColors().border } },
-      splitLine: { lineStyle: { color: chartColors().border } }
+      splitLine: { lineStyle: { color: chartColors().border } },
     },
     series: [
       {
@@ -455,15 +612,17 @@ const initTrendChart = () => {
         data: predictedData,
         smooth: true,
         lineStyle: { width: 3, color: '#1890ff' },
-        areaStyle: { opacity: 0.1, color: '#1890ff' }
+        areaStyle: { opacity: 0.1, color: '#1890ff' },
       },
       {
         name: '当前值',
         type: 'line',
-        data: Array(xAxisData.length).fill(predictionResult.value.current_value),
-        lineStyle: { type: 'dashed', color: '#ff4d4f' }
-      }
-    ]
+        data: Array(xAxisData.length).fill(
+          predictionResult.value.current_value,
+        ),
+        lineStyle: { type: 'dashed', color: '#ff4d4f' },
+      },
+    ],
   };
 
   trendChart.setOption(option);
@@ -475,15 +634,15 @@ const initConfidenceChart = () => {
   confidenceChart?.dispose();
   confidenceChart = echarts.init(confidenceChartRef.value);
 
-  const data = forecastPoints(predictionResult.value).map(item => item.point);
-  const xAxisData = data.map(point => formatTimeForChart(point.timestamp));
-  const predictedData = data.map(point => point.predicted_value);
+  const data = forecastPoints(predictionResult.value).map((item) => item.point);
+  const xAxisData = data.map((point) => formatTimeForChart(point.timestamp));
+  const predictedData = data.map((point) => point.predicted_value);
   const upperData = confidenceValues(data, 'confidence_upper');
   const lowerData = confidenceValues(data, 'confidence_lower');
 
   const option = {
     textStyle: { color: chartColors().text },
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
     tooltip: {
       trigger: 'axis',
       formatter: (params: any) => {
@@ -493,27 +652,27 @@ const initConfidenceChart = () => {
         const upper = upperData[dataIndex] ?? '未知';
         const lower = lowerData[dataIndex] ?? '未知';
         return `时间: ${time}<br/>预测值: ${predicted}<br/>置信上限: ${upper}<br/>置信下限: ${lower}`;
-      }
+      },
     },
     legend: {
       data: ['预测值', '置信上限', '置信下限'],
-      textStyle: { color: chartColors().text }
+      textStyle: { color: chartColors().text },
     },
     grid: {
       left: '3%',
       right: '4%',
       bottom: '3%',
-      containLabel: true
+      containLabel: true,
     },
     xAxis: {
       type: 'category',
       data: xAxisData,
-      axisLine: { lineStyle: { color: chartColors().border } }
+      axisLine: { lineStyle: { color: chartColors().border } },
     },
     yAxis: {
       type: 'value',
       axisLine: { lineStyle: { color: chartColors().border } },
-      splitLine: { lineStyle: { color: chartColors().border } }
+      splitLine: { lineStyle: { color: chartColors().border } },
     },
     series: [
       {
@@ -521,23 +680,23 @@ const initConfidenceChart = () => {
         type: 'line',
         data: upperData,
         lineStyle: { color: '#52c41a', type: 'dashed' },
-        symbol: 'none'
+        symbol: 'none',
       },
       {
         name: '预测值',
         type: 'line',
         data: predictedData,
         lineStyle: { color: '#1890ff', width: 3 },
-        areaStyle: { opacity: 0.1 }
+        areaStyle: { opacity: 0.1 },
       },
       {
         name: '置信下限',
         type: 'line',
         data: lowerData,
         lineStyle: { color: '#52c41a', type: 'dashed' },
-        symbol: 'none'
-      }
-    ]
+        symbol: 'none',
+      },
+    ],
   };
 
   confidenceChart.setOption(option);
@@ -547,14 +706,21 @@ const onChartTabChange = (key: string) => {
   activeChartTab.value = key;
   const result = predictionResult.value;
   nextTick(() => {
-    if (predictionResult.value !== result || !result || activeChartTab.value !== key) return;
+    if (
+      predictionResult.value !== result ||
+      !result ||
+      activeChartTab.value !== key
+    )
+      return;
     switch (key) {
-      case 'trend':
+      case 'trend': {
         initTrendChart();
         break;
-      case 'confidence':
+      }
+      case 'confidence': {
         initConfidenceChart();
         break;
+      }
     }
   });
 };
@@ -568,37 +734,65 @@ const getAccuracyColor = (accuracy?: number | null) => {
 
 const getActionColor = (action: string) => {
   switch (action) {
-    case 'scale_up': return 'red';
-    case 'scale_down': return 'green';
-    case 'maintain': return 'blue';
-    default: return 'default';
+    case 'scale_up': {
+      return 'red';
+    }
+    case 'scale_down': {
+      return 'green';
+    }
+    case 'maintain': {
+      return 'blue';
+    }
+    default: {
+      return 'default';
+    }
   }
 };
 
 const getActionText = (action: string) => {
   switch (action) {
-    case 'scale_up': return '扩容';
-    case 'scale_down': return '缩容';
-    case 'maintain': return '保持';
-    default: return '未知';
+    case 'scale_up': {
+      return '扩容';
+    }
+    case 'scale_down': {
+      return '缩容';
+    }
+    case 'maintain': {
+      return '保持';
+    }
+    default: {
+      return '未知';
+    }
   }
 };
 
 const getActionIcon = (action: string) => {
   switch (action) {
-    case 'scale_up': return 'ArrowUpOutlined';
-    case 'scale_down': return 'ArrowDownOutlined';
-    case 'maintain': return 'MinusOutlined';
-    default: return 'MinusOutlined';
+    case 'scale_up': {
+      return 'ArrowUpOutlined';
+    }
+    case 'scale_down': {
+      return 'ArrowDownOutlined';
+    }
+    case 'maintain': {
+      return 'MinusOutlined';
+    }
+    default: {
+      return 'MinusOutlined';
+    }
   }
 };
 
 // 时间转换工具函数：UTC转北京时间
 const formatTime = (timestamp: string) => formatPredictionTime(timestamp);
-const formatTimeForChart = (timestamp: string | Date) => formatPredictionTime(timestamp, true);
+const formatTimeForChart = (timestamp: string | Date) =>
+  formatPredictionTime(timestamp, true);
 
 const resetForm = () => {
-  analysisLane.invalidate(); analyzing.value = false; predictionError.value = ''; disposeCharts();
+  analysisLane.invalidate();
+  analyzing.value = false;
+  predictionError.value = '';
+  disposeCharts();
   Object.assign(formData, {
     predictionType: 'qps',
     currentValue: null,
@@ -608,10 +802,9 @@ const resetForm = () => {
     sensitivity: 0.5,
     includeConfidence: true,
     includeAnomalyDetection: true,
-    enableAiInsights: true
+    enableAiInsights: true,
   });
   predictionResult.value = null;
-
 };
 
 const exportResult = () => {
@@ -654,15 +847,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-
 /* 页面头部 */
-
-
-
-
-
-
-
 
 .config-card,
 .result-card,
@@ -793,13 +978,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-
-
-
-
-
-
-
   .chart-container {
     height: 300px;
   }
@@ -810,10 +988,23 @@ onUnmounted(() => {
 }
 
 @media (max-width: 575px) {
-  .metric-name { overflow-wrap: anywhere; }
-  .metric-value { font-size: 18px; }
-  .cost-overview { grid-template-columns: 1fr; }
-  .chart-container, .chart-container-small { min-width: 0; }
+  .metric-name {
+    overflow-wrap: anywhere;
+  }
+  .metric-value {
+    font-size: 18px;
+  }
+  .cost-overview {
+    grid-template-columns: 1fr;
+  }
+  .chart-container,
+  .chart-container-small {
+    min-width: 0;
+  }
 }
-.request-note { color: var(--ops-muted); font-size: 12px; margin: var(--ops-space-md) 0 0; }
+.request-note {
+  color: var(--ops-muted);
+  font-size: 12px;
+  margin: var(--ops-space-md) 0 0;
+}
 </style>

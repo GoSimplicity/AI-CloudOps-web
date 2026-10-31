@@ -49,9 +49,9 @@ function add() {
           class="k8s-form-input"
           @update:value="update(index, 'value', $event)"
         />
-        <a-button type="primary" danger size="small" @click="remove(index)"
-          >删除</a-button
-        >
+        <a-button type="primary" danger size="small" @click="remove(index)">
+          删除
+        </a-button>
       </div>
       <a-button type="dashed" style="width: 100%; margin-top: 8px" @click="add">
         <template #icon><PlusOutlined /></template>{{ addText }}

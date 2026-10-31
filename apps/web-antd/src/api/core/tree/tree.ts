@@ -403,7 +403,6 @@ export interface TreeNodeDeleteReq {
   id: number;
 }
 
-
 export async function getVpcResourceList(req: ListVpcResourcesReq) {
   return requestClient.post('/tree/vpc/list', req);
 }
@@ -425,7 +424,9 @@ export async function getEcsResourceList(req: ListEcsResourceReq) {
 }
 
 export async function getEcsResourceDetail(req: GetEcsDetailReq) {
-  return requestClient.get(`/tree/ecs/detail/${req.instanceId}`, { params: req });
+  return requestClient.get(`/tree/ecs/detail/${req.instanceId}`, {
+    params: req,
+  });
 }
 
 export async function createEcsResource(req: CreateEcsResourceReq) {
@@ -449,7 +450,9 @@ export async function restartEcsResource(req: RestartEcsReq) {
 }
 
 export async function deleteEcsResource(req: DeleteEcsReq) {
-  return requestClient.delete(`/tree/ecs/delete/${req.instanceId}`, { data: req });
+  return requestClient.delete(`/tree/ecs/delete/${req.instanceId}`, {
+    data: req,
+  });
 }
 
 export async function getInstanceOptions(req: ListInstanceOptionsReq) {

@@ -34,13 +34,13 @@ import {
 // 任务状态枚举
 export const TaskStatus = {
   PENDING: 'pending',
-  RUNNING: 'running', 
+  RUNNING: 'running',
   SUCCESS: 'success',
   FAILED: 'failed',
   CANCELLED: 'cancelled',
 } as const;
 
-export type TaskStatusType = typeof TaskStatus[keyof typeof TaskStatus];
+export type TaskStatusType = (typeof TaskStatus)[keyof typeof TaskStatus];
 
 export function useTaskPage() {
   // state
@@ -121,20 +121,26 @@ export function useTaskPage() {
   const createFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入任务名称', trigger: 'blur' },
-      { pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/, message: '任务名称只能包含中英文、数字、下划线和连字符', trigger: 'blur' },
-      { max: 50, message: '任务名称长度不能超过50个字符', trigger: 'blur' }
+      {
+        pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/,
+        message: '任务名称只能包含中英文、数字、下划线和连字符',
+        trigger: 'blur',
+      },
+      { max: 50, message: '任务名称长度不能超过50个字符', trigger: 'blur' },
     ],
-    template_id: [
-      { required: true, message: '请选择模板', trigger: 'change' }
-    ]
+    template_id: [{ required: true, message: '请选择模板', trigger: 'change' }],
   };
 
   const editFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入任务名称', trigger: 'blur' },
-      { pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/, message: '任务名称只能包含中英文、数字、下划线和连字符', trigger: 'blur' },
-      { max: 255, message: '任务名称长度不能超过255个字符', trigger: 'blur' }
-    ]
+      {
+        pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/,
+        message: '任务名称只能包含中英文、数字、下划线和连字符',
+        trigger: 'blur',
+      },
+      { max: 255, message: '任务名称长度不能超过255个字符', trigger: 'blur' },
+    ],
   };
 
   // computed
@@ -197,7 +203,7 @@ export function useTaskPage() {
   // 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime
 
   const getTemplateName = (templateId?: number) => {
-    const template = templates.value.find(t => t.id === templateId);
+    const template = templates.value.find((t) => t.id === templateId);
     return template?.name || `模板 ${templateId}`;
   };
 
@@ -258,7 +264,8 @@ export function useTaskPage() {
         clearTasks();
         clearTemplates();
       }
-      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err))
+        clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -286,7 +293,11 @@ export function useTaskPage() {
         cluster_id: clusterId,
       };
       const res = await getYamlTemplateList(params);
-      if (requestId !== templateRequestId || filterClusterId.value !== clusterId) return;
+      if (
+        requestId !== templateRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       if (templatesPage.value === 1) {
         templates.value = res?.items || [];
       } else {
@@ -294,10 +305,15 @@ export function useTaskPage() {
       }
       templatesTotal.value = res?.total || 0;
     } catch (error) {
-      if (requestId !== templateRequestId || filterClusterId.value !== clusterId) return;
+      if (
+        requestId !== templateRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       clearTemplates();
       clearTasks();
-      if (shouldRecordPageError(error)) templatesError.value = '获取模板目录失败，请重试';
+      if (shouldRecordPageError(error))
+        templatesError.value = '获取模板目录失败，请重试';
       if (shouldNotifyPageError(error)) message.error(templatesError.value);
     } finally {
       if (requestId === templateRequestId) templatesLoading.value = false;
@@ -307,7 +323,10 @@ export function useTaskPage() {
   // crud operations
   const fetchTasks = async () => {
     const clusterId = filterClusterId.value;
-    if (!clusterId) { clearTasks(); return; }
+    if (!clusterId) {
+      clearTasks();
+      return;
+    }
     const requestId = ++resourceRequestId;
     try {
       loading.value = true;
@@ -323,13 +342,22 @@ export function useTaskPage() {
         name: searchText.value || undefined,
       };
       const res = await getYamlTaskList(params);
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       tasks.value = res?.items || [];
       total.value = res?.total || 0;
     } catch (error) {
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       clearTasks();
-      if (shouldRecordPageError(error)) loadError.value = '获取 YAML 任务列表失败，请重试';
+      if (shouldRecordPageError(error))
+        loadError.value = '获取 YAML 任务列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
@@ -340,13 +368,13 @@ export function useTaskPage() {
   const showTaskDetail = async (record: K8sYamlTask) => {
     const clusterId = validateClusterId();
     if (!clusterId) return;
-    
+
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
       const params: YamlTaskDetailReq = {
         id: record.id!,
-        cluster_id: clusterId
+        cluster_id: clusterId,
       };
       const res = await getYamlTaskDetail(params);
       currentTaskDetail.value = res || record;
@@ -380,32 +408,32 @@ export function useTaskPage() {
 
   const submitCreateForm = async () => {
     if (!formRef.value) return;
-    
+
     const clusterId = validateClusterId();
     if (!clusterId) return;
-    
+
     try {
       await formRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: YamlTaskCreateReq = {
         name: createFormModel.value.name,
         template_id: createFormModel.value.template_id!,
         cluster_id: clusterId,
-        variables: createFormModel.value.variables.filter(v => v.trim()),
+        variables: createFormModel.value.variables.filter((v) => v.trim()),
       };
-      
+
       await createYamlTask(params);
       message.success('任务创建成功');
       isCreateModalVisible.value = false;
       await fetchTasks();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('任务创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -429,33 +457,33 @@ export function useTaskPage() {
 
   const submitEditForm = async () => {
     if (!editFormRef.value || !currentOperationTask.value) return;
-    
+
     const clusterId = validateClusterId();
     if (!clusterId) return;
-    
+
     try {
       await editFormRef.value.validate();
       submitLoading.value = true;
-      
+
       const params: YamlTaskUpdateReq = {
         id: currentOperationTask.value.id!,
         name: editFormModel.value.name,
         template_id: editFormModel.value.template_id,
         cluster_id: clusterId,
-        variables: editFormModel.value.variables.filter(v => v.trim()),
+        variables: editFormModel.value.variables.filter((v) => v.trim()),
       };
-      
+
       await updateYamlTask(params);
       message.success('任务更新成功');
       isEditModalVisible.value = false;
       await fetchTasks();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) {
-        if (shouldNotifyPageError(err)) message.warning('请检查表单填写是否正确');
+        if (shouldNotifyPageError(err))
+          message.warning('请检查表单填写是否正确');
         return;
       }
       if (shouldNotifyPageError(err)) message.error('任务更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -477,26 +505,30 @@ export function useTaskPage() {
 
   const submitExecuteForm = async () => {
     if (!currentOperationTask.value) return;
-    
+
     const clusterId = validateClusterId();
     if (!clusterId) return;
-    
+
     try {
       executeLoading.value = true;
-      
+
       const params: YamlTaskExecuteReq = {
         id: currentOperationTask.value.id!,
         cluster_id: clusterId,
         dry_run: executeFormModel.value.dry_run,
       };
-      
+
       await applyYamlTask(params);
-      message.success(executeFormModel.value.dry_run ? '任务预检查成功' : '任务执行成功');
+      message.success(
+        executeFormModel.value.dry_run ? '任务预检查成功' : '任务执行成功',
+      );
       isExecuteModalVisible.value = false;
       await fetchTasks();
     } catch (err) {
-      if (shouldNotifyPageError(err)) message.error(executeFormModel.value.dry_run ? '任务预检查失败' : '任务执行失败');
-
+      if (shouldNotifyPageError(err))
+        message.error(
+          executeFormModel.value.dry_run ? '任务预检查失败' : '任务执行失败',
+        );
     } finally {
       executeLoading.value = false;
     }
@@ -506,7 +538,7 @@ export function useTaskPage() {
   const deleteTask = (record: K8sYamlTask) => {
     const clusterId = validateClusterId();
     if (!clusterId) return;
-    
+
     Modal.confirm({
       title: '删除任务',
       content: `确定要删除任务 "${record.name}" 吗？此操作不可逆！`,
@@ -518,14 +550,13 @@ export function useTaskPage() {
         try {
           const params: YamlTaskDeleteReq = {
             id: record.id!,
-            cluster_id: clusterId
+            cluster_id: clusterId,
           };
           await deleteYamlTask(params);
           message.success('任务删除成功');
           await fetchTasks();
         } catch (err) {
           if (shouldNotifyPageError(err)) message.error('任务删除失败');
-
         }
       },
     });
@@ -534,10 +565,10 @@ export function useTaskPage() {
   // 批量操作
   const batchOperation = (operation: string) => {
     if (!selectedRows.value.length) return;
-    
+
     const clusterId = validateClusterId();
     if (!clusterId) return;
-    
+
     Modal.confirm({
       title: `批量${operation}`,
       content: `确定要对选中的 ${selectedRows.value.length} 个任务执行${operation}操作吗？`,
@@ -551,7 +582,7 @@ export function useTaskPage() {
             if (operation === '删除') {
               const params: YamlTaskDeleteReq = {
                 id: task.id!,
-                cluster_id: clusterId
+                cluster_id: clusterId,
               };
               await deleteYamlTask(params);
             } else if (operation === '执行') {
@@ -568,7 +599,6 @@ export function useTaskPage() {
           await fetchTasks();
         } catch (err) {
           if (shouldNotifyPageError(err)) message.error(`批量${operation}失败`);
-
         }
       },
     });
@@ -658,12 +688,12 @@ export function useTaskPage() {
     templatesTotal,
     templatesPage,
     templatesSize,
-    
+
     // form refs
     formRef,
     editFormRef,
     executeFormRef,
-    
+
     // modal state
     isCreateModalVisible,
     isEditModalVisible,
@@ -673,24 +703,24 @@ export function useTaskPage() {
     detailLoading,
     executeLoading,
     checkLoading,
-    
+
     // operation targets
     currentOperationTask,
     currentTaskDetail,
-    
+
     // form models
     createFormModel,
     editFormModel,
     executeFormModel,
-    
+
     // form rules
     createFormRules,
     editFormRules,
-    
+
     // computed
     filteredTasks,
     rowSelection,
-    
+
     // helpers
     validateClusterId,
     getEnvText,
@@ -698,7 +728,7 @@ export function useTaskPage() {
     getStatusColor,
     formatK8sTime,
     getTemplateName,
-    
+
     // operations
     fetchClusters,
     fetchTemplates,
@@ -707,43 +737,43 @@ export function useTaskPage() {
     clearTemplates,
     loadMoreClusters,
     loadMoreTemplates,
-    
+
     // detail operations
     showTaskDetail,
     closeDetailModal,
-    
+
     // create operations
     openCreateModal,
     closeCreateModal,
     submitCreateForm,
-    
+
     // edit operations
     openEditModal,
     closeEditModal,
     submitEditForm,
-    
+
     // execute operations
     openExecuteModal,
     closeExecuteModal,
     submitExecuteForm,
-    
+
     // task operations
     deleteTask,
-    
+
     // batch operations
     batchOperation,
-    
+
     // pagination operations
     resetClusters,
     resetTemplates,
     handlePageChange,
-    
+
     // form field operations
     addVariableField,
     removeVariableField,
     addEditVariableField,
     removeEditVariableField,
-    
+
     // constants
     TaskStatus,
   };

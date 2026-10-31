@@ -1,84 +1,115 @@
 <template>
-  <OpsPage :title="dutyGroupDetail?.name || '值班安排'" description="按月查看排班与历史，管理换班申请">
+  <OpsPage
+    :title="dutyGroupDetail?.name || '值班安排'"
+    description="按月查看排班与历史，管理换班申请"
+  >
     <!-- 页面标题和操作栏 -->
     <template #actions>
       <a-button @click="goBack">返回值班组</a-button>
-<a-button type="default" @click="exportSchedule" class="action-btn" :loading="exportLoading" :disabled="!calendarDays.length || !!scheduleError">
-            <template #icon>
-            </template>
-            导出
-          </a-button>
-<a-button type="primary" @click="handleCreateChange" class="action-btn" :disabled="!dutyGroupDetail">
-            申请换班
-          </a-button>
+      <a-button
+        type="default"
+        @click="exportSchedule"
+        class="action-btn"
+        :loading="exportLoading"
+        :disabled="!calendarDays.length || !!scheduleError"
+      >
+        <template #icon> </template>
+        导出
+      </a-button>
+      <a-button
+        type="primary"
+        @click="handleCreateChange"
+        class="action-btn"
+        :disabled="!dutyGroupDetail"
+      >
+        申请换班
+      </a-button>
     </template>
     <template #filters>
-<div class="search-filters">
-          <a-input-search
-            v-model:value="searchQuery"
-            placeholder="搜索值班历史..."
-            class="search-input"
-            @search="handleSearch"
-            allow-clear
-          />
-          <a-date-picker
-            v-model:value="dateFilter"
-            placeholder="筛选日期"
-            class="filter-select"
-            @change="handleDateChange"
-            allow-clear
-          />
-        </div>
+      <div class="search-filters">
+        <a-input-search
+          v-model:value="searchQuery"
+          placeholder="搜索值班历史..."
+          class="search-input"
+          @search="handleSearch"
+          allow-clear
+        />
+        <a-date-picker
+          v-model:value="dateFilter"
+          placeholder="筛选日期"
+          class="filter-select"
+          @change="handleDateChange"
+          allow-clear
+        />
+      </div>
     </template>
 
     <!-- 统计面板 -->
     <template #summary>
       <div class="stats-section">
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon">
-            <Icon icon="carbon:user-multiple" />
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <Icon icon="carbon:user-multiple" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-number">
+                {{ loadError ? '未知' : stats.totalMembers }}
+              </div>
+              <div class="stat-label">值班成员</div>
+            </div>
           </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ loadError ? '未知' : stats.totalMembers }}</div>
-            <div class="stat-label">值班成员</div>
-          </div>
-        </div>
 
-        <div class="stat-card">
-          <div class="stat-icon">
-            <Icon icon="carbon:user-online" />
+          <div class="stat-card">
+            <div class="stat-icon">
+              <Icon icon="carbon:user-online" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-number">
+                {{ loadError ? '未知' : stats.todayOnDuty }}
+              </div>
+              <div class="stat-label">今日值班</div>
+            </div>
           </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ loadError ? '未知' : stats.todayOnDuty }}</div>
-            <div class="stat-label">今日值班</div>
-          </div>
-        </div>
 
-        <div class="stat-card">
-          <div class="stat-icon">
-            <Icon icon="carbon:calendar-heat-map" />
+          <div class="stat-card">
+            <div class="stat-icon">
+              <Icon icon="carbon:calendar-heat-map" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-number">
+                {{ loadError ? '未知' : stats.monthlyDutyDays }}
+              </div>
+              <div class="stat-label">本月值班天数</div>
+            </div>
           </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ loadError ? '未知' : stats.monthlyDutyDays }}</div>
-            <div class="stat-label">本月值班天数</div>
-          </div>
-        </div>
 
-        <div class="stat-card">
-          <div class="stat-icon">
-            <Icon icon="carbon:change-catalog" />
-          </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ loadError ? '未知' : stats.changeRecords }}</div>
-            <div class="stat-label">本页换班记录</div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <Icon icon="carbon:change-catalog" />
+            </div>
+            <div class="stat-content">
+              <div class="stat-number">
+                {{ loadError ? '未知' : stats.changeRecords }}
+              </div>
+              <div class="stat-label">本页换班记录</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
     </template>
-    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
-      <template #action><a-button :loading="detailLoading" @click="fetchDutyGroups">重试</a-button></template>
+    <a-alert
+      v-if="loadError"
+      type="error"
+      show-icon
+      :message="loadError"
+      role="alert"
+    >
+      <template #action>
+        <a-button :loading="detailLoading" @click="fetchDutyGroups">
+          重试
+        </a-button>
+      </template>
     </a-alert>
 
     <!-- 日历区域 -->
@@ -86,20 +117,36 @@
       <a-card class="calendar-card">
         <div class="calendar-header">
           <div class="calendar-nav">
-            <a-button @click="previousMonth" aria-label="上个月" size="large" class="nav-btn" :disabled="loading">
+            <a-button
+              @click="previousMonth"
+              aria-label="上个月"
+              size="large"
+              class="nav-btn"
+              :disabled="loading"
+            >
               <Icon icon="carbon:chevron-left" />
             </a-button>
             <div class="calendar-title">
               <h2>{{ currentMonthYear }}</h2>
               <span class="calendar-subtitle">值班安排</span>
             </div>
-            <a-button @click="nextMonth" aria-label="下个月" size="large" class="nav-btn" :disabled="loading">
+            <a-button
+              @click="nextMonth"
+              aria-label="下个月"
+              size="large"
+              class="nav-btn"
+              :disabled="loading"
+            >
               <Icon icon="carbon:chevron-right" />
             </a-button>
           </div>
 
           <div class="calendar-actions">
-            <a-button size="small" @click="goToToday" :disabled="isCurrentMonthToday">
+            <a-button
+              size="small"
+              @click="goToToday"
+              :disabled="isCurrentMonthToday"
+            >
               今日
             </a-button>
             <a-button size="small" @click="refreshCalendar" :loading="loading">
@@ -112,7 +159,11 @@
           <div class="calendar">
             <!-- 星期标题 -->
             <div class="calendar-weekdays">
-              <div class="weekday-header" v-for="weekday in weekdays" :key="weekday">
+              <div
+                class="weekday-header"
+                v-for="weekday in weekdays"
+                :key="weekday"
+              >
                 {{ weekday }}
               </div>
             </div>
@@ -126,11 +177,11 @@
                 @click="handleDayClick(day)"
                 :class="{
                   'has-duty': day.user,
-                  'today': isToday(day.date),
-                  'weekend': isWeekend(day.date),
+                  today: isToday(day.date),
+                  weekend: isWeekend(day.date),
                   'current-month': day.isCurrentMonth,
-                  'clickable': day.isCurrentMonth,
-                  'is-adjusted': day.isAdjusted
+                  clickable: day.isCurrentMonth,
+                  'is-adjusted': day.isAdjusted,
                 }"
               >
                 <div class="day-header">
@@ -146,13 +197,24 @@
 
                 <div class="day-content">
                   <div class="duty-info" v-if="day.user">
-                    <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(day.user.real_name || day.user.username) }">
+                    <a-avatar
+                      size="small"
+                      :style="{
+                        backgroundColor: getAvatarColor(
+                          day.user.real_name || day.user.username,
+                        ),
+                      }"
+                    >
                       {{ getInitials(day.user.real_name || day.user.username) }}
                     </a-avatar>
                     <div class="duty-details">
-                      <span class="duty-name">{{ day.user.real_name || day.user.username }}</span>
+                      <span class="duty-name">{{
+                        day.user.real_name || day.user.username
+                      }}</span>
                       <div class="duty-extra" v-if="day.originUser">
-                        <span class="original-user">原: {{ day.originUser }}</span>
+                        <span class="original-user"
+                          >原: {{ day.originUser }}</span
+                        >
                       </div>
                     </div>
                   </div>
@@ -177,8 +239,6 @@
           </div>
         </template>
 
-
-
         <a-table
           :data-source="historyList"
           :columns="historyColumns"
@@ -191,33 +251,59 @@
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'date'">
               <div class="date-cell">
-                <div class="date-main">{{ formatDate(record.date_string) }}</div>
-                <div class="date-sub">{{ getDayOfWeek(record.date_string) }}</div>
+                <div class="date-main">
+                  {{ formatDate(record.date_string) }}
+                </div>
+                <div class="date-sub">
+                  {{ getDayOfWeek(record.date_string) }}
+                </div>
               </div>
             </template>
 
             <template v-if="column.key === 'users'">
               <div class="users-change">
                 <div class="user-item">
-                  <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(getUserName(record.origin_user_id) || '') }">
+                  <a-avatar
+                    size="small"
+                    :style="{
+                      backgroundColor: getAvatarColor(
+                        getUserName(record.origin_user_id) || '',
+                      ),
+                    }"
+                  >
                     {{ getInitials(getUserName(record.origin_user_id)) }}
                   </a-avatar>
-                  <span class="user-name">{{ getUserName(record.origin_user_id) }}</span>
+                  <span class="user-name">{{
+                    getUserName(record.origin_user_id)
+                  }}</span>
                 </div>
                 <Icon icon="carbon:arrow-right" class="arrow" />
                 <div class="user-item">
-                  <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(getUserName(record.on_duty_user_id) || '') }">
+                  <a-avatar
+                    size="small"
+                    :style="{
+                      backgroundColor: getAvatarColor(
+                        getUserName(record.on_duty_user_id) || '',
+                      ),
+                    }"
+                  >
                     {{ getInitials(getUserName(record.on_duty_user_id)) }}
                   </a-avatar>
-                  <span class="user-name">{{ getUserName(record.on_duty_user_id) }}</span>
+                  <span class="user-name">{{
+                    getUserName(record.on_duty_user_id)
+                  }}</span>
                 </div>
               </div>
             </template>
 
             <template v-if="column.key === 'createdAt'">
               <div class="date-cell">
-                <div class="date-main">{{ formatDateFromTimestamp(record.created_at) }}</div>
-                <div class="date-sub">{{ formatTimeFromTimestamp(record.created_at) }}</div>
+                <div class="date-main">
+                  {{ formatDateFromTimestamp(record.created_at) }}
+                </div>
+                <div class="date-sub">
+                  {{ formatTimeFromTimestamp(record.created_at) }}
+                </div>
               </div>
             </template>
           </template>
@@ -260,7 +346,11 @@
             allow-clear
             :filter-option="filterOption"
           >
-            <a-select-option v-for="member in dutyGroupDetail?.users || []" :key="member.id" :value="member.id">
+            <a-select-option
+              v-for="member in dutyGroupDetail?.users || []"
+              :key="member.id"
+              :value="member.id"
+            >
               {{ member.real_name || member.username }}
             </a-select-option>
           </a-select>
@@ -275,7 +365,11 @@
             allow-clear
             :filter-option="filterOption"
           >
-            <a-select-option v-for="member in dutyGroupDetail?.users || []" :key="member.id" :value="member.id">
+            <a-select-option
+              v-for="member in dutyGroupDetail?.users || []"
+              :key="member.id"
+              :value="member.id"
+            >
               {{ member.real_name || member.username }}
             </a-select-option>
           </a-select>
@@ -304,10 +398,16 @@
       <div v-if="selectedDay" class="day-detail-container">
         <div class="day-detail-header">
           <div class="date-display">
-            <div class="date-large">{{ formatDayNumber(selectedDay.date) }}</div>
+            <div class="date-large">
+              {{ formatDayNumber(selectedDay.date) }}
+            </div>
             <div class="date-info">
-              <div class="date-month">{{ formatMonthDay(selectedDay.date) }}</div>
-              <div class="date-weekday">{{ getDayOfWeek(selectedDay.date) }}</div>
+              <div class="date-month">
+                {{ formatMonthDay(selectedDay.date) }}
+              </div>
+              <div class="date-weekday">
+                {{ getDayOfWeek(selectedDay.date) }}
+              </div>
             </div>
           </div>
           <div class="day-badges">
@@ -322,11 +422,24 @@
         <div class="duty-detail-content">
           <div v-if="selectedDay.user" class="duty-assigned">
             <div class="duty-user-info">
-              <a-avatar size="large" :style="{ backgroundColor: getAvatarColor(selectedDay.user.real_name || selectedDay.user.username) }">
-                {{ getInitials(selectedDay.user.real_name || selectedDay.user.username) }}
+              <a-avatar
+                size="large"
+                :style="{
+                  backgroundColor: getAvatarColor(
+                    selectedDay.user.real_name || selectedDay.user.username,
+                  ),
+                }"
+              >
+                {{
+                  getInitials(
+                    selectedDay.user.real_name || selectedDay.user.username,
+                  )
+                }}
               </a-avatar>
               <div class="user-details">
-                <div class="user-name">{{ selectedDay.user.real_name || selectedDay.user.username }}</div>
+                <div class="user-name">
+                  {{ selectedDay.user.real_name || selectedDay.user.username }}
+                </div>
                 <div class="user-role">值班人员</div>
               </div>
             </div>
@@ -337,7 +450,12 @@
             </div>
 
             <div class="duty-actions-full">
-              <a-button type="primary" @click="openSwapModal(selectedDay)" :disabled="isPastDate(selectedDay.date)" block>
+              <a-button
+                type="primary"
+                @click="openSwapModal(selectedDay)"
+                :disabled="isPastDate(selectedDay.date)"
+                block
+              >
                 <Icon icon="carbon:change-catalog" />
                 申请换班
               </a-button>
@@ -372,7 +490,6 @@ import {
   type MonitorOnDutyHistory,
   type MonitorOnDutyGroup,
   type CreateMonitorOnDutyGroupChangeReq,
-
 } from '#/api/core/prometheus/prometheus_onduty';
 
 // Define User type locally
@@ -409,7 +526,7 @@ const router = useRouter();
 const historyColumns = [
   { title: '值班日期', key: 'date', width: 120 },
   { title: '人员变更', key: 'users', width: 220 },
-  { title: '记录时间', key: 'createdAt', width: 150 }
+  { title: '记录时间', key: 'createdAt', width: 150 },
 ];
 
 // 状态数据
@@ -417,11 +534,30 @@ const loading = ref(false);
 const detailLoading = ref(false);
 const historyLoading = ref(false);
 const changesLoading = ref(false);
-const { loadError: detailError, beginRequest: beginDetailRequest } = useListRequest(detailLoading);
-const { loadError: scheduleError, beginRequest: beginScheduleRequest, invalidate: invalidateSchedule } = useListRequest(loading);
-const { loadError: historyError, beginRequest: beginHistoryRequest, invalidate: invalidateHistory } = useListRequest(historyLoading);
-const { loadError: changeError, beginRequest: beginChangeRequest, invalidate: invalidateChanges } = useListRequest(changesLoading);
-const loadError = computed(() => detailError.value || scheduleError.value || historyError.value || changeError.value);
+const { loadError: detailError, beginRequest: beginDetailRequest } =
+  useListRequest(detailLoading);
+const {
+  loadError: scheduleError,
+  beginRequest: beginScheduleRequest,
+  invalidate: invalidateSchedule,
+} = useListRequest(loading);
+const {
+  loadError: historyError,
+  beginRequest: beginHistoryRequest,
+  invalidate: invalidateHistory,
+} = useListRequest(historyLoading);
+const {
+  loadError: changeError,
+  beginRequest: beginChangeRequest,
+  invalidate: invalidateChanges,
+} = useListRequest(changesLoading);
+const loadError = computed(
+  () =>
+    detailError.value ||
+    scheduleError.value ||
+    historyError.value ||
+    changeError.value,
+);
 const submitting = ref(false);
 const exportLoading = ref(false);
 const searchQuery = ref('');
@@ -450,7 +586,7 @@ const paginationConfig = reactive({
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条记录`
+  showTotal: (total: number) => `共 ${total} 条记录`,
 });
 
 // 统计数据
@@ -458,7 +594,7 @@ const stats = reactive({
   totalMembers: 0,
   todayOnDuty: '',
   changeRecords: 0,
-  monthlyDutyDays: 0
+  monthlyDutyDays: 0,
 });
 
 // 对话框状态
@@ -473,8 +609,8 @@ const formDialog = reactive({
     date: undefined as Dayjs | undefined,
     origin_user_id: null as number | null,
     on_duty_user_id: null as number | null,
-    reason: ''
-  }
+    reason: '',
+  },
 });
 
 // 计算属性
@@ -507,7 +643,6 @@ const fetchDutyGroups = async (): Promise<void> => {
     let groupData = null;
 
     if (response) {
-
       if (response.id && response.name) {
         groupData = response;
       }
@@ -524,7 +659,11 @@ const fetchDutyGroups = async (): Promise<void> => {
         }
       }
       // 如果response包含items字段且是数组，取第一个
-      else if (response.items && Array.isArray(response.items) && response.items.length > 0) {
+      else if (
+        response.items &&
+        Array.isArray(response.items) &&
+        response.items.length > 0
+      ) {
         groupData = response.items[0];
       }
     }
@@ -533,12 +672,11 @@ const fetchDutyGroups = async (): Promise<void> => {
       dutyGroupDetail.value = groupData;
 
       // 初始化用户缓存
-        if (groupData.users && Array.isArray(groupData.users)) {
+      if (groupData.users && Array.isArray(groupData.users)) {
         groupData.users.forEach((user: User) => {
           const userName = user.real_name || user.username || `用户${user.id}`;
           userCache.value.set(user.id, userName);
         });
-
       }
 
       updateStats();
@@ -547,10 +685,9 @@ const fetchDutyGroups = async (): Promise<void> => {
       await Promise.all([
         fetchDutySchedule(),
         loadHistoryRecords(),
-        loadChangeRecords(1)
+        loadChangeRecords(1),
       ]);
     } else {
-
       throw new Error('获取值班组信息失败：数据格式异常');
     }
   } catch (error: any) {
@@ -594,7 +731,6 @@ const fetchDutyGroups = async (): Promise<void> => {
 
 const fetchDutySchedule = async (): Promise<void> => {
   if (!dutyGroupId.value) {
-
     return;
   }
 
@@ -607,7 +743,7 @@ const fetchDutySchedule = async (): Promise<void> => {
 
     const response = await getMonitorOnDutyGroupFuturePlanApi(id, {
       start_time: startOfCalendar.format('YYYY-MM-DD'),
-      end_time: endOfCalendar.format('YYYY-MM-DD')
+      end_time: endOfCalendar.format('YYYY-MM-DD'),
     });
     if (!request.isCurrent()) return;
 
@@ -618,9 +754,7 @@ const fetchDutySchedule = async (): Promise<void> => {
       // 直接是数组的情况
       if (Array.isArray(response)) {
         planDetails = response;
-      }
-
-      else if (response.details && Array.isArray(response.details)) {
+      } else if (response.details && Array.isArray(response.details)) {
         planDetails = response.details;
       }
       // 包含items字段的情况
@@ -636,10 +770,17 @@ const fetchDutySchedule = async (): Promise<void> => {
         planDetails = response.list;
       }
       // 嵌套结构的情况
-      else if (response.data && response.data.details && Array.isArray(response.data.details)) {
+      else if (
+        response.data &&
+        response.data.details &&
+        Array.isArray(response.data.details)
+      ) {
         planDetails = response.data.details;
-      }
-      else if (response.result && response.result.details && Array.isArray(response.result.details)) {
+      } else if (
+        response.result &&
+        response.result.details &&
+        Array.isArray(response.result.details)
+      ) {
         planDetails = response.result.details;
       }
     }
@@ -650,9 +791,15 @@ const fetchDutySchedule = async (): Promise<void> => {
       const days: Day[] = [];
 
       // 生成完整的日历网格
-      for (let date = startOfCalendar; date.isBefore(endOfCalendar) || date.isSame(endOfCalendar); date = date.add(1, 'day')) {
+      for (
+        let date = startOfCalendar;
+        date.isBefore(endOfCalendar) || date.isSame(endOfCalendar);
+        date = date.add(1, 'day')
+      ) {
         const dateStr = date.format('YYYY-MM-DD');
-        const detail = planDetails.find((item: DutyPlanDetail) => item.date === dateStr);
+        const detail = planDetails.find(
+          (item: DutyPlanDetail) => item.date === dateStr,
+        );
         const isCurrentMonth = date.isSame(currentMonth, 'month');
 
         // 处理用户信息和换班标识
@@ -671,7 +818,7 @@ const fetchDutySchedule = async (): Promise<void> => {
               user = {
                 id: detail.user,
                 username: userName,
-                real_name: userName
+                real_name: userName,
               };
             }
           }
@@ -688,16 +835,19 @@ const fetchDutySchedule = async (): Promise<void> => {
           user: user,
           originUser: originUser,
           isCurrentMonth,
-          isAdjusted: isAdjusted
+          isAdjusted: isAdjusted,
         });
       }
 
       calendarDays.value = days;
-
     } else {
       // 如果没有计划数据，仍然生成空的日历网格
       const days: Day[] = [];
-      for (let date = startOfCalendar; date.isBefore(endOfCalendar) || date.isSame(endOfCalendar); date = date.add(1, 'day')) {
+      for (
+        let date = startOfCalendar;
+        date.isBefore(endOfCalendar) || date.isSame(endOfCalendar);
+        date = date.add(1, 'day')
+      ) {
         const dateStr = date.format('YYYY-MM-DD');
         const isCurrentMonth = date.isSame(currentMonth, 'month');
 
@@ -706,11 +856,10 @@ const fetchDutySchedule = async (): Promise<void> => {
           user: null,
           originUser: undefined,
           isCurrentMonth,
-          isAdjusted: false
+          isAdjusted: false,
         });
       }
       calendarDays.value = days;
-
     }
 
     updateStats();
@@ -738,7 +887,6 @@ const fetchDutySchedule = async (): Promise<void> => {
 
 const loadHistoryRecords = async (): Promise<void> => {
   if (!dutyGroupId.value) {
-
     return;
   }
 
@@ -753,7 +901,7 @@ const loadHistoryRecords = async (): Promise<void> => {
       end_date: dateFilter.value?.format('YYYY-MM-DD') || endDate,
       search: searchQuery.value.trim() || undefined,
       page: paginationConfig.current,
-      size: paginationConfig.pageSize
+      size: paginationConfig.pageSize,
     });
     if (!request.isCurrent()) return;
 
@@ -792,7 +940,10 @@ const loadHistoryRecords = async (): Promise<void> => {
         if (Array.isArray(response.result)) {
           historyData = response.result;
           total = response.total || response.result.length;
-        } else if (response.result.items && Array.isArray(response.result.items)) {
+        } else if (
+          response.result.items &&
+          Array.isArray(response.result.items)
+        ) {
           historyData = response.result.items;
           total = response.result.total || response.result.items.length;
         }
@@ -829,22 +980,24 @@ const changeRecordsPagination = reactive({
   current: 1,
   pageSize: 20,
   total: 0,
-  hasMore: true
+  hasMore: true,
 });
 
 // 加载调班记录
 const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
   if (!dutyGroupId.value) {
-
     return;
   }
 
   const request = beginChangeRequest();
   try {
-    const response = await getMonitorOnDutyGroupChangeListApi(dutyGroupId.value, {
-      page,
-      size: changeRecordsPagination.pageSize
-    });
+    const response = await getMonitorOnDutyGroupChangeListApi(
+      dutyGroupId.value,
+      {
+        page,
+        size: changeRecordsPagination.pageSize,
+      },
+    );
     if (!request.isCurrent()) return;
 
     // 改进的调班记录响应处理
@@ -886,7 +1039,8 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
     }
 
     changeRecordsPagination.total = total;
-    changeRecordsPagination.hasMore = page * changeRecordsPagination.pageSize < total;
+    changeRecordsPagination.hasMore =
+      page * changeRecordsPagination.pageSize < total;
     updateStats();
   } catch (error: any) {
     if (!request.isCurrent()) return;
@@ -934,7 +1088,14 @@ const filterOption = (input: string, option: any) => {
 };
 
 const getAvatarColor = (name: string): string => {
-  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2'];
+  const colors = [
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+  ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -954,7 +1115,7 @@ const getUserName = (userId: number): string => {
   }
 
   // 从值班组详情中查找
-  const user = dutyGroupDetail.value?.users?.find(u => u.id === userId);
+  const user = dutyGroupDetail.value?.users?.find((u) => u.id === userId);
   if (user) {
     const userName = user.real_name || user.username || `用户${userId}`;
     userCache.value.set(userId, userName);
@@ -985,7 +1146,15 @@ const formatTimeFromTimestamp = (timestamp: string): string => {
 };
 
 const getDayOfWeek = (dateStr: string): string => {
-  const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+  const weekdays = [
+    '星期日',
+    '星期一',
+    '星期二',
+    '星期三',
+    '星期四',
+    '星期五',
+    '星期六',
+  ];
   return weekdays[dayjs(dateStr).day()] || '';
 };
 
@@ -1017,11 +1186,17 @@ const updateStats = (): void => {
 
   // 今日值班 - 显示值班人姓名
   const todayStr = dayjs().format('YYYY-MM-DD');
-  const todayDuty = calendarDays.value.find(day => day.date === todayStr && day.user);
-  stats.todayOnDuty = todayDuty?.user ? (todayDuty.user.real_name || todayDuty.user.username) : '无安排';
+  const todayDuty = calendarDays.value.find(
+    (day) => day.date === todayStr && day.user,
+  );
+  stats.todayOnDuty = todayDuty?.user
+    ? todayDuty.user.real_name || todayDuty.user.username
+    : '无安排';
 
   // 本月值班天数
-  stats.monthlyDutyDays = calendarDays.value.filter(day => day.isCurrentMonth && day.user).length;
+  stats.monthlyDutyDays = calendarDays.value.filter(
+    (day) => day.isCurrentMonth && day.user,
+  ).length;
 
   // 调班记录数
   stats.changeRecords = changeRecordsList.value.length;
@@ -1065,22 +1240,26 @@ const exportSchedule = async (): Promise<void> => {
   exportLoading.value = true;
   try {
     const exportData = calendarDays.value
-      .filter(day => day.isCurrentMonth)
-      .map(day => ({
+      .filter((day) => day.isCurrentMonth)
+      .map((day) => ({
         日期: formatDate(day.date),
         星期: getDayOfWeek(day.date),
-        值班人员: day.user ? (day.user.real_name || day.user.username) : '无安排',
+        值班人员: day.user ? day.user.real_name || day.user.username : '无安排',
         是否换班: day.isAdjusted ? '是' : '否',
-        原值班人: day.originUser || '无'
+        原值班人: day.originUser || '无',
       }));
 
     const headers = Object.keys(exportData[0] || {});
     const csvContent = [
       headers.join(','),
-      ...exportData.map((row: any) => headers.map((header: any) => row[header] || '').join(','))
+      ...exportData.map((row: any) =>
+        headers.map((header: any) => row[header] || '').join(','),
+      ),
     ].join('\n');
 
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\ufeff' + csvContent], {
+      type: 'text/csv;charset=utf-8;',
+    });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `${dutyGroupDetail.value?.name || '值班组'}_值班安排_${currentMonthYear.value}.csv`;
@@ -1131,7 +1310,7 @@ const openSwapModal = (day: Day): void => {
     date: dayjs(day.date),
     origin_user_id: day.user?.id || null,
     on_duty_user_id: null,
-    reason: ''
+    reason: '',
   };
   formDialogVisible.value = true;
   dayDetailVisible.value = false;
@@ -1140,10 +1319,12 @@ const openSwapModal = (day: Day): void => {
 // 表单保存
 const saveChange = async (): Promise<void> => {
   try {
-    if (!formDialog.form.date || 
-        formDialog.form.origin_user_id === null || 
-        formDialog.form.on_duty_user_id === null ||
-        !formDialog.form.reason?.trim()) {
+    if (
+      !formDialog.form.date ||
+      formDialog.form.origin_user_id === null ||
+      formDialog.form.on_duty_user_id === null ||
+      !formDialog.form.reason?.trim()
+    ) {
       message.error('请填写完整的表单信息');
       return;
     }
@@ -1161,7 +1342,7 @@ const saveChange = async (): Promise<void> => {
       date: formDialog.form.date.format('YYYY-MM-DD'),
       origin_user_id: formDialog.form.origin_user_id as number,
       on_duty_user_id: formDialog.form.on_duty_user_id as number,
-      reason: formDialog.form.reason?.trim()
+      reason: formDialog.form.reason?.trim(),
     };
 
     const response = await createMonitorOnDutyGroupChangeApi(formData);
@@ -1173,14 +1354,14 @@ const saveChange = async (): Promise<void> => {
       await Promise.all([
         loadHistoryRecords(),
         loadChangeRecords(1),
-        fetchDutySchedule()
+        fetchDutySchedule(),
       ]);
     } else {
       message.error('创建换班记录失败');
     }
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '保存换班记录失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '保存换班记录失败');
   } finally {
     submitting.value = false;
   }
@@ -1193,7 +1374,7 @@ const resetFormDialog = (): void => {
     date: undefined,
     origin_user_id: null,
     on_duty_user_id: null,
-    reason: ''
+    reason: '',
   };
 };
 
@@ -1207,11 +1388,15 @@ const closeDayDetail = (): void => {
   selectedDay.value = null;
 };
 
-watch(() => route.query.id, () => { initializeData(); });
+watch(
+  () => route.query.id,
+  () => {
+    initializeData();
+  },
+);
 
 // 生命周期钩子 - 修复初始化问题
 onMounted(async () => {
-
   // 使用 nextTick 确保所有函数都已初始化
   await nextTick();
   await initializeData();
@@ -1222,14 +1407,6 @@ onMounted(async () => {
 /* 保持原有样式不变 */
 
 /* 页面头部 */
-
-
-
-
-
-
-
-
 
 /* 统计面板 */
 .stats-section {
@@ -1713,8 +1890,6 @@ onMounted(async () => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-
-
   .search-section {
     flex-direction: column;
   }

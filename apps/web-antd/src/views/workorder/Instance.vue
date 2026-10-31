@@ -9,8 +9,9 @@
         aria-label="刷新工单"
         :loading="listLoading"
         @click="loadInstances"
-        >刷新</a-button
       >
+        刷新
+      </a-button>
       <a-button
         type="primary"
         aria-label="创建工单"
@@ -59,21 +60,21 @@
         >
           <a-select-option :value="undefined">全部状态</a-select-option>
           <a-select-option :value="InstanceStatus.Draft">草稿</a-select-option>
-          <a-select-option :value="InstanceStatus.Pending"
-            >待处理</a-select-option
-          >
-          <a-select-option :value="InstanceStatus.Processing"
-            >处理中</a-select-option
-          >
-          <a-select-option :value="InstanceStatus.Completed"
-            >已完成</a-select-option
-          >
-          <a-select-option :value="InstanceStatus.Rejected"
-            >已拒绝</a-select-option
-          >
-          <a-select-option :value="InstanceStatus.Cancelled"
-            >已取消</a-select-option
-          >
+          <a-select-option :value="InstanceStatus.Pending">
+            待处理
+          </a-select-option>
+          <a-select-option :value="InstanceStatus.Processing">
+            处理中
+          </a-select-option>
+          <a-select-option :value="InstanceStatus.Completed">
+            已完成
+          </a-select-option>
+          <a-select-option :value="InstanceStatus.Rejected">
+            已拒绝
+          </a-select-option>
+          <a-select-option :value="InstanceStatus.Cancelled">
+            已取消
+          </a-select-option>
         </a-select>
         <a-select
           v-model:value="priorityFilter"
@@ -103,9 +104,9 @@
             {{ process.name }}
           </a-select-option>
         </a-select>
-        <a-button @click="resetFilters" aria-label="重置工单筛选"
-          >重置</a-button
-        >
+        <a-button @click="resetFilters" aria-label="重置工单筛选">
+          重置
+        </a-button>
       </div>
     </template>
     <template #summary>
@@ -163,9 +164,9 @@
       :message="loadError"
       role="alert"
     >
-      <template #action
-        ><a-button @click="loadInstances" size="small">重试</a-button></template
-      >
+      <template #action>
+        <a-button @click="loadInstances" size="small">重试</a-button>
+      </template>
     </a-alert>
     <div class="table-container">
       <a-card>
@@ -263,7 +264,12 @@
                 >
                   查看
                 </a-button>
-                <a-dropdown :trigger="['click']" @open-change="(open: boolean) => handleRowMenuVisibility(open, record)">
+                <a-dropdown
+                  :trigger="['click']"
+                  @open-change="
+                    (open: boolean) => handleRowMenuVisibility(open, record)
+                  "
+                >
                   <template #overlay>
                     <a-menu @click="(e: any) => handleCommand(e.key, record)">
                       <a-menu-item key="comment">
@@ -276,29 +282,111 @@
                         <PlayCircleOutlined /> 查看流转
                       </a-menu-item>
                       <a-menu-divider />
-                      <a-menu-item v-if="rowActions.instanceId === record.id && rowActions.loading" key="actions_loading" disabled>正在读取可用操作</a-menu-item>
-                      <a-menu-item v-else-if="rowActions.instanceId === record.id && rowActions.error" key="actions_error" disabled>{{ rowActions.error }}</a-menu-item>
-                      <a-menu-item v-else-if="rowActions.instanceId === record.id && !rowActions.loaded" key="actions_unavailable" disabled>操作未读取，请关闭后重新打开</a-menu-item>
-                      <template v-else>
-                        <a-menu-item v-if="rowHasAction(record, 'edit') && canEditInstance()" key="edit">编辑</a-menu-item>
-                        <a-menu-item v-if="rowHasAction(record, 'submit')" key="submit">提交工单</a-menu-item>
-                        <a-menu-item v-if="rowHasAction(record, 'assign')" key="assign">分配处理人</a-menu-item>
-                        <a-menu-item v-if="rowHasAction(record, 'approve')" key="approve">审批通过</a-menu-item>
-                        <a-menu-item v-if="rowHasAction(record, 'reject')" key="reject">拒绝工单</a-menu-item>
-                        <a-menu-item v-if="rowHasAction(record, 'complete')" key="complete">完成工单</a-menu-item>
-                        <a-menu-item v-if="rowHasAction(record, 'return')" key="return">退回工单</a-menu-item>
-                        <a-menu-item v-if="rowHasAction(record, 'cancel')" key="cancel">取消工单</a-menu-item>
-                        <a-menu-item v-if="rowActions.instanceId === record.id && !rowActions.loading && !hasVisibleRowAction(record)" key="actions_empty" disabled>当前无可用流转操作</a-menu-item>
-                      </template>
-                      <a-menu-item key="notification_logs"
-                        >通知发送记录</a-menu-item
+                      <a-menu-item
+                        v-if="
+                          rowActions.instanceId === record.id &&
+                          rowActions.loading
+                        "
+                        key="actions_loading"
+                        disabled
                       >
+                        正在读取可用操作
+                      </a-menu-item>
+                      <a-menu-item
+                        v-else-if="
+                          rowActions.instanceId === record.id &&
+                          rowActions.error
+                        "
+                        key="actions_error"
+                        disabled
+                      >
+                        {{ rowActions.error }}
+                      </a-menu-item>
+                      <a-menu-item
+                        v-else-if="
+                          rowActions.instanceId === record.id &&
+                          !rowActions.loaded
+                        "
+                        key="actions_unavailable"
+                        disabled
+                      >
+                        操作未读取，请关闭后重新打开
+                      </a-menu-item>
+                      <template v-else>
+                        <a-menu-item
+                          v-if="
+                            rowHasAction(record, 'edit') && canEditInstance()
+                          "
+                          key="edit"
+                        >
+                          编辑
+                        </a-menu-item>
+                        <a-menu-item
+                          v-if="rowHasAction(record, 'submit')"
+                          key="submit"
+                        >
+                          提交工单
+                        </a-menu-item>
+                        <a-menu-item
+                          v-if="rowHasAction(record, 'assign')"
+                          key="assign"
+                        >
+                          分配处理人
+                        </a-menu-item>
+                        <a-menu-item
+                          v-if="rowHasAction(record, 'approve')"
+                          key="approve"
+                        >
+                          审批通过
+                        </a-menu-item>
+                        <a-menu-item
+                          v-if="rowHasAction(record, 'reject')"
+                          key="reject"
+                        >
+                          拒绝工单
+                        </a-menu-item>
+                        <a-menu-item
+                          v-if="rowHasAction(record, 'complete')"
+                          key="complete"
+                        >
+                          完成工单
+                        </a-menu-item>
+                        <a-menu-item
+                          v-if="rowHasAction(record, 'return')"
+                          key="return"
+                        >
+                          退回工单
+                        </a-menu-item>
+                        <a-menu-item
+                          v-if="rowHasAction(record, 'cancel')"
+                          key="cancel"
+                        >
+                          取消工单
+                        </a-menu-item>
+                        <a-menu-item
+                          v-if="
+                            rowActions.instanceId === record.id &&
+                            !rowActions.loading &&
+                            !hasVisibleRowAction(record)
+                          "
+                          key="actions_empty"
+                          disabled
+                        >
+                          当前无可用流转操作
+                        </a-menu-item>
+                      </template>
+                      <a-menu-item key="notification_logs">
+                        通知发送记录
+                      </a-menu-item>
                       <a-menu-divider />
 
                       <a-menu-item
                         key="delete"
                         danger
-                        v-if="can('workorder.instance.delete') && (canDeleteInstance(record))"
+                        v-if="
+                          can('workorder.instance.delete') &&
+                          canDeleteInstance(record)
+                        "
                       >
                         删除
                       </a-menu-item>
@@ -848,9 +936,9 @@
     >
       <a-skeleton v-if="detailLoading" active />
       <a-alert v-if="detailError" :message="detailError" type="error" show-icon>
-        <template #action
-          ><a-button @click="retryInstanceDetail">重试</a-button></template
-        >
+        <template #action>
+          <a-button @click="retryInstanceDetail">重试</a-button>
+        </template>
       </a-alert>
       <a-alert
         v-if="Object.values(detailMetadataErrors).some(Boolean)"
@@ -860,9 +948,9 @@
         "
         show-icon
       >
-        <template #action
-          ><a-button @click="retryInstanceDetail">刷新详情</a-button></template
-        >
+        <template #action>
+          <a-button @click="retryInstanceDetail">刷新详情</a-button>
+        </template>
       </a-alert>
       <div v-if="detailDialog.instance" class="instance-details">
         <div class="detail-header">
@@ -1122,15 +1210,15 @@
         </div>
 
         <a-descriptions bordered :column="2" :labelStyle="{ width: '120px' }">
-          <a-descriptions-item label="工单ID">{{
-            detailDialog.instance.id
-          }}</a-descriptions-item>
-          <a-descriptions-item label="工单编号">{{
-            detailDialog.instance.serial_number
-          }}</a-descriptions-item>
-          <a-descriptions-item label="创建人">{{
-            detailDialog.instance.operator_name
-          }}</a-descriptions-item>
+          <a-descriptions-item label="工单ID">
+            {{ detailDialog.instance.id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="工单编号">
+            {{ detailDialog.instance.serial_number }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建人">
+            {{ detailDialog.instance.operator_name }}
+          </a-descriptions-item>
           <a-descriptions-item label="处理人">
             <span v-if="detailDialog.instance.assignee_id">
               {{ getAssigneeName(detailDialog.instance.assignee_id) }}
@@ -1174,8 +1262,9 @@
               v-for="tag in detailDialog.instance.tags"
               :key="tag"
               color="blue"
-              >{{ tag }}</a-tag
             >
+              {{ tag }}
+            </a-tag>
           </a-descriptions-item>
           <a-descriptions-item label="关联流程" :span="2">
             {{ getProcessName(detailDialog.instance.process_id) || '无' }}
@@ -1247,7 +1336,10 @@
               <a-button
                 type="default"
                 @click="handleActionEdit(detailDialog.instance)"
-                v-if="detailDialog.availableActions.includes('edit') && canEditInstance()"
+                v-if="
+                  detailDialog.availableActions.includes('edit') &&
+                  canEditInstance()
+                "
               >
                 编辑
               </a-button>
@@ -1287,9 +1379,11 @@
             <a-button @click="closeInstanceDetail">关闭</a-button>
           </div>
           <div class="footer-right">
-            <a-button @click="handleViewNotificationLogs(detailDialog.instance)"
-              >通知发送记录</a-button
+            <a-button
+              @click="handleViewNotificationLogs(detailDialog.instance)"
             >
+              通知发送记录
+            </a-button>
             <a-button
               type="default"
               @click="handleViewComments(detailDialog.instance)"
@@ -1343,9 +1437,9 @@
         type="error"
         show-icon
       >
-        <template #action
-          ><a-button @click="loadNotificationLogs()">重试</a-button></template
-        >
+        <template #action>
+          <a-button @click="loadNotificationLogs()">重试</a-button>
+        </template>
       </a-alert>
       <a-spin :spinning="notificationLogsLoading">
         <div
@@ -1522,9 +1616,9 @@
         type="error"
         show-icon
       >
-        <template #action
-          ><a-button @click="loadTemplates()">重试</a-button></template
-        >
+        <template #action>
+          <a-button @click="loadTemplates()">重试</a-button>
+        </template>
       </a-alert>
       <a-form :model="templateDialog.form" layout="vertical">
         <a-form-item
@@ -1727,7 +1821,16 @@
 
 <script setup lang="ts">
 import { downloadCsv } from '#/utils/export-csv';
-import { ref, reactive, onMounted, onBeforeUnmount, onDeactivated, computed, watch, h } from 'vue';
+import {
+  ref,
+  reactive,
+  onMounted,
+  onBeforeUnmount,
+  onDeactivated,
+  computed,
+  watch,
+  h,
+} from 'vue';
 import { useAccessStore } from '@vben/stores';
 import { useWindowSize } from '@vueuse/core';
 import OpsPage from '#/components/ops/OpsPage.vue';
@@ -1903,10 +2006,25 @@ const detailTarget = ref<WorkorderInstanceItem | null>(null);
 const loadError = ref('');
 let listRequest = 0;
 // 只保留当前展开行的动作；关闭、换行、换账号及列表刷新均作废旧请求
-const rowActions = reactive({ instanceId: 0, loading: false, loaded: false, error: '', actions: [] as string[] });
+const rowActions = reactive({
+  instanceId: 0,
+  loading: false,
+  loaded: false,
+  error: '',
+  actions: [] as string[],
+});
 let rowActionsRequest = 0;
 let actionRequest = 0;
-const workflowActions = ['edit', 'submit', 'assign', 'approve', 'reject', 'complete', 'return', 'cancel'];
+const workflowActions = [
+  'edit',
+  'submit',
+  'assign',
+  'approve',
+  'reject',
+  'complete',
+  'return',
+  'cancel',
+];
 const clearRowActions = () => {
   ++rowActionsRequest;
   rowActions.instanceId = 0;
@@ -1916,12 +2034,21 @@ const clearRowActions = () => {
   rowActions.actions = [];
 };
 const rowHasAction = (row: WorkorderInstanceItem, action: string) =>
-  rowActions.instanceId === row.id && !rowActions.loading && !rowActions.error &&
-  row.status !== InstanceStatus.Completed && row.status !== InstanceStatus.Rejected &&
+  rowActions.instanceId === row.id &&
+  !rowActions.loading &&
+  !rowActions.error &&
+  row.status !== InstanceStatus.Completed &&
+  row.status !== InstanceStatus.Rejected &&
   rowActions.actions.includes(action);
 const hasVisibleRowAction = (row: WorkorderInstanceItem) =>
-  workflowActions.some((action) => rowHasAction(row, action) && (action !== 'edit' || canEditInstance()));
-const handleRowMenuVisibility = async (open: boolean, row: WorkorderInstanceItem) => {
+  workflowActions.some(
+    (action) =>
+      rowHasAction(row, action) && (action !== 'edit' || canEditInstance()),
+  );
+const handleRowMenuVisibility = async (
+  open: boolean,
+  row: WorkorderInstanceItem,
+) => {
   if (!open) {
     if (rowActions.instanceId === row.id) clearRowActions();
     return;
@@ -1934,21 +2061,26 @@ const handleRowMenuVisibility = async (open: boolean, row: WorkorderInstanceItem
   rowActions.error = '';
   rowActions.loaded = false;
   rowActions.loading = true;
-  const isCurrent = () => request === rowActionsRequest && listGeneration === listRequest &&
-    rowActions.instanceId === row.id && token === accessStore.accessToken;
+  const isCurrent = () =>
+    request === rowActionsRequest &&
+    listGeneration === listRequest &&
+    rowActions.instanceId === row.id &&
+    token === accessStore.accessToken;
   try {
     const actions = await getAvailableActions(row.id);
     if (!isCurrent()) return;
     if (!Array.isArray(actions)) throw new Error('无效动作目录');
-    rowActions.actions = actions.map((action: unknown) => String(action).toLowerCase());
+    rowActions.actions = actions.map((action: unknown) =>
+      String(action).toLowerCase(),
+    );
     rowActions.loaded = true;
   } catch (error) {
-    if (isCurrent() && shouldRecordPageError(error)) rowActions.error = '操作读取失败，请关闭后重新打开重试';
+    if (isCurrent() && shouldRecordPageError(error))
+      rowActions.error = '操作读取失败，请关闭后重新打开重试';
   } finally {
     if (isCurrent()) rowActions.loading = false;
   }
 };
-
 
 let detailRequest = 0;
 let detailActionsRequest = 0;
@@ -2185,24 +2317,28 @@ const userPagination = reactive({
 });
 
 // 身份变化时移除旧主体的动作和未完成对话框
-watch(() => accessStore.accessToken, () => {
-  clearRowActions();
-  ++actionRequest;
-  ++detailRequest;
-  ++detailActionsRequest;
-  ++formRequest;
-  ++designRequest;
-  detailDialog.visible = false;
-  detailDialog.instance = null;
-  detailDialog.availableActions = [];
-  detailDialog.actionsLoading = false;
-  detailTarget.value = null;
-  detailLoading.value = false;
-  instanceDialog.visible = false;
-  approvalDialog.visible = false;
-  assignDialog.visible = false;
-  actionDialog.visible = false;
-}, { flush: 'sync' });
+watch(
+  () => accessStore.accessToken,
+  () => {
+    clearRowActions();
+    ++actionRequest;
+    ++detailRequest;
+    ++detailActionsRequest;
+    ++formRequest;
+    ++designRequest;
+    detailDialog.visible = false;
+    detailDialog.instance = null;
+    detailDialog.availableActions = [];
+    detailDialog.actionsLoading = false;
+    detailTarget.value = null;
+    detailLoading.value = false;
+    instanceDialog.visible = false;
+    approvalDialog.visible = false;
+    assignDialog.visible = false;
+    actionDialog.visible = false;
+  },
+  { flush: 'sync' },
+);
 onDeactivated(() => {
   clearRowActions();
   ++actionRequest;
@@ -2267,17 +2403,21 @@ const userTotalPages = computed(() => {
 // 获取字段的列宽
 const getFieldColSpan = (fieldType: string): number => {
   switch (fieldType) {
-    case FormFieldType.Textarea:
-      return 24; // 全宽
+    case FormFieldType.Textarea: {
+      return 24;
+    } // 全宽
     case FormFieldType.Checkbox:
-    case FormFieldType.Radio:
-      return 24; // 全宽
+    case FormFieldType.Radio: {
+      return 24;
+    } // 全宽
     case FormFieldType.Date:
     case FormFieldType.Number:
-    case FormFieldType.Switch:
-      return 12; // 半宽
-    default:
-      return 12; // 默认半宽
+    case FormFieldType.Switch: {
+      return 12;
+    } // 半宽
+    default: {
+      return 12;
+    } // 默认半宽
   }
 };
 
@@ -2506,23 +2646,29 @@ const initializeVisualFormData = (): void => {
           case FormFieldType.Password:
           case FormFieldType.Textarea:
           case FormFieldType.Select:
-          case FormFieldType.Radio:
+          case FormFieldType.Radio: {
+          } {} {} {} {} {} {} {} {} {}
             newData[field.name] = '';
             break;
-          case FormFieldType.Number:
+          case FormFieldType.Number: {
             newData[field.name] = undefined;
             break;
-          case FormFieldType.Checkbox:
+          }
+          case FormFieldType.Checkbox: {
             newData[field.name] = [];
             break;
-          case FormFieldType.Switch:
+          }
+          case FormFieldType.Switch: {
             newData[field.name] = false;
             break;
-          case FormFieldType.Date:
+          }
+          case FormFieldType.Date: {
             newData[field.name] = undefined;
             break;
-          default:
+          }
+          default: {
             newData[field.name] = '';
+          }
         }
       }
     }
@@ -2658,7 +2804,8 @@ const loadUsers = async (
     }
   } catch (error: any) {
     if (reset) {
-      if (shouldNotifyPageError(error)) message.error(error.message || '加载用户数据失败');
+      if (shouldNotifyPageError(error))
+        message.error(error.message || '加载用户数据失败');
       users.value = [];
       usersPagination.current = 1;
       usersPagination.total = 0;
@@ -2723,7 +2870,8 @@ const loadDialogProcesses = async (
   } catch (error: any) {
     if (!isCurrent()) return;
     if (reset) {
-      if (shouldNotifyPageError(error)) message.error(error.message || '加载流程列表失败');
+      if (shouldNotifyPageError(error))
+        message.error(error.message || '加载流程列表失败');
       dialogProcesses.value = [];
       processPagination.current = 1;
       processPagination.total = 0;
@@ -2871,7 +3019,8 @@ const loadDialogUsers = async (
   } catch (error: any) {
     if (!isCurrent()) return;
     if (reset) {
-      if (shouldNotifyPageError(error)) message.error(error.message || '加载用户列表失败');
+      if (shouldNotifyPageError(error))
+        message.error(error.message || '加载用户列表失败');
       dialogUsers.value = [];
       userPagination.current = 1;
       userPagination.total = 0;
@@ -2961,7 +3110,8 @@ const loadInstances = async () => {
     instanceList.value = [];
     total.value = 0;
     updatePageStats();
-    if (shouldRecordPageError(error)) loadError.value = '加载工单数据失败，请重试';
+    if (shouldRecordPageError(error))
+      loadError.value = '加载工单数据失败，请重试';
   } finally {
     if (request === listRequest) listLoading.value = false;
   }
@@ -3094,7 +3244,8 @@ const loadTemplates = async (search?: string) => {
   } catch (error) {
     if (request !== templateOptionsRequest || form !== formRequest) return;
     dialogTemplates.value = [];
-    if (shouldRecordPageError(error)) templateListError.value = '加载模板失败，请重试';
+    if (shouldRecordPageError(error))
+      templateListError.value = '加载模板失败，请重试';
   } finally {
     if (request === templateOptionsRequest)
       templateSelectorLoading.value = false;
@@ -3173,7 +3324,8 @@ const handleTemplateSubmit = async () => {
     message.success('已从模板创建工单，请完善信息后提交');
   } catch (error: any) {
     if (request !== formRequest || !templateDialog.visible) return;
-    if (shouldNotifyPageError(error)) message.error(error.message || '从模板创建工单失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '从模板创建工单失败');
   }
 };
 
@@ -3228,7 +3380,8 @@ const handleEditInstance = async (row: WorkorderInstanceItem) => {
 const loadAvailableActions = async (instanceId: number) => {
   const request = detailRequest;
   const ticket = ++detailActionsRequest;
-  const isCurrent = () => ticket === detailActionsRequest && isDetailCurrent(instanceId, request);
+  const isCurrent = () =>
+    ticket === detailActionsRequest && isDetailCurrent(instanceId, request);
   if (!isCurrent()) return;
   detailDialog.actionsLoading = true;
   detailMetadataErrors.actions = '';
@@ -3371,7 +3524,8 @@ const syncStepStatus = async (instanceId: number, _operationType: string) => {
     // 刷新列表数据
     await loadInstances();
   } catch (error) {
-    if (shouldNotifyPageError(error)) message.warning('操作成功，但状态同步失败，请手动刷新页面查看最新状态');
+    if (shouldNotifyPageError(error))
+      message.warning('操作成功，但状态同步失败，请手动刷新页面查看最新状态');
   }
 };
 
@@ -3410,7 +3564,8 @@ const loadNotificationLogs = async (instanceId?: number, resetPage = false) => {
     }
   } catch (error) {
     if (request !== logsRequest) return;
-    if (shouldRecordPageError(error)) notificationLogsError.value = '获取通知记录失败，请重试';
+    if (shouldRecordPageError(error))
+      notificationLogsError.value = '获取通知记录失败，请重试';
     notificationLogs.value = [];
     notificationLogsPagination.total = 0;
   } finally {
@@ -3443,7 +3598,8 @@ const handleViewInstance = async (row: WorkorderInstanceItem) => {
     loadCurrentStep(row.id, res);
   } catch (error) {
     if (request !== detailRequest || !detailDialog.visible) return;
-    if (shouldRecordPageError(error)) detailError.value = '获取工单详情失败，请重试';
+    if (shouldRecordPageError(error))
+      detailError.value = '获取工单详情失败，请重试';
   } finally {
     if (request === detailRequest) detailLoading.value = false;
   }
@@ -3451,45 +3607,58 @@ const handleViewInstance = async (row: WorkorderInstanceItem) => {
 
 const handleCommand = async (command: string, row: WorkorderInstanceItem) => {
   switch (command) {
-    case 'notification_logs':
+    case 'notification_logs': {
       handleViewNotificationLogs(row);
       break;
-    case 'comment':
+    }
+    case 'comment': {
       showCommentDialog(row);
       break;
-    case 'timeline':
+    }
+    case 'timeline': {
       await handleViewTimeline(row);
       break;
-    case 'flow':
+    }
+    case 'flow': {
       await handleViewFlow(row);
       break;
-    case 'edit':
+    }
+    case 'edit': {
       await handleActionEdit(row);
       break;
-    case 'submit':
+    }
+    case 'submit': {
       await handleActionSubmit(row);
       break;
-    case 'assign':
+    }
+    case 'assign': {
       await handleActionAssign(row);
       break;
-    case 'approve':
+    }
+    case 'approve': {
       await handleActionApprove(row);
       break;
-    case 'reject':
+    }
+    case 'reject': {
       await handleActionReject(row);
       break;
-    case 'complete':
+    }
+    case 'complete': {
       await handleActionComplete(row);
       break;
-    case 'return':
+    }
+    case 'return': {
       await handleActionReturn(row);
       break;
-    case 'cancel':
+    }
+    case 'cancel': {
       await handleActionCancel(row);
       break;
-    case 'delete':
+    }
+    case 'delete': {
       confirmDelete(row);
       break;
+    }
   }
 };
 
@@ -3574,15 +3743,24 @@ const handleActionWithPermission = async (
   const listGeneration = listRequest;
   const ticket = ++actionRequest;
   const token = accessStore.accessToken;
-  const detailGeneration = detailDialog.visible && detailDialog.instance?.id === instance.id ? detailRequest : null;
-  const isCurrent = () => ticket === actionRequest && listGeneration === listRequest && token === accessStore.accessToken &&
-    (detailGeneration === null || isDetailCurrent(instance.id, detailGeneration));
+  const detailGeneration =
+    detailDialog.visible && detailDialog.instance?.id === instance.id
+      ? detailRequest
+      : null;
+  const isCurrent = () =>
+    ticket === actionRequest &&
+    listGeneration === listRequest &&
+    token === accessStore.accessToken &&
+    (detailGeneration === null ||
+      isDetailCurrent(instance.id, detailGeneration));
   try {
     const actions = await getAvailableActions(instance.id);
     if (!isCurrent()) return;
     if (action === 'edit' && !canEditInstance()) return;
     if (!Array.isArray(actions)) throw new Error('无效动作目录');
-    const normalizedActions = actions.map((actionName: string) => actionName.toLowerCase());
+    const normalizedActions = actions.map((actionName: string) =>
+      actionName.toLowerCase(),
+    );
     if (!normalizedActions.includes(action)) {
       const actionMap: Record<string, string> = {
         submit: '提交',
@@ -3599,7 +3777,8 @@ const handleActionWithPermission = async (
 
     await callback(instance);
   } catch (error) {
-    if (isCurrent() && shouldNotifyPageError(error)) message.error('获取可用操作失败，请重试');
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('获取可用操作失败，请重试');
   }
 };
 
@@ -3664,7 +3843,8 @@ const handleSubmitInstance = async (instance: WorkorderInstanceItem) => {
 
         await syncStepStatus(instance.id, 'submit');
       } catch (error: any) {
-        if (shouldNotifyPageError(error)) message.error(`提交工单失败: ${error.message || '未知错误'}`);
+        if (shouldNotifyPageError(error))
+          message.error(`提交工单失败: ${error.message || '未知错误'}`);
       } finally {
         loading.value = false;
       }
@@ -3710,7 +3890,8 @@ const saveAssign = async () => {
     // 使用新的同步机制
     await syncStepStatus(assignDialog.instanceId, 'assign');
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(`分配处理人失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error))
+      message.error(`分配处理人失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }
@@ -3751,36 +3932,48 @@ const getActionCommentLabel = (): string => {
 // 获取步骤状态颜色
 const getStepStatusColor = (stepType: string): string => {
   switch (stepType) {
-    case 'start':
+    case 'start': {
       return 'green';
-    case 'end':
+    }
+    case 'end': {
       return 'purple';
-    case 'approval':
+    }
+    case 'approval': {
       return 'orange';
-    case 'task':
+    }
+    case 'task': {
       return 'blue';
-    case 'condition':
+    }
+    case 'condition': {
       return 'cyan';
-    default:
+    }
+    default: {
       return 'default';
+    }
   }
 };
 
 // 获取步骤类型文本
 const getStepTypeText = (stepType: string): string => {
   switch (stepType) {
-    case 'start':
+    case 'start': {
       return '开始步骤';
-    case 'end':
+    }
+    case 'end': {
       return '结束步骤';
-    case 'approval':
+    }
+    case 'approval': {
       return '审批步骤';
-    case 'task':
+    }
+    case 'task': {
       return '任务步骤';
-    case 'condition':
+    }
+    case 'condition': {
       return '条件步骤';
-    default:
+    }
+    default: {
       return stepType || '未知类型';
+    }
   }
 };
 
@@ -3846,7 +4039,7 @@ const saveActionComment = async () => {
     loading.value = true;
 
     switch (actionDialog.type) {
-      case 'cancel':
+      case 'cancel': {
         await cancelWorkorderInstance({
           id: actionDialog.instanceId,
           comment: actionDialog.form.comment,
@@ -3854,8 +4047,9 @@ const saveActionComment = async () => {
         message.success('工单已取消');
 
         break;
+      }
 
-      case 'complete':
+      case 'complete': {
         await completeWorkorderInstance({
           id: actionDialog.instanceId,
           comment: actionDialog.form.comment,
@@ -3863,14 +4057,16 @@ const saveActionComment = async () => {
         message.success('工单已完成');
 
         break;
+      }
 
-      case 'return':
+      case 'return': {
         await returnWorkorderInstance({
           id: actionDialog.instanceId,
           comment: actionDialog.form.comment,
         } as ReturnWorkorderInstanceReq);
         message.success('工单已退回');
         break;
+      }
     }
 
     actionDialog.visible = false;
@@ -3880,7 +4076,8 @@ const saveActionComment = async () => {
     await syncStepStatus(actionDialog.instanceId, actionDialog.type);
   } catch (error: any) {
     const actionName = getActionDialogTitle();
-    if (shouldNotifyPageError(error)) message.error(`${actionName}失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error))
+      message.error(`${actionName}失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }
@@ -3933,7 +4130,8 @@ const saveApproval = async () => {
               // 使用新的同步机制
               await syncStepStatus(approvalDialog.instanceId, 'approve');
             } catch (error: any) {
-              if (shouldNotifyPageError(error)) message.error(`审批失败: ${error.message || '未知错误'}`);
+              if (shouldNotifyPageError(error))
+                message.error(`审批失败: ${error.message || '未知错误'}`);
             }
           },
         });
@@ -3963,9 +4161,10 @@ const saveApproval = async () => {
       approvalDialog.type === 'approve' ? 'approve' : 'reject';
     await syncStepStatus(approvalDialog.instanceId, operationType);
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(
-      `${approvalDialog.type === 'approve' ? '审批' : '拒绝'}失败: ${error.message || '未知错误'}`,
-    );
+    if (shouldNotifyPageError(error))
+      message.error(
+        `${approvalDialog.type === 'approve' ? '审批' : '拒绝'}失败: ${error.message || '未知错误'}`,
+      );
   } finally {
     loading.value = false;
   }
@@ -3994,7 +4193,8 @@ const confirmDelete = (instance: WorkorderInstanceItem) => {
 
         loadInstances();
       } catch (error: any) {
-        if (shouldNotifyPageError(error)) message.error(`删除工单失败: ${error.message || '未知错误'}`);
+        if (shouldNotifyPageError(error))
+          message.error(`删除工单失败: ${error.message || '未知错误'}`);
       } finally {
         loading.value = false;
       }
@@ -4082,7 +4282,8 @@ const saveInstance = async () => {
     loadInstances();
   } catch (error: any) {
     const action = instanceDialog.isEdit ? '更新' : '创建';
-    if (shouldNotifyPageError(error)) message.error(`${action}工单失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error))
+      message.error(`${action}工单失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }
@@ -4627,7 +4828,6 @@ onMounted(() => {
   .header-actions {
     gap: 8px;
   }
-
 
   .operator-info,
   .assignee-info {

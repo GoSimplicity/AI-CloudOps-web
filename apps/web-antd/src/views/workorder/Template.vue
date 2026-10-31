@@ -820,9 +820,10 @@ const handleViewTemplate = async (row: WorkorderTemplateItem) => {
 
 const handleCommand = async (command: string, row: WorkorderTemplateItem) => {
   switch (command) {
-    case 'delete':
+    case 'delete': {
       confirmDelete(row);
       break;
+    }
   }
 };
 
@@ -1110,8 +1111,8 @@ onMounted(async () => {
         创建模板
       </a-button>
     </template>
-    <template #filters
-      ><div class="search-filters">
+    <template #filters>
+      <div class="search-filters">
         <a-input-search
           v-model:value="searchQuery"
           placeholder="搜索模板名称..."
@@ -1144,11 +1145,11 @@ onMounted(async () => {
             {{ category.name }}
           </a-select-option>
         </a-select>
-      </div></template
-    >
+      </div>
+    </template>
 
-    <template #summary
-      ><div class="stats-row">
+    <template #summary>
+      <div class="stats-row">
         <a-row :gutter="16">
           <a-col :xs="12" :sm="12" :md="6">
             <a-card class="stats-card">
@@ -1202,13 +1203,14 @@ onMounted(async () => {
               </a-statistic>
             </a-card>
           </a-col>
-        </a-row></div
-    ></template>
+        </a-row>
+      </div>
+    </template>
 
     <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
-      <template #action
-        ><a-button size="small" @click="loadTemplates">重试</a-button></template
-      >
+      <template #action>
+        <a-button size="small" @click="loadTemplates">重试</a-button>
+      </template>
     </a-alert>
 
     <div class="table-container">
@@ -1591,8 +1593,7 @@ onMounted(async () => {
             style="width: 100%"
             :max-tag-count="10"
             allow-clear
-          >
-          </a-select>
+          />
         </a-form-item>
 
         <a-form-item label="描述" name="description">
@@ -1627,12 +1628,12 @@ onMounted(async () => {
         </div>
 
         <a-descriptions bordered :column="2" :labelStyle="{ width: '120px' }">
-          <a-descriptions-item label="模板ID">{{
-            detailDialog.template.id
-          }}</a-descriptions-item>
-          <a-descriptions-item label="创建人">{{
-            detailDialog.template.operator_name
-          }}</a-descriptions-item>
+          <a-descriptions-item label="模板ID">
+            {{ detailDialog.template.id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建人">
+            {{ detailDialog.template.operator_name }}
+          </a-descriptions-item>
           <a-descriptions-item label="创建时间">
             {{ formatFullDateTime(detailDialog.template.created_at || '') }}
           </a-descriptions-item>
@@ -1661,8 +1662,9 @@ onMounted(async () => {
                 v-for="tag in detailDialog.template.tags"
                 :key="tag"
                 color="blue"
-                >{{ tag }}</a-tag
               >
+                {{ tag }}
+              </a-tag>
             </template>
             <span v-else class="text-gray">无标签</span>
           </a-descriptions-item>
@@ -1676,8 +1678,9 @@ onMounted(async () => {
           <a-button
             type="primary"
             @click="handleEditTemplate(detailDialog.template)"
-            >编辑</a-button
           >
+            编辑
+          </a-button>
         </div>
       </div>
     </a-modal>

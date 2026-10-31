@@ -512,7 +512,8 @@ export function usePodPage() {
         clearNamespaces();
         clearPods();
       }
-      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err))
+        clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -559,7 +560,8 @@ export function usePodPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldRecordPageError(err))
+        namespacesError.value = '获取命名空间列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
@@ -624,7 +626,8 @@ export function usePodPage() {
       )
         return;
       clearPods();
-      if (shouldRecordPageError(err)) loadError.value = '获取 Pod 列表失败，请重试';
+      if (shouldRecordPageError(err))
+        loadError.value = '获取 Pod 列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
@@ -1525,8 +1528,7 @@ export function usePodPage() {
           }
         }
       } catch (error: any) {
-        if (!isManualClose) {
-        }
+        if (!isManualClose) {}
 
         if (error?.name === 'AbortError') {
           isManualClose = true;
@@ -1695,8 +1697,7 @@ export function usePodPage() {
         logsStreamConnection.value.close();
         logsStreamConnection.value = null;
       }
-    } catch (error) {
-    } finally {
+    } catch (error) {} finally {
       // 确保状态被正确重置
       isLogsStreaming.value = false;
       logsLoading.value = false;
@@ -1778,9 +1779,7 @@ export function usePodPage() {
             error.message.includes(
               'Could not dispose an addon that has not been loaded',
             )
-          ) {
-          } else {
-          }
+          ) {} else {}
           // 强制重置状态
           terminal.value = null;
           fitAddon.value = null;
@@ -2113,11 +2112,7 @@ export function usePodPage() {
           socket = null;
 
           // 根据关闭代码提供更详细的错误信息
-          if (event.code === 1006) {
-          } else if (event.code === 1000) {
-          } else if (event.code === 1003) {
-          } else if (event.code === 4401) {
-          }
+          if (event.code === 1006) {} else if (event.code === 1000) {} else if (event.code === 1003) {} else if (event.code === 4401) {}
 
           if (isManualClose) {
             pendingHandshakeError = null;
@@ -2146,8 +2141,7 @@ export function usePodPage() {
         for (const chunk of utf8Chunks(command)) {
           socket.send(JSON.stringify({ op: 'stdin', data: chunk }));
         }
-      } else {
-      }
+      } else {}
     };
 
     // 手动关闭连接
@@ -2313,9 +2307,7 @@ export function usePodPage() {
             error.message.includes(
               'Could not dispose an addon that has not been loaded',
             )
-          ) {
-          } else {
-          }
+          ) {} else {}
           // 强制重置状态，无论是否有错误
           terminal.value = null;
           fitAddon.value = null;
@@ -2326,8 +2318,7 @@ export function usePodPage() {
       if (fitAddon.value) {
         fitAddon.value = null;
       }
-    } catch (error) {
-    } finally {
+    } catch (error) {} finally {
       // 确保状态被正确重置
       isTerminalConnected.value = false;
       terminalLoading.value = false;
@@ -2629,8 +2620,7 @@ export function usePodPage() {
           selectedRows.value = [];
           await fetchPods();
         } catch (err) {
-          if (shouldNotifyPageError(err))
-            message.error(`批量${operation}失败`);
+          if (shouldNotifyPageError(err)) message.error(`批量${operation}失败`);
         }
       },
     });

@@ -103,8 +103,9 @@ describe('SEC-03A 本地命令/脚本开关（真实页面）', () => {
       { text: 'SSH远程', disabled: false },
     ]);
     expect(
-      document.body.querySelector('.ant-modal .ant-select-selection-item')
-        ?.textContent,
+      document.body
+        .querySelector('.ant-modal .ant-select-selection-item')
+        ?.textContent?.trim(),
     ).toBe('HTTP请求');
     expect(document.body.textContent).toContain(
       '本地命令/脚本任务已停用（cron.allow_local_exec=false），请改用 HTTP 或 SSH 任务',

@@ -3,11 +3,7 @@ import { computed } from 'vue';
 
 import { AuthenticationLoginExpiredModal } from '@vben/common-ui';
 import { BookOpenText, CircleHelp, MdiGithub } from '@vben/icons';
-import {
-  BasicLayout,
-  LockScreen,
-  UserDropdown,
-} from '@vben/layouts';
+import { BasicLayout, LockScreen, UserDropdown } from '@vben/layouts';
 import { storeToRefs, useAccessStore, useUserStore } from '@vben/stores';
 import { openWindow } from '@vben/utils';
 
@@ -62,7 +58,6 @@ const avatar = computed(() => {
 async function handleLogout() {
   await authStore.logout(false);
 }
-
 </script>
 
 <template>

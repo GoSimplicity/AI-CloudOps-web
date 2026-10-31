@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { utf8Chunks } from './terminal-input';
+
 const encoder = new TextEncoder();
 const limit = 64 * 1024;
 

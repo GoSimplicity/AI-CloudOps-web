@@ -126,7 +126,11 @@ export async function assistantQuery(data: AssistantRequest, config?: any) {
 
 // 创建空会话，不会调用模型或工具。
 export async function createAssistantSession(config?: any) {
-  return requestClientAIOps.post<{ session_id: string }>('/assistant/session', {}, config);
+  return requestClientAIOps.post<{ session_id: string }>(
+    '/assistant/session',
+    {},
+    config,
+  );
 }
 
 // 获取会话信息

@@ -9,7 +9,7 @@ import {
   EditOutlined,
   PlayCircleOutlined,
   PauseCircleOutlined,
-  PlaySquareOutlined
+  PlaySquareOutlined,
 } from '@ant-design/icons-vue';
 import { onMounted, onUnmounted, watch } from 'vue';
 import OpsPage from '#/components/ops/OpsPage.vue';
@@ -112,7 +112,6 @@ const {
 
   // 批量操作
   batchOperation,
-
 
   // 表单操作
   validateScheduleExpression,
@@ -228,7 +227,6 @@ const handleTableChange = (pagination: any) => {
 // 初始化数据加载
 onMounted(async () => {
   if (!accessStore.accessToken) {
-
     return;
   }
 
@@ -236,20 +234,30 @@ onMounted(async () => {
 });
 
 // 监听认证状态变化，如果用户登录了就重新加载数据
-watch(() => accessStore.accessToken, (newToken, oldToken) => {
-  if (!newToken) clearPage();
-  if (newToken && !oldToken) {
-    // 用户刚刚登录，重新加载数据
-    fetchCronJobs();
-  }
-});
+watch(
+  () => accessStore.accessToken,
+  (newToken, oldToken) => {
+    if (!newToken) clearPage();
+    if (newToken && !oldToken) {
+      // 用户刚刚登录，重新加载数据
+      fetchCronJobs();
+    }
+  },
+);
 onUnmounted(clearPage);
 </script>
 
 <template>
-  <OpsPage title="定时任务管理" description="配置执行周期、查看任务结果并管理启停状态">
+  <OpsPage
+    title="定时任务管理"
+    description="配置执行周期、查看任务结果并管理启停状态"
+  >
     <template #actions>
-      <a-button type="primary" @click="openCreateModal" :disabled="submitLoading">
+      <a-button
+        type="primary"
+        @click="openCreateModal"
+        :disabled="submitLoading"
+      >
         <template #icon><PlusOutlined /></template>
         创建任务
       </a-button>
@@ -271,9 +279,15 @@ onUnmounted(clearPage);
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
-            <a-select-option :value="CronJobStatus.ENABLED">已启用</a-select-option>
-            <a-select-option :value="CronJobStatus.DISABLED">已禁用</a-select-option>
-            <a-select-option :value="CronJobStatus.RUNNING">运行中</a-select-option>
+            <a-select-option :value="CronJobStatus.ENABLED">
+              已启用
+            </a-select-option>
+            <a-select-option :value="CronJobStatus.DISABLED">
+              已禁用
+            </a-select-option>
+            <a-select-option :value="CronJobStatus.RUNNING">
+              运行中
+            </a-select-option>
             <a-select-option :value="CronJobStatus.ERROR">异常</a-select-option>
           </a-select>
 
@@ -285,10 +299,18 @@ onUnmounted(clearPage);
             @change="handleFilterChange"
           >
             <template #suffixIcon><FilterOutlined /></template>
-            <a-select-option :value="CronJobType.SYSTEM">系统任务</a-select-option>
-            <a-select-option :value="CronJobType.COMMAND">命令行</a-select-option>
-            <a-select-option :value="CronJobType.HTTP">HTTP请求</a-select-option>
-            <a-select-option :value="CronJobType.SCRIPT">脚本任务</a-select-option>
+            <a-select-option :value="CronJobType.SYSTEM">
+              系统任务
+            </a-select-option>
+            <a-select-option :value="CronJobType.COMMAND">
+              命令行
+            </a-select-option>
+            <a-select-option :value="CronJobType.HTTP">
+              HTTP请求
+            </a-select-option>
+            <a-select-option :value="CronJobType.SCRIPT">
+              脚本任务
+            </a-select-option>
             <a-select-option :value="CronJobType.SSH">SSH远程</a-select-option>
           </a-select>
         </div>
@@ -323,7 +345,7 @@ onUnmounted(clearPage);
           danger
           @click="batchOperation('删除')"
           :disabled="!selectedRows.length"
-          v-if="can('cron.job.batchDelete') && (selectedRows.length > 0)"
+          v-if="can('cron.job.batchDelete') && selectedRows.length > 0"
           class="k8s-toolbar-btn"
           title="批量删除选中的任务"
         >
@@ -387,8 +409,9 @@ onUnmounted(clearPage);
           total: total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total: number, range: number[]) => `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
-          pageSizeOptions: ['10', '20', '30', '50']
+          showTotal: (total: number, range: number[]) =>
+            `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
+          pageSizeOptions: ['10', '20', '30', '50'],
         }"
         @change="handleTableChange"
         class="k8s-table"
@@ -396,10 +419,15 @@ onUnmounted(clearPage);
       >
         <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'status'">
-            <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
+            <a-badge
+              :status="getStatusColor(text)"
+              :text="getStatusText(text)"
+            />
           </template>
           <template v-else-if="column.key === 'job_type'">
-            <a-tag :color="getJobTypeColor(text)">{{ getJobTypeText(text) }}</a-tag>
+            <a-tag :color="getJobTypeColor(text)">
+              {{ getJobTypeText(text) }}
+            </a-tag>
           </template>
           <template v-else-if="column.key === 'next_run_time'">
             <span v-if="text">{{ formatDateTime(text) }}</span>
@@ -410,7 +438,10 @@ onUnmounted(clearPage);
             <span v-else class="k8s-no-data">暂无</span>
           </template>
           <template v-else-if="column.key === 'last_run_status'">
-            <a-tooltip v-if="record.last_run_time" :title="record.last_run_error || undefined">
+            <a-tooltip
+              v-if="record.last_run_time"
+              :title="record.last_run_error || undefined"
+            >
               <a-badge
                 :status="getLastRunStatusColor(text)"
                 :text="getLastRunStatusText(text)"
@@ -421,12 +452,22 @@ onUnmounted(clearPage);
           <template v-else-if="column.key === 'action'">
             <div class="k8s-action-column">
               <a-tooltip title="查看详情">
-                <a-button type="text" size="small" @click="showJobDetail(record)">
+                <a-button
+                  type="text"
+                  size="small"
+                  @click="showJobDetail(record)"
+                >
                   <template #icon><EyeOutlined /></template>
                 </a-button>
               </a-tooltip>
 
-              <a-tooltip :title="isLocalExecLocked(record) ? '本地命令/脚本任务已停用，不可编辑' : '编辑任务'">
+              <a-tooltip
+                :title="
+                  isLocalExecLocked(record)
+                    ? '本地命令/脚本任务已停用，不可编辑'
+                    : '编辑任务'
+                "
+              >
                 <a-button
                   type="text"
                   size="small"
@@ -437,25 +478,47 @@ onUnmounted(clearPage);
                 </a-button>
               </a-tooltip>
 
-              <a-tooltip :title="record.status === CronJobStatus.ENABLED ? '禁用任务' : '启用任务'">
+              <a-tooltip
+                :title="
+                  record.status === CronJobStatus.ENABLED
+                    ? '禁用任务'
+                    : '启用任务'
+                "
+              >
                 <a-button
                   type="text"
                   size="small"
-                  @click="record.status === CronJobStatus.ENABLED ? disableJob(record) : enableJob(record)"
+                  @click="
+                    record.status === CronJobStatus.ENABLED
+                      ? disableJob(record)
+                      : enableJob(record)
+                  "
                 >
                   <template #icon>
-                    <PauseCircleOutlined v-if="record.status === CronJobStatus.ENABLED" />
+                    <PauseCircleOutlined
+                      v-if="record.status === CronJobStatus.ENABLED"
+                    />
                     <PlayCircleOutlined v-else />
                   </template>
                 </a-button>
               </a-tooltip>
 
-              <a-tooltip v-if="can('cron.job.trigger')" :title="isLocalExecLocked(record) ? '本地命令/脚本任务已停用，不可执行' : '立即执行'">
+              <a-tooltip
+                v-if="can('cron.job.trigger')"
+                :title="
+                  isLocalExecLocked(record)
+                    ? '本地命令/脚本任务已停用，不可执行'
+                    : '立即执行'
+                "
+              >
                 <a-button
                   type="text"
                   size="small"
                   @click="triggerJob(record)"
-                  :disabled="record.status === CronJobStatus.DISABLED || isLocalExecLocked(record)"
+                  :disabled="
+                    record.status === CronJobStatus.DISABLED ||
+                    isLocalExecLocked(record)
+                  "
                 >
                   <template #icon><PlaySquareOutlined /></template>
                 </a-button>
@@ -475,7 +538,6 @@ onUnmounted(clearPage);
             </div>
           </template>
         </template>
-
       </a-table>
     </div>
 
@@ -500,7 +562,11 @@ onUnmounted(clearPage);
         class="k8s-form"
       >
         <a-form-item label="任务名称" name="name" has-feedback>
-          <a-input v-model:value="createFormModel.name" placeholder="请输入任务名称" :maxlength="100" />
+          <a-input
+            v-model:value="createFormModel.name"
+            placeholder="请输入任务名称"
+            :maxlength="100"
+          />
         </a-form-item>
 
         <a-form-item label="任务描述" name="description">
@@ -517,20 +583,52 @@ onUnmounted(clearPage);
           label="任务类型"
           name="job_type"
           has-feedback
-          :extra="allowLocalExec ? undefined : '本地命令/脚本任务已停用（cron.allow_local_exec=false），请改用 HTTP 或 SSH 任务'"
+          :extra="
+            allowLocalExec
+              ? undefined
+              : '本地命令/脚本任务已停用（cron.allow_local_exec=false），请改用 HTTP 或 SSH 任务'
+          "
         >
-          <a-select v-model:value="createFormModel.job_type" placeholder="请选择任务类型" @change="handleJobTypeChange">
-            <a-select-option :value="CronJobType.COMMAND" :disabled="!allowLocalExec">命令行</a-select-option>
-            <a-select-option :value="CronJobType.HTTP">HTTP请求</a-select-option>
-            <a-select-option :value="CronJobType.SCRIPT" :disabled="!allowLocalExec">脚本任务</a-select-option>
+          <a-select
+            v-model:value="createFormModel.job_type"
+            placeholder="请选择任务类型"
+            @change="handleJobTypeChange"
+          >
+            <a-select-option
+              :value="CronJobType.COMMAND"
+              :disabled="!allowLocalExec"
+            >
+              命令行
+            </a-select-option>
+            <a-select-option :value="CronJobType.HTTP">
+              HTTP请求
+            </a-select-option>
+            <a-select-option
+              :value="CronJobType.SCRIPT"
+              :disabled="!allowLocalExec"
+            >
+              脚本任务
+            </a-select-option>
             <a-select-option :value="CronJobType.SSH">SSH远程</a-select-option>
           </a-select>
         </a-form-item>
 
-        <a-form-item label="初始状态" name="status" extra="停用仅保存配置，明确启用后才参与调度。">
-          <a-select id="cron-create-status" v-model:value="createFormModel.status" aria-label="初始状态">
-            <a-select-option :value="CronJobStatus.ENABLED">启用</a-select-option>
-            <a-select-option :value="CronJobStatus.DISABLED">停用（仅保存）</a-select-option>
+        <a-form-item
+          label="初始状态"
+          name="status"
+          extra="停用仅保存配置，明确启用后才参与调度。"
+        >
+          <a-select
+            id="cron-create-status"
+            v-model:value="createFormModel.status"
+            aria-label="初始状态"
+          >
+            <a-select-option :value="CronJobStatus.ENABLED">
+              启用
+            </a-select-option>
+            <a-select-option :value="CronJobStatus.DISABLED">
+              停用（仅保存）
+            </a-select-option>
           </a-select>
         </a-form-item>
 
@@ -541,13 +639,20 @@ onUnmounted(clearPage);
             :maxlength="100"
           >
             <template #addonAfter>
-              <a-button type="link" @click="validateScheduleExpression('create')" size="small">
+              <a-button
+                type="link"
+                @click="validateScheduleExpression('create')"
+                size="small"
+              >
                 验证
               </a-button>
             </template>
           </a-input>
           <div class="cron-schedule-tip">
-            <small>格式：分 时 日 月 周；默认按 UTC 执行，可使用 CRON_TZ 指定时区</small>
+            <small
+              >格式：分 时 日 月 周；默认按 UTC 执行，可使用 CRON_TZ
+              指定时区</small
+            >
           </div>
         </a-form-item>
 
@@ -573,7 +678,7 @@ onUnmounted(clearPage);
                   v-model:value="createFormModel.args![index]"
                   placeholder="输入参数"
                   class="k8s-form-input"
-                  style="flex: 1; margin-right: 8px;"
+                  style="flex: 1; margin-right: 8px"
                 />
                 <a-button
                   @click="removeArg(index)"
@@ -587,7 +692,7 @@ onUnmounted(clearPage);
               <a-button
                 @click="addArg"
                 type="dashed"
-                style="width: 100%; margin-top: 8px;"
+                style="width: 100%; margin-top: 8px"
               >
                 <template #icon><PlusOutlined /></template>
                 添加参数
@@ -632,7 +737,7 @@ onUnmounted(clearPage);
               <a-button
                 @click="addEnvironment"
                 type="dashed"
-                style="width: 100%; margin-top: 8px;"
+                style="width: 100%; margin-top: 8px"
               >
                 <template #icon><PlusOutlined /></template>
                 添加环境变量
@@ -644,7 +749,10 @@ onUnmounted(clearPage);
         <!-- HTTP 请求任务配置 -->
         <template v-if="createFormModel.job_type === CronJobType.HTTP">
           <a-form-item label="请求方法" name="http_method" has-feedback>
-            <a-select v-model:value="createFormModel.http_method" placeholder="请选择HTTP方法">
+            <a-select
+              v-model:value="createFormModel.http_method"
+              placeholder="请选择HTTP方法"
+            >
               <a-select-option value="GET">GET</a-select-option>
               <a-select-option value="POST">POST</a-select-option>
               <a-select-option value="PUT">PUT</a-select-option>
@@ -691,7 +799,7 @@ onUnmounted(clearPage);
               <a-button
                 @click="addHttpHeader"
                 type="dashed"
-                style="width: 100%; margin-top: 8px;"
+                style="width: 100%; margin-top: 8px"
               >
                 <template #icon><PlusOutlined /></template>
                 添加请求头
@@ -714,7 +822,10 @@ onUnmounted(clearPage);
         <!-- 脚本任务配置 -->
         <template v-if="createFormModel.job_type === CronJobType.SCRIPT">
           <a-form-item label="脚本类型" name="script_type" has-feedback>
-            <a-select v-model:value="createFormModel.script_type" placeholder="请选择脚本类型">
+            <a-select
+              v-model:value="createFormModel.script_type"
+              placeholder="请选择脚本类型"
+            >
               <a-select-option value="bash">Bash Shell</a-select-option>
               <a-select-option value="python">Python</a-select-option>
               <a-select-option value="node">Node.js</a-select-option>
@@ -741,15 +852,30 @@ onUnmounted(clearPage);
               v-model:value="createFormModel.ssh_resource_id"
               placeholder="请选择SSH资源"
               :loading="sshResourcesLoading"
-              @dropdown-visible-change="(open: boolean) => open && fetchSshResources()"
+              @dropdown-visible-change="
+                (open: boolean) => open && fetchSshResources()
+              "
               show-search
               :filter-option="false"
               @search="searchSshResources"
             >
-              <a-select-option v-for="resource in filteredSshResources" :key="resource.id" :value="resource.id">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+              <a-select-option
+                v-for="resource in filteredSshResources"
+                :key="resource.id"
+                :value="resource.id"
+              >
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                  "
+                >
                   <span>{{ resource.name }}</span>
-                  <a-tag size="small" :color="resource.status === 1 ? 'green' : 'red'">
+                  <a-tag
+                    size="small"
+                    :color="resource.status === 1 ? 'green' : 'red'"
+                  >
                     {{ resource.ip_addr }}:{{ resource.port }}
                   </a-tag>
                 </div>
@@ -805,7 +931,7 @@ onUnmounted(clearPage);
               <a-button
                 @click="addSshEnvironment"
                 type="dashed"
-                style="width: 100%; margin-top: 8px;"
+                style="width: 100%; margin-top: 8px"
               >
                 <template #icon><PlusOutlined /></template>
                 添加环境变量
@@ -828,7 +954,11 @@ onUnmounted(clearPage);
           </div>
         </a-form-item>
 
-        <a-form-item label="自动重投次数" name="max_retry" extra="初次执行之外的重投预算，包含失败与进程崩溃恢复；0 表示不自动重投">
+        <a-form-item
+          label="自动重投次数"
+          name="max_retry"
+          extra="初次执行之外的重投预算，包含失败与进程崩溃恢复；0 表示不自动重投"
+        >
           <a-input-number
             v-model:value="createFormModel.max_retry"
             placeholder="次数"
@@ -862,7 +992,11 @@ onUnmounted(clearPage);
         class="k8s-form"
       >
         <a-form-item label="任务名称" name="name" has-feedback>
-          <a-input v-model:value="editFormModel.name" placeholder="请输入任务名称" :maxlength="100" />
+          <a-input
+            v-model:value="editFormModel.name"
+            placeholder="请输入任务名称"
+            :maxlength="100"
+          />
         </a-form-item>
 
         <a-form-item label="任务描述" name="description">
@@ -882,14 +1016,24 @@ onUnmounted(clearPage);
             :maxlength="100"
           >
             <template #addonAfter>
-              <a-button type="link" @click="validateScheduleExpression('edit')" size="small">
+              <a-button
+                type="link"
+                @click="validateScheduleExpression('edit')"
+                size="small"
+              >
                 验证
               </a-button>
             </template>
           </a-input>
         </a-form-item>
 
-        <CronEditFields v-model="editFormModel" :resources="filteredSshResources" :loading="sshResourcesLoading" @search="searchSshResources" @open-resources="fetchSshResources" />
+        <CronEditFields
+          v-model="editFormModel"
+          :resources="filteredSshResources"
+          :loading="sshResourcesLoading"
+          @search="searchSshResources"
+          @open-resources="fetchSshResources"
+        />
 
         <a-form-item label="超时时间" name="timeout">
           <a-input-number
@@ -902,7 +1046,11 @@ onUnmounted(clearPage);
           />
         </a-form-item>
 
-        <a-form-item label="自动重投次数" name="max_retry" extra="初次执行之外的重投预算，包含失败与进程崩溃恢复；0 表示不自动重投">
+        <a-form-item
+          label="自动重投次数"
+          name="max_retry"
+          extra="初次执行之外的重投预算，包含失败与进程崩溃恢复；0 表示不自动重投"
+        >
           <a-input-number
             v-model:value="editFormModel.max_retry"
             placeholder="次数"
@@ -926,43 +1074,101 @@ onUnmounted(clearPage);
       <a-spin :spinning="detailLoading">
         <div v-if="currentJobDetail" class="k8s-detail-content">
           <a-descriptions :column="2" bordered>
-            <a-descriptions-item label="任务名称">{{ currentJobDetail.name }}</a-descriptions-item>
+            <a-descriptions-item label="任务名称">
+              {{ currentJobDetail.name }}
+            </a-descriptions-item>
             <a-descriptions-item label="任务状态">
-              <a-badge :status="getStatusColor(currentJobDetail.status)" :text="getStatusText(currentJobDetail.status)" />
+              <a-badge
+                :status="getStatusColor(currentJobDetail.status)"
+                :text="getStatusText(currentJobDetail.status)"
+              />
             </a-descriptions-item>
             <a-descriptions-item label="任务类型">
-              <a-tag :color="getJobTypeColor(currentJobDetail.job_type)">{{ getJobTypeText(currentJobDetail.job_type) }}</a-tag>
+              <a-tag :color="getJobTypeColor(currentJobDetail.job_type)">
+                {{ getJobTypeText(currentJobDetail.job_type) }}
+              </a-tag>
             </a-descriptions-item>
-            <a-descriptions-item label="调度表达式">{{ currentJobDetail.schedule }}</a-descriptions-item>
-            <a-descriptions-item label="创建时间">{{ formatDateTime(currentJobDetail.created_at) }}</a-descriptions-item>
-            <a-descriptions-item label="更新时间">{{ formatDateTime(currentJobDetail.updated_at) }}</a-descriptions-item>
-            <a-descriptions-item label="下次执行">{{ currentJobDetail.next_run_time ? formatDateTime(currentJobDetail.next_run_time) : '暂无' }}</a-descriptions-item>
-            <a-descriptions-item label="上次执行">{{ currentJobDetail.last_run_time ? formatDateTime(currentJobDetail.last_run_time) : '暂无' }}</a-descriptions-item>
+            <a-descriptions-item label="调度表达式">
+              {{ currentJobDetail.schedule }}
+            </a-descriptions-item>
+            <a-descriptions-item label="创建时间">
+              {{ formatDateTime(currentJobDetail.created_at) }}
+            </a-descriptions-item>
+            <a-descriptions-item label="更新时间">
+              {{ formatDateTime(currentJobDetail.updated_at) }}
+            </a-descriptions-item>
+            <a-descriptions-item label="下次执行">
+              {{
+                currentJobDetail.next_run_time
+                  ? formatDateTime(currentJobDetail.next_run_time)
+                  : '暂无'
+              }}
+            </a-descriptions-item>
+            <a-descriptions-item label="上次执行">
+              {{
+                currentJobDetail.last_run_time
+                  ? formatDateTime(currentJobDetail.last_run_time)
+                  : '暂无'
+              }}
+            </a-descriptions-item>
             <a-descriptions-item label="上次状态">
               <a-badge
-                :status="getLastRunStatusColor(currentJobDetail.last_run_status)"
+                :status="
+                  getLastRunStatusColor(currentJobDetail.last_run_status)
+                "
                 :text="getLastRunStatusText(currentJobDetail.last_run_status)"
                 v-if="currentJobDetail.last_run_time"
               />
               <span v-else class="k8s-no-data">暂无</span>
             </a-descriptions-item>
-            <a-descriptions-item label="执行次数">{{ currentJobDetail.run_count || 0 }}次</a-descriptions-item>
-            <a-descriptions-item label="成功次数">{{ currentJobDetail.success_count || 0 }}次</a-descriptions-item>
-            <a-descriptions-item label="失败次数">{{ currentJobDetail.failure_count || 0 }}次</a-descriptions-item>
-            <a-descriptions-item label="超时时间">{{ currentJobDetail.timeout }}秒</a-descriptions-item>
-            <a-descriptions-item label="重试次数">{{ currentJobDetail.max_retry }}次</a-descriptions-item>
-            <a-descriptions-item label="创建者">{{ currentJobDetail.created_by_name || '系统' }}</a-descriptions-item>
-            <a-descriptions-item label="任务描述" :span="2">{{ currentJobDetail.description || '无描述' }}</a-descriptions-item>
-            <a-descriptions-item label="执行耗时" v-if="currentJobDetail.last_run_duration > 0">
+            <a-descriptions-item label="执行次数">
+              {{ currentJobDetail.run_count || 0 }}次
+            </a-descriptions-item>
+            <a-descriptions-item label="成功次数">
+              {{ currentJobDetail.success_count || 0 }}次
+            </a-descriptions-item>
+            <a-descriptions-item label="失败次数">
+              {{ currentJobDetail.failure_count || 0 }}次
+            </a-descriptions-item>
+            <a-descriptions-item label="超时时间">
+              {{ currentJobDetail.timeout }}秒
+            </a-descriptions-item>
+            <a-descriptions-item label="重试次数">
+              {{ currentJobDetail.max_retry }}次
+            </a-descriptions-item>
+            <a-descriptions-item label="创建者">
+              {{ currentJobDetail.created_by_name || '系统' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="任务描述" :span="2">
+              {{ currentJobDetail.description || '无描述' }}
+            </a-descriptions-item>
+            <a-descriptions-item
+              label="执行耗时"
+              v-if="currentJobDetail.last_run_duration > 0"
+            >
               {{ formatDuration(currentJobDetail.last_run_duration) }}
             </a-descriptions-item>
-            <a-descriptions-item label="执行输出" :span="2" v-if="currentJobDetail.last_run_output">
-              <div class="k8s-config-textarea" style="max-height: 200px; overflow-y: auto;">
+            <a-descriptions-item
+              label="执行输出"
+              :span="2"
+              v-if="currentJobDetail.last_run_output"
+            >
+              <div
+                class="k8s-config-textarea"
+                style="max-height: 200px; overflow-y: auto"
+              >
                 <pre>{{ currentJobDetail.last_run_output }}</pre>
               </div>
             </a-descriptions-item>
-            <a-descriptions-item label="错误信息" :span="2" v-if="currentJobDetail.last_run_error">
-              <div class="k8s-config-textarea" style="max-height: 200px; overflow-y: auto; color: #ff4d4f;">
+            <a-descriptions-item
+              label="错误信息"
+              :span="2"
+              v-if="currentJobDetail.last_run_error"
+            >
+              <div
+                class="k8s-config-textarea"
+                style="max-height: 200px; overflow-y: auto; color: #ff4d4f"
+              >
                 <pre>{{ currentJobDetail.last_run_error }}</pre>
               </div>
             </a-descriptions-item>
@@ -972,8 +1178,6 @@ onUnmounted(clearPage);
     </a-modal>
   </OpsPage>
 </template>
-
-
 
 <style scoped>
 @import '../shared/cron-common.css';

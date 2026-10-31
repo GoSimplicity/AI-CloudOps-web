@@ -9,22 +9,22 @@
  */
 export const formatK8sTime = (timeStr?: string | null): string => {
   if (!timeStr) return '-';
-  
+
   try {
     const date = new Date(timeStr);
-    
+
     // 检查日期是否有效
     if (isNaN(date.getTime())) {
       return timeStr;
     }
-    
+
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
-    
+
     return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
   } catch {
     return timeStr || '-';
@@ -39,20 +39,22 @@ export const formatK8sTime = (timeStr?: string | null): string => {
  */
 export const formatK8sAge = (ageStr?: string | null): string => {
   if (!ageStr) return '-';
-  
+
   // 解析类似 "5303h13m51.495736s" 的格式
   const hourMatch = ageStr.match(/(\d+)h/);
   const minuteMatch = ageStr.match(/(\d+)m/);
   const secondMatch = ageStr.match(/(\d+(?:\.\d+)?)s/);
-  
+
   const hours = hourMatch && hourMatch[1] ? parseInt(hourMatch[1], 10) : 0;
-  const minutes = minuteMatch && minuteMatch[1] ? parseInt(minuteMatch[1], 10) : 0;
-  const seconds = secondMatch && secondMatch[1] ? parseFloat(secondMatch[1]) : 0;
-  
+  const minutes =
+    minuteMatch && minuteMatch[1] ? parseInt(minuteMatch[1], 10) : 0;
+  const seconds =
+    secondMatch && secondMatch[1] ? parseFloat(secondMatch[1]) : 0;
+
   // 转换为更友好的格式
   const days = Math.floor(hours / 24);
   const remainingHours = hours % 24;
-  
+
   if (days > 0) {
     if (remainingHours > 0) {
       return `${days}天${remainingHours}小时`;
@@ -97,14 +99,14 @@ export const getRelativeTime = (dateStr: string): string => {
   const now = new Date().getTime();
   const past = new Date(dateStr).getTime();
   const diff = now - past;
-  
+
   const seconds = Math.floor(diff / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
   const months = Math.floor(days / 30);
   const years = Math.floor(days / 365);
-  
+
   if (years > 0) return `${years}年前`;
   if (months > 0) return `${months}个月前`;
   if (days > 0) return `${days}天前`;
@@ -114,11 +116,15 @@ export const getRelativeTime = (dateStr: string): string => {
   return '刚刚';
 };
 
-
 /** 集群内同名资源可跨命名空间存在，选择状态必须使用完整身份 */
-export const namespacedResourceKey = (record: { cluster_id: number; namespace: string; name: string }): string =>
-  `${record.cluster_id}/${record.namespace}/${record.name}`;
+export const namespacedResourceKey = (record: {
+  cluster_id: number;
+  namespace: string;
+  name: string;
+}): string => `${record.cluster_id}/${record.namespace}/${record.name}`;
 
 /** 集群级资源不使用命名空间，仍需隔离集群身份 */
-export const clusterResourceKey = (record: { cluster_id: number; name: string }): string =>
-  `${record.cluster_id}/${record.name}`;
+export const clusterResourceKey = (record: {
+  cluster_id: number;
+  name: string;
+}): string => `${record.cluster_id}/${record.name}`;

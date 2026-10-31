@@ -60,7 +60,7 @@ export interface ListWorkorderInstanceCommentReq {
 }
 
 export interface GetInstanceCommentsTreeReq {
-  id: number; 
+  id: number;
 }
 
 export async function createWorkorderInstanceComment(
@@ -72,7 +72,10 @@ export async function createWorkorderInstanceComment(
 export async function updateWorkorderInstanceComment(
   data: UpdateWorkorderInstanceCommentReq,
 ) {
-  return requestClient.put(`/workorder/instance/comment/update/${data.id}`, data);
+  return requestClient.put(
+    `/workorder/instance/comment/update/${data.id}`,
+    data,
+  );
 }
 
 export async function deleteWorkorderInstanceComment(

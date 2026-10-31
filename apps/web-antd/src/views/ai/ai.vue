@@ -1,7 +1,11 @@
 <template>
   <div class="ai-assistant-container">
     <!-- 优化的悬浮按钮 -->
-    <div class="assistant-float-button" @click="toggleFloatWindow" :class="{ 'active': isFloatWindowVisible }">
+    <div
+      class="assistant-float-button"
+      @click="toggleFloatWindow"
+      :class="{ active: isFloatWindowVisible }"
+    >
       <div class="float-button-icon">
         <MessageCircle :size="24" />
       </div>
@@ -14,7 +18,12 @@
     </div>
 
     <!-- 悬浮窗 -->
-    <div v-if="isFloatWindowVisible" class="ai-float-window" :style="floatWindowStyle" ref="floatWindow">
+    <div
+      v-if="isFloatWindowVisible"
+      class="ai-float-window"
+      :style="floatWindowStyle"
+      ref="floatWindow"
+    >
       <!-- 悬浮窗头部 -->
       <div class="float-window-header" @mousedown="startDrag">
         <div class="header-title">
@@ -28,20 +37,47 @@
         </div>
 
         <div class="header-actions">
-          <button class="action-button minimize-btn" @mousedown.stop @click="minimizeWindow" title="最小化">
+          <button
+            class="action-button minimize-btn"
+            @mousedown.stop
+            @click="minimizeWindow"
+            title="最小化"
+          >
             <Minus :size="16" />
           </button>
-          <button class="action-button resize-btn" @mousedown.stop @click="toggleWindowSize" :title="isExpanded ? '缩小' : '放大'">
+          <button
+            class="action-button resize-btn"
+            @mousedown.stop
+            @click="toggleWindowSize"
+            :title="isExpanded ? '缩小' : '放大'"
+          >
             <Minimize2 v-if="isExpanded" :size="16" />
             <Maximize2 v-else :size="16" />
           </button>
-          <button class="action-button clear-btn" @mousedown.stop @click="clearChat" title="新建会话">
+          <button
+            class="action-button clear-btn"
+            @mousedown.stop
+            @click="clearChat"
+            title="新建会话"
+          >
             <Trash2 :size="16" />
           </button>
-          <button v-if="can('aiops.assistant.refreshKnowledge')" class="action-button refresh-btn" @mousedown.stop @click="refreshKnowledge" title="刷新知识库" :disabled="isRefreshing">
-            <RefreshCw :size="16" :class="{ 'spinning': isRefreshing }" />
+          <button
+            v-if="can('aiops.assistant.refreshKnowledge')"
+            class="action-button refresh-btn"
+            @mousedown.stop
+            @click="refreshKnowledge"
+            title="刷新知识库"
+            :disabled="isRefreshing"
+          >
+            <RefreshCw :size="16" :class="{ spinning: isRefreshing }" />
           </button>
-          <button class="action-button close-btn" @mousedown.stop @click="closeWindow" title="关闭">
+          <button
+            class="action-button close-btn"
+            @mousedown.stop
+            @click="closeWindow"
+            title="关闭"
+          >
             <X :size="16" />
           </button>
         </div>
@@ -51,7 +87,7 @@
       <div class="status-bar">
         <div class="status-left">
           <div class="status-indicator">
-            <div class="status-dot" :class="{ 'online': isConnected }"></div>
+            <div class="status-dot" :class="{ online: isConnected }"></div>
             <span class="status-text">
               {{ connectionStatus }}
             </span>
@@ -59,20 +95,20 @@
 
           <!-- 模式切换器 -->
           <div class="mode-switcher">
-            <button 
-              class="mode-button" 
+            <button
+              class="mode-button"
               :disabled="sending || !!pendingTurn || !!sessionNotice"
-              :class="{ 'active': currentMode === 1 }"
+              :class="{ active: currentMode === 1 }"
               @click="switchMode('rag')"
               title="RAG模式 - 基于知识库回答"
             >
               <FileText :size="12" />
               RAG
             </button>
-            <button 
-              class="mode-button" 
+            <button
+              class="mode-button"
               :disabled="sending || !!pendingTurn || !!sessionNotice"
-              :class="{ 'active': currentMode === 2 }"
+              :class="{ active: currentMode === 2 }"
               @click="switchMode('mcp')"
               title="MCP模式 - 工具调用模式"
             >
@@ -83,24 +119,46 @@
 
           <!-- 会话切换器 -->
           <div class="session-switcher" @click.stop>
-            <button class="session-button" @click="showSessionsPanel = !showSessionsPanel" :title="currentSessionName">
+            <button
+              class="session-button"
+              @click="showSessionsPanel = !showSessionsPanel"
+              :title="currentSessionName"
+            >
               会话：{{ currentSessionName }}
             </button>
             <div v-if="showSessionsPanel" class="session-panel">
               <div class="sessions-header">
                 <span>会话列表</span>
-                <button class="sessions-new" @click="createNewSession" title="新建会话">
+                <button
+                  class="sessions-new"
+                  @click="createNewSession"
+                  title="新建会话"
+                >
                   <Plus :size="12" />
                 </button>
               </div>
               <div class="sessions-list">
-                <div v-for="s in sessions" :key="s.localId" class="session-item" :class="{ active: s.localId === currentLocalSessionId }" @click="switchToSession(s.localId)">
+                <div
+                  v-for="s in sessions"
+                  :key="s.localId"
+                  class="session-item"
+                  :class="{ active: s.localId === currentLocalSessionId }"
+                  @click="switchToSession(s.localId)"
+                >
                   <span class="session-name">{{ s.name }}</span>
                   <div class="session-actions">
-                    <button class="session-action-btn" title="重命名" @click.stop="renameSession(s.localId)">
+                    <button
+                      class="session-action-btn"
+                      title="重命名"
+                      @click.stop="renameSession(s.localId)"
+                    >
                       <Edit2 :size="12" />
                     </button>
-                    <button class="session-action-btn" title="删除" @click.stop="deleteSession(s.localId)">
+                    <button
+                      class="session-action-btn"
+                      title="删除"
+                      @click.stop="deleteSession(s.localId)"
+                    >
                       <Trash2 :size="12" />
                     </button>
                   </div>
@@ -119,36 +177,76 @@
       <div v-if="errorMessage" class="error-banner">
         <AlertCircle :size="16" />
         <span>{{ errorMessage }}</span>
-        <button v-if="lastFailedQuestion && !sending && !pendingTurn" @click="retryLast" class="error-retry">重试</button>
+        <button
+          v-if="lastFailedQuestion && !sending && !pendingTurn"
+          @click="retryLast"
+          class="error-retry"
+        >
+          重试
+        </button>
         <button @click="errorMessage = ''" class="error-close">
           <X :size="14" />
         </button>
       </div>
-      <div v-if="pendingTurn || sessionNotice" class="error-banner" role="alert">
+      <div
+        v-if="pendingTurn || sessionNotice"
+        class="error-banner"
+        role="alert"
+      >
         <AlertCircle :size="16" />
-        <span>{{ sessionNotice || '本次请求结果尚未确认，请查询会话状态。' }}</span>
-        <button v-if="!sending && pendingTurn" @click="recoverTurn" class="error-retry">查询并恢复</button>
-        <button v-else-if="!sending && sessionNotice && sessionId" @click="restoreCurrentSession" class="error-retry">重新查询</button>
+        <span>{{
+          sessionNotice || '本次请求结果尚未确认，请查询会话状态。'
+        }}</span>
+        <button
+          v-if="!sending && pendingTurn"
+          @click="recoverTurn"
+          class="error-retry"
+        >
+          查询并恢复
+        </button>
+        <button
+          v-else-if="!sending && sessionNotice && sessionId"
+          @click="restoreCurrentSession"
+          class="error-retry"
+        >
+          重新查询
+        </button>
       </div>
 
       <!-- 消息内容区域 -->
-      <div class="chat-messages" ref="messagesContainer" @click="onMessagesClick">
-        <div v-for="(msg, index) in chatMessages" :key="`msg-${index}-${msg.time}`" :class="['message', msg.type]">
+      <div
+        class="chat-messages"
+        ref="messagesContainer"
+        @click="onMessagesClick"
+      >
+        <div
+          v-for="(msg, index) in chatMessages"
+          :key="`msg-${index}-${msg.time}`"
+          :class="['message', msg.type]"
+        >
           <div class="message-wrapper">
             <div class="avatar">
-              <div class="avatar-container" :class="msg.type === 'ai' ? 'ai-avatar' : 'user-avatar'">
+              <div
+                class="avatar-container"
+                :class="msg.type === 'ai' ? 'ai-avatar' : 'user-avatar'"
+              >
                 <Bot v-if="msg.type === 'ai'" :size="18" />
                 <User v-else :size="18" />
               </div>
             </div>
             <div class="content">
               <div class="message-header">
-                <span class="name">{{ msg.type === 'user' ? '您' : 'AI助手' }}</span>
+                <span class="name">{{
+                  msg.type === 'user' ? '您' : 'AI助手'
+                }}</span>
                 <span class="time">{{ msg.time }}</span>
               </div>
 
               <!-- AI思考状态 -->
-              <div v-if="msg.type === 'ai' && !msg.content && sending" class="typing-content">
+              <div
+                v-if="msg.type === 'ai' && !msg.content && sending"
+                class="typing-content"
+              >
                 <div class="typing-animation">
                   <span></span>
                   <span></span>
@@ -157,7 +255,10 @@
                 <div class="typing-info">
                   <span class="typing-text">AI正在思考中...</span>
                   <div class="typing-details">
-                    <span class="mode-badge" :class="currentMode === 1 ? 'rag' : 'mcp'">
+                    <span
+                      class="mode-badge"
+                      :class="currentMode === 1 ? 'rag' : 'mcp'"
+                    >
                       {{ currentMode === 1 ? 'RAG模式' : 'MCP模式' }}
                     </span>
                     <span class="session-info" v-if="sessionId">
@@ -168,18 +269,35 @@
               </div>
 
               <!-- 正常消息内容 -->
-              <div v-else class="text" v-html="renderMarkdown(msg.content || '')"></div>
+              <div
+                v-else
+                class="text"
+                v-html="renderMarkdown(msg.content || '')"
+              ></div>
 
               <!-- 消息来源显示 -->
-              <div v-if="msg.sources && msg.sources.length > 0" class="message-sources">
+              <div
+                v-if="msg.sources && msg.sources.length > 0"
+                class="message-sources"
+              >
                 <div class="sources-header">
                   <FileText :size="14" />
                   <span>参考来源</span>
                 </div>
                 <div class="sources-list">
-                  <div v-for="(source, idx) in msg.sources" :key="`source-${idx}`" class="source-item">
+                  <div
+                    v-for="(source, idx) in msg.sources"
+                    :key="`source-${idx}`"
+                    class="source-item"
+                  >
                     <div class="source-title">文档 {{ idx + 1 }}</div>
-                    <div class="source-preview">{{ source.content ? source.content.substring(0, 100) + '...' : '内容不可用' }}</div>
+                    <div class="source-preview">
+                      {{
+                        source.content
+                          ? source.content.substring(0, 100) + '...'
+                          : '内容不可用'
+                      }}
+                    </div>
                     <div v-if="source.score !== undefined" class="source-score">
                       相关性: {{ (source.score * 100).toFixed(1) }}%
                     </div>
@@ -188,15 +306,18 @@
               </div>
 
               <!-- 后续问题推荐 -->
-              <div v-if="msg.followUpQuestions && msg.followUpQuestions.length > 0" class="follow-up-questions">
+              <div
+                v-if="msg.followUpQuestions && msg.followUpQuestions.length > 0"
+                class="follow-up-questions"
+              >
                 <div class="follow-up-header">
                   <HelpCircle :size="14" />
                   <span>您可能还想问</span>
                 </div>
                 <div class="follow-up-list">
-                  <button 
-                    v-for="(question, idx) in msg.followUpQuestions" 
-                    :key="`followup-${idx}`" 
+                  <button
+                    v-for="(question, idx) in msg.followUpQuestions"
+                    :key="`followup-${idx}`"
                     class="follow-up-question"
                     @click="sendQuickMessage(question)"
                     :disabled="sending"
@@ -206,20 +327,41 @@
                 </div>
               </div>
 
-              <div class="message-actions" v-if="msg.type === 'ai' && msg.content">
-                <button class="message-action-btn" @click="copyMessage(msg.content)" title="复制">
+              <div
+                class="message-actions"
+                v-if="msg.type === 'ai' && msg.content"
+              >
+                <button
+                  class="message-action-btn"
+                  @click="copyMessage(msg.content)"
+                  title="复制"
+                >
                   <Copy :size="12" />
                 </button>
-                <button class="message-action-btn" @click="regenerateAnswer(index)" :disabled="sending" title="重新生成">
+                <button
+                  class="message-action-btn"
+                  @click="regenerateAnswer(index)"
+                  :disabled="sending"
+                  title="重新生成"
+                >
                   <RefreshCw :size="12" />
                 </button>
-                <button class="message-action-btn" @click="toggleLike(index)" title="点赞">
-                  <ThumbsUp :size="12" :class="{ 'liked': msg.liked }" />
+                <button
+                  class="message-action-btn"
+                  @click="toggleLike(index)"
+                  title="点赞"
+                >
+                  <ThumbsUp :size="12" :class="{ liked: msg.liked }" />
                 </button>
               </div>
 
               <div class="message-actions" v-if="msg.type === 'user'">
-                <button class="message-action-btn" @click="resendMessage(index)" :disabled="sending" title="重发">
+                <button
+                  class="message-action-btn"
+                  @click="resendMessage(index)"
+                  :disabled="sending"
+                  title="重发"
+                >
                   <RotateCcw :size="12" />
                 </button>
               </div>
@@ -231,8 +373,12 @@
       <!-- 快捷操作 -->
       <div class="quick-actions" v-if="!sending && !isMinimized">
         <div class="quick-action-buttons">
-          <button v-for="action in quickActions" :key="action.text" class="quick-action-btn"
-            @click="sendQuickMessage(action.text)">
+          <button
+            v-for="action in quickActions"
+            :key="action.text"
+            class="quick-action-btn"
+            @click="sendQuickMessage(action.text)"
+          >
             <component :is="action.icon" :size="12" />
             {{ action.text }}
           </button>
@@ -243,22 +389,50 @@
       <div class="chat-input" v-if="!isMinimized">
         <div class="textarea-container">
           <div class="input-wrapper">
-            <textarea v-model="globalInputMessage" placeholder="请输入您的问题...（Enter发送，Shift+Enter换行）" :disabled="sending || !!pendingTurn || !!sessionNotice"
-              @keydown="handleEnterKey" @input="onInputChange" @compositionstart="onCompositionStart" @compositionend="onCompositionEnd" class="message-input" rows="1" ref="messageInput"></textarea>
+            <textarea
+              v-model="globalInputMessage"
+              placeholder="请输入您的问题...（Enter发送，Shift+Enter换行）"
+              :disabled="sending || !!pendingTurn || !!sessionNotice"
+              @keydown="handleEnterKey"
+              @input="onInputChange"
+              @compositionstart="onCompositionStart"
+              @compositionend="onCompositionEnd"
+              class="message-input"
+              rows="1"
+              ref="messageInput"
+            ></textarea>
 
             <div class="input-actions">
               <!-- 高级选项按钮 -->
-              <button class="advanced-options-btn" @click="showAdvancedOptions = !showAdvancedOptions" title="高级选项"
-                :class="{ 'active': showAdvancedOptions }">
+              <button
+                class="advanced-options-btn"
+                @click="showAdvancedOptions = !showAdvancedOptions"
+                title="高级选项"
+                :class="{ active: showAdvancedOptions }"
+              >
                 <Settings2 :size="16" />
               </button>
 
-              <button v-if="sending" class="stop-button" @click="cancelGeneration" title="停止生成">
+              <button
+                v-if="sending"
+                class="stop-button"
+                @click="cancelGeneration"
+                title="停止生成"
+              >
                 <Square :size="16" />
               </button>
 
-              <button class="send-button" :disabled="!globalInputMessage.trim() || sending || !!pendingTurn || !!sessionNotice" @click="handleSearch"
-                :class="{ 'loading': sending }">
+              <button
+                class="send-button"
+                :disabled="
+                  !globalInputMessage.trim() ||
+                  sending ||
+                  !!pendingTurn ||
+                  !!sessionNotice
+                "
+                @click="handleSearch"
+                :class="{ loading: sending }"
+              >
                 <Send :size="16" v-if="!sending" />
                 <div v-else class="loading-spinner"></div>
               </button>
@@ -270,7 +444,11 @@
         <div v-if="showAdvancedOptions" class="advanced-options">
           <div class="option-item">
             <label class="option-label">
-              <input type="checkbox" v-model="useWebSearch" class="option-checkbox" />
+              <input
+                type="checkbox"
+                v-model="useWebSearch"
+                class="option-checkbox"
+              />
               <span>启用网络搜索</span>
             </label>
           </div>
@@ -290,7 +468,10 @@
         <div class="input-hints">
           <span class="hint-item">Enter发送 / Shift+Enter换行</span>
           <div class="mode-info">
-            <span class="mode-indicator" :class="currentMode === 1 ? 'rag' : 'mcp'">
+            <span
+              class="mode-indicator"
+              :class="currentMode === 1 ? 'rag' : 'mcp'"
+            >
               {{ currentMode === 1 ? 'RAG模式' : 'MCP模式' }}
             </span>
           </div>
@@ -302,16 +483,32 @@
       </div>
 
       <!-- 调整大小的拖拽手柄 -->
-      <div class="resize-handle" @mousedown="startResize" v-if="!isExpanded && !isMinimized"></div>
+      <div
+        class="resize-handle"
+        @mousedown="startResize"
+        v-if="!isExpanded && !isMinimized"
+      ></div>
     </div>
 
     <!-- 遮罩层 -->
-    <div v-if="isFloatWindowVisible" class="float-window-overlay" @click="closeWindow"></div>
+    <div
+      v-if="isFloatWindowVisible"
+      class="float-window-overlay"
+      @click="closeWindow"
+    ></div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick, onBeforeUnmount, watch, computed } from 'vue';
+import {
+  ref,
+  reactive,
+  onMounted,
+  nextTick,
+  onBeforeUnmount,
+  watch,
+  computed,
+} from 'vue';
 import {
   MessageCircle,
   Sparkles,
@@ -335,18 +532,21 @@ import {
   Plus,
   Edit2,
   RotateCcw,
-  Square
+  Square,
 } from 'lucide-vue-next';
 import { message } from 'ant-design-vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { useAccessStore, useUserStore } from '@vben/stores';
-import { assistantOwner, createAssistantAccountScope } from '#/utils/assistant-account-scope';
+import {
+  assistantOwner,
+  createAssistantAccountScope,
+} from '#/utils/assistant-account-scope';
 import {
   assistantQuery,
   createAssistantSession,
   getSessionInfo,
-  refreshKnowledgeBase
+  refreshKnowledgeBase,
 } from '#/api/core/aiops/assistant';
 import { usePermission } from '#/utils/permission';
 import {
@@ -355,7 +555,6 @@ import {
 } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
-
 
 // 状态管理
 const isFloatWindowVisible = ref(false);
@@ -381,7 +580,9 @@ const showSessionsPanel = ref(false);
 const currentLocalSessionId = ref('');
 const sessions = ref([]);
 const currentSessionName = computed(() => {
-  const s = sessions.value.find(s => s.localId === currentLocalSessionId.value);
+  const s = sessions.value.find(
+    (s) => s.localId === currentLocalSessionId.value,
+  );
   return s?.name || '默认会话';
 });
 
@@ -403,7 +604,7 @@ const persistState = () => {
       isMinimized: isMinimized.value,
       isExpanded: isExpanded.value,
       currentMode: currentMode.value,
-      showAdvancedOptions: showAdvancedOptions.value
+      showAdvancedOptions: showAdvancedOptions.value,
     };
     localStorage.setItem(UI_STATE_KEY, JSON.stringify(uiState));
 
@@ -411,10 +612,16 @@ const persistState = () => {
       sessionId: sessionId.value,
     };
     accountScope.write('chat', chatState);
-    accountScope.write('sessions', { sessions: sessions.value.map(s => ({ localId: s.localId, name: s.name, createdAt: s.createdAt, serverId: s.serverId || '' })), currentLocalSessionId: currentLocalSessionId.value });
-  } catch (e) {
-
-  }
+    accountScope.write('sessions', {
+      sessions: sessions.value.map((s) => ({
+        localId: s.localId,
+        name: s.name,
+        createdAt: s.createdAt,
+        serverId: s.serverId || '',
+      })),
+      currentLocalSessionId: currentLocalSessionId.value,
+    });
+  } catch (e) {}
 };
 
 const loadState = () => {
@@ -423,12 +630,24 @@ const loadState = () => {
     if (uiRaw) {
       const ui = JSON.parse(uiRaw);
       if (ui?.windowPosition) {
-        windowPosition.x = Math.max(0, Math.min(window.innerWidth - 320, Number(ui.windowPosition.x) || 0));
-        windowPosition.y = Math.max(0, Math.min(window.innerHeight - 100, Number(ui.windowPosition.y) || 0));
+        windowPosition.x = Math.max(
+          0,
+          Math.min(window.innerWidth - 320, Number(ui.windowPosition.x) || 0),
+        );
+        windowPosition.y = Math.max(
+          0,
+          Math.min(window.innerHeight - 100, Number(ui.windowPosition.y) || 0),
+        );
       }
       if (ui?.windowSize) {
-        windowSize.width = Math.max(320, Math.min(600, Number(ui.windowSize.width) || 380));
-        windowSize.height = Math.max(400, Math.min(800, Number(ui.windowSize.height) || 600));
+        windowSize.width = Math.max(
+          320,
+          Math.min(600, Number(ui.windowSize.width) || 380),
+        );
+        windowSize.height = Math.max(
+          400,
+          Math.min(800, Number(ui.windowSize.height) || 600),
+        );
       }
       isMinimized.value = !!ui?.isMinimized;
       isExpanded.value = !!ui?.isExpanded;
@@ -450,16 +669,18 @@ const loadState = () => {
     if (!sessions.value.length) {
       createNewSession(true);
     } else {
-      const selected = sessions.value.find(s => s.localId === currentLocalSessionId.value) || sessions.value[0];
+      const selected =
+        sessions.value.find((s) => s.localId === currentLocalSessionId.value) ||
+        sessions.value[0];
       currentLocalSessionId.value = selected.localId;
-      if (selected && !selected.serverId && sessionId.value) selected.serverId = sessionId.value;
+      if (selected && !selected.serverId && sessionId.value)
+        selected.serverId = sessionId.value;
       sessionId.value = selected?.serverId || '';
       if (sessionId.value) void restoreCurrentSession();
     }
     // 覆盖旧版本本地对话副本，仅保留服务端会话指针。
     persistState();
   } catch (e) {
-
     initChatMessages();
   }
 };
@@ -488,7 +709,6 @@ const switchMode = (mode) => {
 
   currentMode.value = modeNum;
   message.info(`已切换到${mode === 'rag' ? 'RAG' : 'MCP'}模式`);
-
 };
 
 // 消息提示
@@ -518,7 +738,7 @@ const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
       // 指数退避
       const delay = baseDelay * Math.pow(2, attempt - 1);
 
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 };
@@ -545,7 +765,11 @@ const handleApiError = (error, context = '') => {
     isConnected.value = false;
     initChatMessages();
     persistState();
-    showError(status === 403 ? '无权访问该会话，已清除本地内容，请新建会话' : '会话已失效，请重新提问以新建会话');
+    showError(
+      status === 403
+        ? '无权访问该会话，已清除本地内容，请新建会话'
+        : '会话已失效，请重新提问以新建会话',
+    );
     return 'invalid_session';
   } else if (status === 401) {
     showError('认证失败，正在重新建立连接...');
@@ -554,7 +778,6 @@ const handleApiError = (error, context = '') => {
     chatHistory.value = [];
     isConnected.value = false;
     return 'auth_error';
-
   } else if (status >= 500) {
     showError(`服务器错误: ${errorMsg}`);
     return 'server_error';
@@ -570,26 +793,26 @@ const handleApiError = (error, context = '') => {
 // 悬浮窗位置和大小
 const windowPosition = reactive({
   x: 100,
-  y: 100
+  y: 100,
 });
 
 const windowSize = reactive({
   width: 380,
-  height: 600
+  height: 600,
 });
 
 const dragStart = reactive({
   x: 0,
   y: 0,
   windowX: 0,
-  windowY: 0
+  windowY: 0,
 });
 
 const resizeStart = reactive({
   x: 0,
   y: 0,
   startWidth: 0,
-  startHeight: 0
+  startHeight: 0,
 });
 
 // 计算悬浮窗样式
@@ -600,15 +823,17 @@ const floatWindowStyle = computed(() => ({
   height: isMinimized.value ? '60px' : `${windowSize.height}px`,
   transform: isExpanded.value ? 'none' : undefined,
   position: 'fixed',
-  ...(isExpanded.value ? {
-    left: '50%',
-    top: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: '80vw',
-    height: '80vh',
-    maxWidth: '800px',
-    maxHeight: '700px'
-  } : {})
+  ...(isExpanded.value
+    ? {
+        left: '50%',
+        top: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '80vw',
+        height: '80vh',
+        maxWidth: '800px',
+        maxHeight: '700px',
+      }
+    : {}),
 }));
 
 // 快捷操作
@@ -617,16 +842,17 @@ const quickActions = [
   { text: '性能监控', icon: Zap },
   { text: '日志分析', icon: FileText },
   { text: 'Markdown演示', icon: FileText },
-  { text: '帮助文档', icon: HelpCircle }
+  { text: '帮助文档', icon: HelpCircle },
 ];
 
 // 聊天消息接口定义
 const chatMessages = reactive([
   {
-    content: '👋 您好！我是AI-CloudOps助手，专注于为您提供智能运维服务。\n\n我可以帮助您：\n• 🔍 监控云服务器状态\n• 📊 分析性能指标\n• 🛠️ 故障诊断与修复\n• 📋 生成运维报告\n\n请问有什么我可以为您服务的吗？',
+    content:
+      '👋 您好！我是AI-CloudOps助手，专注于为您提供智能运维服务。\n\n我可以帮助您：\n• 🔍 监控云服务器状态\n• 📊 分析性能指标\n• 🛠️ 故障诊断与修复\n• 📋 生成运维报告\n\n请问有什么我可以为您服务的吗？',
     type: 'ai',
-    time: formatTime(new Date())
-  }
+    time: formatTime(new Date()),
+  },
 ]);
 
 // 悬浮窗控制
@@ -691,8 +917,17 @@ const onDrag = (e) => {
   const deltaX = e.clientX - dragStart.x;
   const deltaY = e.clientY - dragStart.y;
 
-  windowPosition.x = Math.max(0, Math.min(window.innerWidth - windowSize.width, dragStart.windowX + deltaX));
-  windowPosition.y = Math.max(0, Math.min(window.innerHeight - (isMinimized.value ? 60 : windowSize.height), dragStart.windowY + deltaY));
+  windowPosition.x = Math.max(
+    0,
+    Math.min(window.innerWidth - windowSize.width, dragStart.windowX + deltaX),
+  );
+  windowPosition.y = Math.max(
+    0,
+    Math.min(
+      window.innerHeight - (isMinimized.value ? 60 : windowSize.height),
+      dragStart.windowY + deltaY,
+    ),
+  );
 };
 
 const stopDrag = () => {
@@ -722,8 +957,14 @@ const onResize = (e) => {
   const deltaX = e.clientX - resizeStart.x;
   const deltaY = e.clientY - resizeStart.y;
 
-  windowSize.width = Math.max(320, Math.min(600, resizeStart.startWidth + deltaX));
-  windowSize.height = Math.max(400, Math.min(800, resizeStart.startHeight + deltaY));
+  windowSize.width = Math.max(
+    320,
+    Math.min(600, resizeStart.startWidth + deltaX),
+  );
+  windowSize.height = Math.max(
+    400,
+    Math.min(800, resizeStart.startHeight + deltaY),
+  );
 };
 
 const stopResize = () => {
@@ -736,14 +977,15 @@ const stopResize = () => {
 const initChatMessages = () => {
   chatMessages.length = 0;
   chatMessages.push({
-    content: '👋 您好！我是AI-CloudOps助手，专注于为您提供智能运维服务。\n\n我可以帮助您：\n• 🔍 监控云服务器状态\n• 📊 分析性能指标\n• 🛠️ 故障诊断与修复\n• 📋 生成运维报告\n\n请问有什么我可以为您服务的吗？',
+    content:
+      '👋 您好！我是AI-CloudOps助手，专注于为您提供智能运维服务。\n\n我可以帮助您：\n• 🔍 监控云服务器状态\n• 📊 分析性能指标\n• 🛠️ 故障诊断与修复\n• 📋 生成运维报告\n\n请问有什么我可以为您服务的吗？',
     type: 'ai',
-    time: formatTime(new Date())
+    time: formatTime(new Date()),
   });
 };
 
 // 模拟流式渲染工具
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const simulateStreamResponse = async (messageObj, fullText, ticket) => {
   if (!fullText) return;
@@ -763,26 +1005,67 @@ const simulateStreamResponse = async (messageObj, fullText, ticket) => {
 };
 
 function applySessionHistory(info) {
-  if (!info || info.session_id !== sessionId.value || !['idle', 'running', 'unknown'].includes(info.status) || (info.mode !== 1 && info.mode !== 2)) throw new Error('会话状态无效');
+  if (
+    !info ||
+    info.session_id !== sessionId.value ||
+    !['idle', 'running', 'unknown'].includes(info.status) ||
+    (info.mode !== 1 && info.mode !== 2)
+  )
+    throw new Error('会话状态无效');
   const history = info.conversation_history ?? [];
-  if (!Array.isArray(history) || history.length > 25 || history.some(turn => typeof turn?.q !== 'string' || typeof turn?.a !== 'string')) throw new Error('会话历史无效');
-  chatHistory.value = history.flatMap(turn => [{ role: 'user', content: turn.q }, { role: 'assistant', content: turn.a }]);
+  if (
+    !Array.isArray(history) ||
+    history.length > 25 ||
+    history.some(
+      (turn) => typeof turn?.q !== 'string' || typeof turn?.a !== 'string',
+    )
+  )
+    throw new Error('会话历史无效');
+  chatHistory.value = history.flatMap((turn) => [
+    { role: 'user', content: turn.q },
+    { role: 'assistant', content: turn.a },
+  ]);
   initChatMessages();
   for (const turn of history) {
-    chatMessages.push({ type: 'user', content: turn.q, time: formatTime(new Date()) });
-    chatMessages.push({ type: 'ai', content: turn.a, time: formatTime(new Date()), sources: [], followUpQuestions: [] });
+    chatMessages.push({
+      type: 'user',
+      content: turn.q,
+      time: formatTime(new Date()),
+    });
+    chatMessages.push({
+      type: 'ai',
+      content: turn.a,
+      time: formatTime(new Date()),
+      sources: [],
+      followUpQuestions: [],
+    });
   }
   currentMode.value = info.mode;
   isConnected.value = true;
   if (info.status !== 'idle') {
-    if (info.active_turn_id && info.active_question && (info.active_mode === 1 || info.active_mode === 2)) {
-      pendingTurn.value = { question: info.active_question, mode: info.active_mode, turnId: info.active_turn_id, sessionId: info.session_id };
-      sessionNotice.value = info.status === 'unknown' ? '上次请求结果未知，请先核对会话，不要盲目重试。' : '请求仍在处理，请稍后查询状态。';
+    if (
+      info.active_turn_id &&
+      info.active_question &&
+      (info.active_mode === 1 || info.active_mode === 2)
+    ) {
+      pendingTurn.value = {
+        question: info.active_question,
+        mode: info.active_mode,
+        turnId: info.active_turn_id,
+        sessionId: info.session_id,
+      };
+      sessionNotice.value =
+        info.status === 'unknown'
+          ? '上次请求结果未知，请先核对会话，不要盲目重试。'
+          : '请求仍在处理，请稍后查询状态。';
     } else {
       pendingTurn.value = null;
       sessionNotice.value = '会话存在未确认的请求，请新建会话。';
     }
-  } else if (pendingTurn.value && info.last_turn_id !== pendingTurn.value.turnId) {
+  } else if (
+    pendingTurn.value &&
+    info.last_turn_id !== pendingTurn.value.turnId
+  ) {
     sessionNotice.value = '请求尚未确认，请核对会话或新建会话。';
   } else {
     pendingTurn.value = null;
@@ -791,7 +1074,12 @@ function applySessionHistory(info) {
 }
 
 const restoreCurrentSession = async () => {
-  if (!sessionId.value || sending.value || !assistantOwner(userStore.userInfo, accessStore.accessToken)) return;
+  if (
+    !sessionId.value ||
+    sending.value ||
+    !assistantOwner(userStore.userInfo, accessStore.accessToken)
+  )
+    return;
   const ticket = accountScope.ticket();
   const requested = sessionId.value;
   sending.value = true;
@@ -802,7 +1090,9 @@ const restoreCurrentSession = async () => {
   } catch (error) {
     if (!accountScope.current(ticket)) return;
     if ([403, 404].includes(error?.response?.status)) {
-      const selected = sessions.value.find(s => s.localId === currentLocalSessionId.value);
+      const selected = sessions.value.find(
+        (s) => s.localId === currentLocalSessionId.value,
+      );
       if (selected) selected.serverId = '';
       sessionId.value = '';
       pendingTurn.value = null;
@@ -811,13 +1101,21 @@ const restoreCurrentSession = async () => {
       showError('会话不可访问或已过期，请新建会话');
     } else sessionNotice.value = '无法读取会话状态，请重新查询或新建会话。';
   } finally {
-    if (accountScope.current(ticket)) { sending.value = false; persistState(); }
+    if (accountScope.current(ticket)) {
+      sending.value = false;
+      persistState();
+    }
   }
 };
 
 const recoverTurn = async () => {
   const pending = pendingTurn.value;
-  if (!pending || sending.value || !assistantOwner(userStore.userInfo, accessStore.accessToken)) return;
+  if (
+    !pending ||
+    sending.value ||
+    !assistantOwner(userStore.userInfo, accessStore.accessToken)
+  )
+    return;
   const ticket = accountScope.ticket();
   sending.value = true;
   abortController.value = new AbortController();
@@ -825,28 +1123,61 @@ const recoverTurn = async () => {
     const info = await getSessionInfo(pending.sessionId);
     if (!accountScope.current(ticket)) return;
     if (info.status !== 'idle' || info.last_turn_id !== pending.turnId) {
-      sessionNotice.value = info.status === 'unknown' ? '上次请求结果未知，请先核查，不要盲目重试。' : '请求尚未确认完成，请稍后查询或新建会话。';
+      sessionNotice.value =
+        info.status === 'unknown'
+          ? '上次请求结果未知，请先核查，不要盲目重试。'
+          : '请求尚未确认完成，请稍后查询或新建会话。';
       return;
     }
-    const response = await assistantQuery({ question: pending.question, mode: pending.mode, session_id: pending.sessionId, turn_id: pending.turnId }, { signal: abortController.value.signal });
+    const response = await assistantQuery(
+      {
+        question: pending.question,
+        mode: pending.mode,
+        session_id: pending.sessionId,
+        turn_id: pending.turnId,
+      },
+      { signal: abortController.value.signal },
+    );
     if (!accountScope.current(ticket)) return;
-    if (typeof response?.answer !== 'string' || response.session_id !== pending.sessionId || response.turn_id !== pending.turnId) throw new Error('恢复结果无效');
+    if (
+      typeof response?.answer !== 'string' ||
+      response.session_id !== pending.sessionId ||
+      response.turn_id !== pending.turnId
+    )
+      throw new Error('恢复结果无效');
     applySessionHistory(info);
     pendingTurn.value = null;
     sessionNotice.value = '';
   } catch (error) {
-    if (accountScope.current(ticket) && shouldNotifyPageError(error)) sessionNotice.value = '无法确认会话状态，请稍后重试。';
+    if (accountScope.current(ticket) && shouldNotifyPageError(error))
+      sessionNotice.value = '无法确认会话状态，请稍后重试。';
   } finally {
-    if (accountScope.current(ticket)) { sending.value = false; abortController.value = null; persistState(); }
+    if (accountScope.current(ticket)) {
+      sending.value = false;
+      abortController.value = null;
+      persistState();
+    }
   }
 };
 
 // 发送消息
 const sendMessage = async (value) => {
-  if (!assistantOwner(userStore.userInfo, accessStore.accessToken) || sending.value || pendingTurn.value || sessionNotice.value) return;
+  if (
+    !assistantOwner(userStore.userInfo, accessStore.accessToken) ||
+    sending.value ||
+    pendingTurn.value ||
+    sessionNotice.value
+  )
+    return;
   const question = value.trim();
-  if (!question) { showError('请输入消息内容'); return; }
-  if (!globalThis.crypto?.randomUUID) { showError('当前环境无法安全生成请求 ID'); return; }
+  if (!question) {
+    showError('请输入消息内容');
+    return;
+  }
+  if (!globalThis.crypto?.randomUUID) {
+    showError('当前环境无法安全生成请求 ID');
+    return;
+  }
   const ticket = accountScope.ticket();
   const turnId = globalThis.crypto.randomUUID();
   const mode = currentMode.value;
@@ -860,7 +1191,9 @@ const sendMessage = async (value) => {
       if (!accountScope.current(ticket)) return;
       if (!created?.session_id) throw new Error('会话创建失败');
       sessionId.value = created.session_id;
-      const selected = sessions.value.find(s => s.localId === currentLocalSessionId.value);
+      const selected = sessions.value.find(
+        (s) => s.localId === currentLocalSessionId.value,
+      );
       if (selected) selected.serverId = created.session_id;
       persistState();
     }
@@ -868,16 +1201,34 @@ const sendMessage = async (value) => {
     pendingTurn.value = { question, mode, turnId, sessionId: sid };
     globalInputMessage.value = '';
     lastFailedQuestion.value = '';
-    chatMessages.push({ content: question, type: 'user', time: formatTime(new Date()) });
+    chatMessages.push({
+      content: question,
+      type: 'user',
+      time: formatTime(new Date()),
+    });
     chatHistory.value.push({ role: 'user', content: question });
-    const placeholder = { content: '', type: 'ai', time: formatTime(new Date()), sources: [], followUpQuestions: [] };
+    const placeholder = {
+      content: '',
+      type: 'ai',
+      time: formatTime(new Date()),
+      sources: [],
+      followUpQuestions: [],
+    };
     chatMessages.push(placeholder);
     await nextTick();
     if (!accountScope.current(ticket)) return;
     sent = true;
-    const response = await assistantQuery({ question, mode, session_id: sid, turn_id: turnId }, { signal });
+    const response = await assistantQuery(
+      { question, mode, session_id: sid, turn_id: turnId },
+      { signal },
+    );
     if (!accountScope.current(ticket)) return;
-    if (typeof response?.answer !== 'string' || response.session_id !== sid || response.turn_id !== turnId) throw new Error('响应格式无效');
+    if (
+      typeof response?.answer !== 'string' ||
+      response.session_id !== sid ||
+      response.turn_id !== turnId
+    )
+      throw new Error('响应格式无效');
     const displayed = chatMessages.at(-1);
     displayed.sources = response.source_documents || [];
     displayed.followUpQuestions = response.follow_up_questions || [];
@@ -891,14 +1242,17 @@ const sendMessage = async (value) => {
   } catch (error) {
     if (!accountScope.current(ticket)) return;
     if ([403, 404].includes(error?.response?.status)) {
-      const selected = sessions.value.find(s => s.localId === currentLocalSessionId.value);
+      const selected = sessions.value.find(
+        (s) => s.localId === currentLocalSessionId.value,
+      );
       if (selected) selected.serverId = '';
       pendingTurn.value = null;
       sessionNotice.value = '';
       handleApiError(error, 'AI查询');
     } else if (sent) {
       sessionNotice.value = '本次请求结果尚未确认，请先查询会话状态。';
-      if (chatMessages.at(-1)?.type === 'ai' && !chatMessages.at(-1)?.content) chatMessages.pop();
+      if (chatMessages.at(-1)?.type === 'ai' && !chatMessages.at(-1)?.content)
+        chatMessages.pop();
     } else {
       pendingTurn.value = null;
       lastFailedQuestion.value = shouldRecordPageError(error) ? question : '';
@@ -909,14 +1263,21 @@ const sendMessage = async (value) => {
       sending.value = false;
       abortController.value = null;
       await nextTick();
-      if (accountScope.current(ticket)) { scrollToBottom(); persistState(); }
+      if (accountScope.current(ticket)) {
+        scrollToBottom();
+        persistState();
+      }
     }
   }
 };
 
 // 刷新知识库
 const refreshKnowledge = async () => {
-  if (isRefreshing.value || !assistantOwner(userStore.userInfo, accessStore.accessToken)) return;
+  if (
+    isRefreshing.value ||
+    !assistantOwner(userStore.userInfo, accessStore.accessToken)
+  )
+    return;
   const identity = accountScope.identity();
 
   try {
@@ -954,8 +1315,12 @@ const refreshKnowledge = async () => {
 
 // 清空聊天
 const clearChat = () => {
-  if (pendingTurn.value) { message.warning('请先核查未确认请求，再新建会话'); return; }
-  if (!confirm('新建会话会清空当前显示；旧服务端会话按保留期过期。继续？')) return;
+  if (pendingTurn.value) {
+    message.warning('请先核查未确认请求，再新建会话');
+    return;
+  }
+  if (!confirm('新建会话会清空当前显示；旧服务端会话按保留期过期。继续？'))
+    return;
   createNewSession();
 };
 
@@ -1036,8 +1401,8 @@ print(f"系统状态: {result}")
       followUpQuestions: [
         '如何监控服务器状态？',
         '告警阈值如何设置？',
-        '性能优化建议'
-      ]
+        '性能优化建议',
+      ],
     };
 
     chatMessages.push(demoMessage);
@@ -1124,10 +1489,13 @@ const resendMessage = async (index) => {
 const cancelGeneration = () => {
   accountScope.invalidate();
   if (abortController.value) {
-    try { abortController.value.abort(); } catch {}
+    try {
+      abortController.value.abort();
+    } catch {}
     abortController.value = null;
     sending.value = false;
-    if (pendingTurn.value) sessionNotice.value = '已停止等待，请先查询请求结果。';
+    if (pendingTurn.value)
+      sessionNotice.value = '已停止等待，请先查询请求结果。';
     message.info('已停止等待');
   }
   sending.value = false;
@@ -1160,7 +1528,8 @@ const switchToSession = (localId) => {
   currentLocalSessionId.value = localId;
   chatHistory.value = [];
   initChatMessages();
-  sessionId.value = sessions.value.find(s => s.localId === localId)?.serverId || '';
+  sessionId.value =
+    sessions.value.find((s) => s.localId === localId)?.serverId || '';
   pendingTurn.value = null;
   sessionNotice.value = '';
   isConnected.value = false;
@@ -1170,7 +1539,7 @@ const switchToSession = (localId) => {
 };
 
 const renameSession = (localId) => {
-  const s = sessions.value.find(s => s.localId === localId);
+  const s = sessions.value.find((s) => s.localId === localId);
   if (!s) return;
   const name = prompt('重命名会话', s.name);
   if (name && name.trim()) {
@@ -1180,10 +1549,14 @@ const renameSession = (localId) => {
 };
 
 const deleteSession = (localId) => {
-  const idx = sessions.value.findIndex(s => s.localId === localId);
+  const idx = sessions.value.findIndex((s) => s.localId === localId);
   if (idx === -1) return;
-  if (currentLocalSessionId.value === localId && pendingTurn.value) { message.warning('请先核查未确认请求'); return; }
-  if (!confirm('仅移除本地会话索引，服务端会话将在保留期后过期。确认移除？')) return;
+  if (currentLocalSessionId.value === localId && pendingTurn.value) {
+    message.warning('请先核查未确认请求');
+    return;
+  }
+  if (!confirm('仅移除本地会话索引，服务端会话将在保留期后过期。确认移除？'))
+    return;
   sessions.value.splice(idx, 1);
   if (currentLocalSessionId.value === localId) {
     if (sessions.value.length === 0) {
@@ -1204,15 +1577,19 @@ const onMessagesClick = (e) => {
     const pre = button.closest('pre');
     const code = pre?.getAttribute('data-code');
     if (code) {
-      navigator.clipboard.writeText(code).then(() => {
-        const original = button.innerHTML;
-        button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"></polyline></svg>';
-        button.style.color = '#10b981';
-        setTimeout(() => {
-          button.innerHTML = original;
-          button.style.color = '';
-        }, 2000);
-      }).catch(() => message.error('复制失败'));
+      navigator.clipboard
+        .writeText(code)
+        .then(() => {
+          const original = button.innerHTML;
+          button.innerHTML =
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"></polyline></svg>';
+          button.style.color = '#10b981';
+          setTimeout(() => {
+            button.innerHTML = original;
+            button.style.color = '';
+          }, 2000);
+        })
+        .catch(() => message.error('复制失败'));
     }
   }
 };
@@ -1227,32 +1604,107 @@ const toggleLike = (index) => {
 // 简单的代码高亮函数
 const highlightCode = (code, lang) => {
   const keywords = {
-    javascript: ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'try', 'catch', 'import', 'export', 'class', 'extends'],
-    python: ['def', 'class', 'import', 'from', 'return', 'if', 'elif', 'else', 'for', 'while', 'try', 'except', 'with', 'as'],
-    bash: ['echo', 'cd', 'ls', 'mkdir', 'rm', 'cp', 'mv', 'grep', 'find', 'sudo', 'chmod', 'chown'],
-    sql: ['SELECT', 'FROM', 'WHERE', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER', 'JOIN', 'GROUP BY', 'ORDER BY']
+    javascript: [
+      'const',
+      'let',
+      'var',
+      'function',
+      'return',
+      'if',
+      'else',
+      'for',
+      'while',
+      'try',
+      'catch',
+      'import',
+      'export',
+      'class',
+      'extends',
+    ],
+    python: [
+      'def',
+      'class',
+      'import',
+      'from',
+      'return',
+      'if',
+      'elif',
+      'else',
+      'for',
+      'while',
+      'try',
+      'except',
+      'with',
+      'as',
+    ],
+    bash: [
+      'echo',
+      'cd',
+      'ls',
+      'mkdir',
+      'rm',
+      'cp',
+      'mv',
+      'grep',
+      'find',
+      'sudo',
+      'chmod',
+      'chown',
+    ],
+    sql: [
+      'SELECT',
+      'FROM',
+      'WHERE',
+      'INSERT',
+      'UPDATE',
+      'DELETE',
+      'CREATE',
+      'DROP',
+      'ALTER',
+      'JOIN',
+      'GROUP BY',
+      'ORDER BY',
+    ],
   };
 
   let highlightedCode = escapeHtml(code);
 
   if (keywords[lang]) {
-    keywords[lang].forEach(keyword => {
+    keywords[lang].forEach((keyword) => {
       const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
-      highlightedCode = highlightedCode.replace(regex, `<span class="code-keyword">${keyword}</span>`);
+      highlightedCode = highlightedCode.replace(
+        regex,
+        `<span class="code-keyword">${keyword}</span>`,
+      );
     });
   }
 
   // 高亮字符串
-  highlightedCode = highlightedCode.replace(/(["'])((?:\\.|(?!\1)[^\\])*?)\1/g, '<span class="code-string">$1$2$1</span>');
+  highlightedCode = highlightedCode.replace(
+    /(["'])((?:\\.|(?!\1)[^\\])*?)\1/g,
+    '<span class="code-string">$1$2$1</span>',
+  );
 
   // 高亮注释
   if (lang === 'javascript' || lang === 'java' || lang === 'cpp') {
-    highlightedCode = highlightedCode.replace(/(\/\/.*$)/gm, '<span class="code-comment">$1</span>');
-    highlightedCode = highlightedCode.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="code-comment">$1</span>');
+    highlightedCode = highlightedCode.replace(
+      /(\/\/.*$)/gm,
+      '<span class="code-comment">$1</span>',
+    );
+    highlightedCode = highlightedCode.replace(
+      /(\/\*[\s\S]*?\*\/)/g,
+      '<span class="code-comment">$1</span>',
+    );
   } else if (lang === 'python' || lang === 'bash') {
-    highlightedCode = highlightedCode.replace(/(#.*$)/gm, '<span class="code-comment">$1</span>');
+    highlightedCode = highlightedCode.replace(
+      /(#.*$)/gm,
+      '<span class="code-comment">$1</span>',
+    );
   } else if (lang === 'sql') {
-    highlightedCode = highlightedCode.replace(/(--.*$)/gm, '<span class="code-comment">$1</span>');
+    highlightedCode = highlightedCode.replace(
+      /(--.*$)/gm,
+      '<span class="code-comment">$1</span>',
+    );
   }
 
   return highlightedCode;
@@ -1265,7 +1717,7 @@ marked.setOptions({
   headerIds: false, // 禁用header id生成
   mangle: false, // 禁用header mangle
   sanitize: false, // 交给DOMPurify处理
-  highlight: function(code, lang) {
+  highlight: function (code, lang) {
     const highlightedCode = highlightCode(code, lang);
     const escapedCode = escapeHtml(code);
     return `<pre class="language-${lang || 'text'}" data-code="${escapedCode}">
@@ -1280,7 +1732,7 @@ marked.setOptions({
       </div>
       <code>${highlightedCode}</code>
     </pre>`;
-  }
+  },
 });
 
 const escapeHtml = (text) => {
@@ -1298,29 +1750,81 @@ const renderMarkdown = (content) => {
     // 使用 DOMPurify 清理 HTML，防止 XSS 攻击
     return DOMPurify.sanitize(html, {
       ALLOWED_TAGS: [
-        'p', 'br', 'strong', 'em', 'u', 'del', 's', 'code', 'pre',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'ul', 'ol', 'li',
+        'p',
+        'br',
+        'strong',
+        'em',
+        'u',
+        'del',
+        's',
+        'code',
+        'pre',
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+        'ul',
+        'ol',
+        'li',
         'blockquote',
-        'a', 'img',
-        'table', 'thead', 'tbody', 'tr', 'th', 'td',
-        'hr', 'div', 'span', 'button', 'svg', 'rect', 'path', 'polyline'
+        'a',
+        'img',
+        'table',
+        'thead',
+        'tbody',
+        'tr',
+        'th',
+        'td',
+        'hr',
+        'div',
+        'span',
+        'button',
+        'svg',
+        'rect',
+        'path',
+        'polyline',
       ],
       ALLOWED_ATTR: [
-        'href', 'target', 'rel', 'src', 'alt', 'title', 'class', 'style',
-        'data-code', 'width', 'height', 'viewBox', 'fill', 'stroke', 'stroke-width',
-        'x', 'y', 'rx', 'ry', 'd', 'points'
+        'href',
+        'target',
+        'rel',
+        'src',
+        'alt',
+        'title',
+        'class',
+        'style',
+        'data-code',
+        'width',
+        'height',
+        'viewBox',
+        'fill',
+        'stroke',
+        'stroke-width',
+        'x',
+        'y',
+        'rx',
+        'ry',
+        'd',
+        'points',
       ],
       ALLOWED_CLASSES: {
-        'span': ['code-keyword', 'code-string', 'code-comment', 'code-number', 'code-operator', 'code-lang'],
-        'pre': [/^language-/],
-        'div': ['code-header'],
-        'button': ['code-copy-btn']
+        span: [
+          'code-keyword',
+          'code-string',
+          'code-comment',
+          'code-number',
+          'code-operator',
+          'code-lang',
+        ],
+        pre: [/^language-/],
+        div: ['code-header'],
+        button: ['code-copy-btn'],
       },
-      ALLOW_DATA_ATTR: true
+      ALLOW_DATA_ATTR: true,
     });
   } catch (error) {
-
     // 如果解析失败，返回原始内容（转义HTML）
     return escapeHtml(content).replace(/\n/g, '<br>');
   }
@@ -1330,14 +1834,19 @@ const scrollToBottom = () => {
   if (messagesContainer.value) {
     messagesContainer.value.scrollTo({
       top: messagesContainer.value.scrollHeight,
-      behavior: 'smooth'
+      behavior: 'smooth',
     });
   }
 };
 
 const handleEnterKey = (e) => {
   // 若处于中文输入法组合输入中，或刚结束组合输入的短时间窗口内，不触发发送
-  if (e.isComposing || e.keyCode === 229 || isComposing.value || (Date.now() - lastCompositionEndAt.value) < 20) {
+  if (
+    e.isComposing ||
+    e.keyCode === 229 ||
+    isComposing.value ||
+    Date.now() - lastCompositionEndAt.value < 20
+  ) {
     return;
   }
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -1362,12 +1871,16 @@ const handleKeydown = (e) => {
 };
 
 // 监听器
-watch(chatMessages, () => {
-  nextTick(() => {
-    scrollToBottom();
-  });
-  persistState();
-}, { deep: true });
+watch(
+  chatMessages,
+  () => {
+    nextTick(() => {
+      scrollToBottom();
+    });
+    persistState();
+  },
+  { deep: true },
+);
 
 watch(chatHistory, () => {
   persistState();
@@ -1377,65 +1890,79 @@ watch(sessionId, () => {
   persistState();
 });
 
-watch(windowPosition, () => {
-  persistState();
-}, { deep: true });
+watch(
+  windowPosition,
+  () => {
+    persistState();
+  },
+  { deep: true },
+);
 
-watch(windowSize, () => {
-  persistState();
-}, { deep: true });
+watch(
+  windowSize,
+  () => {
+    persistState();
+  },
+  { deep: true },
+);
 
 watch([isMinimized, isExpanded, currentMode, showAdvancedOptions], () => {
   persistState();
 });
 
 // 全局复制代码函数
-window.copyCode = function(button) {
+window.copyCode = function (button) {
   const pre = button.closest('pre');
   const code = pre.getAttribute('data-code');
   if (code) {
-    navigator.clipboard.writeText(code).then(() => {
-      const originalText = button.innerHTML;
-      button.innerHTML = `
+    navigator.clipboard
+      .writeText(code)
+      .then(() => {
+        const originalText = button.innerHTML;
+        button.innerHTML = `
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="20,6 9,17 4,12"></polyline>
         </svg>
       `;
-      button.style.color = '#10b981';
-      setTimeout(() => {
-        button.innerHTML = originalText;
-        button.style.color = '';
-      }, 2000);
-    }).catch(() => {
-      message.error('复制失败');
-    });
+        button.style.color = '#10b981';
+        setTimeout(() => {
+          button.innerHTML = originalText;
+          button.style.color = '';
+        }, 2000);
+      })
+      .catch(() => {
+        message.error('复制失败');
+      });
   }
 };
 
-watch(() => assistantOwner(userStore.userInfo, accessStore.accessToken), (owner) => {
-  accountScope.setOwner(owner);
-  abortController.value?.abort();
-  abortController.value = null;
-  sending.value = false;
-  isRefreshing.value = false;
-  globalInputMessage.value = '';
-  lastFailedQuestion.value = '';
-  pendingTurn.value = null;
-  sessionNotice.value = '';
-  errorMessage.value = '';
-  sessionId.value = '';
-  chatHistory.value = [];
-  sessions.value = [];
-  currentLocalSessionId.value = '';
-  isConnected.value = false;
-  isFloatWindowVisible.value = false;
-  initChatMessages();
-  if (owner) loadState();
-}, { immediate: true, flush: 'sync' });
+watch(
+  () => assistantOwner(userStore.userInfo, accessStore.accessToken),
+  (owner) => {
+    accountScope.setOwner(owner);
+    abortController.value?.abort();
+    abortController.value = null;
+    sending.value = false;
+    isRefreshing.value = false;
+    globalInputMessage.value = '';
+    lastFailedQuestion.value = '';
+    pendingTurn.value = null;
+    sessionNotice.value = '';
+    errorMessage.value = '';
+    sessionId.value = '';
+    chatHistory.value = [];
+    sessions.value = [];
+    currentLocalSessionId.value = '';
+    isConnected.value = false;
+    isFloatWindowVisible.value = false;
+    initChatMessages();
+    if (owner) loadState();
+  },
+  { immediate: true, flush: 'sync' },
+);
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
-
 
   // 如果未持久化过，则设置初始位置到右下角附近
   if (!localStorage.getItem(UI_STATE_KEY)) {
@@ -1460,7 +1987,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-
 .ai-assistant-container {
   position: relative;
   z-index: 9999;
@@ -1904,12 +2430,29 @@ onBeforeUnmount(() => {
   color: var(--ops-ground);
 }
 
-.text :deep(h1) { font-size: 24px; border-bottom: 2px solid #374151; padding-bottom: 8px; }
-.text :deep(h2) { font-size: 20px; border-bottom: 1px solid #374151; padding-bottom: 6px; }
-.text :deep(h3) { font-size: 18px; }
-.text :deep(h4) { font-size: 16px; }
-.text :deep(h5) { font-size: 14px; }
-.text :deep(h6) { font-size: 13px; color: #9ca3af; }
+.text :deep(h1) {
+  font-size: 24px;
+  border-bottom: 2px solid #374151;
+  padding-bottom: 8px;
+}
+.text :deep(h2) {
+  font-size: 20px;
+  border-bottom: 1px solid #374151;
+  padding-bottom: 6px;
+}
+.text :deep(h3) {
+  font-size: 18px;
+}
+.text :deep(h4) {
+  font-size: 16px;
+}
+.text :deep(h5) {
+  font-size: 14px;
+}
+.text :deep(h6) {
+  font-size: 13px;
+  color: #9ca3af;
+}
 
 .text :deep(p) {
   margin: 8px 0;
@@ -1957,7 +2500,8 @@ onBeforeUnmount(() => {
   background: var(--ops-ink);
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Courier New', monospace;
+  font-family:
+    'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Courier New', monospace;
   font-size: 13px;
   color: #93c5fd;
   border: 1px solid #374151;
@@ -2023,12 +2567,24 @@ onBeforeUnmount(() => {
   overflow-x: auto;
 }
 
-.text :deep(pre.language-javascript) { border-left: 4px solid #f7df1e; }
-.text :deep(pre.language-python) { border-left: 4px solid #3776ab; }
-.text :deep(pre.language-bash) { border-left: 4px solid #4eaa25; }
-.text :deep(pre.language-json) { border-left: 4px solid #ff6b6b; }
-.text :deep(pre.language-yaml) { border-left: 4px solid #cb171e; }
-.text :deep(pre.language-sql) { border-left: 4px solid #336791; }
+.text :deep(pre.language-javascript) {
+  border-left: 4px solid #f7df1e;
+}
+.text :deep(pre.language-python) {
+  border-left: 4px solid #3776ab;
+}
+.text :deep(pre.language-bash) {
+  border-left: 4px solid #4eaa25;
+}
+.text :deep(pre.language-json) {
+  border-left: 4px solid #ff6b6b;
+}
+.text :deep(pre.language-yaml) {
+  border-left: 4px solid #cb171e;
+}
+.text :deep(pre.language-sql) {
+  border-left: 4px solid #336791;
+}
 
 /* 代码高亮样式 */
 .text :deep(.code-keyword) {
@@ -2237,7 +2793,9 @@ onBeforeUnmount(() => {
 }
 
 @keyframes typing {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     transform: scale(0.8) translateY(0);
     opacity: 0.5;
   }
@@ -2248,7 +2806,8 @@ onBeforeUnmount(() => {
 }
 
 @keyframes pulse-subtle {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
   }
   50% {
@@ -2651,7 +3210,7 @@ onBeforeUnmount(() => {
   border-radius: var(--ops-radius);
   width: 220px;
   z-index: 10001;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
 }
 
 .sessions-header {
@@ -2702,7 +3261,7 @@ onBeforeUnmount(() => {
 }
 
 .session-item:hover {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .session-item.active {

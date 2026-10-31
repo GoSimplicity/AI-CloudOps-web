@@ -1,12 +1,16 @@
 <template>
   <div>
     <!-- 流转记录对话框 -->
-    <a-modal 
-      :open="flowDialog.visible" 
+    <a-modal
+      :open="flowDialog.visible"
       title=""
-      :width="previewDialogWidth" 
+      :width="previewDialogWidth"
       :footer="null"
-      @cancel="() => { flowDialog.visible = false }" 
+      @cancel="
+        () => {
+          flowDialog.visible = false;
+        }
+      "
       class="flow-dialog responsive-modal"
       centered
     >
@@ -44,7 +48,9 @@
             </a-tooltip>
             <a-tooltip title="显示模式">
               <a-button type="text" size="small" @click="toggleViewMode">
-                <IconComponent :icon="viewMode === 'timeline' ? 'list' : 'timeline'" />
+                <IconComponent
+                  :icon="viewMode === 'timeline' ? 'list' : 'timeline'"
+                />
               </a-button>
             </a-tooltip>
           </div>
@@ -97,28 +103,40 @@
         <!-- 加载状态 -->
         <a-spin :spinning="loading" tip="加载流转记录中...">
           <!-- 时间线视图 -->
-          <div v-if="viewMode === 'timeline' && filteredFlowList.length > 0" class="timeline-view">
+          <div
+            v-if="viewMode === 'timeline' && filteredFlowList.length > 0"
+            class="timeline-view"
+          >
             <div class="flow-timeline">
-              <div 
-                v-for="(item, index) in filteredFlowList" 
-                :key="item.id" 
+              <div
+                v-for="(item, index) in filteredFlowList"
+                :key="item.id"
                 class="flow-timeline-item"
                 :class="{ 'important-flow': isImportantFlow(item.action) }"
                 :style="{ '--delay': index * 0.15 + 's' }"
               >
                 <!-- 时间线节点 -->
-                <div class="timeline-node" :class="getFlowActionClass(item.action)">
+                <div
+                  class="timeline-node"
+                  :class="getFlowActionClass(item.action)"
+                >
                   <div class="node-icon">
                     <component :is="getFlowActionIcon(item.action)" />
                   </div>
-                  <div class="node-pulse" v-if="isImportantFlow(item.action)"></div>
+                  <div
+                    class="node-pulse"
+                    v-if="isImportantFlow(item.action)"
+                  ></div>
                 </div>
 
                 <!-- 流转卡片 -->
                 <div class="flow-card">
                   <div class="flow-card-header">
                     <div class="flow-action-info">
-                      <div class="action-badge" :class="getFlowActionClass(item.action)">
+                      <div
+                        class="action-badge"
+                        :class="getFlowActionClass(item.action)"
+                      >
                         <component :is="getFlowActionIcon(item.action)" />
                         <span>{{ getFlowActionText(item.action) }}</span>
                       </div>
@@ -129,7 +147,11 @@
                     </div>
                     <div class="card-actions">
                       <a-tooltip title="查看详情">
-                        <a-button type="text" size="small" @click="showFlowDetail(item)">
+                        <a-button
+                          type="text"
+                          size="small"
+                          @click="showFlowDetail(item)"
+                        >
                           <IconComponent icon="detail" />
                         </a-button>
                       </a-tooltip>
@@ -139,20 +161,33 @@
                   <div class="flow-card-content">
                     <!-- 操作人信息 -->
                     <div class="operator-section">
-                      <a-avatar 
-                        :size="36" 
-                        :style="{ backgroundColor: getAvatarColor(item.operator_name || '') }"
+                      <a-avatar
+                        :size="36"
+                        :style="{
+                          backgroundColor: getAvatarColor(
+                            item.operator_name || '',
+                          ),
+                        }"
                         class="operator-avatar"
                       >
                         {{ getInitials(item.operator_name) }}
                       </a-avatar>
                       <div class="operator-info">
-                        <div class="operator-name">{{ item.operator_name || '系统操作' }}</div>
+                        <div class="operator-name">
+                          {{ item.operator_name || '系统操作' }}
+                        </div>
                         <div class="operator-role">
-                          {{ item.is_system_action === 1 ? '系统自动' : '手动操作' }}
+                          {{
+                            item.is_system_action === 1
+                              ? '系统自动'
+                              : '手动操作'
+                          }}
                         </div>
                       </div>
-                      <div class="system-badge" v-if="item.is_system_action === 1">
+                      <div
+                        class="system-badge"
+                        v-if="item.is_system_action === 1"
+                      >
                         <IconComponent icon="system" />
                         <span>系统</span>
                       </div>
@@ -161,18 +196,26 @@
                     <!-- 状态变更 -->
                     <div class="status-change-section">
                       <div class="status-flow">
-                        <div class="from-status" :class="getStatusBadgeClass(item.from_status)">
+                        <div
+                          class="from-status"
+                          :class="getStatusBadgeClass(item.from_status)"
+                        >
                           {{ getStatusText(item.from_status) }}
                         </div>
                         <div class="flow-arrow">
                           <IconComponent icon="arrow" />
                         </div>
-                        <div class="to-status" :class="getStatusBadgeClass(item.to_status)">
+                        <div
+                          class="to-status"
+                          :class="getStatusBadgeClass(item.to_status)"
+                        >
                           {{ getStatusText(item.to_status) }}
                         </div>
                       </div>
                       <div class="change-summary">
-                        状态从 <strong>{{ getStatusText(item.from_status) }}</strong> 变更为 
+                        状态从
+                        <strong>{{ getStatusText(item.from_status) }}</strong>
+                        变更为
                         <strong>{{ getStatusText(item.to_status) }}</strong>
                       </div>
                     </div>
@@ -197,7 +240,10 @@
           </div>
 
           <!-- 列表视图 -->
-          <div v-else-if="viewMode === 'list' && filteredFlowList.length > 0" class="list-view">
+          <div
+            v-else-if="viewMode === 'list' && filteredFlowList.length > 0"
+            class="list-view"
+          >
             <div class="flow-table">
               <div class="table-header">
                 <div class="header-cell action">操作类型</div>
@@ -207,51 +253,76 @@
                 <div class="header-cell actions">操作</div>
               </div>
               <div class="table-body">
-                <div 
-                  v-for="(item, index) in filteredFlowList" 
+                <div
+                  v-for="(item, index) in filteredFlowList"
                   :key="item.id"
                   class="table-row"
                   :style="{ '--delay': index * 0.1 + 's' }"
                 >
                   <div class="body-cell action" data-label="操作类型">
-                    <div class="action-badge-small" :class="getFlowActionClass(item.action)">
+                    <div
+                      class="action-badge-small"
+                      :class="getFlowActionClass(item.action)"
+                    >
                       <component :is="getFlowActionIcon(item.action)" />
                       <span>{{ getFlowActionText(item.action) }}</span>
                     </div>
                   </div>
                   <div class="body-cell operator" data-label="操作人">
                     <div class="operator-info-small">
-                      <a-avatar 
-                        :size="24" 
-                        :style="{ backgroundColor: getAvatarColor(item.operator_name || '') }"
+                      <a-avatar
+                        :size="24"
+                        :style="{
+                          backgroundColor: getAvatarColor(
+                            item.operator_name || '',
+                          ),
+                        }"
                       >
                         {{ getInitials(item.operator_name) }}
                       </a-avatar>
                       <span>{{ item.operator_name || '系统' }}</span>
-                      <a-tag v-if="item.is_system_action === 1" color="orange" size="small">
+                      <a-tag
+                        v-if="item.is_system_action === 1"
+                        color="orange"
+                        size="small"
+                      >
                         系统
                       </a-tag>
                     </div>
                   </div>
                   <div class="body-cell status" data-label="状态变更">
                     <div class="status-change-small">
-                      <span class="from-status" :class="getStatusBadgeClass(item.from_status)">
+                      <span
+                        class="from-status"
+                        :class="getStatusBadgeClass(item.from_status)"
+                      >
                         {{ getStatusText(item.from_status) }}
                       </span>
                       <IconComponent icon="arrow" />
-                      <span class="to-status" :class="getStatusBadgeClass(item.to_status)">
+                      <span
+                        class="to-status"
+                        :class="getStatusBadgeClass(item.to_status)"
+                      >
                         {{ getStatusText(item.to_status) }}
                       </span>
                     </div>
                   </div>
                   <div class="body-cell time" data-label="操作时间">
                     <div class="time-info">
-                      <div class="relative-time">{{ formatRelativeTime(item.created_at) }}</div>
-                      <div class="absolute-time">{{ formatDate(item.created_at) }}</div>
+                      <div class="relative-time">
+                        {{ formatRelativeTime(item.created_at) }}
+                      </div>
+                      <div class="absolute-time">
+                        {{ formatDate(item.created_at) }}
+                      </div>
                     </div>
                   </div>
                   <div class="body-cell actions" data-label="操作">
-                    <a-button type="text" size="small" @click="showFlowDetail(item)">
+                    <a-button
+                      type="text"
+                      size="small"
+                      @click="showFlowDetail(item)"
+                    >
                       <IconComponent icon="detail" />
                       详情
                     </a-button>
@@ -286,42 +357,73 @@
       :open="detailDialog.visible"
       title="流转详情"
       :width="600"
-      @cancel="() => { detailDialog.visible = false }"
+      @cancel="
+        () => {
+          detailDialog.visible = false;
+        }
+      "
       :footer="null"
       class="flow-detail-dialog responsive-modal"
     >
       <div v-if="detailDialog.item" class="flow-detail-content">
         <div class="detail-header">
-          <div class="detail-action-badge" :class="getFlowActionClass(detailDialog.item.action)">
+          <div
+            class="detail-action-badge"
+            :class="getFlowActionClass(detailDialog.item.action)"
+          >
             <component :is="getFlowActionIcon(detailDialog.item.action)" />
             {{ getFlowActionText(detailDialog.item.action) }}
           </div>
-          <div class="detail-time">{{ formatFullDateTime(detailDialog.item.created_at) }}</div>
+          <div class="detail-time">
+            {{ formatFullDateTime(detailDialog.item.created_at) }}
+          </div>
         </div>
 
-        <a-descriptions bordered :column="1" size="small" class="flow-descriptions">
+        <a-descriptions
+          bordered
+          :column="1"
+          size="small"
+          class="flow-descriptions"
+        >
           <a-descriptions-item label="操作类型">
             <div class="description-value">
               {{ getFlowActionText(detailDialog.item.action) }}
-              <a-tag v-if="detailDialog.item.is_system_action === 1" color="orange" size="small">
+              <a-tag
+                v-if="detailDialog.item.is_system_action === 1"
+                color="orange"
+                size="small"
+              >
                 系统操作
               </a-tag>
             </div>
           </a-descriptions-item>
-          <a-descriptions-item label="操作人">{{ detailDialog.item.operator_name || '系统' }}</a-descriptions-item>
-          <a-descriptions-item label="操作时间">{{ formatFullDateTime(detailDialog.item.created_at) }}</a-descriptions-item>
+          <a-descriptions-item label="操作人">
+            {{ detailDialog.item.operator_name || '系统' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="操作时间">
+            {{ formatFullDateTime(detailDialog.item.created_at) }}
+          </a-descriptions-item>
           <a-descriptions-item label="状态变更">
             <div class="status-change-detail">
-              <span class="from-status" :class="getStatusBadgeClass(detailDialog.item.from_status)">
+              <span
+                class="from-status"
+                :class="getStatusBadgeClass(detailDialog.item.from_status)"
+              >
                 {{ getStatusText(detailDialog.item.from_status) }}
               </span>
               <IconComponent icon="arrow" />
-              <span class="to-status" :class="getStatusBadgeClass(detailDialog.item.to_status)">
+              <span
+                class="to-status"
+                :class="getStatusBadgeClass(detailDialog.item.to_status)"
+              >
                 {{ getStatusText(detailDialog.item.to_status) }}
               </span>
             </div>
           </a-descriptions-item>
-          <a-descriptions-item label="处理说明" v-if="detailDialog.item.comment">
+          <a-descriptions-item
+            label="处理说明"
+            v-if="detailDialog.item.comment"
+          >
             <div class="comment-detail">{{ detailDialog.item.comment }}</div>
           </a-descriptions-item>
         </a-descriptions>
@@ -331,25 +433,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
-import { message } from 'ant-design-vue'
+import { ref, reactive, computed } from 'vue';
+import { message } from 'ant-design-vue';
 import {
   SendOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   UserOutlined,
   StopOutlined,
-  PlayCircleOutlined
-} from '@ant-design/icons-vue'
+  PlayCircleOutlined,
+} from '@ant-design/icons-vue';
 
 import {
   type WorkorderInstanceFlowItem,
   type ListWorkorderInstanceFlowReq,
   FlowAction,
-  listWorkorderInstanceFlow
-} from '#/api/core/workorder/workorder_instance_flow'
+  listWorkorderInstanceFlow,
+} from '#/api/core/workorder/workorder_instance_flow';
 
-import { InstanceStatus } from '#/api/core/workorder/workorder_instance'
+import { InstanceStatus } from '#/api/core/workorder/workorder_instance';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // 图标组件
@@ -369,107 +471,110 @@ const IconComponent = ({ icon }: { icon: string }) => {
     system: '⚙️',
     arrow: '➡️',
     comment: '💬',
-    'empty-flow': '🌀'
-  }
-  return iconMap[icon] || ''
-}
+    'empty-flow': '🌀',
+  };
+  return iconMap[icon] || '';
+};
 
 // 状态数据
-const loading = ref(false)
-const flowList = ref<WorkorderInstanceFlowItem[]>([])
-const filterType = ref<string>('all')
-const viewMode = ref<'timeline' | 'list'>('timeline')
+const loading = ref(false);
+const flowList = ref<WorkorderInstanceFlowItem[]>([]);
+const filterType = ref<string>('all');
+const viewMode = ref<'timeline' | 'list'>('timeline');
 
 // 详情对话框
 const detailDialog = reactive({
   visible: false,
-  item: null as WorkorderInstanceFlowItem | null
-})
+  item: null as WorkorderInstanceFlowItem | null,
+});
 
 // 流转记录对话框
 const flowDialog = reactive({
   visible: false,
-  instanceId: 0
-})
+  instanceId: 0,
+});
 
 // 响应式对话框宽度
 const previewDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
-    const width = window.innerWidth
-    if (width < 768) return '95%'
-    if (width < 1024) return '90%'
-    return '80%'
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '80%';
   }
-  return '80%'
-})
+  return '80%';
+});
 
 // 工具方法
 const formatFullDateTime = (dateStr: string | undefined) => {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
   return d.toLocaleString('zh-CN', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit'
-  })
-}
+    second: '2-digit',
+  });
+};
 
 const formatRelativeTime = (dateStr: string | undefined) => {
-  if (!dateStr) return ''
-  const now = new Date()
-  const date = new Date(dateStr)
-  const diff = now.getTime() - date.getTime()
+  if (!dateStr) return '';
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diff = now.getTime() - date.getTime();
 
-  const minute = 60 * 1000
-  const hour = 60 * minute
-  const day = 24 * hour
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
 
   if (diff < minute) {
-    return '刚刚'
+    return '刚刚';
   } else if (diff < hour) {
-    return `${Math.floor(diff / minute)}分钟前`
+    return `${Math.floor(diff / minute)}分钟前`;
   } else if (diff < day) {
-    return `${Math.floor(diff / hour)}小时前`
+    return `${Math.floor(diff / hour)}小时前`;
   } else {
-    return `${Math.floor(diff / day)}天前`
+    return `${Math.floor(diff / day)}天前`;
   }
-}
+};
 
 const formatDate = (dateStr: string | undefined) => {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('zh-CN')
-}
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('zh-CN');
+};
 
 // 计算属性
 const filteredFlowList = computed(() => {
-  let filtered = [...flowList.value]
+  let filtered = [...flowList.value];
 
   switch (filterType.value) {
-    case 'approve':
-      filtered = filtered.filter(item => 
-        [FlowAction.Approve as string, FlowAction.Reject as string].includes(item.action)
-      )
-      break
-    case 'assign':
-      filtered = filtered.filter(item => item.action === FlowAction.Assign)
-      break
-    case 'status':
-      filtered = filtered.filter(item => 
-        item.from_status !== item.to_status
-      )
-      break
+    case 'approve': {
+      filtered = filtered.filter((item) =>
+        [FlowAction.Approve as string, FlowAction.Reject as string].includes(
+          item.action,
+        ),
+      );
+      break;
+    }
+    case 'assign': {
+      filtered = filtered.filter((item) => item.action === FlowAction.Assign);
+      break;
+    }
+    case 'status': {
+      filtered = filtered.filter((item) => item.from_status !== item.to_status);
+      break;
+    }
   }
 
   return filtered.sort((a, b) => {
-    const dateA = new Date(a.created_at || '')
-    const dateB = new Date(b.created_at || '')
-    return dateB.getTime() - dateA.getTime()
-  })
-})
+    const dateA = new Date(a.created_at || '');
+    const dateB = new Date(b.created_at || '');
+    return dateB.getTime() - dateA.getTime();
+  });
+});
 
 // 新增方法
 const isImportantFlow = (action: string): boolean => {
@@ -478,22 +583,29 @@ const isImportantFlow = (action: string): boolean => {
     FlowAction.Reject as string,
     FlowAction.Submit as string,
     FlowAction.Complete as string,
-    FlowAction.Cancel as string
-  ].includes(action)
-}
+    FlowAction.Cancel as string,
+  ].includes(action);
+};
 
 const getFlowCount = (type: string): number => {
   switch (type) {
-    case 'approve':
-      return flowList.value.filter(item => item.action === FlowAction.Approve).length
-    case 'reject':
-      return flowList.value.filter(item => item.action === FlowAction.Reject).length
-    case 'assign':
-      return flowList.value.filter(item => item.action === FlowAction.Assign).length
-    default:
-      return 0
+    case 'approve': {
+      return flowList.value.filter((item) => item.action === FlowAction.Approve)
+        .length;
+    }
+    case 'reject': {
+      return flowList.value.filter((item) => item.action === FlowAction.Reject)
+        .length;
+    }
+    case 'assign': {
+      return flowList.value.filter((item) => item.action === FlowAction.Assign)
+        .length;
+    }
+    default: {
+      return 0;
+    }
   }
-}
+};
 
 const getFlowActionClass = (action: string): string => {
   const classMap: Record<string, string> = {
@@ -503,10 +615,10 @@ const getFlowActionClass = (action: string): string => {
     [FlowAction.Assign]: 'action-assign',
     [FlowAction.Cancel]: 'action-cancel',
     [FlowAction.Complete]: 'action-complete',
-    [FlowAction.Return]: 'action-return'
-  }
-  return classMap[action] || 'action-default'
-}
+    [FlowAction.Return]: 'action-return',
+  };
+  return classMap[action] || 'action-default';
+};
 
 const getStatusBadgeClass = (status: number): string => {
   const classMap: Record<number, string> = {
@@ -515,55 +627,57 @@ const getStatusBadgeClass = (status: number): string => {
     [InstanceStatus.Processing]: 'status-processing',
     [InstanceStatus.Completed]: 'status-completed',
     [InstanceStatus.Rejected]: 'status-rejected',
-    [InstanceStatus.Cancelled]: 'status-cancelled'
-  }
-  return classMap[status] || 'status-default'
-}
+    [InstanceStatus.Cancelled]: 'status-cancelled',
+  };
+  return classMap[status] || 'status-default';
+};
 
 // 交互方法
 const showFlowDetail = (item: WorkorderInstanceFlowItem) => {
-  detailDialog.item = item
-  detailDialog.visible = true
-}
+  detailDialog.item = item;
+  detailDialog.visible = true;
+};
 
 const handleFilterChange = ({ key }: { key: string }) => {
-  filterType.value = key
-}
+  filterType.value = key;
+};
 
 const toggleViewMode = () => {
-  viewMode.value = viewMode.value === 'timeline' ? 'list' : 'timeline'
-}
+  viewMode.value = viewMode.value === 'timeline' ? 'list' : 'timeline';
+};
 
 const refreshFlow = async () => {
   if (flowDialog.instanceId) {
-    await loadFlow(flowDialog.instanceId)
+    await loadFlow(flowDialog.instanceId);
   }
-}
+};
 
 const getInitials = (name: string | undefined) => {
-  if (!name) return ''
-  return name
-    .split('')
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
-}
+  if (!name) return '';
+  return name.split('').slice(0, 2).join('').toUpperCase();
+};
 
 const getAvatarColor = (name: string | undefined) => {
-  if (!name) return '#1890ff'
+  if (!name) return '#1890ff';
 
   const colors = [
-    '#1890ff', '#52c41a', '#faad14', '#f5222d',
-    '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'
-  ]
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
+  ];
 
-  let hash = 0
+  let hash = 0;
   for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
 
-  return colors[Math.abs(hash) % colors.length]
-}
+  return colors[Math.abs(hash) % colors.length];
+};
 
 const getStatusText = (status: number): string => {
   const textMap = {
@@ -572,10 +686,10 @@ const getStatusText = (status: number): string => {
     [InstanceStatus.Processing]: '处理中',
     [InstanceStatus.Completed]: '已完成',
     [InstanceStatus.Rejected]: '已拒绝',
-    [InstanceStatus.Cancelled]: '已取消'
-  }
-  return textMap[status as keyof typeof textMap] || '未知'
-}
+    [InstanceStatus.Cancelled]: '已取消',
+  };
+  return textMap[status as keyof typeof textMap] || '未知';
+};
 
 const getFlowActionIcon = (action: string) => {
   const iconMap: Record<string, any> = {
@@ -585,10 +699,10 @@ const getFlowActionIcon = (action: string) => {
     [FlowAction.Assign]: UserOutlined,
     [FlowAction.Cancel]: StopOutlined,
     [FlowAction.Complete]: CheckCircleOutlined,
-    [FlowAction.Return]: ExclamationCircleOutlined
-  }
-  return iconMap[action] || PlayCircleOutlined
-}
+    [FlowAction.Return]: ExclamationCircleOutlined,
+  };
+  return iconMap[action] || PlayCircleOutlined;
+};
 
 const getFlowActionText = (action: string): string => {
   const textMap: Record<string, string> = {
@@ -598,15 +712,15 @@ const getFlowActionText = (action: string): string => {
     [FlowAction.Assign]: '指派处理人',
     [FlowAction.Cancel]: '取消工单',
     [FlowAction.Complete]: '完成工单',
-    [FlowAction.Return]: '退回工单'
-  }
-  return textMap[action] || action
-}
+    [FlowAction.Return]: '退回工单',
+  };
+  return textMap[action] || action;
+};
 
 // 加载流转记录
 const loadFlow = async (instanceId: number) => {
   try {
-    loading.value = true
+    loading.value = true;
 
     let allFlows: any[] = [];
     let currentPage = 1;
@@ -617,15 +731,18 @@ const loadFlow = async (instanceId: number) => {
       const params: ListWorkorderInstanceFlowReq = {
         page: currentPage,
         size: pageSize,
-        instance_id: instanceId
-      }
+        instance_id: instanceId,
+      };
 
-      const res = await listWorkorderInstanceFlow(params)
+      const res = await listWorkorderInstanceFlow(params);
 
       if (res && res.items && res.items.length > 0) {
         allFlows = [...allFlows, ...res.items];
 
-        if (res.items.length < pageSize || allFlows.length >= (res.total || 0)) {
+        if (
+          res.items.length < pageSize ||
+          allFlows.length >= (res.total || 0)
+        ) {
           hasMoreData = false;
         } else {
           currentPage++;
@@ -636,32 +753,32 @@ const loadFlow = async (instanceId: number) => {
     }
 
     if (allFlows.length > 0) {
-      flowList.value = allFlows
+      flowList.value = allFlows;
     } else {
-      flowList.value = []
+      flowList.value = [];
     }
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(`加载流转记录失败: ${error.message || '未知错误'}`)
-    flowList.value = []
+    if (shouldNotifyPageError(error))
+      message.error(`加载流转记录失败: ${error.message || '未知错误'}`);
+    flowList.value = [];
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // 主要方法
 const showFlow = async (instanceId: number) => {
-  flowDialog.instanceId = instanceId
-  flowDialog.visible = true
-  filterType.value = 'all'
-  viewMode.value = 'timeline'
-  await loadFlow(instanceId)
-}
+  flowDialog.instanceId = instanceId;
+  flowDialog.visible = true;
+  filterType.value = 'all';
+  viewMode.value = 'timeline';
+  await loadFlow(instanceId);
+};
 
 // 导出方法供父组件调用
 defineExpose({
-  showFlow
-})
+  showFlow,
+});
 </script>
 
 <style scoped>
@@ -698,8 +815,13 @@ defineExpose({
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .header-text {

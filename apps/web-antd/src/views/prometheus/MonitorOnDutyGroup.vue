@@ -3,117 +3,149 @@
     <!-- 页面标题 -->
     <template #actions>
       <a-button type="primary" @click="showAddModal" class="btn-create">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          <span class="btn-text">新增值班组</span>
-        </a-button>
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        <span class="btn-text">新增值班组</span>
+      </a-button>
     </template>
     <template #filters>
       <div class="search-filters">
-          <a-input-search 
-            v-model:value="searchText" 
-            placeholder="搜索值班组名称..." 
-            class="search-input"
-            @search="handleSearch" 
-            @change="handleSearchChange" 
-            allow-clear 
-          />
-          <a-select
-            v-model:value="enableFilter"
-            placeholder="状态筛选"
-            style="width: 120px;"
-            allow-clear
-            @change="handleEnableFilterChange"
-          >
-            <a-select-option :value="1">启用</a-select-option>
-            <a-select-option :value="2">禁用</a-select-option>
-          </a-select>
-          <a-button @click="handleReset" class="reset-btn">
-            重置
-          </a-button>
-        </div>
+        <a-input-search
+          v-model:value="searchText"
+          placeholder="搜索值班组名称..."
+          class="search-input"
+          @search="handleSearch"
+          @change="handleSearchChange"
+          allow-clear
+        />
+        <a-select
+          v-model:value="enableFilter"
+          placeholder="状态筛选"
+          style="width: 120px"
+          allow-clear
+          @change="handleEnableFilterChange"
+        >
+          <a-select-option :value="1">启用</a-select-option>
+          <a-select-option :value="2">禁用</a-select-option>
+        </a-select>
+        <a-button @click="handleReset" class="reset-btn"> 重置 </a-button>
+      </div>
     </template>
 
     <!-- 统计卡片 -->
     <template #summary>
       <div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="总值班组" :value="loadError ? '未知' : stats.total" :value-style="{ color: '#3f8600' }">
-              <template #prefix>
-                <Icon icon="carbon:user-multiple" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="当前页成员" :value="loadError ? '未知' : stats.activeusers" :value-style="{ color: '#52c41a' }">
-              <template #prefix>
-                <Icon icon="carbon:user-activity" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="本页平均周期" :value="loadError ? '未知' : stats.avgShiftDays" suffix="天" :value-style="{ color: '#faad14' }">
-              <template #prefix>
-                <Icon icon="carbon:calendar" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="当前页今日值班" :value="loadError ? '未知' : stats.todayOnDuty" :value-style="{ color: '#cf1322' }">
-              <template #prefix>
-                <Icon icon="carbon:user-certification" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div>
+        <a-row :gutter="[16, 16]">
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="总值班组"
+                :value="loadError ? '未知' : stats.total"
+                :value-style="{ color: '#3f8600' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:user-multiple" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="当前页成员"
+                :value="loadError ? '未知' : stats.activeusers"
+                :value-style="{ color: '#52c41a' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:user-activity" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页平均周期"
+                :value="loadError ? '未知' : stats.avgShiftDays"
+                suffix="天"
+                :value-style="{ color: '#faad14' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:calendar" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="当前页今日值班"
+                :value="loadError ? '未知' : stats.todayOnDuty"
+                :value-style="{ color: '#cf1322' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:user-certification" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
     </template>
 
     <!-- 表格容器 -->
-    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
-      <template #action><a-button size="small" :loading="loading" @click="fetchOnDutyGroups">重试</a-button></template>
+    <a-alert
+      v-if="loadError"
+      type="error"
+      show-icon
+      :message="loadError"
+      role="alert"
+    >
+      <template #action>
+        <a-button size="small" :loading="loading" @click="fetchOnDutyGroups">
+          重试
+        </a-button>
+      </template>
     </a-alert>
 
     <div class="table-container">
       <a-card>
-        <a-table 
-          :data-source="data" 
-          :columns="columns" 
-          :pagination="paginationConfig" 
-          :loading="loading" 
+        <a-table
+          :data-source="data"
+          :columns="columns"
+          :pagination="paginationConfig"
+          :loading="loading"
           row-key="id"
-          bordered 
-          :scroll="{ x: 1400 }" 
+          bordered
+          :scroll="{ x: 1400 }"
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="group-name-cell">
-                <div :class="['group-badge', record.enable === 1 ? 'status-active' : 'status-inactive']"></div>
+                <div
+                  :class="[
+                    'group-badge',
+                    record.enable === 1 ? 'status-active' : 'status-inactive',
+                  ]"
+                ></div>
                 <span class="group-name-text">{{ record.name }}</span>
               </div>
             </template>
 
             <template v-if="column.key === 'users'">
               <div class="tag-container">
-                <a-tag 
-                  v-for="user in record.users" 
-                  :key="user.id" 
+                <a-tag
+                  v-for="user in record.users"
+                  :key="user.id"
                   class="tech-tag user-tag"
                 >
                   {{ user.real_name || user.username }}
                 </a-tag>
-                <span v-if="!record.users?.length" class="empty-text">无成员</span>
+                <span v-if="!record.users?.length" class="empty-text"
+                  >无成员</span
+                >
               </div>
             </template>
 
@@ -125,7 +157,9 @@
                 </div>
                 <div class="config-item">
                   <span class="config-label">成员:</span>
-                  <span class="config-value">{{ record.users?.length || 0 }}人</span>
+                  <span class="config-value"
+                    >{{ record.users?.length || 0 }}人</span
+                  >
                 </div>
               </div>
             </template>
@@ -133,13 +167,26 @@
             <template v-if="column.key === 'duty_status'">
               <div class="duty-status-container">
                 <div class="today-duty" v-if="record.today_duty_user">
-                  <a-avatar 
-                    size="small" 
-                    :style="{ backgroundColor: getAvatarColor(record.today_duty_user.real_name || record.today_duty_user.username) }"
+                  <a-avatar
+                    size="small"
+                    :style="{
+                      backgroundColor: getAvatarColor(
+                        record.today_duty_user.real_name ||
+                          record.today_duty_user.username,
+                      ),
+                    }"
                   >
-                    {{ getInitials(record.today_duty_user.real_name || record.today_duty_user.username) }}
+                    {{
+                      getInitials(
+                        record.today_duty_user.real_name ||
+                          record.today_duty_user.username,
+                      )
+                    }}
                   </a-avatar>
-                  <span class="duty-user-name">{{ record.today_duty_user.real_name || record.today_duty_user.username }}</span>
+                  <span class="duty-user-name">{{
+                    record.today_duty_user.real_name ||
+                    record.today_duty_user.username
+                  }}</span>
                   <a-tag color="green" size="small">今日值班</a-tag>
                 </div>
                 <span v-else class="no-duty">暂无值班</span>
@@ -147,22 +194,30 @@
             </template>
 
             <template v-if="column.key === 'enable'">
-              <a-switch 
-                :checked="record.enable === 1" 
-                @change="(checked: boolean) => handleEnableChange(record, checked)"
+              <a-switch
+                :checked="record.enable === 1"
+                @change="
+                  (checked: boolean) => handleEnableChange(record, checked)
+                "
                 :loading="record.statusLoading"
               />
             </template>
 
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
-                <a-avatar 
-                  size="small" 
-                  :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
+                <a-avatar
+                  size="small"
+                  :style="{
+                    backgroundColor: getAvatarColor(
+                      record.create_user_name || '',
+                    ),
+                  }"
                 >
                   {{ getInitials(record.create_user_name || '') }}
                 </a-avatar>
-                <span class="creator-name">{{ record.create_user_name || '未知' }}</span>
+                <span class="creator-name">{{
+                  record.create_user_name || '未知'
+                }}</span>
               </div>
             </template>
 
@@ -175,10 +230,18 @@
 
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
-                <a-button type="primary" size="small" @click="handleViewDetail(record)">
+                <a-button
+                  type="primary"
+                  size="small"
+                  @click="handleViewDetail(record)"
+                >
                   查看
                 </a-button>
-                <a-button type="default" size="small" @click="handleViewFuturePlan(record)">
+                <a-button
+                  type="default"
+                  size="small"
+                  @click="handleViewFuturePlan(record)"
+                >
                   排班计划
                 </a-button>
                 <a-dropdown>
@@ -193,8 +256,16 @@
                       <a-menu-item key="change">
                         <Icon icon="carbon:change-catalog" /> 调班记录
                       </a-menu-item>
-                      <a-menu-divider v-if="can('monitor.onDutyGroup.delete')" />
-                      <a-menu-item v-if="can('monitor.onDutyGroup.delete')" key="delete" danger>删除</a-menu-item>
+                      <a-menu-divider
+                        v-if="can('monitor.onDutyGroup.delete')"
+                      />
+                      <a-menu-item
+                        v-if="can('monitor.onDutyGroup.delete')"
+                        key="delete"
+                        danger
+                      >
+                        删除
+                      </a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
@@ -210,34 +281,42 @@
     </div>
 
     <!-- 新增值班组模态框 -->
-    <a-modal 
-      :open="isAddModalVisible" 
-      title="新增值班组" 
-      :width="formDialogWidth" 
-      @ok="handleAdd" 
+    <a-modal
+      :open="isAddModalVisible"
+      title="新增值班组"
+      :width="formDialogWidth"
+      @ok="handleAdd"
       @cancel="closeAddModal"
-      :destroy-on-close="true" 
+      :destroy-on-close="true"
       class="responsive-modal on-duty-group-modal"
       :confirmLoading="loading"
     >
-      <a-form ref="addFormRef" :model="addForm" :rules="formRules" layout="vertical">
+      <a-form
+        ref="addFormRef"
+        :model="addForm"
+        :rules="formRules"
+        layout="vertical"
+      >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="值班组名称" name="name">
-                <a-input v-model:value="addForm.name" placeholder="请输入值班组名称" />
+                <a-input
+                  v-model:value="addForm.name"
+                  placeholder="请输入值班组名称"
+                />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="轮班周期（天）" name="shift_days">
-                <a-input-number 
-                  v-model:value="addForm.shift_days" 
-                  :min="1" 
-                  :max="365" 
-                  class="full-width" 
+                <a-input-number
+                  v-model:value="addForm.shift_days"
+                  :min="1"
+                  :max="365"
+                  class="full-width"
                 />
               </a-form-item>
             </a-col>
@@ -245,9 +324,9 @@
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="描述" name="description">
-                <a-textarea 
-                  v-model:value="addForm.description" 
-                  placeholder="请输入值班组描述（可选）" 
+                <a-textarea
+                  v-model:value="addForm.description"
+                  placeholder="请输入值班组描述（可选）"
                   :rows="3"
                 />
               </a-form-item>
@@ -260,16 +339,16 @@
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="值班成员" name="user_ids">
-                <a-select 
-                  mode="multiple" 
-                  v-model:value="addForm.user_ids" 
-                  placeholder="请搜索并选择值班成员" 
+                <a-select
+                  mode="multiple"
+                  v-model:value="addForm.user_ids"
+                  placeholder="请搜索并选择值班成员"
                   style="width: 100%"
-                  :maxTagCount="3" 
-                  :options="userOptions" 
+                  :maxTagCount="3"
+                  :options="userOptions"
                   :loading="usersLoading"
-                  @popupScroll="handleUserSelectScroll" 
-                  @search="handleUserSearch" 
+                  @popupScroll="handleUserSelectScroll"
+                  @search="handleUserSearch"
                   show-search
                   :filter-option="false"
                   allow-clear
@@ -282,42 +361,50 @@
     </a-modal>
 
     <!-- 编辑值班组模态框 -->
-    <a-modal 
-      :open="isEditModalVisible" 
-      title="编辑值班组" 
-      :width="formDialogWidth" 
+    <a-modal
+      :open="isEditModalVisible"
+      title="编辑值班组"
+      :width="formDialogWidth"
       @ok="handleUpdate"
-      @cancel="closeEditModal" 
-      :destroy-on-close="true" 
+      @cancel="closeEditModal"
+      :destroy-on-close="true"
       class="responsive-modal on-duty-group-modal"
       :confirmLoading="loading"
     >
-      <a-form ref="editFormRef" :model="editForm" :rules="formRules" layout="vertical">
+      <a-form
+        ref="editFormRef"
+        :model="editForm"
+        :rules="formRules"
+        layout="vertical"
+      >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="值班组名称" name="name">
-                <a-input v-model:value="editForm.name" placeholder="请输入值班组名称" />
+                <a-input
+                  v-model:value="editForm.name"
+                  placeholder="请输入值班组名称"
+                />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :span="12">
               <a-form-item label="轮班周期（天）" name="shift_days">
-                <a-input-number 
-                  v-model:value="editForm.shift_days" 
-                  :min="1" 
-                  :max="365" 
-                  class="full-width" 
+                <a-input-number
+                  v-model:value="editForm.shift_days"
+                  :min="1"
+                  :max="365"
+                  class="full-width"
                 />
               </a-form-item>
             </a-col>
             <a-col :span="12">
               <a-form-item label="状态" name="enable">
-                <a-select 
-                  v-model:value="editForm.enable" 
-                  placeholder="请选择状态" 
+                <a-select
+                  v-model:value="editForm.enable"
+                  placeholder="请选择状态"
                   style="width: 100%"
                 >
                   <a-select-option :value="1">启用</a-select-option>
@@ -329,9 +416,9 @@
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="描述" name="description">
-                <a-textarea 
-                  v-model:value="editForm.description" 
-                  placeholder="请输入值班组描述（可选）" 
+                <a-textarea
+                  v-model:value="editForm.description"
+                  placeholder="请输入值班组描述（可选）"
                   :rows="3"
                 />
               </a-form-item>
@@ -344,16 +431,16 @@
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="值班成员" name="user_ids">
-                <a-select 
-                  mode="multiple" 
-                  v-model:value="editForm.user_ids" 
-                  placeholder="请搜索并选择值班成员" 
+                <a-select
+                  mode="multiple"
+                  v-model:value="editForm.user_ids"
+                  placeholder="请搜索并选择值班成员"
                   style="width: 100%"
-                  :maxTagCount="3" 
-                  :options="userOptions" 
+                  :maxTagCount="3"
+                  :options="userOptions"
                   :loading="usersLoading"
-                  @popupScroll="handleUserSelectScroll" 
-                  @search="handleUserSearch" 
+                  @popupScroll="handleUserSelectScroll"
+                  @search="handleUserSearch"
                   show-search
                   :filter-option="false"
                   allow-clear
@@ -366,12 +453,12 @@
     </a-modal>
 
     <!-- 详情对话框 -->
-    <a-modal 
-      :open="detailDialogVisible" 
-      title="值班组详情" 
-      :width="previewDialogWidth" 
+    <a-modal
+      :open="detailDialogVisible"
+      title="值班组详情"
+      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeDetailDialog" 
+      @cancel="closeDetailDialog"
       class="detail-dialog"
     >
       <div v-if="detailDialog.data" class="group-details">
@@ -391,9 +478,15 @@
         </div>
 
         <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
-          <a-descriptions-item label="ID">{{ detailDialog.data.id }}</a-descriptions-item>
-          <a-descriptions-item label="值班组名称">{{ detailDialog.data.name }}</a-descriptions-item>
-          <a-descriptions-item label="轮班周期">{{ detailDialog.data.shift_days }}天</a-descriptions-item>
+          <a-descriptions-item label="ID">
+            {{ detailDialog.data.id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="值班组名称">
+            {{ detailDialog.data.name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="轮班周期">
+            {{ detailDialog.data.shift_days }}天
+          </a-descriptions-item>
           <a-descriptions-item label="状态">
             <a-tag :color="detailDialog.data.enable ? 'green' : 'red'">
               {{ detailDialog.data.enable ? '启用' : '禁用' }}
@@ -402,32 +495,54 @@
           <a-descriptions-item label="描述">
             {{ detailDialog.data.description || '无描述' }}
           </a-descriptions-item>
-          <a-descriptions-item label="成员数量">{{ detailDialog.data.users?.length || 0 }}人</a-descriptions-item>
+          <a-descriptions-item label="成员数量">
+            {{ detailDialog.data.users?.length || 0 }}人
+          </a-descriptions-item>
           <a-descriptions-item label="成员列表">
             <div class="tag-container">
-              <a-tag 
-                v-for="user in detailDialog.data.users" 
-                :key="user.id" 
+              <a-tag
+                v-for="user in detailDialog.data.users"
+                :key="user.id"
                 class="tech-tag user-tag"
               >
                 {{ user.real_name || user.username }}
               </a-tag>
-              <span v-if="!detailDialog.data.users?.length" class="empty-text">无成员</span>
+              <span v-if="!detailDialog.data.users?.length" class="empty-text"
+                >无成员</span
+              >
             </div>
           </a-descriptions-item>
           <a-descriptions-item label="今日值班">
-            <div v-if="detailDialog.data.today_duty_user" class="duty-user-info">
-              <a-avatar 
-                size="small" 
-                :style="{ backgroundColor: getAvatarColor(detailDialog.data.today_duty_user.real_name || detailDialog.data.today_duty_user.username) }"
+            <div
+              v-if="detailDialog.data.today_duty_user"
+              class="duty-user-info"
+            >
+              <a-avatar
+                size="small"
+                :style="{
+                  backgroundColor: getAvatarColor(
+                    detailDialog.data.today_duty_user.real_name ||
+                      detailDialog.data.today_duty_user.username,
+                  ),
+                }"
               >
-                {{ getInitials(detailDialog.data.today_duty_user.real_name || detailDialog.data.today_duty_user.username) }}
+                {{
+                  getInitials(
+                    detailDialog.data.today_duty_user.real_name ||
+                      detailDialog.data.today_duty_user.username,
+                  )
+                }}
               </a-avatar>
-              <span>{{ detailDialog.data.today_duty_user.real_name || detailDialog.data.today_duty_user.username }}</span>
+              <span>{{
+                detailDialog.data.today_duty_user.real_name ||
+                detailDialog.data.today_duty_user.username
+              }}</span>
             </div>
             <span v-else>暂无</span>
           </a-descriptions-item>
-          <a-descriptions-item label="创建人">{{ detailDialog.data.create_user_name }}</a-descriptions-item>
+          <a-descriptions-item label="创建人">
+            {{ detailDialog.data.create_user_name }}
+          </a-descriptions-item>
           <a-descriptions-item label="创建时间">
             {{ formatFullDateTime(detailDialog.data.created_at) }}
           </a-descriptions-item>
@@ -439,19 +554,23 @@
         <div class="detail-footer">
           <a-button @click="closeDetailDialog">关闭</a-button>
           <a-button type="primary" @click="handleEditFromDetail">编辑</a-button>
-          <a-button type="default" @click="handleViewFuturePlanFromDetail">查看排班计划</a-button>
-          <a-button type="default" @click="handleViewHistoryFromDetail">值班历史</a-button>
+          <a-button type="default" @click="handleViewFuturePlanFromDetail">
+            查看排班计划
+          </a-button>
+          <a-button type="default" @click="handleViewHistoryFromDetail">
+            值班历史
+          </a-button>
         </div>
       </div>
     </a-modal>
 
     <!-- 未来排班计划对话框 -->
-    <a-modal 
-      :open="futurePlanDialogVisible" 
-      title="未来排班计划" 
-      :width="previewDialogWidth" 
+    <a-modal
+      :open="futurePlanDialogVisible"
+      title="未来排班计划"
+      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeFuturePlanDialog" 
+      @cancel="closeFuturePlanDialog"
       class="detail-dialog future-plan-dialog"
     >
       <a-spin :spinning="futurePlanDialog.loading">
@@ -459,26 +578,31 @@
           <div class="plan-header">
             <h3>{{ futurePlanDialog.groupName }} - 未来排班计划</h3>
             <div class="plan-info">
-              <a-tag color="blue">计划时长: {{ futurePlanDialog.data.details?.length || 0 }}天</a-tag>
-              <a-tag color="green">轮班周期: {{ futurePlanDialog.shiftDays }}天</a-tag>
+              <a-tag color="blue">
+                计划时长:
+                {{ futurePlanDialog.data.details?.length || 0 }}天
+              </a-tag>
+              <a-tag color="green">
+                轮班周期: {{ futurePlanDialog.shiftDays }}天
+              </a-tag>
             </div>
           </div>
 
           <div class="plan-filters">
-            <a-date-picker 
-              v-model:value="planDateFilter" 
-              placeholder="选择日期筛选" 
+            <a-date-picker
+              v-model:value="planDateFilter"
+              placeholder="选择日期筛选"
               @change="handlePlanDateChange"
-              style="margin-right: 12px;" 
+              style="margin-right: 12px"
             />
-            <a-select 
-              v-model:value="planUserFilter" 
-              placeholder="选择用户筛选" 
-              style="width: 150px; margin-right: 12px;"
-              allow-clear 
-              @change="handlePlanUserChange" 
+            <a-select
+              v-model:value="planUserFilter"
+              placeholder="选择用户筛选"
+              style="width: 150px; margin-right: 12px"
+              allow-clear
+              @change="handlePlanUserChange"
               :options="planUserOptions"
-              show-search 
+              show-search
               :filter-option="filterOption"
             />
             <a-button @click="resetPlanFilters">重置筛选</a-button>
@@ -486,30 +610,46 @@
 
           <div class="plan-timeline">
             <a-timeline mode="left">
-              <a-timeline-item 
-                v-for="(plan, index) in filteredFuturePlans" 
+              <a-timeline-item
+                v-for="(plan, index) in filteredFuturePlans"
                 :key="index"
                 :color="getPlanTimelineColor(plan.date, index)"
               >
                 <template #label>
                   <div class="timeline-date">
                     <div class="date-main">{{ formatPlanDate(plan.date) }}</div>
-                    <div class="date-sub">{{ formatPlanWeekday(plan.date) }}</div>
+                    <div class="date-sub">
+                      {{ formatPlanWeekday(plan.date) }}
+                    </div>
                   </div>
                 </template>
                 <div class="timeline-content">
                   <div class="duty-user">
-                    <a-avatar 
-                      size="small" 
-                      :style="{ backgroundColor: getAvatarColor(plan.user?.username || '') }"
+                    <a-avatar
+                      size="small"
+                      :style="{
+                        backgroundColor: getAvatarColor(
+                          plan.user?.username || '',
+                        ),
+                      }"
                     >
                       {{ getInitials(plan.user?.username || '') }}
                     </a-avatar>
-                    <span class="user-name">{{ plan.user?.username || '未指定' }}</span>
-                    <a-tag v-if="isToday(plan.date)" color="red" class="today-tag">
+                    <span class="user-name">{{
+                      plan.user?.username || '未指定'
+                    }}</span>
+                    <a-tag
+                      v-if="isToday(plan.date)"
+                      color="red"
+                      class="today-tag"
+                    >
                       今日
                     </a-tag>
-                    <a-tag v-else-if="isTomorrow(plan.date)" color="orange" class="tomorrow-tag">
+                    <a-tag
+                      v-else-if="isTomorrow(plan.date)"
+                      color="orange"
+                      class="tomorrow-tag"
+                    >
                       明日
                     </a-tag>
                   </div>
@@ -522,38 +662,42 @@
             </a-timeline>
 
             <!-- 分页 -->
-            <div 
+            <div
               class="pagination-container"
-              v-if="futurePlanDialog.data?.details && futurePlanDialog.data.details.length > planPaginationConfig.pageSize"
+              v-if="
+                futurePlanDialog.data?.details &&
+                futurePlanDialog.data.details.length >
+                  planPaginationConfig.pageSize
+              "
             >
-              <a-pagination 
-                v-model:current="planPaginationConfig.current" 
+              <a-pagination
+                v-model:current="planPaginationConfig.current"
                 :pageSize="planPaginationConfig.pageSize"
-                :total="planPaginationConfig.total" 
-                :showSizeChanger="true" 
+                :total="planPaginationConfig.total"
+                :showSizeChanger="true"
                 :pageSizeOptions="['10', '15', '30', '50']"
-                @change="handlePlanPaginationChange" 
-                @showSizeChange="handlePlanPaginationChange" 
+                @change="handlePlanPaginationChange"
+                @showSizeChange="handlePlanPaginationChange"
               />
             </div>
           </div>
 
           <div class="plan-summary">
             <a-space wrap size="large">
-              <a-statistic 
-                title="总计划天数" 
-                :value="futurePlanDialog.data.details?.length || 0" 
-                suffix="天" 
+              <a-statistic
+                title="总计划天数"
+                :value="futurePlanDialog.data.details?.length || 0"
+                suffix="天"
               />
-              <a-statistic 
-                title="参与人数" 
-                :value="futurePlanDialog.availableUsers.length" 
-                suffix="人" 
+              <a-statistic
+                title="参与人数"
+                :value="futurePlanDialog.availableUsers.length"
+                suffix="人"
               />
-              <a-statistic 
-                title="轮班周期" 
-                :value="futurePlanDialog.shiftDays" 
-                suffix="天" 
+              <a-statistic
+                title="轮班周期"
+                :value="futurePlanDialog.shiftDays"
+                suffix="天"
               />
             </a-space>
           </div>
@@ -561,7 +705,9 @@
           <div class="detail-footer">
             <a-button @click="closeFuturePlanDialog">关闭</a-button>
             <a-button type="primary" @click="exportPlan">导出计划</a-button>
-            <a-button type="default" @click="handleCreatePlanFromDialog">创建排班计划</a-button>
+            <a-button type="default" @click="handleCreatePlanFromDialog">
+              创建排班计划
+            </a-button>
           </div>
         </div>
         <div v-else class="empty-state">
@@ -577,39 +723,44 @@
     </a-modal>
 
     <!-- 值班历史对话框 -->
-    <a-modal 
-      :open="historyDialogVisible" 
-      title="值班历史" 
-      :width="previewDialogWidth" 
+    <a-modal
+      :open="historyDialogVisible"
+      title="值班历史"
+      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeHistoryDialog" 
+      @cancel="closeHistoryDialog"
       class="detail-dialog history-dialog"
     >
       <a-spin :spinning="historyDialog.loading">
-        <div v-if="historyDialog.data && historyDialog.data.length > 0" class="history-content">
+        <div
+          v-if="historyDialog.data && historyDialog.data.length > 0"
+          class="history-content"
+        >
           <div class="history-header">
             <h3>{{ historyDialog.groupName }} - 值班历史</h3>
             <div class="history-info">
-              <a-tag color="blue">历史记录: {{ historyDialog.data.length || 0 }}条</a-tag>
+              <a-tag color="blue">
+                历史记录: {{ historyDialog.data.length || 0 }}条
+              </a-tag>
             </div>
           </div>
 
           <div class="history-filters">
-            <a-range-picker 
-              v-model:value="historyDateRange" 
-              placeholder="选择日期范围" 
+            <a-range-picker
+              v-model:value="historyDateRange"
+              placeholder="选择日期范围"
               @change="handleHistoryDateChange"
-              style="margin-right: 12px;" 
+              style="margin-right: 12px"
             />
             <a-button @click="resetHistoryFilters">重置筛选</a-button>
           </div>
 
           <div class="history-table">
-            <a-table 
-              :data-source="historyDialog.data" 
-              :columns="historyColumns" 
+            <a-table
+              :data-source="historyDialog.data"
+              :columns="historyColumns"
               :pagination="false"
-              :loading="historyDialog.loading" 
+              :loading="historyDialog.loading"
               row-key="id"
               size="small"
             >
@@ -620,29 +771,44 @@
                 <template v-if="column.key === 'date'">
                   <div class="date-info">
                     <span class="date">{{ record.date_string }}</span>
-                    <span class="weekday">{{ formatPlanWeekday(record.date_string) }}</span>
+                    <span class="weekday">{{
+                      formatPlanWeekday(record.date_string)
+                    }}</span>
                   </div>
                 </template>
                 <template v-if="column.key === 'users'">
                   <div class="user-change-info">
                     <div class="user-item">
                       <span class="label">原值班:</span>
-                      <span class="user-id">ID {{ record.origin_user_id }}</span>
+                      <span class="user-id"
+                        >ID {{ record.origin_user_id }}</span
+                      >
                     </div>
-                    <Icon icon="carbon:arrow-right" style="margin: 0 8px;" />
+                    <Icon icon="carbon:arrow-right" style="margin: 0 8px" />
                     <div class="user-item">
                       <span class="label">实际值班:</span>
-                      <span class="user-id">ID {{ record.on_duty_user_id }}</span>
+                      <span class="user-id"
+                        >ID {{ record.on_duty_user_id }}</span
+                      >
                     </div>
-                    <a-tag v-if="record.origin_user_id !== record.on_duty_user_id" color="orange" size="small" class="changed-tag">
+                    <a-tag
+                      v-if="record.origin_user_id !== record.on_duty_user_id"
+                      color="orange"
+                      size="small"
+                      class="changed-tag"
+                    >
                       已调班
                     </a-tag>
                   </div>
                 </template>
                 <template v-if="column.key === 'created_at'">
                   <div class="date-info">
-                    <span class="date">{{ formatDate(record.created_at) }}</span>
-                    <span class="time">{{ formatTime(record.created_at) }}</span>
+                    <span class="date">{{
+                      formatDate(record.created_at)
+                    }}</span>
+                    <span class="time">{{
+                      formatTime(record.created_at)
+                    }}</span>
                   </div>
                 </template>
               </template>
@@ -650,7 +816,9 @@
                 <div class="empty-state table-empty">
                   <Icon icon="carbon:time" class="empty-icon" />
                   <div class="empty-title">暂无值班历史</div>
-                  <div class="empty-description">该值班组尚未有值班历史记录</div>
+                  <div class="empty-description">
+                    该值班组尚未有值班历史记录
+                  </div>
                 </div>
               </template>
             </a-table>
@@ -659,11 +827,13 @@
           <div class="detail-footer">
             <div class="footer-left">
               <a-button @click="closeHistoryDialog">关闭</a-button>
-              <a-button type="primary" @click="exportHistory">导出历史</a-button>
+              <a-button type="primary" @click="exportHistory">
+                导出历史
+              </a-button>
             </div>
             <div class="footer-right">
-              <a-pagination 
-                v-model:current="historyPaginationConfig.current" 
+              <a-pagination
+                v-model:current="historyPaginationConfig.current"
                 :total="historyPaginationConfig.total"
                 :pageSize="historyPaginationConfig.pageSize"
                 :showTotal="historyPaginationConfig.showTotal"
@@ -682,12 +852,12 @@
     </a-modal>
 
     <!-- 调班记录对话框 -->
-    <a-modal 
-      :open="changeDialogVisible" 
-      title="调班记录" 
-      :width="previewDialogWidth" 
+    <a-modal
+      :open="changeDialogVisible"
+      title="调班记录"
+      :width="previewDialogWidth"
       :footer="null"
-      @cancel="closeChangeDialog" 
+      @cancel="closeChangeDialog"
       class="detail-dialog change-dialog"
     >
       <a-spin :spinning="changeDialog.loading">
@@ -699,11 +869,11 @@
             </a-button>
           </div>
 
-          <a-table 
-            :data-source="changeDialog.data" 
-            :columns="changeColumns" 
+          <a-table
+            :data-source="changeDialog.data"
+            :columns="changeColumns"
             :pagination="changePaginationConfig"
-            :loading="changeDialog.loading" 
+            :loading="changeDialog.loading"
             row-key="id"
             size="small"
             @change="handleChangeTableChange"
@@ -715,7 +885,9 @@
               <template v-if="column.key === 'date'">
                 <div class="date-info">
                   <span class="date">{{ record.date }}</span>
-                  <span class="weekday">{{ formatPlanWeekday(record.date) }}</span>
+                  <span class="weekday">{{
+                    formatPlanWeekday(record.date)
+                  }}</span>
                 </div>
               </template>
               <template v-if="column.key === 'users'">
@@ -724,7 +896,7 @@
                     <span class="label">原值班:</span>
                     <span class="user-id">ID {{ record.origin_user_id }}</span>
                   </div>
-                  <Icon icon="carbon:arrow-right" style="margin: 0 8px;" />
+                  <Icon icon="carbon:arrow-right" style="margin: 0 8px" />
                   <div class="user-item">
                     <span class="label">调班后:</span>
                     <span class="user-id">ID {{ record.on_duty_user_id }}</span>
@@ -736,13 +908,19 @@
               </template>
               <template v-if="column.key === 'creator'">
                 <div class="creator-info">
-                  <a-avatar 
-                    size="small" 
-                    :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
+                  <a-avatar
+                    size="small"
+                    :style="{
+                      backgroundColor: getAvatarColor(
+                        record.create_user_name || '',
+                      ),
+                    }"
                   >
                     {{ getInitials(record.create_user_name || '') }}
                   </a-avatar>
-                  <span class="creator-name">{{ record.create_user_name || '未知' }}</span>
+                  <span class="creator-name">{{
+                    record.create_user_name || '未知'
+                  }}</span>
                 </div>
               </template>
               <template v-if="column.key === 'created_at'">
@@ -763,9 +941,9 @@
 
           <div class="detail-footer">
             <a-button @click="closeChangeDialog">关闭</a-button>
-            <a-button 
-              v-if="changePaginationConfig.total > changeDialog.data.length" 
-              type="primary" 
+            <a-button
+              v-if="changePaginationConfig.total > changeDialog.data.length"
+              type="primary"
               @click="loadMoreChangeRecords"
               :loading="changeDialog.loading"
             >
@@ -777,57 +955,62 @@
     </a-modal>
 
     <!-- 新增调班记录模态框 -->
-    <a-modal 
-      :open="isCreateChangeModalVisible" 
-      title="新增调班记录" 
-      :width="formDialogWidth" 
-      @ok="handleCreateChange" 
+    <a-modal
+      :open="isCreateChangeModalVisible"
+      title="新增调班记录"
+      :width="formDialogWidth"
+      @ok="handleCreateChange"
       @cancel="closeCreateChangeModal"
-      :destroy-on-close="true" 
+      :destroy-on-close="true"
       class="responsive-modal"
       :confirmLoading="loading"
     >
-      <a-form ref="createChangeFormRef" :model="createChangeForm" :rules="changeFormRules" layout="vertical">
+      <a-form
+        ref="createChangeFormRef"
+        :model="createChangeForm"
+        :rules="changeFormRules"
+        layout="vertical"
+      >
         <a-form-item label="调班日期" name="date">
-          <a-date-picker 
-            v-model:value="createChangeForm.date" 
-            placeholder="请选择调班日期" 
+          <a-date-picker
+            v-model:value="createChangeForm.date"
+            placeholder="请选择调班日期"
             style="width: 100%"
             @change="handleChangeDateSelect"
           />
         </a-form-item>
         <a-form-item label="原值班人员" name="origin_user_id">
-          <a-select 
-            v-model:value="createChangeForm.origin_user_id" 
-            placeholder="请选择原值班人员" 
+          <a-select
+            v-model:value="createChangeForm.origin_user_id"
+            placeholder="请选择原值班人员"
             style="width: 100%"
-            :options="changeUserOptions" 
+            :options="changeUserOptions"
             :loading="changeUsersLoading"
-            @popupScroll="handleChangeUserSelectScroll" 
-            @search="handleChangeUserSearch" 
+            @popupScroll="handleChangeUserSelectScroll"
+            @search="handleChangeUserSearch"
             show-search
             :filter-option="false"
             allow-clear
           />
         </a-form-item>
         <a-form-item label="调班后人员" name="on_duty_user_id">
-          <a-select 
-            v-model:value="createChangeForm.on_duty_user_id" 
-            placeholder="请选择调班后人员" 
+          <a-select
+            v-model:value="createChangeForm.on_duty_user_id"
+            placeholder="请选择调班后人员"
             style="width: 100%"
-            :options="changeUserOptions" 
+            :options="changeUserOptions"
             :loading="changeUsersLoading"
-            @popupScroll="handleChangeUserSelectScroll" 
-            @search="handleChangeUserSearch" 
+            @popupScroll="handleChangeUserSelectScroll"
+            @search="handleChangeUserSearch"
             show-search
             :filter-option="false"
             allow-clear
           />
         </a-form-item>
         <a-form-item label="调班原因" name="reason">
-          <a-textarea 
-            v-model:value="createChangeForm.reason" 
-            placeholder="请输入调班原因（可选）" 
+          <a-textarea
+            v-model:value="createChangeForm.reason"
+            placeholder="请输入调班原因（可选）"
             :rows="3"
           />
         </a-form-item>
@@ -859,7 +1042,6 @@ import {
   type MonitorOnDutyHistory,
   type MonitorOnDutyChange,
   type CreateMonitorOnDutyGroupChangeReq,
-
   type GetMonitorOnDutyGroupListReq,
 } from '#/api/core/prometheus/prometheus_onduty';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -901,11 +1083,27 @@ const columns = [
   { title: '值班组名称', dataIndex: 'name', key: 'name', width: 200 },
   { title: '值班信息', dataIndex: 'shift_info', key: 'shift_info', width: 150 },
   { title: '成员列表', dataIndex: 'users', key: 'users', width: 200 },
-  { title: '值班状态', dataIndex: 'duty_status', key: 'duty_status', width: 200 },
+  {
+    title: '值班状态',
+    dataIndex: 'duty_status',
+    key: 'duty_status',
+    width: 200,
+  },
   { title: '启用状态', dataIndex: 'enable', key: 'enable', width: 100 },
-  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
+  {
+    title: '创建人',
+    dataIndex: 'create_user_name',
+    key: 'creator',
+    width: 120,
+  },
   { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'action', width: 240, align: 'center' as const, fixed: 'right' }
+  {
+    title: '操作',
+    key: 'action',
+    width: 240,
+    align: 'center' as const,
+    fixed: 'right',
+  },
 ];
 
 // 调班记录列定义
@@ -914,8 +1112,13 @@ const changeColumns = [
   { title: '日期', dataIndex: 'date', key: 'date', width: 120 },
   { title: '人员变更', dataIndex: 'users', key: 'users', width: 250 },
   { title: '调班原因', dataIndex: 'reason', key: 'reason', width: 200 },
-  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 150 },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 }
+  {
+    title: '创建人',
+    dataIndex: 'create_user_name',
+    key: 'creator',
+    width: 150,
+  },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
 ];
 
 // 值班历史列定义
@@ -923,7 +1126,7 @@ const historyColumns = [
   { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
   { title: '日期', dataIndex: 'date_string', key: 'date', width: 120 },
   { title: '人员信息', dataIndex: 'users', key: 'users', width: 300 },
-  { title: '记录时间', dataIndex: 'created_at', key: 'created_at', width: 180 }
+  { title: '记录时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
 ];
 
 // 状态数据
@@ -938,7 +1141,9 @@ const createChangeFormRef = ref();
 
 // 防抖处理
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-onBeforeUnmount(() => { if (searchTimeout) clearTimeout(searchTimeout); });
+onBeforeUnmount(() => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+});
 
 // 分页配置
 const paginationConfig = reactive({
@@ -948,11 +1153,11 @@ const paginationConfig = reactive({
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
-  size: 'default' as const
+  size: 'default' as const,
 });
 
 // 用户选择相关状态
-const userOptions = ref<{ value: number, label: string }[]>([]);
+const userOptions = ref<{ value: number; label: string }[]>([]);
 const usersLoading = ref(false);
 const userSearchText = ref('');
 
@@ -961,14 +1166,14 @@ const userPaginationConfig = reactive({
   current: 1,
   pageSize: 20,
   total: 0,
-  hasMore: true
+  hasMore: true,
 });
 
 // 用户数据缓存
 const userCache = ref<Map<number, string>>(new Map());
 
 // 计划用户选择相关状态
-const planUserOptions = ref<{ value: string, label: string }[]>([]);
+const planUserOptions = ref<{ value: string; label: string }[]>([]);
 
 // 排班计划分页配置
 const planPaginationConfig = reactive({
@@ -984,7 +1189,7 @@ const stats = reactive({
   total: 0,
   activeusers: 0,
   avgShiftDays: 0,
-  todayOnDuty: 0
+  todayOnDuty: 0,
 });
 
 // 对话框状态
@@ -1001,7 +1206,7 @@ const addForm = reactive<CreateMonitorOnDutyGroupReq>({
   name: '',
   user_ids: [],
   shift_days: 7,
-  description: ''
+  description: '',
 });
 
 const editForm = reactive<UpdateMonitorOnDutyGroupReq>({
@@ -1010,7 +1215,7 @@ const editForm = reactive<UpdateMonitorOnDutyGroupReq>({
   shift_days: 7,
   user_ids: [],
   description: '',
-  enable: 1
+  enable: 1,
 });
 
 const createChangeForm = reactive<{
@@ -1024,17 +1229,17 @@ const createChangeForm = reactive<{
   date: null,
   origin_user_id: null,
   on_duty_user_id: null,
-  reason: ''
+  reason: '',
 });
 
 // 调班记录用户选择相关状态
-const changeUserOptions = ref<{ value: number, label: string }[]>([]);
+const changeUserOptions = ref<{ value: number; label: string }[]>([]);
 const changeUsersLoading = ref(false);
 const changeUserSearchText = ref('');
 
 // 详情对话框数据
 const detailDialog = reactive({
-  data: null as MonitorOnDutyGroup | null
+  data: null as MonitorOnDutyGroup | null,
 });
 
 // 未来排班计划对话框数据
@@ -1044,7 +1249,7 @@ const futurePlanDialog = reactive({
   groupName: '',
   shiftDays: 0,
   availableUsers: [] as string[],
-  loading: false
+  loading: false,
 });
 
 // 值班历史对话框数据
@@ -1052,7 +1257,7 @@ const historyDialog = reactive({
   data: [] as MonitorOnDutyHistory[],
   groupId: 0,
   groupName: '',
-  loading: false
+  loading: false,
 });
 
 // 值班历史分页配置
@@ -1062,7 +1267,7 @@ const historyPaginationConfig = reactive({
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条记录`
+  showTotal: (total: number) => `共 ${total} 条记录`,
 });
 
 // 调班记录对话框数据
@@ -1070,7 +1275,7 @@ const changeDialog = reactive({
   data: [] as MonitorOnDutyChange[],
   groupId: 0,
   groupName: '',
-  loading: false
+  loading: false,
 });
 
 // 调班记录分页配置
@@ -1080,7 +1285,7 @@ const changePaginationConfig = reactive({
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条记录`
+  showTotal: (total: number) => `共 ${total} 条记录`,
 });
 
 // 排班计划筛选
@@ -1094,26 +1299,22 @@ const historyDateRange = ref<[Dayjs, Dayjs] | null>(null);
 const formRules = {
   name: [
     { required: true, message: '请输入值班组名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度应为2到50个字符', trigger: 'blur' }
+    { min: 2, max: 50, message: '长度应为2到50个字符', trigger: 'blur' },
   ],
-  shift_days: [
-    { required: true, message: '请输入轮班周期', trigger: 'blur' }
-  ],
+  shift_days: [{ required: true, message: '请输入轮班周期', trigger: 'blur' }],
   user_ids: [
-    { required: true, message: '请选择至少一个值班成员', trigger: 'change' }
-  ]
+    { required: true, message: '请选择至少一个值班成员', trigger: 'change' },
+  ],
 };
 
 const changeFormRules = {
-  date: [
-    { required: true, message: '请选择调班日期', trigger: 'change' }
-  ],
+  date: [{ required: true, message: '请选择调班日期', trigger: 'change' }],
   origin_user_id: [
-    { required: true, message: '请选择原值班人员', trigger: 'change' }
+    { required: true, message: '请选择原值班人员', trigger: 'change' },
   ],
   on_duty_user_id: [
-    { required: true, message: '请选择调班后人员', trigger: 'change' }
-  ]
+    { required: true, message: '请选择调班后人员', trigger: 'change' },
+  ],
 };
 
 // 计算属性 - 筛选后的未来排班
@@ -1130,20 +1331,32 @@ const filteredFuturePlans = computed(() => {
 
   // 按用户筛选
   if (planUserFilter.value) {
-    plans = plans.filter((plan: any) => plan.user?.username === planUserFilter.value);
+    plans = plans.filter(
+      (plan: any) => plan.user?.username === planUserFilter.value,
+    );
   }
 
   // 更新计划分页总数
   planPaginationConfig.total = plans.length;
 
   // 应用分页
-  const startIndex = (planPaginationConfig.current - 1) * planPaginationConfig.pageSize;
+  const startIndex =
+    (planPaginationConfig.current - 1) * planPaginationConfig.pageSize;
   const endIndex = startIndex + planPaginationConfig.pageSize;
   return plans.slice(startIndex, endIndex);
 });
 
 const getAvatarColor = (name: string): string => {
-  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
+  const colors = [
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
+  ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -1159,21 +1372,24 @@ const getInitials = (name: string): string => {
 const formatDate = (timestamp: string | number): string => {
   if (!timestamp) return '';
   // 如果是字符串，直接解析；如果是数字，按Unix时间戳处理
-  const date = typeof timestamp === 'string' ? dayjs(timestamp) : dayjs(timestamp * 1000);
+  const date =
+    typeof timestamp === 'string' ? dayjs(timestamp) : dayjs(timestamp * 1000);
   return date.format('YYYY-MM-DD');
 };
 
 const formatTime = (timestamp: string | number): string => {
   if (!timestamp) return '';
   // 如果是字符串，直接解析；如果是数字，按Unix时间戳处理
-  const date = typeof timestamp === 'string' ? dayjs(timestamp) : dayjs(timestamp * 1000);
+  const date =
+    typeof timestamp === 'string' ? dayjs(timestamp) : dayjs(timestamp * 1000);
   return date.format('HH:mm');
 };
 
 const formatFullDateTime = (timestamp: string | number): string => {
   if (!timestamp) return '';
   // 如果是字符串，直接解析；如果是数字，按Unix时间戳处理
-  const date = typeof timestamp === 'string' ? dayjs(timestamp) : dayjs(timestamp * 1000);
+  const date =
+    typeof timestamp === 'string' ? dayjs(timestamp) : dayjs(timestamp * 1000);
   return date.format('YYYY-MM-DD HH:mm:ss');
 };
 
@@ -1214,9 +1430,17 @@ const updateStats = (): void => {
   stats.total = paginationConfig.total;
 
   if (data.value.length > 0) {
-    const currentPageActiveusers = data.value.reduce((total, item) => total + (item.users?.length || 0), 0);
-    const currentPageAvgShiftDays = Math.round(data.value.reduce((sum, item) => sum + item.shift_days, 0) / data.value.length);
-    const currentPageTodayOnDuty = data.value.filter(item => item.today_duty_user).length;
+    const currentPageActiveusers = data.value.reduce(
+      (total, item) => total + (item.users?.length || 0),
+      0,
+    );
+    const currentPageAvgShiftDays = Math.round(
+      data.value.reduce((sum, item) => sum + item.shift_days, 0) /
+        data.value.length,
+    );
+    const currentPageTodayOnDuty = data.value.filter(
+      (item) => item.today_duty_user,
+    ).length;
 
     stats.activeusers = currentPageActiveusers;
     stats.avgShiftDays = currentPageAvgShiftDays;
@@ -1232,7 +1456,6 @@ const updateStats = (): void => {
 const fetchOnDutyGroups = async (): Promise<void> => {
   const request = beginRequest();
   try {
-
     const params: GetMonitorOnDutyGroupListReq = {
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
@@ -1281,7 +1504,8 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
 
     const newOptions = items.map((user: any) => {
       const userId = user.id || user.userId || user.user_id;
-      const userName = user.real_name || user.username || user.realName || `用户${userId}`;
+      const userName =
+        user.real_name || user.username || user.realName || `用户${userId}`;
 
       // 缓存用户信息
       userCache.value.set(userId, userName);
@@ -1295,7 +1519,7 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
     if (page === 1) {
       userOptions.value = newOptions;
     } else {
-      const existingIds = new Set(userOptions.value.map(opt => opt.value));
+      const existingIds = new Set(userOptions.value.map((opt) => opt.value));
       userOptions.value = [
         ...userOptions.value,
         ...newOptions.filter((opt: any) => !existingIds.has(opt.value)),
@@ -1305,8 +1529,8 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
     userPaginationConfig.total = total;
     userPaginationConfig.hasMore = page * userPaginationConfig.pageSize < total;
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取用户列表失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取用户列表失败');
   } finally {
     usersLoading.value = false;
   }
@@ -1360,15 +1584,21 @@ const fetchOnDutyGroupDetail = async (id: number): Promise<void> => {
       message.error('获取值班组详情失败');
     }
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取值班组详情失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取值班组详情失败');
   }
 };
 
 // 获取未来排班计划
 
 // 获取值班历史
-const fetchOnDutyHistory = async (id: number, startDate?: string, endDate?: string, page = 1, append = false): Promise<void> => {
+const fetchOnDutyHistory = async (
+  id: number,
+  startDate?: string,
+  endDate?: string,
+  page = 1,
+  append = false,
+): Promise<void> => {
   try {
     historyDialog.loading = true;
 
@@ -1380,7 +1610,7 @@ const fetchOnDutyHistory = async (id: number, startDate?: string, endDate?: stri
       size?: number;
     } = {
       page,
-      size: historyPaginationConfig.pageSize
+      size: historyPaginationConfig.pageSize,
     };
 
     if (startDate) apiParams.start_date = startDate;
@@ -1406,8 +1636,8 @@ const fetchOnDutyHistory = async (id: number, startDate?: string, endDate?: stri
       }
     }
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取值班历史失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取值班历史失败');
     if (!append) {
       historyDialog.data = [];
     }
@@ -1422,10 +1652,13 @@ const fetchChangeRecords = async (page = 1, append = false): Promise<void> => {
   try {
     changeDialog.loading = true;
 
-    const response = await getMonitorOnDutyGroupChangeListApi(changeDialog.groupId, {
-      page,
-      size: changePaginationConfig.pageSize
-    });
+    const response = await getMonitorOnDutyGroupChangeListApi(
+      changeDialog.groupId,
+      {
+        page,
+        size: changePaginationConfig.pageSize,
+      },
+    );
 
     if (response && response.items) {
       if (append) {
@@ -1444,8 +1677,8 @@ const fetchChangeRecords = async (page = 1, append = false): Promise<void> => {
       }
     }
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取调班记录失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取调班记录失败');
     if (!append) {
       changeDialog.data = [];
     }
@@ -1495,16 +1728,19 @@ const handleReset = (): void => {
   fetchOnDutyGroups();
 };
 
-const handleEnableChange = async (record: MonitorOnDutyGroup & { statusLoading?: boolean }, checked: boolean): Promise<void> => {
+const handleEnableChange = async (
+  record: MonitorOnDutyGroup & { statusLoading?: boolean },
+  checked: boolean,
+): Promise<void> => {
   try {
     record.statusLoading = true;
 
     // 如果users为空，尝试从data.value中找
-    let userIds = record.users?.map(user => user.id);
+    let userIds = record.users?.map((user) => user.id);
     if (!userIds || userIds.length === 0) {
-      const found = data.value.find(item => item.id === record.id);
+      const found = data.value.find((item) => item.id === record.id);
       if (found && found.users && found.users.length > 0) {
-        userIds = found.users.map(user => user.id);
+        userIds = found.users.map((user) => user.id);
       }
     }
 
@@ -1514,7 +1750,7 @@ const handleEnableChange = async (record: MonitorOnDutyGroup & { statusLoading?:
       shift_days: record.shift_days,
       user_ids: userIds,
       enable: checked ? 1 : 2,
-      description: record.description
+      description: record.description,
     };
 
     const response = await updateMonitorOnDutyGroupApi(payload);
@@ -1526,8 +1762,8 @@ const handleEnableChange = async (record: MonitorOnDutyGroup & { statusLoading?:
       message.error(`${checked ? '启用' : '禁用'}值班组失败`);
     }
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '更新值班组状态失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '更新值班组状态失败');
   } finally {
     if (record) {
       record.statusLoading = false;
@@ -1542,10 +1778,12 @@ const handleViewDetail = async (record: MonitorOnDutyGroup): Promise<void> => {
 };
 
 // 查看未来排班计划
-const handleViewFuturePlan = async (record: MonitorOnDutyGroup): Promise<void> => {
+const handleViewFuturePlan = async (
+  record: MonitorOnDutyGroup,
+): Promise<void> => {
   router.push({
     path: '/monitor_onduty_group_table',
-    query: { id: record.id.toString() }
+    query: { id: record.id.toString() },
   });
 };
 
@@ -1563,7 +1801,7 @@ const handleViewFuturePlanFromDetail = async (): Promise<void> => {
   if (detailDialog.data) {
     router.push({
       path: '/monitor_onduty_group_table',
-      query: { id: detailDialog.data.id.toString() }
+      query: { id: detailDialog.data.id.toString() },
     });
   }
 };
@@ -1604,7 +1842,10 @@ const resetPlanFilters = (): void => {
 };
 
 // 处理排班计划分页变化
-const handlePlanPaginationChange = (current: number, pageSize: number): void => {
+const handlePlanPaginationChange = (
+  current: number,
+  pageSize: number,
+): void => {
   planPaginationConfig.current = current;
   planPaginationConfig.pageSize = pageSize;
 };
@@ -1632,8 +1873,12 @@ const resetHistoryFilters = (): void => {
 // 处理历史分页页码变化
 const handleHistoryPageChange = (page: number): void => {
   historyPaginationConfig.current = page;
-  const startDate = historyDateRange.value ? historyDateRange.value[0].format('YYYY-MM-DD') : undefined;
-  const endDate = historyDateRange.value ? historyDateRange.value[1].format('YYYY-MM-DD') : undefined;
+  const startDate = historyDateRange.value
+    ? historyDateRange.value[0].format('YYYY-MM-DD')
+    : undefined;
+  const endDate = historyDateRange.value
+    ? historyDateRange.value[1].format('YYYY-MM-DD')
+    : undefined;
   fetchOnDutyHistory(historyDialog.groupId, startDate, endDate, page);
 };
 
@@ -1644,15 +1889,19 @@ const exportPlan = (): void => {
   const headers = ['日期', '星期', '值班人员', '值班类型'];
   const csvContent = [
     headers.join(','),
-    ...filteredFuturePlans.value.map((plan: any) => [
-      plan.date,
-      formatPlanWeekday(plan.date || ''),
-      plan.user?.username || '未指定',
-      '正常值班'
-    ].join(','))
+    ...filteredFuturePlans.value.map((plan: any) =>
+      [
+        plan.date,
+        formatPlanWeekday(plan.date || ''),
+        plan.user?.username || '未指定',
+        '正常值班',
+      ].join(','),
+    ),
   ].join('\n');
 
-  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\ufeff' + csvContent], {
+    type: 'text/csv;charset=utf-8;',
+  });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = `${futurePlanDialog.groupName}_排班计划_${dayjs().format('YYYY-MM-DD')}.csv`;
@@ -1675,7 +1924,7 @@ const exportHistory = async (): Promise<void> => {
       end_date?: string;
       size?: number;
     } = {
-      size: 1000 // 设置较大的size以获取尽可能多的记录
+      size: 1000, // 设置较大的size以获取尽可能多的记录
     };
 
     // 如果有日期范围筛选，添加到参数中
@@ -1684,22 +1933,29 @@ const exportHistory = async (): Promise<void> => {
       apiParams.end_date = historyDateRange.value[1].format('YYYY-MM-DD');
     }
 
-    const response = await getMonitorOnDutyHistoryApi(historyDialog.groupId, apiParams);
+    const response = await getMonitorOnDutyHistoryApi(
+      historyDialog.groupId,
+      apiParams,
+    );
     const exportData = response?.items || historyDialog.data;
 
     const headers = ['日期', '星期', '值班人员ID', '原值班人员ID', '创建时间'];
     const csvContent = [
       headers.join(','),
-      ...exportData.map((history: MonitorOnDutyHistory) => [
-        history.date_string,
-        formatPlanWeekday(history.date_string),
-        history.on_duty_user_id,
-        history.origin_user_id,
-        formatFullDateTime(history.created_at)
-      ].join(','))
+      ...exportData.map((history: MonitorOnDutyHistory) =>
+        [
+          history.date_string,
+          formatPlanWeekday(history.date_string),
+          history.on_duty_user_id,
+          history.origin_user_id,
+          formatFullDateTime(history.created_at),
+        ].join(','),
+      ),
     ].join('\n');
 
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\ufeff' + csvContent], {
+      type: 'text/csv;charset=utf-8;',
+    });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `${historyDialog.groupName}_值班历史_${dayjs().format('YYYY-MM-DD')}.csv`;
@@ -1707,8 +1963,8 @@ const exportHistory = async (): Promise<void> => {
 
     message.success(`值班历史已导出 (${exportData.length}条记录)`);
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '导出值班历史失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '导出值班历史失败');
   } finally {
     historyDialog.loading = false;
   }
@@ -1742,7 +1998,7 @@ const showEditModal = (record: MonitorOnDutyGroup): void => {
   editForm.id = record.id;
   editForm.name = record.name;
   editForm.shift_days = record.shift_days;
-  editForm.user_ids = record.users?.map(user => user.id) || [];
+  editForm.user_ids = record.users?.map((user) => user.id) || [];
   editForm.description = record.description || '';
   editForm.enable = record.enable;
 
@@ -1750,12 +2006,14 @@ const showEditModal = (record: MonitorOnDutyGroup): void => {
   userPaginationConfig.current = 1;
   fetchUserList(1).then(() => {
     if (record.users && record.users.length > 0) {
-      record.users.forEach(user => {
-        const exists = userOptions.value.some(option => option.value === user.id);
+      record.users.forEach((user) => {
+        const exists = userOptions.value.some(
+          (option) => option.value === user.id,
+        );
         if (!exists) {
           userOptions.value.unshift({
             value: user.id,
-            label: user.username
+            label: user.username,
           });
         }
       });
@@ -1827,7 +2085,7 @@ const handleAdd = async (): Promise<void> => {
       name: addForm.name.trim(),
       user_ids: addForm.user_ids,
       shift_days: addForm.shift_days,
-      description: addForm.description?.trim()
+      description: addForm.description?.trim(),
     };
 
     const response = await createMonitorOnDutyGroupApi(payload);
@@ -1841,8 +2099,8 @@ const handleAdd = async (): Promise<void> => {
       message.error('新增值班组失败');
     }
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '新增值班组失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '新增值班组失败');
   } finally {
     loading.value = false;
   }
@@ -1859,7 +2117,7 @@ const handleUpdate = async (): Promise<void> => {
       shift_days: editForm.shift_days,
       user_ids: editForm.user_ids,
       description: editForm.description?.trim(),
-      enable: editForm.enable
+      enable: editForm.enable,
     };
 
     const response = await updateMonitorOnDutyGroupApi(payload);
@@ -1872,8 +2130,8 @@ const handleUpdate = async (): Promise<void> => {
       message.error('更新值班组失败');
     }
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '更新值班组失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '更新值班组失败');
   } finally {
     loading.value = false;
   }
@@ -1889,7 +2147,7 @@ const handleCreateChange = async (): Promise<void> => {
       date: createChangeForm.date!.format('YYYY-MM-DD'),
       origin_user_id: createChangeForm.origin_user_id!,
       on_duty_user_id: createChangeForm.on_duty_user_id!,
-      reason: createChangeForm.reason?.trim()
+      reason: createChangeForm.reason?.trim(),
     };
 
     const response = await createMonitorOnDutyGroupChangeApi(payload);
@@ -1905,8 +2163,8 @@ const handleCreateChange = async (): Promise<void> => {
       message.error('创建调班记录失败');
     }
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '创建调班记录失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '创建调班记录失败');
   } finally {
     loading.value = false;
   }
@@ -1915,7 +2173,9 @@ const handleCreateChange = async (): Promise<void> => {
 // 加载更多调班记录
 const loadMoreChangeRecords = async (): Promise<void> => {
   if (changePaginationConfig.total > changeDialog.data.length) {
-    const nextPage = Math.floor(changeDialog.data.length / changePaginationConfig.pageSize) + 1;
+    const nextPage =
+      Math.floor(changeDialog.data.length / changePaginationConfig.pageSize) +
+      1;
     await fetchChangeRecords(nextPage, true);
   }
 };
@@ -1925,24 +2185,28 @@ const loadMoreChangeRecords = async (): Promise<void> => {
 const handleCreatePlanFromDialog = (): void => {
   router.push({
     path: '/monitor_onduty_group_table',
-    query: { id: futurePlanDialog.groupId.toString() }
+    query: { id: futurePlanDialog.groupId.toString() },
   });
 };
 
 const handleMenuClick = (command: string, record: MonitorOnDutyGroup): void => {
   switch (command) {
-    case 'edit':
+    case 'edit': {
       showEditModal(record);
       break;
-    case 'history':
+    }
+    case 'history': {
       handleViewHistory(record);
       break;
-    case 'change':
+    }
+    case 'change': {
       handleViewChange(record);
       break;
-    case 'delete':
+    }
+    case 'delete': {
       confirmDelete(record);
       break;
+    }
   }
 };
 
@@ -1956,8 +2220,8 @@ const handleViewChange = async (record: MonitorOnDutyGroup): Promise<void> => {
     await fetchChangeRecords(1);
     changeDialogVisible.value = true;
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取调班记录失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取调班记录失败');
     changeDialog.data = [];
   } finally {
     changeDialog.loading = false;
@@ -1987,10 +2251,10 @@ const confirmDelete = (record: MonitorOnDutyGroup): void => {
           message.error('删除值班组失败');
         }
       } catch (error: any) {
-
-        if (shouldNotifyPageError(error)) message.error(error.message || '删除值班组失败');
+        if (shouldNotifyPageError(error))
+          message.error(error.message || '删除值班组失败');
       }
-    }
+    },
   });
 };
 
@@ -1999,10 +2263,7 @@ onMounted(async () => {
   paginationConfig.current = 1;
   paginationConfig.pageSize = 10;
 
-  await Promise.all([
-    fetchOnDutyGroups(),
-    fetchUserList(1)
-  ]);
+  await Promise.all([fetchOnDutyGroups(), fetchUserList(1)]);
 });
 
 // 处理调班日期选择
@@ -2013,14 +2274,19 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
     // 如果当前有未来排班计划数据，从中查找
     if (futurePlanDialog.data?.details) {
-      const planDetail = futurePlanDialog.data.details.find((item: any) => item.date === dateStr);
+      const planDetail = futurePlanDialog.data.details.find(
+        (item: any) => item.date === dateStr,
+      );
       if (planDetail && planDetail.user) {
         createChangeForm.origin_user_id = planDetail.user.id;
       }
     }
 
     // 如果没有找到，尝试从值班组详情中获取今日值班人作为默认值
-    if (!createChangeForm.origin_user_id && detailDialog.data?.today_duty_user) {
+    if (
+      !createChangeForm.origin_user_id &&
+      detailDialog.data?.today_duty_user
+    ) {
       createChangeForm.origin_user_id = detailDialog.data.today_duty_user.id;
     }
   }
@@ -2028,11 +2294,6 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 </script>
 
 <style scoped>
-
-
-
-
-
 .search-input {
   width: 250px;
   min-width: 200px;
@@ -2426,15 +2687,10 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-
-
-
   .search-input {
     width: calc(100% - 140px);
     min-width: auto;
   }
-
-
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
@@ -2492,7 +2748,6 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 }
 
 @media (max-width: 480px) {
-
   .stats-card {
     text-align: center;
   }

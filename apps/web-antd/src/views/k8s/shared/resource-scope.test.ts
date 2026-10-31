@@ -11,6 +11,7 @@ import { usePVPage } from '../pv/PV';
 import { useClusterRoleBindingPage } from '../clusterrolebinding/ClusterRoleBinding';
 import { useTaskPage } from '../task/Task';
 import { useTemplatePage } from '../template/Template';
+
 const client = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('ant-design-vue', () => ({
@@ -279,9 +280,13 @@ describe('YAML 模板目录隔离', () => {
   });
 });
 
-
 it('YAML 任务名称搜索按真实 name 参数发送', async () => {
-  const state = useTaskPage(); state.filterClusterId.value = 1; state.searchText.value = 'task-name';
-  client.get.mockResolvedValue({ items: [], total: 0 }); await state.fetchTasks();
-  expect(client.get).toHaveBeenLastCalledWith('/k8s/yaml_task/1/list', { params: expect.objectContaining({ name: 'task-name' }) });
+  const state = useTaskPage();
+  state.filterClusterId.value = 1;
+  state.searchText.value = 'task-name';
+  client.get.mockResolvedValue({ items: [], total: 0 });
+  await state.fetchTasks();
+  expect(client.get).toHaveBeenLastCalledWith('/k8s/yaml_task/1/list', {
+    params: expect.objectContaining({ name: 'task-name' }),
+  });
 });

@@ -3,8 +3,9 @@
     title="表单设计"
     description="配置字段并校验预览，保存为草稿、已发布表单或模板"
     class="dynamic-form-container"
-    ><template #actions
-      ><template v-if="showDesigner">
+  >
+    <template #actions>
+      <template v-if="showDesigner">
         <a-space>
           <a-button
             @click="saveFormDesign"
@@ -44,8 +45,8 @@
             校验预览
           </a-button>
         </a-space>
-      </template></template
-    >
+      </template>
+    </template>
     <a-alert
       v-if="saveError"
       :message="saveError"
@@ -92,8 +93,9 @@
                       formMeta.category_id = undefined;
                       selectedCategory = null;
                     "
-                    >清除分类</a-button
                   >
+                    清除分类
+                  </a-button>
                 </a-form-item>
               </a-col>
               <a-col :span="24" :md="8">
@@ -105,15 +107,15 @@
                     :disabled="saving"
                     class="config-input"
                   >
-                    <a-select-option :value="FormDesignStatus.Draft"
-                      >草稿</a-select-option
-                    >
-                    <a-select-option :value="FormDesignStatus.Published"
-                      >已发布</a-select-option
-                    >
-                    <a-select-option :value="FormDesignStatus.Archived"
-                      >已归档</a-select-option
-                    >
+                    <a-select-option :value="FormDesignStatus.Draft">
+                      草稿
+                    </a-select-option>
+                    <a-select-option :value="FormDesignStatus.Published">
+                      已发布
+                    </a-select-option>
+                    <a-select-option :value="FormDesignStatus.Archived">
+                      已归档
+                    </a-select-option>
                   </a-select>
                 </a-form-item>
               </a-col>
@@ -445,9 +447,9 @@
           type="error"
           show-icon
         >
-          <template #action
-            ><a-button @click="loadCategories()">重试</a-button></template
-          >
+          <template #action>
+            <a-button @click="loadCategories()">重试</a-button>
+          </template>
         </a-alert>
         <div class="category-list">
           <a-spin :spinning="categoryLoading">
@@ -618,7 +620,8 @@ const loadCategories = async (resetPage = false) => {
     if (ticket !== categoryRequest || !showCategoryModal.value) return;
     categories.value = [];
     categoryPagination.total = 0;
-    if (shouldRecordPageError(error)) categoryError.value = '读取分类失败，请重试';
+    if (shouldRecordPageError(error))
+      categoryError.value = '读取分类失败，请重试';
   } finally {
     if (ticket === categoryRequest) categoryLoading.value = false;
   }
@@ -730,14 +733,18 @@ const addFieldType = (type: string) => {
 // 获取默认值
 const getDefaultValue = (type: string) => {
   switch (type) {
-    case FormFieldType.Checkbox:
+    case FormFieldType.Checkbox: {
       return [];
-    case FormFieldType.Number:
+    }
+    case FormFieldType.Number: {
       return 0;
-    case FormFieldType.Switch:
+    }
+    case FormFieldType.Switch: {
       return false;
-    default:
+    }
+    default: {
       return '';
+    }
   }
 };
 
@@ -876,7 +883,8 @@ const saveFormDesign = async () => {
     if (ticket === saveRequest) message.success('表单设计保存成功');
   } catch (error) {
     if (ticket === saveRequest)
-      if (shouldRecordPageError(error)) saveError.value = '保存失败，请重试，当前设计已保留';
+      if (shouldRecordPageError(error))
+        saveError.value = '保存失败，请重试，当前设计已保留';
   } finally {
     if (ticket === saveRequest) saving.value = false;
   }
@@ -924,8 +932,7 @@ const copyJson = async () => {
     if (successful) {
       message.success('配置已复制到剪贴板');
     } else {
-      if (shouldNotifyPageError(error))
-        message.error('复制失败，请手动复制');
+      if (shouldNotifyPageError(error)) message.error('复制失败，请手动复制');
     }
   }
 };

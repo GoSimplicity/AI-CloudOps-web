@@ -186,9 +186,9 @@ onMounted(async () => {
             allow-clear
             @change="handleFilterChange"
           >
-            <template #suffixIcon
-              ><FilterOutlined aria-hidden="true"
-            /></template>
+            <template #suffixIcon>
+              <FilterOutlined aria-hidden="true" />
+            </template>
             <a-select-option :value="Env.Prod">生产环境</a-select-option>
             <a-select-option :value="Env.Dev">开发环境</a-select-option>
             <a-select-option :value="Env.Stage">预发环境</a-select-option>
@@ -203,15 +203,15 @@ onMounted(async () => {
             allow-clear
             @change="handleFilterChange"
           >
-            <template #suffixIcon
-              ><FilterOutlined aria-hidden="true"
-            /></template>
-            <a-select-option :value="ClusterStatus.Running"
-              >运行中</a-select-option
-            >
-            <a-select-option :value="ClusterStatus.Stopped"
-              >已停止</a-select-option
-            >
+            <template #suffixIcon>
+              <FilterOutlined aria-hidden="true" />
+            </template>
+            <a-select-option :value="ClusterStatus.Running">
+              运行中
+            </a-select-option>
+            <a-select-option :value="ClusterStatus.Stopped">
+              已停止
+            </a-select-option>
             <a-select-option :value="ClusterStatus.Error">异常</a-select-option>
           </a-select>
         </div>
@@ -263,9 +263,9 @@ onMounted(async () => {
 
     <!-- 数据展示区域 -->
     <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
-      <template #action
-        ><a-button size="small" @click="fetchClusters">重试</a-button></template
-      >
+      <template #action>
+        <a-button size="small" @click="fetchClusters">重试</a-button>
+      </template>
     </a-alert>
     <div class="k8s-data-display table-container">
       <a-table
@@ -380,9 +380,9 @@ onMounted(async () => {
                   "
                 >
                   <a-tag class="k8s-label-item">
-                    <template #icon
-                      ><TagOutlined aria-hidden="true"
-                    /></template>
+                    <template #icon>
+                      <TagOutlined aria-hidden="true" />
+                    </template>
                     {{ text.length }} 个标签
                   </a-tag>
                 </a-tooltip>
@@ -430,9 +430,9 @@ onMounted(async () => {
                   cancel-text="取消"
                 >
                   <a-button size="small" danger>
-                    <template #icon
-                      ><DeleteOutlined aria-hidden="true"
-                    /></template>
+                    <template #icon>
+                      <DeleteOutlined aria-hidden="true" />
+                    </template>
                   </a-button>
                 </a-popconfirm>
               </a-tooltip>
@@ -701,9 +701,9 @@ onMounted(async () => {
                   @click="removeTag(idx)"
                   class="k8s-remove-btn"
                 >
-                  <template #icon
-                    ><DeleteOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <DeleteOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </div>
             </a-form-item-rest>
@@ -761,9 +761,9 @@ onMounted(async () => {
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">环境:</span>
-                  <a-tag color="blue">{{
-                    getEnvText(currentClusterDetail.env)
-                  }}</a-tag>
+                  <a-tag color="blue">
+                    {{ getEnvText(currentClusterDetail.env) }}
+                  </a-tag>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">状态:</span>
@@ -908,13 +908,13 @@ onMounted(async () => {
                   size="small"
                   bordered
                 >
-                  <a-descriptions-item label="集群名称">{{
-                    currentClusterDetail.name
-                  }}</a-descriptions-item>
+                  <a-descriptions-item label="集群名称">
+                    {{ currentClusterDetail.name }}
+                  </a-descriptions-item>
                   <a-descriptions-item label="环境">
-                    <a-tag color="blue">{{
-                      getEnvText(currentClusterDetail.env)
-                    }}</a-tag>
+                    <a-tag color="blue">
+                      {{ getEnvText(currentClusterDetail.env) }}
+                    </a-tag>
                   </a-descriptions-item>
                   <a-descriptions-item label="状态">
                     <a-badge
@@ -928,26 +928,24 @@ onMounted(async () => {
                       :text="getStatusText(currentClusterDetail.status)"
                     />
                   </a-descriptions-item>
-                  <a-descriptions-item label="版本">{{
-                    currentClusterDetail.version || '-'
-                  }}</a-descriptions-item>
-                  <a-descriptions-item label="API Server">{{
-                    currentClusterDetail.api_server_addr || '-'
-                  }}</a-descriptions-item>
-                  <a-descriptions-item label="创建者">{{
-                    currentClusterDetail.create_user_name || '-'
-                  }}</a-descriptions-item>
-                  <a-descriptions-item label="创建时间">{{
-                    currentClusterDetail.created_at || '-'
-                  }}</a-descriptions-item>
-                  <a-descriptions-item label="更新时间">{{
-                    currentClusterDetail.updated_at || '-'
-                  }}</a-descriptions-item>
-                  <a-descriptions-item label="操作超时"
-                    >{{
-                      currentClusterDetail.action_timeout_seconds || '-'
-                    }}秒</a-descriptions-item
-                  >
+                  <a-descriptions-item label="版本">
+                    {{ currentClusterDetail.version || '-' }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="API Server">
+                    {{ currentClusterDetail.api_server_addr || '-' }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="创建者">
+                    {{ currentClusterDetail.create_user_name || '-' }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="创建时间">
+                    {{ currentClusterDetail.created_at || '-' }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="更新时间">
+                    {{ currentClusterDetail.updated_at || '-' }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="操作超时">
+                    {{ currentClusterDetail.action_timeout_seconds || '-' }}秒
+                  </a-descriptions-item>
                 </a-descriptions>
               </a-card>
             </a-col>

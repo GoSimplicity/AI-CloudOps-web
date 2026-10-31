@@ -180,39 +180,48 @@ export function useSecretPage() {
   const yamlFormModel = ref<{
     yaml: string;
   }>({
-    yaml: ''
+    yaml: '',
   });
 
   const createYamlFormModel = ref<{
     yaml: string;
   }>({
-    yaml: ''
+    yaml: '',
   });
 
   // form validation rules
   const createFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入 Secret 名称', trigger: 'blur' },
-      { pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, message: 'Secret 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', trigger: 'blur' },
-      { max: 253, message: 'Secret 名称长度不能超过253个字符', trigger: 'blur' }
+      {
+        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        message:
+          'Secret 名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        trigger: 'blur',
+      },
+      {
+        max: 253,
+        message: 'Secret 名称长度不能超过253个字符',
+        trigger: 'blur',
+      },
     ],
     namespace: [
-      { required: true, message: '请选择命名空间', trigger: 'change' }
-    ]
+      { required: true, message: '请选择命名空间', trigger: 'change' },
+    ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
-    ]
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
+    ],
   };
 
   // computed
@@ -267,30 +276,40 @@ export function useSecretPage() {
   };
 
   // 转换函数：Record<string, string> -> KeyValueList
-  const recordToKeyValueList = (record: Record<string, string> | null | undefined): KeyValueList => {
+  const recordToKeyValueList = (
+    record: Record<string, string> | null | undefined,
+  ): KeyValueList => {
     if (!record || typeof record !== 'object') {
       return [];
     }
-    return Object.entries(record).map(([key, value]: [string, string]) => ({ key, value }));
+    return Object.entries(record).map(([key, value]: [string, string]) => ({
+      key,
+      value,
+    }));
   };
 
   // 转换函数：KeyValueList 或对象 -> Record<string, string>
-  const keyValueListToRecord = (data?: KeyValueList | Record<string, string>): Record<string, string> => {
+  const keyValueListToRecord = (
+    data?: KeyValueList | Record<string, string>,
+  ): Record<string, string> => {
     if (!data) return {};
-    
+
     // 如果已经是对象格式，直接返回
     if (typeof data === 'object' && !Array.isArray(data)) {
       return data as Record<string, string>;
     }
-    
+
     // 如果是数组格式，进行转换
     if (Array.isArray(data)) {
-      return data.reduce((acc, { key, value }) => {
-        acc[key] = value;
-        return acc;
-      }, {} as Record<string, string>);
+      return data.reduce(
+        (acc, { key, value }) => {
+          acc[key] = value;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
     }
-    
+
     return {};
   };
 
@@ -363,7 +382,8 @@ export function useSecretPage() {
         clearNamespaces();
         clearSecrets();
       }
-      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err))
+        clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -410,7 +430,8 @@ export function useSecretPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldRecordPageError(err))
+        namespacesError.value = '获取命名空间列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
@@ -421,7 +442,10 @@ export function useSecretPage() {
   const fetchSecrets = async () => {
     const clusterId = filterClusterId.value;
     const namespace = filterNamespace.value;
-    if (!clusterId) { clearSecrets(); return; }
+    if (!clusterId) {
+      clearSecrets();
+      return;
+    }
     const requestId = ++resourceRequestId;
     try {
       loading.value = true;
@@ -434,30 +458,44 @@ export function useSecretPage() {
         size: pageSize.value,
         namespace: namespace,
         type: filterType.value,
-        labels: Object.keys(filterLabels.value).length > 0 
-          ? filterLabels.value 
-          : undefined,
+        labels:
+          Object.keys(filterLabels.value).length > 0
+            ? filterLabels.value
+            : undefined,
       };
       const res = await getSecretListApi(params);
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
-      
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
+
       // 确保每个secret对象都有正确的cluster_id和解析的JSON字段
-      const secretsWithClusterId = (res?.items || []).map((secret: K8sSecret) => ({
-        ...secret,
-        cluster_id: secret.cluster_id || clusterId || 0,
-        // 解析JSON字段
-        data: parseJsonField(secret.data, {}),
-        string_data: parseJsonField(secret.string_data, {}),
-        labels: parseJsonField(secret.labels, {}),
-        annotations: parseJsonField(secret.annotations, {}),
-      }));
-      
+      const secretsWithClusterId = (res?.items || []).map(
+        (secret: K8sSecret) => ({
+          ...secret,
+          cluster_id: secret.cluster_id || clusterId || 0,
+          // 解析JSON字段
+          data: parseJsonField(secret.data, {}),
+          string_data: parseJsonField(secret.string_data, {}),
+          labels: parseJsonField(secret.labels, {}),
+          annotations: parseJsonField(secret.annotations, {}),
+        }),
+      );
+
       secrets.value = secretsWithClusterId;
       total.value = res?.total || 0;
     } catch (error) {
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
       clearSecrets();
-      if (shouldRecordPageError(error)) loadError.value = '获取 Secret 列表失败，请重试';
+      if (shouldRecordPageError(error))
+        loadError.value = '获取 Secret 列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
@@ -471,20 +509,24 @@ export function useSecretPage() {
   };
 
   /** 详情里的 data 键（脱敏后只有键名与字节数） */
-  const secretDetailDataKeys = computed<Array<{ key: string; size?: number }>>(() => {
-    const detail = currentSecretDetail.value;
-    if (!detail) return [];
-    if (Array.isArray(detail.data_keys)) {
-      return detail.data_keys.map((item: { key: string; size?: number }) => ({
-        key: item.key,
-        size: item.size,
-      }));
-    }
-    return getSecretDataKeys(detail).map((key) => ({ key }));
-  });
+  const secretDetailDataKeys = computed<Array<{ key: string; size?: number }>>(
+    () => {
+      const detail = currentSecretDetail.value;
+      if (!detail) return [];
+      if (Array.isArray(detail.data_keys)) {
+        return detail.data_keys.map((item: { key: string; size?: number }) => ({
+          key: item.key,
+          size: item.size,
+        }));
+      }
+      return getSecretDataKeys(detail).map((key) => ({ key }));
+    },
+  );
 
   /** 调 reveal 取单个键的明文；失败或已过期（详情已关闭 / 已切换）返回 undefined */
-  const fetchRevealedValue = async (key: string): Promise<string | undefined> => {
+  const fetchRevealedValue = async (
+    key: string,
+  ): Promise<string | undefined> => {
     const detail = currentSecretDetail.value;
     if (!detail) return undefined;
     const generation = revealGeneration;
@@ -541,45 +583,53 @@ export function useSecretPage() {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
     clearRevealedValues();
-    
+
     try {
       detailLoading.value = true;
       isDetailModalVisible.value = true;
       const params: GetSecretDetailsReq = {
         cluster_id: clusterId,
         namespace: record.namespace,
-        name: record.name
+        name: record.name,
       };
       const res = await getSecretDetailsApi(params);
-      
+
       // 转换标签和注解格式：从对象转为数组
-      const processedDetail = res ? {
-        ...res,
-        cluster_id: clusterId,
-        labels: recordToKeyValueList(parseJsonField(res.labels, {})),
-        annotations: recordToKeyValueList(parseJsonField(res.annotations, {})),
-        data: parseJsonField(res.data, {}),
-        string_data: parseJsonField(res.string_data, {}),
-      } : { 
-        ...record, 
-        cluster_id: clusterId,
-        labels: recordToKeyValueList(parseJsonField(record.labels, {})),
-        annotations: recordToKeyValueList(parseJsonField(record.annotations, {})),
-        data: parseJsonField(record.data, {}),
-        string_data: parseJsonField(record.string_data, {}),
-      };
-      
+      const processedDetail = res
+        ? {
+            ...res,
+            cluster_id: clusterId,
+            labels: recordToKeyValueList(parseJsonField(res.labels, {})),
+            annotations: recordToKeyValueList(
+              parseJsonField(res.annotations, {}),
+            ),
+            data: parseJsonField(res.data, {}),
+            string_data: parseJsonField(res.string_data, {}),
+          }
+        : {
+            ...record,
+            cluster_id: clusterId,
+            labels: recordToKeyValueList(parseJsonField(record.labels, {})),
+            annotations: recordToKeyValueList(
+              parseJsonField(record.annotations, {}),
+            ),
+            data: parseJsonField(record.data, {}),
+            string_data: parseJsonField(record.string_data, {}),
+          };
+
       currentSecretDetail.value = processedDetail;
     } catch (err) {
       if (shouldNotifyPageError(err)) message.error('获取 Secret 详情失败');
 
       // 错误时也要处理格式转换
       try {
-        const fallbackDetail = { 
-          ...record, 
+        const fallbackDetail = {
+          ...record,
           cluster_id: clusterId,
           labels: recordToKeyValueList(parseJsonField(record.labels, {})),
-          annotations: recordToKeyValueList(parseJsonField(record.annotations, {})),
+          annotations: recordToKeyValueList(
+            parseJsonField(record.annotations, {}),
+          ),
           data: parseJsonField(record.data, {}),
           string_data: parseJsonField(record.string_data, {}),
         };
@@ -612,7 +662,7 @@ export function useSecretPage() {
     if (!clusterId) return;
     yamlOpenSeq += 1;
     const seq = yamlOpenSeq;
-    
+
     try {
       submitLoading.value = true;
       isYamlLoading.value = true;
@@ -620,14 +670,14 @@ export function useSecretPage() {
       const params: GetSecretYamlReq = {
         cluster_id: clusterId,
         namespace: record.namespace,
-        name: record.name
+        name: record.name,
       };
       const res = await getSecretYamlApi(params);
       // incr9 P3-D：等待期间关闭了弹窗或打开了别的 Secret，这次的响应作废
       if (seq !== yamlOpenSeq) return;
-      
+
       let originalYaml = '';
-      
+
       // 尝试不同的数据获取方式
       if (res?.data) {
         originalYaml = res.data;
@@ -638,11 +688,11 @@ export function useSecretPage() {
       } else {
         originalYaml = '';
       }
-      
+
       // 处理 YAML 中的 base64 编码数据
       const processedYaml = processSecretYaml(originalYaml);
       yamlFormModel.value.yaml = processedYaml;
-      
+
       isYamlModalVisible.value = true;
     } catch (err) {
       if (seq !== yamlOpenSeq) return;
@@ -673,7 +723,7 @@ export function useSecretPage() {
     // incr8 P3-5：validate 前取快照；validate 期间关闭 / 打开了别的 Secret，就放弃这次提交
     const seq = yamlOpenSeq;
     const target = currentOperationSecret.value;
-    
+
     try {
       await yamlFormRef.value.validate();
       if (seq !== yamlOpenSeq) return;
@@ -692,9 +742,11 @@ export function useSecretPage() {
         message.warning(yamlFormatError);
         return;
       }
-      
+
       // 处理 YAML 中的明文数据，重新编码为 base64
-      const encodedYaml = encodeSecretYamlForSubmission(yamlFormModel.value.yaml);
+      const encodedYaml = encodeSecretYamlForSubmission(
+        yamlFormModel.value.yaml,
+      );
       // incr7 P2-A 兜底：编码后、发请求前，data 里任何值（含空白 / 换行变体）解码为占位符、或不是 base64 都不发
       const payloadError = getYamlDataPayloadError(encodedYaml);
       if (payloadError) {
@@ -702,14 +754,14 @@ export function useSecretPage() {
         return;
       }
       submitLoading.value = true;
-      
+
       const params: UpdateSecretByYamlReq = {
         cluster_id: target.cluster_id,
         namespace: target.namespace,
         name: target.name,
         yaml: encodedYaml,
       };
-      
+
       await updateSecretByYamlApi(params);
       message.success('Secret YAML 更新成功');
       // 请求期间已关闭 / 换成别的 Secret：不去关后来打开的弹窗
@@ -721,7 +773,6 @@ export function useSecretPage() {
         return;
       }
       if (shouldNotifyPageError(err)) message.error('Secret YAML 更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -759,7 +810,7 @@ export function useSecretPage() {
 
   const submitCreateForm = async () => {
     if (!formRef.value || !filterClusterId.value) return;
-    
+
     try {
       await formRef.value.validate();
       // incr7 兜底：新建表单同样不发脱敏占位符（原文或其 base64）
@@ -773,19 +824,31 @@ export function useSecretPage() {
         return;
       }
       submitLoading.value = true;
-      
+
       const params: CreateSecretReq = {
         cluster_id: filterClusterId.value,
         namespace: createFormModel.value.namespace,
         name: createFormModel.value.name,
         type: createFormModel.value.type,
-        data: Object.keys(createFormModel.value.data).length > 0 ? createFormModel.value.data : undefined,
-        string_data: Object.keys(createFormModel.value.string_data).length > 0 ? createFormModel.value.string_data : undefined,
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
+        data:
+          Object.keys(createFormModel.value.data).length > 0
+            ? createFormModel.value.data
+            : undefined,
+        string_data:
+          Object.keys(createFormModel.value.string_data).length > 0
+            ? createFormModel.value.string_data
+            : undefined,
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(createFormModel.value.annotations).length > 0
+            ? createFormModel.value.annotations
+            : undefined,
         immutable: createFormModel.value.immutable,
       };
-      
+
       await createSecretApi(params);
       message.success('Secret 创建成功');
       isCreateModalVisible.value = false;
@@ -796,7 +859,6 @@ export function useSecretPage() {
         return;
       }
       if (shouldNotifyPageError(err)) message.error('Secret 创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -804,7 +866,7 @@ export function useSecretPage() {
 
   const submitCreateYamlForm = async () => {
     if (!createYamlFormRef.value || !filterClusterId.value) return;
-    
+
     try {
       await createYamlFormRef.value.validate();
       // incr7 兜底：新建 YAML 不做编码、原文发出；data 里的值解码为占位符或不是 base64 时不发
@@ -816,12 +878,12 @@ export function useSecretPage() {
         return;
       }
       submitLoading.value = true;
-      
+
       const params: CreateSecretByYamlReq = {
         cluster_id: filterClusterId.value,
         yaml: createYamlFormModel.value.yaml,
       };
-      
+
       await createSecretByYamlApi(params);
       message.success('Secret YAML 创建成功');
       isCreateYamlModalVisible.value = false;
@@ -832,7 +894,6 @@ export function useSecretPage() {
         return;
       }
       if (shouldNotifyPageError(err)) message.error('Secret YAML 创建失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -909,7 +970,9 @@ export function useSecretPage() {
   };
 
   const removeEditDataRow = (row: SecretDataRow) => {
-    editDataRows.value = editDataRows.value.filter((item) => item.id !== row.id);
+    editDataRows.value = editDataRows.value.filter(
+      (item) => item.id !== row.id,
+    );
   };
 
   const addEditDataRow = (key = '') => {
@@ -935,7 +998,7 @@ export function useSecretPage() {
     const seq = editOpenSeq;
     // incr7 P3-B：提交开始时的快照，请求参数只取它（提交期间 currentOperationSecret 被关闭 / 换成别的也不串）
     const target = currentOperationSecret.value;
-    
+
     try {
       await formRef.value.validate();
       // incr7 P3-B：validate 期间弹窗已关闭或换成了别的 Secret：静默放弃，不发请求、不提示
@@ -963,7 +1026,7 @@ export function useSecretPage() {
         return;
       }
       submitLoading.value = true;
-      
+
       // 冲突时后端返回 HTTP 200 + code=1（该接口没有 409）：由请求层按业务错误弹后端原文，
       // 下面 catch 里 isNotifiedByRequestLayer 跳过页面自身提示，弹窗保留供用户刷新后重试
       const params: UpdateSecretReq = {
@@ -972,10 +1035,16 @@ export function useSecretPage() {
         name: target.name,
         data,
         string_data: stringData,
-        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
-        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(editFormModel.value.annotations).length > 0
+            ? editFormModel.value.annotations
+            : undefined,
       };
-      
+
       await updateSecretApi(params);
       message.success('Secret 更新成功');
       if (seq === editOpenSeq) closeEditModal();
@@ -986,7 +1055,6 @@ export function useSecretPage() {
         return;
       }
       if (shouldNotifyPageError(err)) message.error('Secret 更新失败');
-
     } finally {
       submitLoading.value = false;
     }
@@ -996,7 +1064,7 @@ export function useSecretPage() {
   const deleteSecret = (record: K8sSecret) => {
     const clusterId = validateClusterId(record);
     if (!clusterId) return;
-    
+
     Modal.confirm({
       title: '删除 Secret',
       content: `确定要删除 Secret "${record.name}" 吗？此操作不可逆！`,
@@ -1016,7 +1084,6 @@ export function useSecretPage() {
           await fetchSecrets();
         } catch (err) {
           if (shouldNotifyPageError(err)) message.error('Secret 删除失败');
-
         }
       },
     });
@@ -1046,7 +1113,7 @@ export function useSecretPage() {
   // 批量操作
   const batchOperation = (operation: string) => {
     if (!selectedRows.value.length) return;
-    
+
     Modal.confirm({
       title: `批量${operation}`,
       content: `确定要对选中的 ${selectedRows.value.length} 个 Secret 执行${operation}操作吗？`,
@@ -1060,26 +1127,27 @@ export function useSecretPage() {
             for (const secret of selectedRows.value) {
               const clusterId = secret.cluster_id || filterClusterId.value;
               if (!clusterId) {
-                message.error(`Secret "${secret.name}" 缺少有效的集群ID，跳过操作`);
+                message.error(
+                  `Secret "${secret.name}" 缺少有效的集群ID，跳过操作`,
+                );
                 continue;
               }
-              
+
               const params: DeleteSecretReq = {
                 cluster_id: clusterId,
                 namespace: secret.namespace,
-                name: secret.name
+                name: secret.name,
               };
               await deleteSecretApi(params);
             }
           }
-          
+
           message.success(`批量${operation}操作已完成`);
           selectedRowKeys.value = [];
           selectedRows.value = [];
           await fetchSecrets();
         } catch (err) {
           if (shouldNotifyPageError(err)) message.error(`批量${operation}失败`);
-
         }
       },
     });
@@ -1161,7 +1229,10 @@ export function useSecretPage() {
 
   // YAML 操作辅助函数
   const insertYamlTemplate = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认操作',
         content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
@@ -1193,7 +1264,7 @@ export function useSecretPage() {
       const formatted = yaml.dump(parsed, {
         indent: 2,
         lineWidth: -1, // 不限制行宽
-        noRefs: true,  // 不使用引用
+        noRefs: true, // 不使用引用
         sortKeys: false, // 保持原有顺序
       });
       createYamlFormModel.value.yaml = formatted;
@@ -1213,7 +1284,7 @@ export function useSecretPage() {
     try {
       // 尝试解析 YAML
       const parsed = yaml.load(yamlContent);
-      
+
       // 检查是否是有效的对象
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
@@ -1245,12 +1316,15 @@ export function useSecretPage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -1260,12 +1334,24 @@ export function useSecretPage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
@@ -1273,7 +1359,10 @@ export function useSecretPage() {
   };
 
   const clearYaml = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认清空',
         content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
@@ -1323,7 +1412,7 @@ export function useSecretPage() {
 
     try {
       const parsed = yaml.load(yamlContent);
-      
+
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
         return;
@@ -1354,12 +1443,15 @@ export function useSecretPage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -1369,12 +1461,24 @@ export function useSecretPage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
@@ -1424,12 +1528,12 @@ export function useSecretPage() {
     namespacesTotal,
     namespacesPage,
     namespacesSize,
-    
+
     // form refs
     formRef,
     yamlFormRef,
     createYamlFormRef,
-    
+
     // modal state
     isCreateModalVisible,
     isCreateYamlModalVisible,
@@ -1439,26 +1543,26 @@ export function useSecretPage() {
     submitLoading,
     detailLoading,
     isYamlLoading,
-    
+
     // operation targets
     currentOperationSecret,
     currentSecretDetail,
-    
+
     // form models
     createFormModel,
     editFormModel,
     yamlFormModel,
     createYamlFormModel,
-    
+
     // form rules
     createFormRules,
     yamlFormRules,
     createYamlFormRules,
-    
+
     // computed
     filteredSecrets,
     rowSelection,
-    
+
     // helpers
     validateClusterId,
     getEnvText,
@@ -1467,7 +1571,7 @@ export function useSecretPage() {
     keyValueListToRecord,
     parseJsonField,
     K8sSecretType,
-    
+
     // operations
     fetchClusters,
     fetchNamespaces,
@@ -1476,16 +1580,16 @@ export function useSecretPage() {
     clearNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
-    
+
     // detail operations
     showSecretDetail,
     closeDetailModal,
-    
+
     // YAML operations
     showYamlModal,
     closeYamlModal,
     submitYamlForm,
-    
+
     // create operations
     openCreateModal,
     closeCreateModal,
@@ -1493,27 +1597,27 @@ export function useSecretPage() {
     openCreateYamlModal,
     closeCreateYamlModal,
     submitCreateYamlForm,
-    
+
     // edit operations
     openEditModal,
     closeEditModal,
     submitEditForm,
-    
+
     // secret operations
     deleteSecret,
-    
+
     // filter operations
     addFilterLabel,
     removeFilterLabel,
     clearFilterLabels,
-    
+
     // batch operations
     batchOperation,
-    
+
     // pagination operations
     resetClusters,
     handlePageChange,
-    
+
     // form field operations
     removeDataField,
     removeEditDataField,
@@ -1523,7 +1627,7 @@ export function useSecretPage() {
     removeEditLabelField,
     removeAnnotationField,
     removeEditAnnotationField,
-    
+
     // yaml operations
     insertYamlTemplate,
     formatYaml,

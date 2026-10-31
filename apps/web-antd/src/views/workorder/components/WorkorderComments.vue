@@ -287,9 +287,9 @@
                         @keydown.ctrl.enter="submitReply(comment.id)"
                       />
                       <div class="reply-actions">
-                        <a-button size="small" @click="cancelReply(comment.id)"
-                          >取消</a-button
-                        >
+                        <a-button size="small" @click="cancelReply(comment.id)">
+                          取消
+                        </a-button>
                         <a-button
                           type="primary"
                           size="small"
@@ -368,7 +368,7 @@
 </template>
 
 <script setup lang="ts">
-import { formatCommentContent } from "#/utils/comment-content";
+import { formatCommentContent } from '#/utils/comment-content';
 import { ref, reactive, computed, nextTick } from 'vue';
 import { message } from 'ant-design-vue';
 import {
@@ -380,6 +380,15 @@ import {
 } from '#/api/core/workorder/workorder_instance_comment';
 import type { WorkorderInstanceItem } from '#/api/core/workorder/workorder_instance';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+withDefaults(defineProps<Props>(), {
+  instance: undefined,
+});
+
+// 定义emits
+const emit = defineEmits<{
+  commentAdded: [];
+}>();
 
 // 图标组件
 const IconComponent = ({ icon }: { icon: string }) => {
@@ -403,19 +412,10 @@ const IconComponent = ({ icon }: { icon: string }) => {
   return iconMap[icon] || '';
 };
 
-// 定义emits
-const emit = defineEmits<{
-  commentAdded: [];
-}>();
-
 // 定义props
 interface Props {
   instance?: WorkorderInstanceItem;
 }
-
-withDefaults(defineProps<Props>(), {
-  instance: undefined,
-});
 
 // 状态数据
 const loading = ref(false);
@@ -508,8 +508,6 @@ const formatRelativeTime = (dateStr: string | undefined) => {
   }
 };
 
-
-
 const getInitials = (name: string | undefined) => {
   if (!name) return '';
   return name.split('').slice(0, 2).join('').toUpperCase();
@@ -582,7 +580,8 @@ const submitQuickComment = async () => {
     await refreshComments();
     emit('commentAdded');
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(`发布评论失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error))
+      message.error(`发布评论失败: ${error.message || '未知错误'}`);
   } finally {
     quickCommenting.value = false;
   }
@@ -640,7 +639,8 @@ const submitReply = async (commentId: number) => {
     // 触发父组件的评论添加事件
     emit('commentAdded');
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(`回复失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error))
+      message.error(`回复失败: ${error.message || '未知错误'}`);
   } finally {
     replySubmitting.value[commentId] = false;
   }
@@ -805,7 +805,8 @@ const loadComments = async (instanceId: number) => {
       commentsList.value = [];
     }
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(`加载评论失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error))
+      message.error(`加载评论失败: ${error.message || '未知错误'}`);
     commentsList.value = [];
   } finally {
     loading.value = false;
@@ -826,7 +827,8 @@ const saveComment = async () => {
     commentDialog.visible = false;
     emit('commentAdded');
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(`添加评论失败: ${error.message || '未知错误'}`);
+    if (shouldNotifyPageError(error))
+      message.error(`添加评论失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
   }

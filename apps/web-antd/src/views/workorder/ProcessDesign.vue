@@ -11,8 +11,9 @@
         @click="saveProcess"
         :loading="saving"
         :disabled="formsLoading || !!formLoadError"
-        ><SaveOutlined /> 保存流程</a-button
       >
+        <SaveOutlined /> 保存流程
+      </a-button>
       <a-button @click="copyProcessJson"><CopyOutlined /> 复制JSON</a-button>
     </template>
     <a-alert v-if="saveError" :message="saveError" type="error" show-icon />
@@ -21,23 +22,25 @@
       :message="formLoadError"
       type="error"
       show-icon
-      ><template #action
-        ><a-button :loading="formsLoading" @click="loadFormDesigns"
-          >重试表单</a-button
-        ></template
-      ></a-alert
     >
+      <template #action>
+        <a-button :loading="formsLoading" @click="loadFormDesigns">
+          重试表单
+        </a-button>
+      </template>
+    </a-alert>
     <a-alert
       v-if="categoryLoadError"
       :message="categoryLoadError"
       type="error"
       show-icon
-      ><template #action
-        ><a-button :loading="categoriesLoading" @click="loadCategories"
-          >重试分类</a-button
-        ></template
-      ></a-alert
     >
+      <template #action>
+        <a-button :loading="categoriesLoading" @click="loadCategories">
+          重试分类
+        </a-button>
+      </template>
+    </a-alert>
     <div class="edit-mode-tabs" :inert="saving || undefined">
       <a-tabs v-model:activeKey="editMode" type="card">
         <a-tab-pane key="basic" tab="基本信息">
@@ -102,12 +105,12 @@
                       v-model:value="processBasicInfo.status"
                       placeholder="选择状态"
                     >
-                      <a-select-option :value="ProcessStatus.Draft"
-                        >草稿</a-select-option
-                      >
-                      <a-select-option :value="ProcessStatus.Published"
-                        >已发布</a-select-option
-                      >
+                      <a-select-option :value="ProcessStatus.Draft">
+                        草稿
+                      </a-select-option>
+                      <a-select-option :value="ProcessStatus.Published">
+                        已发布
+                      </a-select-option>
                     </a-select>
                   </a-form-item>
                 </a-col>
@@ -283,18 +286,18 @@
                           v-model:value="selectedStep.type"
                           placeholder="选择步骤类型"
                         >
-                          <a-select-option :value="ProcessStepType.Start"
-                            >开始</a-select-option
-                          >
-                          <a-select-option :value="ProcessStepType.Approval"
-                            >审批</a-select-option
-                          >
-                          <a-select-option :value="ProcessStepType.Task"
-                            >任务</a-select-option
-                          >
-                          <a-select-option :value="ProcessStepType.End"
-                            >结束</a-select-option
-                          >
+                          <a-select-option :value="ProcessStepType.Start">
+                            开始
+                          </a-select-option>
+                          <a-select-option :value="ProcessStepType.Approval">
+                            审批
+                          </a-select-option>
+                          <a-select-option :value="ProcessStepType.Task">
+                            任务
+                          </a-select-option>
+                          <a-select-option :value="ProcessStepType.End">
+                            结束
+                          </a-select-option>
                         </a-select>
                       </a-form-item>
                     </a-col>
@@ -308,12 +311,12 @@
                           placeholder="选择受理人类型"
                           allow-clear
                         >
-                          <a-select-option :value="AssigneeType.User"
-                            >用户</a-select-option
-                          >
-                          <a-select-option :value="AssigneeType.Group"
-                            >系统</a-select-option
-                          >
+                          <a-select-option :value="AssigneeType.User">
+                            用户
+                          </a-select-option>
+                          <a-select-option :value="AssigneeType.Group">
+                            系统
+                          </a-select-option>
                         </a-select>
                       </a-form-item>
                     </a-col>
@@ -337,8 +340,7 @@
                       placeholder="选择此步骤完成后要流向的步骤"
                       style="width: 100%"
                       :options="otherStepsOptions"
-                    >
-                    </a-select>
+                    />
                     <div class="field-hint">
                       定义流程分支、并行或汇合。可选择多个后续步骤。
                     </div>
@@ -351,12 +353,13 @@
                     :message="userLoadError"
                     type="error"
                     show-icon
-                    ><template #action
-                      ><a-button @click="fetchUserList(false)"
-                        >重试用户</a-button
-                      ></template
-                    ></a-alert
                   >
+                    <template #action>
+                      <a-button @click="fetchUserList(false)">
+                        重试用户
+                      </a-button>
+                    </template>
+                  </a-alert>
                   <a-form-item label="受理人ID列表">
                     <a-select
                       id="process-assignees"
@@ -561,11 +564,10 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   modelValue: () => ({ steps: [], connections: [] }),
 });
+const emit = defineEmits<Emits>();
 interface Emits {
   (e: 'update:modelValue', value: ProcessDefinition): void;
 }
-const emit = defineEmits<Emits>();
-
 // 响应式状态
 const editMode = ref('basic');
 const processSteps = ref<ProcessStep[]>([]);
@@ -769,7 +771,8 @@ const fetchUserList = async (loadMore = false) => {
     userPagination.value.total = res.total || 0;
   } catch (error) {
     if (ticket === userRequest && selectedStep.value?.id === owner)
-      if (shouldRecordPageError(error)) userLoadError.value = '读取用户失败，请重试';
+      if (shouldRecordPageError(error))
+        userLoadError.value = '读取用户失败，请重试';
   } finally {
     if (ticket === userRequest) userLoading.value = false;
   }
@@ -1059,7 +1062,8 @@ const loadCategories = async (): Promise<void> => {
   } catch (error) {
     if (ticket === categoriesRequest) {
       categories.value = [];
-      if (shouldRecordPageError(error)) categoryLoadError.value = '读取分类失败，请重试';
+      if (shouldRecordPageError(error))
+        categoryLoadError.value = '读取分类失败，请重试';
     }
   } finally {
     if (ticket === categoriesRequest) categoriesLoading.value = false;
@@ -1109,7 +1113,8 @@ const loadFormDesigns = async (): Promise<void> => {
   } catch (error) {
     if (ticket === formsRequest) {
       formDesigns.value = [];
-      if (shouldRecordPageError(error)) formLoadError.value = '读取已发布表单失败，请重试';
+      if (shouldRecordPageError(error))
+        formLoadError.value = '读取已发布表单失败，请重试';
     }
   } finally {
     if (ticket === formsRequest) formsLoading.value = false;
@@ -1199,7 +1204,8 @@ const saveProcess = async (): Promise<void> => {
     selectedStepIndex.value = null;
   } catch (error) {
     if (ticket === saveRequest)
-      if (shouldRecordPageError(error)) saveError.value = '保存失败，请重试，当前流程设计已保留';
+      if (shouldRecordPageError(error))
+        saveError.value = '保存失败，请重试，当前流程设计已保留';
   } finally {
     if (ticket === saveRequest) saving.value = false;
   }

@@ -8,7 +8,11 @@
         <a-row :gutter="16">
           <a-col :span="24" :md="8">
             <a-form-item label="字段类型" class="form-item">
-              <a-select v-model:value="localField.type" @change="handleTypeChange" class="field-select">
+              <a-select
+                v-model:value="localField.type"
+                @change="handleTypeChange"
+                class="field-select"
+              >
                 <a-select-option value="text">
                   <span class="option-content">📝 文本框</span>
                 </a-select-option>
@@ -42,9 +46,9 @@
 
           <a-col :span="24" :md="8">
             <a-form-item label="标签名称" class="form-item">
-              <a-input 
-                v-model:value="localField.label" 
-                placeholder="请输入字段标签" 
+              <a-input
+                v-model:value="localField.label"
+                placeholder="请输入字段标签"
                 class="config-input"
               />
             </a-form-item>
@@ -52,9 +56,9 @@
 
           <a-col :span="24" :md="8">
             <a-form-item label="字段名称" class="form-item">
-              <a-input 
-                v-model:value="localField.name" 
-                placeholder="英文、数字、下划线" 
+              <a-input
+                v-model:value="localField.name"
+                placeholder="英文、数字、下划线"
                 class="config-input"
               />
             </a-form-item>
@@ -64,9 +68,9 @@
         <a-row :gutter="16">
           <a-col :span="24" :md="12">
             <a-form-item label="占位符文本" class="form-item">
-              <a-input 
-                v-model:value="localField.placeholder" 
-                placeholder="输入框的提示文本" 
+              <a-input
+                v-model:value="localField.placeholder"
+                placeholder="输入框的提示文本"
                 class="config-input"
               />
             </a-form-item>
@@ -74,8 +78,8 @@
 
           <a-col :span="24" :md="6">
             <a-form-item label="是否必填" class="form-item switch-item">
-              <a-switch 
-                v-model:checked="isRequired" 
+              <a-switch
+                v-model:checked="isRequired"
                 checked-children="必填"
                 un-checked-children="可选"
               />
@@ -92,38 +96,48 @@
         <a-row>
           <a-col :span="24">
             <a-form-item label="默认值" class="form-item">
-              <template v-if="localField.type === 'text' || localField.type === 'password' || localField.type === 'textarea'">
-                <a-input 
-                  v-model:value="localField.default" 
-                  placeholder="请输入默认值" 
+              <template
+                v-if="
+                  localField.type === 'text' ||
+                  localField.type === 'password' ||
+                  localField.type === 'textarea'
+                "
+              >
+                <a-input
+                  v-model:value="localField.default"
+                  placeholder="请输入默认值"
                   class="config-input"
                 />
               </template>
               <template v-else-if="localField.type === 'number'">
-                <a-input-number 
-                  v-model:value="localField.default" 
+                <a-input-number
+                  v-model:value="localField.default"
                   placeholder="请输入默认数值"
-                  style="width: 100%" 
+                  style="width: 100%"
                   class="config-input"
                 />
               </template>
               <template v-else-if="localField.type === 'switch'">
-                <a-switch 
-                  v-model:checked="localField.default" 
+                <a-switch
+                  v-model:checked="localField.default"
                   checked-children="开"
                   un-checked-children="关"
                 />
               </template>
-              <template v-else-if="localField.type === 'select' || localField.type === 'radio'">
-                <a-select 
-                  v-model:value="localField.default" 
-                  placeholder="请选择默认值" 
+              <template
+                v-else-if="
+                  localField.type === 'select' || localField.type === 'radio'
+                "
+              >
+                <a-select
+                  v-model:value="localField.default"
+                  placeholder="请选择默认值"
                   class="config-input"
                   allow-clear
                 >
-                  <a-select-option 
-                    v-for="(option, index) in (localField.options || [])" 
-                    :key="index" 
+                  <a-select-option
+                    v-for="(option, index) in localField.options || []"
+                    :key="index"
                     :value="option"
                   >
                     {{ option }}
@@ -131,10 +145,13 @@
                 </a-select>
               </template>
               <template v-else-if="localField.type === 'checkbox'">
-                <a-checkbox-group v-model:value="localField.default" class="checkbox-group">
-                  <a-checkbox 
-                    v-for="(option, index) in (localField.options || [])" 
-                    :key="index" 
+                <a-checkbox-group
+                  v-model:value="localField.default"
+                  class="checkbox-group"
+                >
+                  <a-checkbox
+                    v-for="(option, index) in localField.options || []"
+                    :key="index"
                     :value="option"
                     class="checkbox-item"
                   >
@@ -151,18 +168,27 @@
       <div class="config-section" v-if="needsOptions">
         <div class="section-title">
           <span>选项配置</span>
-          <a-button type="link" @click="addOption" size="small" class="add-option-btn">
+          <a-button
+            type="link"
+            @click="addOption"
+            size="small"
+            class="add-option-btn"
+          >
             <PlusOutlined /> 添加选项
           </a-button>
         </div>
         <div class="options-list">
-          <div v-for="(option, index) in (localField.options || [])" :key="index" class="option-item">
+          <div
+            v-for="(option, index) in localField.options || []"
+            :key="index"
+            class="option-item"
+          >
             <div class="option-header">
               <span class="option-index">选项 {{ index + 1 }}</span>
-              <a-button 
-                type="text" 
-                danger 
-                size="small" 
+              <a-button
+                type="text"
+                danger
+                size="small"
                 @click="removeOption(index)"
                 class="remove-option-btn"
               >
@@ -171,20 +197,23 @@
             </div>
             <a-row :gutter="12">
               <a-col :span="24">
-                <a-input 
+                <a-input
                   :value="option"
                   @update:value="(value: string) => updateOption(index, value)"
-                  placeholder="选项文本" 
+                  placeholder="选项文本"
                   class="option-input"
                 />
               </a-col>
             </a-row>
           </div>
 
-          <div class="add-option-area" v-if="!localField.options || localField.options.length === 0">
-            <a-button 
-              type="dashed" 
-              @click="addOption" 
+          <div
+            class="add-option-area"
+            v-if="!localField.options || localField.options.length === 0"
+          >
+            <a-button
+              type="dashed"
+              @click="addOption"
               size="large"
               class="add-option-large"
             >
@@ -200,7 +229,10 @@
 <script setup lang="ts">
 import { ref, watch, computed, nextTick } from 'vue';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons-vue';
-import { FormFieldType, type FormField } from '#/api/core/workorder/workorder_form_design';
+import {
+  FormFieldType,
+  type FormField,
+} from '#/api/core/workorder/workorder_form_design';
 
 interface Props {
   field: FormField;
@@ -221,12 +253,16 @@ const isRequired = computed({
   get: () => localField.value.required === 1,
   set: (value: boolean) => {
     localField.value.required = value ? 1 : 0;
-  }
+  },
 });
 
 // 计算属性
 const needsOptions = computed(() => {
-  return [FormFieldType.Select, FormFieldType.Radio, FormFieldType.Checkbox].includes(localField.value.type as any);
+  return [
+    FormFieldType.Select,
+    FormFieldType.Radio,
+    FormFieldType.Checkbox,
+  ].includes(localField.value.type as any);
 });
 
 const showDefaultValue = computed(() => {
@@ -244,7 +280,7 @@ watch(
       emit('update', JSON.parse(JSON.stringify(newField)));
     }
   },
-  { deep: true }
+  { deep: true },
 );
 
 // 监听props变化
@@ -261,7 +297,7 @@ watch(
       });
     }
   },
-  { deep: true }
+  { deep: true },
 );
 
 // 处理类型变化
@@ -269,7 +305,10 @@ const handleTypeChange = (type: string) => {
   localField.value.type = type;
 
   // 根据类型初始化选项和默认值
-  if (needsOptions.value && (!localField.value.options || localField.value.options.length === 0)) {
+  if (
+    needsOptions.value &&
+    (!localField.value.options || localField.value.options.length === 0)
+  ) {
     localField.value.options = ['选项1', '选项2'];
   } else if (!needsOptions.value) {
     localField.value.options = undefined;
@@ -277,20 +316,25 @@ const handleTypeChange = (type: string) => {
 
   // 重置默认值
   switch (type) {
-    case FormFieldType.Checkbox:
+    case FormFieldType.Checkbox: {
       localField.value.default = [];
       break;
-    case FormFieldType.Number:
+    }
+    case FormFieldType.Number: {
       localField.value.default = 0;
       break;
-    case FormFieldType.Switch:
+    }
+    case FormFieldType.Switch: {
       localField.value.default = false;
       break;
-    case FormFieldType.Date:
+    }
+    case FormFieldType.Date: {
       localField.value.default = undefined;
       break;
-    default:
+    }
+    default: {
       localField.value.default = '';
+    }
   }
 };
 

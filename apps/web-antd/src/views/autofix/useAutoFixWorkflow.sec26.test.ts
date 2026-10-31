@@ -24,7 +24,9 @@ vi.mock('@vben/stores', () => ({
   useAccessStore: () => account.access,
 }));
 vi.mock('#/api/core/aiops/autofix', () => api);
-vi.mock('#/utils/permission', () => ({ usePermission: () => ({ can: () => true, hasPerm: () => true }) }));
+vi.mock('#/utils/permission', () => ({
+  usePermission: () => ({ can: () => true, hasPerm: () => true }),
+}));
 
 const action = (id: string) => ({
   action_id: id,

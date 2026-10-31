@@ -59,16 +59,27 @@ export interface DeleteMonitorAlertManagerPoolReq {
   id: number;
 }
 
-export async function getMonitorAlertManagerPoolListApi(data: GetAlertManagerPoolListParams) {
-  return requestClient.get('/monitor/alert_manager_pools/list', { params: data });
+export async function getMonitorAlertManagerPoolListApi(
+  data: GetAlertManagerPoolListParams,
+) {
+  return requestClient.get('/monitor/alert_manager_pools/list', {
+    params: data,
+  });
 }
 
-export async function createMonitorAlertManagerPoolApi(data: CreateMonitorAlertManagerPoolReq) {
+export async function createMonitorAlertManagerPoolApi(
+  data: CreateMonitorAlertManagerPoolReq,
+) {
   return requestClient.post('/monitor/alert_manager_pools/create', data);
 }
 
-export async function updateMonitorAlertManagerPoolApi(data: UpdateMonitorAlertManagerPoolReq) {
-  return requestClient.put(`/monitor/alert_manager_pools/update/${data.id}`, data);
+export async function updateMonitorAlertManagerPoolApi(
+  data: UpdateMonitorAlertManagerPoolReq,
+) {
+  return requestClient.put(
+    `/monitor/alert_manager_pools/update/${data.id}`,
+    data,
+  );
 }
 
 export async function deleteMonitorAlertManagerPoolApi(id: number) {

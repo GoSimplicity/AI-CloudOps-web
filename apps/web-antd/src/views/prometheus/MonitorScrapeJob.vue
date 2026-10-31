@@ -2,89 +2,147 @@
   <OpsPage title="采集任务" description="维护采集目标、发现方式与任务状态">
     <!-- 页面标题 -->
     <template #actions>
-      <a-button type="primary" @click="handleCreateScrapeJob" class="btn-create">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          <span class="btn-text">创建采集任务</span>
-        </a-button>
+      <a-button
+        type="primary"
+        @click="handleCreateScrapeJob"
+        class="btn-create"
+      >
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        <span class="btn-text">创建采集任务</span>
+      </a-button>
     </template>
     <template #filters>
       <div class="search-filters">
-          <a-input-search v-model:value="searchQuery" placeholder="搜索采集任务名称..." class="search-input"
-            @search="handleSearch" @change="handleSearchChange" allow-clear />
-          <a-select v-model:value="enableFilter" placeholder="启用状态" class="filter-select" @change="handleEnableChange"
-            allow-clear>
-            <a-select-option :value="undefined">全部</a-select-option>
-            <a-select-option :value="1">启用</a-select-option>
-            <a-select-option :value="2">禁用</a-select-option>
-          </a-select>
-          <a-select v-model:value="poolFilter" placeholder="采集池" class="filter-select" @change="handlePoolChange"
-            allow-clear>
-            <a-select-option :value="undefined">全部</a-select-option>
-            <a-select-option v-for="pool in pools" :key="pool.id" :value="pool.id">
-              {{ pool.name }}
-            </a-select-option>
-          </a-select>
-          <a-button @click="handleResetFilters" class="reset-btn">
-            重置
-          </a-button>
-        </div>
+        <a-input-search
+          v-model:value="searchQuery"
+          placeholder="搜索采集任务名称..."
+          class="search-input"
+          @search="handleSearch"
+          @change="handleSearchChange"
+          allow-clear
+        />
+        <a-select
+          v-model:value="enableFilter"
+          placeholder="启用状态"
+          class="filter-select"
+          @change="handleEnableChange"
+          allow-clear
+        >
+          <a-select-option :value="undefined">全部</a-select-option>
+          <a-select-option :value="1">启用</a-select-option>
+          <a-select-option :value="2">禁用</a-select-option>
+        </a-select>
+        <a-select
+          v-model:value="poolFilter"
+          placeholder="采集池"
+          class="filter-select"
+          @change="handlePoolChange"
+          allow-clear
+        >
+          <a-select-option :value="undefined">全部</a-select-option>
+          <a-select-option
+            v-for="pool in pools"
+            :key="pool.id"
+            :value="pool.id"
+          >
+            {{ pool.name }}
+          </a-select-option>
+        </a-select>
+        <a-button @click="handleResetFilters" class="reset-btn">
+          重置
+        </a-button>
+      </div>
     </template>
 
     <!-- 统计卡片 -->
     <template #summary>
       <div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="总采集任务" :value="loadError ? '未知' : stats.total" :value-style="{ color: '#3f8600' }">
-              <template #prefix>
-                <Icon icon="carbon:task" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="本页已启用" :value="loadError ? '未知' : stats.enabled" :value-style="{ color: '#52c41a' }">
-              <template #prefix>
-                <Icon icon="carbon:checkmark" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="本页Kubernetes" :value="loadError ? '未知' : stats.k8sJobs" :value-style="{ color: '#faad14' }">
-              <template #prefix>
-                <Icon icon="carbon:logo-kubernetes" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="本页HTTP任务" :value="loadError ? '未知' : stats.httpJobs" :value-style="{ color: '#cf1322' }">
-              <template #prefix>
-                <Icon icon="carbon:http" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div>
+        <a-row :gutter="[16, 16]">
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="总采集任务"
+                :value="loadError ? '未知' : stats.total"
+                :value-style="{ color: '#3f8600' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:task" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页已启用"
+                :value="loadError ? '未知' : stats.enabled"
+                :value-style="{ color: '#52c41a' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:checkmark" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页Kubernetes"
+                :value="loadError ? '未知' : stats.k8sJobs"
+                :value-style="{ color: '#faad14' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:logo-kubernetes" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页HTTP任务"
+                :value="loadError ? '未知' : stats.httpJobs"
+                :value-style="{ color: '#cf1322' }"
+              >
+                <template #prefix>
+                  <Icon icon="carbon:http" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
     </template>
 
-    <a-alert v-if="loadError" type="error" show-icon :message="loadError" role="alert">
-      <template #action><a-button size="small" :loading="loading" @click="loadScrapeJobList">重试</a-button></template>
+    <a-alert
+      v-if="loadError"
+      type="error"
+      show-icon
+      :message="loadError"
+      role="alert"
+    >
+      <template #action>
+        <a-button size="small" :loading="loading" @click="loadScrapeJobList">
+          重试
+        </a-button>
+      </template>
     </a-alert>
 
     <!-- 表格容器 -->
     <div class="table-container">
       <a-card>
-        <a-table :data-source="scrapeJobList" :columns="columns" :pagination="paginationConfig" :loading="loading"
-          row-key="id" bordered :scroll="{ x: 1400 }" @change="handleTableChange">
+        <a-table
+          :data-source="scrapeJobList"
+          :columns="columns"
+          :pagination="paginationConfig"
+          :loading="loading"
+          row-key="id"
+          bordered
+          :scroll="{ x: 1400 }"
+          @change="handleTableChange"
+        >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="job-name-cell">
@@ -94,7 +152,10 @@
             </template>
 
             <template v-if="column.key === 'service_discovery_type'">
-              <a-tag :color="getDiscoveryTypeColor(record.service_discovery_type)" class="tech-tag">
+              <a-tag
+                :color="getDiscoveryTypeColor(record.service_discovery_type)"
+                class="tech-tag"
+              >
                 {{ getDiscoveryTypeLabel(record.service_discovery_type) }}
               </a-tag>
             </template>
@@ -115,7 +176,9 @@
               <div class="target-info">
                 <div class="target-item">
                   <span class="target-label">地址:</span>
-                  <span class="target-value">{{ record.ip_address }}:{{ record.port }}</span>
+                  <span class="target-value"
+                    >{{ record.ip_address }}:{{ record.port }}</span
+                  >
                 </div>
                 <div class="target-item">
                   <span class="target-label">路径:</span>
@@ -128,7 +191,9 @@
               <div class="config-info">
                 <div class="config-item">
                   <span class="config-label">间隔:</span>
-                  <span class="config-value">{{ record.scrape_interval }}s</span>
+                  <span class="config-value"
+                    >{{ record.scrape_interval }}s</span
+                  >
                 </div>
                 <div class="config-item">
                   <span class="config-label">超时:</span>
@@ -139,7 +204,14 @@
 
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
-                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }">
+                <a-avatar
+                  size="small"
+                  :style="{
+                    backgroundColor: getAvatarColor(
+                      record.create_user_name || '',
+                    ),
+                  }"
+                >
                   {{ getInitials(record.create_user_name) }}
                 </a-avatar>
                 <span class="creator-name">{{ record.create_user_name }}</span>
@@ -155,21 +227,39 @@
 
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
-                <a-button type="primary" size="small" @click="handleViewScrapeJob(record)">
+                <a-button
+                  type="primary"
+                  size="small"
+                  @click="handleViewScrapeJob(record)"
+                >
                   查看
                 </a-button>
-                <a-button type="default" size="small" @click="handleEditScrapeJob(record)">
+                <a-button
+                  type="default"
+                  size="small"
+                  @click="handleEditScrapeJob(record)"
+                >
                   编辑
                 </a-button>
                 <a-dropdown>
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
                       <a-menu-item key="toggle">
-                        <Icon :icon="record.enable === 1 ? 'carbon:pause' : 'carbon:play'" />
+                        <Icon
+                          :icon="
+                            record.enable === 1 ? 'carbon:pause' : 'carbon:play'
+                          "
+                        />
                         {{ record.enable === 1 ? '禁用' : '启用' }}
                       </a-menu-item>
                       <a-menu-divider v-if="can('monitor.scrapeJob.delete')" />
-                      <a-menu-item v-if="can('monitor.scrapeJob.delete')" key="delete" danger>删除</a-menu-item>
+                      <a-menu-item
+                        v-if="can('monitor.scrapeJob.delete')"
+                        key="delete"
+                        danger
+                      >
+                        删除
+                      </a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
@@ -185,21 +275,44 @@
     </div>
 
     <!-- 创建/编辑采集任务对话框 -->
-    <a-modal :open="formDialogVisible" :title="formDialog.isEdit ? '编辑采集任务' : '创建采集任务'" :width="formDialogWidth"
-      @ok="saveScrapeJob" @cancel="closeFormDialog" :destroy-on-close="true" class="responsive-modal scrape-job-modal">
-      <a-form ref="formRef" :model="formDialog.form" :rules="formRules" layout="vertical">
+    <a-modal
+      :open="formDialogVisible"
+      :title="formDialog.isEdit ? '编辑采集任务' : '创建采集任务'"
+      :width="formDialogWidth"
+      @ok="saveScrapeJob"
+      @cancel="closeFormDialog"
+      :destroy-on-close="true"
+      class="responsive-modal scrape-job-modal"
+    >
+      <a-form
+        ref="formRef"
+        :model="formDialog.form"
+        :rules="formRules"
+        layout="vertical"
+      >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item label="采集任务名称" name="name" :rules="[{ required: true, message: '请输入采集任务名称' }]">
-                <a-input v-model:value="formDialog.form.name" placeholder="请输入采集任务名称" />
+              <a-form-item
+                label="采集任务名称"
+                name="name"
+                :rules="[{ required: true, message: '请输入采集任务名称' }]"
+              >
+                <a-input
+                  v-model:value="formDialog.form.name"
+                  placeholder="请输入采集任务名称"
+                />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="启用状态" name="enable">
-                <a-switch v-model:checked="formDialog.form.enableSwitch" class="tech-switch" :checked-children="'启用'"
-                  :un-checked-children="'禁用'" />
+                <a-switch
+                  v-model:checked="formDialog.form.enableSwitch"
+                  class="tech-switch"
+                  :checked-children="'启用'"
+                  :un-checked-children="'禁用'"
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -209,18 +322,35 @@
           <div class="section-title">服务配置</div>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item label="服务发现类型" name="service_discovery_type"
-                :rules="[{ required: true, message: '请选择服务发现类型' }]">
-                <a-select v-model:value="formDialog.form.service_discovery_type" placeholder="请选择服务发现类型">
-                  <a-select-option v-for="opt in serviceDiscoveryOptions" :key="opt.value" :value="opt.value">
+              <a-form-item
+                label="服务发现类型"
+                name="service_discovery_type"
+                :rules="[{ required: true, message: '请选择服务发现类型' }]"
+              >
+                <a-select
+                  v-model:value="formDialog.form.service_discovery_type"
+                  placeholder="请选择服务发现类型"
+                >
+                  <a-select-option
+                    v-for="opt in serviceDiscoveryOptions"
+                    :key="opt.value"
+                    :value="opt.value"
+                  >
                     {{ opt.label }}
                   </a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item label="协议方案" name="scheme" :rules="[{ required: true, message: '请选择协议方案' }]">
-                <a-select v-model:value="formDialog.form.scheme" placeholder="请选择协议方案">
+              <a-form-item
+                label="协议方案"
+                name="scheme"
+                :rules="[{ required: true, message: '请选择协议方案' }]"
+              >
+                <a-select
+                  v-model:value="formDialog.form.scheme"
+                  placeholder="请选择协议方案"
+                >
                   <a-select-option value="http">HTTP</a-select-option>
                   <a-select-option value="https">HTTPS</a-select-option>
                 </a-select>
@@ -230,16 +360,38 @@
 
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item label="监控采集路径" name="metrics_path" :rules="[{ required: true, message: '请输入监控采集路径' }]">
-                <a-input v-model:value="formDialog.form.metrics_path" placeholder="请输入监控采集路径" />
+              <a-form-item
+                label="监控采集路径"
+                name="metrics_path"
+                :rules="[{ required: true, message: '请输入监控采集路径' }]"
+              >
+                <a-input
+                  v-model:value="formDialog.form.metrics_path"
+                  placeholder="请输入监控采集路径"
+                />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item label="关联采集池" name="pool_id" :rules="[{ required: true, message: '请选择关联采集池' }]">
-                <a-select v-model:value="formDialog.form.pool_id" placeholder="请搜索并选择关联采集池" show-search
-                  :filter-option="false" @search="handleDialogPoolSearch" @popupScroll="handleDialogPoolScroll"
-                  :loading="dialogPoolLoading" allow-clear>
-                  <a-select-option v-for="pool in dialogPools" :key="pool.id" :value="pool.id">
+              <a-form-item
+                label="关联采集池"
+                name="pool_id"
+                :rules="[{ required: true, message: '请选择关联采集池' }]"
+              >
+                <a-select
+                  v-model:value="formDialog.form.pool_id"
+                  placeholder="请搜索并选择关联采集池"
+                  show-search
+                  :filter-option="false"
+                  @search="handleDialogPoolSearch"
+                  @popupScroll="handleDialogPoolScroll"
+                  :loading="dialogPoolLoading"
+                  allow-clear
+                >
+                  <a-select-option
+                    v-for="pool in dialogPools"
+                    :key="pool.id"
+                    :value="pool.id"
+                  >
                     {{ pool.name }}
                   </a-select-option>
                 </a-select>
@@ -252,48 +404,97 @@
           <div class="section-title">采集配置</div>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item label="采集间隔（秒）" name="scrape_interval" :rules="[
-                { required: true, message: '请输入采集间隔' },
-                { type: 'number', min: 1, message: '采集间隔必须大于0' }
-              ]">
-                <a-input-number v-model:value="formDialog.form.scrape_interval" :min="1" class="full-width"
-                  placeholder="请输入采集间隔（秒）" />
+              <a-form-item
+                label="采集间隔（秒）"
+                name="scrape_interval"
+                :rules="[
+                  { required: true, message: '请输入采集间隔' },
+                  { type: 'number', min: 1, message: '采集间隔必须大于0' },
+                ]"
+              >
+                <a-input-number
+                  v-model:value="formDialog.form.scrape_interval"
+                  :min="1"
+                  class="full-width"
+                  placeholder="请输入采集间隔（秒）"
+                />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item label="采集超时（秒）" name="scrape_timeout" :rules="[
-                { required: true, message: '请输入采集超时' },
-                { type: 'number', min: 1, message: '采集超时必须大于0' }
-              ]">
-                <a-input-number v-model:value="formDialog.form.scrape_timeout" :min="1" class="full-width"
-                  placeholder="请输入采集超时（秒）" />
+              <a-form-item
+                label="采集超时（秒）"
+                name="scrape_timeout"
+                :rules="[
+                  { required: true, message: '请输入采集超时' },
+                  { type: 'number', min: 1, message: '采集超时必须大于0' },
+                ]"
+              >
+                <a-input-number
+                  v-model:value="formDialog.form.scrape_timeout"
+                  :min="1"
+                  class="full-width"
+                  placeholder="请输入采集超时（秒）"
+                />
               </a-form-item>
             </a-col>
           </a-row>
 
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item label="刷新间隔（秒）" name="refresh_interval" :rules="[
-                { required: true, message: '请输入刷新间隔' },
-                { type: 'number', min: 1, message: '刷新间隔必须大于0' }
-              ]">
-                <a-input-number v-model:value="formDialog.form.refresh_interval" :min="1" class="full-width"
-                  placeholder="请输入刷新间隔（秒）" />
+              <a-form-item
+                label="刷新间隔（秒）"
+                name="refresh_interval"
+                :rules="[
+                  { required: true, message: '请输入刷新间隔' },
+                  { type: 'number', min: 1, message: '刷新间隔必须大于0' },
+                ]"
+              >
+                <a-input-number
+                  v-model:value="formDialog.form.refresh_interval"
+                  :min="1"
+                  class="full-width"
+                  placeholder="请输入刷新间隔（秒）"
+                />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12" v-if="formDialog.form.service_discovery_type === ServiceDiscoveryType.Static">
+            <a-col
+              :xs="24"
+              :sm="12"
+              v-if="
+                formDialog.form.service_discovery_type ===
+                ServiceDiscoveryType.Static
+              "
+            >
               <a-form-item label="端口" name="port" :rules="formRules.port">
-                <a-input-number v-model:value="formDialog.form.port" :min="1" :max="65535" class="full-width"
-                  placeholder="请输入端口" />
+                <a-input-number
+                  v-model:value="formDialog.form.port"
+                  :min="1"
+                  :max="65535"
+                  class="full-width"
+                  placeholder="请输入端口"
+                />
               </a-form-item>
             </a-col>
           </a-row>
         </div>
 
-        <div v-if="formDialog.form.service_discovery_type === ServiceDiscoveryType.Static" class="form-section">
+        <div
+          v-if="
+            formDialog.form.service_discovery_type ===
+            ServiceDiscoveryType.Static
+          "
+          class="form-section"
+        >
           <div class="section-title">目标地址配置</div>
-          <a-form-item label="IP地址" name="ip_address" :rules="formRules.ip_address">
-            <a-input v-model:value="formDialog.form.ip_address" placeholder="请输入IP地址，如：192.168.1.100" />
+          <a-form-item
+            label="IP地址"
+            name="ip_address"
+            :rules="formRules.ip_address"
+          >
+            <a-input
+              v-model:value="formDialog.form.ip_address"
+              placeholder="请输入IP地址，如：192.168.1.100"
+            />
             <div class="form-help-text">
               <Icon icon="ant-design:info-circle-outlined" />
               请输入单个IP地址，端口配置在上方端口字段
@@ -302,12 +503,20 @@
         </div>
 
         <!-- Kubernetes配置（当选择K8s时显示） -->
-        <div v-if="formDialog.form.service_discovery_type === ServiceDiscoveryType.K8s" class="form-section">
+        <div
+          v-if="
+            formDialog.form.service_discovery_type === ServiceDiscoveryType.K8s
+          "
+          class="form-section"
+        >
           <div class="section-title">Kubernetes配置</div>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="Kubernetes角色" name="kubernetes_sd_role">
-                <a-select v-model:value="formDialog.form.kubernetes_sd_role" placeholder="请选择Kubernetes角色">
+                <a-select
+                  v-model:value="formDialog.form.kubernetes_sd_role"
+                  placeholder="请选择Kubernetes角色"
+                >
                   <a-select-option value="pod">Pod</a-select-option>
                   <a-select-option value="service">Service</a-select-option>
                   <a-select-option value="endpoints">Endpoints</a-select-option>
@@ -316,8 +525,14 @@
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item label="KubeConfig文件路径" name="kube_config_file_path">
-                <a-input v-model:value="formDialog.form.kube_config_file_path" placeholder="请输入KubeConfig文件路径" />
+              <a-form-item
+                label="KubeConfig文件路径"
+                name="kube_config_file_path"
+              >
+                <a-input
+                  v-model:value="formDialog.form.kube_config_file_path"
+                  placeholder="请输入KubeConfig文件路径"
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -329,41 +544,77 @@
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="TLS CA文件路径" name="tls_ca_file_path">
-                <a-input v-model:value="formDialog.form.tls_ca_file_path" placeholder="请输入TLS CA文件路径" />
+                <a-input
+                  v-model:value="formDialog.form.tls_ca_file_path"
+                  placeholder="请输入TLS CA文件路径"
+                />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="Bearer Token" name="bearer_token">
                 <a-form-item-rest v-if="formDialog.isEdit">
-                  <p class="credential-status">{{ hasExistingBearerToken ? '已有Token已配置，原文不返回' : '尚未配置Token' }}</p>
-                  <a-radio-group v-model:value="bearerTokenAction" aria-label="Bearer Token更新方式">
+                  <p class="credential-status">
+                    {{
+                      hasExistingBearerToken
+                        ? '已有Token已配置，原文不返回'
+                        : '尚未配置Token'
+                    }}
+                  </p>
+                  <a-radio-group
+                    v-model:value="bearerTokenAction"
+                    aria-label="Bearer Token更新方式"
+                  >
                     <a-radio value="keep">保留现状</a-radio>
                     <a-radio value="replace">替换Token</a-radio>
                     <a-radio value="clear">清除已有Token</a-radio>
                   </a-radio-group>
-                  <p v-if="bearerTokenAction === 'clear'" class="credential-status">保存后清除已有Token，可改用文件认证</p>
+                  <p
+                    v-if="bearerTokenAction === 'clear'"
+                    class="credential-status"
+                  >
+                    保存后清除已有Token，可改用文件认证
+                  </p>
                 </a-form-item-rest>
-                <a-input-password v-if="!formDialog.isEdit || bearerTokenAction === 'replace'"
-                  v-model:value="formDialog.form.bearer_token" placeholder="请输入新的Bearer Token" autocomplete="new-password" />
+                <a-input-password
+                  v-if="!formDialog.isEdit || bearerTokenAction === 'replace'"
+                  v-model:value="formDialog.form.bearer_token"
+                  placeholder="请输入新的Bearer Token"
+                  autocomplete="new-password"
+                />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item label="Bearer Token文件路径" name="bearer_token_file">
-                <a-input v-model:value="formDialog.form.bearer_token_file" placeholder="请输入Bearer Token文件路径" />
+              <a-form-item
+                label="Bearer Token文件路径"
+                name="bearer_token_file"
+              >
+                <a-input
+                  v-model:value="formDialog.form.bearer_token_file"
+                  placeholder="请输入Bearer Token文件路径"
+                />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="TLS CA内容" name="tls_ca_content">
-                <a-textarea v-model:value="formDialog.form.tls_ca_content" placeholder="请输入TLS CA证书内容" :rows="4" />
+                <a-textarea
+                  v-model:value="formDialog.form.tls_ca_content"
+                  placeholder="请输入TLS CA证书内容"
+                  :rows="4"
+                />
               </a-form-item>
             </a-col>
           </a-row>
         </div>
 
         <!-- 服务树绑定 -->
-        <div v-if="formDialog.form.service_discovery_type === ServiceDiscoveryType.Http" class="form-section">
+        <div
+          v-if="
+            formDialog.form.service_discovery_type === ServiceDiscoveryType.Http
+          "
+          class="form-section"
+        >
           <div class="section-title">服务树绑定</div>
           <a-form-item label="服务树节点" name="tree_node_ids">
             <a-tree-select
@@ -373,7 +624,11 @@
               allow-clear
               multiple
               :tree-data="treeData"
-              :field-names="{ children: 'children', label: 'name', value: 'id' }"
+              :field-names="{
+                children: 'children',
+                label: 'name',
+                value: 'id',
+              }"
             />
           </a-form-item>
         </div>
@@ -395,32 +650,47 @@
         <!-- 高级配置 -->
         <div class="form-section">
           <div class="section-title">高级配置</div>
-          <a-form-item label="Relabel配置（YAML）" name="relabel_configs_yaml_string">
+          <a-form-item
+            label="Relabel配置（YAML）"
+            name="relabel_configs_yaml_string"
+          >
             <div class="yaml-editor-container">
               <div class="yaml-toolbar">
-                <a-button size="small" @click="formatYaml" :disabled="!formDialog.form.relabel_configs_yaml_string">
+                <a-button
+                  size="small"
+                  @click="formatYaml"
+                  :disabled="!formDialog.form.relabel_configs_yaml_string"
+                >
                   <template #icon>
                     <Icon icon="carbon:code" />
                   </template>
                   格式化
                 </a-button>
-                <a-button size="small" @click="insertYamlTemplate" type="dashed">
+                <a-button
+                  size="small"
+                  @click="insertYamlTemplate"
+                  type="dashed"
+                >
                   <template #icon>
                     <Icon icon="carbon:add" />
                   </template>
                   插入模板
                 </a-button>
-                <a-button size="small" @click="validateYaml" :disabled="!formDialog.form.relabel_configs_yaml_string">
+                <a-button
+                  size="small"
+                  @click="validateYaml"
+                  :disabled="!formDialog.form.relabel_configs_yaml_string"
+                >
                   <template #icon>
                     <Icon icon="carbon:checkmark" />
                   </template>
                   验证
                 </a-button>
               </div>
-              <a-textarea 
-                v-model:value="formDialog.form.relabel_configs_yaml_string" 
+              <a-textarea
+                v-model:value="formDialog.form.relabel_configs_yaml_string"
                 placeholder="请输入Relabel配置（YAML格式）"
-                :rows="8" 
+                :rows="8"
                 :class="{ 'yaml-error': yamlError }"
                 @blur="validateYamlOnBlur"
               />
@@ -439,49 +709,117 @@
     </a-modal>
 
     <!-- 详情对话框 -->
-    <a-modal :open="detailDialogVisible" title="采集任务详情" :width="previewDialogWidth" :footer="null"
-      @cancel="closeDetailDialog" class="detail-dialog">
+    <a-modal
+      :open="detailDialogVisible"
+      title="采集任务详情"
+      :width="previewDialogWidth"
+      :footer="null"
+      @cancel="closeDetailDialog"
+      class="detail-dialog"
+    >
       <a-spin :spinning="detailDialog.loading">
         <div v-if="detailDialog.form" class="job-details">
           <div class="detail-header">
             <h2>{{ detailDialog.form.name }}</h2>
             <div class="detail-badges">
-              <a-tag :color="detailDialog.form.enable === 1 ? 'success' : 'default'">
+              <a-tag
+                :color="detailDialog.form.enable === 1 ? 'success' : 'default'"
+              >
                 {{ detailDialog.form.enable === 1 ? '已启用' : '已禁用' }}
               </a-tag>
-              <a-tag :color="getDiscoveryTypeColor(detailDialog.form.service_discovery_type)">
-                {{ getDiscoveryTypeLabel(detailDialog.form.service_discovery_type) }}
+              <a-tag
+                :color="
+                  getDiscoveryTypeColor(
+                    detailDialog.form.service_discovery_type,
+                  )
+                "
+              >
+                {{
+                  getDiscoveryTypeLabel(
+                    detailDialog.form.service_discovery_type,
+                  )
+                }}
               </a-tag>
             </div>
           </div>
 
           <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
-            <a-descriptions-item label="ID">{{ detailDialog.form.id }}</a-descriptions-item>
-            <a-descriptions-item label="服务发现类型">{{ getDiscoveryTypeLabel(detailDialog.form.service_discovery_type) }}</a-descriptions-item>
-            <a-descriptions-item label="协议方案">{{ detailDialog.form.scheme }}</a-descriptions-item>
-            <a-descriptions-item label="监控路径">{{ detailDialog.form.metrics_path }}</a-descriptions-item>
-            <a-descriptions-item label="目标地址">{{ detailDialog.form.ip_address }}:{{ detailDialog.form.port
-              }}</a-descriptions-item>
-            <a-descriptions-item label="采集间隔">{{ detailDialog.form.scrape_interval }}秒</a-descriptions-item>
-            <a-descriptions-item label="采集超时">{{ detailDialog.form.scrape_timeout }}秒</a-descriptions-item>
-            <a-descriptions-item label="刷新间隔">{{ detailDialog.form.refresh_interval }}秒</a-descriptions-item>
-            <a-descriptions-item label="关联采集池">{{ getPoolName(detailDialog.form.pool_id) }}</a-descriptions-item>
-            <a-descriptions-item label="创建人">{{ detailDialog.form.create_user_name }}</a-descriptions-item>
-            <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at || '')
-              }}</a-descriptions-item>
-            <a-descriptions-item v-if="detailDialog.form.tags && detailDialog.form.tags.length" label="标签">
+            <a-descriptions-item label="ID">
+              {{ detailDialog.form.id }}
+            </a-descriptions-item>
+            <a-descriptions-item label="服务发现类型">
+              {{
+                getDiscoveryTypeLabel(detailDialog.form.service_discovery_type)
+              }}
+            </a-descriptions-item>
+            <a-descriptions-item label="协议方案">
+              {{ detailDialog.form.scheme }}
+            </a-descriptions-item>
+            <a-descriptions-item label="监控路径">
+              {{ detailDialog.form.metrics_path }}
+            </a-descriptions-item>
+            <a-descriptions-item label="目标地址">
+              {{ detailDialog.form.ip_address }}:{{ detailDialog.form.port }}
+            </a-descriptions-item>
+            <a-descriptions-item label="采集间隔">
+              {{ detailDialog.form.scrape_interval }}秒
+            </a-descriptions-item>
+            <a-descriptions-item label="采集超时">
+              {{ detailDialog.form.scrape_timeout }}秒
+            </a-descriptions-item>
+            <a-descriptions-item label="刷新间隔">
+              {{ detailDialog.form.refresh_interval }}秒
+            </a-descriptions-item>
+            <a-descriptions-item label="关联采集池">
+              {{ getPoolName(detailDialog.form.pool_id) }}
+            </a-descriptions-item>
+            <a-descriptions-item label="创建人">
+              {{ detailDialog.form.create_user_name }}
+            </a-descriptions-item>
+            <a-descriptions-item label="创建时间">
+              {{ formatFullDateTime(detailDialog.form.created_at || '') }}
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-if="detailDialog.form.tags && detailDialog.form.tags.length"
+              label="标签"
+            >
               {{ (detailDialog.form.tags || []).join(', ') }}
             </a-descriptions-item>
-            <a-descriptions-item v-if="detailDialog.form.tree_node_ids && detailDialog.form.tree_node_ids.length" label="服务树节点">
-              {{ mapTreeNodeIdsToNames(detailDialog.form.tree_node_ids || []).join(', ') }}
+            <a-descriptions-item
+              v-if="
+                detailDialog.form.tree_node_ids &&
+                detailDialog.form.tree_node_ids.length
+              "
+              label="服务树节点"
+            >
+              {{
+                mapTreeNodeIdsToNames(
+                  detailDialog.form.tree_node_ids || [],
+                ).join(', ')
+              }}
             </a-descriptions-item>
-            <a-descriptions-item v-if="detailDialog.form.service_discovery_type === ServiceDiscoveryType.K8s" label="Kubernetes角色">
+            <a-descriptions-item
+              v-if="
+                detailDialog.form.service_discovery_type ===
+                ServiceDiscoveryType.K8s
+              "
+              label="Kubernetes角色"
+            >
               {{ detailDialog.form.kubernetes_sd_role || '未配置' }}
             </a-descriptions-item>
-            <a-descriptions-item v-if="detailDialog.form.service_discovery_type === ServiceDiscoveryType.K8s" label="KubeConfig路径">
+            <a-descriptions-item
+              v-if="
+                detailDialog.form.service_discovery_type ===
+                ServiceDiscoveryType.K8s
+              "
+              label="KubeConfig路径"
+            >
               {{ detailDialog.form.kube_config_file_path || '未配置' }}
             </a-descriptions-item>
-            <a-descriptions-item v-if="detailDialog.form.tls_ca_file_path" label="TLS CA文件">
+            <a-descriptions-item
+              v-if="detailDialog.form.tls_ca_file_path"
+              label="TLS CA文件"
+            >
               {{ detailDialog.form.tls_ca_file_path }}
             </a-descriptions-item>
             <a-descriptions-item label="Bearer Token">
@@ -491,7 +829,12 @@
 
           <div class="detail-footer">
             <a-button @click="closeDetailDialog">关闭</a-button>
-            <a-button type="primary" @click="handleEditScrapeJob(detailDialog.form!)">编辑</a-button>
+            <a-button
+              type="primary"
+              @click="handleEditScrapeJob(detailDialog.form!)"
+            >
+              编辑
+            </a-button>
           </div>
         </div>
       </a-spin>
@@ -502,13 +845,13 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
-import { bearerTokenPayload, type BearerTokenAction } from './scrapeJobCredentials';
+import {
+  bearerTokenPayload,
+  type BearerTokenAction,
+} from './scrapeJobCredentials';
 import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import {
-  PlusOutlined,
-  DownOutlined
-} from '@ant-design/icons-vue';
+import { PlusOutlined, DownOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
   getMonitorScrapeJobListApi,
@@ -520,7 +863,7 @@ import {
   type MonitorScrapeJob,
   type GetMonitorScrapeJobListReq,
   type CreateMonitorScrapeJobReq,
-  type UpdateMonitorScrapeJobReq
+  type UpdateMonitorScrapeJobReq,
 } from '#/api/core/prometheus/prometheus_scrape_job';
 import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_scrape_pool';
 import { getTreeList, type TreeNode } from '#/api/core/tree/tree_node';
@@ -559,15 +902,53 @@ const previewDialogWidth = computed(() => {
 
 // 列定义
 const columns = [
-  { title: '任务名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
-  { title: '服务发现', dataIndex: 'service_discovery_type', key: 'service_discovery_type', width: 140 },
-  { title: '启用状态', dataIndex: 'enable', key: 'enable', width: 100, align: 'center' as const },
+  {
+    title: '任务名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 200,
+    fixed: 'left',
+  },
+  {
+    title: '服务发现',
+    dataIndex: 'service_discovery_type',
+    key: 'service_discovery_type',
+    width: 140,
+  },
+  {
+    title: '启用状态',
+    dataIndex: 'enable',
+    key: 'enable',
+    width: 100,
+    align: 'center' as const,
+  },
   { title: '关联采集池', dataIndex: 'pool_id', key: 'pool_id', width: 120 },
-  { title: '目标信息', dataIndex: 'target_info', key: 'target_info', width: 200 },
-  { title: '采集配置', dataIndex: 'scrape_config', key: 'scrape_config', width: 120 },
-  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
+  {
+    title: '目标信息',
+    dataIndex: 'target_info',
+    key: 'target_info',
+    width: 200,
+  },
+  {
+    title: '采集配置',
+    dataIndex: 'scrape_config',
+    key: 'scrape_config',
+    width: 120,
+  },
+  {
+    title: '创建人',
+    dataIndex: 'create_user_name',
+    key: 'creator',
+    width: 120,
+  },
   { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
+  {
+    title: '操作',
+    key: 'action',
+    width: 200,
+    align: 'center' as const,
+    fixed: 'right',
+  },
 ];
 
 // 状态数据
@@ -597,7 +978,9 @@ let poolSearchDebounce: any;
 
 // 防抖处理
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-onBeforeUnmount(() => { if (searchTimeout) clearTimeout(searchTimeout); });
+onBeforeUnmount(() => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+});
 
 // 分页配置
 const paginationConfig = reactive({
@@ -607,7 +990,7 @@ const paginationConfig = reactive({
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
-  size: 'default' as const
+  size: 'default' as const,
 });
 
 // 统计数据
@@ -615,7 +998,7 @@ const stats = reactive({
   total: 0,
   enabled: 0,
   k8sJobs: 0,
-  httpJobs: 0
+  httpJobs: 0,
 });
 
 // 对话框状态
@@ -648,7 +1031,7 @@ const formDialog = reactive({
     kubernetes_sd_role: '',
     tree_node_ids: [] as number[],
     tags: [] as string[],
-  }
+  },
 });
 
 const bearerTokenAction = ref<BearerTokenAction>('keep');
@@ -668,41 +1051,47 @@ const yamlSuccess = ref<boolean>(false);
 const formRules = computed(() => ({
   name: [
     { required: true, message: '请输入采集任务名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' }
+    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
   ],
   service_discovery_type: [
-    { required: true, message: '请选择服务发现类型', trigger: 'change' }
+    { required: true, message: '请选择服务发现类型', trigger: 'change' },
   ],
-  scheme: [
-    { required: true, message: '请选择协议方案', trigger: 'change' }
-  ],
+  scheme: [{ required: true, message: '请选择协议方案', trigger: 'change' }],
   metrics_path: [
-    { required: true, message: '请输入监控采集路径', trigger: 'blur' }
+    { required: true, message: '请输入监控采集路径', trigger: 'blur' },
   ],
-  pool_id: [
-    { required: true, message: '请选择关联采集池', trigger: 'change' }
-  ],
+  pool_id: [{ required: true, message: '请选择关联采集池', trigger: 'change' }],
   scrape_interval: [
-    { required: true, message: '请输入采集间隔', trigger: 'blur' }
+    { required: true, message: '请输入采集间隔', trigger: 'blur' },
   ],
   scrape_timeout: [
-    { required: true, message: '请输入采集超时', trigger: 'blur' }
+    { required: true, message: '请输入采集超时', trigger: 'blur' },
   ],
   refresh_interval: [
-    { required: true, message: '请输入刷新间隔', trigger: 'blur' }
+    { required: true, message: '请输入刷新间隔', trigger: 'blur' },
   ],
   port: [
     ...(formDialog.form.service_discovery_type === ServiceDiscoveryType.Static
       ? [{ required: true, message: '请输入端口', trigger: 'blur' }]
       : []),
-    { type: 'number', min: 1, max: 65535, message: '端口必须在1-65535之间', trigger: 'blur' },
+    {
+      type: 'number',
+      min: 1,
+      max: 65535,
+      message: '端口必须在1-65535之间',
+      trigger: 'blur',
+    },
   ],
   ip_address: [
     ...(formDialog.form.service_discovery_type === ServiceDiscoveryType.Static
       ? [{ required: true, message: '请输入IP地址', trigger: 'blur' }]
       : []),
-    { pattern: /^(\d{1,3}\.){3}\d{1,3}$/, message: '请输入正确的IP地址格式', trigger: 'blur' }
-  ]
+    {
+      pattern: /^(\d{1,3}\.){3}\d{1,3}$/,
+      message: '请输入正确的IP地址格式',
+      trigger: 'blur',
+    },
+  ],
 }));
 
 const getJobStatusClass = (record: MonitorScrapeJob): string => {
@@ -711,7 +1100,16 @@ const getJobStatusClass = (record: MonitorScrapeJob): string => {
 };
 
 const getAvatarColor = (name: string): string => {
-  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
+  const colors = [
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
+  ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -731,7 +1129,10 @@ const formatDate = (timestamp: string): string => {
 
 const formatTime = (timestamp: string): string => {
   if (!timestamp) return '';
-  return new Date(timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  return new Date(timestamp).toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 const formatFullDateTime = (timestamp: string): string => {
@@ -741,33 +1142,41 @@ const formatFullDateTime = (timestamp: string): string => {
 
 const getPoolName = (poolId: number): string => {
   const allKnownPools = [...pools.value, ...dialogPools.value];
-  const pool = allKnownPools.find(p => p.id === poolId);
+  const pool = allKnownPools.find((p) => p.id === poolId);
   return pool ? pool.name : '未知';
 };
 
 const getDiscoveryTypeLabel = (type: ServiceDiscoveryType): string => {
   switch (type) {
-    case ServiceDiscoveryType.K8s:
+    case ServiceDiscoveryType.K8s: {
       return 'Kubernetes';
-    case ServiceDiscoveryType.Http:
+    }
+    case ServiceDiscoveryType.Http: {
       return 'HTTP';
-    case ServiceDiscoveryType.Static:
+    }
+    case ServiceDiscoveryType.Static: {
       return 'Static';
-    default:
+    }
+    default: {
       return String(type);
+    }
   }
 };
 
 const getDiscoveryTypeColor = (type: ServiceDiscoveryType): string => {
   switch (type) {
-    case ServiceDiscoveryType.K8s:
+    case ServiceDiscoveryType.K8s: {
       return 'blue';
-    case ServiceDiscoveryType.Http:
+    }
+    case ServiceDiscoveryType.Http: {
       return 'green';
-    case ServiceDiscoveryType.Static:
+    }
+    case ServiceDiscoveryType.Static: {
       return 'purple';
-    default:
+    }
+    default: {
       return 'default';
+    }
   }
 };
 
@@ -791,7 +1200,10 @@ const loadDialogPools = async (isNewSearch = false) => {
     });
 
     if (response && response.items && response.items.length > 0) {
-      const newPools = response.items.map((p: any) => ({ id: p.id, name: p.name }));
+      const newPools = response.items.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+      }));
       dialogPools.value.push(...newPools);
       dialogPoolPage.value++;
       if (dialogPools.value.length >= (response.total || 0)) {
@@ -801,7 +1213,8 @@ const loadDialogPools = async (isNewSearch = false) => {
       dialogPoolHasMore.value = false;
     }
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取采集池数据失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取采集池数据失败');
   } finally {
     dialogPoolLoading.value = false;
   }
@@ -825,9 +1238,15 @@ const handleDialogPoolScroll = (e: any) => {
 // 更新统计数据
 const updateStats = () => {
   // 当前页数据统计
-  const currentPageEnabled = scrapeJobList.value.filter(item => item.enable === 1).length;
-  const currentPageK8sJobs = scrapeJobList.value.filter(item => item.service_discovery_type === ServiceDiscoveryType.K8s).length;
-  const currentPageHttpJobs = scrapeJobList.value.filter(item => item.service_discovery_type === ServiceDiscoveryType.Http).length;
+  const currentPageEnabled = scrapeJobList.value.filter(
+    (item) => item.enable === 1,
+  ).length;
+  const currentPageK8sJobs = scrapeJobList.value.filter(
+    (item) => item.service_discovery_type === ServiceDiscoveryType.K8s,
+  ).length;
+  const currentPageHttpJobs = scrapeJobList.value.filter(
+    (item) => item.service_discovery_type === ServiceDiscoveryType.Http,
+  ).length;
 
   // 使用后端返回的总数
   stats.total = paginationConfig.total;
@@ -846,7 +1265,7 @@ const loadScrapeJobList = async (): Promise<void> => {
       size: paginationConfig.pageSize,
       search: searchQuery.value || undefined,
       enable: enableFilter.value,
-      pool_id: poolFilter.value
+      pool_id: poolFilter.value,
     };
 
     const response = await getMonitorScrapeJobListApi(params);
@@ -860,7 +1279,6 @@ const loadScrapeJobList = async (): Promise<void> => {
       paginationConfig.total = 0;
     }
   } catch (error: any) {
-
     if (!request.fail(error, '加载采集任务列表失败')) return;
     scrapeJobList.value = [];
     paginationConfig.total = 0;
@@ -895,7 +1313,10 @@ const loadPools = async (): Promise<void> => {
         allPools = [...allPools, ...pagePools];
 
         // 检查是否还有更多数据
-        if (response.items.length < pageSize || allPools.length >= (response.total || 0)) {
+        if (
+          response.items.length < pageSize ||
+          allPools.length >= (response.total || 0)
+        ) {
           hasMoreData = false;
         } else {
           currentPage++;
@@ -908,12 +1329,17 @@ const loadPools = async (): Promise<void> => {
     pools.value = allPools;
   } catch (error: any) {
     pools.value = [];
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取采集池数据失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取采集池数据失败');
   }
 };
 
 // 事件处理
-const handleTableChange = (pagination: any, _filters: any, _sorter: any): void => {
+const handleTableChange = (
+  pagination: any,
+  _filters: any,
+  _sorter: any,
+): void => {
   paginationConfig.current = pagination.current;
   paginationConfig.pageSize = pagination.pageSize;
   loadScrapeJobList();
@@ -986,7 +1412,9 @@ const handleEditScrapeJob = (record: MonitorScrapeJob): void => {
     bearer_token_file: record.bearer_token_file || '',
     kubernetes_sd_role: record.kubernetes_sd_role || '',
     tree_node_ids: Array.isArray(record.tree_node_ids)
-      ? record.tree_node_ids.map((id: any) => Number(id)).filter((n: any) => !Number.isNaN(n))
+      ? record.tree_node_ids
+          .map((id: any) => Number(id))
+          .filter((n: any) => !Number.isNaN(n))
       : [],
     tags: Array.isArray(record.tags) ? [...record.tags] : [],
   };
@@ -997,9 +1425,11 @@ const handleEditScrapeJob = (record: MonitorScrapeJob): void => {
 
   dialogPoolSearch.value = '';
   loadDialogPools(true).then(() => {
-    const selectedPoolInList = dialogPools.value.some(p => p.id === record.pool_id);
+    const selectedPoolInList = dialogPools.value.some(
+      (p) => p.id === record.pool_id,
+    );
     if (!selectedPoolInList) {
-      const pool = pools.value.find(p => p.id === record.pool_id);
+      const pool = pools.value.find((p) => p.id === record.pool_id);
       if (pool) {
         dialogPools.value.unshift(pool);
       }
@@ -1018,7 +1448,8 @@ const handleViewScrapeJob = async (record: MonitorScrapeJob): Promise<void> => {
     const response = await getMonitorScrapeJobDetailApi(record.id!);
     detailDialog.form = response as MonitorScrapeJob;
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error(error.message || '获取任务详情失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '获取任务详情失败');
     detailDialogVisible.value = false;
   } finally {
     detailDialog.loading = false;
@@ -1027,12 +1458,14 @@ const handleViewScrapeJob = async (record: MonitorScrapeJob): Promise<void> => {
 
 const handleMenuClick = (command: string, record: MonitorScrapeJob): void => {
   switch (command) {
-    case 'toggle':
+    case 'toggle': {
       toggleJobStatus(record);
       break;
-    case 'delete':
+    }
+    case 'delete': {
       confirmDelete(record);
       break;
+    }
   }
 };
 
@@ -1066,8 +1499,8 @@ const toggleJobStatus = async (record: MonitorScrapeJob): Promise<void> => {
     message.success(`采集任务已${newStatus === 1 ? '启用' : '禁用'}`);
     loadScrapeJobList();
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '切换采集任务状态失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '切换采集任务状态失败');
   }
 };
 
@@ -1090,10 +1523,10 @@ const confirmDelete = (record: MonitorScrapeJob): void => {
 
         loadScrapeJobList();
       } catch (error: any) {
-
-        if (shouldNotifyPageError(error)) message.error(error.message || '删除采集任务失败');
+        if (shouldNotifyPageError(error))
+          message.error(error.message || '删除采集任务失败');
       }
-    }
+    },
   });
 };
 
@@ -1110,7 +1543,10 @@ const saveScrapeJob = async (): Promise<void> => {
   }
 
   if (formDialog.form.service_discovery_type === ServiceDiscoveryType.Static) {
-    if (!formDialog.form.ip_address || formDialog.form.ip_address.trim() === '') {
+    if (
+      !formDialog.form.ip_address ||
+      formDialog.form.ip_address.trim() === ''
+    ) {
       message.error('请输入IP地址');
       return;
     }
@@ -1119,9 +1555,11 @@ const saveScrapeJob = async (): Promise<void> => {
   try {
     const { bearer_token, enableSwitch, ...configuration } = formDialog.form;
     const credentials = bearerTokenPayload({
-      editing: formDialog.isEdit, action: bearerTokenAction.value,
+      editing: formDialog.isEdit,
+      action: bearerTokenAction.value,
       hasExisting: hasExistingBearerToken.value,
-      token: bearer_token, tokenFile: configuration.bearer_token_file,
+      token: bearer_token,
+      tokenFile: configuration.bearer_token_file,
     });
     const formData = {
       ...configuration,
@@ -1130,15 +1568,19 @@ const saveScrapeJob = async (): Promise<void> => {
       tree_node_ids: Array.isArray((formDialog.form as any).tree_node_ids)
         ? (formDialog.form as any).tree_node_ids.map((id: number) => String(id))
         : [],
-      tags: Array.isArray((formDialog.form as any).tags) ? (formDialog.form as any).tags : [],
+      tags: Array.isArray((formDialog.form as any).tags)
+        ? (formDialog.form as any).tags
+        : [],
     };
 
     if (formDialog.isEdit && formDialog.form.id) {
-      const updateData: UpdateMonitorScrapeJobReq = formData as UpdateMonitorScrapeJobReq;
+      const updateData: UpdateMonitorScrapeJobReq =
+        formData as UpdateMonitorScrapeJobReq;
       await updateMonitorScrapeJobApi(updateData);
       message.success(`采集任务 "${formDialog.form.name}" 已更新`);
     } else {
-      const createData: CreateMonitorScrapeJobReq = formData as CreateMonitorScrapeJobReq;
+      const createData: CreateMonitorScrapeJobReq =
+        formData as CreateMonitorScrapeJobReq;
       await createMonitorScrapeJobApi(createData);
       message.success(`采集任务 "${formDialog.form.name}" 已创建`);
       // 创建后返回第一页
@@ -1148,8 +1590,8 @@ const saveScrapeJob = async (): Promise<void> => {
     formDialogVisible.value = false;
     loadScrapeJobList();
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '保存采集任务失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '保存采集任务失败');
   }
 };
 
@@ -1283,7 +1725,9 @@ const formatYaml = (): void => {
         if (key) {
           if (value && value.trim() !== '') {
             // 有值的键值对
-            formattedLines.push('  '.repeat(currentIndent) + key.trim() + ':' + value);
+            formattedLines.push(
+              '  '.repeat(currentIndent) + key.trim() + ':' + value,
+            );
           } else {
             // 没有值的键，可能是嵌套对象的开始
             formattedLines.push('  '.repeat(currentIndent) + key.trim() + ':');
@@ -1349,7 +1793,6 @@ const loadTreeData = async (): Promise<void> => {
     const response = await getTreeList();
     treeData.value = response.items || [];
   } catch (error) {
-
     if (shouldNotifyPageError(error)) message.error('获取服务树数据失败');
     treeData.value = [];
   }
@@ -1365,7 +1808,9 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
     }
   };
   dfs(treeData.value || []);
-  const idNums = ids.map((id: any) => Number(id)).filter((n: any) => !Number.isNaN(n));
+  const idNums = ids
+    .map((id: any) => Number(id))
+    .filter((n: any) => !Number.isNaN(n));
   return idNums.map((id: number) => idToName.get(id) || String(id));
 };
 </script>
@@ -1376,11 +1821,6 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
   margin: 0 0 var(--ops-space-sm);
   line-height: 1.6;
 }
-
-
-
-
-
 
 .search-input {
   width: 250px;
@@ -1599,9 +2039,6 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-
-
-
   .search-input {
     width: 100%;
     min-width: auto;
@@ -1611,8 +2048,6 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
     width: 100%;
     min-width: auto;
   }
-
-
 
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
@@ -1642,7 +2077,6 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 }
 
 @media (max-width: 480px) {
-
   .stats-card {
     text-align: center;
   }

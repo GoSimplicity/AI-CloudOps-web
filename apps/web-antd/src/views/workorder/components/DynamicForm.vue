@@ -136,7 +136,12 @@
 
       <div class="form-actions" v-if="showActions">
         <a-space size="large">
-          <a-button type="primary" html-type="submit" size="large" class="submit-btn">
+          <a-button
+            type="primary"
+            html-type="submit"
+            size="large"
+            class="submit-btn"
+          >
             <FormOutlined />
             提交表单
           </a-button>
@@ -171,7 +176,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   data: () => ({}),
   rules: () => ({}),
-  showActions: true
+  showActions: true,
 });
 
 const emit = defineEmits<Emits>();
@@ -194,14 +199,17 @@ watch(
       }, 0);
     }
   },
-  { deep: true }
+  { deep: true },
 );
 
 // 监听外部数据变化
 watch(
   () => props.data,
   (newData) => {
-    if (!isUpdatingFromLocal && JSON.stringify(localData.value) !== JSON.stringify(newData)) {
+    if (
+      !isUpdatingFromLocal &&
+      JSON.stringify(localData.value) !== JSON.stringify(newData)
+    ) {
       isUpdatingFromProps = true;
       localData.value = JSON.parse(JSON.stringify(newData || {}));
       setTimeout(() => {
@@ -209,7 +217,7 @@ watch(
       }, 0);
     }
   },
-  { deep: true }
+  { deep: true },
 );
 
 // 处理表单提交
@@ -230,7 +238,7 @@ const validate = () => {
 // 暴露方法给父组件
 defineExpose({
   validate,
-  resetForm
+  resetForm,
 });
 </script>
 

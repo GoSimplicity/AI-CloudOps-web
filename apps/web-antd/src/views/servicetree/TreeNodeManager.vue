@@ -5,10 +5,7 @@ import { onBeforeUnmount } from 'vue';
 
 import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import {
-  PlusOutlined,
-  DownOutlined
-} from '@ant-design/icons-vue';
+import { PlusOutlined, DownOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
   getTreeList,
@@ -26,11 +23,16 @@ import {
   type CreateTreeNodeReq,
   type UpdateTreeNodeReq,
   TreeNodeStatus,
-  TreeNodeMemberType
+  TreeNodeMemberType,
 } from '#/api/core/tree/tree_node';
 
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
-import { getTreeLocalList, type GetTreeLocalResourceListReq, type TreeLocalResource, ResourceStatus } from '#/api/core/tree/tree_local';
+import {
+  getTreeLocalList,
+  type GetTreeLocalResourceListReq,
+  type TreeLocalResource,
+  ResourceStatus,
+} from '#/api/core/tree/tree_local';
 
 import { usePermission } from '#/utils/permission';
 import {
@@ -43,7 +45,6 @@ const { can } = usePermission();
 const loadError = ref<string | null>(null);
 let listRequest = 0;
 let detailRequest = 0;
-
 
 // 为了兼容后端返回的节点详情结构，定义本地扩展类型
 type NodeUser = { id: number; real_name: string; email?: string };
@@ -90,7 +91,7 @@ const stats = reactive({
   total_admins: 0,
   total_members: 0,
   active_nodes: 0,
-  inactive_nodes: 0
+  inactive_nodes: 0,
 });
 
 // 对话框状态
@@ -108,21 +109,21 @@ const formDialog = reactive({
     parent_id: undefined as number | undefined,
     description: '',
     status: TreeNodeStatus.ACTIVE,
-    is_leaf: 1 | 2
-  }
+    is_leaf: 1 | 2,
+  },
 });
 
 // 移动节点对话框数据
 const moveDialog = reactive({
   nodeId: undefined as number | undefined,
-  newParentId: undefined as number | undefined
+  newParentId: undefined as number | undefined,
 });
 
 // 添加成员对话框数据
 const addMemberDialog = reactive({
   nodeId: undefined as number | undefined,
   memberType: TreeNodeMemberType.AdminRole,
-  selectedUsers: [] as number[]
+  selectedUsers: [] as number[],
 });
 
 // 用户选项和资源相关
@@ -136,7 +137,7 @@ const userPagination = reactive({
   pageSize: 10,
   total: 0,
   showSizeChanger: true,
-  showTotal: (total: number) => `共 ${total} 条记录`
+  showTotal: (total: number) => `共 ${total} 条记录`,
 });
 
 // 用户搜索
@@ -148,14 +149,14 @@ const resourceColumns = [
   { title: '地址', key: 'address' },
   { title: '状态', dataIndex: 'status', key: 'status' },
   { title: '环境', dataIndex: 'environment', key: 'environment' },
-  { title: '描述', dataIndex: 'description', key: 'description' }
+  { title: '描述', dataIndex: 'description', key: 'description' },
 ];
 
 const resourceRowSelection = {
   selectedRowKeys: selectedResourceIds,
   onChange: (selectedRowKeys: number[]) => {
     selectedResourceIds.value = selectedRowKeys;
-  }
+  },
 };
 
 const resourcePagination = reactive({
@@ -163,23 +164,34 @@ const resourcePagination = reactive({
   pageSize: 10,
   total: 0,
   showSizeChanger: true,
-  showTotal: (total: number) => `共 ${total} 条记录`
+  showTotal: (total: number) => `共 ${total} 条记录`,
 });
 
 // 表单验证规则
 const formRules = {
   name: [
     { required: true, message: '请输入节点名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度应为2到50个字符', trigger: 'blur' }
-  ]
+    { min: 2, max: 50, message: '长度应为2到50个字符', trigger: 'blur' },
+  ],
 };
 
 const getNodeIconClass = (node: TreeNodeWithRelations): string => {
-  return node.status === TreeNodeStatus.ACTIVE ? 'node-icon-active' : 'node-icon-inactive';
+  return node.status === TreeNodeStatus.ACTIVE
+    ? 'node-icon-active'
+    : 'node-icon-inactive';
 };
 
 const getAvatarColor = (name: string): string => {
-  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
+  const colors = [
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
+  ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -205,7 +217,7 @@ const getResourceStatusColor = (status: ResourceStatus): string => {
     [ResourceStatus.STOPPING]: 'warning',
     [ResourceStatus.RESTARTING]: 'processing',
     [ResourceStatus.DELETING]: 'error',
-    [ResourceStatus.ERROR]: 'error'
+    [ResourceStatus.ERROR]: 'error',
   };
   return statusColorMap[status] || 'default';
 };
@@ -218,25 +230,40 @@ const getResourceStatusText = (status: ResourceStatus): string => {
     [ResourceStatus.STOPPING]: '停止中',
     [ResourceStatus.RESTARTING]: '重启中',
     [ResourceStatus.DELETING]: '删除中',
-    [ResourceStatus.ERROR]: '错误'
+    [ResourceStatus.ERROR]: '错误',
   };
   return statusTextMap[status] || '未知';
 };
 
 const filterUserOption = (input: string, option: any) => {
-  return option.real_name?.toLowerCase().includes(input.toLowerCase()) ||
-         option.email?.toLowerCase().includes(input.toLowerCase());
+  return (
+    option.real_name?.toLowerCase().includes(input.toLowerCase()) ||
+    option.email?.toLowerCase().includes(input.toLowerCase())
+  );
 };
 
 // 更新统计数据
 const updateStats = (nodes: TreeNodeWithRelations[]): void => {
   const visible = flattenNodeTree(nodes);
   stats.total_nodes = visible.length;
-  stats.active_nodes = visible.filter(node => node.status === TreeNodeStatus.ACTIVE).length;
-  stats.inactive_nodes = visible.filter(node => node.status === TreeNodeStatus.INACTIVE).length;
-  stats.total_resources = visible.reduce((total, node) => total + (node.tree_local_resources?.length || 0), 0);
-  stats.total_admins = visible.reduce((total, node) => total + (node.admins?.length || 0), 0);
-  stats.total_members = visible.reduce((total, node) => total + (node.members?.length || 0), 0);
+  stats.active_nodes = visible.filter(
+    (node) => node.status === TreeNodeStatus.ACTIVE,
+  ).length;
+  stats.inactive_nodes = visible.filter(
+    (node) => node.status === TreeNodeStatus.INACTIVE,
+  ).length;
+  stats.total_resources = visible.reduce(
+    (total, node) => total + (node.tree_local_resources?.length || 0),
+    0,
+  );
+  stats.total_admins = visible.reduce(
+    (total, node) => total + (node.admins?.length || 0),
+    0,
+  );
+  stats.total_members = visible.reduce(
+    (total, node) => total + (node.members?.length || 0),
+    0,
+  );
 };
 
 // 数据加载
@@ -251,7 +278,7 @@ const loadTreeData = async (): Promise<void> => {
   try {
     const params: GetTreeNodeListReq = {
       level: levelFilter.value,
-      status: statusFilter.value
+      status: statusFilter.value,
     };
 
     const response = await getTreeList(params);
@@ -267,12 +294,14 @@ const loadTreeData = async (): Promise<void> => {
     }
   } catch (error: any) {
     if (ticket !== listRequest) return;
-    if (shouldRecordPageError(error)) loadError.value = '获取服务树失败，请重试';
+    if (shouldRecordPageError(error))
+      loadError.value = '获取服务树失败，请重试';
 
     treeData.value = [];
     selectedNode.value = null;
     updateStats([]);
-    if (shouldNotifyPageError(error)) message.error(error.message || '加载树状数据失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '加载树状数据失败');
   } finally {
     if (ticket === listRequest) treeLoading.value = false;
   }
@@ -284,20 +313,18 @@ const loadUserList = async (): Promise<void> => {
     const params: GetUserListReq = {
       page: userPagination.current,
       size: userPagination.pageSize,
-      search: userSearchQuery.value
+      search: userSearchQuery.value,
     };
     const response = await getUserList(params);
     if (response && response.items) {
       userOptions.value = response.items;
       userPagination.total = response.total || 0;
-
     } else {
-
       message.error('加载用户列表失败: 响应格式异常');
     }
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '加载用户列表失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '加载用户列表失败');
   }
 };
 
@@ -320,7 +347,7 @@ const loadAvailableResources = async (): Promise<void> => {
   try {
     const params: GetTreeLocalResourceListReq = {
       page: resourcePagination.current,
-      size: resourcePagination.pageSize
+      size: resourcePagination.pageSize,
     };
     const response = await getTreeLocalList(params);
     if (response && response.items) {
@@ -328,8 +355,8 @@ const loadAvailableResources = async (): Promise<void> => {
       resourcePagination.total = response.total || 0;
     }
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '加载资源列表失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '加载资源列表失败');
   } finally {
     resourceLoading.value = false;
   }
@@ -344,11 +371,13 @@ const handleTreeSelect = async (selectedKeys: number[]): Promise<void> => {
     detailLoading.value = true;
     try {
       const response = await getNodeDetail(nodeId!);
-      if (ticket === detailRequest) selectedNode.value = response as TreeNodeWithRelations;
+      if (ticket === detailRequest)
+        selectedNode.value = response as TreeNodeWithRelations;
     } catch (error: any) {
       if (ticket !== detailRequest) return;
 
-      if (shouldNotifyPageError(error)) message.error(error.message || '获取节点详情失败');
+      if (shouldNotifyPageError(error))
+        message.error(error.message || '获取节点详情失败');
     } finally {
       if (ticket === detailRequest) detailLoading.value = false;
     }
@@ -410,27 +439,35 @@ const handleEditNode = (record: TreeNodeWithRelations): void => {
     parent_id: record.parent_id || undefined,
     description: record.description,
     status: record.status,
-    is_leaf: record.is_leaf
+    is_leaf: record.is_leaf,
   };
   formDialogVisible.value = true;
 };
 
-const handleMenuClick = async (command: string, record: TreeNodeWithRelations): Promise<void> => {
+const handleMenuClick = async (
+  command: string,
+  record: TreeNodeWithRelations,
+): Promise<void> => {
   switch (command) {
-    case 'members':
+    case 'members': {
       break;
-    case 'resources':
+    }
+    case 'resources': {
       handleBindResource();
       break;
-    case 'move':
+    }
+    case 'move': {
       handleMoveNodeDialog(record);
       break;
-    case 'children':
+    }
+    case 'children': {
       handleCreateChildNode(record);
       break;
-    case 'delete':
+    }
+    case 'delete': {
       confirmDelete(record);
       break;
+    }
   }
 };
 
@@ -475,26 +512,29 @@ const handleUnbindResource = async (resourceId: number): Promise<void> => {
   try {
     await unbindResource({
       node_id: selectedNode.value.id,
-      resource_id: resourceId
+      resource_id: resourceId,
     });
     message.success('资源解绑成功');
     // 重新加载节点详情
     handleTreeSelect([selectedNode.value.id]);
     loadTreeData();
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '解绑资源失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '解绑资源失败');
   }
 };
 
-const removeMember = async (userId: number, memberType: TreeNodeMemberType): Promise<void> => {
+const removeMember = async (
+  userId: number,
+  memberType: TreeNodeMemberType,
+): Promise<void> => {
   if (!selectedNode.value) return;
 
   try {
     await removeNodeMember(selectedNode.value.id, {
       node_id: selectedNode.value.id,
       user_id: userId,
-      member_type: memberType
+      member_type: memberType,
     });
 
     message.success('成员已移除');
@@ -502,8 +542,8 @@ const removeMember = async (userId: number, memberType: TreeNodeMemberType): Pro
     handleTreeSelect([selectedNode.value.id]);
     loadTreeData();
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '移除成员失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '移除成员失败');
   }
 };
 
@@ -522,10 +562,10 @@ const confirmDelete = (record: TreeNode): void => {
         selectedKeys.value = [];
         loadTreeData();
       } catch (error: any) {
-
-        if (shouldNotifyPageError(error)) message.error(error.message || '删除节点失败');
+        if (shouldNotifyPageError(error))
+          message.error(error.message || '删除节点失败');
       }
-    }
+    },
   });
 };
 
@@ -542,13 +582,13 @@ const saveNode = async (): Promise<void> => {
       parent_id: formDialog.form.parent_id,
       description: formDialog.form.description,
       status: formDialog.form.status,
-      is_leaf: formDialog.form.is_leaf
+      is_leaf: formDialog.form.is_leaf,
     };
 
     if (formDialog.isEdit && formDialog.form.id) {
       const updateData: UpdateTreeNodeReq = {
         id: formDialog.form.id,
-        ...formData
+        ...formData,
       };
       await updateNode(formDialog.form.id, updateData);
       message.success(`节点 "${formDialog.form.name}" 已更新`);
@@ -567,8 +607,8 @@ const saveNode = async (): Promise<void> => {
       handleTreeSelect([formDialog.form.id]);
     }
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '保存节点失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '保存节点失败');
   }
 };
 
@@ -581,7 +621,7 @@ const handleMoveNode = async (): Promise<void> => {
   try {
     await moveNode(moveDialog.nodeId, {
       id: moveDialog.nodeId,
-      new_parent_id: moveDialog.newParentId
+      new_parent_id: moveDialog.newParentId,
     });
     message.success('节点移动成功');
     moveDialogVisible.value = false;
@@ -591,8 +631,8 @@ const handleMoveNode = async (): Promise<void> => {
     selectedKeys.value = [moveDialog.nodeId];
     handleTreeSelect([moveDialog.nodeId]);
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '移动节点失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '移动节点失败');
   }
 };
 
@@ -607,7 +647,7 @@ const handleAddMemberConfirm = async (): Promise<void> => {
       await addNodeMember({
         node_id: addMemberDialog.nodeId,
         user_id: userId,
-        member_type: addMemberDialog.memberType
+        member_type: addMemberDialog.memberType,
       });
     }
 
@@ -620,8 +660,8 @@ const handleAddMemberConfirm = async (): Promise<void> => {
     }
     loadTreeData();
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '添加成员失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '添加成员失败');
   }
 };
 
@@ -634,7 +674,7 @@ const handleBindResourceConfirm = async (): Promise<void> => {
   try {
     await bindResource({
       node_id: selectedNode.value.id,
-      resource_ids: selectedResourceIds.value
+      resource_ids: selectedResourceIds.value,
     });
 
     message.success('资源绑定成功');
@@ -644,8 +684,8 @@ const handleBindResourceConfirm = async (): Promise<void> => {
     handleTreeSelect([selectedNode.value.id]);
     loadTreeData();
   } catch (error: any) {
-
-    if (shouldNotifyPageError(error)) message.error(error.message || '绑定资源失败');
+    if (shouldNotifyPageError(error))
+      message.error(error.message || '绑定资源失败');
   }
 };
 
@@ -677,7 +717,7 @@ const resetFormDialog = (): void => {
     parent_id: undefined,
     description: '',
     status: TreeNodeStatus.ACTIVE,
-    is_leaf: 1
+    is_leaf: 1,
   };
 };
 
@@ -693,111 +733,117 @@ onMounted(() => {
   loadTreeData();
   loadUserList();
 });
-onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clearTimeout(searchTimeout); });
+onBeforeUnmount(() => {
+  listRequest++;
+  detailRequest++;
+  if (searchTimeout) clearTimeout(searchTimeout);
+});
 </script>
 
 <template>
-  <OpsPage title="服务树" description="维护节点、成员与资源关联" class="cmdb-console tree-node-container">
+  <OpsPage
+    title="服务树"
+    description="维护节点、成员与资源关联"
+    class="cmdb-console tree-node-container"
+  >
     <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
-      <template #action><a-button @click="loadTreeData()">重试</a-button></template>
+      <template #action>
+        <a-button @click="loadTreeData()">重试</a-button>
+      </template>
     </a-alert>
     <!-- 页面标题 -->
-    <template #actions><a-button type="primary" @click="handleCreateNode" class="btn-create">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          <span class="btn-text">创建节点</span>
-        </a-button><a-button @click="loadTreeData()" :loading="treeLoading">刷新</a-button></template><template #filters><div class="search-filters">
-          <a-input-search
-            v-model:value="searchQuery"
-            placeholder="搜索节点名称..."
-            class="search-input"
-            @search="handleSearch"
-            @change="handleSearchChange"
-            allow-clear
-          />
-          <a-select
-            v-model:value="levelFilter"
-            placeholder="节点层级"
-            class="filter-select"
-            @change="handleLevelChange"
-            allow-clear
-          >
-            <a-select-option :value="undefined">全部层级</a-select-option>
-            <a-select-option :value="1">第1层</a-select-option>
-            <a-select-option :value="2">第2层</a-select-option>
-            <a-select-option :value="3">第3层</a-select-option>
-            <a-select-option :value="4">第4层</a-select-option>
-          </a-select>
-          <a-select
-            v-model:value="statusFilter"
-            placeholder="节点状态"
-            class="filter-select"
-            @change="handleStatusChange"
-            allow-clear
-          >
-            <a-select-option :value="undefined">全部状态</a-select-option>
-            <a-select-option :value="1">活跃</a-select-option>
-            <a-select-option :value="2">非活跃</a-select-option>
-          </a-select>
-          <a-button @click="handleResetFilters" class="reset-btn">
-            重置
-          </a-button>
-        </div></template>
+    <template #actions>
+      <a-button type="primary" @click="handleCreateNode" class="btn-create">
+        <template #icon>
+          <PlusOutlined />
+        </template>
+        <span class="btn-text">创建节点</span> </a-button
+      ><a-button @click="loadTreeData()" :loading="treeLoading">
+        刷新
+      </a-button> </template
+    ><template #filters>
+      <div class="search-filters">
+        <a-input-search
+          v-model:value="searchQuery"
+          placeholder="搜索节点名称..."
+          class="search-input"
+          @search="handleSearch"
+          @change="handleSearchChange"
+          allow-clear
+        />
+        <a-select
+          v-model:value="levelFilter"
+          placeholder="节点层级"
+          class="filter-select"
+          @change="handleLevelChange"
+          allow-clear
+        >
+          <a-select-option :value="undefined">全部层级</a-select-option>
+          <a-select-option :value="1">第1层</a-select-option>
+          <a-select-option :value="2">第2层</a-select-option>
+          <a-select-option :value="3">第3层</a-select-option>
+          <a-select-option :value="4">第4层</a-select-option>
+        </a-select>
+        <a-select
+          v-model:value="statusFilter"
+          placeholder="节点状态"
+          class="filter-select"
+          @change="handleStatusChange"
+          allow-clear
+        >
+          <a-select-option :value="undefined">全部状态</a-select-option>
+          <a-select-option :value="1">活跃</a-select-option>
+          <a-select-option :value="2">非活跃</a-select-option>
+        </a-select>
+        <a-button @click="handleResetFilters" class="reset-btn">
+          重置
+        </a-button>
+      </div>
+    </template>
 
     <!-- 统计卡片 -->
-    <template #summary><div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="当前节点"
-              :value="stats.total_nodes"
-            >
-              <template #prefix>
-                <Icon icon="carbon:tree-view" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="当前活跃节点"
-              :value="stats.active_nodes"
-            >
-              <template #prefix>
-                <Icon icon="carbon:checkmark-outline" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="当前资源关联"
-              :value="stats.total_resources"
-            >
-              <template #prefix>
-                <Icon icon="carbon:data-table" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="当前管理员关联"
-              :value="stats.total_admins"
-            >
-              <template #prefix>
-                <Icon icon="carbon:user-admin" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div></template>
+    <template #summary>
+      <div class="stats-row">
+        <a-row :gutter="[16, 16]">
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic title="当前节点" :value="stats.total_nodes">
+                <template #prefix>
+                  <Icon icon="carbon:tree-view" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic title="当前活跃节点" :value="stats.active_nodes">
+                <template #prefix>
+                  <Icon icon="carbon:checkmark-outline" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic title="当前资源关联" :value="stats.total_resources">
+                <template #prefix>
+                  <Icon icon="carbon:data-table" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic title="当前管理员关联" :value="stats.total_admins">
+                <template #prefix>
+                  <Icon icon="carbon:user-admin" />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
+    </template>
 
     <!-- 树状结构和详情展示 -->
     <div class="content-layout">
@@ -831,7 +877,9 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
             >
               <template #icon="{ dataRef }">
                 <Icon
-                  :icon="dataRef.is_leaf === 1 ? 'carbon:document' : 'carbon:folder'"
+                  :icon="
+                    dataRef.is_leaf === 1 ? 'carbon:document' : 'carbon:folder'
+                  "
                   :class="getNodeIconClass(dataRef)"
                 />
               </template>
@@ -862,7 +910,11 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
 
         <!-- 右侧详情展示 -->
         <a-col :xs="24" :sm="24" :md="16" :lg="18">
-          <a-card v-if="selectedNode" class="detail-card" :loading="detailLoading">
+          <a-card
+            v-if="selectedNode"
+            class="detail-card"
+            :loading="detailLoading"
+          >
             <template #title>
               <div class="detail-header">
                 <Icon icon="carbon:information" />
@@ -877,10 +929,20 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
                   </a-button>
                   <a-dropdown>
                     <template #overlay>
-                      <a-menu @click="(e: any) => handleMenuClick(e.key, selectedNode!)">
+                      <a-menu
+                        @click="
+                          (e: any) => handleMenuClick(e.key, selectedNode!)
+                        "
+                      >
                         <a-menu-item key="move">移动节点</a-menu-item>
                         <a-menu-item key="children">添加子节点</a-menu-item>
-                        <a-menu-item v-if="can('tree.node.delete')" key="delete" danger>删除</a-menu-item>
+                        <a-menu-item
+                          v-if="can('tree.node.delete')"
+                          key="delete"
+                          danger
+                        >
+                          删除
+                        </a-menu-item>
                       </a-menu>
                     </template>
                     <a-button size="small">
@@ -895,21 +957,37 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
             <a-tabs>
               <!-- 基本信息 -->
               <a-tab-pane key="info" tab="基本信息">
-                <a-descriptions bordered :column="2" :labelStyle="{ width: '120px' }">
-                  <a-descriptions-item label="节点ID">{{ selectedNode.id }}</a-descriptions-item>
-                  <a-descriptions-item label="父节点ID">{{ selectedNode.parent_id || '无' }}</a-descriptions-item>
-                  <a-descriptions-item label="节点层级">第{{ selectedNode.level }}层</a-descriptions-item>
+                <a-descriptions
+                  bordered
+                  :column="2"
+                  :labelStyle="{ width: '120px' }"
+                >
+                  <a-descriptions-item label="节点ID">
+                    {{ selectedNode.id }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="父节点ID">
+                    {{ selectedNode.parent_id || '无' }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="节点层级">
+                    第{{ selectedNode.level }}层
+                  </a-descriptions-item>
                   <a-descriptions-item label="节点状态">
-                    <a-tag :color="selectedNode.status === 1 ? 'success' : 'default'">
+                    <a-tag
+                      :color="selectedNode.status === 1 ? 'success' : 'default'"
+                    >
                       {{ selectedNode.status === 1 ? '活跃' : '非活跃' }}
                     </a-tag>
                   </a-descriptions-item>
                   <a-descriptions-item label="节点类型">
-                    <a-tag :color="selectedNode.is_leaf === 1 ? 'blue' : 'green'">
+                    <a-tag
+                      :color="selectedNode.is_leaf === 1 ? 'blue' : 'green'"
+                    >
                       {{ selectedNode.is_leaf === 1 ? '叶子节点' : '分支节点' }}
                     </a-tag>
                   </a-descriptions-item>
-                  <a-descriptions-item label="创建人">{{ selectedNode.create_user_name }}</a-descriptions-item>
+                  <a-descriptions-item label="创建人">
+                    {{ selectedNode.create_user_name }}
+                  </a-descriptions-item>
                   <a-descriptions-item label="创建时间" :span="2">
                     {{ formatFullDateTime(selectedNode.created_at) }}
                   </a-descriptions-item>
@@ -942,7 +1020,9 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
                       class="member-item"
                     >
                       <a-avatar
-                        :style="{ backgroundColor: getAvatarColor(admin.real_name) }"
+                        :style="{
+                          backgroundColor: getAvatarColor(admin.real_name),
+                        }"
                       >
                         {{ getInitials(admin.real_name) }}
                       </a-avatar>
@@ -979,7 +1059,9 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
                       class="member-item"
                     >
                       <a-avatar
-                        :style="{ backgroundColor: getAvatarColor(member.real_name) }"
+                        :style="{
+                          backgroundColor: getAvatarColor(member.real_name),
+                        }"
                       >
                         {{ getInitials(member.real_name) }}
                       </a-avatar>
@@ -1005,7 +1087,11 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
               <a-tab-pane key="resources" tab="绑定资源">
                 <div class="resources-section">
                   <div class="section-header">
-                    <h4>绑定资源 ({{ selectedNode.tree_local_resources?.length || 0 }})</h4>
+                    <h4>
+                      绑定资源 ({{
+                        selectedNode.tree_local_resources?.length || 0
+                      }})
+                    </h4>
                     <a-button
                       type="primary"
                       size="small"
@@ -1025,7 +1111,9 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
                       </div>
                       <div class="resource-info">
                         <div class="resource-name">{{ resource.name }}</div>
-                        <div class="resource-address">{{ resource.ip_addr }}:{{ resource.port }}</div>
+                        <div class="resource-address">
+                          {{ resource.ip_addr }}:{{ resource.port }}
+                        </div>
                         <a-tag
                           :color="getResourceStatusColor(resource.status)"
                           size="small"
@@ -1092,7 +1180,11 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
                 <a-tree-select
                   v-model:value="formDialog.form.parent_id"
                   :tree-data="treeData"
-                  :field-names="{ children: 'children', label: 'name', value: 'id' }"
+                  :field-names="{
+                    children: 'children',
+                    label: 'name',
+                    value: 'id',
+                  }"
                   placeholder="请选择父节点"
                   allow-clear
                   tree-default-expand-all
@@ -1114,7 +1206,10 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="节点状态" name="status">
-                <a-select v-model:value="formDialog.form.status" placeholder="请选择状态">
+                <a-select
+                  v-model:value="formDialog.form.status"
+                  placeholder="请选择状态"
+                >
                   <a-select-option :value="1">活跃</a-select-option>
                   <a-select-option :value="2">非活跃</a-select-option>
                 </a-select>
@@ -1124,7 +1219,10 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
               <a-form-item label="是否叶子节点" name="is_leaf">
                 <a-switch
                   :checked="formDialog.form.is_leaf === 1"
-                  @change="(checked: boolean) => formDialog.form.is_leaf = checked ? 1 : 2"
+                  @change="
+                    (checked: boolean) =>
+                      (formDialog.form.is_leaf = checked ? 1 : 2)
+                  "
                   class="tech-switch"
                 />
               </a-form-item>
@@ -1184,7 +1282,11 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
           />
           <div class="user-option-extra" v-if="userOptions.length > 0">
             <div class="user-option-list">
-              <div v-for="user in userOptions" :key="user.id" class="user-option-item">
+              <div
+                v-for="user in userOptions"
+                :key="user.id"
+                class="user-option-item"
+              >
                 <div class="user-option-info">
                   <div class="user-name">{{ user.real_name }}</div>
                   <div class="user-email">{{ user.email }}</div>
@@ -1239,8 +1341,6 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
     </a-modal>
   </OpsPage>
 </template>
-
-
 
 <style scoped>
 .tree-node-container {
@@ -1448,9 +1548,11 @@ onBeforeUnmount(() => { listRequest++; detailRequest++; if (searchTimeout) clear
   border-left: 1px solid var(--ops-border);
 }
 
-.tech-switch {}
+.tech-switch {
+}
 
-.tech-switch.ant-switch-checked {}
+.tech-switch.ant-switch-checked {
+}
 
 .bind-resource-content {
   max-height: 400px;

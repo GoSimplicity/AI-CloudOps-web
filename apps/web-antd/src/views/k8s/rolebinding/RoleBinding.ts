@@ -59,16 +59,16 @@ const calculateAge = (creationTimestamp?: string): string => {
   if (!creationTimestamp) {
     return '-';
   }
-  
+
   try {
     const createTime = new Date(creationTimestamp);
     const now = new Date();
     const diff = now.getTime() - createTime.getTime();
-    
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (days > 0) {
       return `${days}天`;
     } else if (hours > 0) {
@@ -79,7 +79,6 @@ const calculateAge = (creationTimestamp?: string): string => {
       return '刚刚';
     }
   } catch (error) {
-
     return '-';
   }
 };
@@ -90,24 +89,34 @@ const parseRoleBindingData = (roleBinding: K8sRoleBinding): K8sRoleBinding => {
 
   try {
     // 从 annotations 中解析真实的配置数据
-    const lastAppliedConfig = roleBinding.annotations?.['kubectl.kubernetes.io/last-applied-configuration'];
-    
+    const lastAppliedConfig =
+      roleBinding.annotations?.[
+        'kubectl.kubernetes.io/last-applied-configuration'
+      ];
+
     if (lastAppliedConfig) {
       const config = JSON.parse(lastAppliedConfig);
-      
+
       // 修复 role_ref 数据
-      if (config.roleRef && (!parsedRoleBinding.role_ref || 
-          !parsedRoleBinding.role_ref.name || !parsedRoleBinding.role_ref.kind)) {
+      if (
+        config.roleRef &&
+        (!parsedRoleBinding.role_ref ||
+          !parsedRoleBinding.role_ref.name ||
+          !parsedRoleBinding.role_ref.kind)
+      ) {
         parsedRoleBinding.role_ref = {
           api_group: config.roleRef.apiGroup || 'rbac.authorization.k8s.io',
           kind: config.roleRef.kind || '',
           name: config.roleRef.name || '',
         };
       }
-      
+
       // 修复 subjects 数据
-      if (config.subjects && Array.isArray(config.subjects) && 
-          (!parsedRoleBinding.subjects || parsedRoleBinding.subjects.length === 0)) {
+      if (
+        config.subjects &&
+        Array.isArray(config.subjects) &&
+        (!parsedRoleBinding.subjects || parsedRoleBinding.subjects.length === 0)
+      ) {
         parsedRoleBinding.subjects = config.subjects.map((subject: any) => ({
           kind: subject.kind || '',
           name: subject.name || '',
@@ -116,9 +125,7 @@ const parseRoleBindingData = (roleBinding: K8sRoleBinding): K8sRoleBinding => {
         }));
       }
     }
-  } catch (error) {
-
-  }
+  } catch (error) {}
 
   // 确保 subjects 不为 null
   if (!parsedRoleBinding.subjects) {
@@ -144,7 +151,10 @@ const parseRoleBindingData = (roleBinding: K8sRoleBinding): K8sRoleBinding => {
     parsedRoleBinding.uid = '-';
   }
 
-  if (!parsedRoleBinding.resource_version || parsedRoleBinding.resource_version.trim() === '') {
+  if (
+    !parsedRoleBinding.resource_version ||
+    parsedRoleBinding.resource_version.trim() === ''
+  ) {
     parsedRoleBinding.resource_version = '-';
   }
 
@@ -216,11 +226,13 @@ export function useRoleBindingPage() {
       kind: 'Role',
       name: '',
     },
-    subjects: [{
-      kind: 'User',
-      name: '',
-      api_group: 'rbac.authorization.k8s.io',
-    }],
+    subjects: [
+      {
+        kind: 'User',
+        name: '',
+        api_group: 'rbac.authorization.k8s.io',
+      },
+    ],
     labels: {},
     annotations: {},
   });
@@ -261,10 +273,10 @@ export function useRoleBindingPage() {
   const createFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入 RoleBinding 名称', trigger: 'blur' },
-      { 
-        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, 
-        message: '名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾', 
-        trigger: 'blur' 
+      {
+        pattern: /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
+        message: '名称只能包含小写字母、数字和连字符，且不能以连字符开头或结尾',
+        trigger: 'blur',
       },
       { max: 63, message: '名称长度不能超过63个字符', trigger: 'blur' },
     ],
@@ -280,14 +292,14 @@ export function useRoleBindingPage() {
   const createYamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
     ],
   };
 
   const yamlFormRules: Record<string, Rule[]> = {
     yaml: [
       { required: true, message: '请输入 YAML 内容', trigger: 'blur' },
-      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' }
+      { min: 50, message: 'YAML 内容过短，请检查是否完整', trigger: 'blur' },
     ],
   };
 
@@ -295,12 +307,10 @@ export function useRoleBindingPage() {
   const filteredRoleBindings = computed(() => {
     // 如果有标签过滤，在前端进行过滤（但不改变 total，因为会导致分页不准确）
     if (Object.keys(filterLabels.value).length > 0) {
-      return roleBindings.value.filter(item => {
+      return roleBindings.value.filter((item) => {
         if (!item.labels) return false;
         return Object.entries(filterLabels.value).every(([key, value]) => {
-          const itemLabels = typeof item.labels === 'object' 
-            ? item.labels 
-            : {};
+          const itemLabels = typeof item.labels === 'object' ? item.labels : {};
           return itemLabels[key] === value;
         });
       });
@@ -315,14 +325,27 @@ export function useRoleBindingPage() {
       selectedRowKeys.value = keys;
       selectedRows.value = rows;
     },
-    onSelectAll: (selected: boolean, _rows: K8sRoleBinding[], changeRows: K8sRoleBinding[]) => {
+    onSelectAll: (
+      selected: boolean,
+      _rows: K8sRoleBinding[],
+      changeRows: K8sRoleBinding[],
+    ) => {
       if (selected) {
-        selectedRowKeys.value = [...selectedRowKeys.value, ...changeRows.map(row => `${row.namespace}/${row.name}`)];
+        selectedRowKeys.value = [
+          ...selectedRowKeys.value,
+          ...changeRows.map((row) => `${row.namespace}/${row.name}`),
+        ];
         selectedRows.value = [...selectedRows.value, ...changeRows];
       } else {
-        const changeKeys = changeRows.map(row => `${row.namespace}/${row.name}`);
-        selectedRowKeys.value = selectedRowKeys.value.filter(key => !changeKeys.includes(key));
-        selectedRows.value = selectedRows.value.filter(row => !changeKeys.includes(`${row.namespace}/${row.name}`));
+        const changeKeys = changeRows.map(
+          (row) => `${row.namespace}/${row.name}`,
+        );
+        selectedRowKeys.value = selectedRowKeys.value.filter(
+          (key) => !changeKeys.includes(key),
+        );
+        selectedRows.value = selectedRows.value.filter(
+          (row) => !changeKeys.includes(`${row.namespace}/${row.name}`),
+        );
       }
     },
   }));
@@ -353,7 +376,7 @@ export function useRoleBindingPage() {
   // 获取集群名称
   const getClusterName = (clusterId?: number) => {
     if (!clusterId) return '-';
-    const cluster = clusters.value.find(c => c.id === clusterId);
+    const cluster = clusters.value.find((c) => c.id === clusterId);
     return cluster?.name || `集群 ${clusterId}`;
   };
 
@@ -427,7 +450,8 @@ export function useRoleBindingPage() {
         clearNamespaces();
         clearRoleBindings();
       }
-      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err))
+        clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -435,7 +459,10 @@ export function useRoleBindingPage() {
   };
 
   const loadMoreClusters = async () => {
-    if (clustersPage.value * clustersSize.value >= clustersTotal.value || clustersLoading.value) {
+    if (
+      clustersPage.value * clustersSize.value >= clustersTotal.value ||
+      clustersLoading.value
+    ) {
       return;
     }
     clustersPage.value += 1;
@@ -482,7 +509,8 @@ export function useRoleBindingPage() {
         return;
       namespaces.value = [];
       namespacesTotal.value = 0;
-      if (shouldRecordPageError(err)) namespacesError.value = '获取命名空间列表失败，请重试';
+      if (shouldRecordPageError(err))
+        namespacesError.value = '获取命名空间列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
@@ -490,7 +518,10 @@ export function useRoleBindingPage() {
   };
 
   const loadMoreNamespaces = async () => {
-    if (namespacesPage.value * namespacesSize.value >= namespacesTotal.value || namespacesLoading.value) {
+    if (
+      namespacesPage.value * namespacesSize.value >= namespacesTotal.value ||
+      namespacesLoading.value
+    ) {
       return;
     }
     namespacesPage.value += 1;
@@ -508,7 +539,10 @@ export function useRoleBindingPage() {
   const fetchRoleBindings = async () => {
     const clusterId = filterClusterId.value;
     const namespace = filterNamespace.value;
-    if (!clusterId) { clearRoleBindings(); return; }
+    if (!clusterId) {
+      clearRoleBindings();
+      return;
+    }
     const requestId = ++resourceRequestId;
     try {
       loading.value = true;
@@ -524,15 +558,28 @@ export function useRoleBindingPage() {
       };
 
       const response = await getRoleBindingListApi(params);
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
       // 解析和修复每个RoleBinding的数据
       const rawRoleBindings: K8sRoleBinding[] = response?.items || [];
-      roleBindings.value = rawRoleBindings.map(rb => parseRoleBindingData(rb));
+      roleBindings.value = rawRoleBindings.map((rb) =>
+        parseRoleBindingData(rb),
+      );
       total.value = response?.total || 0;
     } catch (error) {
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId || filterNamespace.value !== namespace) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId ||
+        filterNamespace.value !== namespace
+      )
+        return;
       clearRoleBindings();
-      if (shouldRecordPageError(error)) loadError.value = '获取 RoleBinding 列表失败，请重试';
+      if (shouldRecordPageError(error))
+        loadError.value = '获取 RoleBinding 列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
@@ -557,10 +604,14 @@ export function useRoleBindingPage() {
 
       const response = await getRoleBindingDetailsApi(params);
       // 对详情数据也进行解析
-      currentRoleBindingDetail.value = response ? parseRoleBindingData(response) : parseRoleBindingData(roleBinding);
+      currentRoleBindingDetail.value = response
+        ? parseRoleBindingData(response)
+        : parseRoleBindingData(roleBinding);
     } catch (error: any) {
-
-      if (shouldNotifyPageError(error)) message.error('获取 RoleBinding 详情失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error))
+        message.error(
+          '获取 RoleBinding 详情失败：' + (error.message || '未知错误'),
+        );
       // 即使获取详情失败，也要解析基础数据
       currentRoleBindingDetail.value = parseRoleBindingData(roleBinding);
     } finally {
@@ -594,8 +645,10 @@ export function useRoleBindingPage() {
       yamlFormModel.value.yaml = response?.yaml || '';
       isYamlModalVisible.value = true;
     } catch (error: any) {
-
-      if (shouldNotifyPageError(error)) message.error('获取 RoleBinding YAML 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error))
+        message.error(
+          '获取 RoleBinding YAML 失败：' + (error.message || '未知错误'),
+        );
     } finally {
       submitLoading.value = false;
     }
@@ -610,7 +663,7 @@ export function useRoleBindingPage() {
 
   const submitYamlForm = async () => {
     if (!yamlFormRef.value || !currentOperationRoleBinding.value) return;
-    
+
     const clusterId = validateClusterId(currentOperationRoleBinding.value);
     if (!clusterId) return;
 
@@ -632,7 +685,10 @@ export function useRoleBindingPage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (shouldNotifyPageError(error)) message.error('更新 RoleBinding YAML 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error))
+        message.error(
+          '更新 RoleBinding YAML 失败：' + (error.message || '未知错误'),
+        );
     } finally {
       submitLoading.value = false;
     }
@@ -663,11 +719,13 @@ export function useRoleBindingPage() {
         kind: 'Role',
         name: '',
       },
-      subjects: [{
-        kind: 'User',
-        name: '',
-        api_group: 'rbac.authorization.k8s.io',
-      }],
+      subjects: [
+        {
+          kind: 'User',
+          name: '',
+          api_group: 'rbac.authorization.k8s.io',
+        },
+      ],
       labels: {},
       annotations: {},
     };
@@ -686,9 +744,17 @@ export function useRoleBindingPage() {
         namespace: createFormModel.value.namespace,
         name: createFormModel.value.name,
         role_ref: createFormModel.value.role_ref,
-        subjects: createFormModel.value.subjects.filter(subject => subject.name.trim()),
-        labels: Object.keys(createFormModel.value.labels).length > 0 ? createFormModel.value.labels : undefined,
-        annotations: Object.keys(createFormModel.value.annotations).length > 0 ? createFormModel.value.annotations : undefined,
+        subjects: createFormModel.value.subjects.filter((subject) =>
+          subject.name.trim(),
+        ),
+        labels:
+          Object.keys(createFormModel.value.labels).length > 0
+            ? createFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(createFormModel.value.annotations).length > 0
+            ? createFormModel.value.annotations
+            : undefined,
       };
 
       await createRoleBindingApi(params);
@@ -698,7 +764,10 @@ export function useRoleBindingPage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (shouldNotifyPageError(error)) message.error('创建 RoleBinding 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error))
+        message.error(
+          '创建 RoleBinding 失败：' + (error.message || '未知错误'),
+        );
     } finally {
       submitLoading.value = false;
     }
@@ -710,36 +779,46 @@ export function useRoleBindingPage() {
     if (!clusterId) return;
 
     currentOperationRoleBinding.value = roleBinding;
-    
+
     // 解析并填充编辑表单
     editFormModel.value = {
       name: roleBinding.name,
       namespace: roleBinding.namespace,
       role_ref: {
-        api_group: roleBinding.role_ref?.api_group || 'rbac.authorization.k8s.io',
+        api_group:
+          roleBinding.role_ref?.api_group || 'rbac.authorization.k8s.io',
         kind: roleBinding.role_ref?.kind || 'Role',
         name: roleBinding.role_ref?.name || '',
       },
-      subjects: roleBinding.subjects && roleBinding.subjects.length > 0 
-        ? roleBinding.subjects.map(subject => ({
-            kind: subject.kind || 'User',
-            name: subject.name || '',
-            namespace: subject.namespace,
-            api_group: subject.api_group || (subject.kind === 'ServiceAccount' ? '' : 'rbac.authorization.k8s.io'),
-          }))
-        : [{
-            kind: 'User',
-            name: '',
-            api_group: 'rbac.authorization.k8s.io',
-          }],
-      labels: roleBinding.labels && typeof roleBinding.labels === 'object' 
-        ? { ...roleBinding.labels } 
-        : {},
-      annotations: roleBinding.annotations && typeof roleBinding.annotations === 'object' 
-        ? { ...roleBinding.annotations } 
-        : {},
+      subjects:
+        roleBinding.subjects && roleBinding.subjects.length > 0
+          ? roleBinding.subjects.map((subject) => ({
+              kind: subject.kind || 'User',
+              name: subject.name || '',
+              namespace: subject.namespace,
+              api_group:
+                subject.api_group ||
+                (subject.kind === 'ServiceAccount'
+                  ? ''
+                  : 'rbac.authorization.k8s.io'),
+            }))
+          : [
+              {
+                kind: 'User',
+                name: '',
+                api_group: 'rbac.authorization.k8s.io',
+              },
+            ],
+      labels:
+        roleBinding.labels && typeof roleBinding.labels === 'object'
+          ? { ...roleBinding.labels }
+          : {},
+      annotations:
+        roleBinding.annotations && typeof roleBinding.annotations === 'object'
+          ? { ...roleBinding.annotations }
+          : {},
     };
-    
+
     isEditModalVisible.value = true;
   };
 
@@ -750,7 +829,7 @@ export function useRoleBindingPage() {
 
   const submitEditForm = async () => {
     if (!editFormRef.value || !currentOperationRoleBinding.value) return;
-    
+
     const clusterId = validateClusterId(currentOperationRoleBinding.value);
     if (!clusterId) return;
 
@@ -763,9 +842,17 @@ export function useRoleBindingPage() {
         namespace: currentOperationRoleBinding.value.namespace,
         name: currentOperationRoleBinding.value.name,
         role_ref: editFormModel.value.role_ref,
-        subjects: editFormModel.value.subjects.filter(subject => subject.name.trim()),
-        labels: Object.keys(editFormModel.value.labels).length > 0 ? editFormModel.value.labels : undefined,
-        annotations: Object.keys(editFormModel.value.annotations).length > 0 ? editFormModel.value.annotations : undefined,
+        subjects: editFormModel.value.subjects.filter((subject) =>
+          subject.name.trim(),
+        ),
+        labels:
+          Object.keys(editFormModel.value.labels).length > 0
+            ? editFormModel.value.labels
+            : undefined,
+        annotations:
+          Object.keys(editFormModel.value.annotations).length > 0
+            ? editFormModel.value.annotations
+            : undefined,
       };
 
       await updateRoleBindingApi(params);
@@ -775,7 +862,10 @@ export function useRoleBindingPage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (shouldNotifyPageError(error)) message.error('更新 RoleBinding 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error))
+        message.error(
+          '更新 RoleBinding 失败：' + (error.message || '未知错误'),
+        );
     } finally {
       submitLoading.value = false;
     }
@@ -815,7 +905,10 @@ export function useRoleBindingPage() {
     } catch (error: any) {
       if (error.errorFields) return;
 
-      if (shouldNotifyPageError(error)) message.error('通过 YAML 创建 RoleBinding 失败：' + (error.message || '未知错误'));
+      if (shouldNotifyPageError(error))
+        message.error(
+          '通过 YAML 创建 RoleBinding 失败：' + (error.message || '未知错误'),
+        );
     } finally {
       submitLoading.value = false;
     }
@@ -845,8 +938,10 @@ export function useRoleBindingPage() {
           message.success(' RoleBinding 删除成功');
           await fetchRoleBindings();
         } catch (error: any) {
-
-          if (shouldNotifyPageError(error)) message.error('删除 RoleBinding 失败：' + (error.message || '未知错误'));
+          if (shouldNotifyPageError(error))
+            message.error(
+              '删除 RoleBinding 失败：' + (error.message || '未知错误'),
+            );
         }
       },
     });
@@ -878,8 +973,10 @@ export function useRoleBindingPage() {
       return;
     }
 
-    const names = selectedRows.value.map(item => `${item.namespace}/${item.name}`).join('、');
-    
+    const names = selectedRows.value
+      .map((item) => `${item.namespace}/${item.name}`)
+      .join('、');
+
     if (operation === '删除') {
       Modal.confirm({
         title: '批量删除确认',
@@ -889,10 +986,10 @@ export function useRoleBindingPage() {
         cancelText: '取消',
         centered: true,
         onOk: async () => {
-          const deletePromises = selectedRows.value.map(roleBinding => {
+          const deletePromises = selectedRows.value.map((roleBinding) => {
             const clusterId = validateClusterId(roleBinding);
             if (!clusterId) return Promise.resolve();
-            
+
             const params: DeleteRoleBindingReq = {
               cluster_id: clusterId,
               namespace: roleBinding.namespace,
@@ -903,13 +1000,18 @@ export function useRoleBindingPage() {
 
           try {
             await Promise.all(deletePromises);
-            message.success(` 成功删除 ${selectedRows.value.length} 个 RoleBinding`);
+            message.success(
+              ` 成功删除 ${selectedRows.value.length} 个 RoleBinding`,
+            );
             selectedRowKeys.value = [];
             selectedRows.value = [];
             await fetchRoleBindings();
           } catch (error: any) {
-
-            if (shouldNotifyPageError(error)) message.error('批量删除部分 RoleBinding 失败：' + (error.message || '未知错误'));
+            if (shouldNotifyPageError(error))
+              message.error(
+                '批量删除部分 RoleBinding 失败：' +
+                  (error.message || '未知错误'),
+              );
             await fetchRoleBindings();
           }
         },
@@ -974,7 +1076,10 @@ export function useRoleBindingPage() {
 
   // YAML 操作辅助函数
   const insertYamlTemplate = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认操作',
         content: '当前已有内容，插入模板将覆盖现有内容，是否继续？',
@@ -1006,7 +1111,7 @@ export function useRoleBindingPage() {
       const formatted = yaml.dump(parsed, {
         indent: 2,
         lineWidth: -1, // 不限制行宽
-        noRefs: true,  // 不使用引用
+        noRefs: true, // 不使用引用
         sortKeys: false, // 保持原有顺序
       });
       createYamlFormModel.value.yaml = formatted;
@@ -1026,7 +1131,7 @@ export function useRoleBindingPage() {
     try {
       // 尝试解析 YAML
       const parsed = yaml.load(yamlContent);
-      
+
       // 检查是否是有效的对象
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
@@ -1070,12 +1175,15 @@ export function useRoleBindingPage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -1085,12 +1193,24 @@ export function useRoleBindingPage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
@@ -1098,7 +1218,10 @@ export function useRoleBindingPage() {
   };
 
   const clearYaml = () => {
-    if (createYamlFormModel.value.yaml && createYamlFormModel.value.yaml.trim()) {
+    if (
+      createYamlFormModel.value.yaml &&
+      createYamlFormModel.value.yaml.trim()
+    ) {
       Modal.confirm({
         title: '确认清空',
         content: '确定要清空当前的 YAML 内容吗？此操作不可恢复。',
@@ -1148,7 +1271,7 @@ export function useRoleBindingPage() {
 
     try {
       const parsed = yaml.load(yamlContent);
-      
+
       if (!parsed || typeof parsed !== 'object') {
         message.warning('YAML 内容无效：应为对象格式');
         return;
@@ -1190,12 +1313,15 @@ export function useRoleBindingPage() {
       if (issues.length > 0) {
         Modal.warning({
           title: 'YAML 格式检查警告',
-          content: () => h('div', [
-            h('p', 'YAML 语法正确，但发现以下问题：'),
-            h('ul', { style: 'margin: 8px 0; padding-left: 20px;' }, 
-              issues.map((issue) => h('li', issue))
-            ),
-          ]),
+          content: () =>
+            h('div', [
+              h('p', 'YAML 语法正确，但发现以下问题：'),
+              h(
+                'ul',
+                { style: 'margin: 8px 0; padding-left: 20px;' },
+                issues.map((issue) => h('li', issue)),
+              ),
+            ]),
           width: 500,
           centered: true,
         });
@@ -1205,12 +1331,24 @@ export function useRoleBindingPage() {
     } catch (error: any) {
       Modal.error({
         title: 'YAML 格式检查失败',
-        content: () => h('div', [
-          h('p', { style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;' }, '语法错误：'),
-          h('pre', { 
-            style: 'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;' 
-          }, error.message || '未知错误'),
-        ]),
+        content: () =>
+          h('div', [
+            h(
+              'p',
+              {
+                style: 'color: #ff4d4f; font-weight: 600; margin-bottom: 8px;',
+              },
+              '语法错误：',
+            ),
+            h(
+              'pre',
+              {
+                style:
+                  'background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; overflow: auto; max-height: 200px;',
+              },
+              error.message || '未知错误',
+            ),
+          ]),
         width: 600,
         centered: true,
       });
@@ -1238,7 +1376,7 @@ export function useRoleBindingPage() {
     total,
     clustersTotal,
     namespacesTotal,
-    
+
     // modal state
     isCreateModalVisible,
     isCreateYamlModalVisible,
@@ -1247,39 +1385,39 @@ export function useRoleBindingPage() {
     isYamlModalVisible,
     submitLoading,
     detailLoading,
-    
+
     // operation targets
     currentOperationRoleBinding,
     currentRoleBindingDetail,
-    
+
     // form models
     createFormModel,
     editFormModel,
     createYamlFormModel,
     yamlFormModel,
-    
+
     // form refs
     formRef,
     editFormRef,
     yamlFormRef,
     createYamlFormRef,
-    
+
     // form rules
     createFormRules,
     editFormRules,
     createYamlFormRules,
     yamlFormRules,
-    
+
     // computed
     filteredRoleBindings,
     rowSelection,
-    
+
     // helpers
     validateClusterId,
     getEnvText,
     getClusterName,
     getUserDisplay,
-    
+
     // operations
     fetchClusters,
     fetchNamespaces,
@@ -1288,16 +1426,16 @@ export function useRoleBindingPage() {
     clearNamespaces,
     loadMoreClusters,
     loadMoreNamespaces,
-    
+
     // detail operations
     showRoleBindingDetail,
     closeDetailModal,
-    
+
     // YAML operations
     showYamlModal,
     closeYamlModal,
     submitYamlForm,
-    
+
     // create operations
     openCreateModal,
     closeCreateModal,
@@ -1305,26 +1443,26 @@ export function useRoleBindingPage() {
     openCreateYamlModal,
     closeCreateYamlModal,
     submitCreateYamlForm,
-    
+
     // edit operations
     openEditModal,
     closeEditModal,
     submitEditForm,
-    
+
     // roleBinding operations
     deleteRoleBinding,
-    
+
     // filter operations
     addFilterLabel,
     removeFilterLabel,
     clearFilterLabels,
-    
+
     // batch operations
     batchOperation,
-    
+
     // pagination operations
     handlePageChange,
-    
+
     // form field operations
     addSubjectField,
     removeSubjectField,
@@ -1334,7 +1472,7 @@ export function useRoleBindingPage() {
     removeEditSubjectField,
     removeEditLabelField,
     removeEditAnnotationField,
-    
+
     // YAML utility functions
     insertYamlTemplate,
     formatYaml,

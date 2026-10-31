@@ -683,8 +683,8 @@ onMounted(() => {
     </template>
 
     <!-- 统计卡片 -->
-    <template #summary
-      ><div class="stats-grid">
+    <template #summary>
+      <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-number">{{ paginationConfig.total }}</div>
           <div class="stat-label">总用户数</div>
@@ -699,12 +699,12 @@ onMounted(() => {
           <div class="stat-number">{{ userStatistics.admin_count || 0 }}</div>
           <div class="stat-label">管理员</div>
         </div>
-      </div></template
-    >
+      </div>
+    </template>
 
     <!-- 搜索筛选区域 -->
-    <template #filters
-      ><div class="ops-filter-row">
+    <template #filters>
+      <div class="ops-filter-row">
         <div class="search-left">
           <a-input
             v-model:value="searchParams.search"
@@ -744,8 +744,8 @@ onMounted(() => {
           <a-button type="primary" @click="handleSearch">搜索</a-button>
           <a-button @click="handleReset">重置</a-button>
         </div>
-      </div></template
-    >
+      </div>
+    </template>
 
     <!-- 用户表格 -->
     <div class="table-container">
@@ -790,9 +790,9 @@ onMounted(() => {
           </template>
 
           <template v-if="column.key === 'type'">
-            <a-tag v-if="record.account_type === 2" color="orange"
-              >服务账号</a-tag
-            >
+            <a-tag v-if="record.account_type === 2" color="orange">
+              服务账号
+            </a-tag>
             <a-tag v-else-if="isAdminUser(record)" color="red">管理员</a-tag>
             <a-tag v-else color="blue">普通用户</a-tag>
           </template>
@@ -818,21 +818,22 @@ onMounted(() => {
 
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
-              <a-button type="text" size="small" @click="handleView(record)"
-                >查看</a-button
-              >
-              <a-button type="text" size="small" @click="handleEdit(record)"
-                >编辑信息</a-button
-              >
-              <a-button type="text" size="small" @click="handleEPwd(record)"
-                >修改密码</a-button
-              >
+              <a-button type="text" size="small" @click="handleView(record)">
+                查看
+              </a-button>
+              <a-button type="text" size="small" @click="handleEdit(record)">
+                编辑信息
+              </a-button>
+              <a-button type="text" size="small" @click="handleEPwd(record)">
+                修改密码
+              </a-button>
               <a-button
                 type="text"
                 size="small"
                 @click="handleRoleManagement(record)"
-                >角色</a-button
               >
+                角色
+              </a-button>
               <a-popconfirm
                 v-if="can('system.user.delete')"
                 title="确定要删除吗？"
@@ -1146,8 +1147,9 @@ onMounted(() => {
                   danger
                   size="small"
                   @click="handleRevokeRole(role)"
-                  >移除</a-button
                 >
+                  移除
+                </a-button>
               </div>
             </div>
           </a-tab-pane>
@@ -1172,8 +1174,9 @@ onMounted(() => {
                   type="primary"
                   size="small"
                   @click="handleAssignRole(role)"
-                  >分配</a-button
                 >
+                  分配
+                </a-button>
               </div>
             </div>
           </a-tab-pane>

@@ -76,10 +76,7 @@ const state = shallowReactive<State>({
 function dispatch(action: Action) {
   switch (action.type) {
     case actionTypes.ADD_TOAST: {
-      state.toasts = [action.toast, ...state.toasts].slice(
-        0,
-        TOAST_LIMIT,
-      );
+      state.toasts = [action.toast, ...state.toasts].slice(0, TOAST_LIMIT);
       break;
     }
 

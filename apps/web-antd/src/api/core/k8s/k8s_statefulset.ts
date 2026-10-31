@@ -6,7 +6,7 @@ export enum K8sStatefulSetStatus {
   Running = 1, // 运行中
   Stopped = 2, // 停止
   Updating = 3, // 更新中
-  Error = 4    // 异常
+  Error = 4, // 异常
 }
 
 // StatefulSet条件
@@ -183,90 +183,171 @@ export interface K8sStatefulSetYaml {
 /**
  * 获取StatefulSet列表
  */
-export async function getStatefulSetListApi(clusterId: number, params?: GetStatefulSetListReq) {
+export async function getStatefulSetListApi(
+  clusterId: number,
+  params?: GetStatefulSetListReq,
+) {
   return requestClient.get(`/k8s/statefulset/${clusterId}/list`, { params });
 }
 
 /**
  * 获取StatefulSet详情
  */
-export async function getStatefulSetDetailsApi(clusterId: number, namespace: string, name: string) {
-  return requestClient.get(`/k8s/statefulset/${clusterId}/${namespace}/${name}/detail`);
+export async function getStatefulSetDetailsApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+) {
+  return requestClient.get(
+    `/k8s/statefulset/${clusterId}/${namespace}/${name}/detail`,
+  );
 }
 
 /**
  * 获取StatefulSet YAML
  */
-export async function getStatefulSetYamlApi(clusterId: number, namespace: string, name: string) {
-  return requestClient.get(`/k8s/statefulset/${clusterId}/${namespace}/${name}/detail/yaml`);
+export async function getStatefulSetYamlApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+) {
+  return requestClient.get(
+    `/k8s/statefulset/${clusterId}/${namespace}/${name}/detail/yaml`,
+  );
 }
 
 /**
  * 创建StatefulSet
  */
-export async function createStatefulSetApi(clusterId: number, data: CreateStatefulSetReq) {
+export async function createStatefulSetApi(
+  clusterId: number,
+  data: CreateStatefulSetReq,
+) {
   return requestClient.post(`/k8s/statefulset/${clusterId}/create`, data);
 }
 
 /**
  * 通过YAML创建StatefulSet
  */
-export async function createStatefulSetByYamlApi(clusterId: number, data: CreateStatefulSetByYamlReq) {
+export async function createStatefulSetByYamlApi(
+  clusterId: number,
+  data: CreateStatefulSetByYamlReq,
+) {
   return requestClient.post(`/k8s/statefulset/${clusterId}/create/yaml`, data);
 }
 
 /**
  * 更新StatefulSet
  */
-export async function updateStatefulSetApi(clusterId: number, namespace: string, name: string, data: UpdateStatefulSetReq) {
-  return requestClient.put(`/k8s/statefulset/${clusterId}/${namespace}/${name}/update`, data);
+export async function updateStatefulSetApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+  data: UpdateStatefulSetReq,
+) {
+  return requestClient.put(
+    `/k8s/statefulset/${clusterId}/${namespace}/${name}/update`,
+    data,
+  );
 }
 
 /**
  * 通过YAML更新StatefulSet
  */
-export async function updateStatefulSetByYamlApi(clusterId: number, namespace: string, name: string, data: UpdateStatefulSetByYamlReq) {
-  return requestClient.put(`/k8s/statefulset/${clusterId}/${namespace}/${name}/update/yaml`, data);
+export async function updateStatefulSetByYamlApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+  data: UpdateStatefulSetByYamlReq,
+) {
+  return requestClient.put(
+    `/k8s/statefulset/${clusterId}/${namespace}/${name}/update/yaml`,
+    data,
+  );
 }
 
 /**
  * 删除StatefulSet
  */
-export async function deleteStatefulSetApi(clusterId: number, namespace: string, name: string, data?: DeleteStatefulSetReq) {
-  return requestClient.delete(`/k8s/statefulset/${clusterId}/${namespace}/${name}/delete`, { data });
+export async function deleteStatefulSetApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+  data?: DeleteStatefulSetReq,
+) {
+  return requestClient.delete(
+    `/k8s/statefulset/${clusterId}/${namespace}/${name}/delete`,
+    { data },
+  );
 }
 
 /**
  * 重启StatefulSet
  */
-export async function restartStatefulSetApi(clusterId: number, namespace: string, name: string, data: RestartStatefulSetReq) {
-  return requestClient.post(`/k8s/statefulset/${clusterId}/${namespace}/${name}/restart`, data);
+export async function restartStatefulSetApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+  data: RestartStatefulSetReq,
+) {
+  return requestClient.post(
+    `/k8s/statefulset/${clusterId}/${namespace}/${name}/restart`,
+    data,
+  );
 }
 
 /**
  * 伸缩StatefulSet
  */
-export async function scaleStatefulSetApi(clusterId: number, namespace: string, name: string, data: ScaleStatefulSetReq) {
-  return requestClient.post(`/k8s/statefulset/${clusterId}/${namespace}/${name}/scale`, data);
+export async function scaleStatefulSetApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+  data: ScaleStatefulSetReq,
+) {
+  return requestClient.post(
+    `/k8s/statefulset/${clusterId}/${namespace}/${name}/scale`,
+    data,
+  );
 }
 
 /**
  * 回滚StatefulSet
  */
-export async function rollbackStatefulSetApi(clusterId: number, namespace: string, name: string, data: RollbackStatefulSetReq) {
-  return requestClient.post(`/k8s/statefulset/${clusterId}/${namespace}/${name}/rollback`, data);
+export async function rollbackStatefulSetApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+  data: RollbackStatefulSetReq,
+) {
+  return requestClient.post(
+    `/k8s/statefulset/${clusterId}/${namespace}/${name}/rollback`,
+    data,
+  );
 }
 
 /**
  * 获取StatefulSet下的Pod列表
  */
-export async function getStatefulSetPodsApi(clusterId: number, namespace: string, name: string) {
-  return requestClient.get(`/k8s/statefulset/${clusterId}/${namespace}/${name}/pods`);
+export async function getStatefulSetPodsApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+) {
+  return requestClient.get(
+    `/k8s/statefulset/${clusterId}/${namespace}/${name}/pods`,
+  );
 }
 
 /**
  * 获取StatefulSet版本历史
  */
-export async function getStatefulSetHistoryApi(clusterId: number, namespace: string, name: string) {
-  return requestClient.get(`/k8s/statefulset/${clusterId}/${namespace}/${name}/history`);
+export async function getStatefulSetHistoryApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+) {
+  return requestClient.get(
+    `/k8s/statefulset/${clusterId}/${namespace}/${name}/history`,
+  );
 }

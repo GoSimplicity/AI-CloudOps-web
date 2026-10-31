@@ -5,21 +5,21 @@ export enum PredictionType {
   QPS = 'qps',
   CPU = 'cpu',
   MEMORY = 'memory',
-  DISK = 'disk'
+  DISK = 'disk',
 }
 
 // 预测时间粒度枚举
 export enum PredictionGranularity {
   MINUTE = 'minute',
   HOUR = 'hour',
-  DAY = 'day'
+  DAY = 'day',
 }
 
 // 扩缩容建议动作枚举
 export enum ScalingAction {
   SCALE_UP = 'scale_up',
   SCALE_DOWN = 'scale_down',
-  MAINTAIN = 'maintain'
+  MAINTAIN = 'maintain',
 }
 
 // 资源约束配置接口
@@ -292,41 +292,49 @@ export interface ServiceReadyResponse {
 }
 
 // QPS预测API
-export async function predictQps(request: QpsPredictionRequest): Promise<PredictionResponse> {
+export async function predictQps(
+  request: QpsPredictionRequest,
+): Promise<PredictionResponse> {
   return requestClientAIOps.post('/predict/qps', request);
-};
+}
 
 // CPU预测API
-export async function predictCpu(request: CpuPredictionRequest): Promise<PredictionResponse> {
+export async function predictCpu(
+  request: CpuPredictionRequest,
+): Promise<PredictionResponse> {
   return requestClientAIOps.post('/predict/cpu', request);
-};
+}
 
 // 内存预测API
-export async function predictMemory(request: MemoryPredictionRequest): Promise<PredictionResponse> {
+export async function predictMemory(
+  request: MemoryPredictionRequest,
+): Promise<PredictionResponse> {
   return requestClientAIOps.post('/predict/memory', request);
-};
+}
 
 // 磁盘预测API
-export async function predictDisk(request: DiskPredictionRequest): Promise<PredictionResponse> {
+export async function predictDisk(
+  request: DiskPredictionRequest,
+): Promise<PredictionResponse> {
   return requestClientAIOps.post('/predict/disk', request);
-};
+}
 
 // 预测服务健康检查API
 export async function getPredictionHealth(): Promise<PredictionServiceHealthResponse> {
   return requestClientAIOps.get('/predict/health');
-};
+}
 
 // 预测服务就绪检查API
 export async function getPredictionReady(): Promise<ServiceReadyResponse> {
   return requestClientAIOps.get('/predict/ready');
-};
+}
 
 // 预测服务信息API
 export async function getPredictionInfo(): Promise<ServiceInfoResponse> {
   return requestClientAIOps.get('/predict/info');
-};
+}
 
 // 模型信息API
 export async function getModelInfo(): Promise<ModelInfoResponse> {
   return requestClientAIOps.get('/predict/models');
-};
+}

@@ -685,9 +685,9 @@ const handleCloseFileManagerModal = () => {
             :disabled="clustersLoading"
             @popup-scroll="handleClusterDropdownScroll"
           >
-            <template #suffixIcon
-              ><DatabaseOutlined aria-hidden="true"
-            /></template>
+            <template #suffixIcon>
+              <DatabaseOutlined aria-hidden="true" />
+            </template>
             <a-select-option
               v-for="cluster in clusters"
               :key="cluster.id"
@@ -701,9 +701,9 @@ const handleCloseFileManagerModal = () => {
                 "
               >
                 <span>{{ cluster.name }}</span>
-                <a-tag color="blue" size="small">{{
-                  getEnvText(cluster.env)
-                }}</a-tag>
+                <a-tag color="blue" size="small">
+                  {{ getEnvText(cluster.env) }}
+                </a-tag>
               </div>
             </a-select-option>
             <a-select-option
@@ -727,9 +727,9 @@ const handleCloseFileManagerModal = () => {
             :disabled="!filterClusterId"
             :loading="namespacesLoading"
           >
-            <template #suffixIcon
-              ><AppstoreOutlined aria-hidden="true"
-            /></template>
+            <template #suffixIcon>
+              <AppstoreOutlined aria-hidden="true" />
+            </template>
             <a-select-option
               v-for="ns in namespaces"
               :key="ns.name"
@@ -763,22 +763,22 @@ const handleCloseFileManagerModal = () => {
             allow-clear
             @change="handleFilterChange"
           >
-            <template #suffixIcon
-              ><FilterOutlined aria-hidden="true"
-            /></template>
-            <a-select-option :value="K8sPodStatus.Pending"
-              >等待中</a-select-option
-            >
-            <a-select-option :value="K8sPodStatus.Running"
-              >运行中</a-select-option
-            >
-            <a-select-option :value="K8sPodStatus.Succeeded"
-              >已完成</a-select-option
-            >
+            <template #suffixIcon>
+              <FilterOutlined aria-hidden="true" />
+            </template>
+            <a-select-option :value="K8sPodStatus.Pending">
+              等待中
+            </a-select-option>
+            <a-select-option :value="K8sPodStatus.Running">
+              运行中
+            </a-select-option>
+            <a-select-option :value="K8sPodStatus.Succeeded">
+              已完成
+            </a-select-option>
             <a-select-option :value="K8sPodStatus.Failed">失败</a-select-option>
-            <a-select-option :value="K8sPodStatus.Unknown"
-              >未知</a-select-option
-            >
+            <a-select-option :value="K8sPodStatus.Unknown">
+              未知
+            </a-select-option>
           </a-select>
 
           <!-- 标签过滤器 -->
@@ -882,9 +882,9 @@ const handleCloseFileManagerModal = () => {
 
     <!-- 数据展示区域 -->
     <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
-      <template #action
-        ><a-button size="small" @click="fetchPods">重试</a-button></template
-      >
+      <template #action>
+        <a-button size="small" @click="fetchPods">重试</a-button>
+      </template>
     </a-alert>
     <a-alert
       v-if="clustersError"
@@ -892,11 +892,11 @@ const handleCloseFileManagerModal = () => {
       :message="clustersError"
       show-icon
     >
-      <template #action
-        ><a-button size="small" @click="() => fetchClusters(true)"
-          >重试集群列表</a-button
-        ></template
-      >
+      <template #action>
+        <a-button size="small" @click="() => fetchClusters(true)">
+          重试集群列表
+        </a-button>
+      </template>
     </a-alert>
     <a-alert
       v-if="namespacesError"
@@ -904,11 +904,11 @@ const handleCloseFileManagerModal = () => {
       :message="namespacesError"
       show-icon
     >
-      <template #action
-        ><a-button size="small" @click="() => fetchNamespaces(true)"
-          >重试命名空间</a-button
-        ></template
-      >
+      <template #action>
+        <a-button size="small" @click="() => fetchNamespaces(true)">
+          重试命名空间
+        </a-button>
+      </template>
     </a-alert>
     <div class="k8s-data-display table-container">
       <a-table
@@ -933,10 +933,15 @@ const handleCloseFileManagerModal = () => {
       >
         <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'status'">
-            <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
+            <a-badge
+              :status="getStatusColor(text)"
+              :text="getStatusText(text)"
+            />
           </template>
           <template v-else-if="column.key === 'phase'">
-            <a-tag :color="getStatusColor(text)">{{ getPhaseText(text) }}</a-tag>
+            <a-tag :color="getStatusColor(text)">
+              {{ getPhaseText(text) }}
+            </a-tag>
           </template>
           <template v-else-if="column.key === 'ready'">
             <div class="pod-ready">
@@ -952,9 +957,9 @@ const handleCloseFileManagerModal = () => {
             </div>
           </template>
           <template v-else-if="column.key === 'restart_count'">
-            <a-tag :color="text > 0 ? 'warning' : 'success'">{{
-              text || 0
-            }}</a-tag>
+            <a-tag :color="text > 0 ? 'warning' : 'success'">
+              {{ text || 0 }}
+            </a-tag>
           </template>
           <template v-else-if="column.key === 'node_name'">
             <a-tag v-if="text" color="cyan">{{ text }}</a-tag>
@@ -965,7 +970,9 @@ const handleCloseFileManagerModal = () => {
             <span v-else class="k8s-no-data">-</span>
           </template>
           <template v-else-if="column.key === 'qos_class'">
-            <a-tag v-if="text" :color="getQosClassColor(text)">{{ text }}</a-tag>
+            <a-tag v-if="text" :color="getQosClassColor(text)">
+              {{ text }}
+            </a-tag>
             <span v-else class="k8s-no-data">-</span>
           </template>
           <template v-else-if="column.key === 'labels'">
@@ -989,7 +996,9 @@ const handleCloseFileManagerModal = () => {
                       .join('\n')
                   "
                 >
-                  <a-tag class="k8s-label-item"> {{ text.length }} 个标签 </a-tag>
+                  <a-tag class="k8s-label-item">
+                    {{ text.length }} 个标签
+                  </a-tag>
                 </a-tooltip>
                 <span v-if="text.length === 0" class="k8s-no-data">-</span>
               </template>
@@ -1014,9 +1023,7 @@ const handleCloseFileManagerModal = () => {
                     {{ Object.keys(text).length }} 个标签
                   </a-tag>
                 </a-tooltip>
-                <span v-if="Object.keys(text).length === 0" class="k8s-no-data"
-                  >-</span
-                >
+                <span v-if="Object.keys(text).length === 0" class="k8s-no-data">-</span>
               </template>
               <template v-else>
                 <span class="k8s-no-data">-</span>
@@ -1091,16 +1098,16 @@ const handleCloseFileManagerModal = () => {
               </a-tooltip>
               <a-tooltip title="查看 YAML">
                 <a-button title="查看 YAML" @click="showYamlModal(record)">
-                  <template #icon
-                    ><FileTextOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <FileTextOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
               <a-tooltip title="查看日志">
                 <a-button title="查看日志" @click="showLogsModal(record)">
-                  <template #icon
-                    ><FileSearchOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <FileSearchOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
               <a-tooltip v-if="can('k8s.pod.exec')" title="执行命令">
@@ -1127,7 +1134,9 @@ const handleCloseFileManagerModal = () => {
                   @click="showFileManagerModal(record)"
                   :disabled="record.status !== 'Running'"
                 >
-                  <template #icon><FolderOutlined aria-hidden="true" /></template>
+                  <template #icon>
+                    <FolderOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
               <a-tooltip title="编辑">
@@ -1137,7 +1146,9 @@ const handleCloseFileManagerModal = () => {
               </a-tooltip>
               <a-tooltip v-if="can('k8s.pod.delete')" title="删除">
                 <a-button title="删除" danger @click="deletePod(record)">
-                  <template #icon><DeleteOutlined aria-hidden="true" /></template>
+                  <template #icon>
+                    <DeleteOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
             </div>
@@ -1227,9 +1238,9 @@ const handleCloseFileManagerModal = () => {
                   size="small"
                   class="k8s-remove-btn"
                 >
-                  <template #icon
-                    ><DeleteOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <DeleteOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </div>
 
@@ -1254,9 +1265,9 @@ const handleCloseFileManagerModal = () => {
                   <a-form-item label="镜像拉取策略">
                     <a-select v-model:value="container.image_pull_policy">
                       <a-select-option value="Always">Always</a-select-option>
-                      <a-select-option value="IfNotPresent"
-                        >IfNotPresent</a-select-option
-                      >
+                      <a-select-option value="IfNotPresent">
+                        IfNotPresent
+                      </a-select-option>
                       <a-select-option value="Never">Never</a-select-option>
                     </a-select>
                   </a-form-item>
@@ -1288,9 +1299,9 @@ const handleCloseFileManagerModal = () => {
                       size="small"
                       class="k8s-remove-btn"
                     >
-                      <template #icon
-                        ><DeleteOutlined aria-hidden="true"
-                      /></template>
+                      <template #icon>
+                        <DeleteOutlined aria-hidden="true" />
+                      </template>
                     </a-button>
                   </div>
                   <a-button
@@ -1298,9 +1309,9 @@ const handleCloseFileManagerModal = () => {
                     @click="addEnvField(index)"
                     style="width: 100%; margin-top: 8px"
                   >
-                    <template #icon
-                      ><PlusOutlined aria-hidden="true"
-                    /></template>
+                    <template #icon>
+                      <PlusOutlined aria-hidden="true" />
+                    </template>
                     添加环境变量
                   </a-button>
                 </div>
@@ -1341,9 +1352,9 @@ const handleCloseFileManagerModal = () => {
                       size="small"
                       class="k8s-remove-btn"
                     >
-                      <template #icon
-                        ><DeleteOutlined aria-hidden="true"
-                      /></template>
+                      <template #icon>
+                        <DeleteOutlined aria-hidden="true" />
+                      </template>
                     </a-button>
                   </div>
                   <a-button
@@ -1351,9 +1362,9 @@ const handleCloseFileManagerModal = () => {
                     @click="addPortField(index)"
                     style="width: 100%; margin-top: 8px"
                   >
-                    <template #icon
-                      ><PlusOutlined aria-hidden="true"
-                    /></template>
+                    <template #icon>
+                      <PlusOutlined aria-hidden="true" />
+                    </template>
                     添加端口
                   </a-button>
                 </div>
@@ -1425,9 +1436,9 @@ const handleCloseFileManagerModal = () => {
           <a-col :span="8">
             <a-form-item label="DNS 策略">
               <a-select v-model:value="createFormModel.dns_policy">
-                <a-select-option value="ClusterFirst"
-                  >ClusterFirst</a-select-option
-                >
+                <a-select-option value="ClusterFirst">
+                  ClusterFirst
+                </a-select-option>
                 <a-select-option value="Default">Default</a-select-option>
                 <a-select-option value="None">None</a-select-option>
               </a-select>
@@ -1446,14 +1457,15 @@ const handleCloseFileManagerModal = () => {
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item label="网络配置">
-              <a-checkbox v-model:checked="createFormModel.host_network"
-                >使用主机网络</a-checkbox
-              >
+              <a-checkbox v-model:checked="createFormModel.host_network">
+                使用主机网络
+              </a-checkbox>
               <a-checkbox
                 v-model:checked="createFormModel.host_pid"
                 style="margin-left: 16px"
-                >使用主机PID</a-checkbox
               >
+                使用主机PID
+              </a-checkbox>
             </a-form-item>
           </a-col>
         </a-row>
@@ -1609,18 +1621,18 @@ const handleCloseFileManagerModal = () => {
               class="yaml-toolbar-btn yaml-btn-format"
               @click="formatYaml"
             >
-              <template #icon
-                ><FormatPainterOutlined aria-hidden="true"
-              /></template>
+              <template #icon>
+                <FormatPainterOutlined aria-hidden="true" />
+              </template>
               格式化
             </a-button>
             <a-button
               class="yaml-toolbar-btn yaml-btn-validate"
               @click="validateYaml"
             >
-              <template #icon
-                ><CheckCircleOutlined aria-hidden="true"
-              /></template>
+              <template #icon>
+                <CheckCircleOutlined aria-hidden="true" />
+              </template>
               检查格式
             </a-button>
             <a-button
@@ -1677,9 +1689,9 @@ const handleCloseFileManagerModal = () => {
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">阶段:</span>
-                  <a-tag :color="getStatusColor(currentPodDetail.phase)">{{
-                    getPhaseText(currentPodDetail.phase)
-                  }}</a-tag>
+                  <a-tag :color="getStatusColor(currentPodDetail.phase)">
+                    {{ getPhaseText(currentPodDetail.phase) }}
+                  </a-tag>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">集群ID:</span>
@@ -1718,10 +1730,9 @@ const handleCloseFileManagerModal = () => {
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">QoS等级:</span>
-                  <a-tag
-                    :color="getQosClassColor(currentPodDetail.qos_class)"
-                    >{{ currentPodDetail.qos_class || '-' }}</a-tag
-                  >
+                  <a-tag :color="getQosClassColor(currentPodDetail.qos_class)">
+                    {{ currentPodDetail.qos_class || '-' }}
+                  </a-tag>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">重启次数:</span>
@@ -1729,8 +1740,9 @@ const handleCloseFileManagerModal = () => {
                     :color="
                       currentPodDetail.restart_count > 0 ? 'warning' : 'success'
                     "
-                    >{{ currentPodDetail.restart_count || 0 }}</a-tag
                   >
+                    {{ currentPodDetail.restart_count || 0 }}
+                  </a-tag>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">就绪状态:</span>
@@ -1892,9 +1904,9 @@ const handleCloseFileManagerModal = () => {
                   <a-table-column title="镜像" dataIndex="image" key="image" />
                   <a-table-column title="状态" dataIndex="ready" key="ready">
                     <template #default="{ text }">
-                      <a-tag :color="text ? 'success' : 'error'">{{
-                        text ? '就绪' : '未就绪'
-                      }}</a-tag>
+                      <a-tag :color="text ? 'success' : 'error'">
+                        {{ text ? '就绪' : '未就绪' }}
+                      </a-tag>
                     </template>
                   </a-table-column>
                   <a-table-column
@@ -1936,18 +1948,18 @@ const handleCloseFileManagerModal = () => {
               class="yaml-toolbar-btn yaml-btn-format"
               @click="formatEditYaml"
             >
-              <template #icon
-                ><FormatPainterOutlined aria-hidden="true"
-              /></template>
+              <template #icon>
+                <FormatPainterOutlined aria-hidden="true" />
+              </template>
               格式化
             </a-button>
             <a-button
               class="yaml-toolbar-btn yaml-btn-validate"
               @click="validateEditYaml"
             >
-              <template #icon
-                ><CheckCircleOutlined aria-hidden="true"
-              /></template>
+              <template #icon>
+                <CheckCircleOutlined aria-hidden="true" />
+              </template>
               检查格式
             </a-button>
           </div>
@@ -2142,14 +2154,15 @@ const handleCloseFileManagerModal = () => {
               />
             </a-col>
             <a-col :span="6">
-              <a-checkbox v-model:checked="logsFormModel.timestamps"
-                >显示时间戳</a-checkbox
-              >
+              <a-checkbox v-model:checked="logsFormModel.timestamps">
+                显示时间戳
+              </a-checkbox>
               <a-checkbox
                 v-model:checked="logsFormModel.previous"
                 style="margin-left: 16px"
-                >前一个容器</a-checkbox
               >
+                前一个容器
+              </a-checkbox>
             </a-col>
             <a-col :span="14">
               <!-- 实时流按钮 -->
@@ -2160,15 +2173,15 @@ const handleCloseFileManagerModal = () => {
                 :loading="logsLoading"
                 :disabled="!logsFormModel.container"
               >
-                <template #icon
-                  ><PlayCircleOutlined aria-hidden="true"
-                /></template>
+                <template #icon>
+                  <PlayCircleOutlined aria-hidden="true" />
+                </template>
                 开始实时流
               </a-button>
               <a-button v-else type="primary" danger @click="stopLogsStream">
-                <template #icon
-                  ><PauseCircleOutlined aria-hidden="true"
-                /></template>
+                <template #icon>
+                  <PauseCircleOutlined aria-hidden="true" />
+                </template>
                 停止实时流
               </a-button>
 
@@ -2208,8 +2221,7 @@ const handleCloseFileManagerModal = () => {
             class="logs-content"
             :class="{ 'streaming-logs': isLogsStreaming }"
             v-show="podLogs || isLogsStreaming"
-            >{{ podLogs || '正在连接...' }}</pre
-          >
+            >{{ podLogs || '正在连接...' }}</pre>
 
           <!-- 空状态提示 -->
           <div v-show="!podLogs && !isLogsStreaming" class="logs-empty-state">
@@ -2276,9 +2288,9 @@ const handleCloseFileManagerModal = () => {
                 :loading="terminalLoading"
                 :disabled="!execFormModel.container"
               >
-                <template #icon
-                  ><PlayCircleOutlined aria-hidden="true"
-                /></template>
+                <template #icon>
+                  <PlayCircleOutlined aria-hidden="true" />
+                </template>
                 连接终端
               </a-button>
             </a-form-item>
@@ -2327,18 +2339,18 @@ const handleCloseFileManagerModal = () => {
                   @click="disconnectTerminal"
                   danger
                 >
-                  <template #icon
-                    ><DisconnectOutlined aria-hidden="true"
-                  /></template>
+                  <template #icon>
+                    <DisconnectOutlined aria-hidden="true" />
+                  </template>
                   断开连接
                 </a-button>
                 <a-tooltip
                   title="终端支持完整的Shell交互，包括vi/nano编辑器、tab补全等"
                 >
                   <a-button type="text" size="small">
-                    <template #icon
-                      ><QuestionCircleOutlined aria-hidden="true"
-                    /></template>
+                    <template #icon>
+                      <QuestionCircleOutlined aria-hidden="true" />
+                    </template>
                   </a-button>
                 </a-tooltip>
               </a-space>
@@ -2564,11 +2576,9 @@ const handleCloseFileManagerModal = () => {
             style="margin-bottom: 16px"
           >
             <div style="margin-bottom: 8px">
-              <span
-                >上传进度: {{ uploadProgress.current }}/{{
+              <span>上传进度: {{ uploadProgress.current }}/{{
                   uploadProgress.total
-                }}</span
-              >
+                }}</span>
             </div>
             <a-progress
               :percent="uploadProgress.percent"
@@ -2605,9 +2615,9 @@ const handleCloseFileManagerModal = () => {
                 :disabled="!downloadFilePath || !fileManagerContainer"
                 @click="handleDownloadFile"
               >
-                <template #icon
-                  ><DownloadOutlined aria-hidden="true"
-                /></template>
+                <template #icon>
+                  <DownloadOutlined aria-hidden="true" />
+                </template>
                 下载文件
               </a-button>
             </a-form-item>

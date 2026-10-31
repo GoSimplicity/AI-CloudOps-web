@@ -1,180 +1,265 @@
 <template>
-  <OpsPage title="Ingress 管理" description="管理和监控集群中的所有 Kubernetes Ingress">
+  <OpsPage
+    title="Ingress 管理"
+    description="管理和监控集群中的所有 Kubernetes Ingress"
+  >
     <template #actions>
-            <a-button type="primary" @click="openCreateModal" :disabled="!filterClusterId">
-              <template #icon><PlusOutlined aria-hidden="true"  /></template>
-              创建 Ingress
-            </a-button>
-            <a-button @click="fetchIngresses" :loading="loading" :disabled="!filterClusterId">
-              <template #icon><ReloadOutlined aria-hidden="true"  /></template>
-              刷新数据
-            </a-button>
+      <a-button
+        type="primary"
+        @click="openCreateModal"
+        :disabled="!filterClusterId"
+      >
+        <template #icon><PlusOutlined aria-hidden="true" /></template>
+        创建 Ingress
+      </a-button>
+      <a-button
+        @click="fetchIngresses"
+        :loading="loading"
+        :disabled="!filterClusterId"
+      >
+        <template #icon><ReloadOutlined aria-hidden="true" /></template>
+        刷新数据
+      </a-button>
     </template>
 
     <!-- 工具栏 -->
     <template #filters>
-    <div class="ops-filter-row">
-      <!-- 筛选和搜索区域 -->
-      <div class="k8s-toolbar-filters">
-        <div class="k8s-filter-group">
-          <a-select
-            v-model:value="filterClusterId"
-            placeholder="选择集群"
-            class="k8s-cluster-selector"
-            aria-label="选择集群"
-            allow-clear
-            @change="handleClusterChange"
-            :loading="clustersLoading"
-            :disabled="clustersLoading"
-            @popup-scroll="handleClusterDropdownScroll"
-          >
-            <template #suffixIcon><DeploymentUnitOutlined aria-hidden="true"  /></template>
-            <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
-              <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span class="k8s-cluster-name" :title="cluster.name">{{ cluster.name }}</span>
-                <a-tag color="blue" size="small">{{ getEnvText(cluster.env) }}</a-tag>
-              </div>
-            </a-select-option>
-            <a-select-option
-              v-if="clusters.length > 0 && clusters.length < clustersTotal"
-              :value="'__load_more__'"
-              disabled
-              style="text-align: center; color: var(--ops-muted);"
+      <div class="ops-filter-row">
+        <!-- 筛选和搜索区域 -->
+        <div class="k8s-toolbar-filters">
+          <div class="k8s-filter-group">
+            <a-select
+              v-model:value="filterClusterId"
+              placeholder="选择集群"
+              class="k8s-cluster-selector"
+              aria-label="选择集群"
+              allow-clear
+              @change="handleClusterChange"
+              :loading="clustersLoading"
+              :disabled="clustersLoading"
+              @popup-scroll="handleClusterDropdownScroll"
             >
-              <a-spin size="small" :spinning="clustersLoading" />
-              <span v-if="!clustersLoading">滚动加载更多...</span>
-            </a-select-option>
-          </a-select>
-
-          <a-select
-            v-model:value="filterNamespace"
-            placeholder="选择命名空间"
-            class="k8s-filter-select k8s-namespace-selector"
-            aria-label="选择命名空间"
-            allow-clear
-            @change="handleFilterChange"
-            :disabled="!filterClusterId"
-            :loading="namespacesLoading"
-          >
-            <template #suffixIcon><AppstoreOutlined aria-hidden="true"  /></template>
-            <a-select-option v-for="ns in namespaces" :key="ns.name" :value="ns.name">
-              {{ ns.name }}
-            </a-select-option>
-            <a-select-option
-              v-if="namespaces.length > 0 && namespaces.length < namespacesTotal"
-              :value="'__load_more_namespaces__'"
-              disabled
-              style="text-align: center; color: var(--ops-muted);"
-            >
-              <a-button type="link" size="small" @click.stop="loadMoreNamespaces" :loading="namespacesLoading">
-                加载更多...
-              </a-button>
-            </a-select-option>
-          </a-select>
-
-          <a-select
-            v-model:value="filterStatus"
-            placeholder="状态筛选"
-            class="k8s-filter-select"
-            allow-clear
-            @change="handleFilterChange"
-          >
-            <template #suffixIcon><FilterOutlined aria-hidden="true"  /></template>
-            <a-select-option :value="K8sIngressStatus.RUNNING">运行中</a-select-option>
-            <a-select-option :value="K8sIngressStatus.PENDING">等待中</a-select-option>
-            <a-select-option :value="K8sIngressStatus.FAILED">失败</a-select-option>
-          </a-select>
-
-          <!-- 标签过滤器 -->
-          <div class="k8s-labels-filter">
-            <a-button type="dashed" @click="openLabelsFilter" class="k8s-toolbar-btn">
-              <template #icon><TagsOutlined aria-hidden="true"  /></template>
-              标签过滤
-              <a-tag v-if="Object.keys(filterLabels).length > 0" color="blue" size="small" style="margin-left: 8px;">
-                {{ Object.keys(filterLabels).length }}
-              </a-tag>
-            </a-button>
-            <div v-if="Object.keys(filterLabels).length > 0" class="active-filters" style="margin-top: 8px;">
-              <a-tag
-                v-for="(value, key) in filterLabels"
-                :key="key"
-                closable
-                @close="removeFilterLabel(key)"
-                color="blue"
-                size="small"
-                style="margin-right: 4px; margin-bottom: 4px;"
+              <template #suffixIcon>
+                <DeploymentUnitOutlined aria-hidden="true" />
+              </template>
+              <a-select-option
+                v-for="cluster in clusters"
+                :key="cluster.id"
+                :value="cluster.id"
               >
-                {{ key }}: {{ value }}
-              </a-tag>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                  "
+                >
+                  <span class="k8s-cluster-name" :title="cluster.name">{{
+                    cluster.name
+                  }}</span>
+                  <a-tag color="blue" size="small">
+                    {{ getEnvText(cluster.env) }}
+                  </a-tag>
+                </div>
+              </a-select-option>
+              <a-select-option
+                v-if="clusters.length > 0 && clusters.length < clustersTotal"
+                :value="'__load_more__'"
+                disabled
+                style="text-align: center; color: var(--ops-muted)"
+              >
+                <a-spin size="small" :spinning="clustersLoading" />
+                <span v-if="!clustersLoading">滚动加载更多...</span>
+              </a-select-option>
+            </a-select>
+
+            <a-select
+              v-model:value="filterNamespace"
+              placeholder="选择命名空间"
+              class="k8s-filter-select k8s-namespace-selector"
+              aria-label="选择命名空间"
+              allow-clear
+              @change="handleFilterChange"
+              :disabled="!filterClusterId"
+              :loading="namespacesLoading"
+            >
+              <template #suffixIcon>
+                <AppstoreOutlined aria-hidden="true" />
+              </template>
+              <a-select-option
+                v-for="ns in namespaces"
+                :key="ns.name"
+                :value="ns.name"
+              >
+                {{ ns.name }}
+              </a-select-option>
+              <a-select-option
+                v-if="
+                  namespaces.length > 0 && namespaces.length < namespacesTotal
+                "
+                :value="'__load_more_namespaces__'"
+                disabled
+                style="text-align: center; color: var(--ops-muted)"
+              >
+                <a-button
+                  type="link"
+                  size="small"
+                  @click.stop="loadMoreNamespaces"
+                  :loading="namespacesLoading"
+                >
+                  加载更多...
+                </a-button>
+              </a-select-option>
+            </a-select>
+
+            <a-select
+              v-model:value="filterStatus"
+              placeholder="状态筛选"
+              class="k8s-filter-select"
+              allow-clear
+              @change="handleFilterChange"
+            >
+              <template #suffixIcon>
+                <FilterOutlined aria-hidden="true" />
+              </template>
+              <a-select-option :value="K8sIngressStatus.RUNNING">
+                运行中
+              </a-select-option>
+              <a-select-option :value="K8sIngressStatus.PENDING">
+                等待中
+              </a-select-option>
+              <a-select-option :value="K8sIngressStatus.FAILED">
+                失败
+              </a-select-option>
+            </a-select>
+
+            <!-- 标签过滤器 -->
+            <div class="k8s-labels-filter">
+              <a-button
+                type="dashed"
+                @click="openLabelsFilter"
+                class="k8s-toolbar-btn"
+              >
+                <template #icon><TagsOutlined aria-hidden="true" /></template>
+                标签过滤
+                <a-tag
+                  v-if="Object.keys(filterLabels).length > 0"
+                  color="blue"
+                  size="small"
+                  style="margin-left: 8px"
+                >
+                  {{ Object.keys(filterLabels).length }}
+                </a-tag>
+              </a-button>
+              <div
+                v-if="Object.keys(filterLabels).length > 0"
+                class="active-filters"
+                style="margin-top: 8px"
+              >
+                <a-tag
+                  v-for="(value, key) in filterLabels"
+                  :key="key"
+                  closable
+                  @close="removeFilterLabel(key)"
+                  color="blue"
+                  size="small"
+                  style="margin-right: 4px; margin-bottom: 4px"
+                >
+                  {{ key }}: {{ value }}
+                </a-tag>
+              </div>
             </div>
+          </div>
+
+          <div class="k8s-search-group">
+            <a-input
+              v-model:value="searchText"
+              placeholder="搜索 Ingress 名称"
+              class="k8s-search-input"
+              @pressEnter="onSearch"
+              @input="onSearch"
+              allow-clear
+            >
+              <template #suffix>
+                <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
+              </template>
+            </a-input>
           </div>
         </div>
 
-        <div class="k8s-search-group">
-          <a-input
-            v-model:value="searchText"
-            placeholder="搜索 Ingress 名称"
-            class="k8s-search-input"
-            @pressEnter="onSearch"
-            @input="onSearch"
-            allow-clear
-          >
-            <template #suffix>
-              <SearchOutlined aria-hidden="true" class="k8s-search-icon" />
-            </template>
-          </a-input>
+        <!-- 操作区域 -->
+        <div class="k8s-toolbar-actions">
+          <div class="k8s-action-buttons">
+            <a-button
+              @click="resetFilters"
+              :disabled="
+                !filterStatus &&
+                !searchText &&
+                !filterClusterId &&
+                !filterNamespace &&
+                Object.keys(filterLabels).length === 0
+              "
+              class="k8s-toolbar-btn"
+              title="重置所有筛选条件"
+            >
+              <template #icon><DeleteOutlined aria-hidden="true" /></template>
+              重置筛选
+            </a-button>
+
+            <a-button
+              @click="openCreateYamlModal"
+              :disabled="!filterClusterId"
+              class="k8s-toolbar-btn"
+              title="通过YAML创建Ingress"
+            >
+              <template #icon><FileTextOutlined aria-hidden="true" /></template>
+              YAML 创建
+            </a-button>
+
+            <a-button
+              type="primary"
+              danger
+              @click="() => batchOperation('删除')"
+              :disabled="!selectedRows.length"
+              v-if="can('k8s.ingress.batchDelete') && selectedRows.length > 0"
+              class="k8s-toolbar-btn"
+              title="批量删除选中的 Ingress"
+            >
+              <template #icon><DeleteOutlined aria-hidden="true" /></template>
+              删除 ({{ selectedRows.length }})
+            </a-button>
+          </div>
         </div>
       </div>
-
-      <!-- 操作区域 -->
-      <div class="k8s-toolbar-actions">
-        <div class="k8s-action-buttons">
-          <a-button
-            @click="resetFilters"
-            :disabled="!filterStatus && !searchText && !filterClusterId && !filterNamespace && Object.keys(filterLabels).length === 0"
-            class="k8s-toolbar-btn"
-            title="重置所有筛选条件"
-          >
-            <template #icon><DeleteOutlined aria-hidden="true"  /></template>
-            重置筛选
-          </a-button>
-
-
-          <a-button
-            @click="openCreateYamlModal"
-            :disabled="!filterClusterId"
-            class="k8s-toolbar-btn"
-            title="通过YAML创建Ingress"
-          >
-            <template #icon><FileTextOutlined aria-hidden="true"  /></template>
-            YAML 创建
-          </a-button>
-
-          <a-button
-            type="primary"
-            danger
-            @click="() => batchOperation('删除')"
-            :disabled="!selectedRows.length"
-            v-if="can('k8s.ingress.batchDelete') && (selectedRows.length > 0)"
-            class="k8s-toolbar-btn"
-            title="批量删除选中的 Ingress"
-          >
-            <template #icon><DeleteOutlined aria-hidden="true"  /></template>
-            删除 ({{ selectedRows.length }})
-          </a-button>
-        </div>
-      </div>
-    </div>
-
     </template>
-    <a-alert v-if="clustersError" type="error" :message="clustersError" show-icon>
-      <template #action><a-button size="small" @click="fetchClusters(true)">重试集群</a-button></template>
+    <a-alert
+      v-if="clustersError"
+      type="error"
+      :message="clustersError"
+      show-icon
+    >
+      <template #action>
+        <a-button size="small" @click="fetchClusters(true)">
+          重试集群
+        </a-button>
+      </template>
     </a-alert>
-    <a-alert v-if="namespacesError" type="error" :message="namespacesError" show-icon>
-      <template #action><a-button size="small" @click="fetchNamespaces(true)">重试命名空间</a-button></template>
+    <a-alert
+      v-if="namespacesError"
+      type="error"
+      :message="namespacesError"
+      show-icon
+    >
+      <template #action>
+        <a-button size="small" @click="fetchNamespaces(true)">
+          重试命名空间
+        </a-button>
+      </template>
     </a-alert>
     <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
-      <template #action><a-button size="small" @click="fetchIngresses">重试查询</a-button></template>
+      <template #action>
+        <a-button size="small" @click="fetchIngresses"> 重试查询 </a-button>
+      </template>
     </a-alert>
 
     <!-- 数据展示区域 -->
@@ -191,8 +276,9 @@
           total: total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total: number, range: number[]) => `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
-          pageSizeOptions: ['10', '20', '30', '50']
+          showTotal: (total: number, range: number[]) =>
+            `显示 ${range[0]}-${range[1]} 条，共 ${total} 条数据`,
+          pageSizeOptions: ['10', '20', '30', '50'],
         }"
         @change="handleTableChange"
         class="k8s-table ingress-table"
@@ -200,7 +286,10 @@
       >
         <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'status'">
-            <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
+            <a-badge
+              :status="getStatusColor(text)"
+              :text="getStatusText(text)"
+            />
           </template>
           <template v-else-if="column.key === 'ingress_class_name'">
             <span v-if="text" class="ingress-class">{{ text }}</span>
@@ -217,12 +306,17 @@
               >
                 {{ host }}
               </a-tag>
-              <a-tooltip v-if="(text || []).length > 3" :title="(text || []).join('\n')">
+              <a-tooltip
+                v-if="(text || []).length > 3"
+                :title="(text || []).join('\n')"
+              >
                 <a-tag class="host-tag" color="blue" size="small">
                   +{{ (text || []).length - 3 }} 更多
                 </a-tag>
               </a-tooltip>
-              <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
+              <span v-if="!text || text.length === 0" class="k8s-no-data"
+                >-</span
+              >
             </div>
           </template>
           <template v-else-if="column.key === 'load_balancer'">
@@ -237,7 +331,14 @@
                 >
                   {{ lb.ip || lb.hostname || 'N/A' }}
                 </a-tag>
-                <a-tooltip v-if="text.ingress.length > 2" :title="text.ingress.map((lb: any) => lb.ip || lb.hostname || 'N/A').join('\n')">
+                <a-tooltip
+                  v-if="text.ingress.length > 2"
+                  :title="
+                    text.ingress
+                      .map((lb: any) => lb.ip || lb.hostname || 'N/A')
+                      .join('\n')
+                  "
+                >
                   <a-tag class="lb-tag" color="orange" size="small">
                     +{{ text.ingress.length - 2 }} 更多
                   </a-tag>
@@ -257,12 +358,17 @@
               >
                 {{ rule.host || '*' }}
               </a-tag>
-              <a-tooltip v-if="(text || []).length > 2" :title="(text || []).map((r: any) => r.host || '*').join('\n')">
+              <a-tooltip
+                v-if="(text || []).length > 2"
+                :title="(text || []).map((r: any) => r.host || '*').join('\n')"
+              >
                 <a-tag class="rule-tag" color="green" size="small">
                   +{{ (text || []).length - 2 }} 更多
                 </a-tag>
               </a-tooltip>
-              <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
+              <span v-if="!text || text.length === 0" class="k8s-no-data"
+                >-</span
+              >
             </div>
           </template>
           <template v-else-if="column.key === 'tls'">
@@ -276,43 +382,80 @@
               >
                 🔒 {{ tls.secret_name || 'TLS' }}
               </a-tag>
-              <a-tooltip v-if="(text || []).length > 2" :title="(text || []).map((t: any) => t.secret_name || 'TLS').join('\n')">
+              <a-tooltip
+                v-if="(text || []).length > 2"
+                :title="
+                  (text || [])
+                    .map((t: any) => t.secret_name || 'TLS')
+                    .join('\n')
+                "
+              >
                 <a-tag class="tls-tag" color="purple" size="small">
                   +{{ (text || []).length - 2 }} 更多
                 </a-tag>
               </a-tooltip>
-              <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
+              <span v-if="!text || text.length === 0" class="k8s-no-data"
+                >-</span
+              >
             </div>
           </template>
           <template v-else-if="column.key === 'labels'">
             <div class="k8s-labels-display">
               <template v-if="Array.isArray(text)">
                 <!-- 数组格式 -->
-                <a-tooltip v-for="label in text.slice(0, 3)" :key="label.key" :title="`${label.key}: ${label.value}`">
+                <a-tooltip
+                  v-for="label in text.slice(0, 3)"
+                  :key="label.key"
+                  :title="`${label.key}: ${label.value}`"
+                >
                   <a-tag class="k8s-label-item" size="small">
                     {{ label.key }}: {{ label.value }}
                   </a-tag>
                 </a-tooltip>
-                <a-tooltip v-if="text && text.length > 3" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                <a-tooltip
+                  v-if="text && text.length > 3"
+                  :title="
+                    text
+                      .map((item: any) => `${item.key}: ${item.value}`)
+                      .join('\n')
+                  "
+                >
                   <a-tag class="k8s-label-item" size="small">
                     {{ text.length }} 个标签
                   </a-tag>
                 </a-tooltip>
-                <span v-if="!text || text.length === 0" class="k8s-no-data">-</span>
+                <span v-if="!text || text.length === 0" class="k8s-no-data"
+                  >-</span
+                >
               </template>
               <template v-else-if="text && typeof text === 'object'">
                 <!-- 对象格式 -->
-                <a-tooltip v-for="[key, value] in Object.entries(text).slice(0, 3)" :key="key" :title="`${key}: ${value}`">
+                <a-tooltip
+                  v-for="[key, value] in Object.entries(text).slice(0, 3)"
+                  :key="key"
+                  :title="`${key}: ${value}`"
+                >
                   <a-tag class="k8s-label-item" size="small">
                     {{ key }}: {{ value }}
                   </a-tag>
                 </a-tooltip>
-                <a-tooltip v-if="text && Object.keys(text).length > 3" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                <a-tooltip
+                  v-if="text && Object.keys(text).length > 3"
+                  :title="
+                    Object.entries(text)
+                      .map(([k, v]: [string, any]) => `${k}: ${v}`)
+                      .join('\n')
+                  "
+                >
                   <a-tag class="k8s-label-item" size="small">
                     {{ Object.keys(text).length }} 个标签
                   </a-tag>
                 </a-tooltip>
-                <span v-if="!text || Object.keys(text).length === 0" class="k8s-no-data">-</span>
+                <span
+                  v-if="!text || Object.keys(text).length === 0"
+                  class="k8s-no-data"
+                  >-</span
+                >
               </template>
               <template v-else>
                 <span class="k8s-no-data">-</span>
@@ -322,7 +465,14 @@
           <template v-else-if="column.key === 'annotations'">
             <div class="k8s-annotations-display">
               <template v-if="Array.isArray(text)">
-                <a-tooltip v-if="text.length > 0" :title="text.map((item: any) => `${item.key}: ${item.value}`).join('\n')">
+                <a-tooltip
+                  v-if="text.length > 0"
+                  :title="
+                    text
+                      .map((item: any) => `${item.key}: ${item.value}`)
+                      .join('\n')
+                  "
+                >
                   <a-tag class="k8s-annotation-item" color="purple">
                     {{ text.length }} 个注解
                   </a-tag>
@@ -330,7 +480,14 @@
                 <span v-else class="k8s-no-data">-</span>
               </template>
               <template v-else-if="text && typeof text === 'object'">
-                <a-tooltip v-if="Object.keys(text).length > 0" :title="Object.entries(text).map(([k, v]: [string, any]) => `${k}: ${v}`).join('\n')">
+                <a-tooltip
+                  v-if="Object.keys(text).length > 0"
+                  :title="
+                    Object.entries(text)
+                      .map(([k, v]: [string, any]) => `${k}: ${v}`)
+                      .join('\n')
+                  "
+                >
                   <a-tag class="k8s-annotation-item" color="purple">
                     {{ Object.keys(text).length }} 个注解
                   </a-tag>
@@ -344,16 +501,31 @@
           </template>
           <template v-else-if="column.key === 'uid'">
             <a-tooltip v-if="text" :title="text">
-              <span class="k8s-uid-text" style="font-family: monospace; font-size: 11px; color: var(--ops-muted);">
+              <span
+                class="k8s-uid-text"
+                style="
+                  font-family: monospace;
+                  font-size: 11px;
+                  color: var(--ops-muted);
+                "
+              >
                 {{ text.substring(0, 8) }}...
               </span>
             </a-tooltip>
             <span v-else class="k8s-no-data">-</span>
           </template>
           <template v-else-if="column.key === 'created_at'">
-            <div v-if="text" style="font-size: 12px; color: var(--ops-muted);">
+            <div v-if="text" style="font-size: 12px; color: var(--ops-muted)">
               <div>{{ formatDateTime(text) }}</div>
-              <div style="color: var(--ops-muted); font-size: 11px; margin-top: 2px;">{{ getRelativeTime(text) }}</div>
+              <div
+                style="
+                  color: var(--ops-muted);
+                  font-size: 11px;
+                  margin-top: 2px;
+                "
+              >
+                {{ getRelativeTime(text) }}
+              </div>
             </div>
             <span v-else class="k8s-no-data">-</span>
           </template>
@@ -361,26 +533,26 @@
             <div class="k8s-action-column">
               <a-tooltip title="查看详情">
                 <a-button title="查看详情" @click="showIngressDetail(record)">
-                  <template #icon><EyeOutlined aria-hidden="true"  /></template>
+                  <template #icon><EyeOutlined aria-hidden="true" /></template>
                 </a-button>
               </a-tooltip>
               <a-tooltip title="编辑">
                 <a-button title="编辑" @click="openEditModal(record)">
-                  <template #icon><EditOutlined aria-hidden="true"  /></template>
+                  <template #icon><EditOutlined aria-hidden="true" /></template>
                 </a-button>
               </a-tooltip>
               <a-tooltip title="查看 YAML">
                 <a-button title="查看 YAML" @click="showYamlModal(record)">
-                  <template #icon><FileTextOutlined aria-hidden="true"  /></template>
+                  <template #icon>
+                    <FileTextOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
               <a-tooltip v-if="can('k8s.ingress.delete')" title="删除">
-                <a-button
-                  title="删除"
-                  danger
-                  @click="deleteIngress(record)"
-                >
-                  <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+                <a-button title="删除" danger @click="deleteIngress(record)">
+                  <template #icon>
+                    <DeleteOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
             </div>
@@ -389,7 +561,7 @@
 
         <template #emptyText>
           <div class="k8s-empty-state">
-            <GlobalOutlined aria-hidden="true"  />
+            <GlobalOutlined aria-hidden="true" />
             <p>暂无 Ingress 数据</p>
             <p v-if="!filterClusterId">请先选择集群</p>
             <p v-else>请调整筛选条件或刷新数据</p>
@@ -425,7 +597,9 @@
             class="k8s-form-input"
             :maxlength="63"
           />
-          <div style="color: var(--ops-muted); font-size: 12px; margin-top: 4px;">
+          <div
+            style="color: var(--ops-muted); font-size: 12px; margin-top: 4px"
+          >
             只能包含小写字母、数字和连字符，且不能以连字符开头或结尾
           </div>
         </a-form-item>
@@ -437,7 +611,11 @@
             class="k8s-form-input"
             :disabled="!filterClusterId"
           >
-            <a-select-option v-for="ns in namespaces" :key="ns.name" :value="ns.name">
+            <a-select-option
+              v-for="ns in namespaces"
+              :key="ns.name"
+              :value="ns.name"
+            >
               {{ ns.name }}
             </a-select-option>
           </a-select>
@@ -453,53 +631,68 @@
 
         <a-form-item label="Ingress 规则">
           <div class="k8s-key-value-inputs">
-            <div v-for="(rule, index) in createFormModel.rules" :key="index" class="k8s-key-value-row">
+            <div
+              v-for="(rule, index) in createFormModel.rules"
+              :key="index"
+              class="k8s-key-value-row"
+            >
               <a-input
                 v-model:value="rule.host"
                 placeholder="主机名 (例如：example.com)"
                 class="k8s-form-input"
-                style="flex: 1;"
+                style="flex: 1"
               />
               <a-input
                 v-model:value="(rule.http.paths[0] as any).path"
                 placeholder="路径 (例如：/api)"
                 class="k8s-form-input"
-                style="flex: 1;"
+                style="flex: 1"
               />
               <a-select
                 v-model:value="(rule.http.paths[0] as any).path_type"
                 placeholder="路径类型"
                 class="k8s-form-input"
-                style="width: 120px;"
+                style="width: 120px"
               >
                 <a-select-option value="Exact">Exact</a-select-option>
                 <a-select-option value="Prefix">Prefix</a-select-option>
-                <a-select-option value="ImplementationSpecific">Implementation</a-select-option>
+                <a-select-option value="ImplementationSpecific">
+                  Implementation
+                </a-select-option>
               </a-select>
               <a-input
                 v-model:value="(rule as any).http.paths[0].backend.service.name"
                 placeholder="服务名称"
                 class="k8s-form-input"
-                style="flex: 1;"
+                style="flex: 1"
               />
               <a-input-number
-                v-model:value="(rule as any).http.paths[0].backend.service.port.number"
+                v-model:value="
+                  (rule as any).http.paths[0].backend.service.port.number
+                "
                 placeholder="端口"
                 class="k8s-form-input"
-                style="width: 100px;"
+                style="width: 100px"
                 :min="1"
                 :max="65535"
               />
-              <a-button type="text" danger
+              <a-button
+                type="text"
+                danger
                 @click="removeRuleField(index)"
                 :disabled="createFormModel.rules.length <= 1"
                 size="small"
-               class="k8s-remove-btn">
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+                class="k8s-remove-btn"
+              >
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
-            <a-button type="dashed" @click="addRuleField" style="margin-top: 8px;">
-              <template #icon><PlusOutlined aria-hidden="true"  /></template>
+            <a-button
+              type="dashed"
+              @click="addRuleField"
+              style="margin-top: 8px"
+            >
+              <template #icon><PlusOutlined aria-hidden="true" /></template>
               添加规则
             </a-button>
           </div>
@@ -507,30 +700,46 @@
 
         <a-form-item label="TLS 配置（可选）" name="tls">
           <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.tls || createFormModel.tls.length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
+            <div
+              v-if="!createFormModel.tls || createFormModel.tls.length === 0"
+              style="text-align: center; color: var(--ops-muted); padding: 16px"
+            >
               暂无 TLS 配置，点击下方按钮添加
             </div>
-            <div v-for="(tls, index) in createFormModel.tls" :key="index" class="k8s-key-value-row">
+            <div
+              v-for="(tls, index) in createFormModel.tls"
+              :key="index"
+              class="k8s-key-value-row"
+            >
               <a-input
                 v-model:value="tls.secret_name"
                 placeholder="Secret 名称"
                 class="k8s-form-input"
-                style="flex: 1;"
+                style="flex: 1"
               />
               <a-select
                 v-model:value="tls.hosts"
                 mode="tags"
                 placeholder="主机列表"
                 class="k8s-form-input"
-                style="flex: 2;"
+                style="flex: 2"
+              />
+              <a-button
+                type="text"
+                danger
+                @click="removeTlsField(index)"
+                size="small"
+                class="k8s-remove-btn"
               >
-              </a-select>
-              <a-button type="text" danger @click="removeTlsField(index)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
-            <a-button type="dashed" @click="addTlsField" style="margin-top: 8px;">
-              <template #icon><PlusOutlined aria-hidden="true"  /></template>
+            <a-button
+              type="dashed"
+              @click="addTlsField"
+              style="margin-top: 8px"
+            >
+              <template #icon><PlusOutlined aria-hidden="true" /></template>
               添加 TLS
             </a-button>
           </div>
@@ -538,10 +747,20 @@
 
         <a-form-item label="标签配置（可选）" name="labels">
           <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.labels || Object.keys(createFormModel.labels).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
+            <div
+              v-if="
+                !createFormModel.labels ||
+                Object.keys(createFormModel.labels).length === 0
+              "
+              style="text-align: center; color: var(--ops-muted); padding: 16px"
+            >
               暂无标签，点击下方按钮添加
             </div>
-            <div v-for="(_, key) in createFormModel.labels" :key="key" class="k8s-key-value-row">
+            <div
+              v-for="(_, key) in createFormModel.labels"
+              :key="key"
+              class="k8s-key-value-row"
+            >
               <a-input
                 :value="key"
                 :placeholder="`标签键: ${key}`"
@@ -554,19 +773,29 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeLabelField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+              <a-button
+                type="text"
+                danger
+                @click="removeLabelField(key)"
+                size="small"
+                class="k8s-remove-btn"
+              >
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
-            <div class="add-input-row" style="margin-top: 8px;">
+            <div class="add-input-row" style="margin-top: 8px">
               <a-input
                 v-model:value="newLabelKey"
                 placeholder="输入标签键"
-                style="flex: 1; margin-right: 8px;"
+                style="flex: 1; margin-right: 8px"
                 @press-enter="addNewLabel"
               />
-              <a-button type="primary" @click="addNewLabel" :disabled="!newLabelKey.trim()">
-                <template #icon><PlusOutlined aria-hidden="true"  /></template>
+              <a-button
+                type="primary"
+                @click="addNewLabel"
+                :disabled="!newLabelKey.trim()"
+              >
+                <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
               </a-button>
             </div>
@@ -575,10 +804,20 @@
 
         <a-form-item label="注解配置（可选）" name="annotations">
           <div class="k8s-key-value-inputs">
-            <div v-if="!createFormModel.annotations || Object.keys(createFormModel.annotations).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
+            <div
+              v-if="
+                !createFormModel.annotations ||
+                Object.keys(createFormModel.annotations).length === 0
+              "
+              style="text-align: center; color: var(--ops-muted); padding: 16px"
+            >
               暂无注解，点击下方按钮添加
             </div>
-            <div v-for="(_, key) in createFormModel.annotations" :key="key" class="k8s-key-value-row">
+            <div
+              v-for="(_, key) in createFormModel.annotations"
+              :key="key"
+              class="k8s-key-value-row"
+            >
               <a-input
                 :value="key"
                 :placeholder="`注解键: ${key}`"
@@ -591,19 +830,29 @@
                 class="k8s-form-input"
                 :maxlength="500"
               />
-              <a-button type="text" danger @click="removeAnnotationField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+              <a-button
+                type="text"
+                danger
+                @click="removeAnnotationField(key)"
+                size="small"
+                class="k8s-remove-btn"
+              >
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
-            <div class="add-input-row" style="margin-top: 8px;">
+            <div class="add-input-row" style="margin-top: 8px">
               <a-input
                 v-model:value="newAnnotationKey"
                 placeholder="输入注解键"
-                style="flex: 1; margin-right: 8px;"
+                style="flex: 1; margin-right: 8px"
                 @press-enter="addNewAnnotation"
               />
-              <a-button type="primary" @click="addNewAnnotation" :disabled="!newAnnotationKey.trim()">
-                <template #icon><PlusOutlined aria-hidden="true"  /></template>
+              <a-button
+                type="primary"
+                @click="addNewAnnotation"
+                :disabled="!newAnnotationKey.trim()"
+              >
+                <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
               </a-button>
             </div>
@@ -640,7 +889,9 @@
             :maxlength="63"
             disabled
           />
-          <div style="color: var(--ops-muted); font-size: 12px; margin-top: 4px;">
+          <div
+            style="color: var(--ops-muted); font-size: 12px; margin-top: 4px"
+          >
             Ingress 名称不可修改
           </div>
         </a-form-item>
@@ -652,7 +903,9 @@
             class="k8s-form-input"
             disabled
           />
-          <div style="color: var(--ops-muted); font-size: 12px; margin-top: 4px;">
+          <div
+            style="color: var(--ops-muted); font-size: 12px; margin-top: 4px"
+          >
             命名空间不可修改
           </div>
         </a-form-item>
@@ -667,53 +920,68 @@
 
         <a-form-item label="Ingress 规则">
           <div class="k8s-key-value-inputs">
-            <div v-for="(rule, index) in editFormModel.rules" :key="index" class="k8s-key-value-row">
+            <div
+              v-for="(rule, index) in editFormModel.rules"
+              :key="index"
+              class="k8s-key-value-row"
+            >
               <a-input
                 v-model:value="rule.host"
                 placeholder="主机名 (例如：example.com)"
                 class="k8s-form-input"
-                style="flex: 1;"
+                style="flex: 1"
               />
               <a-input
                 v-model:value="(rule.http.paths[0] as any).path"
                 placeholder="路径 (例如：/api)"
                 class="k8s-form-input"
-                style="flex: 1;"
+                style="flex: 1"
               />
               <a-select
                 v-model:value="(rule.http.paths[0] as any).path_type"
                 placeholder="路径类型"
                 class="k8s-form-input"
-                style="width: 120px;"
+                style="width: 120px"
               >
                 <a-select-option value="Exact">Exact</a-select-option>
                 <a-select-option value="Prefix">Prefix</a-select-option>
-                <a-select-option value="ImplementationSpecific">Implementation</a-select-option>
+                <a-select-option value="ImplementationSpecific">
+                  Implementation
+                </a-select-option>
               </a-select>
               <a-input
                 v-model:value="(rule as any).http.paths[0].backend.service.name"
                 placeholder="服务名称"
                 class="k8s-form-input"
-                style="flex: 1;"
+                style="flex: 1"
               />
               <a-input-number
-                v-model:value="(rule as any).http.paths[0].backend.service.port.number"
+                v-model:value="
+                  (rule as any).http.paths[0].backend.service.port.number
+                "
                 placeholder="端口"
                 class="k8s-form-input"
-                style="width: 100px;"
+                style="width: 100px"
                 :min="1"
                 :max="65535"
               />
-              <a-button type="text" danger
+              <a-button
+                type="text"
+                danger
                 @click="removeEditRuleField(index)"
                 :disabled="editFormModel.rules.length <= 1"
                 size="small"
-               class="k8s-remove-btn">
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+                class="k8s-remove-btn"
+              >
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
-            <a-button type="dashed" @click="addEditRuleField" style="margin-top: 8px;">
-              <template #icon><PlusOutlined aria-hidden="true"  /></template>
+            <a-button
+              type="dashed"
+              @click="addEditRuleField"
+              style="margin-top: 8px"
+            >
+              <template #icon><PlusOutlined aria-hidden="true" /></template>
               添加规则
             </a-button>
           </div>
@@ -721,30 +989,46 @@
 
         <a-form-item label="TLS 配置（可选）" name="tls">
           <div class="k8s-key-value-inputs">
-            <div v-if="!editFormModel.tls || editFormModel.tls.length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
+            <div
+              v-if="!editFormModel.tls || editFormModel.tls.length === 0"
+              style="text-align: center; color: var(--ops-muted); padding: 16px"
+            >
               暂无 TLS 配置，点击下方按钮添加
             </div>
-            <div v-for="(tls, index) in editFormModel.tls" :key="index" class="k8s-key-value-row">
+            <div
+              v-for="(tls, index) in editFormModel.tls"
+              :key="index"
+              class="k8s-key-value-row"
+            >
               <a-input
                 v-model:value="tls.secret_name"
                 placeholder="Secret 名称"
                 class="k8s-form-input"
-                style="flex: 1;"
+                style="flex: 1"
               />
               <a-select
                 v-model:value="tls.hosts"
                 mode="tags"
                 placeholder="主机列表"
                 class="k8s-form-input"
-                style="flex: 2;"
+                style="flex: 2"
+              />
+              <a-button
+                type="text"
+                danger
+                @click="removeEditTlsField(index)"
+                size="small"
+                class="k8s-remove-btn"
               >
-              </a-select>
-              <a-button type="text" danger @click="removeEditTlsField(index)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
-            <a-button type="dashed" @click="addEditTlsField" style="margin-top: 8px;">
-              <template #icon><PlusOutlined aria-hidden="true"  /></template>
+            <a-button
+              type="dashed"
+              @click="addEditTlsField"
+              style="margin-top: 8px"
+            >
+              <template #icon><PlusOutlined aria-hidden="true" /></template>
               添加 TLS
             </a-button>
           </div>
@@ -752,10 +1036,20 @@
 
         <a-form-item label="标签配置（可选）" name="labels">
           <div class="k8s-key-value-inputs">
-            <div v-if="!editFormModel.labels || Object.keys(editFormModel.labels).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
+            <div
+              v-if="
+                !editFormModel.labels ||
+                Object.keys(editFormModel.labels).length === 0
+              "
+              style="text-align: center; color: var(--ops-muted); padding: 16px"
+            >
               暂无标签，点击下方按钮添加
             </div>
-            <div v-for="(_, key) in editFormModel.labels" :key="key" class="k8s-key-value-row">
+            <div
+              v-for="(_, key) in editFormModel.labels"
+              :key="key"
+              class="k8s-key-value-row"
+            >
               <a-input
                 :value="key"
                 :placeholder="`标签键: ${key}`"
@@ -768,19 +1062,29 @@
                 class="k8s-form-input"
                 :maxlength="200"
               />
-              <a-button type="text" danger @click="removeEditLabelField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+              <a-button
+                type="text"
+                danger
+                @click="removeEditLabelField(key)"
+                size="small"
+                class="k8s-remove-btn"
+              >
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
-            <div class="add-input-row" style="margin-top: 8px;">
+            <div class="add-input-row" style="margin-top: 8px">
               <a-input
                 v-model:value="newEditLabelKey"
                 placeholder="输入标签键"
-                style="flex: 1; margin-right: 8px;"
+                style="flex: 1; margin-right: 8px"
                 @press-enter="addNewEditLabel"
               />
-              <a-button type="primary" @click="addNewEditLabel" :disabled="!newEditLabelKey.trim()">
-                <template #icon><PlusOutlined aria-hidden="true"  /></template>
+              <a-button
+                type="primary"
+                @click="addNewEditLabel"
+                :disabled="!newEditLabelKey.trim()"
+              >
+                <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
               </a-button>
             </div>
@@ -789,10 +1093,20 @@
 
         <a-form-item label="注解配置（可选）" name="annotations">
           <div class="k8s-key-value-inputs">
-            <div v-if="!editFormModel.annotations || Object.keys(editFormModel.annotations).length === 0" style="text-align: center; color: var(--ops-muted); padding: 16px;">
+            <div
+              v-if="
+                !editFormModel.annotations ||
+                Object.keys(editFormModel.annotations).length === 0
+              "
+              style="text-align: center; color: var(--ops-muted); padding: 16px"
+            >
               暂无注解，点击下方按钮添加
             </div>
-            <div v-for="(_, key) in editFormModel.annotations" :key="key" class="k8s-key-value-row">
+            <div
+              v-for="(_, key) in editFormModel.annotations"
+              :key="key"
+              class="k8s-key-value-row"
+            >
               <a-input
                 :value="key"
                 :placeholder="`注解键: ${key}`"
@@ -805,19 +1119,29 @@
                 class="k8s-form-input"
                 :maxlength="500"
               />
-              <a-button type="text" danger @click="removeEditAnnotationField(key)" size="small" class="k8s-remove-btn">
-                <template #icon><DeleteOutlined aria-hidden="true"  /></template>
+              <a-button
+                type="text"
+                danger
+                @click="removeEditAnnotationField(key)"
+                size="small"
+                class="k8s-remove-btn"
+              >
+                <template #icon><DeleteOutlined aria-hidden="true" /></template>
               </a-button>
             </div>
-            <div class="add-input-row" style="margin-top: 8px;">
+            <div class="add-input-row" style="margin-top: 8px">
               <a-input
                 v-model:value="newEditAnnotationKey"
                 placeholder="输入注解键"
-                style="flex: 1; margin-right: 8px;"
+                style="flex: 1; margin-right: 8px"
                 @press-enter="addNewEditAnnotation"
               />
-              <a-button type="primary" @click="addNewEditAnnotation" :disabled="!newEditAnnotationKey.trim()">
-                <template #icon><PlusOutlined aria-hidden="true"  /></template>
+              <a-button
+                type="primary"
+                @click="addNewEditAnnotation"
+                :disabled="!newEditAnnotationKey.trim()"
+              >
+                <template #icon><PlusOutlined aria-hidden="true" /></template>
                 添加
               </a-button>
             </div>
@@ -848,20 +1172,36 @@
       >
         <a-form-item name="yaml">
           <div class="yaml-toolbar">
-            <a-button class="yaml-toolbar-btn yaml-btn-template" @click="insertYamlTemplate">
-              <template #icon><FileAddOutlined aria-hidden="true"  /></template>
+            <a-button
+              class="yaml-toolbar-btn yaml-btn-template"
+              @click="insertYamlTemplate"
+            >
+              <template #icon><FileAddOutlined aria-hidden="true" /></template>
               插入模板
             </a-button>
-            <a-button class="yaml-toolbar-btn yaml-btn-format" @click="formatYaml">
-              <template #icon><FormatPainterOutlined aria-hidden="true"  /></template>
+            <a-button
+              class="yaml-toolbar-btn yaml-btn-format"
+              @click="formatYaml"
+            >
+              <template #icon>
+                <FormatPainterOutlined aria-hidden="true" />
+              </template>
               格式化
             </a-button>
-            <a-button class="yaml-toolbar-btn yaml-btn-validate" @click="validateYaml">
-              <template #icon><CheckCircleOutlined aria-hidden="true"  /></template>
+            <a-button
+              class="yaml-toolbar-btn yaml-btn-validate"
+              @click="validateYaml"
+            >
+              <template #icon>
+                <CheckCircleOutlined aria-hidden="true" />
+              </template>
               检查格式
             </a-button>
-            <a-button class="yaml-toolbar-btn yaml-btn-clear" @click="clearYaml">
-              <template #icon><ClearOutlined aria-hidden="true"  /></template>
+            <a-button
+              class="yaml-toolbar-btn yaml-btn-clear"
+              @click="clearYaml"
+            >
+              <template #icon><ClearOutlined aria-hidden="true" /></template>
               清空
             </a-button>
           </div>
@@ -892,31 +1232,46 @@
               <a-card title="基本信息" class="k8s-detail-card" size="small">
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">Ingress 名称:</span>
-                  <span class="k8s-detail-value">{{ currentIngressDetail.name }}</span>
+                  <span class="k8s-detail-value">{{
+                    currentIngressDetail.name
+                  }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">命名空间:</span>
-                  <span class="k8s-detail-value">{{ currentIngressDetail.namespace }}</span>
+                  <span class="k8s-detail-value">{{
+                    currentIngressDetail.namespace
+                  }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">状态:</span>
-                  <a-badge :status="getStatusColor(currentIngressDetail.status)" :text="getStatusText(currentIngressDetail.status)" />
+                  <a-badge
+                    :status="getStatusColor(currentIngressDetail.status)"
+                    :text="getStatusText(currentIngressDetail.status)"
+                  />
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">Ingress 类名:</span>
-                  <span class="k8s-detail-value">{{ currentIngressDetail.ingress_class_name || '-' }}</span>
+                  <span class="k8s-detail-value">{{
+                    currentIngressDetail.ingress_class_name || '-'
+                  }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">UID:</span>
-                  <span class="k8s-detail-value">{{ currentIngressDetail.uid || '-' }}</span>
+                  <span class="k8s-detail-value">{{
+                    currentIngressDetail.uid || '-'
+                  }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">创建时间:</span>
-                  <span class="k8s-detail-value">{{ currentIngressDetail.created_at || '-' }}</span>
+                  <span class="k8s-detail-value">{{
+                    currentIngressDetail.created_at || '-'
+                  }}</span>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">存在时间:</span>
-                  <span class="k8s-detail-value">{{ currentIngressDetail.age || '-' }}</span>
+                  <span class="k8s-detail-value">{{
+                    currentIngressDetail.age || '-'
+                  }}</span>
                 </div>
               </a-card>
             </a-col>
@@ -926,22 +1281,40 @@
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">主机列表:</span>
                   <div class="k8s-detail-value">
-                    <a-tag v-for="host in currentIngressDetail.hosts" :key="host" color="blue" size="small" style="margin-right: 4px;">
+                    <a-tag
+                      v-for="host in currentIngressDetail.hosts"
+                      :key="host"
+                      color="blue"
+                      size="small"
+                      style="margin-right: 4px"
+                    >
                       {{ host }}
                     </a-tag>
-                    <span v-if="!currentIngressDetail.hosts || currentIngressDetail.hosts.length === 0">-</span>
+                    <span
+                      v-if="
+                        !currentIngressDetail.hosts ||
+                        currentIngressDetail.hosts.length === 0
+                      "
+                      >-</span
+                    >
                   </div>
                 </div>
                 <div class="k8s-detail-item">
                   <span class="k8s-detail-label">负载均衡器:</span>
                   <div class="k8s-detail-value">
-                    <div v-if="currentIngressDetail.load_balancer && currentIngressDetail.load_balancer.ingress && currentIngressDetail.load_balancer.ingress.length > 0">
+                    <div
+                      v-if="
+                        currentIngressDetail.load_balancer &&
+                        currentIngressDetail.load_balancer.ingress &&
+                        currentIngressDetail.load_balancer.ingress.length > 0
+                      "
+                    >
                       <a-tag
                         v-for="lb in currentIngressDetail.load_balancer.ingress"
                         :key="lb.ip || lb.hostname"
                         color="orange"
                         size="small"
-                        style="margin-right: 4px;"
+                        style="margin-right: 4px"
                       >
                         {{ lb.ip || lb.hostname || 'N/A' }}
                       </a-tag>
@@ -953,7 +1326,7 @@
             </a-col>
           </a-row>
 
-          <a-row :gutter="[24, 16]" style="margin-top: 16px;">
+          <a-row :gutter="[24, 16]" style="margin-top: 16px">
             <a-col :xs="24">
               <a-card title="Ingress 规则" class="k8s-detail-card" size="small">
                 <a-table
@@ -971,7 +1344,7 @@
                           :key="index"
                           color="green"
                           size="small"
-                          style="margin-bottom: 4px;"
+                          style="margin-bottom: 4px"
                         >
                           {{ path.path }} ({{ path.path_type }})
                         </a-tag>
@@ -984,7 +1357,7 @@
             </a-col>
           </a-row>
 
-          <a-row :gutter="[24, 16]" style="margin-top: 16px;">
+          <a-row :gutter="[24, 16]" style="margin-top: 16px">
             <a-col :xs="24">
               <a-card title="TLS 配置" class="k8s-detail-card" size="small">
                 <a-table
@@ -1002,7 +1375,7 @@
                           :key="host"
                           color="purple"
                           size="small"
-                          style="margin-right: 4px;"
+                          style="margin-right: 4px"
                         >
                           {{ host }}
                         </a-tag>
@@ -1015,16 +1388,36 @@
             </a-col>
           </a-row>
 
-          <a-row :gutter="[24, 16]" style="margin-top: 16px;">
+          <a-row :gutter="[24, 16]" style="margin-top: 16px">
             <a-col :xs="24" :lg="12">
               <a-card title="标签信息" class="k8s-detail-card" size="small">
                 <div class="k8s-labels-display">
-                  <a-tooltip v-for="(value, key) in (currentIngressDetail.labels || {})" :key="key" :title="`${key}: ${value}`" placement="top">
-                    <a-tag class="k8s-label-item" style="margin-bottom: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <a-tooltip
+                    v-for="(value, key) in currentIngressDetail.labels || {}"
+                    :key="key"
+                    :title="`${key}: ${value}`"
+                    placement="top"
+                  >
+                    <a-tag
+                      class="k8s-label-item"
+                      style="
+                        margin-bottom: 8px;
+                        max-width: 200px;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                      "
+                    >
                       {{ key }}: {{ value }}
                     </a-tag>
                   </a-tooltip>
-                  <span v-if="!currentIngressDetail.labels || Object.keys(currentIngressDetail.labels).length === 0" class="k8s-no-data">
+                  <span
+                    v-if="
+                      !currentIngressDetail.labels ||
+                      Object.keys(currentIngressDetail.labels).length === 0
+                    "
+                    class="k8s-no-data"
+                  >
                     暂无标签
                   </span>
                 </div>
@@ -1034,12 +1427,34 @@
             <a-col :xs="24" :lg="12">
               <a-card title="注解信息" class="k8s-detail-card" size="small">
                 <div class="k8s-annotations-display">
-                  <a-tooltip v-for="(value, key) in (currentIngressDetail.annotations || {})" :key="key" :title="`${key}: ${value}`">
-                    <div class="k8s-annotation-item" style="margin-bottom: 8px; display: inline-block; max-width: 100%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; margin-right: 8px;">
+                  <a-tooltip
+                    v-for="(value, key) in currentIngressDetail.annotations ||
+                    {}"
+                    :key="key"
+                    :title="`${key}: ${value}`"
+                  >
+                    <div
+                      class="k8s-annotation-item"
+                      style="
+                        margin-bottom: 8px;
+                        display: inline-block;
+                        max-width: 100%;
+                        text-overflow: ellipsis;
+                        overflow: hidden;
+                        white-space: nowrap;
+                        margin-right: 8px;
+                      "
+                    >
                       {{ key }}: {{ value }}
                     </div>
                   </a-tooltip>
-                  <span v-if="!currentIngressDetail.annotations || Object.keys(currentIngressDetail.annotations).length === 0" class="k8s-no-data">
+                  <span
+                    v-if="
+                      !currentIngressDetail.annotations ||
+                      Object.keys(currentIngressDetail.annotations).length === 0
+                    "
+                    class="k8s-no-data"
+                  >
                     暂无注解
                   </span>
                 </div>
@@ -1094,7 +1509,10 @@
       cancelText="取消"
     >
       <div class="labels-filter-form">
-        <div class="current-filters" v-if="Object.keys(filterLabels).length > 0">
+        <div
+          class="current-filters"
+          v-if="Object.keys(filterLabels).length > 0"
+        >
           <h4>当前过滤条件：</h4>
           <div class="filter-tags">
             <a-tag
@@ -1103,37 +1521,46 @@
               closable
               @close="removeFilterLabel(key)"
               color="blue"
-              style="margin-right: 8px; margin-bottom: 8px;"
+              style="margin-right: 8px; margin-bottom: 8px"
             >
               {{ key }}: {{ value }}
             </a-tag>
           </div>
-          <a-button type="link" danger @click="clearFilterLabels" style="padding: 0; margin-bottom: 16px;">
+          <a-button
+            type="link"
+            danger
+            @click="clearFilterLabels"
+            style="padding: 0; margin-bottom: 16px"
+          >
             清除所有过滤条件
           </a-button>
         </div>
 
         <div class="add-filter-section">
           <h4>添加过滤条件</h4>
-          <div class="filter-input-row" style="gap: 8px;">
+          <div class="filter-input-row" style="gap: 8px">
             <a-input
               v-model:value="newFilterKey"
               placeholder="标签键"
-              style="flex: 1;"
+              style="flex: 1"
             />
             <a-input
               v-model:value="newFilterValue"
               placeholder="标签值"
-              style="flex: 1;"
+              style="flex: 1"
             />
-            <a-button type="primary" @click="addNewFilterLabel" :disabled="!newFilterKey.trim()" size="small">
-              <template #icon><PlusOutlined aria-hidden="true"  /></template>
+            <a-button
+              type="primary"
+              @click="addNewFilterLabel"
+              :disabled="!newFilterKey.trim()"
+              size="small"
+            >
+              <template #icon><PlusOutlined aria-hidden="true" /></template>
             </a-button>
           </div>
         </div>
       </div>
     </a-modal>
-
   </OpsPage>
 </template>
 
@@ -1337,41 +1764,96 @@ const handleClusterChange = () => {
   if (filterClusterId.value) {
     fetchNamespaces(true); // 重置命名空间分页
     fetchIngresses();
-  } else {
-  }
+  } else {}
 };
 
-const handleTableChange = (pagination: { current?: number; pageSize?: number }) => {
+const handleTableChange = (pagination: {
+  current?: number;
+  pageSize?: number;
+}) => {
   if (pagination) {
-    handlePageChange(pagination.current || currentPage.value, pagination.pageSize);
+    handlePageChange(
+      pagination.current || currentPage.value,
+      pagination.pageSize,
+    );
   }
 };
 
 // 处理集群下拉选择的滚动事件
 const handleClusterDropdownScroll = (e: Event) => {
   const { target } = e;
-  if (target && 'scrollTop' in target && 'scrollHeight' in target && 'clientHeight' in target) {
+  if (
+    target &&
+    'scrollTop' in target &&
+    'scrollHeight' in target &&
+    'clientHeight' in target
+  ) {
     const scrollTarget = target as HTMLElement;
-    if (scrollTarget.scrollTop + scrollTarget.clientHeight >= scrollTarget.scrollHeight - 5) {
+    if (
+      scrollTarget.scrollTop + scrollTarget.clientHeight >=
+      scrollTarget.scrollHeight - 5
+    ) {
       loadMoreClusters();
     }
   }
 };
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: true, fixed: 'left' },
-  { title: '命名空间', dataIndex: 'namespace', key: 'namespace', width: 120, ellipsis: true },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 90, align: 'center' },
-  { title: 'Ingress类', dataIndex: 'ingress_class_name', key: 'ingress_class_name', width: 130, align: 'center' },
+  {
+    title: '名称',
+    dataIndex: 'name',
+    key: 'name',
+    width: 150,
+    ellipsis: true,
+    fixed: 'left',
+  },
+  {
+    title: '命名空间',
+    dataIndex: 'namespace',
+    key: 'namespace',
+    width: 120,
+    ellipsis: true,
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 90,
+    align: 'center',
+  },
+  {
+    title: 'Ingress类',
+    dataIndex: 'ingress_class_name',
+    key: 'ingress_class_name',
+    width: 130,
+    align: 'center',
+  },
   { title: '主机', dataIndex: 'hosts', key: 'hosts', width: 180 },
-  { title: '负载均衡器', dataIndex: 'load_balancer', key: 'load_balancer', width: 160 },
-  { title: '规则', dataIndex: 'rules', key: 'rules', width: 90, align: 'center' },
+  {
+    title: '负载均衡器',
+    dataIndex: 'load_balancer',
+    key: 'load_balancer',
+    width: 160,
+  },
+  {
+    title: '规则',
+    dataIndex: 'rules',
+    key: 'rules',
+    width: 90,
+    align: 'center',
+  },
   { title: 'TLS', dataIndex: 'tls', key: 'tls', width: 80, align: 'center' },
   { title: '标签', dataIndex: 'labels', key: 'labels', width: 150 },
   { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 120 },
   { title: 'UID', dataIndex: 'uid', key: 'uid', width: 100, ellipsis: true },
   { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
-  { title: '操作', key: 'actions', width: 230, fixed: 'right', align: 'center' },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 230,
+    fixed: 'right',
+    align: 'center',
+  },
 ];
 
 const ruleColumns = [

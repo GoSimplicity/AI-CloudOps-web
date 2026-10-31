@@ -134,18 +134,15 @@ export interface DeleteSecretReq {
  * 获取Secret列表
  */
 export async function getSecretListApi(params: GetSecretListReq) {
-  return requestClient.get(
-    `/k8s/secret/${params.cluster_id}/list`,
-    {
-      params: {
-        namespace: params.namespace,
-        type: params.type,
-        labels: params.labels,
-        page: params.page,
-        size: params.size,
-      },
+  return requestClient.get(`/k8s/secret/${params.cluster_id}/list`, {
+    params: {
+      namespace: params.namespace,
+      type: params.type,
+      labels: params.labels,
+      page: params.page,
+      size: params.size,
     },
-  );
+  });
 }
 
 /**
@@ -185,10 +182,7 @@ export async function getSecretYamlApi(params: GetSecretYamlReq) {
  * 创建Secret
  */
 export async function createSecretApi(params: CreateSecretReq) {
-  return requestClient.post(
-    `/k8s/secret/${params.cluster_id}/create`,
-    params,
-  );
+  return requestClient.post(`/k8s/secret/${params.cluster_id}/create`, params);
 }
 
 /**

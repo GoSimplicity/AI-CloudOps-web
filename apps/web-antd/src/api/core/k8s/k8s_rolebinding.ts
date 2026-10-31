@@ -110,12 +110,16 @@ export const getRoleBindingListApi = (params: GetRoleBindingListReq) => {
 
 // 获取RoleBinding详情
 export const getRoleBindingDetailsApi = (params: GetRoleBindingDetailsReq) => {
-  return requestClient.get(`/k8s/rolebinding/${params.cluster_id}/${params.namespace}/${params.name}/detail`);
+  return requestClient.get(
+    `/k8s/rolebinding/${params.cluster_id}/${params.namespace}/${params.name}/detail`,
+  );
 };
 
 // 获取RoleBinding YAML
 export const getRoleBindingYamlApi = (params: GetRoleBindingYamlReq) => {
-  return requestClient.get(`/k8s/rolebinding/${params.cluster_id}/${params.namespace}/${params.name}/detail/yaml`);
+  return requestClient.get(
+    `/k8s/rolebinding/${params.cluster_id}/${params.namespace}/${params.name}/detail/yaml`,
+  );
 };
 
 // 创建RoleBinding
@@ -124,21 +128,36 @@ export const createRoleBindingApi = (data: CreateRoleBindingReq) => {
 };
 
 // 通过YAML创建RoleBinding
-export const createRoleBindingByYamlApi = (data: CreateRoleBindingByYamlReq) => {
-  return requestClient.post(`/k8s/rolebinding/${data.cluster_id}/create/yaml`, data);
+export const createRoleBindingByYamlApi = (
+  data: CreateRoleBindingByYamlReq,
+) => {
+  return requestClient.post(
+    `/k8s/rolebinding/${data.cluster_id}/create/yaml`,
+    data,
+  );
 };
 
 // 更新RoleBinding
 export const updateRoleBindingApi = (data: UpdateRoleBindingReq) => {
-  return requestClient.put(`/k8s/rolebinding/${data.cluster_id}/${data.namespace}/${data.name}/update`, data);
+  return requestClient.put(
+    `/k8s/rolebinding/${data.cluster_id}/${data.namespace}/${data.name}/update`,
+    data,
+  );
 };
 
 // 通过YAML更新RoleBinding
-export const updateRoleBindingByYamlApi = (data: UpdateRoleBindingByYamlReq) => {
-  return requestClient.put(`/k8s/rolebinding/${data.cluster_id}/${data.namespace}/${data.name}/update/yaml`, data);
+export const updateRoleBindingByYamlApi = (
+  data: UpdateRoleBindingByYamlReq,
+) => {
+  return requestClient.put(
+    `/k8s/rolebinding/${data.cluster_id}/${data.namespace}/${data.name}/update/yaml`,
+    data,
+  );
 };
 
 // 删除RoleBinding
 export const deleteRoleBindingApi = (params: DeleteRoleBindingReq) => {
-  return requestClient.delete(`/k8s/rolebinding/${params.cluster_id}/${params.namespace}/${params.name}/delete`);
+  return requestClient.delete(
+    `/k8s/rolebinding/${params.cluster_id}/${params.namespace}/${params.name}/delete`,
+  );
 };

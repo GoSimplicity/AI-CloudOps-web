@@ -491,8 +491,8 @@ onMounted(() => {
     </template>
 
     <!-- 统计卡片 -->
-    <template #summary
-      ><div class="stats-grid">
+    <template #summary>
+      <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-number">{{ auditStatistics.total_count || 0 }}</div>
           <div class="stat-label">总日志数</div>
@@ -511,12 +511,12 @@ onMounted(() => {
           </div>
           <div class="stat-label">平均耗时</div>
         </div>
-      </div></template
-    >
+      </div>
+    </template>
 
     <!-- 搜索筛选区域 -->
-    <template #filters
-      ><div class="ops-filter-row">
+    <template #filters>
+      <div class="ops-filter-row">
         <div class="search-left">
           <a-input
             v-model:value="searchParams.search"
@@ -597,8 +597,8 @@ onMounted(() => {
           <a-button @click="handleReset">重置</a-button>
           <a-button @click="handleAdvancedSearch">高级搜索</a-button>
         </div>
-      </div></template
-    >
+      </div>
+    </template>
 
     <!-- 审计日志表格 -->
     <div class="table-container">
@@ -664,9 +664,9 @@ onMounted(() => {
 
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
-              <a-button type="text" size="small" @click="handleView(record)"
-                >查看</a-button
-              >
+              <a-button type="text" size="small" @click="handleView(record)">
+                查看
+              </a-button>
               <a-popconfirm
                 v-if="can('system.audit.delete')"
                 title="确定要删除吗？"

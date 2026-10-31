@@ -65,7 +65,16 @@ export function useVbenModal<TParentModalProps extends ModalProps = ModalProps>(
   const Modal = defineComponent(
     (props: ModalProps, { attrs, slots }) => {
       return () =>
-        h(VbenModal, { ...props, ...attrs, class: cn(attrs.class as string), modalApi: extendedApi }, slots);
+        h(
+          VbenModal,
+          {
+            ...props,
+            ...attrs,
+            class: cn(attrs.class as string),
+            modalApi: extendedApi,
+          },
+          slots,
+        );
     },
     {
       inheritAttrs: false,

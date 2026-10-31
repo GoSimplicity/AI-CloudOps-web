@@ -423,21 +423,26 @@ const handleCommand = async (
   row: WorkorderProcessItem,
 ): Promise<void> => {
   switch (command) {
-    case 'publish':
+    case 'publish': {
       await publishProcess(row);
       break;
-    case 'archive':
+    }
+    case 'archive': {
       await archiveProcess(row);
       break;
-    case 'activate':
+    }
+    case 'activate': {
       await activateProcess(row);
       break;
-    case 'setDefault':
+    }
+    case 'setDefault': {
       await setDefaultProcess(row);
       break;
-    case 'delete':
+    }
+    case 'delete': {
       confirmDelete(row);
       break;
+    }
   }
 };
 
@@ -692,40 +697,52 @@ const getInitials = (name: string | undefined): string => {
 
 const getStatusClass = (status: number): string => {
   switch (status) {
-    case ProcessStatus.Draft:
+    case ProcessStatus.Draft: {
       return 'status-draft';
-    case ProcessStatus.Published:
+    }
+    case ProcessStatus.Published: {
       return 'status-published';
-    case ProcessStatus.Archived:
+    }
+    case ProcessStatus.Archived: {
       return 'status-archived';
-    default:
+    }
+    default: {
       return '';
+    }
   }
 };
 
 const getStatusColor = (status: number): string => {
   switch (status) {
-    case ProcessStatus.Draft:
+    case ProcessStatus.Draft: {
       return 'orange';
-    case ProcessStatus.Published:
+    }
+    case ProcessStatus.Published: {
       return 'green';
-    case ProcessStatus.Archived:
+    }
+    case ProcessStatus.Archived: {
       return 'default';
-    default:
+    }
+    default: {
       return 'default';
+    }
   }
 };
 
 const getStatusText = (status: number): string => {
   switch (status) {
-    case ProcessStatus.Draft:
+    case ProcessStatus.Draft: {
       return '草稿';
-    case ProcessStatus.Published:
+    }
+    case ProcessStatus.Published: {
       return '已发布';
-    case ProcessStatus.Archived:
+    }
+    case ProcessStatus.Archived: {
       return '已归档';
-    default:
+    }
+    default: {
       return '未知';
+    }
   }
 };
 
@@ -799,8 +816,8 @@ onMounted(async (): Promise<void> => {
         创建新流程
       </a-button>
     </template>
-    <template #filters
-      ><div class="search-filters">
+    <template #filters>
+      <div class="search-filters">
         <a-input-search
           v-model:value="searchQuery"
           placeholder="搜索流程..."
@@ -816,12 +833,12 @@ onMounted(async (): Promise<void> => {
         >
           <a-select-option :value="null">全部</a-select-option>
           <a-select-option :value="ProcessStatus.Draft">草稿</a-select-option>
-          <a-select-option :value="ProcessStatus.Published"
-            >已发布</a-select-option
-          >
-          <a-select-option :value="ProcessStatus.Archived"
-            >已归档</a-select-option
-          >
+          <a-select-option :value="ProcessStatus.Published">
+            已发布
+          </a-select-option>
+          <a-select-option :value="ProcessStatus.Archived">
+            已归档
+          </a-select-option>
         </a-select>
         <a-select
           v-model:value="categoryFilter"
@@ -838,11 +855,11 @@ onMounted(async (): Promise<void> => {
             {{ category.name }}
           </a-select-option>
         </a-select>
-      </div></template
-    >
+      </div>
+    </template>
 
-    <template #summary
-      ><div class="stats-row">
+    <template #summary>
+      <div class="stats-row">
         <a-row :gutter="16">
           <a-col :xs="12" :sm="12" :md="6">
             <a-card class="stats-card">
@@ -896,13 +913,14 @@ onMounted(async (): Promise<void> => {
               </a-statistic>
             </a-card>
           </a-col>
-        </a-row></div
-    ></template>
+        </a-row>
+      </div>
+    </template>
 
     <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
-      <template #action
-        ><a-button size="small" @click="loadProcesses">重试</a-button></template
-      >
+      <template #action>
+        <a-button size="small" @click="loadProcesses">重试</a-button>
+      </template>
     </a-alert>
 
     <div class="table-container">
@@ -1014,30 +1032,35 @@ onMounted(async (): Promise<void> => {
                       <a-menu-item
                         key="publish"
                         v-if="record.status === ProcessStatus.Draft"
-                        >发布</a-menu-item
                       >
+                        发布
+                      </a-menu-item>
                       <a-menu-item
                         key="archive"
                         v-if="record.status === ProcessStatus.Published"
-                        >归档</a-menu-item
                       >
+                        归档
+                      </a-menu-item>
                       <a-menu-item
                         key="activate"
                         v-if="record.status === ProcessStatus.Archived"
-                        >激活</a-menu-item
                       >
+                        激活
+                      </a-menu-item>
                       <a-menu-item
                         key="setDefault"
                         v-if="!isDefaultProcess(record.is_default)"
-                        >设为默认</a-menu-item
                       >
+                        设为默认
+                      </a-menu-item>
                       <a-menu-divider v-if="can('workorder.process.delete')" />
                       <a-menu-item
                         v-if="can('workorder.process.delete')"
                         key="delete"
                         danger
-                        >删除</a-menu-item
                       >
+                        删除
+                      </a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
@@ -1098,27 +1121,29 @@ onMounted(async (): Promise<void> => {
         </div>
 
         <a-descriptions bordered :column="2">
-          <a-descriptions-item label="ID">{{
-            detailDialog.process.id
-          }}</a-descriptions-item>
-          <a-descriptions-item label="操作人">{{
-            detailDialog.process.operator_name
-          }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{
-            formatFullDateTime(detailDialog.process.created_at)
-          }}</a-descriptions-item>
-          <a-descriptions-item label="更新时间">{{
-            formatFullDateTime(detailDialog.process.updated_at)
-          }}</a-descriptions-item>
-          <a-descriptions-item label="关联表单">{{
-            getFormName(detailDialog.process.form_design_id)
-          }}</a-descriptions-item>
-          <a-descriptions-item label="分类">{{
-            getCategoryName(detailDialog.process.category_id)
-          }}</a-descriptions-item>
-          <a-descriptions-item label="是否默认">{{
-            isDefaultProcess(detailDialog.process.is_default) ? '是' : '否'
-          }}</a-descriptions-item>
+          <a-descriptions-item label="ID">
+            {{ detailDialog.process.id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="操作人">
+            {{ detailDialog.process.operator_name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{ formatFullDateTime(detailDialog.process.created_at) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="更新时间">
+            {{ formatFullDateTime(detailDialog.process.updated_at) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="关联表单">
+            {{ getFormName(detailDialog.process.form_design_id) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="分类">
+            {{ getCategoryName(detailDialog.process.category_id) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="是否默认">
+            {{
+              isDefaultProcess(detailDialog.process.is_default) ? '是' : '否'
+            }}
+          </a-descriptions-item>
           <a-descriptions-item label="标签">
             <div class="tags-container">
               <a-tag
@@ -1137,9 +1162,9 @@ onMounted(async (): Promise<void> => {
               >
             </div>
           </a-descriptions-item>
-          <a-descriptions-item label="描述" :span="2">{{
-            detailDialog.process.description || '无描述'
-          }}</a-descriptions-item>
+          <a-descriptions-item label="描述" :span="2">
+            {{ detailDialog.process.description || '无描述' }}
+          </a-descriptions-item>
         </a-descriptions>
 
         <div class="process-preview">
@@ -1156,8 +1181,9 @@ onMounted(async (): Promise<void> => {
           <a-button
             type="primary"
             @click="handleEditProcess(detailDialog.process)"
-            >编辑</a-button
           >
+            编辑
+          </a-button>
         </div>
       </div>
     </a-modal>

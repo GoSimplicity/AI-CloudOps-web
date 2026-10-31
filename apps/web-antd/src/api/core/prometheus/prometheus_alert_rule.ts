@@ -4,7 +4,7 @@ import { requestClient } from '#/api/request';
 export enum AlertRuleSeverity {
   Info = 1,
   Warning = 2,
-  Critical = 3
+  Critical = 3,
 }
 
 // 监控告警规则配置
@@ -84,15 +84,21 @@ export interface GetMonitorAlertRuleReq {
   id: number;
 }
 
-export async function getMonitorAlertRuleListApi(data: GetMonitorAlertRuleListReq) {
+export async function getMonitorAlertRuleListApi(
+  data: GetMonitorAlertRuleListReq,
+) {
   return requestClient.get('/monitor/alert_rules/list', { params: data });
 }
 
-export async function createMonitorAlertRuleApi(data: CreateMonitorAlertRuleReq) {
+export async function createMonitorAlertRuleApi(
+  data: CreateMonitorAlertRuleReq,
+) {
   return requestClient.post('/monitor/alert_rules/create', data);
 }
 
-export async function updateMonitorAlertRuleApi(data: UpdateMonitorAlertRuleReq) {
+export async function updateMonitorAlertRuleApi(
+  data: UpdateMonitorAlertRuleReq,
+) {
   return requestClient.put(`/monitor/alert_rules/update/${data.id}`, data);
 }
 

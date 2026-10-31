@@ -141,17 +141,23 @@ export interface DeleteIngressReq {
 
 // 获取Ingress列表
 export const getK8sIngressList = (params: GetIngressListReq) => {
-  return requestClient.get(`/k8s/ingress/${params.cluster_id}/list`, { params });
+  return requestClient.get(`/k8s/ingress/${params.cluster_id}/list`, {
+    params,
+  });
 };
 
 // 获取Ingress详情
 export const getK8sIngressDetails = (params: GetIngressDetailsReq) => {
-  return requestClient.get(`/k8s/ingress/${params.cluster_id}/${params.namespace}/${params.name}/detail`);
+  return requestClient.get(
+    `/k8s/ingress/${params.cluster_id}/${params.namespace}/${params.name}/detail`,
+  );
 };
 
 // 获取Ingress YAML
 export const getK8sIngressYaml = (params: GetIngressYamlReq) => {
-  return requestClient.get(`/k8s/ingress/${params.cluster_id}/${params.namespace}/${params.name}/detail/yaml`);
+  return requestClient.get(
+    `/k8s/ingress/${params.cluster_id}/${params.namespace}/${params.name}/detail/yaml`,
+  );
 };
 
 // 创建Ingress
@@ -161,20 +167,31 @@ export const createK8sIngress = (data: CreateIngressReq) => {
 
 // 通过YAML创建Ingress
 export const createK8sIngressByYaml = (data: CreateIngressByYamlReq) => {
-  return requestClient.post(`/k8s/ingress/${data.cluster_id}/create/yaml`, data);
+  return requestClient.post(
+    `/k8s/ingress/${data.cluster_id}/create/yaml`,
+    data,
+  );
 };
 
 // 更新Ingress
 export const updateK8sIngress = (data: UpdateIngressReq) => {
-  return requestClient.put(`/k8s/ingress/${data.cluster_id}/${data.namespace}/${data.name}/update`, data);
+  return requestClient.put(
+    `/k8s/ingress/${data.cluster_id}/${data.namespace}/${data.name}/update`,
+    data,
+  );
 };
 
 // 通过YAML更新Ingress
 export const updateK8sIngressByYaml = (data: UpdateIngressByYamlReq) => {
-  return requestClient.put(`/k8s/ingress/${data.cluster_id}/${data.namespace}/${data.name}/update/yaml`, data);
+  return requestClient.put(
+    `/k8s/ingress/${data.cluster_id}/${data.namespace}/${data.name}/update/yaml`,
+    data,
+  );
 };
 
 // 删除Ingress
 export const deleteK8sIngress = (params: DeleteIngressReq) => {
-  return requestClient.delete(`/k8s/ingress/${params.cluster_id}/${params.namespace}/${params.name}/delete`);
+  return requestClient.delete(
+    `/k8s/ingress/${params.cluster_id}/${params.namespace}/${params.name}/delete`,
+  );
 };

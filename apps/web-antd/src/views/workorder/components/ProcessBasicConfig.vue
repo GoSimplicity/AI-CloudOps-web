@@ -109,8 +109,7 @@
           placeholder="输入标签后按回车添加"
           style="width: 100%"
           :token-separators="[',']"
-        >
-        </a-select>
+        />
       </a-form-item>
 
       <a-form-item label="流程定义" name="definition">

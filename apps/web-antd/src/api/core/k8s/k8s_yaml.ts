@@ -111,12 +111,18 @@ export const getYamlTemplateList = (params: YamlTemplateListReq) => {
 
 // 创建新的 YAML 模板
 export const createYamlTemplate = (data: YamlTemplateCreateReq) => {
-  return requestClient.post(`/k8s/yaml_template/${data.cluster_id}/create`, data);
+  return requestClient.post(
+    `/k8s/yaml_template/${data.cluster_id}/create`,
+    data,
+  );
 };
 
 // 检查 YAML 模板是否可用
 export const checkYamlTemplate = (data: YamlTemplateCheckReq) => {
-  return requestClient.post(`/k8s/yaml_template/${data.cluster_id}/check`, data);
+  return requestClient.post(
+    `/k8s/yaml_template/${data.cluster_id}/check`,
+    data,
+  );
 };
 
 // 更新指定 ID 的 YAML 模板

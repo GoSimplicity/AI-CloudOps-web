@@ -35,8 +35,15 @@ beforeEach(() => {
   vi.resetAllMocks();
   state.user = reactive({ userInfo: { userId: '1' } });
   state.access = reactive({ accessToken: 'credential' });
-  api.createAssistantSession.mockImplementation(async () => ({ session_id: state.user.userInfo?.userId === '2' ? 'new-sid' : 'first-sid' }));
-  api.getSessionInfo.mockImplementation(async (session_id: string) => ({session_id, status:'idle', mode:1, conversation_history:[]}));
+  api.createAssistantSession.mockImplementation(async () => ({
+    session_id: state.user.userInfo?.userId === '2' ? 'new-sid' : 'first-sid',
+  }));
+  api.getSessionInfo.mockImplementation(async (session_id: string) => ({
+    session_id,
+    status: 'idle',
+    mode: 1,
+    conversation_history: [],
+  }));
 });
 afterEach(() => {
   wrapper?.unmount();
@@ -62,7 +69,14 @@ describe('悬浮助手真实状态隔离', () => {
       sessionId: 'owner-one',
       chatMessages: [{ content: 'owner one private', type: 'user' }],
     });
-    api.getSessionInfo.mockResolvedValueOnce({session_id:'owner-one', status:'idle', mode:1, conversation_history:[{q:'owner one private',a:'owned answer',mode:1}]});
+    api.getSessionInfo.mockResolvedValueOnce({
+      session_id: 'owner-one',
+      status: 'idle',
+      mode: 1,
+      conversation_history: [
+        { q: 'owner one private', a: 'owned answer', mode: 1 },
+      ],
+    });
     wrapper = mount(AiAssistant);
     await flushPromises();
     expect(setup().sessionId).toBe('owner-one');
@@ -98,12 +112,20 @@ describe('悬浮助手真实状态隔离', () => {
     await flushPromises();
     const oldParams = api.assistantQuery.mock.calls[0]![0];
     const freshParams = api.assistantQuery.mock.calls[1]![0];
-    old.resolve({ answer: 'old private answer', session_id: oldParams.session_id, turn_id: oldParams.turn_id });
+    old.resolve({
+      answer: 'old private answer',
+      session_id: oldParams.session_id,
+      turn_id: oldParams.turn_id,
+    });
     await oldTask;
     expect(setup().sending).toBe(true);
     expect(setup().sessionId).toBe('new-sid');
     expect(JSON.stringify(setup().chatMessages)).not.toContain('old private');
-    fresh.resolve({ answer: 'ok', session_id: freshParams.session_id, turn_id: freshParams.turn_id });
+    fresh.resolve({
+      answer: 'ok',
+      session_id: freshParams.session_id,
+      turn_id: freshParams.turn_id,
+    });
     await freshTask;
     expect(setup().sessionId).toBe('new-sid');
     expect(JSON.stringify(localStorage)).not.toContain('old private answer');
@@ -145,8 +167,12 @@ describe('悬浮助手真实状态隔离', () => {
     async (status) => {
       api.assistantQuery
         .mockRejectedValueOnce({ response: { status } })
-        .mockImplementationOnce(async (params) => ({ answer: 'ok', session_id: params.session_id, turn_id: params.turn_id }));
-      api.createAssistantSession.mockResolvedValueOnce({session_id:'fresh'});
+        .mockImplementationOnce(async (params) => ({
+          answer: 'ok',
+          session_id: params.session_id,
+          turn_id: params.turn_id,
+        }));
+      api.createAssistantSession.mockResolvedValueOnce({ session_id: 'fresh' });
       wrapper = mount(AiAssistant);
       setup().sessionId = 'invalid-sid';
       await setup().sendMessage('question');

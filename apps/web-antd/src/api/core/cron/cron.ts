@@ -214,8 +214,6 @@ export interface ValidateScheduleResp {
   next_run_times?: string[];
 }
 
-
-
 // 获取定时任务列表
 export async function getCronJobList(params: GetCronJobListReq) {
   return requestClient.get('/cron/job/list', { params });
@@ -263,4 +261,3 @@ export async function validateSchedule(params: ValidateScheduleReq) {
     params,
   );
 }
-

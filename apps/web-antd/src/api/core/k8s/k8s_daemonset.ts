@@ -3,8 +3,8 @@ import { requestClient } from '#/api/request';
 // DaemonSet状态枚举
 export enum K8sDaemonSetStatus {
   Running = 1, // 运行中
-  Error = 2,   // 异常
-  Updating = 3 // 更新中
+  Error = 2, // 异常
+  Updating = 3, // 更新中
 }
 
 // DaemonSet条件
@@ -165,83 +165,156 @@ export interface K8sDaemonSetYaml {
 /**
  * 获取DaemonSet列表
  */
-export async function getDaemonSetListApi(clusterId: number, params?: GetDaemonSetListReq) {
+export async function getDaemonSetListApi(
+  clusterId: number,
+  params?: GetDaemonSetListReq,
+) {
   return requestClient.get(`/k8s/daemonset/${clusterId}/list`, { params });
 }
 
 /**
  * 获取DaemonSet详情
  */
-export async function getDaemonSetDetailsApi(clusterId: number, namespace: string, name: string) {
-  return requestClient.get(`/k8s/daemonset/${clusterId}/${namespace}/${name}/detail`);
+export async function getDaemonSetDetailsApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+) {
+  return requestClient.get(
+    `/k8s/daemonset/${clusterId}/${namespace}/${name}/detail`,
+  );
 }
 
 /**
  * 获取DaemonSet YAML
  */
-export async function getDaemonSetYamlApi(clusterId: number, namespace: string, name: string) {
-  return requestClient.get(`/k8s/daemonset/${clusterId}/${namespace}/${name}/detail/yaml`);
+export async function getDaemonSetYamlApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+) {
+  return requestClient.get(
+    `/k8s/daemonset/${clusterId}/${namespace}/${name}/detail/yaml`,
+  );
 }
 
 /**
  * 创建DaemonSet
  */
-export async function createDaemonSetApi(clusterId: number, data: CreateDaemonSetReq) {
+export async function createDaemonSetApi(
+  clusterId: number,
+  data: CreateDaemonSetReq,
+) {
   return requestClient.post(`/k8s/daemonset/${clusterId}/create`, data);
 }
 
 /**
  * 通过YAML创建DaemonSet
  */
-export async function createDaemonSetByYamlApi(clusterId: number, data: CreateDaemonSetByYamlReq) {
+export async function createDaemonSetByYamlApi(
+  clusterId: number,
+  data: CreateDaemonSetByYamlReq,
+) {
   return requestClient.post(`/k8s/daemonset/${clusterId}/create/yaml`, data);
 }
 
 /**
  * 更新DaemonSet
  */
-export async function updateDaemonSetApi(clusterId: number, namespace: string, name: string, data: UpdateDaemonSetReq) {
-  return requestClient.put(`/k8s/daemonset/${clusterId}/${namespace}/${name}/update`, data);
+export async function updateDaemonSetApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+  data: UpdateDaemonSetReq,
+) {
+  return requestClient.put(
+    `/k8s/daemonset/${clusterId}/${namespace}/${name}/update`,
+    data,
+  );
 }
 
 /**
  * 通过YAML更新DaemonSet
  */
-export async function updateDaemonSetByYamlApi(clusterId: number, namespace: string, name: string, data: UpdateDaemonSetByYamlReq) {
-  return requestClient.put(`/k8s/daemonset/${clusterId}/${namespace}/${name}/update/yaml`, data);
+export async function updateDaemonSetByYamlApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+  data: UpdateDaemonSetByYamlReq,
+) {
+  return requestClient.put(
+    `/k8s/daemonset/${clusterId}/${namespace}/${name}/update/yaml`,
+    data,
+  );
 }
 
 /**
  * 删除DaemonSet
  */
-export async function deleteDaemonSetApi(clusterId: number, namespace: string, name: string, data?: DeleteDaemonSetReq) {
-  return requestClient.delete(`/k8s/daemonset/${clusterId}/${namespace}/${name}/delete`, { data });
+export async function deleteDaemonSetApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+  data?: DeleteDaemonSetReq,
+) {
+  return requestClient.delete(
+    `/k8s/daemonset/${clusterId}/${namespace}/${name}/delete`,
+    { data },
+  );
 }
 
 /**
  * 重启DaemonSet
  */
-export async function restartDaemonSetApi(clusterId: number, namespace: string, name: string, data?: RestartDaemonSetReq) {
-  return requestClient.post(`/k8s/daemonset/${clusterId}/${namespace}/${name}/restart`, data);
+export async function restartDaemonSetApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+  data?: RestartDaemonSetReq,
+) {
+  return requestClient.post(
+    `/k8s/daemonset/${clusterId}/${namespace}/${name}/restart`,
+    data,
+  );
 }
 
 /**
  * 回滚DaemonSet
  */
-export async function rollbackDaemonSetApi(clusterId: number, namespace: string, name: string, data: RollbackDaemonSetReq) {
-  return requestClient.post(`/k8s/daemonset/${clusterId}/${namespace}/${name}/rollback`, data);
+export async function rollbackDaemonSetApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+  data: RollbackDaemonSetReq,
+) {
+  return requestClient.post(
+    `/k8s/daemonset/${clusterId}/${namespace}/${name}/rollback`,
+    data,
+  );
 }
 
 /**
  * 获取DaemonSet下的Pod列表
  */
-export async function getDaemonSetPodsApi(clusterId: number, namespace: string, name: string) {
-  return requestClient.get(`/k8s/daemonset/${clusterId}/${namespace}/${name}/pods`);
+export async function getDaemonSetPodsApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+) {
+  return requestClient.get(
+    `/k8s/daemonset/${clusterId}/${namespace}/${name}/pods`,
+  );
 }
 
 /**
  * 获取DaemonSet版本历史
  */
-export async function getDaemonSetHistoryApi(clusterId: number, namespace: string, name: string) {
-  return requestClient.get(`/k8s/daemonset/${clusterId}/${namespace}/${name}/history`);
+export async function getDaemonSetHistoryApi(
+  clusterId: number,
+  namespace: string,
+  name: string,
+) {
+  return requestClient.get(
+    `/k8s/daemonset/${clusterId}/${namespace}/${name}/history`,
+  );
 }

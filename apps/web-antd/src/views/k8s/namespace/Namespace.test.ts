@@ -101,7 +101,9 @@ describe('命名空间查询作用域', () => {
     page.filterClusterId.value = 1;
     // RequestClient 把 HTTP 错误包成带 response 的普通对象再抛给页面；
     // incr3 P3-3：带请求层痕迹（经过 requestClient 拦截器）才算请求层已提示
-    client.get.mockRejectedValueOnce(markRequestLayerTrace({ response: { status: 500 } }));
+    client.get.mockRejectedValueOnce(
+      markRequestLayerTrace({ response: { status: 500 } }),
+    );
     await page.fetchNamespaces();
     client.get.mockRejectedValueOnce(
       markRequestLayerTrace(

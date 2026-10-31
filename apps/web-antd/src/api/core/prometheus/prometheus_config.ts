@@ -2,17 +2,17 @@ import { requestClient } from '#/api/request';
 
 // 配置类型枚举
 export enum ConfigType {
-  Prometheus = 1,    // Prometheus 主配置
-  AlertManager = 2,  // AlertManager 主配置
-  AlertRule = 3,     // 告警规则配置
-  RecordRule = 4,    // 预聚合规则配置
-  WebhookFile = 5,   // webhook file
+  Prometheus = 1, // Prometheus 主配置
+  AlertManager = 2, // AlertManager 主配置
+  AlertRule = 3, // 告警规则配置
+  RecordRule = 4, // 预聚合规则配置
+  WebhookFile = 5, // webhook file
 }
 
 // 配置状态枚举
 export enum ConfigStatus {
-  Active = 1,     // 激活状态
-  Inactive = 2,   // 非激活状态
+  Active = 1, // 激活状态
+  Inactive = 2, // 非激活状态
 }
 
 // 监控配置数据模型
@@ -77,7 +77,9 @@ export interface DeleteMonitorConfigParams {
 }
 
 // API 接口
-export async function getMonitorConfigListApi(data: GetMonitorConfigListParams) {
+export async function getMonitorConfigListApi(
+  data: GetMonitorConfigListParams,
+) {
   return requestClient.get('/monitor/configs/list', { params: data });
 }
 

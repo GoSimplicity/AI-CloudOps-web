@@ -6,31 +6,31 @@ import type { WorkorderProcessItem } from '#/api/core/workorder/workorder_proces
 
 // 工单状态常量
 export const InstanceStatus = {
-  Draft: 1,      // 草稿
-  Pending: 2,    // 待处理
+  Draft: 1, // 草稿
+  Pending: 2, // 待处理
   Processing: 3, // 处理中
-  Completed: 4,  // 已完成
-  Rejected: 5,   // 已拒绝
-  Cancelled: 6,  // 已取消
+  Completed: 4, // 已完成
+  Rejected: 5, // 已拒绝
+  Cancelled: 6, // 已取消
 } as const;
 
 // 工单优先级常量
 export const Priority = {
-  High: 1,    // 高
-  Normal: 2,  // 普通
-  Low: 3,     // 低
+  High: 1, // 高
+  Normal: 2, // 普通
+  Low: 3, // 低
 } as const;
 
 // 流转记录类型常量
 export const FlowRecordType = {
-  User: 1,    // 用户操作
-  System: 2,  // 系统操作
+  User: 1, // 用户操作
+  System: 2, // 系统操作
 } as const;
 
 // 表单字段必填状态常量
 export const FieldRequired = {
-  No: 1,   // 非必填
-  Yes: 2,  // 必填
+  No: 1, // 非必填
+  Yes: 2, // 必填
 } as const;
 
 // 工单实例
@@ -51,7 +51,7 @@ export interface WorkorderInstanceItem {
   description?: string; // 详细描述
   tags?: string[]; // 标签
   due_date?: string; // 截止时间
-  completed_at?: string; // 完成时间 
+  completed_at?: string; // 完成时间
 
   // 关联查询字段
   process?: WorkorderProcessItem; // 流程信息
@@ -181,7 +181,10 @@ export async function createWorkorderInstanceFromTemplate(
   templateId: number,
   data: CreateWorkorderInstanceFromTemplateReq,
 ) {
-  return requestClient.post(`/workorder/instance/create-from-template/${templateId}`, data);
+  return requestClient.post(
+    `/workorder/instance/create-from-template/${templateId}`,
+    data,
+  );
 }
 
 // 更新工单实例
@@ -206,9 +209,7 @@ export async function detailWorkorderInstance(
 }
 
 // 获取工单实例列表
-export async function listWorkorderInstance(
-  params: ListWorkorderInstanceReq,
-) {
+export async function listWorkorderInstance(params: ListWorkorderInstanceReq) {
   return requestClient.get('/workorder/instance/list', { params });
 }
 

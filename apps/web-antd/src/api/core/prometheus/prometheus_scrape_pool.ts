@@ -78,7 +78,9 @@ export interface GetMonitorScrapePoolDetailReq {
 }
 
 // 获取采集池列表
-export async function getMonitorScrapePoolListApi(data: GetMonitorScrapePoolListReq) {
+export async function getMonitorScrapePoolListApi(
+  data: GetMonitorScrapePoolListReq,
+) {
   return requestClient.get(`/monitor/scrape_pools/list`, { params: data });
 }
 
@@ -90,7 +92,9 @@ export async function createMonitorScrapePoolApi(
 }
 
 // 更新采集池
-export async function updateMonitorScrapePoolApi(data: UpdateMonitorScrapePoolReq) {
+export async function updateMonitorScrapePoolApi(
+  data: UpdateMonitorScrapePoolReq,
+) {
   return requestClient.put(`/monitor/scrape_pools/update/${data.id}`, data);
 }
 

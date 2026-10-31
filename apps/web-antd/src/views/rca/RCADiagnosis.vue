@@ -1,20 +1,30 @@
 <template>
-  <OpsPage title="快速诊断" description="按选择范围诊断，部分失败与未知状态单独显示" class="rca-diagnosis">
+  <OpsPage
+    title="快速诊断"
+    description="按选择范围诊断，部分失败与未知状态单独显示"
+    class="rca-diagnosis"
+  >
     <!-- 页面头部 -->
     <template #actions>
-<a-button
-            type="primary" 
-            size="large" 
-            @click="refreshAllDiagnosis"
-            :loading="loading"
-            :disabled="!isFormValid || loading"
-          >
-            {{ loading ? '诊断中...' : '开始诊断' }}
-          </a-button>
+      <a-button
+        type="primary"
+        size="large"
+        @click="refreshAllDiagnosis"
+        :loading="loading"
+        :disabled="!isFormValid || loading"
+      >
+        {{ loading ? '诊断中...' : '开始诊断' }}
+      </a-button>
     </template>
 
     <!-- 诊断参数配置 -->
-    <a-alert v-if="diagnosisError" :message="diagnosisError" type="error" show-icon role="alert" />
+    <a-alert
+      v-if="diagnosisError"
+      :message="diagnosisError"
+      type="error"
+      show-icon
+      role="alert"
+    />
     <div class="config-section">
       <div class="section-header">
         <h2>诊断配置</h2>
@@ -27,14 +37,19 @@
         <div class="config-item">
           <label>命名空间</label>
           <a-input
-            v-model:value="inputData.namespace" :disabled="loading"
+            v-model:value="inputData.namespace"
+            :disabled="loading"
             placeholder="输入K8s命名空间"
             class="modern-input"
           />
         </div>
         <div class="config-item">
           <label>时间范围</label>
-          <a-select v-model:value="timeRange" :disabled="loading" class="modern-select">
+          <a-select
+            v-model:value="timeRange"
+            :disabled="loading"
+            class="modern-select"
+          >
             <a-select-option value="1">1小时</a-select-option>
             <a-select-option value="6">6小时</a-select-option>
             <a-select-option value="24">24小时</a-select-option>
@@ -42,7 +57,11 @@
         </div>
         <div class="config-item">
           <label>诊断级别</label>
-          <a-radio-group v-model:value="diagnosisLevel" :disabled="loading" button-style="solid">
+          <a-radio-group
+            v-model:value="diagnosisLevel"
+            :disabled="loading"
+            button-style="solid"
+          >
             <a-radio-button value="quick">快速</a-radio-button>
             <a-radio-button value="standard">标准</a-radio-button>
             <a-radio-button value="comprehensive">全面</a-radio-button>
@@ -51,66 +70,141 @@
         <div class="config-item">
           <label>每30秒诊断（会重复调用分析服务）</label>
           <div class="switch-container">
-            <a-switch v-model:checked="autoRefresh" @change="toggleAutoRefresh" />
-            <span class="switch-label">{{ autoRefresh ? '已开启' : '已关闭' }}</span>
+            <a-switch
+              v-model:checked="autoRefresh"
+              @change="toggleAutoRefresh"
+            />
+            <span class="switch-label">{{
+              autoRefresh ? '已开启' : '已关闭'
+            }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <CollectionSummary v-if="quickDiagnosisResult && !loading" :status="quickDiagnosisResult.status" :collection="quickDiagnosisResult.collection" />
+    <CollectionSummary
+      v-if="quickDiagnosisResult && !loading"
+      :status="quickDiagnosisResult.status"
+      :collection="quickDiagnosisResult.collection"
+    />
 
     <!-- 核心指标卡片 -->
     <div class="metrics-grid">
       <div class="metric-card critical">
         <div class="metric-icon"><Icon icon="mdi:alert-outline" /></div>
         <div class="metric-info">
-          <div class="metric-value">{{ quickUsable ? getCriticalIssuesCount() : quickDiagnosisResult ? '未知' : '待诊断' }}</div>
+          <div class="metric-value">
+            {{
+              quickUsable
+                ? getCriticalIssuesCount()
+                : quickDiagnosisResult
+                  ? '未知'
+                  : '待诊断'
+            }}
+          </div>
           <div class="metric-label">关键问题</div>
         </div>
-        <div class="metric-trend" :class="!quickUsable ? 'trend-unknown' : getCriticalIssuesCount() > 0 ? 'trend-up' : 'trend-stable'">
-          {{ !quickUsable ? '结果不可用' : getCriticalIssuesCount() > 0 ? '需要关注' : '本次未见关键问题' }}
+        <div
+          class="metric-trend"
+          :class="
+            !quickUsable
+              ? 'trend-unknown'
+              : getCriticalIssuesCount() > 0
+                ? 'trend-up'
+                : 'trend-stable'
+          "
+        >
+          {{
+            !quickUsable
+              ? '结果不可用'
+              : getCriticalIssuesCount() > 0
+                ? '需要关注'
+                : '本次未见关键问题'
+          }}
         </div>
       </div>
 
       <div class="metric-card warning">
         <div class="metric-icon"><Icon icon="mdi:alert-circle-outline" /></div>
         <div class="metric-info">
-          <div class="metric-value">{{ quickUsable ? getWarningsCount() : quickDiagnosisResult ? '未知' : '待诊断' }}</div>
+          <div class="metric-value">
+            {{
+              quickUsable
+                ? getWarningsCount()
+                : quickDiagnosisResult
+                  ? '未知'
+                  : '待诊断'
+            }}
+          </div>
           <div class="metric-label">警告信息</div>
         </div>
-        <div class="metric-trend" :class="!quickUsable ? 'trend-unknown' : getWarningsCount() > 0 ? 'trend-warning' : 'trend-stable'">
-          {{ !quickUsable ? '结果不可用' : getWarningsCount() > 0 ? '存在警告' : '本次无警告' }}
+        <div
+          class="metric-trend"
+          :class="
+            !quickUsable
+              ? 'trend-unknown'
+              : getWarningsCount() > 0
+                ? 'trend-warning'
+                : 'trend-stable'
+          "
+        >
+          {{
+            !quickUsable
+              ? '结果不可用'
+              : getWarningsCount() > 0
+                ? '存在警告'
+                : '本次无警告'
+          }}
         </div>
       </div>
 
       <div class="metric-card errors">
         <div class="metric-icon"><Icon icon="mdi:bug-outline" /></div>
         <div class="metric-info">
-          <div class="metric-value">{{ errorSummaryResult ? getTotalErrors() : '未查询' }}</div>
+          <div class="metric-value">
+            {{ errorSummaryResult ? getTotalErrors() : '未查询' }}
+          </div>
           <div class="metric-label">错误总数</div>
         </div>
-        <div class="metric-trend" :class="!errorSummaryResult ? 'trend-unknown' : getTotalErrors() > 100 ? 'trend-up' : 'trend-stable'">
+        <div
+          class="metric-trend"
+          :class="
+            !errorSummaryResult
+              ? 'trend-unknown'
+              : getTotalErrors() > 100
+                ? 'trend-up'
+                : 'trend-stable'
+          "
+        >
           过去{{ timeRange }}小时
         </div>
       </div>
 
       <div class="metric-card health">
-        <div class="metric-icon"><Icon icon="mdi:clipboard-check-outline" /></div>
+        <div class="metric-icon">
+          <Icon icon="mdi:clipboard-check-outline" />
+        </div>
         <div class="metric-info">
-          <div class="metric-value">{{ quickDiagnosisResult ? analysisStatus(quickDiagnosisResult.status).label : '待诊断' }}</div>
+          <div class="metric-value">
+            {{
+              quickDiagnosisResult
+                ? analysisStatus(quickDiagnosisResult.status).label
+                : '待诊断'
+            }}
+          </div>
           <div class="metric-label">诊断状态</div>
         </div>
-        <div class="metric-trend">
-          以本次检查范围为准
-        </div>
+        <div class="metric-trend">以本次检查范围为准</div>
       </div>
     </div>
 
     <!-- 诊断结果区域 -->
     <div class="diagnosis-section" v-if="quickDiagnosisResult || loading">
       <!-- 加载状态 -->
-      <div v-if="loading" class="loading-container"><a-spin /><p>正在等待服务返回实际结果，请稍候</p></div>
+      <div v-if="loading" class="loading-container">
+        <a-spin />
+        <p>正在等待服务返回实际结果，请稍候</p>
+      </div>
 
       <!-- 诊断结果 -->
       <div v-else-if="quickUsable" class="issues-container">
@@ -118,27 +212,45 @@
         <div class="issues-panel critical-panel">
           <div class="panel-header">
             <h3>关键问题</h3>
-            <span class="issue-count">{{ quickUsable ? getCriticalIssuesCount() : quickDiagnosisResult ? '未知' : '待诊断' }}</span>
+            <span class="issue-count">{{
+              quickUsable
+                ? getCriticalIssuesCount()
+                : quickDiagnosisResult
+                  ? '未知'
+                  : '待诊断'
+            }}</span>
           </div>
           <div class="issues-list">
-            <div 
-              v-for="(issue, index) in formattedCriticalIssues" 
+            <div
+              v-for="(issue, index) in formattedCriticalIssues"
               :key="index"
               class="issue-item critical-item"
             >
               <div class="issue-header">
                 <span class="issue-type">{{ issue.type || 'unknown' }}</span>
-                <span class="issue-severity">{{ issue.severity || 'critical' }}</span>
+                <span class="issue-severity">{{
+                  issue.severity || 'critical'
+                }}</span>
                 <span class="issue-time" v-if="issue.timestamp">
                   {{ formatShortTime(issue.timestamp) }}
                 </span>
               </div>
-              <div class="issue-description">{{ issue.description || issue }}</div>
-              <div class="issue-confidence" v-if="Number.isFinite(issue.confidence)">
+              <div class="issue-description">
+                {{ issue.description || issue }}
+              </div>
+              <div
+                class="issue-confidence"
+                v-if="Number.isFinite(issue.confidence)"
+              >
                 <div class="confidence-bar">
-                  <div class="confidence-fill" :style="{width: (issue.confidence * 100) + '%'}"></div>
+                  <div
+                    class="confidence-fill"
+                    :style="{ width: issue.confidence * 100 + '%' }"
+                  ></div>
                 </div>
-                <span class="confidence-text">{{ (issue.confidence * 100).toFixed(0) }}%</span>
+                <span class="confidence-text"
+                  >{{ (issue.confidence * 100).toFixed(0) }}%</span
+                >
               </div>
             </div>
             <div v-if="getCriticalIssuesCount() === 0" class="empty-state">
@@ -154,8 +266,9 @@
             <span class="issue-count">{{ getRecommendationsCount() }}</span>
           </div>
           <div class="recommendations-list">
-            <div 
-              v-for="(rec, index) in quickDiagnosisResult?.recommendations || []"
+            <div
+              v-for="(rec, index) in quickDiagnosisResult?.recommendations ||
+              []"
               :key="index"
               class="recommendation-item"
             >
@@ -172,7 +285,12 @@
     </div>
 
     <!-- 图表区域 -->
-    <a-alert v-if="diagnosisFailures.length" type="warning" :message="`未完成：${diagnosisFailures.join('、')}。当前结果不代表完整健康检查。`" show-icon />
+    <a-alert
+      v-if="diagnosisFailures.length"
+      type="warning"
+      :message="`未完成：${diagnosisFailures.join('、')}。当前结果不代表完整健康检查。`"
+      show-icon
+    />
     <div class="charts-section" v-if="hasInitialData">
       <div class="chart-container">
         <div class="chart-header">
@@ -198,14 +316,22 @@
       <div class="section-header">
         <h2>根因分析</h2>
         <a-tag v-if="rcaUsable" color="#6366f1">
-          置信度: {{ Number.isFinite(rcaAnalysisResult.confidence_score) ? (rcaAnalysisResult.confidence_score * 100).toFixed(1) + '%' : '未知' }}
+          置信度:
+          {{
+            Number.isFinite(rcaAnalysisResult.confidence_score)
+              ? (rcaAnalysisResult.confidence_score * 100).toFixed(1) + '%'
+              : '未知'
+          }}
         </a-tag>
       </div>
 
-      <CollectionSummary :status="rcaAnalysisResult.status" :collection="rcaAnalysisResult.collection" />
+      <CollectionSummary
+        :status="rcaAnalysisResult.status"
+        :collection="rcaAnalysisResult.collection"
+      />
       <div v-if="rcaUsable" class="rca-content">
-        <div 
-          v-for="(cause, index) in rcaAnalysisResult.root_causes" 
+        <div
+          v-for="(cause, index) in rcaAnalysisResult.root_causes"
           :key="index"
           class="root-cause-card"
         >
@@ -213,21 +339,38 @@
             <span class="cause-type">{{ cause.cause_type || 'unknown' }}</span>
             <div class="cause-confidence">
               <div class="confidence-mini-bar">
-                <div class="confidence-mini-fill" :style="{width: (cause.confidence * 100) + '%'}"></div>
+                <div
+                  class="confidence-mini-fill"
+                  :style="{ width: cause.confidence * 100 + '%' }"
+                ></div>
               </div>
             </div>
           </div>
           <p class="cause-description">{{ cause.description || '暂无描述' }}</p>
-          <div class="cause-components" v-if="cause.affected_components?.length">
+          <div
+            class="cause-components"
+            v-if="cause.affected_components?.length"
+          >
             <span class="components-label">影响组件:</span>
-            <a-tag v-for="comp in cause.affected_components" :key="comp" size="small">
+            <a-tag
+              v-for="comp in cause.affected_components"
+              :key="comp"
+              size="small"
+            >
               {{ comp }}
             </a-tag>
           </div>
-          <div class="cause-recommendations" v-if="cause.recommendations?.length">
+          <div
+            class="cause-recommendations"
+            v-if="cause.recommendations?.length"
+          >
             <span class="components-label">建议:</span>
             <div class="rec-list">
-              <div v-for="(rec, recIndex) in cause.recommendations" :key="recIndex" class="rec-item">
+              <div
+                v-for="(rec, recIndex) in cause.recommendations"
+                :key="recIndex"
+                class="rec-item"
+              >
                 {{ rec }}
               </div>
             </div>
@@ -241,7 +384,9 @@
       <div class="summary-grid">
         <div class="summary-item">
           <span class="summary-label">命名空间</span>
-          <span class="summary-value">{{ diagnosisContext?.namespace || '未知' }}</span>
+          <span class="summary-value">{{
+            diagnosisContext?.namespace || '未知'
+          }}</span>
         </div>
         <div class="summary-item">
           <span class="summary-label">分析时间</span>
@@ -249,19 +394,29 @@
         </div>
         <div class="summary-item">
           <span class="summary-label">时间范围</span>
-          <span class="summary-value">{{ diagnosisContext?.hours ?? '未知' }}小时</span>
+          <span class="summary-value"
+            >{{ diagnosisContext?.hours ?? '未知' }}小时</span
+          >
         </div>
         <div class="summary-item">
           <span class="summary-label">诊断状态</span>
-          <span class="summary-value">{{ quickDiagnosisResult ? analysisStatus(quickDiagnosisResult.status).label : '未知' }}</span>
+          <span class="summary-value">{{
+            quickDiagnosisResult
+              ? analysisStatus(quickDiagnosisResult.status).label
+              : '未知'
+          }}</span>
         </div>
-        <div class="summary-item" v-if="quickDiagnosisResult?.analysis_duration">
+        <div
+          class="summary-item"
+          v-if="quickDiagnosisResult?.analysis_duration"
+        >
           <span class="summary-label">分析耗时</span>
-          <span class="summary-value">{{ quickDiagnosisResult.analysis_duration }}ms</span>
+          <span class="summary-value"
+            >{{ quickDiagnosisResult.analysis_duration }}ms</span
+          >
         </div>
       </div>
     </div>
-
   </OpsPage>
 </template>
 
@@ -275,14 +430,24 @@ import { ref, computed, onMounted, nextTick, onUnmounted, watch } from 'vue';
 // 按需引入echarts，减少打包体积
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart, PieChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components';
+import {
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  TitleComponent,
+} from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
 // 注册必需的组件
 echarts.use([
-  BarChart, LineChart, PieChart,
-  GridComponent, TooltipComponent, LegendComponent, TitleComponent,
-  CanvasRenderer
+  BarChart,
+  LineChart,
+  PieChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  TitleComponent,
+  CanvasRenderer,
 ]);
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
@@ -290,13 +455,13 @@ import type {
   QuickDiagnosisResponse,
   EventPatternsResponse,
   ErrorSummaryResponse,
-  RCAAnalysisResponse
+  RCAAnalysisResponse,
 } from '#/api/core/aiops/rca';
 import {
   quickDiagnosis,
   getEventPatterns,
   getErrorSummary,
-  analyzeRootCause
+  analyzeRootCause,
 } from '#/api/core/aiops/rca';
 
 // 响应式数据
@@ -309,7 +474,7 @@ const hasInitialData = ref(false);
 const diagnosisFailures = ref<string[]>([]);
 
 const inputData = ref({
-  namespace: 'default'
+  namespace: 'default',
 });
 
 // 诊断结果
@@ -317,8 +482,11 @@ const quickDiagnosisResult = ref<QuickDiagnosisResponse | null>(null);
 const eventPatternsResult = ref<EventPatternsResponse | null>(null);
 const errorSummaryResult = ref<ErrorSummaryResponse | null>(null);
 const rcaAnalysisResult = ref<RCAAnalysisResponse | null>(null);
-const usableStatus = (status?: string) => status === 'completed' || status === 'degraded';
-const quickUsable = computed(() => usableStatus(quickDiagnosisResult.value?.status));
+const usableStatus = (status?: string) =>
+  status === 'completed' || status === 'degraded';
+const quickUsable = computed(() =>
+  usableStatus(quickDiagnosisResult.value?.status),
+);
 const rcaUsable = computed(() => usableStatus(rcaAnalysisResult.value?.status));
 
 // 图表引用
@@ -331,16 +499,28 @@ let refreshTimer: ReturnType<typeof setInterval> | null = null;
 const diagnosisError = ref('');
 const diagnosisContext = ref<{ namespace: string; hours: number } | null>(null);
 const scope = useAiRequestScope(() => {
-  diagnosisLane.invalidate(); stopAutoRefresh(); autoRefresh.value = false;
-  loading.value = false; hasInitialData.value = false; diagnosisError.value = ''; diagnosisContext.value = null;
-  diagnosisFailures.value = []; quickDiagnosisResult.value = null;
-  eventPatternsResult.value = null; errorSummaryResult.value = null; rcaAnalysisResult.value = null;
+  diagnosisLane.invalidate();
+  stopAutoRefresh();
+  autoRefresh.value = false;
+  loading.value = false;
+  hasInitialData.value = false;
+  diagnosisError.value = '';
+  diagnosisContext.value = null;
+  diagnosisFailures.value = [];
+  quickDiagnosisResult.value = null;
+  eventPatternsResult.value = null;
+  errorSummaryResult.value = null;
+  rcaAnalysisResult.value = null;
   inputData.value.namespace = 'default';
-  errorTrendsChart?.dispose(); errorTrendsChart = null;
-  errorCategoriesChart?.dispose(); errorCategoriesChart = null;
+  errorTrendsChart?.dispose();
+  errorTrendsChart = null;
+  errorCategoriesChart?.dispose();
+  errorCategoriesChart = null;
 });
 const diagnosisLane = scope.createLane();
-useChartAppearance(() => { if (hasInitialData.value) initCharts(); });
+useChartAppearance(() => {
+  if (hasInitialData.value) initCharts();
+});
 
 // 计算属性
 const isFormValid = computed(() => {
@@ -357,7 +537,7 @@ const formattedCriticalIssues = computed(() => {
         severity: 'critical',
         description: issue,
         confidence: 0,
-        timestamp: null
+        timestamp: null,
       };
     }
 
@@ -366,7 +546,7 @@ const formattedCriticalIssues = computed(() => {
       severity: issue.severity || 'critical',
       description: issue.description || issue.message || '暂无描述',
       confidence: Math.max(0, Math.min(1, issue.confidence || 0)),
-      timestamp: issue.timestamp || null
+      timestamp: issue.timestamp || null,
     };
   });
 });
@@ -388,21 +568,24 @@ const getRecommendationsCount = () => {
   return quickDiagnosisResult.value?.recommendations?.length || 0;
 };
 
-
-
-
 const getCurrentTime = () => {
-  const timestamp = quickDiagnosisResult.value?.timestamp || rcaAnalysisResult.value?.timestamp || eventPatternsResult.value?.timestamp || errorSummaryResult.value?.timestamp;
-  return timestamp && Number.isFinite(Date.parse(timestamp)) ? new Date(timestamp).toLocaleString('zh-CN') : '未知';
+  const timestamp =
+    quickDiagnosisResult.value?.timestamp ||
+    rcaAnalysisResult.value?.timestamp ||
+    eventPatternsResult.value?.timestamp ||
+    errorSummaryResult.value?.timestamp;
+  return timestamp && Number.isFinite(Date.parse(timestamp))
+    ? new Date(timestamp).toLocaleString('zh-CN')
+    : '未知';
 };
 
 const formatShortTime = (timestamp: string) => {
   if (!timestamp) return '';
   try {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('zh-CN', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
     });
   } catch (error) {
     return timestamp;
@@ -436,60 +619,55 @@ const refreshAllDiagnosis = async () => {
   rcaAnalysisResult.value = null;
   diagnosisFailures.value = [];
 
-
   // 开始诊断提示
-
 
   try {
     const promises: Promise<any>[] = [];
 
     // 步骤1: 快速诊断
 
-
     promises.push(
       quickDiagnosis({
-        namespace
-      }).catch(_error => {
+        namespace,
+      }).catch((_error) => {
         // Quick diagnosis failed
         return null;
-      })
+      }),
     );
 
     if (level !== 'quick') {
       // 步骤2: 事件模式分析
 
-
       promises.push(
         getEventPatterns({
           namespace,
-          hours: hours
-        }).catch(_error => {
+          hours: hours,
+        }).catch((_error) => {
           // Event patterns analysis failed
           return null;
-        })
+        }),
       );
     }
 
     if (level === 'comprehensive') {
       // 步骤3: 综合分析
 
-
       promises.push(
         getErrorSummary({
           namespace,
-          hours: hours
-        }).catch(_error => {
+          hours: hours,
+        }).catch((_error) => {
           // Error summary analysis failed
           return null;
         }),
         analyzeRootCause({
           namespace,
           time_window_hours: hours,
-          metrics: []
-        }).catch(_error => {
+          metrics: [],
+        }).catch((_error) => {
           // Root cause analysis failed
           return null;
-        })
+        }),
       );
     }
 
@@ -497,15 +675,19 @@ const refreshAllDiagnosis = async () => {
     if (!diagnosisLane.current(ticket)) return;
 
     const labels = ['快速诊断', '事件模式', '错误汇总', '根因分析'];
-    diagnosisFailures.value = results.flatMap((result, index) => result === null || ((index === 0 || index === 3) && !usableStatus(result.status)) ? [labels[index]!] : []);
-    if (results.every(result => result === null)) {
+    diagnosisFailures.value = results.flatMap((result, index) =>
+      result === null ||
+      ((index === 0 || index === 3) && !usableStatus(result.status))
+        ? [labels[index]!]
+        : [],
+    );
+    if (results.every((result) => result === null)) {
       diagnosisError.value = '全部诊断失败，请检查服务状态后重试';
       message.error(diagnosisError.value);
       return;
     }
 
     // 完成所有步骤
-
 
     if (results[0]) {
       quickDiagnosisResult.value = results[0];
@@ -531,14 +713,18 @@ const refreshAllDiagnosis = async () => {
 
     if (diagnosisFailures.value.length) {
       message.warning('部分诊断未完成，请检查失败项目');
-    } else if (results[0]?.status === 'degraded' || results[3]?.status === 'degraded') {
+    } else if (
+      results[0]?.status === 'degraded' ||
+      results[3]?.status === 'degraded'
+    ) {
       message.warning('诊断结果已降级，请检查采集状态');
     } else {
       message.success('诊断完成，请查看各项检查结果');
     }
   } catch (error) {
     if (!diagnosisLane.current(ticket)) return;
-    diagnosisError.value = error instanceof Error ? error.message : '诊断失败，请核对参数后重试';
+    diagnosisError.value =
+      error instanceof Error ? error.message : '诊断失败，请核对参数后重试';
   } finally {
     if (diagnosisLane.current(ticket)) loading.value = false;
   }
@@ -550,7 +736,6 @@ const initCharts = () => {
     initErrorTrendsChart();
     initErrorCategoriesChart();
   } catch (error) {
-
     message.warning('图表渲染失败，但不影响诊断结果');
   }
 };
@@ -563,49 +748,53 @@ const initErrorTrendsChart = () => {
   }
 
   // Diagnosis returns aggregate counts, not a time-series histogram.
-  const data = errorSummaryResult.value ? [{ time: '本次诊断', value: getTotalErrors() }] : [];
+  const data = errorSummaryResult.value
+    ? [{ time: '本次诊断', value: getTotalErrors() }]
+    : [];
 
   const option = {
     textStyle: { color: chartColors().text },
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
     color: ['#6366f1'],
     tooltip: {
       trigger: 'axis',
       backgroundColor: chartColors().surface,
       borderColor: chartColors().border,
       borderWidth: 1,
-      textStyle: { color: chartColors().text }
+      textStyle: { color: chartColors().text },
     },
     grid: {
       left: '3%',
       right: '4%',
       bottom: '3%',
-      containLabel: true
+      containLabel: true,
     },
     xAxis: {
       type: 'category',
       boundaryGap: chartType.value === 'bar',
-      data: data.map(d => d.time),
+      data: data.map((d) => d.time),
       axisLine: { lineStyle: { color: chartColors().border } },
-      axisLabel: { color: chartColors().muted }
+      axisLabel: { color: chartColors().muted },
     },
     yAxis: {
       type: 'value',
       axisLine: { lineStyle: { color: chartColors().border } },
       splitLine: { lineStyle: { color: chartColors().ground } },
-      axisLabel: { color: chartColors().muted }
+      axisLabel: { color: chartColors().muted },
     },
-    series: [{
-      name: '错误数量',
-      type: chartType.value,
-      data: data.map(d => d.value),
-      smooth: true,
-      lineStyle: { width: 2 },
-      areaStyle: chartType.value === 'line' ? { opacity: 0.1 } : undefined,
-      itemStyle: {
-        borderRadius: chartType.value === 'bar' ? [4, 4, 0, 0] : 0
-      }
-    }]
+    series: [
+      {
+        name: '错误数量',
+        type: chartType.value,
+        data: data.map((d) => d.value),
+        smooth: true,
+        lineStyle: { width: 2 },
+        areaStyle: chartType.value === 'line' ? { opacity: 0.1 } : undefined,
+        itemStyle: {
+          borderRadius: chartType.value === 'bar' ? [4, 4, 0, 0] : 0,
+        },
+      },
+    ],
   };
 
   errorTrendsChart.setOption(option);
@@ -619,42 +808,45 @@ const initErrorCategoriesChart = () => {
   }
 
   const topErrors = errorSummaryResult.value?.top_errors || [];
-  const pieData = topErrors.filter((error: any) => Number.isFinite(error.count) && error.count >= 0).slice(0, 5).map((error: any, index: number) => ({
-    name: error.error_type || `错误类型 ${index + 1}`,
-    value: error.count
-  }));
-
-
+  const pieData = topErrors
+    .filter((error: any) => Number.isFinite(error.count) && error.count >= 0)
+    .slice(0, 5)
+    .map((error: any, index: number) => ({
+      name: error.error_type || `错误类型 ${index + 1}`,
+      value: error.count,
+    }));
 
   const option = {
     textStyle: { color: chartColors().text },
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
     color: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'],
     tooltip: {
       trigger: 'item',
       backgroundColor: chartColors().surface,
       borderColor: chartColors().border,
       borderWidth: 1,
-      textStyle: { color: chartColors().text }
+      textStyle: { color: chartColors().text },
     },
-    series: [{
-      type: 'pie',
-      radius: ['40%', '70%'],
-      avoidLabelOverlap: false,
-      label: {
-        show: false,
-        position: 'center'
-      },
-      emphasis: {
+    series: [
+      {
+        type: 'pie',
+        radius: ['40%', '70%'],
+        avoidLabelOverlap: false,
         label: {
-          show: true,
-          fontSize: '18',
-          fontWeight: 'bold'
-        }
+          show: false,
+          position: 'center',
+        },
+        emphasis: {
+          label: {
+            show: true,
+            fontSize: '18',
+            fontWeight: 'bold',
+          },
+        },
+        labelLine: { show: false },
+        data: pieData,
       },
-      labelLine: { show: false },
-      data: pieData
-    }]
+    ],
   };
 
   errorCategoriesChart.setOption(option);
@@ -695,9 +887,8 @@ function stopAutoRefresh() {
   if (refreshTimer) {
     clearInterval(refreshTimer);
     refreshTimer = null;
-
   }
-};
+}
 
 // 生命周期
 onMounted(() => {
@@ -733,16 +924,12 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.trend-unknown { color: var(--ops-muted); background: var(--ops-ground); }
+.trend-unknown {
+  color: var(--ops-muted);
+  background: var(--ops-ground);
+}
 
 /* 页面头部 */
-
-
-
-
-
-
-
 
 /* 配置区域 */
 .config-section {
@@ -956,7 +1143,8 @@ onUnmounted(() => {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
@@ -1424,113 +1612,119 @@ onUnmounted(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 
+  .config-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
 
+  .config-item {
+    margin-bottom: 8px;
+  }
 
+  .issues-container {
+    grid-template-columns: 1fr;
+  }
 
+  .charts-section {
+    grid-template-columns: 1fr;
+  }
 
+  .rca-content {
+    grid-template-columns: 1fr;
+  }
 
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 
-.metrics-grid {
-  grid-template-columns: 1fr;
-  gap: 16px;
-}
+  .chart-content {
+    height: 250px;
+  }
 
-.config-grid {
-  grid-template-columns: 1fr;
-  gap: 20px;
-}
+  .loading-container {
+    min-height: 300px;
+  }
 
-.config-item {
-  margin-bottom: 8px;
-}
+  .loading-content {
+    padding: 20px;
+  }
 
-.issues-container {
-  grid-template-columns: 1fr;
-}
+  .loading-main-icon {
+    font-size: 60px;
+  }
 
-.charts-section {
-  grid-template-columns: 1fr;
-}
+  .loading-title {
+    font-size: 20px;
+  }
 
-.rca-content {
-  grid-template-columns: 1fr;
-}
+  .diagnosis-steps {
+    flex-direction: column;
+    gap: 16px;
+  }
 
-.summary-grid {
-  grid-template-columns: repeat(2, 1fr);
-}
+  .step-item {
+    flex-direction: row;
+    gap: 12px;
+    padding: 12px;
+  }
 
-.chart-content {
-  height: 250px;
-}
-
-.loading-container {
-  min-height: 300px;
-}
-
-.loading-content {
-  padding: 20px;
-}
-
-.loading-main-icon {
-  font-size: 60px;
-}
-
-.loading-title {
-  font-size: 20px;
-}
-
-.diagnosis-steps {
-  flex-direction: column;
-  gap: 16px;
-}
-
-.step-item {
-  flex-direction: row;
-  gap: 12px;
-  padding: 12px;
-}
-
-.step-icon {
-  width: 32px;
-  height: 32px;
-  font-size: 14px;
-}
+  .step-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
 }
 
 @media (max-width: 576px) {
+  .config-grid {
+    grid-template-columns: 1fr;
+  }
 
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
 
+  .metric-card {
+    padding: 16px;
+  }
 
+  .metric-icon {
+    font-size: 28px;
+  }
 
-
-.config-grid {
-  grid-template-columns: 1fr;
-}
-
-.summary-grid {
-  grid-template-columns: 1fr;
-}
-
-.metric-card {
-  padding: 16px;
-}
-
-.metric-icon {
-  font-size: 28px;
-}
-
-.metric-value {
-  font-size: 20px;
-}
+  .metric-value {
+    font-size: 20px;
+  }
 }
 
 @media (max-width: 575px) {
-  .overview-grid, .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ops-space-sm); }
-  .overview-card, .metric-card { min-width: 0; padding: var(--ops-space-md); gap: var(--ops-space-sm); flex-wrap: wrap; }
-  .metric-icon { font-size: 20px; }
-  .card-value, .metric-value { overflow-wrap: anywhere; }
-  .section-header { flex-wrap: wrap; gap: var(--ops-space-sm); }
+  .overview-grid,
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ops-space-sm);
+  }
+  .overview-card,
+  .metric-card {
+    min-width: 0;
+    padding: var(--ops-space-md);
+    gap: var(--ops-space-sm);
+    flex-wrap: wrap;
+  }
+  .metric-icon {
+    font-size: 20px;
+  }
+  .card-value,
+  .metric-value {
+    overflow-wrap: anywhere;
+  }
+  .section-header {
+    flex-wrap: wrap;
+    gap: var(--ops-space-sm);
+  }
 }
 </style>

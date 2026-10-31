@@ -8,7 +8,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       order: 4,
       title: '定时任务管理',
-      icon: 'tabler:clock-cog'
+      icon: 'tabler:clock-cog',
     },
     name: 'Cron',
     path: '/cron',

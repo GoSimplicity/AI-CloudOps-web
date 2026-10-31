@@ -11,7 +11,10 @@ const recoveryPermission = vi.hoisted(() => ({ allowed: true }));
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
-  usePermission: () => ({ can: () => true, hasPerm: () => recoveryPermission.allowed }),
+  usePermission: () => ({
+    can: () => true,
+    hasPerm: () => recoveryPermission.allowed,
+  }),
 }));
 
 const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
@@ -226,12 +229,20 @@ describe('自动修复页面的显式调用和审批状态', () => {
   });
   it('失败后显式查询同一操作，恢复原计划并禁止自动重发', async () => {
     api.executeAutoFixWorkflow.mockRejectedValueOnce(new Error('offline'));
-    await start(); await fillAndRun();
+    await start();
+    await fillAndRun();
     const id = api.executeAutoFixWorkflow.mock.calls[0]![0].operation_id;
     expect(wrapper!.text()).toContain('待核对');
     expect(wrapper!.text()).toContain('不要重复执行');
-    api.getAutoFixOperation.mockResolvedValueOnce({ operation_id: id, plan_id: 'opaque-plan-one', state: 'pending', approval_state: 'pending', result: plan() });
-    await button('查询当前状态').trigger('click'); await flushPromises();
+    api.getAutoFixOperation.mockResolvedValueOnce({
+      operation_id: id,
+      plan_id: 'opaque-plan-one',
+      state: 'pending',
+      approval_state: 'pending',
+      result: plan(),
+    });
+    await button('查询当前状态').trigger('click');
+    await flushPromises();
     expect(wrapper!.text()).toContain('待审批');
     expect(wrapper!.find('.confirm-panel').exists()).toBe(true);
     expect(api.executeAutoFixWorkflow).toHaveBeenCalledTimes(1);

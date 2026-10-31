@@ -74,7 +74,13 @@ describe('buildSecretDataPayload', () => {
   it('删除的键不发；新增的键发 base64', () => {
     const original = ['a', 'b'];
     const current = rows(original).filter((row) => row.key !== 'b');
-    current.push({ id: 99, key: 'n', modified: true, original: false, value: FAKE });
+    current.push({
+      id: 99,
+      key: 'n',
+      modified: true,
+      original: false,
+      value: FAKE,
+    });
     expect(isDataEdited(original, current)).toBe(true);
     expect(buildSecretDataPayload(original, current)).toEqual({
       a: '',
@@ -163,7 +169,10 @@ describe('findRedactedPlaceholder（最终防线）', () => {
       findRedactedPlaceholder({ string_data: { s: REDACTED_PLACEHOLDER } }),
     ).toBe('string_data.s');
     expect(
-      findRedactedPlaceholder({ data: { a: '', b: FAKE_B64 }, string_data: {} }),
+      findRedactedPlaceholder({
+        data: { a: '', b: FAKE_B64 },
+        string_data: {},
+      }),
     ).toBeNull();
     expect(findRedactedPlaceholder({ data: null })).toBeNull();
   });

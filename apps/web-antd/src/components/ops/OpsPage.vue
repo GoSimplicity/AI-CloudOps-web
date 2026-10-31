@@ -10,16 +10,16 @@ defineProps<{ title: string; description?: string }>();
         <p v-if="description">{{ description }}</p>
       </div>
       <div v-if="$slots.actions" class="ops-page__actions">
-        <slot name="actions" />
+        <slot name="actions"></slot>
       </div>
     </header>
     <div v-if="$slots.summary" class="ops-page__summary">
-      <slot name="summary" />
+      <slot name="summary"></slot>
     </div>
     <div v-if="$slots.filters" class="ops-page__filters">
-      <slot name="filters" />
+      <slot name="filters"></slot>
     </div>
-    <div class="ops-page__content"><slot /></div>
+    <div class="ops-page__content"><slot></slot></div>
   </section>
 </template>
 

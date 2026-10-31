@@ -99,9 +99,15 @@ export function normalizeWorkflowResult(
   const plan = raw.plan || {};
   const execution = raw.execution || {};
   const review = raw.review || {};
-  const candidateActions = raw.candidate_actions || plan.candidate_actions || [];
-  const executedActions = raw.executed_actions || execution.executed_actions || [];
-  const blockedActions = raw.blocked_actions || review.blocked_actions || execution.blocked_actions || [];
+  const candidateActions =
+    raw.candidate_actions || plan.candidate_actions || [];
+  const executedActions =
+    raw.executed_actions || execution.executed_actions || [];
+  const blockedActions =
+    raw.blocked_actions ||
+    review.blocked_actions ||
+    execution.blocked_actions ||
+    [];
 
   return {
     approval: raw.approval,
@@ -140,7 +146,8 @@ function appendHighlights(target: string[], value: unknown) {
 
 export function getAiAnalysisHighlights(diagnosis?: Record<string, any>) {
   const highlights: string[] = [];
-  const aiAnalysis = diagnosis?.ai_analysis || diagnosis?.diagnosis?.ai_analysis || {};
+  const aiAnalysis =
+    diagnosis?.ai_analysis || diagnosis?.diagnosis?.ai_analysis || {};
   const faultAnalysis = aiAnalysis?.faultAnalysis || aiAnalysis;
 
   appendHighlights(highlights, faultAnalysis?.faultType);
@@ -165,11 +172,20 @@ export function getAiPlanHighlights(plan?: Record<string, any>) {
   appendHighlights(highlights, aiPlanSummary?.summary);
   appendHighlights(highlights, aiPlanSummary?.priority_actions);
   appendHighlights(highlights, aiPlanSummary?.recommended_order);
-  appendHighlights(highlights, aiPlanSummary?.blocked_actions?.map((item: any) => item?.action_type));
+  appendHighlights(
+    highlights,
+    aiPlanSummary?.blocked_actions?.map((item: any) => item?.action_type),
+  );
 
   if (!highlights.length && plan?.summary) {
-    appendHighlights(highlights, `候选 ${plan.summary.total_actions || 0} 个动作`);
-    appendHighlights(highlights, `阻断 ${plan.summary.blocked_actions || 0} 个动作`);
+    appendHighlights(
+      highlights,
+      `候选 ${plan.summary.total_actions || 0} 个动作`,
+    );
+    appendHighlights(
+      highlights,
+      `阻断 ${plan.summary.blocked_actions || 0} 个动作`,
+    );
   }
 
   return [...new Set(highlights)].slice(0, 4);

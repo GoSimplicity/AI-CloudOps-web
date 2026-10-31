@@ -5,6 +5,7 @@ import type { NitroMockPluginOptions } from '../typing';
 import { colors, consola, getPackage } from '@vben/node-utils';
 
 import getPort from 'get-port';
+
 type NitroPackModule = typeof import('nitropack');
 
 let nitroPackModulePromise: Promise<NitroPackModule> | null = null;

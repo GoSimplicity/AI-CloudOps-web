@@ -1,12 +1,16 @@
 <template>
   <div>
     <!-- 时间线对话框 -->
-    <a-modal 
-      :open="timelineDialog.visible" 
+    <a-modal
+      :open="timelineDialog.visible"
       title=""
-      :width="previewDialogWidth" 
+      :width="previewDialogWidth"
       :footer="null"
-      @cancel="() => { timelineDialog.visible = false }" 
+      @cancel="
+        () => {
+          timelineDialog.visible = false;
+        }
+      "
       class="timeline-dialog responsive-modal"
       centered
     >
@@ -44,7 +48,9 @@
             </a-tooltip>
             <a-tooltip title="时间排序">
               <a-button type="text" size="small" @click="toggleTimeSort">
-                <IconComponent :icon="timeSortOrder === 'desc' ? 'time-desc' : 'time-asc'" />
+                <IconComponent
+                  :icon="timeSortOrder === 'desc' ? 'time-desc' : 'time-asc'"
+                />
               </a-button>
             </a-tooltip>
           </div>
@@ -100,31 +106,43 @@
           <div v-if="filteredTimelineList.length > 0" class="timeline-wrapper">
             <div class="timeline-line"></div>
             <div class="timeline-list">
-              <div 
-                v-for="(item, index) in filteredTimelineList" 
-                :key="item.id" 
+              <div
+                v-for="(item, index) in filteredTimelineList"
+                :key="item.id"
                 class="timeline-item-wrapper"
                 :class="{
                   'timeline-item-left': index % 2 === 0,
                   'timeline-item-right': index % 2 === 1,
-                  'timeline-item-highlight': isImportantAction(item.action)
+                  'timeline-item-highlight': isImportantAction(item.action),
                 }"
                 :style="{ '--delay': index * 0.1 + 's' }"
               >
                 <!-- 时间线节点 -->
                 <div class="timeline-node" :class="getActionClass(item.action)">
                   <div class="timeline-node-inner">
-                    <component :is="getTimelineIcon(item.action)" class="timeline-node-icon" />
+                    <component
+                      :is="getTimelineIcon(item.action)"
+                      class="timeline-node-icon"
+                    />
                   </div>
-                  <div class="timeline-node-pulse" v-if="isImportantAction(item.action)"></div>
+                  <div
+                    class="timeline-node-pulse"
+                    v-if="isImportantAction(item.action)"
+                  ></div>
                 </div>
 
                 <!-- 时间线内容 -->
                 <div class="timeline-card">
                   <div class="timeline-card-header">
                     <div class="action-info">
-                      <div class="action-type-badge" :class="getActionClass(item.action)">
-                        <component :is="getTimelineIcon(item.action)" class="action-type-icon" />
+                      <div
+                        class="action-type-badge"
+                        :class="getActionClass(item.action)"
+                      >
+                        <component
+                          :is="getTimelineIcon(item.action)"
+                          class="action-type-icon"
+                        />
                         {{ getActionText(item.action) }}
                       </div>
                       <div class="action-time">
@@ -134,7 +152,11 @@
                     </div>
                     <div class="card-actions">
                       <a-tooltip title="查看详情">
-                        <a-button type="text" size="small" @click="showTimelineDetail(item)">
+                        <a-button
+                          type="text"
+                          size="small"
+                          @click="showTimelineDetail(item)"
+                        >
                           <IconComponent icon="detail" />
                         </a-button>
                       </a-tooltip>
@@ -144,18 +166,27 @@
                   <div class="timeline-card-content">
                     <!-- 操作人信息 -->
                     <div class="operator-section">
-                      <a-avatar 
-                        :size="32" 
-                        :style="{ backgroundColor: getAvatarColor(item.operator_name || '') }"
+                      <a-avatar
+                        :size="32"
+                        :style="{
+                          backgroundColor: getAvatarColor(
+                            item.operator_name || '',
+                          ),
+                        }"
                         class="operator-avatar"
                       >
                         {{ getInitials(item.operator_name) }}
                       </a-avatar>
                       <div class="operator-info">
-                        <div class="operator-name">{{ item.operator_name || '未知用户' }}</div>
+                        <div class="operator-name">
+                          {{ item.operator_name || '未知用户' }}
+                        </div>
                         <div class="operator-role">操作人</div>
                       </div>
-                      <div class="action-status" :class="getActionStatusClass(item.action)">
+                      <div
+                        class="action-status"
+                        :class="getActionStatusClass(item.action)"
+                      >
                         {{ getActionStatusText(item.action) }}
                       </div>
                     </div>
@@ -170,25 +201,35 @@
                     </div>
 
                     <!-- 详细数据 -->
-                    <div v-if="item.action_detail && showDetails[item.id]" class="detail-section">
+                    <div
+                      v-if="item.action_detail && showDetails[item.id]"
+                      class="detail-section"
+                    >
                       <div class="detail-label">
                         <IconComponent icon="data" />
                         详细数据
                       </div>
                       <div class="detail-content">
-                        <pre class="json-content">{{ formatActionDetail(item.action_detail) }}</pre>
+                        <pre class="json-content">{{
+                          formatActionDetail(item.action_detail)
+                        }}</pre>
                       </div>
                     </div>
 
                     <!-- 操作按钮 -->
-                    <div v-if="item.action_detail" class="timeline-card-actions">
-                      <a-button 
-                        type="text" 
-                        size="small" 
+                    <div
+                      v-if="item.action_detail"
+                      class="timeline-card-actions"
+                    >
+                      <a-button
+                        type="text"
+                        size="small"
                         @click="toggleDetail(item.id)"
                         class="toggle-detail-btn"
                       >
-                        <IconComponent :icon="showDetails[item.id] ? 'collapse' : 'expand'" />
+                        <IconComponent
+                          :icon="showDetails[item.id] ? 'collapse' : 'expand'"
+                        />
                         {{ showDetails[item.id] ? '收起详情' : '展开详情' }}
                       </a-button>
                     </div>
@@ -228,28 +269,51 @@
       :open="detailDialog.visible"
       title="操作详情"
       :width="600"
-      @cancel="() => { detailDialog.visible = false }"
+      @cancel="
+        () => {
+          detailDialog.visible = false;
+        }
+      "
       :footer="null"
       class="timeline-detail-dialog responsive-modal"
     >
       <div v-if="detailDialog.item" class="timeline-detail-content">
         <div class="detail-header">
-          <div class="detail-action-badge" :class="getActionClass(detailDialog.item.action)">
+          <div
+            class="detail-action-badge"
+            :class="getActionClass(detailDialog.item.action)"
+          >
             <component :is="getTimelineIcon(detailDialog.item.action)" />
             {{ getActionText(detailDialog.item.action) }}
           </div>
-          <div class="detail-time">{{ formatFullDateTime(detailDialog.item.created_at) }}</div>
+          <div class="detail-time">
+            {{ formatFullDateTime(detailDialog.item.created_at) }}
+          </div>
         </div>
 
         <a-descriptions bordered :column="1" size="small">
-          <a-descriptions-item label="操作人">{{ detailDialog.item.operator_name }}</a-descriptions-item>
-          <a-descriptions-item label="操作时间">{{ formatFullDateTime(detailDialog.item.created_at) }}</a-descriptions-item>
-          <a-descriptions-item label="操作类型">{{ getActionText(detailDialog.item.action) }}</a-descriptions-item>
-          <a-descriptions-item label="备注说明" v-if="detailDialog.item.comment">
+          <a-descriptions-item label="操作人">
+            {{ detailDialog.item.operator_name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="操作时间">
+            {{ formatFullDateTime(detailDialog.item.created_at) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="操作类型">
+            {{ getActionText(detailDialog.item.action) }}
+          </a-descriptions-item>
+          <a-descriptions-item
+            label="备注说明"
+            v-if="detailDialog.item.comment"
+          >
             {{ detailDialog.item.comment }}
           </a-descriptions-item>
-          <a-descriptions-item label="详细数据" v-if="detailDialog.item.action_detail">
-            <pre class="detail-json">{{ formatActionDetail(detailDialog.item.action_detail) }}</pre>
+          <a-descriptions-item
+            label="详细数据"
+            v-if="detailDialog.item.action_detail"
+          >
+            <pre class="detail-json">{{
+              formatActionDetail(detailDialog.item.action_detail)
+            }}</pre>
           </a-descriptions-item>
         </a-descriptions>
       </div>
@@ -258,8 +322,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
-import { message } from 'ant-design-vue'
+import { ref, reactive, computed } from 'vue';
+import { message } from 'ant-design-vue';
 import {
   PlusOutlined,
   EditOutlined,
@@ -269,15 +333,15 @@ import {
   ExclamationCircleOutlined,
   StopOutlined,
   MessageOutlined,
-  FileTextOutlined
-} from '@ant-design/icons-vue'
+  FileTextOutlined,
+} from '@ant-design/icons-vue';
 
 import {
   type WorkorderInstanceTimelineItem,
   type ListWorkorderInstanceTimelineReq,
   TimelineAction,
-  listWorkorderInstanceTimeline
-} from '#/api/core/workorder/workorder_instance_time_line'
+  listWorkorderInstanceTimeline,
+} from '#/api/core/workorder/workorder_instance_time_line';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // 图标组件
@@ -298,140 +362,145 @@ const IconComponent = ({ icon }: { icon: string }) => {
     data: '📊',
     expand: '⬇️',
     collapse: '⬆️',
-    'empty-timeline': '📅'
-  }
-  return iconMap[icon] || ''
-}
+    'empty-timeline': '📅',
+  };
+  return iconMap[icon] || '';
+};
 
 // 状态数据
-const loading = ref(false)
-const timelineList = ref<WorkorderInstanceTimelineItem[]>([])
-const filterType = ref<string>('all')
-const timeSortOrder = ref<'asc' | 'desc'>('desc')
-const showDetails = ref<Record<number, boolean>>({})
+const loading = ref(false);
+const timelineList = ref<WorkorderInstanceTimelineItem[]>([]);
+const filterType = ref<string>('all');
+const timeSortOrder = ref<'asc' | 'desc'>('desc');
+const showDetails = ref<Record<number, boolean>>({});
 
 // 详情对话框
 const detailDialog = reactive({
   visible: false,
-  item: null as WorkorderInstanceTimelineItem | null
-})
+  item: null as WorkorderInstanceTimelineItem | null,
+});
 
 // 时间线对话框
 const timelineDialog = reactive({
   visible: false,
-  instanceId: 0
-})
+  instanceId: 0,
+});
 
 // 响应式对话框宽度
 const previewDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
-    const width = window.innerWidth
-    if (width < 768) return '95%'
-    if (width < 1024) return '90%'
-    return '80%'
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '80%';
   }
-  return '80%'
-})
+  return '80%';
+});
 
 // 工具方法
 const formatFullDateTime = (dateStr: string | undefined) => {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
   return d.toLocaleString('zh-CN', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit'
-  })
-}
+    second: '2-digit',
+  });
+};
 
 const formatRelativeTime = (dateStr: string | undefined) => {
-  if (!dateStr) return ''
-  const now = new Date()
-  const date = new Date(dateStr)
-  const diff = now.getTime() - date.getTime()
+  if (!dateStr) return '';
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diff = now.getTime() - date.getTime();
 
-  const minute = 60 * 1000
-  const hour = 60 * minute
-  const day = 24 * hour
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
 
   if (diff < minute) {
-    return '刚刚'
+    return '刚刚';
   } else if (diff < hour) {
-    return `${Math.floor(diff / minute)}分钟前`
+    return `${Math.floor(diff / minute)}分钟前`;
   } else if (diff < day) {
-    return `${Math.floor(diff / hour)}小时前`
+    return `${Math.floor(diff / hour)}小时前`;
   } else {
-    return `${Math.floor(diff / day)}天前`
+    return `${Math.floor(diff / day)}天前`;
   }
-}
+};
 
 const formatActionDetail = (detail: string) => {
   try {
-    const parsed = JSON.parse(detail)
-    return JSON.stringify(parsed, null, 2)
+    const parsed = JSON.parse(detail);
+    return JSON.stringify(parsed, null, 2);
   } catch {
-    return detail
+    return detail;
   }
-}
+};
 
 const getInitials = (name: string | undefined) => {
-  if (!name) return ''
-  return name
-    .split('')
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
-}
+  if (!name) return '';
+  return name.split('').slice(0, 2).join('').toUpperCase();
+};
 
 const getAvatarColor = (name: string | undefined) => {
-  if (!name) return '#1890ff'
+  if (!name) return '#1890ff';
 
   const colors = [
-    '#1890ff', '#52c41a', '#faad14', '#f5222d',
-    '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'
-  ]
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
+  ];
 
-  let hash = 0
+  let hash = 0;
   for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
 
-  return colors[Math.abs(hash) % colors.length]
-}
+  return colors[Math.abs(hash) % colors.length];
+};
 
 // 计算属性
 const filteredTimelineList = computed(() => {
-  let filtered = [...timelineList.value]
+  let filtered = [...timelineList.value];
 
   // 筛选
   if (filterType.value !== 'all') {
     switch (filterType.value) {
-      case 'important':
-        filtered = filtered.filter(item => isImportantAction(item.action))
-        break
-      case 'user':
-        filtered = filtered.filter(item => !isSystemAction(item.action))
-        break
-      case 'system':
-        filtered = filtered.filter(item => isSystemAction(item.action))
-        break
+      case 'important': {
+        filtered = filtered.filter((item) => isImportantAction(item.action));
+        break;
+      }
+      case 'user': {
+        filtered = filtered.filter((item) => !isSystemAction(item.action));
+        break;
+      }
+      case 'system': {
+        filtered = filtered.filter((item) => isSystemAction(item.action));
+        break;
+      }
     }
   }
 
   // 排序
   filtered.sort((a, b) => {
-    const dateA = new Date(a.created_at || '')
-    const dateB = new Date(b.created_at || '')
-    return timeSortOrder.value === 'desc' 
-      ? dateB.getTime() - dateA.getTime() 
-      : dateA.getTime() - dateB.getTime()
-  })
+    const dateA = new Date(a.created_at || '');
+    const dateB = new Date(b.created_at || '');
+    return timeSortOrder.value === 'desc'
+      ? dateB.getTime() - dateA.getTime()
+      : dateA.getTime() - dateB.getTime();
+  });
 
-  return filtered
-})
+  return filtered;
+});
 
 // 新增方法
 const isImportantAction = (action: string): boolean => {
@@ -441,32 +510,43 @@ const isImportantAction = (action: string): boolean => {
     TimelineAction.Approve as string,
     TimelineAction.Reject as string,
     TimelineAction.Complete as string,
-    TimelineAction.Cancel as string
-  ].includes(action)
-}
+    TimelineAction.Cancel as string,
+  ].includes(action);
+};
 
 const isSystemAction = (action: string): boolean => {
   return [
     TimelineAction.Notify as string,
     TimelineAction.Remind as string,
-    TimelineAction.View as string
-  ].includes(action)
-}
+    TimelineAction.View as string,
+  ].includes(action);
+};
 
 const getActionCount = (type: string): number => {
   switch (type) {
-    case 'create':
-      return timelineList.value.filter(item => item.action === TimelineAction.Create).length
-    case 'update':
-      return timelineList.value.filter(item => item.action === TimelineAction.Update).length
-    case 'approve':
-      return timelineList.value.filter(item => 
-        [TimelineAction.Approve as string, TimelineAction.Reject as string].includes(item.action)
-      ).length
-    default:
-      return 0
+    case 'create': {
+      return timelineList.value.filter(
+        (item) => item.action === TimelineAction.Create,
+      ).length;
+    }
+    case 'update': {
+      return timelineList.value.filter(
+        (item) => item.action === TimelineAction.Update,
+      ).length;
+    }
+    case 'approve': {
+      return timelineList.value.filter((item) =>
+        [
+          TimelineAction.Approve as string,
+          TimelineAction.Reject as string,
+        ].includes(item.action),
+      ).length;
+    }
+    default: {
+      return 0;
+    }
   }
-}
+};
 
 const getActionClass = (action: string): string => {
   const classMap: Record<string, string> = {
@@ -483,10 +563,10 @@ const getActionClass = (action: string): string => {
     [TimelineAction.View]: 'action-view',
     [TimelineAction.Attach]: 'action-attach',
     [TimelineAction.Notify]: 'action-notify',
-    [TimelineAction.Remind]: 'action-remind'
-  }
-  return classMap[action] || 'action-default'
-}
+    [TimelineAction.Remind]: 'action-remind',
+  };
+  return classMap[action] || 'action-default';
+};
 
 const getActionStatusClass = (action: string): string => {
   const statusClassMap: Record<string, string> = {
@@ -495,10 +575,10 @@ const getActionStatusClass = (action: string): string => {
     [TimelineAction.Reject]: 'status-error',
     [TimelineAction.Cancel]: 'status-error',
     [TimelineAction.Submit]: 'status-processing',
-    [TimelineAction.Assign]: 'status-processing'
-  }
-  return statusClassMap[action] || 'status-default'
-}
+    [TimelineAction.Assign]: 'status-processing',
+  };
+  return statusClassMap[action] || 'status-default';
+};
 
 const getActionStatusText = (action: string): string => {
   const statusTextMap: Record<string, string> = {
@@ -507,34 +587,34 @@ const getActionStatusText = (action: string): string => {
     [TimelineAction.Reject]: '已拒绝',
     [TimelineAction.Cancel]: '已取消',
     [TimelineAction.Submit]: '处理中',
-    [TimelineAction.Assign]: '已分配'
-  }
-  return statusTextMap[action] || '正常'
-}
+    [TimelineAction.Assign]: '已分配',
+  };
+  return statusTextMap[action] || '正常';
+};
 
 // 交互方法
 const toggleDetail = (itemId: number) => {
-  showDetails.value[itemId] = !showDetails.value[itemId]
-}
+  showDetails.value[itemId] = !showDetails.value[itemId];
+};
 
 const showTimelineDetail = (item: WorkorderInstanceTimelineItem) => {
-  detailDialog.item = item
-  detailDialog.visible = true
-}
+  detailDialog.item = item;
+  detailDialog.visible = true;
+};
 
 const handleFilterChange = ({ key }: { key: string }) => {
-  filterType.value = key
-}
+  filterType.value = key;
+};
 
 const toggleTimeSort = () => {
-  timeSortOrder.value = timeSortOrder.value === 'desc' ? 'asc' : 'desc'
-}
+  timeSortOrder.value = timeSortOrder.value === 'desc' ? 'asc' : 'desc';
+};
 
 const refreshTimeline = async () => {
   if (timelineDialog.instanceId) {
-    await loadTimeline(timelineDialog.instanceId)
+    await loadTimeline(timelineDialog.instanceId);
   }
-}
+};
 
 const getTimelineIcon = (action: string) => {
   const iconMap: Record<string, any> = {
@@ -551,10 +631,10 @@ const getTimelineIcon = (action: string) => {
     [TimelineAction.View]: FileTextOutlined,
     [TimelineAction.Attach]: PlusOutlined,
     [TimelineAction.Notify]: MessageOutlined,
-    [TimelineAction.Remind]: ExclamationCircleOutlined
-  }
-  return iconMap[action] || EditOutlined
-}
+    [TimelineAction.Remind]: ExclamationCircleOutlined,
+  };
+  return iconMap[action] || EditOutlined;
+};
 
 const getActionText = (action: string): string => {
   const textMap: Record<string, string> = {
@@ -571,15 +651,15 @@ const getActionText = (action: string): string => {
     [TimelineAction.View]: '查看工单',
     [TimelineAction.Attach]: '添加附件',
     [TimelineAction.Notify]: '发送通知',
-    [TimelineAction.Remind]: '催办提醒'
-  }
-  return textMap[action] || action
-}
+    [TimelineAction.Remind]: '催办提醒',
+  };
+  return textMap[action] || action;
+};
 
 // 加载时间线
 const loadTimeline = async (instanceId: number) => {
   try {
-    loading.value = true
+    loading.value = true;
 
     let allTimelines: any[] = [];
     let currentPage = 1;
@@ -590,15 +670,18 @@ const loadTimeline = async (instanceId: number) => {
       const params: ListWorkorderInstanceTimelineReq = {
         page: currentPage,
         size: pageSize,
-        instance_id: instanceId
-      }
+        instance_id: instanceId,
+      };
 
-      const res = await listWorkorderInstanceTimeline(params)
+      const res = await listWorkorderInstanceTimeline(params);
 
       if (res && res.items && res.items.length > 0) {
         allTimelines = [...allTimelines, ...res.items];
 
-        if (res.items.length < pageSize || allTimelines.length >= (res.total || 0)) {
+        if (
+          res.items.length < pageSize ||
+          allTimelines.length >= (res.total || 0)
+        ) {
           hasMoreData = false;
         } else {
           currentPage++;
@@ -612,7 +695,7 @@ const loadTimeline = async (instanceId: number) => {
     // 初始化详情展开状态
     allTimelines.forEach((item: WorkorderInstanceTimelineItem) => {
       if (item.action_detail) {
-        showDetails.value[item.id] = false
+        showDetails.value[item.id] = false;
       }
     });
   } catch (error: any) {
@@ -622,22 +705,22 @@ const loadTimeline = async (instanceId: number) => {
   } finally {
     loading.value = false;
   }
-}
+};
 
 // 主要方法
 const showTimeline = async (instanceId: number) => {
-  timelineDialog.instanceId = instanceId
-  timelineDialog.visible = true
-  filterType.value = 'all'
-  timeSortOrder.value = 'desc'
-  showDetails.value = {}
-  await loadTimeline(instanceId)
-}
+  timelineDialog.instanceId = instanceId;
+  timelineDialog.visible = true;
+  filterType.value = 'all';
+  timeSortOrder.value = 'desc';
+  showDetails.value = {};
+  await loadTimeline(instanceId);
+};
 
 // 导出方法供父组件调用
 defineExpose({
-  showTimeline
-})
+  showTimeline,
+});
 </script>
 
 <style scoped>
@@ -674,8 +757,13 @@ defineExpose({
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .header-text {

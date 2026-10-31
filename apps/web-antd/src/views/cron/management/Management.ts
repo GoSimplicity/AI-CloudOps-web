@@ -74,7 +74,10 @@ interface CronJobPageState {
 }
 
 // 本地执行类任务：命令行(2)、脚本(4)，受后端 cron.allow_local_exec 开关控制
-const LOCAL_EXEC_JOB_TYPES: CronJobType[] = [CronJobType.COMMAND, CronJobType.SCRIPT];
+const LOCAL_EXEC_JOB_TYPES: CronJobType[] = [
+  CronJobType.COMMAND,
+  CronJobType.SCRIPT,
+];
 export const isLocalExecJobType = (jobType?: CronJobType) =>
   jobType !== undefined && LOCAL_EXEC_JOB_TYPES.includes(jobType);
 
@@ -85,7 +88,10 @@ export const resolveAllowLocalExec = (data: any): boolean =>
 
 // 取后端返回的原始提示：业务码非 0 时响应解构抛出 `Error <HTTP状态>: <message>`。
 // 不读 HTTP 错误的响应体 message：带 response 的 HTTP 错误已由请求层提示过，页面不再展示原文（见 shouldNotifyPageError）
-export const getBackendErrorMessage = (error: any, fallback: string): string => {
+export const getBackendErrorMessage = (
+  error: any,
+  fallback: string,
+): string => {
   const raw = error?.message;
   if (typeof raw !== 'string' || !raw.trim()) return fallback;
   return raw.replace(/^Error \d{3}: /, '') || fallback;
@@ -106,7 +112,10 @@ interface ListFailureTexts {
 }
 
 // 按错误类型取页面文案；网络错误 / 超时含 ECONNABORTED、ETIMEDOUT 以及发出请求但没有响应的 axios 错误
-const resolveListFailureText = (error: any, texts: ListFailureTexts): string => {
+const resolveListFailureText = (
+  error: any,
+  texts: ListFailureTexts,
+): string => {
   const status = error?.response?.status;
   if (status === 401) return texts.unauthorized;
   if (status === 403) return texts.forbidden;
@@ -127,7 +136,10 @@ const resolveListFailureText = (error: any, texts: ListFailureTexts): string => 
 // 列表类请求失败的统一处理：取消类静默（返回 null，不写错误状态）；
 // 请求层已提示（HTTP 错误、网络错误 / 超时、已弹后端原文的业务错误，见 shouldNotifyPageError）页面不再弹；
 // 其余由页面弹一条（401 用 warning），返回页面错误文案
-const handleListFailure = (error: any, texts: ListFailureTexts): string | null => {
+const handleListFailure = (
+  error: any,
+  texts: ListFailureTexts,
+): string | null => {
   if (isCanceledRequest(error)) return null;
   const text = resolveListFailureText(error, texts);
   if (shouldNotifyPageError(error)) {
@@ -156,7 +168,10 @@ const SSH_LIST_FAILURE_TEXTS: ListFailureTexts = {
 };
 
 // 创建表单初始数据
-const validateHttpRequestURL = async (_rule: unknown, value?: string): Promise<void> => {
+const validateHttpRequestURL = async (
+  _rule: unknown,
+  value?: string,
+): Promise<void> => {
   if (!value) return;
   try {
     const parsed = new URL(value);
@@ -164,8 +179,17 @@ const validateHttpRequestURL = async (_rule: unknown, value?: string): Promise<v
     const explicitAuthority = /^https?:\/\/[^/?#]+/i.test(value);
     const invalidEscape = /%(?![0-9a-f]{2})/i.test(value);
     const httpProtocol = ['http:', 'https:'].includes(parsed.protocol);
-    const validPort = !parsed.port || (Number(parsed.port) >= 1 && Number(parsed.port) <= 65535);
-    if (invalidCharacters || !explicitAuthority || invalidEscape || !httpProtocol || !parsed.hostname || !validPort) {
+    const validPort =
+      !parsed.port ||
+      (Number(parsed.port) >= 1 && Number(parsed.port) <= 65535);
+    if (
+      invalidCharacters ||
+      !explicitAuthority ||
+      invalidEscape ||
+      !httpProtocol ||
+      !parsed.hostname ||
+      !validPort
+    ) {
       throw new Error('invalid HTTP URL');
     }
   } catch {
@@ -310,7 +334,11 @@ export function useCronJobPage() {
     state.editFormModel = createInitialEditFormModel();
     state.sshResources = [];
     state.filteredSshResources = [];
-    state.loading = state.detailLoading = state.submitLoading = state.sshResourcesLoading = false;
+    state.loading =
+      state.detailLoading =
+      state.submitLoading =
+      state.sshResourcesLoading =
+        false;
     state.error = null;
     state.allowLocalExec = true;
   };
@@ -321,58 +349,75 @@ export function useCronJobPage() {
 
   // 创建表单验证规则
   const createFormRules = {
-    status: [{ required: true, type: 'enum' as const, enum: [CronJobStatus.ENABLED, CronJobStatus.DISABLED], message: '请选择初始状态' }],
+    status: [
+      {
+        required: true,
+        type: 'enum' as const,
+        enum: [CronJobStatus.ENABLED, CronJobStatus.DISABLED],
+        message: '请选择初始状态',
+      },
+    ],
     name: [
       { required: true, message: '请输入任务名称' },
       { min: 1, max: 100, message: '任务名称长度应在1-100个字符之间' },
     ],
-    job_type: [
-      { required: true, message: '请选择任务类型' },
-    ],
-    schedule: [
-      { required: true, message: '请输入调度表达式' },
-    ],
+    job_type: [{ required: true, message: '请选择任务类型' }],
+    schedule: [{ required: true, message: '请输入调度表达式' }],
     command: [
       {
-        required: computed(() => state.createFormModel.job_type === CronJobType.COMMAND),
-        message: '请输入执行命令'
+        required: computed(
+          () => state.createFormModel.job_type === CronJobType.COMMAND,
+        ),
+        message: '请输入执行命令',
       },
     ],
     http_url: [
       {
-        required: computed(() => state.createFormModel.job_type === CronJobType.HTTP),
-        message: '请输入请求URL'
+        required: computed(
+          () => state.createFormModel.job_type === CronJobType.HTTP,
+        ),
+        message: '请输入请求URL',
       },
       { validator: validateHttpRequestURL },
     ],
     http_method: [
       {
-        required: computed(() => state.createFormModel.job_type === CronJobType.HTTP),
-        message: '请选择HTTP方法'
+        required: computed(
+          () => state.createFormModel.job_type === CronJobType.HTTP,
+        ),
+        message: '请选择HTTP方法',
       },
     ],
     script_type: [
       {
-        required: computed(() => state.createFormModel.job_type === CronJobType.SCRIPT),
-        message: '请选择脚本类型'
+        required: computed(
+          () => state.createFormModel.job_type === CronJobType.SCRIPT,
+        ),
+        message: '请选择脚本类型',
       },
     ],
     script_content: [
       {
-        required: computed(() => state.createFormModel.job_type === CronJobType.SCRIPT),
-        message: '请输入脚本内容'
+        required: computed(
+          () => state.createFormModel.job_type === CronJobType.SCRIPT,
+        ),
+        message: '请输入脚本内容',
       },
     ],
     ssh_resource_id: [
       {
-        required: computed(() => state.createFormModel.job_type === CronJobType.SSH),
-        message: '请选择SSH资源'
+        required: computed(
+          () => state.createFormModel.job_type === CronJobType.SSH,
+        ),
+        message: '请选择SSH资源',
       },
     ],
     ssh_command: [
       {
-        required: computed(() => state.createFormModel.job_type === CronJobType.SSH),
-        message: '请输入SSH命令'
+        required: computed(
+          () => state.createFormModel.job_type === CronJobType.SSH,
+        ),
+        message: '请输入SSH命令',
       },
     ],
   };
@@ -383,53 +428,63 @@ export function useCronJobPage() {
       { required: true, message: '请输入任务名称' },
       { min: 1, max: 100, message: '任务名称长度应在1-100个字符之间' },
     ],
-    job_type: [
-      { required: true, message: '请选择任务类型' },
-    ],
-    schedule: [
-      { required: true, message: '请输入调度表达式' },
-    ],
+    job_type: [{ required: true, message: '请选择任务类型' }],
+    schedule: [{ required: true, message: '请输入调度表达式' }],
     command: [
       {
-        required: computed(() => state.editFormModel.job_type === CronJobType.COMMAND),
-        message: '请输入执行命令'
+        required: computed(
+          () => state.editFormModel.job_type === CronJobType.COMMAND,
+        ),
+        message: '请输入执行命令',
       },
     ],
     http_url: [
       {
-        required: computed(() => state.editFormModel.job_type === CronJobType.HTTP),
-        message: '请输入请求URL'
+        required: computed(
+          () => state.editFormModel.job_type === CronJobType.HTTP,
+        ),
+        message: '请输入请求URL',
       },
       { validator: validateHttpRequestURL },
     ],
     http_method: [
       {
-        required: computed(() => state.editFormModel.job_type === CronJobType.HTTP),
-        message: '请选择HTTP方法'
+        required: computed(
+          () => state.editFormModel.job_type === CronJobType.HTTP,
+        ),
+        message: '请选择HTTP方法',
       },
     ],
     script_type: [
       {
-        required: computed(() => state.editFormModel.job_type === CronJobType.SCRIPT),
-        message: '请选择脚本类型'
+        required: computed(
+          () => state.editFormModel.job_type === CronJobType.SCRIPT,
+        ),
+        message: '请选择脚本类型',
       },
     ],
     script_content: [
       {
-        required: computed(() => state.editFormModel.job_type === CronJobType.SCRIPT),
-        message: '请输入脚本内容'
+        required: computed(
+          () => state.editFormModel.job_type === CronJobType.SCRIPT,
+        ),
+        message: '请输入脚本内容',
       },
     ],
     ssh_resource_id: [
       {
-        required: computed(() => state.editFormModel.job_type === CronJobType.SSH),
-        message: '请选择SSH资源'
+        required: computed(
+          () => state.editFormModel.job_type === CronJobType.SSH,
+        ),
+        message: '请选择SSH资源',
       },
     ],
     ssh_command: [
       {
-        required: computed(() => state.editFormModel.job_type === CronJobType.SSH),
-        message: '请输入SSH命令'
+        required: computed(
+          () => state.editFormModel.job_type === CronJobType.SSH,
+        ),
+        message: '请输入SSH命令',
       },
     ],
   };
@@ -512,7 +567,6 @@ export function useCronJobPage() {
         second: '2-digit',
       });
     } catch (error) {
-
       return dateTimeStr;
     }
   };
@@ -606,10 +660,12 @@ export function useCronJobPage() {
       state.filteredSshResources = [...state.sshResources];
     } else {
       const searchLower = searchText.toLowerCase();
-      state.filteredSshResources = state.sshResources.filter(resource =>
-        resource.name.toLowerCase().includes(searchLower) ||
-        resource.ip_addr.toLowerCase().includes(searchLower) ||
-        (resource.description && resource.description.toLowerCase().includes(searchLower))
+      state.filteredSshResources = state.sshResources.filter(
+        (resource) =>
+          resource.name.toLowerCase().includes(searchLower) ||
+          resource.ip_addr.toLowerCase().includes(searchLower) ||
+          (resource.description &&
+            resource.description.toLowerCase().includes(searchLower)),
       );
     }
   };
@@ -624,8 +680,8 @@ export function useCronJobPage() {
       const response = await getCronJobDetail({ id: job.id });
       if (ticket === detailRequest) state.currentJobDetail = response;
     } catch (error) {
-      if (ticket === detailRequest && shouldNotifyPageError(error)) message.error('获取任务详情失败');
-
+      if (ticket === detailRequest && shouldNotifyPageError(error))
+        message.error('获取任务详情失败');
     } finally {
       if (ticket === detailRequest) state.detailLoading = false;
     }
@@ -659,10 +715,18 @@ export function useCronJobPage() {
     state.submitLoading = true;
     try {
       await formRef.value?.validate();
-      if (!state.isCreateModalVisible || generation !== pageGeneration || ticket !== createRequest) return;
+      if (
+        !state.isCreateModalVisible ||
+        generation !== pageGeneration ||
+        ticket !== createRequest
+      )
+        return;
 
       // job_type 显式随请求发送，后端为必填
-      await createCronJob({ ...state.createFormModel, job_type: state.createFormModel.job_type });
+      await createCronJob({
+        ...state.createFormModel,
+        job_type: state.createFormModel.job_type,
+      });
       if (generation !== pageGeneration || ticket !== createRequest) return;
       message.success('定时任务创建成功');
 
@@ -673,11 +737,12 @@ export function useCronJobPage() {
       if (error?.errorFields) {
         if (shouldNotifyPageError(error)) message.error('请检查表单输入');
       } else {
-        if (shouldNotifyPageError(error)) message.error(getBackendErrorMessage(error, '定时任务创建失败'));
-
+        if (shouldNotifyPageError(error))
+          message.error(getBackendErrorMessage(error, '定时任务创建失败'));
       }
     } finally {
-      if (generation === pageGeneration && ticket === createRequest) state.submitLoading = false;
+      if (generation === pageGeneration && ticket === createRequest)
+        state.submitLoading = false;
     }
   };
 
@@ -716,13 +781,15 @@ export function useCronJobPage() {
         ssh_resource_id: jobDetail.ssh_resource_id,
         ssh_command: jobDetail.ssh_command,
         ssh_work_dir: jobDetail.ssh_work_dir,
-        ssh_environment: jobDetail.ssh_environment?.map((item) => ({ ...item })),
+        ssh_environment: jobDetail.ssh_environment?.map((item) => ({
+          ...item,
+        })),
       };
 
       state.isEditModalVisible = true;
     } catch (error) {
-      if (ticket === editRequest && shouldNotifyPageError(error)) message.error('获取任务详情失败');
-
+      if (ticket === editRequest && shouldNotifyPageError(error))
+        message.error('获取任务详情失败');
     } finally {
       if (ticket === editRequest) state.submitLoading = false;
     }
@@ -746,13 +813,21 @@ export function useCronJobPage() {
     state.submitLoading = true;
     try {
       await formRef.value?.validate();
-      if (!state.isEditModalVisible || generation !== pageGeneration || ticket !== editRequest) return;
+      if (
+        !state.isEditModalVisible ||
+        generation !== pageGeneration ||
+        ticket !== editRequest
+      )
+        return;
       if (isLocalExecLocked(state.editFormModel)) {
         message.warning('本地命令/脚本任务已停用，无法编辑');
         return;
       }
 
-      await updateCronJob({ ...state.editFormModel, job_type: state.editFormModel.job_type });
+      await updateCronJob({
+        ...state.editFormModel,
+        job_type: state.editFormModel.job_type,
+      });
       if (generation !== pageGeneration || ticket !== editRequest) return;
       message.success('定时任务更新成功');
 
@@ -763,11 +838,12 @@ export function useCronJobPage() {
       if (error?.errorFields) {
         if (shouldNotifyPageError(error)) message.error('请检查表单输入');
       } else {
-        if (shouldNotifyPageError(error)) message.error(getBackendErrorMessage(error, '定时任务更新失败'));
-
+        if (shouldNotifyPageError(error))
+          message.error(getBackendErrorMessage(error, '定时任务更新失败'));
       }
     } finally {
-      if (generation === pageGeneration && ticket === editRequest) state.submitLoading = false;
+      if (generation === pageGeneration && ticket === editRequest)
+        state.submitLoading = false;
     }
   };
 
@@ -787,7 +863,6 @@ export function useCronJobPage() {
           await fetchCronJobs();
         } catch (error) {
           if (shouldNotifyPageError(error)) message.error(`定时任务删除失败`);
-
         }
       },
     });
@@ -800,7 +875,6 @@ export function useCronJobPage() {
       await fetchCronJobs();
     } catch (error) {
       if (shouldNotifyPageError(error)) message.error(`定时任务启用失败`);
-
     }
   };
 
@@ -811,7 +885,6 @@ export function useCronJobPage() {
       await fetchCronJobs();
     } catch (error) {
       if (shouldNotifyPageError(error)) message.error(`定时任务禁用失败`);
-
     }
   };
 
@@ -830,8 +903,8 @@ export function useCronJobPage() {
           message.success(`定时任务 "${job.name}" 触发成功`);
           await fetchCronJobs();
         } catch (error) {
-          if (shouldNotifyPageError(error)) message.error(getBackendErrorMessage(error, '定时任务触发失败'));
-
+          if (shouldNotifyPageError(error))
+            message.error(getBackendErrorMessage(error, '定时任务触发失败'));
         }
       },
     });
@@ -845,9 +918,12 @@ export function useCronJobPage() {
     }
 
     if (!['删除', '启用', '禁用'].includes(operation)) return;
-    const selected = state.selectedRows.map(job => ({ id: job.id, name: job.name }));
+    const selected = state.selectedRows.map((job) => ({
+      id: job.id,
+      name: job.name,
+    }));
     const generation = pageGeneration;
-    const jobNames = selected.map(job => job.name).join('、');
+    const jobNames = selected.map((job) => job.name).join('、');
 
     Modal.confirm({
       title: `批量${operation}确认`,
@@ -859,23 +935,32 @@ export function useCronJobPage() {
       onOk: async () => {
         try {
           if (generation !== pageGeneration) return;
-          const promises = selected.map(job => {
+          const promises = selected.map((job) => {
             switch (operation) {
-              case '删除':
+              case '删除': {
                 return deleteCronJob({ id: job.id });
-              case '启用':
+              }
+              case '启用': {
                 return enableCronJob({ id: job.id });
-              case '禁用':
+              }
+              case '禁用': {
                 return disableCronJob({ id: job.id });
-              default:
+              }
+              default: {
                 return Promise.resolve();
+              }
             }
           });
 
           const results = await Promise.allSettled(promises);
           if (generation !== pageGeneration) return;
-          const failed = results.filter(result => result.status === 'rejected').length;
-          if (failed) message.error(`批量${operation}：${results.length - failed} 项成功，${failed} 项失败，请核对后重试`);
+          const failed = results.filter(
+            (result) => result.status === 'rejected',
+          ).length;
+          if (failed)
+            message.error(
+              `批量${operation}：${results.length - failed} 项成功，${failed} 项失败，请核对后重试`,
+            );
           else message.success(`批量${operation}成功`);
 
           // 清空选中状态
@@ -884,8 +969,8 @@ export function useCronJobPage() {
 
           await fetchCronJobs();
         } catch (error) {
-          if (shouldNotifyPageError(error)) message.error(`批量${operation}失败`);
-
+          if (shouldNotifyPageError(error))
+            message.error(`批量${operation}失败`);
         }
       },
     });
@@ -903,15 +988,25 @@ export function useCronJobPage() {
   // 日志分页操作
 
   // 表单操作
-  const validateScheduleExpression = async (mode: 'create' | 'edit' = 'create') => {
-    const schedule = mode === 'edit' ? state.editFormModel.schedule : state.createFormModel.schedule;
+  const validateScheduleExpression = async (
+    mode: 'create' | 'edit' = 'create',
+  ) => {
+    const schedule =
+      mode === 'edit'
+        ? state.editFormModel.schedule
+        : state.createFormModel.schedule;
     if (!schedule) return;
     const ticket = ++scheduleValidationRequest;
     const generation = pageGeneration;
     const formTicket = mode === 'edit' ? editRequest : createRequest;
-    const isCurrent = () => ticket === scheduleValidationRequest && generation === pageGeneration &&
+    const isCurrent = () =>
+      ticket === scheduleValidationRequest &&
+      generation === pageGeneration &&
       formTicket === (mode === 'edit' ? editRequest : createRequest) &&
-      schedule === (mode === 'edit' ? state.editFormModel.schedule : state.createFormModel.schedule);
+      schedule ===
+        (mode === 'edit'
+          ? state.editFormModel.schedule
+          : state.createFormModel.schedule);
 
     try {
       const response = await validateSchedule({ schedule });
@@ -927,8 +1022,8 @@ export function useCronJobPage() {
         }
       }
     } catch (error) {
-      if (isCurrent() && shouldNotifyPageError(error)) message.error('调度表达式验证失败');
-
+      if (isCurrent() && shouldNotifyPageError(error))
+        message.error('调度表达式验证失败');
     }
   };
 
@@ -1039,7 +1134,6 @@ export function useCronJobPage() {
     // 任务详情操作
     showJobDetail,
     closeDetailModal,
-
 
     // 创建操作
     openCreateModal,

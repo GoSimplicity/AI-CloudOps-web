@@ -12,9 +12,14 @@ vi.mock('#/utils/permission', async (importOriginal) => ({
 }));
 
 const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
-vi.mock('@vben/stores', () => ({ useUserStore: () => account.user, useAccessStore: () => account.access }));
+vi.mock('@vben/stores', () => ({
+  useUserStore: () => account.user,
+  useAccessStore: () => account.access,
+}));
 const wrappers: VueWrapper[] = [];
-afterEach(() => { for (const wrapper of wrappers.splice(0)) wrapper.unmount(); });
+afterEach(() => {
+  for (const wrapper of wrappers.splice(0)) wrapper.unmount();
+});
 
 const autofixMocks = vi.hoisted(() => ({
   confirmAutoFixWorkflow: vi.fn(),
@@ -66,7 +71,8 @@ const ButtonStub = defineComponent({
     },
   },
   emits: ['click'],
-  template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
+  template:
+    '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
 });
 
 const InputStub = defineComponent({
@@ -78,7 +84,8 @@ const InputStub = defineComponent({
     },
   },
   emits: ['update:value'],
-  template: '<input :value="value" @input="$emit(\'update:value\', $event.target.value)" />',
+  template:
+    '<input :value="value" @input="$emit(\'update:value\', $event.target.value)" />',
 });
 
 const TextareaStub = defineComponent({
@@ -143,7 +150,8 @@ const AlertStub = defineComponent({
       default: '',
     },
   },
-  template: '<div class="alert-stub"><span>{{ message }}</span><span>{{ description }}</span><slot /></div>',
+  template:
+    '<div class="alert-stub"><span>{{ message }}</span><span>{{ description }}</span><slot /></div>',
 });
 
 const DrawerStub = defineComponent({
@@ -208,7 +216,7 @@ function createWrapper() {
 
 describe('AutoFixWorkflow.vue', () => {
   beforeEach(() => {
-  sessionStorage.clear();
+    sessionStorage.clear();
     vi.clearAllMocks();
     account.user = reactive({ userInfo: { userId: '1' } });
     account.access = reactive({ accessToken: 'offline-token' });
@@ -241,7 +249,10 @@ describe('AutoFixWorkflow.vue', () => {
 
     expect(autofixMocks.getAutoFixInfo).toHaveBeenCalledTimes(1);
     expect(autofixMocks.getAutoFixReady).not.toHaveBeenCalled();
-    await wrapper.findAll('button').find(button => button.text().includes('检查服务依赖'))!.trigger('click');
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('检查服务依赖'))!
+      .trigger('click');
     await flushPromises();
     expect(autofixMocks.getAutoFixReady).toHaveBeenCalledTimes(1);
     expect(wrapper.text()).toContain('AutoFix Service');
@@ -337,7 +348,9 @@ describe('AutoFixWorkflow.vue', () => {
     await flushPromises();
 
     await wrapper.find('select').setValue('imagepull');
-    await wrapper.find('input[placeholder="例如 payment-service"]').setValue('payment-service');
+    await wrapper
+      .find('input[placeholder="例如 payment-service"]')
+      .setValue('payment-service');
 
     const runButton = wrapper
       .findAll('button')
@@ -357,7 +370,9 @@ describe('AutoFixWorkflow.vue', () => {
       problem_description:
         'Deployment 镜像拉取失败，请检查镜像地址、镜像拉取密钥和网络连通性，并给出可控修复动作。',
     });
-    expect(messageMocks.warning).toHaveBeenCalledWith('工作流已生成原计划，待执行动作需要明确审批');
+    expect(messageMocks.warning).toHaveBeenCalledWith(
+      '工作流已生成原计划，待执行动作需要明确审批',
+    );
     expect(wrapper.text()).toContain('需要人工确认或补充诊断');
     expect(wrapper.text()).toContain('镜像密钥未确认');
     expect(wrapper.text()).toContain('Reviewer');
@@ -379,7 +394,9 @@ describe('AutoFixWorkflow.vue', () => {
       approved_action_ids: ['block-secret-check'],
       plan_id: 'autofix-default-payment-service-123',
     });
-    expect(messageMocks.success).toHaveBeenCalledWith('已确认并执行所选原计划动作');
+    expect(messageMocks.success).toHaveBeenCalledWith(
+      '已确认并执行所选原计划动作',
+    );
     expect(wrapper.text()).toContain('已执行 1 个经人工确认动作');
   });
 });

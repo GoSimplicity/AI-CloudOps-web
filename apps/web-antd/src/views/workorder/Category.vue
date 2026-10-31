@@ -25,54 +25,56 @@
           @change="handleStatusChange"
           allow-clear
         >
-          <a-select-option :value="CategoryStatus.Enabled"
-            >启用</a-select-option
-          >
-          <a-select-option :value="CategoryStatus.Disabled"
-            >禁用</a-select-option
-          >
+          <a-select-option :value="CategoryStatus.Enabled">
+            启用
+          </a-select-option>
+          <a-select-option :value="CategoryStatus.Disabled">
+            禁用
+          </a-select-option>
         </a-select>
       </div>
     </template>
 
     <!-- 统计卡片 -->
-    <template #summary><div class="stats-grid">
-      <a-card class="stats-card">
-        <a-statistic
-          title="总分类数"
-          :value="statistics.total"
-          :value-style="{ color: '#1890ff' }"
-        >
-          <template #prefix>
-            <FolderOutlined />
-          </template>
-        </a-statistic>
-      </a-card>
+    <template #summary>
+      <div class="stats-grid">
+        <a-card class="stats-card">
+          <a-statistic
+            title="总分类数"
+            :value="statistics.total"
+            :value-style="{ color: '#1890ff' }"
+          >
+            <template #prefix>
+              <FolderOutlined />
+            </template>
+          </a-statistic>
+        </a-card>
 
-      <a-card class="stats-card">
-        <a-statistic
-          title="启用分类"
-          :value="statistics.enabled"
-          :value-style="{ color: '#52c41a' }"
-        >
-          <template #prefix>
-            <CheckCircleOutlined />
-          </template>
-        </a-statistic>
-      </a-card>
+        <a-card class="stats-card">
+          <a-statistic
+            title="启用分类"
+            :value="statistics.enabled"
+            :value-style="{ color: '#52c41a' }"
+          >
+            <template #prefix>
+              <CheckCircleOutlined />
+            </template>
+          </a-statistic>
+        </a-card>
 
-      <a-card class="stats-card">
-        <a-statistic
-          title="禁用分类"
-          :value="statistics.disabled"
-          :value-style="{ color: '#ff4d4f' }"
-        >
-          <template #prefix>
-            <StopOutlined />
-          </template>
-        </a-statistic>
-      </a-card>
-    </div></template>
+        <a-card class="stats-card">
+          <a-statistic
+            title="禁用分类"
+            :value="statistics.disabled"
+            :value-style="{ color: '#ff4d4f' }"
+          >
+            <template #prefix>
+              <StopOutlined />
+            </template>
+          </a-statistic>
+        </a-card>
+      </div>
+    </template>
 
     <!-- 数据表格 -->
     <div class="table-container">
@@ -159,7 +161,11 @@
                         </template>
                       </a-menu-item>
                       <a-menu-divider v-if="can('workorder.category.delete')" />
-                      <a-menu-item v-if="can('workorder.category.delete')" key="delete" danger>
+                      <a-menu-item
+                        v-if="can('workorder.category.delete')"
+                        key="delete"
+                        danger
+                      >
                         <DeleteOutlined />
                         删除
                       </a-menu-item>
@@ -577,12 +583,14 @@ const handleView = async (record: WorkorderCategoryItem): Promise<void> => {
 
 const handleMenuAction = (key: string, record: WorkorderCategoryItem): void => {
   switch (key) {
-    case 'toggleStatus':
+    case 'toggleStatus': {
       handleToggleStatus(record);
       break;
-    case 'delete':
+    }
+    case 'delete': {
       handleDelete(record);
       break;
+    }
   }
 };
 
@@ -890,7 +898,6 @@ onMounted(() => {
 
 /* 移动端适配 */
 @media (max-width: 768px) {
-
   .search-filters {
     width: 100%;
   }
@@ -950,7 +957,6 @@ onMounted(() => {
 
 /* 平板端适配 */
 @media (max-width: 1024px) and (min-width: 769px) {
-
   .search-input {
     width: 200px;
   }
@@ -962,7 +968,6 @@ onMounted(() => {
 
 /* 超小屏幕适配 */
 @media (max-width: 480px) {
-
   .operator-info {
     flex-direction: column;
     gap: 4px;

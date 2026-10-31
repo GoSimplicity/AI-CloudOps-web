@@ -1,5 +1,5 @@
 import { requestClient } from '#/api/request';
-import type { User } from '#/api/core/system/user'
+import type { User } from '#/api/core/system/user';
 
 // 值班组配置接口
 export interface MonitorOnDutyGroup {
@@ -119,9 +119,10 @@ export interface GetMonitorOnDutyGroupChangeListReq {
   on_duty_group_id: number;
 }
 
-
 // 获取值班组列表
-export async function getMonitorOnDutyGroupListApi(data: GetMonitorOnDutyGroupListReq) {
+export async function getMonitorOnDutyGroupListApi(
+  data: GetMonitorOnDutyGroupListReq,
+) {
   return requestClient.get('/monitor/onduty_groups/list', { params: data });
 }
 
@@ -169,13 +170,13 @@ export async function getMonitorOnDutyGroupFuturePlanApi(
 // 获取值班历史
 export async function getMonitorOnDutyHistoryApi(
   id: number,
-  params?: { 
-    start_date?: string; 
+  params?: {
+    start_date?: string;
     end_date?: string;
     search?: string;
     page?: number;
     size?: number;
-  }
+  },
 ) {
   return requestClient.get(`/monitor/onduty_groups/history/${id}`, { params });
 }

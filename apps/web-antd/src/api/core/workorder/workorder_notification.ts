@@ -2,80 +2,80 @@ import { requestClient } from '#/api/request';
 
 // 工单事件类型常量
 export const WorkorderEventTypes = {
-  INSTANCE_CREATED: 'instance_created',   // 工单创建
+  INSTANCE_CREATED: 'instance_created', // 工单创建
   INSTANCE_SUBMITTED: 'instance_submitted', // 工单提交
-  INSTANCE_ASSIGNED: 'instance_assigned',  // 工单指派
-  INSTANCE_APPROVED: 'instance_approved',  // 工单审批通过
-  INSTANCE_REJECTED: 'instance_rejected',  // 工单拒绝
+  INSTANCE_ASSIGNED: 'instance_assigned', // 工单指派
+  INSTANCE_APPROVED: 'instance_approved', // 工单审批通过
+  INSTANCE_REJECTED: 'instance_rejected', // 工单拒绝
   INSTANCE_COMPLETED: 'instance_completed', // 工单完成
   INSTANCE_CANCELLED: 'instance_cancelled', // 工单取消
-  INSTANCE_UPDATED: 'instance_updated',   // 工单更新
+  INSTANCE_UPDATED: 'instance_updated', // 工单更新
   INSTANCE_COMMENTED: 'instance_commented', // 工单评论
-  INSTANCE_DELETED: 'instance_deleted',   // 工单删除
-  INSTANCE_RETURNED: 'instance_returned',  // 工单退回
+  INSTANCE_DELETED: 'instance_deleted', // 工单删除
+  INSTANCE_RETURNED: 'instance_returned', // 工单退回
 } as const;
 
 // 通知状态常量
 export const NotificationStatus = {
-  Enabled: 1,   // 启用
-  Disabled: 2,  // 禁用
+  Enabled: 1, // 启用
+  Disabled: 2, // 禁用
 } as const;
 
 // 优先级常量
 export const NotificationPriority = {
-  High: 1,     // 高
-  Medium: 2,   // 中
-  Low: 3,      // 低
+  High: 1, // 高
+  Medium: 2, // 中
+  Low: 3, // 低
 } as const;
 
 // 是否默认配置常量
 export const IsDefault = {
-  Yes: 1,  // 是
-  No: 2,   // 否
+  Yes: 1, // 是
+  No: 2, // 否
 } as const;
 
 // 通知渠道常量
 export const NotificationChannel = {
   IN_APP: 'in_app', // 站内消息
-  EMAIL: 'email',       // 邮箱
-  FEISHU: 'feishu',     // 飞书
-  SMS: 'sms',           // 短信
-  WEBHOOK: 'webhook',   // Webhook
+  EMAIL: 'email', // 邮箱
+  FEISHU: 'feishu', // 飞书
+  SMS: 'sms', // 短信
+  WEBHOOK: 'webhook', // Webhook
 } as const;
 
 // 触发类型常量
 export const NotificationTrigger = {
-  IMMEDIATE: 'immediate',     // 立即触发
-  DELAYED: 'delayed',         // 延迟触发
-  SCHEDULED: 'scheduled',     // 定时触发
+  IMMEDIATE: 'immediate', // 立即触发
+  DELAYED: 'delayed', // 延迟触发
+  SCHEDULED: 'scheduled', // 定时触发
   CONDITIONAL: 'conditional', // 条件触发
 } as const;
 
 // 接收人类型常量
 export const RecipientTypes = {
-  CREATOR: 'creator',   // 工单创建人
+  CREATOR: 'creator', // 工单创建人
   ASSIGNEE: 'assignee', // 工单处理人
-  USER: 'user',         // 指定用户
-  ROLE: 'role',         // 角色用户
-  DEPT: 'dept',         // 部门用户
-  CUSTOM: 'custom',     // 自定义用户
+  USER: 'user', // 指定用户
+  ROLE: 'role', // 角色用户
+  DEPT: 'dept', // 部门用户
+  CUSTOM: 'custom', // 自定义用户
 } as const;
 
 // 发送状态常量
 export const SendStatus = {
-  Pending: 1,    // 待发送
-  Sending: 2,    // 发送中
-  Success: 3,    // 发送成功
-  Failed: 4,     // 发送失败
-  Cancelled: 5,  // 已取消
+  Pending: 1, // 待发送
+  Sending: 2, // 发送中
+  Success: 3, // 发送成功
+  Failed: 4, // 发送失败
+  Cancelled: 5, // 已取消
 } as const;
 
 // 队列状态常量
 export const QueueStatus = {
-  Pending: 1,     // 待处理
-  Processing: 2,  // 处理中
-  Success: 3,     // 处理成功
-  Failed: 4,      // 处理失败
+  Pending: 1, // 待处理
+  Processing: 2, // 处理中
+  Success: 3, // 处理成功
+  Failed: 4, // 处理失败
 } as const;
 
 // 通知任务类型常量
@@ -88,20 +88,25 @@ export const TaskTypes = {
 
 // 流程动作常量
 export const FlowActions = {
-  UPDATE: 'update',   // 更新
+  UPDATE: 'update', // 更新
   COMMENT: 'comment', // 评论
 } as const;
 
 // 类型定义
-export type WorkorderEventType = typeof WorkorderEventTypes[keyof typeof WorkorderEventTypes];
-export type NotificationChannelType = typeof NotificationChannel[keyof typeof NotificationChannel];
-export type NotificationTriggerType = typeof NotificationTrigger[keyof typeof NotificationTrigger];
-export type NotificationStatusType = typeof NotificationStatus[keyof typeof NotificationStatus];
-export type RecipientType = typeof RecipientTypes[keyof typeof RecipientTypes];
-export type SendStatusType = typeof SendStatus[keyof typeof SendStatus];
-export type QueueStatusType = typeof QueueStatus[keyof typeof QueueStatus];
-export type TaskType = typeof TaskTypes[keyof typeof TaskTypes];
-export type FlowActionType = typeof FlowActions[keyof typeof FlowActions];
+export type WorkorderEventType =
+  (typeof WorkorderEventTypes)[keyof typeof WorkorderEventTypes];
+export type NotificationChannelType =
+  (typeof NotificationChannel)[keyof typeof NotificationChannel];
+export type NotificationTriggerType =
+  (typeof NotificationTrigger)[keyof typeof NotificationTrigger];
+export type NotificationStatusType =
+  (typeof NotificationStatus)[keyof typeof NotificationStatus];
+export type RecipientType =
+  (typeof RecipientTypes)[keyof typeof RecipientTypes];
+export type SendStatusType = (typeof SendStatus)[keyof typeof SendStatus];
+export type QueueStatusType = (typeof QueueStatus)[keyof typeof QueueStatus];
+export type TaskType = (typeof TaskTypes)[keyof typeof TaskTypes];
+export type FlowActionType = (typeof FlowActions)[keyof typeof FlowActions];
 
 // 简化别名，方便组件使用
 export type Notification = WorkorderNotificationItem;
@@ -396,7 +401,9 @@ export const updateNotification = (data: UpdateNotificationReq) => {
 };
 
 export const deleteNotification = (id: number) => {
-  return requestClient.delete(`/workorder/notification/delete/${id}`, { data: { id } });
+  return requestClient.delete(`/workorder/notification/delete/${id}`, {
+    data: { id },
+  });
 };
 
 export const updateNotificationStatus = (id: number, status: number) => {
@@ -420,10 +427,11 @@ export const sendNotificationManually = (data: ManualSendNotificationReq) => {
 };
 
 /** 通知发送记录状态，与服务端 SendStatus 保持一致 */
-export const getNotificationSendStatus = (status: number) => ({
-  [SendStatus.Pending]: { label: '待发送', color: 'default' },
-  [SendStatus.Sending]: { label: '发送中', color: 'processing' },
-  [SendStatus.Success]: { label: '发送成功', color: 'success' },
-  [SendStatus.Failed]: { label: '发送失败', color: 'error' },
-  [SendStatus.Cancelled]: { label: '已取消', color: 'default' },
-}[status] || { label: '未知', color: 'default' });
+export const getNotificationSendStatus = (status: number) =>
+  ({
+    [SendStatus.Pending]: { label: '待发送', color: 'default' },
+    [SendStatus.Sending]: { label: '发送中', color: 'processing' },
+    [SendStatus.Success]: { label: '发送成功', color: 'success' },
+    [SendStatus.Failed]: { label: '发送失败', color: 'error' },
+    [SendStatus.Cancelled]: { label: '已取消', color: 'default' },
+  })[status] || { label: '未知', color: 'default' };

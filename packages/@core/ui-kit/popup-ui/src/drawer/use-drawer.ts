@@ -69,7 +69,16 @@ export function useVbenDrawer<
   const Drawer = defineComponent(
     (props: DrawerProps, { attrs, slots }) => {
       return () =>
-        h(VbenDrawer, { ...props, ...attrs, class: cn(attrs.class as string), drawerApi: extendedApi }, slots);
+        h(
+          VbenDrawer,
+          {
+            ...props,
+            ...attrs,
+            class: cn(attrs.class as string),
+            drawerApi: extendedApi,
+          },
+          slots,
+        );
     },
     {
       inheritAttrs: false,

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { createRouterGuard } from './guard';
+
 const state = vi.hoisted(() => ({
   access: null as any,
   user: null as any,

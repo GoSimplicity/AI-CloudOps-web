@@ -52,7 +52,6 @@ let detailRequest = 0;
 let formRequest = 0;
 const existingAuthMode = ref<AuthMode>();
 
-
 const loading = ref(false);
 const detailLoading = ref(false);
 const submitLoading = ref(false);
@@ -118,8 +117,10 @@ const modalWidth = computed(() => {
 
 const paginationConfig = computed(() => ({
   ...pagination,
-  onChange: (page: number, pageSize: number) => handleTableChange({ current: page, pageSize }),
-  onShowSizeChange: (current: number, size: number) => handleTableChange({ current, pageSize: size }),
+  onChange: (page: number, pageSize: number) =>
+    handleTableChange({ current: page, pageSize }),
+  onShowSizeChange: (current: number, size: number) =>
+    handleTableChange({ current, pageSize: size }),
 }));
 
 const formRules = computed(() => ({
@@ -130,23 +131,33 @@ const formRules = computed(() => ({
   ip_addr: [
     { required: true, message: '请输入IP地址', trigger: 'blur' },
     {
-      pattern: /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
+      pattern:
+        /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
       message: 'IP地址格式不正确',
       trigger: 'blur',
     },
   ],
   port: [
     { required: true, message: '请输入SSH端口', trigger: 'blur' },
-    { type: 'number', min: 1, max: 65535, message: '端口范围为1-65535', trigger: 'blur' },
+    {
+      type: 'number',
+      min: 1,
+      max: 65535,
+      message: '端口范围为1-65535',
+      trigger: 'blur',
+    },
   ],
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 1, max: 50, message: '用户名长度在1-50个字符之间', trigger: 'blur' },
   ],
-  os_type: [{ required: true, message: '请选择操作系统类型', trigger: 'change' }],
+  os_type: [
+    { required: true, message: '请选择操作系统类型', trigger: 'change' },
+  ],
   auth_mode: [{ required: true, message: '请选择认证方式', trigger: 'change' }],
   password:
-    formData.value.auth_mode === AuthMode.PASSWORD && (!isEdit.value || existingAuthMode.value !== AuthMode.PASSWORD)
+    formData.value.auth_mode === AuthMode.PASSWORD &&
+    (!isEdit.value || existingAuthMode.value !== AuthMode.PASSWORD)
       ? [
           { required: true, message: '请输入登录密码', trigger: 'blur' },
           { min: 6, message: '密码长度至少6位', trigger: 'blur' },
@@ -155,7 +166,11 @@ const formRules = computed(() => ({
   key:
     formData.value.auth_mode === AuthMode.KEY
       ? [
-          { required: !isEdit.value || existingAuthMode.value !== AuthMode.KEY, message: '请输入SSH私钥', trigger: 'blur' },
+          {
+            required: !isEdit.value || existingAuthMode.value !== AuthMode.KEY,
+            message: '请输入SSH私钥',
+            trigger: 'blur',
+          },
           { validator: validatePrivateKey, trigger: 'blur' },
         ]
       : [],
@@ -163,41 +178,69 @@ const formRules = computed(() => ({
 
 const showUnbindModal = (record: TreeLocalResource): void => {
   currentResource.value = record;
-  selectedUnbindNodeIds.value = record.tree_nodes?.map(node => node.id) || [];
+  selectedUnbindNodeIds.value = record.tree_nodes?.map((node) => node.id) || [];
   unbindModalVisible.value = true;
 };
 
 // 表格列定义
 const columns = [
   { title: '服务器名称', dataIndex: 'name', key: 'name', width: 200 },
-  { title: '连接信息', dataIndex: 'connection_info', key: 'connection_info', width: 150 },
+  {
+    title: '连接信息',
+    dataIndex: 'connection_info',
+    key: 'connection_info',
+    width: 150,
+  },
   { title: '用户名', dataIndex: 'username', key: 'username', width: 100 },
   { title: '操作系统', dataIndex: 'os_type', key: 'os_type', width: 120 },
   { title: '环境', dataIndex: 'environment', key: 'environment', width: 100 },
   { title: '认证方式', dataIndex: 'auth_mode', key: 'auth_mode', width: 100 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
-  { title: '服务树节点', dataIndex: 'tree_nodes', key: 'tree_nodes', width: 200 },
+  {
+    title: '服务树节点',
+    dataIndex: 'tree_nodes',
+    key: 'tree_nodes',
+    width: 200,
+  },
   { title: '标签', dataIndex: 'tags', key: 'tags', width: 200, ellipsis: true },
-  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
+  {
+    title: '创建人',
+    dataIndex: 'create_user_name',
+    key: 'creator',
+    width: 120,
+  },
   { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
   { title: '操作', key: 'action', width: 200, align: 'center' as const },
 ];
 
 const getServerStatusClass = (record: TreeLocalResource): string => {
   switch (record.status) {
-    case ResourceStatus.RUNNING:
+    case ResourceStatus.RUNNING: {
       return 'status-running';
-    case ResourceStatus.STOPPED:
+    }
+    case ResourceStatus.STOPPED: {
       return 'status-stopped';
-    case ResourceStatus.ERROR:
+    }
+    case ResourceStatus.ERROR: {
       return 'status-error';
-    default:
+    }
+    default: {
       return 'status-unknown';
+    }
   }
 };
 
 const getAvatarColor = (name: string): string => {
-  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
+  const colors = [
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
+  ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -217,7 +260,10 @@ const formatDate = (dateString: string): string => {
 
 const formatTime = (dateString: string): string => {
   if (!dateString) return '';
-  return new Date(dateString).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  return new Date(dateString).toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 const formatDateTime = (dateTime?: string): string => {
@@ -265,7 +311,11 @@ const getAuthModeText = (authMode: AuthMode): string => {
 
 // 表单验证函数
 async function validatePrivateKey(_rule: any, value: string): Promise<void> {
-  if (formData.value.auth_mode === AuthMode.KEY && value && !value.includes('PRIVATE KEY')) {
+  if (
+    formData.value.auth_mode === AuthMode.KEY &&
+    value &&
+    !value.includes('PRIVATE KEY')
+  ) {
     throw new Error('请输入有效的SSH私钥');
   }
 }
@@ -275,7 +325,6 @@ const fetchTreeData = async (): Promise<void> => {
     const response = await getTreeList();
     treeData.value = response.items || [];
   } catch (error) {
-
     if (shouldNotifyPageError(error)) message.error('获取服务树数据失败');
   }
 };
@@ -301,12 +350,13 @@ const fetchLocalResources = async (): Promise<void> => {
     const items = response.items || [];
     localResources.value = items.map((item: TreeLocalResource) => ({
       ...item,
-      tree_nodes: item.tree_nodes || []
+      tree_nodes: item.tree_nodes || [],
     }));
     pagination.total = response.total || 0;
   } catch (error) {
     if (ticket !== listRequest) return;
-    if (shouldRecordPageError(error)) loadError.value = '获取本地资源列表失败，请重试';
+    if (shouldRecordPageError(error))
+      loadError.value = '获取本地资源列表失败，请重试';
     if (shouldNotifyPageError(error)) message.error('获取本地资源列表失败');
 
     localResources.value = [];
@@ -330,7 +380,10 @@ const resetFilter = (): void => {
   message.success('过滤条件已重置');
 };
 
-const handleTableChange = (pag: { current?: number; pageSize?: number }): void => {
+const handleTableChange = (pag: {
+  current?: number;
+  pageSize?: number;
+}): void => {
   pagination.current = pag.current || pagination.current;
   pagination.pageSize = pag.pageSize || pagination.pageSize;
   filterForm.page = pagination.current;
@@ -389,7 +442,7 @@ const handleEdit = (record: TreeLocalResource): void => {
     name: record.name,
     environment: record.environment,
     description: record.description,
-    tags: record.tags?.map(tag => ({ ...tag })) ?? [],
+    tags: record.tags?.map((tag) => ({ ...tag })) ?? [],
     ip_addr: record.ip_addr,
     port: record.port,
     username: record.username,
@@ -412,14 +465,13 @@ const handleViewDetail = async (record: TreeLocalResource): Promise<void> => {
   detailVisible.value = true;
   detailLoading.value = true;
 
-
   try {
     const response = await getTreeLocalDetail(record.id);
     if (ticket !== detailRequest || !detailVisible.value) return;
     // 确保详情数据包含 tree_nodes 字段
     currentDetail.value = {
       ...response,
-      tree_nodes: response.tree_nodes || []
+      tree_nodes: response.tree_nodes || [],
     };
   } catch (error) {
     if (ticket !== detailRequest) return;
@@ -452,9 +504,15 @@ const addTag = (): void => {
   }
 
   const separator = tagValue.indexOf('=');
-  const tag = { key: (separator < 0 ? tagValue : tagValue.slice(0, separator)).trim(), value: separator < 0 ? '' : tagValue.slice(separator + 1).trim() };
-  if (!tag.key) { message.warning('请输入标签键'); return; }
-  if (formData.value.tags.some(current => current.key === tag.key)) {
+  const tag = {
+    key: (separator < 0 ? tagValue : tagValue.slice(0, separator)).trim(),
+    value: separator < 0 ? '' : tagValue.slice(separator + 1).trim(),
+  };
+  if (!tag.key) {
+    message.warning('请输入标签键');
+    return;
+  }
+  if (formData.value.tags.some((current) => current.key === tag.key)) {
     message.warning('标签已存在');
     return;
   }
@@ -473,16 +531,18 @@ const addTag = (): void => {
     // 让输入框失去焦点
     tagInputRef.value?.blur();
     // 添加调试信息
-
   });
 };
 
 // 修复：标签删除功能
 const removeTag = (index: number): void => {
-  if (Array.isArray(formData.value.tags) && index >= 0 && index < formData.value.tags.length) {
+  if (
+    Array.isArray(formData.value.tags) &&
+    index >= 0 &&
+    index < formData.value.tags.length
+  ) {
     // 使用 Vue 3 推荐的方式更新数组，确保响应式
     formData.value.tags = formData.value.tags.filter((_, i) => i !== index);
-
   }
 };
 
@@ -513,16 +573,19 @@ const handleBind = async (): Promise<void> => {
     await fetchLocalResources();
 
     // 如果当前有详情显示，也刷新详情
-    if (detailVisible.value && currentDetail.value && currentDetail.value.id === currentResource.value.id) {
+    if (
+      detailVisible.value &&
+      currentDetail.value &&
+      currentDetail.value.id === currentResource.value.id
+    ) {
       const response = await getTreeLocalDetail(currentResource.value.id);
       currentDetail.value = {
         ...response,
-        tree_nodes: response.tree_nodes || []
+        tree_nodes: response.tree_nodes || [],
       };
     }
   } catch (error) {
     if (shouldNotifyPageError(error)) message.error('绑定失败');
-
   } finally {
     bindLoading.value = false;
   }
@@ -549,16 +612,19 @@ const handleUnbind = async (): Promise<void> => {
     await fetchLocalResources();
 
     // 如果当前有详情显示，也刷新详情
-    if (detailVisible.value && currentDetail.value && currentDetail.value.id === currentResource.value.id) {
+    if (
+      detailVisible.value &&
+      currentDetail.value &&
+      currentDetail.value.id === currentResource.value.id
+    ) {
       const response = await getTreeLocalDetail(currentResource.value.id);
       currentDetail.value = {
         ...response,
-        tree_nodes: response.tree_nodes || []
+        tree_nodes: response.tree_nodes || [],
       };
     }
   } catch (error) {
     if (shouldNotifyPageError(error)) message.error('解绑失败');
-
   } finally {
     unbindLoading.value = false;
   }
@@ -575,7 +641,10 @@ const handleSubmit = async (): Promise<void> => {
   submitLoading.value = true;
   const ticket = ++formRequest;
   const editing = isEdit.value;
-  const { id, ...data } = { ...formData.value, tags: formData.value.tags?.map(tag => ({ ...tag })) ?? [] };
+  const { id, ...data } = {
+    ...formData.value,
+    tags: formData.value.tags?.map((tag) => ({ ...tag })) ?? [],
+  };
   if (!data.key) delete data.key;
   if (!data.password) delete data.password;
   try {
@@ -592,7 +661,8 @@ const handleSubmit = async (): Promise<void> => {
     modalVisible.value = false;
     await fetchLocalResources();
   } catch (error) {
-    if (ticket === formRequest && shouldNotifyPageError(error)) message.error(editing ? '更新服务器失败' : '添加服务器失败');
+    if (ticket === formRequest && shouldNotifyPageError(error))
+      message.error(editing ? '更新服务器失败' : '添加服务器失败');
   } finally {
     if (ticket === formRequest) submitLoading.value = false;
   }
@@ -617,24 +687,24 @@ const handleDelete = (record: TreeLocalResource): void => {
         await fetchLocalResources();
       } catch (error) {
         if (shouldNotifyPageError(error)) message.error('删除服务器失败');
-
       }
-    }
+    },
   });
 };
 
 onMounted(async () => {
   try {
-    await Promise.all([
-      fetchTreeData(),
-      fetchLocalResources()
-    ]);
+    await Promise.all([fetchTreeData(), fetchLocalResources()]);
   } catch (error) {
-
-    if (shouldNotifyPageError(error)) message.error('页面数据加载失败，请刷新页面重试');
+    if (shouldNotifyPageError(error))
+      message.error('页面数据加载失败，请刷新页面重试');
   }
 });
-onBeforeUnmount(() => { listRequest++; detailRequest++; formRequest++; });
+onBeforeUnmount(() => {
+  listRequest++;
+  detailRequest++;
+  formRequest++;
+});
 const closeDetails = () => {
   detailRequest++;
   detailVisible.value = false;
@@ -644,89 +714,119 @@ const closeDetails = () => {
 </script>
 
 <template>
-  <OpsPage title="本地资源" description="维护服务器连接配置与服务树绑定" class="cmdb-console local-resource-management">
+  <OpsPage
+    title="本地资源"
+    description="维护服务器连接配置与服务树绑定"
+    class="cmdb-console local-resource-management"
+  >
     <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
-      <template #action><a-button @click="fetchLocalResources()">重试</a-button></template>
+      <template #action>
+        <a-button @click="fetchLocalResources()">重试</a-button>
+      </template>
     </a-alert>
     <!-- 页面标题 -->
-    <template #actions><a-button type="primary" @click="showCreateModal" class="btn-create">
-          <template #icon>
-            <plus-outlined />
-          </template>
-          <span class="btn-text">添加服务器</span>
-        </a-button><a-button @click="fetchLocalResources()" :loading="loading">刷新</a-button></template><template #filters><div class="search-filters">
-          <a-select
-            v-model:value="filterForm.status"
-            placeholder="连接状态"
-            allow-clear
-            class="filter-select"
-            @change="handleSearch"
-          >
-            <a-select-option :value="ResourceStatus.RUNNING">运行中</a-select-option>
-            <a-select-option :value="ResourceStatus.STOPPED">已停止</a-select-option>
-            <a-select-option :value="ResourceStatus.STARTING">启动中</a-select-option>
-            <a-select-option :value="ResourceStatus.STOPPING">停止中</a-select-option>
-            <a-select-option :value="ResourceStatus.RESTARTING">重启中</a-select-option>
-            <a-select-option :value="ResourceStatus.ERROR">错误</a-select-option>
-          </a-select>
-          <a-button @click="resetFilter" class="reset-btn">
-            重置
-          </a-button>
-        </div></template>
+    <template #actions>
+      <a-button type="primary" @click="showCreateModal" class="btn-create">
+        <template #icon>
+          <plus-outlined />
+        </template>
+        <span class="btn-text">添加服务器</span> </a-button
+      ><a-button @click="fetchLocalResources()" :loading="loading">
+        刷新
+      </a-button> </template
+    ><template #filters>
+      <div class="search-filters">
+        <a-select
+          v-model:value="filterForm.status"
+          placeholder="连接状态"
+          allow-clear
+          class="filter-select"
+          @change="handleSearch"
+        >
+          <a-select-option :value="ResourceStatus.RUNNING">
+            运行中
+          </a-select-option>
+          <a-select-option :value="ResourceStatus.STOPPED">
+            已停止
+          </a-select-option>
+          <a-select-option :value="ResourceStatus.STARTING">
+            启动中
+          </a-select-option>
+          <a-select-option :value="ResourceStatus.STOPPING">
+            停止中
+          </a-select-option>
+          <a-select-option :value="ResourceStatus.RESTARTING">
+            重启中
+          </a-select-option>
+          <a-select-option :value="ResourceStatus.ERROR">错误</a-select-option>
+        </a-select>
+        <a-button @click="resetFilter" class="reset-btn"> 重置 </a-button>
+      </div>
+    </template>
 
     <!-- 统计卡片 -->
-    <template #summary><div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="匹配服务器"
-              :value="pagination.total"
-            >
-              <template #prefix>
-                <desktop-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="本页运行中"
-              :value="localResources.filter(item => item.status === ResourceStatus.RUNNING).length"
-            >
-              <template #prefix>
-                <api-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="本页Linux系统"
-              :value="localResources.filter(item => item.os_type === 'linux').length"
-            >
-              <template #prefix>
-                <desktop-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="本页已绑定节点"
-              :value="localResources.filter(item => item.tree_nodes && item.tree_nodes.length > 0).length"
-            >
-              <template #prefix>
-                <deployment-unit-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div></template>
+    <template #summary>
+      <div class="stats-row">
+        <a-row :gutter="[16, 16]">
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic title="匹配服务器" :value="pagination.total">
+                <template #prefix>
+                  <desktop-outlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页运行中"
+                :value="
+                  localResources.filter(
+                    (item) => item.status === ResourceStatus.RUNNING,
+                  ).length
+                "
+              >
+                <template #prefix>
+                  <api-outlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页Linux系统"
+                :value="
+                  localResources.filter((item) => item.os_type === 'linux')
+                    .length
+                "
+              >
+                <template #prefix>
+                  <desktop-outlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic
+                title="本页已绑定节点"
+                :value="
+                  localResources.filter(
+                    (item) => item.tree_nodes && item.tree_nodes.length > 0,
+                  ).length
+                "
+              >
+                <template #prefix>
+                  <deployment-unit-outlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
+    </template>
 
     <!-- 表格容器 -->
     <div class="table-container">
@@ -745,7 +845,10 @@ const closeDetails = () => {
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="server-name-cell">
-                <div class="server-badge" :class="getServerStatusClass(record)"></div>
+                <div
+                  class="server-badge"
+                  :class="getServerStatusClass(record)"
+                ></div>
                 <span class="server-name-text">{{ record.name }}</span>
               </div>
             </template>
@@ -758,7 +861,10 @@ const closeDetails = () => {
             </template>
 
             <template v-if="column.key === 'os_type'">
-              <a-tag :color="record.os_type === 'linux' ? 'blue' : 'green'" class="tech-tag">
+              <a-tag
+                :color="record.os_type === 'linux' ? 'blue' : 'green'"
+                class="tech-tag"
+              >
                 <windows-outlined v-if="record.os_type === 'windows'" />
                 <desktop-outlined v-else />
                 {{ record.os_type === 'linux' ? 'Linux' : 'Windows' }}
@@ -766,14 +872,21 @@ const closeDetails = () => {
             </template>
 
             <template v-if="column.key === 'auth_mode'">
-              <a-tag :color="record.auth_mode === AuthMode.PASSWORD ? 'orange' : 'purple'" class="tech-tag">
+              <a-tag
+                :color="
+                  record.auth_mode === AuthMode.PASSWORD ? 'orange' : 'purple'
+                "
+                class="tech-tag"
+              >
                 {{ getAuthModeText(record.auth_mode) }}
               </a-tag>
             </template>
 
             <template v-if="column.key === 'tree_nodes'">
               <div class="tag-container">
-                <template v-if="record.tree_nodes && record.tree_nodes.length > 0">
+                <template
+                  v-if="record.tree_nodes && record.tree_nodes.length > 0"
+                >
                   <a-tag
                     v-for="node in record.tree_nodes.slice(0, 2)"
                     :key="node.id"
@@ -824,11 +937,17 @@ const closeDetails = () => {
               <div class="creator-info">
                 <a-avatar
                   size="small"
-                  :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
+                  :style="{
+                    backgroundColor: getAvatarColor(
+                      record.create_user_name || '',
+                    ),
+                  }"
                 >
                   {{ getInitials(record.create_user_name || 'Admin') }}
                 </a-avatar>
-                <span class="creator-name">{{ record.create_user_name || 'Admin' }}</span>
+                <span class="creator-name">{{
+                  record.create_user_name || 'Admin'
+                }}</span>
               </div>
             </template>
 
@@ -841,10 +960,18 @@ const closeDetails = () => {
 
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
-                <a-button type="primary" size="small" @click="handleViewDetail(record)">
+                <a-button
+                  type="primary"
+                  size="small"
+                  @click="handleViewDetail(record)"
+                >
                   查看
                 </a-button>
-                <a-button type="default" size="small" @click="handleEdit(record)">
+                <a-button
+                  type="default"
+                  size="small"
+                  @click="handleEdit(record)"
+                >
                   编辑
                 </a-button>
                 <a-dropdown>
@@ -856,15 +983,26 @@ const closeDetails = () => {
                       <a-menu-item
                         key="unbind"
                         @click="showUnbindModal(record)"
-                        :disabled="!record.tree_nodes || record.tree_nodes.length === 0"
+                        :disabled="
+                          !record.tree_nodes || record.tree_nodes.length === 0
+                        "
                       >
                         <deployment-unit-outlined /> 解绑服务树
                       </a-menu-item>
-                      <a-menu-item v-if="can('tree.local.terminal')" key="terminal" @click="handleConnectTerminal(record)">
+                      <a-menu-item
+                        v-if="can('tree.local.terminal')"
+                        key="terminal"
+                        @click="handleConnectTerminal(record)"
+                      >
                         <code-outlined /> 连接终端
                       </a-menu-item>
                       <a-menu-divider v-if="can('tree.local.delete')" />
-                      <a-menu-item v-if="can('tree.local.delete')" key="delete" @click="handleDelete(record)" danger>
+                      <a-menu-item
+                        v-if="can('tree.local.delete')"
+                        key="delete"
+                        @click="handleDelete(record)"
+                        danger
+                      >
                         <delete-outlined /> 删除
                       </a-menu-item>
                     </a-menu>
@@ -908,7 +1046,10 @@ const closeDetails = () => {
               />
             </a-form-item>
             <a-form-item label="环境" name="environment" class="form-item">
-              <a-select v-model:value="formData.environment" placeholder="选择环境">
+              <a-select
+                v-model:value="formData.environment"
+                placeholder="选择环境"
+              >
                 <a-select-option value="local">本地</a-select-option>
                 <a-select-option value="dev">开发</a-select-option>
                 <a-select-option value="test">测试</a-select-option>
@@ -931,13 +1072,13 @@ const closeDetails = () => {
               />
             </a-form-item>
             <a-form-item label="用户名" name="username" class="form-item">
-              <a-input
-                v-model:value="formData.username"
-                placeholder="root"
-              />
+              <a-input v-model:value="formData.username" placeholder="root" />
             </a-form-item>
             <a-form-item label="操作系统类型" name="os_type" class="form-item">
-              <a-select v-model:value="formData.os_type" placeholder="选择操作系统">
+              <a-select
+                v-model:value="formData.os_type"
+                placeholder="选择操作系统"
+              >
                 <a-select-option value="linux">
                   <desktop-outlined /> Linux
                 </a-select-option>
@@ -964,7 +1105,10 @@ const closeDetails = () => {
         <div class="form-section">
           <div class="section-title">认证配置</div>
           <a-form-item label="认证方式" name="auth_mode">
-            <a-radio-group v-model:value="formData.auth_mode" @change="handleAuthModeChange">
+            <a-radio-group
+              v-model:value="formData.auth_mode"
+              @change="handleAuthModeChange"
+            >
               <a-radio :value="AuthMode.PASSWORD">密码认证</a-radio>
               <a-radio :value="AuthMode.KEY">密钥认证</a-radio>
             </a-radio-group>
@@ -977,7 +1121,11 @@ const closeDetails = () => {
           >
             <a-input-password
               v-model:value="formData.password"
-              :placeholder="isEdit && existingAuthMode === AuthMode.PASSWORD ? '留空保留原密码' : '请输入登录密码'"
+              :placeholder="
+                isEdit && existingAuthMode === AuthMode.PASSWORD
+                  ? '留空保留原密码'
+                  : '请输入登录密码'
+              "
               autocomplete="new-password"
             />
           </a-form-item>
@@ -989,9 +1137,13 @@ const closeDetails = () => {
           >
             <a-textarea
               v-model:value="formData.key"
-              :placeholder="isEdit && existingAuthMode === AuthMode.KEY ? '留空保留原私钥' : '请粘贴SSH私钥内容'"
+              :placeholder="
+                isEdit && existingAuthMode === AuthMode.KEY
+                  ? '留空保留原私钥'
+                  : '请粘贴SSH私钥内容'
+              "
               :rows="6"
-              style="font-family: 'Courier New', monospace;"
+              style="font-family: 'Courier New', monospace"
             />
           </a-form-item>
         </div>
@@ -1008,7 +1160,10 @@ const closeDetails = () => {
 
           <a-form-item label="资源标签">
             <div class="tags-input">
-              <div class="current-tags" v-if="formData.tags && formData.tags.length > 0">
+              <div
+                class="current-tags"
+                v-if="formData.tags && formData.tags.length > 0"
+              >
                 <a-tag
                   v-for="(tag, index) in formData.tags"
                   :key="`tag-${index}-${tag}`"
@@ -1024,7 +1179,7 @@ const closeDetails = () => {
                   ref="tagInputRef"
                   v-model:value="newTag"
                   placeholder="输入标签（如 team=ops），按回车添加"
-                  style="width: 200px; margin-right: 8px;"
+                  style="width: 200px; margin-right: 8px"
                   @pressEnter="addTag"
                 />
                 <a-button type="dashed" @click="addTag" class="add-tag-btn">
@@ -1041,7 +1196,7 @@ const closeDetails = () => {
             type="primary"
             @click="handleSubmit"
             :loading="submitLoading"
-            style="margin-left: 8px;"
+            style="margin-left: 8px"
           >
             {{ isEdit ? '更新' : '添加' }}
           </a-button>
@@ -1084,9 +1239,18 @@ const closeDetails = () => {
     >
       <a-form layout="vertical">
         <a-form-item label="当前绑定的节点">
-          <div v-if="currentResource?.tree_nodes && currentResource.tree_nodes.length > 0">
+          <div
+            v-if="
+              currentResource?.tree_nodes &&
+              currentResource.tree_nodes.length > 0
+            "
+          >
             <a-checkbox-group v-model:value="selectedUnbindNodeIds">
-              <div v-for="node in currentResource.tree_nodes" :key="node.id" style="margin-bottom: 8px;">
+              <div
+                v-for="node in currentResource.tree_nodes"
+                :key="node.id"
+                style="margin-bottom: 8px"
+              >
                 <a-checkbox :value="node.id">{{ node.name }}</a-checkbox>
               </div>
             </a-checkbox-group>
@@ -1106,7 +1270,10 @@ const closeDetails = () => {
       class="detail-drawer"
     >
       <a-skeleton :loading="detailLoading" active>
-        <a-empty v-if="!detailLoading && !currentDetail" description="详情加载失败，请关闭后重试" />
+        <a-empty
+          v-if="!detailLoading && !currentDetail"
+          description="详情加载失败，请关闭后重试"
+        />
         <template v-if="currentDetail">
           <div class="detail-content">
             <div class="detail-header">
@@ -1116,8 +1283,13 @@ const closeDetails = () => {
                   :status="getStatusBadge(currentDetail.status)"
                   :text="getStatusText(currentDetail.status)"
                 />
-                <a-tag :color="currentDetail.os_type === 'linux' ? 'blue' : 'green'" class="tech-tag">
-                  <windows-outlined v-if="currentDetail.os_type === 'windows'" />
+                <a-tag
+                  :color="currentDetail.os_type === 'linux' ? 'blue' : 'green'"
+                  class="tech-tag"
+                >
+                  <windows-outlined
+                    v-if="currentDetail.os_type === 'windows'"
+                  />
                   <desktop-outlined v-else />
                   {{ currentDetail.os_type === 'linux' ? 'Linux' : 'Windows' }}
                 </a-tag>
@@ -1147,7 +1319,14 @@ const closeDetails = () => {
                 {{ currentDetail.image_name || '-' }}
               </a-descriptions-item>
               <a-descriptions-item label="认证方式">
-                <a-tag :color="currentDetail.auth_mode === AuthMode.PASSWORD ? 'orange' : 'purple'" class="tech-tag">
+                <a-tag
+                  :color="
+                    currentDetail.auth_mode === AuthMode.PASSWORD
+                      ? 'orange'
+                      : 'purple'
+                  "
+                  class="tech-tag"
+                >
                   {{ getAuthModeText(currentDetail.auth_mode) }}
                 </a-tag>
               </a-descriptions-item>
@@ -1174,7 +1353,9 @@ const closeDetails = () => {
             <div class="detail-section">
               <div class="section-title">资源标签</div>
               <div class="tag-list">
-                <template v-if="currentDetail.tags && currentDetail.tags.length > 0">
+                <template
+                  v-if="currentDetail.tags && currentDetail.tags.length > 0"
+                >
                   <a-tag
                     v-for="(tag, index) in currentDetail.tags"
                     :key="index"
@@ -1183,14 +1364,23 @@ const closeDetails = () => {
                     {{ tag.value ? `${tag.key}=${tag.value}` : tag.key }}
                   </a-tag>
                 </template>
-                <a-empty v-else :image="Empty.PRESENTED_IMAGE_SIMPLE" description="暂无标签" />
+                <a-empty
+                  v-else
+                  :image="Empty.PRESENTED_IMAGE_SIMPLE"
+                  description="暂无标签"
+                />
               </div>
             </div>
 
             <div class="detail-section">
               <div class="section-title">绑定的服务树节点</div>
               <div class="tree-node-list">
-                <template v-if="currentDetail.tree_nodes && currentDetail.tree_nodes.length > 0">
+                <template
+                  v-if="
+                    currentDetail.tree_nodes &&
+                    currentDetail.tree_nodes.length > 0
+                  "
+                >
                   <a-tag
                     v-for="node in currentDetail.tree_nodes"
                     :key="node.id"
@@ -1199,7 +1389,11 @@ const closeDetails = () => {
                     {{ node.name }}
                   </a-tag>
                 </template>
-                <a-empty v-else :image="Empty.PRESENTED_IMAGE_SIMPLE" description="暂无绑定节点" />
+                <a-empty
+                  v-else
+                  :image="Empty.PRESENTED_IMAGE_SIMPLE"
+                  description="暂无绑定节点"
+                />
               </div>
             </div>
 
@@ -1209,7 +1403,11 @@ const closeDetails = () => {
                   <edit-outlined /> 编辑
                 </a-button>
               </a-button-group>
-              <a-button v-if="can('tree.local.delete')" danger @click="handleDelete(currentDetail)">
+              <a-button
+                v-if="can('tree.local.delete')"
+                danger
+                @click="handleDelete(currentDetail)"
+              >
                 <delete-outlined /> 删除
               </a-button>
             </div>
@@ -1219,8 +1417,6 @@ const closeDetails = () => {
     </a-drawer>
   </OpsPage>
 </template>
-
-
 
 <style scoped>
 .local-resource-management {
@@ -1524,7 +1720,8 @@ const closeDetails = () => {
   margin-top: 24px;
 }
 
-.tag-list, .tree-node-list {
+.tag-list,
+.tree-node-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1563,7 +1760,8 @@ const closeDetails = () => {
     display: inline;
   }
 
-  .btn-create, .btn-action {
+  .btn-create,
+  .btn-action {
     padding: 4px 8px;
     min-width: auto;
   }
@@ -1691,11 +1889,17 @@ const closeDetails = () => {
 }
 
 /* 动画效果 */
-.stats-card, .tech-tag, .action-buttons .ant-btn {
-  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+.stats-card,
+.tech-tag,
+.action-buttons .ant-btn {
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
 }
 
-.btn-create:hover, .btn-action:hover {
+.btn-create:hover,
+.btn-action:hover {
   transform: none;
   box-shadow: none;
 }

@@ -10,7 +10,6 @@ import {
   type YamlTemplateUpdateReq,
   type YamlTemplateCheckReq,
   type YamlTemplateDeleteReq,
-
   getYamlTemplateList,
   createYamlTemplate,
   updateYamlTemplate,
@@ -125,25 +124,33 @@ export function useTemplatePage() {
   const createFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入模板名称', trigger: 'blur' },
-      { pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/, message: '模板名称只能包含中英文、数字、下划线和连字符', trigger: 'blur' },
-      { max: 50, message: '模板名称长度不能超过50个字符', trigger: 'blur' }
+      {
+        pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/,
+        message: '模板名称只能包含中英文、数字、下划线和连字符',
+        trigger: 'blur',
+      },
+      { max: 50, message: '模板名称长度不能超过50个字符', trigger: 'blur' },
     ],
     content: [
       { required: true, message: '请输入YAML内容', trigger: 'blur' },
-      { min: 10, message: 'YAML内容不能少于10个字符', trigger: 'blur' }
-    ]
+      { min: 10, message: 'YAML内容不能少于10个字符', trigger: 'blur' },
+    ],
   };
 
   const editFormRules: Record<string, Rule[]> = {
     name: [
       { required: true, message: '请输入模板名称', trigger: 'blur' },
-      { pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/, message: '模板名称只能包含中英文、数字、下划线和连字符', trigger: 'blur' },
-      { max: 50, message: '模板名称长度不能超过50个字符', trigger: 'blur' }
+      {
+        pattern: /^[a-zA-Z0-9-_\u4e00-\u9fa5]+$/,
+        message: '模板名称只能包含中英文、数字、下划线和连字符',
+        trigger: 'blur',
+      },
+      { max: 50, message: '模板名称长度不能超过50个字符', trigger: 'blur' },
     ],
     content: [
       { required: true, message: '请输入YAML内容', trigger: 'blur' },
-      { min: 10, message: 'YAML内容不能少于10个字符', trigger: 'blur' }
-    ]
+      { min: 10, message: 'YAML内容不能少于10个字符', trigger: 'blur' },
+    ],
   };
 
   // computed
@@ -184,7 +191,7 @@ export function useTemplatePage() {
   // 获取集群名称
   const getClusterName = (clusterId?: number) => {
     if (!clusterId) return '-';
-    const cluster = clusters.value.find(c => c.id === clusterId);
+    const cluster = clusters.value.find((c) => c.id === clusterId);
     return cluster?.name || `集群 ${clusterId}`;
   };
 
@@ -243,7 +250,8 @@ export function useTemplatePage() {
         filterClusterId.value = undefined;
         clearTemplates();
       }
-      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err))
+        clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -253,7 +261,10 @@ export function useTemplatePage() {
   // crud operations
   const fetchTemplates = async () => {
     const clusterId = filterClusterId.value;
-    if (!clusterId) { clearTemplates(); return; }
+    if (!clusterId) {
+      clearTemplates();
+      return;
+    }
     const requestId = ++resourceRequestId;
     try {
       loading.value = true;
@@ -267,13 +278,22 @@ export function useTemplatePage() {
         search: searchText.value || undefined,
       };
       const res = await getYamlTemplateList(params);
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       templates.value = res?.items || [];
       total.value = res?.total || 0;
     } catch (error) {
-      if (requestId !== resourceRequestId || filterClusterId.value !== clusterId) return;
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
       clearTemplates();
-      if (shouldRecordPageError(error)) loadError.value = '获取 YAML 模板列表失败，请重试';
+      if (shouldRecordPageError(error))
+        loadError.value = '获取 YAML 模板列表失败，请重试';
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
@@ -290,11 +310,12 @@ export function useTemplatePage() {
       isDetailModalVisible.value = true;
       const res = await getYamlTemplateDetail({
         id: record.id!,
-        cluster_id: clusterId
+        cluster_id: clusterId,
       });
       currentTemplateDetail.value = res || record;
     } catch (err: any) {
-      if (shouldNotifyPageError(err)) message.error('获取模板详情失败：' + (err.message || '未知错误'));
+      if (shouldNotifyPageError(err))
+        message.error('获取模板详情失败：' + (err.message || '未知错误'));
       currentTemplateDetail.value = record;
     } finally {
       detailLoading.value = false;
@@ -354,7 +375,8 @@ export function useTemplatePage() {
       await fetchTemplates();
     } catch (err: any) {
       if (err.errorFields) return;
-      if (shouldNotifyPageError(err)) message.error('创建模板失败：' + (err.message || '未知错误'));
+      if (shouldNotifyPageError(err))
+        message.error('创建模板失败：' + (err.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -398,7 +420,8 @@ export function useTemplatePage() {
       await fetchTemplates();
     } catch (err: any) {
       if (err.errorFields) return;
-      if (shouldNotifyPageError(err)) message.error('更新模板失败：' + (err.message || '未知错误'));
+      if (shouldNotifyPageError(err))
+        message.error('更新模板失败：' + (err.message || '未知错误'));
     } finally {
       submitLoading.value = false;
     }
@@ -417,7 +440,10 @@ export function useTemplatePage() {
     try {
       checkLoading.value = true;
       const params: YamlTemplateCheckReq = {
-        name: createFormModel.value.name || editFormModel.value.name || 'temp-check',
+        name:
+          createFormModel.value.name ||
+          editFormModel.value.name ||
+          'temp-check',
         content: content,
         cluster_id: clusterId,
       };
@@ -426,7 +452,8 @@ export function useTemplatePage() {
       message.success('YAML 格式检查通过');
       return true;
     } catch (err: any) {
-      if (shouldNotifyPageError(err)) message.error('YAML 格式检查失败：' + (err.message || '未知错误'));
+      if (shouldNotifyPageError(err))
+        message.error('YAML 格式检查失败：' + (err.message || '未知错误'));
       return false;
     } finally {
       checkLoading.value = false;
@@ -449,13 +476,14 @@ export function useTemplatePage() {
         try {
           const params: YamlTemplateDeleteReq = {
             id: record.id!,
-            cluster_id: clusterId
+            cluster_id: clusterId,
           };
           await deleteYamlTemplate(params);
           message.success('模板删除成功');
           await fetchTemplates();
         } catch (err: any) {
-          if (shouldNotifyPageError(err)) message.error('删除模板失败：' + (err.message || '未知错误'));
+          if (shouldNotifyPageError(err))
+            message.error('删除模板失败：' + (err.message || '未知错误'));
         }
       },
     });
@@ -481,7 +509,7 @@ export function useTemplatePage() {
             if (operation === '删除') {
               const params: YamlTemplateDeleteReq = {
                 id: template.id!,
-                cluster_id: clusterId
+                cluster_id: clusterId,
               };
               await deleteYamlTemplate(params);
             }
@@ -491,7 +519,10 @@ export function useTemplatePage() {
           selectedRows.value = [];
           await fetchTemplates();
         } catch (err: any) {
-          if (shouldNotifyPageError(err)) message.error(`批量${operation}失败：` + (err.message || '未知错误'));
+          if (shouldNotifyPageError(err))
+            message.error(
+              `批量${operation}失败：` + (err.message || '未知错误'),
+            );
         }
       },
     });

@@ -6,6 +6,7 @@ import {
   formatPredictionTime,
 } from './prediction-series';
 import type { PredictionResponse } from '#/api/core/aiops/predict';
+
 const response = (points: any[]): PredictionResponse =>
   ({ current_value: 0, predicted_data: points }) as PredictionResponse;
 const point = (timestamp: string, predicted_value = 0) => ({

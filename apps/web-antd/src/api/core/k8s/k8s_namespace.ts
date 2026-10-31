@@ -59,7 +59,9 @@ export async function getNamespacesListApi(
   clusterId: number,
   params?: K8sNamespaceListReq,
 ) {
-  return requestClient.get(`/k8s/clusters/${clusterId}/namespace/list`, { params });
+  return requestClient.get(`/k8s/clusters/${clusterId}/namespace/list`, {
+    params,
+  });
 }
 
 /**
@@ -69,7 +71,10 @@ export async function createNamespaceApi(
   clusterId: number,
   data: CreateNamespaceReq,
 ) {
-  return requestClient.post(`/k8s/clusters/${clusterId}/namespace/create`, data);
+  return requestClient.post(
+    `/k8s/clusters/${clusterId}/namespace/create`,
+    data,
+  );
 }
 
 /**
@@ -80,16 +85,21 @@ export async function deleteNamespaceApi(
   name: string,
   data?: DeleteNamespaceReq,
 ) {
-  return requestClient.delete(`/k8s/clusters/${clusterId}/namespace/${name}/delete`, {
-    data,
-  });
+  return requestClient.delete(
+    `/k8s/clusters/${clusterId}/namespace/${name}/delete`,
+    {
+      data,
+    },
+  );
 }
 
 /**
  * 获取命名空间详情
  */
 export async function getNamespaceDetailsApi(clusterId: number, name: string) {
-  return requestClient.get(`/k8s/clusters/${clusterId}/namespace/${name}/detail`);
+  return requestClient.get(
+    `/k8s/clusters/${clusterId}/namespace/${name}/detail`,
+  );
 }
 
 /**
@@ -100,5 +110,8 @@ export async function updateNamespaceApi(
   name: string,
   data: UpdateNamespaceReq,
 ) {
-  return requestClient.put(`/k8s/clusters/${clusterId}/namespace/${name}/update`, data);
+  return requestClient.put(
+    `/k8s/clusters/${clusterId}/namespace/${name}/update`,
+    data,
+  );
 }

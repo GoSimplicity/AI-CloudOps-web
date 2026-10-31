@@ -639,8 +639,8 @@ onMounted(() => {
     </template>
 
     <!-- 统计卡片 -->
-    <template #summary
-      ><div class="stats-grid">
+    <template #summary>
+      <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-number">{{ roleList.length }}</div>
           <div class="stat-label">本页角色数</div>
@@ -657,12 +657,12 @@ onMounted(() => {
           <div class="stat-number">{{ totalUsers }}</div>
           <div class="stat-label">本页关联用户</div>
         </div>
-      </div></template
-    >
+      </div>
+    </template>
 
     <!-- 搜索筛选区域 -->
-    <template #filters
-      ><div class="ops-filter-row">
+    <template #filters>
+      <div class="ops-filter-row">
         <div class="search-left">
           <a-input
             v-model:value="searchParams.search"
@@ -702,8 +702,8 @@ onMounted(() => {
           <a-button type="primary" @click="handleSearch">搜索</a-button>
           <a-button @click="handleReset">重置</a-button>
         </div>
-      </div></template
-    >
+      </div>
+    </template>
 
     <!-- 角色表格 -->
     <div class="table-container">
@@ -776,18 +776,19 @@ onMounted(() => {
 
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
-              <a-button type="text" size="small" @click="handleView(record)"
-                >查看</a-button
-              >
-              <a-button type="text" size="small" @click="handleEdit(record)"
-                >编辑</a-button
-              >
+              <a-button type="text" size="small" @click="handleView(record)">
+                查看
+              </a-button>
+              <a-button type="text" size="small" @click="handleEdit(record)">
+                编辑
+              </a-button>
               <a-button
                 type="text"
                 size="small"
                 @click="handlePermission(record)"
-                >权限</a-button
               >
+                权限
+              </a-button>
               <a-popconfirm
                 v-if="can('system.role.delete')"
                 title="确定要删除吗？"
@@ -963,9 +964,9 @@ onMounted(() => {
             <div v-if="selectedApis.length > 0" class="selected-apis">
               <div class="selected-header">
                 <span>已选择 {{ selectedApis.length }} 个API</span>
-                <a-button type="text" size="small" @click="clearSelectedApis"
-                  >清空</a-button
-                >
+                <a-button type="text" size="small" @click="clearSelectedApis">
+                  清空
+                </a-button>
               </div>
               <div class="selected-list">
                 <div
@@ -1114,8 +1115,9 @@ onMounted(() => {
                   danger
                   size="small"
                   @click="handleRevokeApi(api)"
-                  >移除</a-button
                 >
+                  移除
+                </a-button>
               </div>
             </div>
           </a-tab-pane>
@@ -1141,8 +1143,9 @@ onMounted(() => {
                   type="primary"
                   size="small"
                   @click="handleAssignApi(api)"
-                  >分配</a-button
                 >
+                  分配
+                </a-button>
               </div>
             </div>
           </a-tab-pane>

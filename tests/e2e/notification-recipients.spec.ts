@@ -128,7 +128,10 @@ test('notification department and explicit addresses persist disabled and preser
         await dialog
           .getByRole('checkbox', { name: '部门用户', exact: true })
           .check();
-        const ids = dialog.getByRole('combobox', { name: '接收人部门ID', exact: true });
+        const ids = dialog.getByRole('combobox', {
+          name: '接收人部门ID',
+          exact: true,
+        });
         await ids.fill(String(departmentId));
         await ids.press('Enter');
       } else {
@@ -157,7 +160,9 @@ test('notification department and explicit addresses persist disabled and preser
           .fill('飞书接收人');
       }
       if (presenceReady) {
-        const retries = dialog.getByRole('spinbutton', { name: /最大重试次数/ });
+        const retries = dialog.getByRole('spinbutton', {
+          name: /最大重试次数/,
+        });
         await retries.fill('0');
         await retries.press('Tab');
       }
@@ -208,27 +213,48 @@ test('notification department and explicit addresses persist disabled and preser
     await dialog
       .getByPlaceholder('请输入主题模板（可选）', { exact: true })
       .fill(presenceReady ? '' : '更新主题');
-    await page.screenshot({ path: '/tmp/cloudops-notification-recipients-desktop.png', fullPage: true, animations: 'disabled' });
-    await page.setViewportSize({ width: 390, height: 844 });
-    const addressLayout = await dialog.locator('.recipient-address-row').first().evaluate((element) => {
-      const bounds = element.getBoundingClientRect();
-      return {
-        grid: getComputedStyle(element).gridTemplateColumns,
-        width: bounds.width,
-        controls: Array.from(element.children).filter((child) => child.tagName !== 'LEGEND').map((child) => {
-          const rect = child.getBoundingClientRect();
-          return { left: rect.left, top: rect.top, right: rect.right, width: rect.width };
-        }),
-      };
+    await page.screenshot({
+      path: '/tmp/cloudops-notification-recipients-desktop.png',
+      fullPage: true,
+      animations: 'disabled',
     });
+    await page.setViewportSize({ width: 390, height: 844 });
+    const addressLayout = await dialog
+      .locator('.recipient-address-row')
+      .first()
+      .evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          grid: getComputedStyle(element).gridTemplateColumns,
+          width: bounds.width,
+          controls: Array.from(element.children)
+            .filter((child) => child.tagName !== 'LEGEND')
+            .map((child) => {
+              const rect = child.getBoundingClientRect();
+              return {
+                left: rect.left,
+                top: rect.top,
+                right: rect.right,
+                width: rect.width,
+              };
+            }),
+        };
+      });
     expect(addressLayout.controls).toHaveLength(4);
     for (const control of addressLayout.controls) {
       expect(control.right).toBeLessThanOrEqual(390);
       expect(control.left).toBeGreaterThanOrEqual(0);
     }
-    expect(addressLayout.controls[1]!.top).toBeGreaterThan(addressLayout.controls[0]!.top);
-    expect(addressLayout.controls[2]!.top).toBeGreaterThan(addressLayout.controls[1]!.top);
-    await page.screenshot({ path: '/tmp/cloudops-notification-recipients-mobile.png', fullPage: true });
+    expect(addressLayout.controls[1]!.top).toBeGreaterThan(
+      addressLayout.controls[0]!.top,
+    );
+    expect(addressLayout.controls[2]!.top).toBeGreaterThan(
+      addressLayout.controls[1]!.top,
+    );
+    await page.screenshot({
+      path: '/tmp/cloudops-notification-recipients-mobile.png',
+      fullPage: true,
+    });
     await save(page, 'PUT', `/api/workorder/notification/update/${custom.id}`);
     const updated = await api(`workorder/notification/detail/${custom.id}`);
     expect(updated.status).toBe(2);
@@ -243,10 +269,13 @@ test('notification department and explicit addresses persist disabled and preser
       const partial = await api(`workorder/notification/detail/${custom.id}`);
       expect(partial.is_default).toBe(updated.is_default);
       expect(partial.max_retries).toBe(0);
-      const unsupported = await page.request.put(`/api/workorder/notification/update/${custom.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        data: { status: 2, trigger_type: 'scheduled' },
-      });
+      const unsupported = await page.request.put(
+        `/api/workorder/notification/update/${custom.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          data: { status: 2, trigger_type: 'scheduled' },
+        },
+      );
       expect((await unsupported.json()).code).not.toBe(0);
       const unchanged = await api(`workorder/notification/detail/${custom.id}`);
       expect(unchanged.trigger_type).toBe('immediate');
@@ -255,8 +284,14 @@ test('notification department and explicit addresses persist disabled and preser
     await page.getByLabel('深色', { exact: true }).click();
     await expect(page.locator('html')).toHaveClass(/dark/);
     await row.getByRole('button', { name: /^编\s*辑$/ }).click();
-    await dialog.getByLabel('自定义接收地址1', { exact: true }).scrollIntoViewIfNeeded();
-    await page.screenshot({ path: '/tmp/cloudops-notification-recipients-mobile-dark.png', fullPage: true, animations: 'disabled' });
+    await dialog
+      .getByLabel('自定义接收地址1', { exact: true })
+      .scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: '/tmp/cloudops-notification-recipients-mobile-dark.png',
+      fullPage: true,
+      animations: 'disabled',
+    });
     await dialog.locator('.ant-modal-footer .ant-btn-default').click();
     expect(sends).toEqual([]);
     expect(runtimeErrors).toEqual([]);

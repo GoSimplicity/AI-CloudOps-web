@@ -1,15 +1,30 @@
 <template>
-  <OpsPage title="会话管理" description="查询本人会话与服务端保存的对话；本地列表仅保存会话索引" class="session-container">
+  <OpsPage
+    title="会话管理"
+    description="查询本人会话与服务端保存的对话；本地列表仅保存会话索引"
+    class="session-container"
+  >
     <!-- 页面头部 -->
     <template #actions>
-<a-button type="primary" @click="clearAllHistory" :disabled="sessionHistory.length === 0">
-            <template #icon><DeleteOutlined /></template>
-            清空历史
-          </a-button>
+      <a-button
+        type="primary"
+        @click="clearAllHistory"
+        :disabled="sessionHistory.length === 0"
+      >
+        <template #icon><DeleteOutlined /></template>
+        清空历史
+      </a-button>
     </template>
 
     <div class="session-content">
-      <a-alert v-if="sessionError" :message="sessionError" type="error" show-icon role="alert" class="session-error" />
+      <a-alert
+        v-if="sessionError"
+        :message="sessionError"
+        type="error"
+        show-icon
+        role="alert"
+        class="session-error"
+      />
       <!-- 会话搜索 -->
       <a-card title="会话搜索" class="search-card">
         <div class="search-area">
@@ -20,7 +35,11 @@
               style="width: calc(100% - 100px)"
               @pressEnter="searchSession"
             />
-            <a-button type="primary" @click="searchSession" :loading="searching">
+            <a-button
+              type="primary"
+              @click="searchSession"
+              :loading="searching"
+            >
               <template #icon><SearchOutlined /></template>
               搜索
             </a-button>
@@ -29,10 +48,16 @@
       </a-card>
 
       <!-- 会话详情 -->
-      <a-card v-if="currentSession.session_id" title="会话详情" class="session-detail-card">
+      <a-card
+        v-if="currentSession.session_id"
+        title="会话详情"
+        class="session-detail-card"
+      >
         <a-descriptions :column="{ xs: 1, sm: 2 }" bordered>
           <a-descriptions-item label="会话ID">
-            <a-typography-text copyable>{{ currentSession.session_id }}</a-typography-text>
+            <a-typography-text copyable>
+              {{ currentSession.session_id }}
+            </a-typography-text>
           </a-descriptions-item>
           <a-descriptions-item label="会话状态">
             <a-tag :color="getStatusColor(currentSession.status)">
@@ -40,13 +65,24 @@
             </a-tag>
           </a-descriptions-item>
           <a-descriptions-item label="创建时间">
-            {{ currentSession.created_time ? formatTime(currentSession.created_time) : '未知' }}
+            {{
+              currentSession.created_time
+                ? formatTime(currentSession.created_time)
+                : '未知'
+            }}
           </a-descriptions-item>
           <a-descriptions-item label="最后活动">
-            {{ currentSession.last_activity ? formatTime(currentSession.last_activity) : '未知' }}
+            {{
+              currentSession.last_activity
+                ? formatTime(currentSession.last_activity)
+                : '未知'
+            }}
           </a-descriptions-item>
           <a-descriptions-item label="消息数量">
-            <a-badge :count="currentSession.message_count || 0" :number-style="{ backgroundColor: '#52c41a' }" />
+            <a-badge
+              :count="currentSession.message_count || 0"
+              :number-style="{ backgroundColor: '#52c41a' }"
+            />
           </a-descriptions-item>
           <a-descriptions-item label="运行模式">
             <a-tag :color="getModeColor(currentSession.mode)">
@@ -55,15 +91,42 @@
           </a-descriptions-item>
         </a-descriptions>
 
-        <a-alert v-if="currentSession.status === 'unknown'" type="warning" show-icon message="上次请求结果未知，请核对下方问题与已有结果；不要盲目重新执行。" />
-        <a-alert v-else-if="currentSession.status === 'running'" type="info" show-icon message="会话正在处理请求，请稍后刷新状态。" />
-        <a-descriptions v-if="currentSession.active_turn_id" :column="1" bordered size="small" title="待核对请求">
-          <a-descriptions-item label="请求 ID">{{ currentSession.active_turn_id }}</a-descriptions-item>
-          <a-descriptions-item label="请求内容">{{ currentSession.active_question || '未知' }}</a-descriptions-item>
+        <a-alert
+          v-if="currentSession.status === 'unknown'"
+          type="warning"
+          show-icon
+          message="上次请求结果未知，请核对下方问题与已有结果；不要盲目重新执行。"
+        />
+        <a-alert
+          v-else-if="currentSession.status === 'running'"
+          type="info"
+          show-icon
+          message="会话正在处理请求，请稍后刷新状态。"
+        />
+        <a-descriptions
+          v-if="currentSession.active_turn_id"
+          :column="1"
+          bordered
+          size="small"
+          title="待核对请求"
+        >
+          <a-descriptions-item label="请求 ID">
+            {{ currentSession.active_turn_id }}
+          </a-descriptions-item>
+          <a-descriptions-item label="请求内容">
+            {{ currentSession.active_question || '未知' }}
+          </a-descriptions-item>
         </a-descriptions>
-        <div v-if="currentSession.conversation_history?.length" class="durable-history">
+        <div
+          v-if="currentSession.conversation_history?.length"
+          class="durable-history"
+        >
           <h3>服务端最近对话</h3>
-          <div v-for="(turn, index) in currentSession.conversation_history" :key="index" class="durable-turn">
+          <div
+            v-for="(turn, index) in currentSession.conversation_history"
+            :key="index"
+            class="durable-turn"
+          >
             <p><strong>问题：</strong>{{ turn.q }}</p>
             <p><strong>回答：</strong>{{ turn.a }}</p>
           </div>
@@ -92,13 +155,13 @@
         <div v-if="sessionHistory.length === 0" class="empty-history">
           <a-empty description="暂无会话历史记录">
             <template #image>
-              <HistoryOutlined style="font-size: 64px; color: #d9d9d9;" />
+              <HistoryOutlined style="font-size: 64px; color: #d9d9d9" />
             </template>
           </a-empty>
         </div>
         <div v-else class="history-list">
-          <div 
-            v-for="(session, index) in sessionHistory" 
+          <div
+            v-for="(session, index) in sessionHistory"
             :key="session.session_id"
             class="history-item"
             @click="loadHistorySession(session)"
@@ -106,7 +169,9 @@
             <div class="history-content">
               <div class="history-header">
                 <div class="session-info">
-                  <span class="session-id">{{ session.session_id.slice(0, 8) }}...</span>
+                  <span class="session-id"
+                    >{{ session.session_id.slice(0, 8) }}...</span
+                  >
                   <a-tag :color="getStatusColor(session.status)" size="small">
                     {{ getStatusText(session.status) }}
                   </a-tag>
@@ -115,9 +180,9 @@
                   </a-tag>
                 </div>
                 <div class="history-actions">
-                  <a-button 
-                    type="text" 
-                    size="small" 
+                  <a-button
+                    type="text"
+                    size="small"
                     @click.stop="removeFromHistory(index)"
                     danger
                   >
@@ -169,9 +234,9 @@
               <div class="action-content">
                 <div class="action-title">批量导出</div>
                 <div class="action-desc">导出所有历史会话</div>
-                <a-button 
-                  type="default" 
-                  @click="exportAllSessions" 
+                <a-button
+                  type="default"
+                  @click="exportAllSessions"
                   size="small"
                   :disabled="sessionHistory.length === 0"
                 >
@@ -248,7 +313,10 @@ import { ref, reactive, computed, watch, onBeforeUnmount } from 'vue';
 import { message } from 'ant-design-vue';
 import { useRouter } from 'vue-router';
 import { useAccessStore, useUserStore } from '@vben/stores';
-import { assistantOwner, createAssistantAccountScope } from '#/utils/assistant-account-scope';
+import {
+  assistantOwner,
+  createAssistantAccountScope,
+} from '#/utils/assistant-account-scope';
 import {
   SearchOutlined,
   DeleteOutlined,
@@ -264,11 +332,11 @@ import {
   BarChartOutlined,
   CommentOutlined,
   DatabaseOutlined,
-  ApiOutlined
+  ApiOutlined,
 } from '@ant-design/icons-vue';
-import { 
+import {
   getSessionInfo,
-  type SessionInfoResponse
+  type SessionInfoResponse,
 } from '#/api/core/aiops/assistant';
 
 // 响应式数据
@@ -288,40 +356,48 @@ const currentSession = reactive<Partial<SessionInfoResponse>>({
   last_activity: '',
   message_count: 0,
   mode: 1,
-  status: ''
+  status: '',
 });
 
 // 会话历史记录 (本地存储)
 const sessionHistory = ref<SessionInfoResponse[]>([]);
 const resetCurrentSession = () => {
-  for (const key of Object.keys(currentSession)) delete currentSession[key as keyof SessionInfoResponse];
+  for (const key of Object.keys(currentSession))
+    delete currentSession[key as keyof SessionInfoResponse];
 };
 
 // 会话统计
 const sessionStats = computed(() => {
   const total = sessionHistory.value.length;
-  const totalMessages = sessionHistory.value.reduce((sum, session) => sum + (session.message_count || 0), 0);
-  const ragSessions = sessionHistory.value.filter(session => session.mode === 1).length;
-  const mcpSessions = sessionHistory.value.filter(session => session.mode === 2).length;
+  const totalMessages = sessionHistory.value.reduce(
+    (sum, session) => sum + (session.message_count || 0),
+    0,
+  );
+  const ragSessions = sessionHistory.value.filter(
+    (session) => session.mode === 1,
+  ).length;
+  const mcpSessions = sessionHistory.value.filter(
+    (session) => session.mode === 2,
+  ).length;
 
   return {
     totalSessions: total,
     totalMessages,
     ragSessions,
-    mcpSessions
+    mcpSessions,
   };
 });
 
 // 获取状态颜色
 const getStatusColor = (status?: string) => {
   const colorMap: Record<string, string> = {
-    'idle': 'green',
-    'running': 'blue',
-    'unknown': 'orange',
-    'active': 'green',
-    'inactive': 'orange',
-    'ended': 'red',
-    'error': 'red'
+    idle: 'green',
+    running: 'blue',
+    unknown: 'orange',
+    active: 'green',
+    inactive: 'orange',
+    ended: 'red',
+    error: 'red',
   };
   return colorMap[status || ''] || 'default';
 };
@@ -329,13 +405,13 @@ const getStatusColor = (status?: string) => {
 // 获取状态文本
 const getStatusText = (status?: string) => {
   const textMap: Record<string, string> = {
-    'idle': '可继续',
-    'running': '处理中',
-    'unknown': '结果未知',
-    'active': '活跃',
-    'inactive': '不活跃',
-    'ended': '已结束',
-    'error': '错误'
+    idle: '可继续',
+    running: '处理中',
+    unknown: '结果未知',
+    active: '活跃',
+    inactive: '不活跃',
+    ended: '已结束',
+    error: '错误',
   };
   return textMap[status || ''] || '未知';
 };
@@ -376,17 +452,16 @@ const searchSession = async () => {
 
     // 更新当前会话信息
     Object.assign(currentSession, data);
-
-
   } catch (error: any) {
     if (!accountScope.current(ticket)) return;
     resetCurrentSession();
     if ([403, 404].includes(error?.response?.status)) {
-      sessionHistory.value = sessionHistory.value.filter(session => session.session_id !== requestedSession);
+      sessionHistory.value = sessionHistory.value.filter(
+        (session) => session.session_id !== requestedSession,
+      );
       saveHistoryToStorage();
     }
     sessionError.value = error?.message || '会话读取失败，可核对会话ID后重试';
-
   } finally {
     if (accountScope.current(ticket)) searching.value = false;
   }
@@ -411,7 +486,9 @@ const addToHistory = () => {
   }
 
   // 检查是否已存在
-  const exists = sessionHistory.value.find(session => session.session_id === currentSession.session_id);
+  const exists = sessionHistory.value.find(
+    (session) => session.session_id === currentSession.session_id,
+  );
   if (exists) {
     message.warning('该会话已在历史记录中');
     return;
@@ -450,7 +527,9 @@ const exportSession = () => {
     return;
   }
 
-  const blob = new Blob([JSON.stringify(currentSession, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(currentSession, null, 2)], {
+    type: 'application/json',
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -473,10 +552,12 @@ const exportAllSessions = () => {
   const exportData = {
     timestamp: new Date().toISOString(),
     sessions: sessionHistory.value,
-    statistics: sessionStats.value
+    statistics: sessionStats.value,
   };
 
-  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+    type: 'application/json',
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -505,46 +586,48 @@ const saveHistoryToStorage = () => {
 };
 
 // 浏览器只缓存索引；对话与待核对问题只从已授权的服务端读取。
-const sessionMetadata = (session: Partial<SessionInfoResponse>): SessionInfoResponse => ({
-  session_id: session.session_id || '', created_time: session.created_time || '',
-  last_activity: session.last_activity || '', message_count: session.message_count || 0,
-  mode: session.mode || 1, status: session.status || '', revision: session.revision,
+const sessionMetadata = (
+  session: Partial<SessionInfoResponse>,
+): SessionInfoResponse => ({
+  session_id: session.session_id || '',
+  created_time: session.created_time || '',
+  last_activity: session.last_activity || '',
+  message_count: session.message_count || 0,
+  mode: session.mode || 1,
+  status: session.status || '',
+  revision: session.revision,
 });
 
 // 从本地存储加载历史记录
 const loadHistoryFromStorage = () => {
   try {
     const stored = accountScope.read<SessionInfoResponse[]>('history');
-    sessionHistory.value = Array.isArray(stored) ? stored.map(sessionMetadata) : [];
+    sessionHistory.value = Array.isArray(stored)
+      ? stored.map(sessionMetadata)
+      : [];
     if (Array.isArray(stored)) saveHistoryToStorage();
-  } catch (error) {
-
-  }
+  } catch (error) {}
 };
 
-watch(() => assistantOwner(userStore.userInfo, accessStore.accessToken), (owner) => {
-  accountScope.setOwner(owner);
-  searching.value = false;
-  searchSessionId.value = '';
-  sessionError.value = '';
-  showStats.value = false;
-  resetCurrentSession();
-  sessionHistory.value = [];
-  if (owner) loadHistoryFromStorage();
-}, { immediate: true, flush: 'sync' });
+watch(
+  () => assistantOwner(userStore.userInfo, accessStore.accessToken),
+  (owner) => {
+    accountScope.setOwner(owner);
+    searching.value = false;
+    searchSessionId.value = '';
+    sessionError.value = '';
+    showStats.value = false;
+    resetCurrentSession();
+    sessionHistory.value = [];
+    if (owner) loadHistoryFromStorage();
+  },
+  { immediate: true, flush: 'sync' },
+);
 onBeforeUnmount(() => accountScope.invalidate());
 </script>
 
 <style scoped>
-
 /* 页面头部 */
-
-
-
-
-
-
-
 
 .session-content {
   .search-card {
@@ -718,13 +801,6 @@ onBeforeUnmount(() => accountScope.invalidate());
 }
 
 @media (max-width: 768px) {
-
-
-
-
-
-
-
   .search-area {
     max-width: none;
   }
@@ -755,12 +831,27 @@ onBeforeUnmount(() => accountScope.invalidate());
     }
   }
 }
-.accent-icon { color: var(--ops-accent); }
-.muted-icon { color: var(--ops-muted); }
-.session-error { margin-bottom: var(--ops-space-lg); }
+.accent-icon {
+  color: var(--ops-accent);
+}
+.muted-icon {
+  color: var(--ops-muted);
+}
+.session-error {
+  margin-bottom: var(--ops-space-lg);
+}
 @media (max-width: 575px) {
-  .page-content .chat-history, .page-content .chat-input, .sidebar-card .card-content { padding: var(--ops-space-md); }
-  .message-content { min-width: 0; overflow-wrap: anywhere; }
-  .session-actions :deep(.ant-space) { flex-wrap: wrap; }
+  .page-content .chat-history,
+  .page-content .chat-input,
+  .sidebar-card .card-content {
+    padding: var(--ops-space-md);
+  }
+  .message-content {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .session-actions :deep(.ant-space) {
+    flex-wrap: wrap;
+  }
 }
 </style>

@@ -56,7 +56,10 @@ describe('checkExplicitGrant（纯函数）', () => {
   });
   it.each([['super'], ['admin']])('角色 %s 没有精确码不放行', (role) => {
     expect(
-      checkExplicitGrant({ codes: ['*'], roles: [role], username: 'ops' }, REVEAL),
+      checkExplicitGrant(
+        { codes: ['*'], roles: [role], username: 'ops' },
+        REVEAL,
+      ),
     ).toBe(false);
   });
   it('用户名 admin 放行（auth.go:170）', () => {
@@ -79,7 +82,10 @@ describe('usePermission().can / hasPerm 走真实 store', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });
-  function subject(info: { roles?: string[]; username: string }, codes: string[]) {
+  function subject(
+    info: { roles?: string[]; username: string },
+    codes: string[],
+  ) {
     useUserStore().setUserInfo(info as any);
     useAccessStore().setAccessCodes(codes);
   }

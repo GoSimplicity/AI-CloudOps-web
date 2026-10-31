@@ -247,13 +247,15 @@ onBeforeUnmount(() => { alive = false; session++; listGeneration++; detailGenera
         <a-table-column key="event" title="事件"><template #default="{ record }">{{ eventsNames[record.event_type] ?? '其他事件' }}</template></a-table-column>
         <a-table-column key="status" title="状态"><template #default="{ record }">{{ states[record.status] ?? '未知状态' }}</template></a-table-column>
         <a-table-column key="scheduled" title="下次处理"><template #default="{ record }">{{ dateText(record.next_attempt_at) }}</template></a-table-column>
-        <a-table-column key="operation" title="操作" :width="235"><template #default="{ record }">
+        <a-table-column key="operation" title="操作" :width="235">
+<template #default="{ record }">
           <a-space>
             <a-button v-if="allowed(codes.deliveries)" type="link" size="small" :disabled="!safeId(record.id)" @click="openDetails(record)">详情</a-button>
             <a-button v-if="allowed(codes.cancel) && record.status === 'pending' && safeId(record.parent_event_id)" type="link" size="small" @click="openAction('cancel', record)">取消排期</a-button>
             <a-button v-if="allowed(codes.retry) && record.status === 'failed'" type="link" size="small" @click="openAction('retry', record)">重试事件</a-button>
           </a-space>
-        </template></a-table-column>
+        </template>
+</a-table-column>
       </a-table>
       <a-pagination class="events-pagination" :current="page" :page-size="pageSize" :total="total" :show-size-changer="false" @change="changePage" />
     </template>
@@ -267,12 +269,14 @@ onBeforeUnmount(() => { alive = false; session++; listGeneration++; detailGenera
           <a-table-column key="recipient" title="接收人"><template #default="{ record }"><div>{{ masked(record.channel, record.recipient_masked) }}</div><small class="hash">{{ hashText(record.recipient_hash) }}</small></template></a-table-column>
           <a-table-column key="status" title="状态"><template #default="{ record }">{{ states[record.status] ?? '未知状态' }}</template></a-table-column>
           <a-table-column key="attempts" title="次数"><template #default="{ record }">{{ safeCount(record.attempts) }}</template></a-table-column>
-          <a-table-column key="actions" title="处置"><template #default="{ record }">
+          <a-table-column key="actions" title="处置">
+<template #default="{ record }">
             <a-space v-if="selected && allowed(codes.resolve) && ['uncertain', 'failed'].includes(selected.status) && ['uncertain', 'sending', 'failed'].includes(record.status)">
               <a-button type="link" size="small" @click="openAction('delivered', selected, record)">确认送达</a-button>
               <a-button type="link" size="small" @click="openAction('redeliver', selected, record)">重新投递</a-button>
             </a-space>
-          </template></a-table-column>
+          </template>
+</a-table-column>
         </a-table>
         <div v-if="allowed(codes.resolutions)" class="audit-list">
           <h3>处置记录</h3>

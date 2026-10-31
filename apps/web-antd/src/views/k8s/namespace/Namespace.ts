@@ -318,7 +318,8 @@ export function useNamespacePage() {
         filterClusterId.value = undefined;
         clearNamespaces();
       }
-      if (shouldRecordPageError(err)) clustersError.value = '获取集群列表失败，请重试';
+      if (shouldRecordPageError(err))
+        clustersError.value = '获取集群列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
@@ -372,7 +373,8 @@ export function useNamespacePage() {
       )
         return;
       clearNamespaces();
-      if (shouldRecordPageError(err)) loadError.value = '获取命名空间列表失败，请重试';
+      if (shouldRecordPageError(err))
+        loadError.value = '获取命名空间列表失败，请重试';
       if (shouldNotifyPageError(err)) message.error(loadError.value);
     } finally {
       if (requestId === namespaceRequestId) loading.value = false;
@@ -574,8 +576,7 @@ export function useNamespacePage() {
           message.success('命名空间强制删除成功');
           await fetchNamespaces();
         } catch (err) {
-          if (shouldNotifyPageError(err))
-            message.error('命名空间强制删除失败');
+          if (shouldNotifyPageError(err)) message.error('命名空间强制删除失败');
         }
       },
     });
@@ -647,8 +648,7 @@ export function useNamespacePage() {
           selectedRows.value = [];
           await fetchNamespaces();
         } catch (err) {
-          if (shouldNotifyPageError(err))
-            message.error(`批量${operation}失败`);
+          if (shouldNotifyPageError(err)) message.error(`批量${operation}失败`);
         }
       },
     });

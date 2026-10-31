@@ -26,7 +26,8 @@ const routes: RouteRecordRaw[] = [
       {
         name: '本地资源管理',
         path: '/local_resource_management',
-        component: () => import('#/views/servicetree/LocalResourceManagement.vue'),
+        component: () =>
+          import('#/views/servicetree/LocalResourceManagement.vue'),
         meta: {
           title: '本地资源管理',
           icon: 'mdi:server-network',
@@ -35,7 +36,8 @@ const routes: RouteRecordRaw[] = [
       {
         name: '云账户管理',
         path: '/cloud_account_management',
-        component: () => import('#/views/servicetree/CloudAccountManagement.vue'),
+        component: () =>
+          import('#/views/servicetree/CloudAccountManagement.vue'),
         meta: {
           title: '云账户管理',
           icon: 'mdi:cloud-outline',

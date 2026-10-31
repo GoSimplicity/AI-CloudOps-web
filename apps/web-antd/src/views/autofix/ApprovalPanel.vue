@@ -4,7 +4,6 @@ import { getActionLabel } from './autofix-format';
 
 import { usePermission } from '#/utils/permission';
 
-const { can } = usePermission();
 defineProps<{
   actions: AutoFixAction[];
   selected: string[];
@@ -20,6 +19,7 @@ const emit = defineEmits<{
   confirmOne: [id: string];
   confirmAll: [];
 }>();
+const { can } = usePermission();
 // SEC-25/26 规则 4：逐项「确认此项」+ 批量「全部确认」；后端没有拒绝接口，不提供拒绝按钮
 </script>
 <template>
@@ -28,7 +28,10 @@ const emit = defineEmits<{
       <strong>待明确审批的原计划动作</strong
       ><a-tag color="orange">{{ actions.length }}</a-tag>
     </div>
-    <p v-if="expiresAt && Number.isFinite(Date.parse(expiresAt))" class="approval-expiry">
+    <p
+      v-if="expiresAt && Number.isFinite(Date.parse(expiresAt))"
+      class="approval-expiry"
+    >
       审批有效期至 {{ new Date(expiresAt).toLocaleString() }}
     </p>
     <a-alert v-if="issue" :message="issue" type="warning" show-icon />
@@ -78,20 +81,23 @@ const emit = defineEmits<{
         >
       </label>
     </div>
-    <a-button v-if="can('aiops.autofix.confirm')"
+    <a-button
+      v-if="can('aiops.autofix.confirm')"
       type="primary"
       :loading="busy"
       :disabled="!canConfirm"
       @click="emit('confirm')"
-      >确认并继续执行</a-button
     >
+      确认并继续执行
+    </a-button>
     <a-button
       v-if="can('aiops.autofix.confirm') && actions.length > 0"
       :loading="busy"
       :disabled="!canConfirmAll"
       @click="emit('confirmAll')"
-      >全部确认</a-button
     >
+      全部确认
+    </a-button>
   </section>
 </template>
 <style scoped>

@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import AccountRegionsEditor from './cloudaccountmanagement/AccountRegionsEditor.vue';
-import { CLOUD_ACCOUNT_PERMISSIONS, computeProviderName, isSupportedAccountProvider } from './cloudaccountmanagement/provider';
+import {
+  CLOUD_ACCOUNT_PERMISSIONS,
+  computeProviderName,
+  isSupportedAccountProvider,
+} from './cloudaccountmanagement/provider';
 import { onBeforeUnmount } from 'vue';
 
 import { ref, reactive, onMounted, computed, watch } from 'vue';
@@ -93,7 +97,13 @@ const filterForm = reactive<GetCloudAccountListReq>({
   status: undefined,
 });
 
-const formData = ref<CreateCloudAccountReq & { id?: number; access_key: string; secret_key: string }>({
+const formData = ref<
+  CreateCloudAccountReq & {
+    id?: number;
+    access_key: string;
+    secret_key: string;
+  }
+>({
   status: CloudAccountStatus.Enabled,
   name: '',
   provider: CloudProvider.AliCloud,
@@ -110,27 +120,81 @@ const formData = ref<CreateCloudAccountReq & { id?: number; access_key: string; 
 });
 
 // Provider credentials are write-only and never populated from account details.
-const providerCredentialDraft = reactive({ tenant_id: '', client_id: '', client_secret: '', subscription_id: '', project_id: '', service_account_json: '' });
-const structuredProvider = computed(() => formData.value.provider === CloudProvider.Azure || formData.value.provider === CloudProvider.GCP);
+const providerCredentialDraft = reactive({
+  tenant_id: '',
+  client_id: '',
+  client_secret: '',
+  subscription_id: '',
+  project_id: '',
+  service_account_json: '',
+});
+const structuredProvider = computed(
+  () =>
+    formData.value.provider === CloudProvider.Azure ||
+    formData.value.provider === CloudProvider.GCP,
+);
 function clearProviderCredentials() {
-  Object.assign(providerCredentialDraft, { tenant_id: '', client_id: '', client_secret: '', subscription_id: '', project_id: '', service_account_json: '' });
+  Object.assign(providerCredentialDraft, {
+    tenant_id: '',
+    client_id: '',
+    client_secret: '',
+    subscription_id: '',
+    project_id: '',
+    service_account_json: '',
+  });
 }
-function buildProviderCredentials(provider: CloudProvider, editing: boolean): ProviderCredentialInput | undefined {
+function buildProviderCredentials(
+  provider: CloudProvider,
+  editing: boolean,
+): ProviderCredentialInput | undefined {
   if (provider === CloudProvider.Azure) {
-    const { tenant_id, client_id, client_secret, subscription_id } = providerCredentialDraft;
-    if (editing && !tenant_id && !client_id && !client_secret && !subscription_id) return undefined;
-    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (![tenant_id, client_id, subscription_id].every(value => uuid.test(value)) || !client_secret.trim() || new TextEncoder().encode(client_secret).length > 8192) throw new Error('请完整填写有效的租户 ID、应用 ID、订阅 ID 和客户端密钥');
+    const { tenant_id, client_id, client_secret, subscription_id } =
+      providerCredentialDraft;
+    if (
+      editing &&
+      !tenant_id &&
+      !client_id &&
+      !client_secret &&
+      !subscription_id
+    )
+      return undefined;
+    const uuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (
+      ![tenant_id, client_id, subscription_id].every((value) =>
+        uuid.test(value),
+      ) ||
+      !client_secret.trim() ||
+      new TextEncoder().encode(client_secret).length > 8192
+    )
+      throw new Error('请完整填写有效的租户 ID、应用 ID、订阅 ID 和客户端密钥');
     return { tenant_id, client_id, client_secret, subscription_id };
   }
   const { project_id, service_account_json } = providerCredentialDraft;
   if (editing && !project_id && !service_account_json) return undefined;
-  if (!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(project_id) || !service_account_json || new TextEncoder().encode(service_account_json).length > 16384) throw new Error('请完整填写有效的 GCP 项目 ID 和服务账号 JSON');
+  if (
+    !/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(project_id) ||
+    !service_account_json ||
+    new TextEncoder().encode(service_account_json).length > 16384
+  )
+    throw new Error('请完整填写有效的 GCP 项目 ID 和服务账号 JSON');
   let parsed: unknown;
-  try { parsed = JSON.parse(service_account_json); } catch { throw new Error('服务账号 JSON 格式无效'); }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('服务账号 JSON 格式无效');
+  try {
+    parsed = JSON.parse(service_account_json);
+  } catch {
+    throw new Error('服务账号 JSON 格式无效');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+    throw new Error('服务账号 JSON 格式无效');
   const account = parsed as Record<string, unknown>;
-  if (account.type !== 'service_account' || account.token_uri !== 'https://oauth2.googleapis.com/token' || typeof account.private_key !== 'string' || typeof account.client_email !== 'string' || typeof account.project_id !== 'string') throw new Error('服务账号 JSON 缺少必要字段或令牌地址无效');
+  if (
+    account.type !== 'service_account' ||
+    account.token_uri !== 'https://oauth2.googleapis.com/token' ||
+    typeof account.private_key !== 'string' ||
+    typeof account.client_email !== 'string' ||
+    typeof account.project_id !== 'string'
+  )
+    throw new Error('服务账号 JSON 缺少必要字段或令牌地址无效');
   return { project_id, service_account_json };
 }
 
@@ -152,7 +216,9 @@ const aliCloudCount = computed(
 const tencentAndAwsCount = computed(
   () =>
     cloudAccounts.value.filter(
-      (item) => item.provider === CloudProvider.TencentCloud || item.provider === CloudProvider.AWS,
+      (item) =>
+        item.provider === CloudProvider.TencentCloud ||
+        item.provider === CloudProvider.AWS,
     ).length,
 );
 
@@ -172,7 +238,14 @@ const formRules = computed(() => ({
     { min: 2, max: 100, message: '名称长度在2-100个字符之间', trigger: 'blur' },
   ],
   provider: [{ required: true, message: '请选择云厂商', trigger: 'change' }],
-  status: [{ required: true, type: 'enum' as const, enum: [CloudAccountStatus.Enabled, CloudAccountStatus.Disabled], message: '请选择初始状态' }],
+  status: [
+    {
+      required: true,
+      type: 'enum' as const,
+      enum: [CloudAccountStatus.Enabled, CloudAccountStatus.Disabled],
+      message: '请选择初始状态',
+    },
+  ],
   regions: [
     {
       validator: async (_: unknown, value: CloudAccountRegionInput[]) => {
@@ -181,12 +254,38 @@ const formRules = computed(() => ({
           value.some((item) => !item.region.trim() || item.region.length > 50)
         )
           throw new Error('地域代码长度为1至50个字符');
-        const changedRegions = !isEdit.value || regionSignature(value) !== originalRegions;
-        if (changedRegions && formData.value.provider === CloudProvider.Azure && value.some(item => !/^[a-z0-9]+$/.test(item.region))) throw new Error('Azure 地域代码格式无效，例如 eastus');
-        if (changedRegions && formData.value.provider === CloudProvider.GCP && value.some(item => !/^[a-z][a-z0-9-]{1,48}-[a-z]$/.test(item.region))) throw new Error('GCP 需要填写可用区，例如 us-central1-a');
-        if (formData.value.provider === CloudProvider.HuaweiCloud && (!isEdit.value || regionSignature(value) !== originalRegions)) {
-          if (value.some((item) => !/^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(item.region))) throw new Error('华为云地域代码格式无效');
-          if (value.some((item) => !/^[a-zA-Z0-9_-]{1,64}$/.test(item.project_id ?? ''))) throw new Error('华为云每个地域必须填写有效的项目 ID');
+        const changedRegions =
+          !isEdit.value || regionSignature(value) !== originalRegions;
+        if (
+          changedRegions &&
+          formData.value.provider === CloudProvider.Azure &&
+          value.some((item) => !/^[a-z0-9]+$/.test(item.region))
+        )
+          throw new Error('Azure 地域代码格式无效，例如 eastus');
+        if (
+          changedRegions &&
+          formData.value.provider === CloudProvider.GCP &&
+          value.some(
+            (item) => !/^[a-z][a-z0-9-]{1,48}-[a-z]$/.test(item.region),
+          )
+        )
+          throw new Error('GCP 需要填写可用区，例如 us-central1-a');
+        if (
+          formData.value.provider === CloudProvider.HuaweiCloud &&
+          (!isEdit.value || regionSignature(value) !== originalRegions)
+        ) {
+          if (
+            value.some(
+              (item) => !/^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(item.region),
+            )
+          )
+            throw new Error('华为云地域代码格式无效');
+          if (
+            value.some(
+              (item) => !/^[a-zA-Z0-9_-]{1,64}$/.test(item.project_id ?? ''),
+            )
+          )
+            throw new Error('华为云每个地域必须填写有效的项目 ID');
         }
       },
       trigger: 'change',
@@ -329,7 +428,8 @@ const fetchCloudAccounts = async (): Promise<void> => {
     pagination.total = response.total || 0;
   } catch (error) {
     if (ticket !== listRequest) return;
-    if (shouldRecordPageError(error)) loadError.value = '获取云账户列表失败，请重试';
+    if (shouldRecordPageError(error))
+      loadError.value = '获取云账户列表失败，请重试';
     if (shouldNotifyPageError(error)) message.error('获取云账户列表失败');
     cloudAccounts.value = [];
     pagination.total = 0;
@@ -422,7 +522,12 @@ const closeForm = () => {
   clearProviderCredentials();
 };
 const handleEdit = async (record: CloudAccount): Promise<void> => {
-  if (!isSupportedAccountProvider(record.provider) || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)) return;
+  if (
+    !isSupportedAccountProvider(record.provider) ||
+    !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) ||
+    !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)
+  )
+    return;
   const ticket = ++formRequest;
   clearProviderCredentials();
   formData.value = {
@@ -439,8 +544,21 @@ const handleEdit = async (record: CloudAccount): Promise<void> => {
   try {
     const current = await getCloudAccountDetailApi(record.id);
     if (ticket !== formRequest || !modalVisible.value) return;
-    if (!hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)) { closeForm(); return; }
-    if (current.credential_type && !['long_term', 'temporary'].includes(current.credential_type)) { message.error('账户凭据类型不受支持'); closeForm(); return; }
+    if (
+      !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) ||
+      !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)
+    ) {
+      closeForm();
+      return;
+    }
+    if (
+      current.credential_type &&
+      !['long_term', 'temporary'].includes(current.credential_type)
+    ) {
+      message.error('账户凭据类型不受支持');
+      closeForm();
+      return;
+    }
     editAccountStatus.value = current.status;
     originalCredentialType.value = current.credential_type || 'long_term';
     savedCredentialExpiry.value = current.credential_expires_at;
@@ -486,45 +604,133 @@ function changeCredentialType() {
 }
 
 function isFutureUTC(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) return false;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value))
+    return false;
   const time = Date.parse(value);
   if (!Number.isFinite(time) || time <= Date.now()) return false;
-  const normalized = value.replace(/(?:\.(\d{1,3}))?Z$/, (_, fraction: string | undefined) => `.${(fraction ?? '').padEnd(3, '0')}Z`);
+  const normalized = value.replace(
+    /(?:\.(\d{1,3}))?Z$/,
+    (_, fraction: string | undefined) => `.${(fraction ?? '').padEnd(3, '0')}Z`,
+  );
   return new Date(time).toISOString() === normalized;
 }
 
-watch(() => [modalVisible.value, isEdit.value, hasPerm(CLOUD_ACCOUNT_PERMISSIONS.create), hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit), hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)], () => {
-  if (modalVisible.value && (!hasPerm(isEdit.value ? CLOUD_ACCOUNT_PERMISSIONS.edit : CLOUD_ACCOUNT_PERMISSIONS.create) || (isEdit.value && !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)))) closeForm();
-});
+watch(
+  () => [
+    modalVisible.value,
+    isEdit.value,
+    hasPerm(CLOUD_ACCOUNT_PERMISSIONS.create),
+    hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit),
+    hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail),
+  ],
+  () => {
+    if (
+      modalVisible.value &&
+      (!hasPerm(
+        isEdit.value
+          ? CLOUD_ACCOUNT_PERMISSIONS.edit
+          : CLOUD_ACCOUNT_PERMISSIONS.create,
+      ) ||
+        (isEdit.value && !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)))
+    )
+      closeForm();
+  },
+);
 
 const handleSubmit = async (): Promise<void> => {
-  if (submitLoading.value || formLoading.value || !formRef.value || !hasPerm(isEdit.value ? CLOUD_ACCOUNT_PERMISSIONS.edit : CLOUD_ACCOUNT_PERMISSIONS.create)) return;
+  if (
+    submitLoading.value ||
+    formLoading.value ||
+    !formRef.value ||
+    !hasPerm(
+      isEdit.value
+        ? CLOUD_ACCOUNT_PERMISSIONS.edit
+        : CLOUD_ACCOUNT_PERMISSIONS.create,
+    )
+  )
+    return;
   const ticket = formRequest;
   const editing = isEdit.value;
   submitLoading.value = true;
   try {
     await formRef.value?.validate();
-    if (ticket !== formRequest || !modalVisible.value || !hasPerm(editing ? CLOUD_ACCOUNT_PERMISSIONS.edit : CLOUD_ACCOUNT_PERMISSIONS.create) || (editing && !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail))) return;
+    if (
+      ticket !== formRequest ||
+      !modalVisible.value ||
+      !hasPerm(
+        editing
+          ? CLOUD_ACCOUNT_PERMISSIONS.edit
+          : CLOUD_ACCOUNT_PERMISSIONS.create,
+      ) ||
+      (editing && !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail))
+    )
+      return;
     const draft = {
       ...formData.value,
       regions: normalizeRegions(formData.value.regions),
     };
-    if (!isSupportedAccountProvider(draft.provider)) { message.error('当前不支持该云厂商'); return; }
+    if (!isSupportedAccountProvider(draft.provider)) {
+      message.error('当前不支持该云厂商');
+      return;
+    }
     let providerCredentials: ProviderCredentialInput | undefined;
-    if (draft.provider === CloudProvider.Azure || draft.provider === CloudProvider.GCP) {
-      try { providerCredentials = buildProviderCredentials(draft.provider, editing); }
-      catch (error) { message.error(error instanceof Error ? error.message : '专用凭据格式无效'); return; }
+    if (
+      draft.provider === CloudProvider.Azure ||
+      draft.provider === CloudProvider.GCP
+    ) {
+      try {
+        providerCredentials = buildProviderCredentials(draft.provider, editing);
+      } catch (error) {
+        message.error(
+          error instanceof Error ? error.message : '专用凭据格式无效',
+        );
+        return;
+      }
     }
     const mode = draft.credential_type || 'long_term';
     const token = draft.session_token || '';
     const expiry = draft.credential_expires_at || '';
-    const changed = !!(draft.access_key || draft.secret_key || token || expiry) || mode !== originalCredentialType.value;
-    if (!structuredProvider.value && mode === 'temporary' && ![CloudProvider.AWS, CloudProvider.TencentCloud].includes(draft.provider)) { message.error('当前云厂商不支持临时凭据'); return; }
-    if (!structuredProvider.value && (!editing || changed) && (mode === 'temporary' || (editing && (originalCredentialType.value === 'temporary' || mode !== originalCredentialType.value)))) {
-      if (!draft.access_key || !draft.secret_key) { message.error('轮换或切换凭据时必须填写完整 Access Key 和 Secret Key'); return; }
-      if (mode === 'temporary' && (!token.trim() || new TextEncoder().encode(token).length > 8192 || !isFutureUTC(expiry))) { message.error('临时凭据需填写令牌和未来的 UTC 到期时间'); return; }
+    const changed =
+      !!(draft.access_key || draft.secret_key || token || expiry) ||
+      mode !== originalCredentialType.value;
+    if (
+      !structuredProvider.value &&
+      mode === 'temporary' &&
+      ![CloudProvider.AWS, CloudProvider.TencentCloud].includes(draft.provider)
+    ) {
+      message.error('当前云厂商不支持临时凭据');
+      return;
     }
-    if (mode === 'long_term' && draft.provider === CloudProvider.AWS && draft.access_key.startsWith('ASIA')) { message.error('AWS 临时 Access Key 需要选择临时凭据并提供令牌'); return; }
+    if (
+      !structuredProvider.value &&
+      (!editing || changed) &&
+      (mode === 'temporary' ||
+        (editing &&
+          (originalCredentialType.value === 'temporary' ||
+            mode !== originalCredentialType.value)))
+    ) {
+      if (!draft.access_key || !draft.secret_key) {
+        message.error('轮换或切换凭据时必须填写完整 Access Key 和 Secret Key');
+        return;
+      }
+      if (
+        mode === 'temporary' &&
+        (!token.trim() ||
+          new TextEncoder().encode(token).length > 8192 ||
+          !isFutureUTC(expiry))
+      ) {
+        message.error('临时凭据需填写令牌和未来的 UTC 到期时间');
+        return;
+      }
+    }
+    if (
+      mode === 'long_term' &&
+      draft.provider === CloudProvider.AWS &&
+      draft.access_key.startsWith('ASIA')
+    ) {
+      message.error('AWS 临时 Access Key 需要选择临时凭据并提供令牌');
+      return;
+    }
     if (editing && draft.id) {
       const updateData: Omit<UpdateCloudAccountReq, 'id'> = {
         name: draft.name,
@@ -533,20 +739,34 @@ const handleSubmit = async (): Promise<void> => {
         account_alias: draft.account_alias || undefined,
         description: draft.description || undefined,
       };
-      if (providerCredentials) updateData.provider_credentials = providerCredentials;
+      if (providerCredentials)
+        updateData.provider_credentials = providerCredentials;
       if (draft.access_key) updateData.access_key = draft.access_key;
       if (draft.secret_key) updateData.secret_key = draft.secret_key;
-      if (!structuredProvider.value && changed && (mode !== originalCredentialType.value || mode === 'temporary')) updateData.credential_type = mode;
-      if (!structuredProvider.value && changed && mode === 'temporary') { updateData.session_token = token; updateData.credential_expires_at = expiry; }
+      if (
+        !structuredProvider.value &&
+        changed &&
+        (mode !== originalCredentialType.value || mode === 'temporary')
+      )
+        updateData.credential_type = mode;
+      if (!structuredProvider.value && changed && mode === 'temporary') {
+        updateData.session_token = token;
+        updateData.credential_expires_at = expiry;
+      }
       if (regionSignature(draft.regions) !== originalRegions)
         updateData.regions = draft.regions;
       await updateCloudAccountApi(draft.id, updateData);
     } else {
       const { id: _id, ...rawCreateData } = draft;
       const createData: CreateCloudAccountReq = rawCreateData;
-      if (mode === 'long_term' || structuredProvider.value) { delete createData.session_token; delete createData.credential_expires_at; }
+      if (mode === 'long_term' || structuredProvider.value) {
+        delete createData.session_token;
+        delete createData.credential_expires_at;
+      }
       if (structuredProvider.value) {
-        delete createData.access_key; delete createData.secret_key; delete createData.credential_type;
+        delete createData.access_key;
+        delete createData.secret_key;
+        delete createData.credential_type;
         createData.provider_credentials = providerCredentials;
       }
       await createCloudAccountApi(createData);
@@ -559,16 +779,21 @@ const handleSubmit = async (): Promise<void> => {
     void fetchCloudAccounts();
   } catch (error: any) {
     if (ticket !== formRequest || error?.errorFields) return;
-    if (shouldNotifyPageError(error)) message.error(
-      editing ? '更新云账户失败，已保留表单' : '创建云账户失败，已保留表单',
-    );
+    if (shouldNotifyPageError(error))
+      message.error(
+        editing ? '更新云账户失败，已保留表单' : '创建云账户失败，已保留表单',
+      );
   } finally {
     submitLoading.value = false;
   }
 };
 
 const handleDelete = (record: CloudAccount): void => {
-  if (!isSupportedAccountProvider(record.provider) || !can('tree.cloudAccount.delete')) return;
+  if (
+    !isSupportedAccountProvider(record.provider) ||
+    !can('tree.cloudAccount.delete')
+  )
+    return;
   Modal.confirm({
     title: '确认删除',
     content: `确定要删除云账户 "${record.name}" 吗？此操作不可恢复。`,
@@ -593,7 +818,11 @@ const handleStatusChange = async (
   record: CloudAccount,
   checked: boolean,
 ): Promise<void> => {
-  if (!isSupportedAccountProvider(record.provider) || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.status)) return;
+  if (
+    !isSupportedAccountProvider(record.provider) ||
+    !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.status)
+  )
+    return;
   const newStatus = checked
     ? CloudAccountStatus.Enabled
     : CloudAccountStatus.Disabled;
@@ -621,20 +850,31 @@ const handleStatusChange = async (
 };
 
 const handleVerify = (record: CloudAccount): void => {
-  if (!isSupportedAccountProvider(record.provider) || record.status !== CloudAccountStatus.Enabled || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify)) return;
+  if (
+    !isSupportedAccountProvider(record.provider) ||
+    record.status !== CloudAccountStatus.Enabled ||
+    !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify)
+  )
+    return;
   Modal.confirm({
     title: '验证云账户凭据',
     content: `将向${computeProviderName(record.provider)}验证账户“${record.name}”的凭据，验证失败不会删除账户`,
     okText: '开始验证',
     cancelText: '取消',
     onOk: async () => {
-      if (!hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify) || record.status !== CloudAccountStatus.Enabled || !isSupportedAccountProvider(record.provider)) return;
+      if (
+        !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify) ||
+        record.status !== CloudAccountStatus.Enabled ||
+        !isSupportedAccountProvider(record.provider)
+      )
+        return;
       const hide = message.loading('正在验证凭据...', 0);
       try {
         await verifyCloudAccountApi(record.id);
         message.success('凭据验证成功');
       } catch (error) {
-        if (shouldNotifyPageError(error)) message.error('凭据验证失败，账户配置已保留');
+        if (shouldNotifyPageError(error))
+          message.error('凭据验证失败，账户配置已保留');
       } finally {
         hide();
       }
@@ -652,7 +892,10 @@ const handleViewDetail = async (record: CloudAccount): Promise<void> => {
   try {
     const response = await getCloudAccountDetailApi(record.id);
     if (ticket !== detailRequest || !detailVisible.value) return;
-    if (!hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)) { detailVisible.value = false; return; }
+    if (!hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)) {
+      detailVisible.value = false;
+      return;
+    }
     currentDetail.value = response;
   } catch (error) {
     if (ticket !== detailRequest) return;
@@ -719,126 +962,148 @@ const closeDetails = () => {
 </script>
 
 <template>
-  <OpsPage title="云账户" description="管理云账户和授权地域，验证操作需显式发起" class="cmdb-console cloud-account-management">
+  <OpsPage
+    title="云账户"
+    description="管理云账户和授权地域，验证操作需显式发起"
+    class="cmdb-console cloud-account-management"
+  >
     <a-alert v-if="loadError" :message="loadError" type="error" show-icon>
-      <template #action><a-button @click="fetchCloudAccounts()">重试</a-button></template>
+      <template #action>
+        <a-button @click="fetchCloudAccounts()">重试</a-button>
+      </template>
     </a-alert>
     <!-- 页面头部 -->
-    <template #actions><a-space :size="12">
-          <a-button v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.create)" type="primary" aria-label="添加账户" @click="showCreateModal" class="btn-create">
-            <template #icon><plus-outlined /></template>
-            <span class="btn-text">添加账户</span>
-          </a-button>
-          <a-button @click="exportToExcel(cloudAccounts)"><export-outlined /> 导出当前页</a-button>
-        </a-space><a-button @click="fetchCloudAccounts()" :loading="loading">刷新</a-button></template>
+    <template #actions>
+      <a-space :size="12">
+        <a-button
+          v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.create)"
+          type="primary"
+          aria-label="添加账户"
+          @click="showCreateModal"
+          class="btn-create"
+        >
+          <template #icon><plus-outlined /></template>
+          <span class="btn-text">添加账户</span>
+        </a-button>
+        <a-button @click="exportToExcel(cloudAccounts)">
+          <export-outlined /> 导出当前页
+        </a-button> </a-space
+      ><a-button @click="fetchCloudAccounts()" :loading="loading">
+        刷新
+      </a-button>
+    </template>
 
     <!-- 统计卡片 -->
-    <template #summary><div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="匹配账户数"
-              :value="pagination.total"
-            >
-              <template #prefix>
-                <cloud-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="本页已启用"
-              :value="enabledCount"
-            >
-              <template #prefix>
-                <check-circle-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="本页阿里云"
-              :value="aliCloudCount"
-            >
-              <template #prefix>
-                <cloud-server-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic
-              title="本页腾讯云 / AWS"
-              :value="tencentAndAwsCount"
-            >
-              <template #prefix>
-                <global-outlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
-    </div></template>
+    <template #summary>
+      <div class="stats-row">
+        <a-row :gutter="[16, 16]">
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic title="匹配账户数" :value="pagination.total">
+                <template #prefix>
+                  <cloud-outlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic title="本页已启用" :value="enabledCount">
+                <template #prefix>
+                  <check-circle-outlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic title="本页阿里云" :value="aliCloudCount">
+                <template #prefix>
+                  <cloud-server-outlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+          <a-col :xs="12" :sm="6" :md="6" :lg="6">
+            <a-card class="stats-card">
+              <a-statistic title="本页腾讯云 / AWS" :value="tencentAndAwsCount">
+                <template #prefix>
+                  <global-outlined />
+                </template>
+              </a-statistic>
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
+    </template>
 
     <!-- 搜索筛选区 -->
-    <template #filters><a-form layout="inline" class="filter-form">
-          <a-form-item>
-            <a-input
-              v-model:value="filterForm.search"
-              placeholder="搜索账户名称"
-              allow-clear
-              style="width: 220px"
-              @pressEnter="handleSearch"
-              @change="handleSearchChange"
-            >
-              <template #prefix><search-outlined /></template>
-            </a-input>
-          </a-form-item>
-          <a-form-item label="云厂商">
-            <a-select
-              v-model:value="filterForm.provider"
-              placeholder="全部厂商"
-              allow-clear
-              style="width: 150px"
-              @change="handleSearch"
-            >
-              <a-select-option :value="CloudProvider.AliCloud">阿里云</a-select-option>
-              <a-select-option :value="CloudProvider.TencentCloud">腾讯云</a-select-option>
-              <a-select-option :value="CloudProvider.HuaweiCloud">华为云</a-select-option>
-              <a-select-option :value="CloudProvider.AWS">AWS</a-select-option>
-              <a-select-option :value="CloudProvider.Azure">Azure</a-select-option>
-              <a-select-option :value="CloudProvider.GCP">GCP</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="账户状态">
-            <a-select
-              v-model:value="filterForm.status"
-              placeholder="全部状态"
-              allow-clear
-              style="width: 130px"
-              @change="handleSearch"
-            >
-              <a-select-option :value="CloudAccountStatus.Enabled">启用</a-select-option>
-              <a-select-option :value="CloudAccountStatus.Disabled">禁用</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item>
-            <a-space>
-              <a-button type="primary" @click="handleSearch">
-                <search-outlined /> 查询
-              </a-button>
-              <a-button @click="resetFilter" class="reset-btn">
-                <clear-outlined /> 重置
-              </a-button>
-            </a-space>
-          </a-form-item>
-        </a-form></template>
+    <template #filters>
+      <a-form layout="inline" class="filter-form">
+        <a-form-item>
+          <a-input
+            v-model:value="filterForm.search"
+            placeholder="搜索账户名称"
+            allow-clear
+            style="width: 220px"
+            @pressEnter="handleSearch"
+            @change="handleSearchChange"
+          >
+            <template #prefix><search-outlined /></template>
+          </a-input>
+        </a-form-item>
+        <a-form-item label="云厂商">
+          <a-select
+            v-model:value="filterForm.provider"
+            placeholder="全部厂商"
+            allow-clear
+            style="width: 150px"
+            @change="handleSearch"
+          >
+            <a-select-option :value="CloudProvider.AliCloud">
+              阿里云
+            </a-select-option>
+            <a-select-option :value="CloudProvider.TencentCloud">
+              腾讯云
+            </a-select-option>
+            <a-select-option :value="CloudProvider.HuaweiCloud">
+              华为云
+            </a-select-option>
+            <a-select-option :value="CloudProvider.AWS">AWS</a-select-option>
+            <a-select-option :value="CloudProvider.Azure">
+              Azure
+            </a-select-option>
+            <a-select-option :value="CloudProvider.GCP">GCP</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="账户状态">
+          <a-select
+            v-model:value="filterForm.status"
+            placeholder="全部状态"
+            allow-clear
+            style="width: 130px"
+            @change="handleSearch"
+          >
+            <a-select-option :value="CloudAccountStatus.Enabled">
+              启用
+            </a-select-option>
+            <a-select-option :value="CloudAccountStatus.Disabled">
+              禁用
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item>
+          <a-space>
+            <a-button type="primary" @click="handleSearch">
+              <search-outlined /> 查询
+            </a-button>
+            <a-button @click="resetFilter" class="reset-btn">
+              <clear-outlined /> 重置
+            </a-button>
+          </a-space>
+        </a-form-item>
+      </a-form>
+    </template>
 
     <!-- 账户列表表格 -->
     <div class="table-section">
@@ -857,15 +1122,29 @@ const closeDetails = () => {
             <!-- 账户名称列 -->
             <template v-if="column.key === 'name'">
               <div class="name-cell">
-                <a-badge :status="record.status === CloudAccountStatus.Enabled ? 'success' : 'error'" />
-                <a v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)" class="account-name" @click="handleViewDetail(record)">{{ record.name }}</a>
+                <a-badge
+                  :status="
+                    record.status === CloudAccountStatus.Enabled
+                      ? 'success'
+                      : 'error'
+                  "
+                />
+                <a
+                  v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)"
+                  class="account-name"
+                  @click="handleViewDetail(record)"
+                  >{{ record.name }}</a
+                >
                 <span v-else class="account-name">{{ record.name }}</span>
               </div>
             </template>
 
             <!-- 云厂商列 -->
             <template v-else-if="column.key === 'provider'">
-              <a-tag :color="getProviderColor(record.provider)" class="provider-tag">
+              <a-tag
+                :color="getProviderColor(record.provider)"
+                class="provider-tag"
+              >
                 <cloud-outlined class="tag-icon" />
                 {{ getProviderText(record.provider) }}
               </a-tag>
@@ -875,7 +1154,15 @@ const closeDetails = () => {
             <template v-else-if="column.key === 'region'">
               <div class="region-cell">
                 <environment-outlined class="region-icon" />
-                <a-space wrap><a-tag v-for="region in record.regions ?? []" :key="region.id">{{ region.region_name || region.region }}<span v-if="region.is_default">（默认）</span></a-tag><span v-if="!record.regions?.length">未配置</span></a-space>
+                <a-space wrap>
+                  <a-tag
+                    v-for="region in record.regions ?? []"
+                    :key="region.id"
+                  >
+                    {{ region.region_name || region.region
+                    }}<span v-if="region.is_default">（默认）</span> </a-tag
+                  ><span v-if="!record.regions?.length">未配置</span>
+                </a-space>
               </div>
             </template>
 
@@ -884,7 +1171,10 @@ const closeDetails = () => {
               <div class="account-info">
                 <div v-if="record.account_id" class="info-row">
                   <span class="info-label">ID:</span>
-                  <a-typography-text :copyable="{ text: record.account_id }" class="info-value">
+                  <a-typography-text
+                    :copyable="{ text: record.account_id }"
+                    class="info-value"
+                  >
                     {{ truncateText(record.account_id, 20) }}
                   </a-typography-text>
                 </div>
@@ -896,16 +1186,30 @@ const closeDetails = () => {
                   <span class="info-label">别名:</span>
                   <span class="info-value">{{ record.account_alias }}</span>
                 </div>
-                <span v-if="!record.account_id && !record.account_name && !record.account_alias" class="empty-text">-</span>
+                <span
+                  v-if="
+                    !record.account_id &&
+                    !record.account_name &&
+                    !record.account_alias
+                  "
+                  class="empty-text"
+                  >-</span
+                >
               </div>
             </template>
 
             <!-- 状态列 -->
             <template v-else-if="column.key === 'status'">
               <a-switch
-                :disabled="!isSupportedAccountProvider(record.provider) || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.status)" :checked="record.status === CloudAccountStatus.Enabled"
+                :disabled="
+                  !isSupportedAccountProvider(record.provider) ||
+                  !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.status)
+                "
+                :checked="record.status === CloudAccountStatus.Enabled"
                 :loading="switchLoading[record.id]"
-                @change="(checked: boolean) => handleStatusChange(record, checked)"
+                @change="
+                  (checked: boolean) => handleStatusChange(record, checked)
+                "
                 checked-children="启用"
                 un-checked-children="禁用"
               />
@@ -916,11 +1220,17 @@ const closeDetails = () => {
               <div class="creator-cell">
                 <a-avatar
                   size="small"
-                  :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
+                  :style="{
+                    backgroundColor: getAvatarColor(
+                      record.create_user_name || '',
+                    ),
+                  }"
                 >
                   {{ getInitials(record.create_user_name || 'Admin') }}
                 </a-avatar>
-                <span class="creator-name">{{ record.create_user_name || 'Admin' }}</span>
+                <span class="creator-name">{{
+                  record.create_user_name || 'Admin'
+                }}</span>
               </div>
             </template>
 
@@ -935,23 +1245,58 @@ const closeDetails = () => {
             <!-- 操作列 -->
             <template v-else-if="column.key === 'action'">
               <a-space :size="4" class="action-buttons">
-                <a-tooltip v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)" title="查看详情">
-                  <a-button type="text" size="small" @click="handleViewDetail(record)">
+                <a-tooltip
+                  v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)"
+                  title="查看详情"
+                >
+                  <a-button
+                    type="text"
+                    size="small"
+                    @click="handleViewDetail(record)"
+                  >
                     <eye-outlined />
                   </a-button>
                 </a-tooltip>
-                <a-tooltip v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) && hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)" title="编辑">
-                  <a-button type="text" size="small" :disabled="!isSupportedAccountProvider(record.provider)" @click="handleEdit(record)">
+                <a-tooltip
+                  v-if="
+                    hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) &&
+                    hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)
+                  "
+                  title="编辑"
+                >
+                  <a-button
+                    type="text"
+                    size="small"
+                    :disabled="!isSupportedAccountProvider(record.provider)"
+                    @click="handleEdit(record)"
+                  >
                     <edit-outlined />
                   </a-button>
                 </a-tooltip>
-                <a-tooltip v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify)" title="验证凭证">
-                  <a-button type="text" size="small" :disabled="!isSupportedAccountProvider(record.provider) || record.status !== CloudAccountStatus.Enabled" @click="handleVerify(record)">
+                <a-tooltip
+                  v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify)"
+                  title="验证凭证"
+                >
+                  <a-button
+                    type="text"
+                    size="small"
+                    :disabled="
+                      !isSupportedAccountProvider(record.provider) ||
+                      record.status !== CloudAccountStatus.Enabled
+                    "
+                    @click="handleVerify(record)"
+                  >
                     <safety-certificate-outlined />
                   </a-button>
                 </a-tooltip>
                 <a-tooltip v-if="can('tree.cloudAccount.delete')" title="删除">
-                  <a-button type="text" size="small" :disabled="!isSupportedAccountProvider(record.provider)" danger @click="handleDelete(record)">
+                  <a-button
+                    type="text"
+                    size="small"
+                    :disabled="!isSupportedAccountProvider(record.provider)"
+                    danger
+                    @click="handleDelete(record)"
+                  >
                     <delete-outlined />
                   </a-button>
                 </a-tooltip>
@@ -972,7 +1317,11 @@ const closeDetails = () => {
       :title="isEdit ? '编辑云账户' : '添加云账户'"
       :width="800"
       :style="{ top: 'var(--ops-space-xl)' }"
-      :body-style="{ maxHeight: 'calc(100dvh - 200px)', overflowY: 'auto', paddingInline: 'var(--ops-space-sm)' }"
+      :body-style="{
+        maxHeight: 'calc(100dvh - 200px)',
+        overflowY: 'auto',
+        paddingInline: 'var(--ops-space-sm)',
+      }"
       @ok="handleSubmit"
       :confirm-loading="submitLoading"
       :destroy-on-close="true"
@@ -1032,16 +1381,38 @@ const closeDetails = () => {
             </a-form-item>
           </a-col>
           <a-col v-if="!isEdit" :xs="24" :sm="12">
-            <a-form-item label="初始状态" name="status" extra="停用仅保存配置，可在核对后启用并显式同步。">
-              <a-select id="cloud-account-create-status" v-model:value="formData.status" aria-label="初始状态" size="large">
-                <a-select-option :value="CloudAccountStatus.Enabled">启用</a-select-option>
-                <a-select-option :value="CloudAccountStatus.Disabled">停用（仅保存）</a-select-option>
+            <a-form-item
+              label="初始状态"
+              name="status"
+              extra="停用仅保存配置，可在核对后启用并显式同步。"
+            >
+              <a-select
+                id="cloud-account-create-status"
+                v-model:value="formData.status"
+                aria-label="初始状态"
+                size="large"
+              >
+                <a-select-option :value="CloudAccountStatus.Enabled">
+                  启用
+                </a-select-option>
+                <a-select-option :value="CloudAccountStatus.Disabled">
+                  停用（仅保存）
+                </a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
           <a-col :xs="24" :sm="12">
             <a-form-item label="授权地域" name="regions">
-              <AccountRegionsEditor v-model="formData.regions" :disabled="formLoading || submitLoading || !modalVisible" :provider="formData.provider" :account-id="isEdit ? formData.id : undefined" :account-enabled="editAccountStatus === CloudAccountStatus.Enabled" :can-read="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.regions)" />
+              <AccountRegionsEditor
+                v-model="formData.regions"
+                :disabled="formLoading || submitLoading || !modalVisible"
+                :provider="formData.provider"
+                :account-id="isEdit ? formData.id : undefined"
+                :account-enabled="
+                  editAccountStatus === CloudAccountStatus.Enabled
+                "
+                :can-read="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.regions)"
+              />
             </a-form-item>
           </a-col>
         </a-row>
@@ -1049,17 +1420,56 @@ const closeDetails = () => {
         <a-divider orientation="left">
           <safety-certificate-outlined /> 凭证配置
         </a-divider>
-        <a-form-item v-if="formData.provider === CloudProvider.AWS || formData.provider === CloudProvider.TencentCloud" label="凭据类型">
-          <a-select id="cloud-credential-type" v-model:value="formData.credential_type" aria-label="凭据类型" @change="changeCredentialType">
+        <a-form-item
+          v-if="
+            formData.provider === CloudProvider.AWS ||
+            formData.provider === CloudProvider.TencentCloud
+          "
+          label="凭据类型"
+        >
+          <a-select
+            id="cloud-credential-type"
+            v-model:value="formData.credential_type"
+            aria-label="凭据类型"
+            @change="changeCredentialType"
+          >
             <a-select-option value="long_term">长期凭据</a-select-option>
             <a-select-option value="temporary">临时凭据</a-select-option>
           </a-select>
         </a-form-item>
-        <a-alert v-if="!structuredProvider && formData.credential_type === 'temporary'" type="info" show-icon message="临时凭据需提供完整密钥、令牌和 UTC 到期时间；暂不支持全量同步。" />
-        <a-alert v-if="formData.provider === CloudProvider.HuaweiCloud" type="info" show-icon message="华为云仅支持指定实例 ID 的增量同步；每个地域必须配置对应项目 ID。" />
-        <a-alert v-if="structuredProvider" type="info" show-icon message="Azure 和 GCP 仅支持指定实例 ID 的增量同步，不支持全量或无 ID 同步。" />
-        <p v-if="structuredProvider && isEdit" class="form-hint">已保存凭据不会回显；全部留空保留现有凭据，修改任一项时需完整填写。</p>
-        <p v-if="isEdit && originalCredentialType === 'temporary' && !structuredProvider" class="form-hint">当前到期时间：{{ savedCredentialExpiry || '未知' }}。凭据全部留空可保留；轮换时需完整填写。</p>
+        <a-alert
+          v-if="!structuredProvider && formData.credential_type === 'temporary'"
+          type="info"
+          show-icon
+          message="临时凭据需提供完整密钥、令牌和 UTC 到期时间；暂不支持全量同步。"
+        />
+        <a-alert
+          v-if="formData.provider === CloudProvider.HuaweiCloud"
+          type="info"
+          show-icon
+          message="华为云仅支持指定实例 ID 的增量同步；每个地域必须配置对应项目 ID。"
+        />
+        <a-alert
+          v-if="structuredProvider"
+          type="info"
+          show-icon
+          message="Azure 和 GCP 仅支持指定实例 ID 的增量同步，不支持全量或无 ID 同步。"
+        />
+        <p v-if="structuredProvider && isEdit" class="form-hint">
+          已保存凭据不会回显；全部留空保留现有凭据，修改任一项时需完整填写。
+        </p>
+        <p
+          v-if="
+            isEdit &&
+            originalCredentialType === 'temporary' &&
+            !structuredProvider
+          "
+          class="form-hint"
+        >
+          当前到期时间：{{
+            savedCredentialExpiry || '未知'
+          }}。凭据全部留空可保留；轮换时需完整填写。
+        </p>
         <a-row v-if="!structuredProvider" :gutter="16">
           <a-col :span="24">
             <a-form-item label="Access Key" name="access_key">
@@ -1088,27 +1498,97 @@ const closeDetails = () => {
           <template v-if="formData.credential_type === 'temporary'">
             <a-col :span="24">
               <a-form-item label="Session Token">
-                <a-input-password v-model:value="formData.session_token" placeholder="请输入 Session Token" autocomplete="new-password" :maxlength="8192" size="large" />
+                <a-input-password
+                  v-model:value="formData.session_token"
+                  placeholder="请输入 Session Token"
+                  autocomplete="new-password"
+                  :maxlength="8192"
+                  size="large"
+                />
               </a-form-item>
             </a-col>
             <a-col :span="24">
               <a-form-item label="到期时间（UTC）">
-                <a-input v-model:value="formData.credential_expires_at" placeholder="例如 2027-01-01T00:00:00Z" autocomplete="off" size="large" />
+                <a-input
+                  v-model:value="formData.credential_expires_at"
+                  placeholder="例如 2027-01-01T00:00:00Z"
+                  autocomplete="off"
+                  size="large"
+                />
               </a-form-item>
             </a-col>
           </template>
         </a-row>
 
         <a-row v-if="formData.provider === CloudProvider.Azure" :gutter="16">
-          <a-col :xs="24" :sm="12"><a-form-item label="租户 ID"><a-input v-model:value="providerCredentialDraft.tenant_id" placeholder="请输入租户 ID" autocomplete="off" :disabled="submitLoading || formLoading" /></a-form-item></a-col>
-          <a-col :xs="24" :sm="12"><a-form-item label="应用（客户端）ID"><a-input v-model:value="providerCredentialDraft.client_id" placeholder="请输入应用 ID" autocomplete="off" :disabled="submitLoading || formLoading" /></a-form-item></a-col>
-          <a-col :xs="24" :sm="12"><a-form-item label="订阅 ID"><a-input v-model:value="providerCredentialDraft.subscription_id" placeholder="请输入订阅 ID" autocomplete="off" :disabled="submitLoading || formLoading" /></a-form-item></a-col>
-          <a-col :xs="24" :sm="12"><a-form-item label="客户端密钥"><a-input-password v-model:value="providerCredentialDraft.client_secret" placeholder="请输入客户端密钥" autocomplete="new-password" :disabled="submitLoading || formLoading" /></a-form-item></a-col>
+          <a-col :xs="24" :sm="12">
+            <a-form-item label="租户 ID">
+              <a-input
+                v-model:value="providerCredentialDraft.tenant_id"
+                placeholder="请输入租户 ID"
+                autocomplete="off"
+                :disabled="submitLoading || formLoading"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12">
+            <a-form-item label="应用（客户端）ID">
+              <a-input
+                v-model:value="providerCredentialDraft.client_id"
+                placeholder="请输入应用 ID"
+                autocomplete="off"
+                :disabled="submitLoading || formLoading"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12">
+            <a-form-item label="订阅 ID">
+              <a-input
+                v-model:value="providerCredentialDraft.subscription_id"
+                placeholder="请输入订阅 ID"
+                autocomplete="off"
+                :disabled="submitLoading || formLoading"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12">
+            <a-form-item label="客户端密钥">
+              <a-input-password
+                v-model:value="providerCredentialDraft.client_secret"
+                placeholder="请输入客户端密钥"
+                autocomplete="new-password"
+                :disabled="submitLoading || formLoading"
+              />
+            </a-form-item>
+          </a-col>
         </a-row>
         <a-row v-if="formData.provider === CloudProvider.GCP" :gutter="16">
-          <a-col :span="24"><a-form-item label="资源项目 ID"><a-input v-model:value="providerCredentialDraft.project_id" placeholder="请输入 GCP 资源项目 ID" autocomplete="off" :disabled="submitLoading || formLoading" /></a-form-item></a-col>
-          <a-col :span="24"><a-form-item label="服务账号 JSON"><a-input-password v-model:value="providerCredentialDraft.service_account_json" placeholder="粘贴服务账号 JSON" autocomplete="new-password" :disabled="submitLoading || formLoading" /></a-form-item></a-col>
-          <a-col :span="24"><p class="form-hint">资源项目可以与服务账号所属项目不同。JSON 仅用于保存凭据，不会回显。</p></a-col>
+          <a-col :span="24">
+            <a-form-item label="资源项目 ID">
+              <a-input
+                v-model:value="providerCredentialDraft.project_id"
+                placeholder="请输入 GCP 资源项目 ID"
+                autocomplete="off"
+                :disabled="submitLoading || formLoading"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="24">
+            <a-form-item label="服务账号 JSON">
+              <a-input-password
+                v-model:value="providerCredentialDraft.service_account_json"
+                placeholder="粘贴服务账号 JSON"
+                autocomplete="new-password"
+                :disabled="submitLoading || formLoading"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="24">
+            <p class="form-hint">
+              资源项目可以与服务账号所属项目不同。JSON
+              仅用于保存凭据，不会回显。
+            </p>
+          </a-col>
         </a-row>
 
         <a-divider orientation="left">
@@ -1167,7 +1647,6 @@ const closeDetails = () => {
           >
             {{ isEdit ? '更新' : '添加' }}
           </a-button>
-
         </a-space>
       </template>
     </a-modal>
@@ -1182,15 +1661,26 @@ const closeDetails = () => {
       class="detail-drawer"
     >
       <a-skeleton :loading="detailLoading" active>
-        <a-empty v-if="!detailLoading && !currentDetail" description="详情加载失败，请关闭后重试" />
+        <a-empty
+          v-if="!detailLoading && !currentDetail"
+          description="详情加载失败，请关闭后重试"
+        />
         <template v-if="currentDetail">
           <div class="detail-content">
             <div class="detail-header">
               <h2>{{ currentDetail.name }}</h2>
               <div class="detail-badges">
                 <a-badge
-                  :status="currentDetail.status === CloudAccountStatus.Enabled ? 'success' : 'error'"
-                  :text="currentDetail.status === CloudAccountStatus.Enabled ? '已启用' : '已禁用'"
+                  :status="
+                    currentDetail.status === CloudAccountStatus.Enabled
+                      ? 'success'
+                      : 'error'
+                  "
+                  :text="
+                    currentDetail.status === CloudAccountStatus.Enabled
+                      ? '已启用'
+                      : '已禁用'
+                  "
                 />
                 <a-tag :color="getProviderColor(currentDetail.provider)">
                   {{ getProviderText(currentDetail.provider) }}
@@ -1199,7 +1689,13 @@ const closeDetails = () => {
             </div>
 
             <!-- 详细信息 -->
-            <a-descriptions bordered :column="1" size="small" class="detail-descriptions" title="账户信息">
+            <a-descriptions
+              bordered
+              :column="1"
+              size="small"
+              class="detail-descriptions"
+              title="账户信息"
+            >
               <a-descriptions-item label="账户ID" :span="2">
                 {{ currentDetail.id }}
               </a-descriptions-item>
@@ -1209,12 +1705,41 @@ const closeDetails = () => {
                 </a-tag>
               </a-descriptions-item>
               <a-descriptions-item label="地域" :span="1">
-                <a-space wrap><a-tag v-for="region in currentDetail.regions ?? []" :key="region.id">{{ region.region_name || region.region }} ({{ region.region }})<span v-if="region.project_id"> · 项目 {{ region.project_id }}</span><span v-if="region.is_default"> 默认</span><span v-if="region.status === 2"> 已停用</span></a-tag></a-space>
+                <a-space wrap>
+                  <a-tag
+                    v-for="region in currentDetail.regions ?? []"
+                    :key="region.id"
+                  >
+                    {{ region.region_name || region.region }} ({{
+                      region.region
+                    }})<span v-if="region.project_id">
+                      · 项目 {{ region.project_id }}</span
+                    ><span v-if="region.is_default"> 默认</span
+                    ><span v-if="region.status === 2"> 已停用</span>
+                  </a-tag>
+                </a-space>
               </a-descriptions-item>
-              <a-descriptions-item label="凭据类型">{{ currentDetail.credential_type === 'temporary' ? '临时凭据' : (!currentDetail.credential_type || currentDetail.credential_type === 'long_term') ? '长期凭据' : '未知' }}</a-descriptions-item>
-              <a-descriptions-item v-if="currentDetail.credential_type === 'temporary'" label="到期时间（UTC）">{{ currentDetail.credential_expires_at || '未知' }}</a-descriptions-item>
+              <a-descriptions-item label="凭据类型">
+                {{
+                  currentDetail.credential_type === 'temporary'
+                    ? '临时凭据'
+                    : !currentDetail.credential_type ||
+                        currentDetail.credential_type === 'long_term'
+                      ? '长期凭据'
+                      : '未知'
+                }}
+              </a-descriptions-item>
+              <a-descriptions-item
+                v-if="currentDetail.credential_type === 'temporary'"
+                label="到期时间（UTC）"
+              >
+                {{ currentDetail.credential_expires_at || '未知' }}
+              </a-descriptions-item>
               <a-descriptions-item label="云账户ID" :span="2">
-                <a-typography-text v-if="currentDetail.account_id" :copyable="{ text: currentDetail.account_id }">
+                <a-typography-text
+                  v-if="currentDetail.account_id"
+                  :copyable="{ text: currentDetail.account_id }"
+                >
                   {{ currentDetail.account_id }}
                 </a-typography-text>
                 <span v-else>-</span>
@@ -1231,9 +1756,17 @@ const closeDetails = () => {
               <a-descriptions-item label="状态" :span="2">
                 <a-switch
                   v-if="currentDetail"
-                  :disabled="!isSupportedAccountProvider(currentDetail.provider) || !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.status)" :checked="currentDetail.status === CloudAccountStatus.Enabled"
+                  :disabled="
+                    !isSupportedAccountProvider(currentDetail.provider) ||
+                    !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.status)
+                  "
+                  :checked="currentDetail.status === CloudAccountStatus.Enabled"
                   :loading="switchLoading[currentDetail.id]"
-                  @change="(checked: boolean) => currentDetail && handleStatusChange(currentDetail, checked)"
+                  @change="
+                    (checked: boolean) =>
+                      currentDetail &&
+                      handleStatusChange(currentDetail, checked)
+                  "
                   checked-children="启用"
                   un-checked-children="禁用"
                 />
@@ -1241,11 +1774,17 @@ const closeDetails = () => {
               <a-descriptions-item label="创建人" :span="1">
                 <a-avatar
                   size="small"
-                  :style="{ backgroundColor: getAvatarColor(currentDetail.create_user_name || '') }"
+                  :style="{
+                    backgroundColor: getAvatarColor(
+                      currentDetail.create_user_name || '',
+                    ),
+                  }"
                 >
                   {{ getInitials(currentDetail.create_user_name || 'Admin') }}
                 </a-avatar>
-                <span style="margin-left: 8px">{{ currentDetail.create_user_name || '-' }}</span>
+                <span style="margin-left: 8px">{{
+                  currentDetail.create_user_name || '-'
+                }}</span>
               </a-descriptions-item>
               <a-descriptions-item label="创建时间" :span="1">
                 {{ formatDateTime(currentDetail.created_at) }}
@@ -1258,14 +1797,36 @@ const closeDetails = () => {
             <!-- 操作按钮 -->
             <div class="drawer-actions">
               <a-button-group>
-                <a-button v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify)" type="primary" :disabled="!isSupportedAccountProvider(currentDetail.provider) || currentDetail.status !== CloudAccountStatus.Enabled" @click="handleVerify(currentDetail)">
+                <a-button
+                  v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify)"
+                  type="primary"
+                  :disabled="
+                    !isSupportedAccountProvider(currentDetail.provider) ||
+                    currentDetail.status !== CloudAccountStatus.Enabled
+                  "
+                  @click="handleVerify(currentDetail)"
+                >
                   <safety-certificate-outlined /> 验证凭证
                 </a-button>
-                <a-button v-if="hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) && hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)" :disabled="!isSupportedAccountProvider(currentDetail.provider)" @click="handleEdit(currentDetail)">
+                <a-button
+                  v-if="
+                    hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) &&
+                    hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)
+                  "
+                  :disabled="
+                    !isSupportedAccountProvider(currentDetail.provider)
+                  "
+                  @click="handleEdit(currentDetail)"
+                >
                   <edit-outlined /> 编辑
                 </a-button>
               </a-button-group>
-              <a-button v-if="can('tree.cloudAccount.delete')" danger :disabled="!isSupportedAccountProvider(currentDetail.provider)" @click="handleDelete(currentDetail)">
+              <a-button
+                v-if="can('tree.cloudAccount.delete')"
+                danger
+                :disabled="!isSupportedAccountProvider(currentDetail.provider)"
+                @click="handleDelete(currentDetail)"
+              >
                 <delete-outlined /> 删除
               </a-button>
             </div>
@@ -1275,8 +1836,6 @@ const closeDetails = () => {
     </a-drawer>
   </OpsPage>
 </template>
-
-
 
 <style scoped lang="scss">
 .cloud-account-management {

@@ -371,9 +371,9 @@ onMounted(async () => {
             :disabled="clustersLoading"
             @popup-scroll="handleClusterDropdownScroll"
           >
-            <template #suffixIcon
-              ><DeploymentUnitOutlined aria-hidden="true"
-            /></template>
+            <template #suffixIcon>
+              <DeploymentUnitOutlined aria-hidden="true" />
+            </template>
             <a-select-option
               v-for="cluster in clusters"
               :key="cluster.id"
@@ -387,9 +387,9 @@ onMounted(async () => {
                 "
               >
                 <span>{{ cluster.name }}</span>
-                <a-tag color="blue" size="small">{{
-                  getEnvText(cluster.env)
-                }}</a-tag>
+                <a-tag color="blue" size="small">
+                  {{ getEnvText(cluster.env) }}
+                </a-tag>
               </div>
             </a-select-option>
             <a-select-option
@@ -410,18 +410,18 @@ onMounted(async () => {
             allow-clear
             @change="handleFilterChange"
           >
-            <template #suffixIcon
-              ><FilterOutlined aria-hidden="true"
-            /></template>
-            <a-select-option :value="NamespaceStatus.Active"
-              >活跃</a-select-option
-            >
-            <a-select-option :value="NamespaceStatus.Terminating"
-              >终止中</a-select-option
-            >
-            <a-select-option :value="NamespaceStatus.Unknown"
-              >未知</a-select-option
-            >
+            <template #suffixIcon>
+              <FilterOutlined aria-hidden="true" />
+            </template>
+            <a-select-option :value="NamespaceStatus.Active">
+              活跃
+            </a-select-option>
+            <a-select-option :value="NamespaceStatus.Terminating">
+              终止中
+            </a-select-option>
+            <a-select-option :value="NamespaceStatus.Unknown">
+              未知
+            </a-select-option>
           </a-select>
 
           <!-- 标签过滤器 -->
@@ -514,11 +514,9 @@ onMounted(async () => {
 
     <!-- 数据展示区域 -->
     <a-alert v-if="loadError" type="error" :message="loadError" show-icon>
-      <template #action
-        ><a-button size="small" @click="fetchNamespaces"
-          >重试</a-button
-        ></template
-      >
+      <template #action>
+        <a-button size="small" @click="fetchNamespaces"> 重试 </a-button>
+      </template>
     </a-alert>
     <a-alert
       v-if="clustersError"
@@ -526,11 +524,11 @@ onMounted(async () => {
       :message="clustersError"
       show-icon
     >
-      <template #action
-        ><a-button size="small" @click="() => fetchClusters(true)"
-          >重试集群列表</a-button
-        ></template
-      >
+      <template #action>
+        <a-button size="small" @click="() => fetchClusters(true)">
+          重试集群列表
+        </a-button>
+      </template>
     </a-alert>
     <div class="k8s-data-display table-container">
       <a-table
@@ -555,7 +553,10 @@ onMounted(async () => {
       >
         <template #bodyCell="{ column, text, record }">
           <template v-if="column.key === 'status'">
-            <a-badge :status="getStatusColor(text)" :text="getStatusText(text)" />
+            <a-badge
+              :status="getStatusColor(text)"
+              :text="getStatusText(text)"
+            />
           </template>
           <template v-else-if="column.key === 'phase'">
             <a-badge :status="getPhaseColor(text)" :text="getPhaseText(text)" />
@@ -642,7 +643,10 @@ onMounted(async () => {
                   <template #icon><TagsOutlined aria-hidden="true" /></template>
                 </a-button>
               </a-tooltip>
-              <a-tooltip v-if="can('k8s.namespace.delete')" title="删除命名空间">
+              <a-tooltip
+                v-if="can('k8s.namespace.delete')"
+                title="删除命名空间"
+              >
                 <a-button
                   title="删除"
                   danger
@@ -654,7 +658,9 @@ onMounted(async () => {
                     record.name === 'kube-node-lease'
                   "
                 >
-                  <template #icon><DeleteOutlined aria-hidden="true" /></template>
+                  <template #icon>
+                    <DeleteOutlined aria-hidden="true" />
+                  </template>
                 </a-button>
               </a-tooltip>
               <a-tooltip
@@ -1089,12 +1095,12 @@ onMounted(async () => {
                   size="small"
                   bordered
                 >
-                  <a-descriptions-item label="命名空间">{{
-                    currentNamespaceDetail.name
-                  }}</a-descriptions-item>
-                  <a-descriptions-item label="集群">{{
-                    getClusterName(currentNamespaceDetail.cluster_id)
-                  }}</a-descriptions-item>
+                  <a-descriptions-item label="命名空间">
+                    {{ currentNamespaceDetail.name }}
+                  </a-descriptions-item>
+                  <a-descriptions-item label="集群">
+                    {{ getClusterName(currentNamespaceDetail.cluster_id) }}
+                  </a-descriptions-item>
                   <a-descriptions-item label="状态">
                     <a-badge
                       :status="getStatusColor(currentNamespaceDetail.status)"
@@ -1107,9 +1113,9 @@ onMounted(async () => {
                       :text="getPhaseText(currentNamespaceDetail.phase)"
                     />
                   </a-descriptions-item>
-                  <a-descriptions-item label="UID">{{
-                    currentNamespaceDetail.uid || '-'
-                  }}</a-descriptions-item>
+                  <a-descriptions-item label="UID">
+                    {{ currentNamespaceDetail.uid || '-' }}
+                  </a-descriptions-item>
                 </a-descriptions>
               </a-card>
             </a-col>
