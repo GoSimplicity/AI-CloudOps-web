@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { computed, onMounted, reactive, ref } from 'vue';
+import {
+  computed,
+  onMounted,
+  onUnmounted,
+  reactive,
+  ref,
+  toRaw,
+  watch,
+} from 'vue';
+
+import { useUserStore } from '@vben/stores';
+import { cloneDeep } from '@vben/utils';
+
 import { message, Modal } from 'ant-design-vue';
 import {
   ApartmentOutlined,
@@ -21,7 +33,6 @@ import {
   type ListWorkorderProcessReq,
   ProcessStatus,
   updateWorkorderProcess,
-  type UpdateWorkorderProcessReq,
   type WorkorderProcessItem,
 } from '#/api/core/workorder/workorder_process';
 
@@ -38,13 +49,120 @@ import {
 
 import ProcessBasicConfig from './components/ProcessBasicConfig.vue';
 
+import { useAuthStore } from '#/store/auth';
+import { getAvatarColor as avatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
+const userStore = useUserStore();
+const authStore = useAuthStore();
+
+let disposed = false;
+let interactionRevision = 0;
+let submitRevision = 0;
+let listRevision = 0;
+let categoryRevision = 0;
+let formsRevision = 0;
+let formOwner: string | undefined;
+let deleteDialog: ReturnType<typeof Modal.confirm> | undefined;
+const detailLoading = ref(false);
+const submitLoading = ref(false);
+const actionLoading = ref(false);
+const formReady = ref(false);
+
+const pageOwner = () =>
+  JSON.stringify([
+    userStore.userInfo?.userId ?? '',
+    authStore.getAuthGeneration(),
+  ]);
+const validId = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+const validStatus = (value: number) =>
+  value === ProcessStatus.Draft ||
+  value === ProcessStatus.Published ||
+  value === ProcessStatus.Archived;
+
+const invalidateInteraction = () => {
+  ++interactionRevision;
+  ++submitRevision;
+  formOwner = undefined;
+  detailLoading.value = false;
+  submitLoading.value = false;
+  actionLoading.value = false;
+  formReady.value = false;
+  const dialog = deleteDialog;
+  deleteDialog = undefined;
+  dialog?.destroy();
+};
+
+const beginInteraction = (permission: string) => {
+  if (disposed || !userStore.userInfo?.userId || !hasPerm(permission)) return;
+  invalidateInteraction();
+  const revision = interactionRevision;
+  const owner = pageOwner();
+  return {
+    isCurrent: () =>
+      !disposed &&
+      revision === interactionRevision &&
+      owner === pageOwner() &&
+      hasPerm(permission),
+    ownsInteraction: () =>
+      !disposed && revision === interactionRevision && owner === pageOwner(),
+  };
+};
+
+const capturePayload = (
+  data: CreateWorkorderProcessReq | WorkorderProcessItem,
+  nextStatus = data.status,
+  nextDefault = data.is_default,
+): CreateWorkorderProcessReq | undefined => {
+  if (
+    !validId(data.form_design_id) ||
+    (data.category_id !== undefined &&
+      data.category_id !== null &&
+      !validId(data.category_id)) ||
+    !validStatus(nextStatus) ||
+    (nextDefault !== 1 && nextDefault !== 2) ||
+    typeof data.name !== 'string' ||
+    !data.name.trim() ||
+    (data.tags !== undefined && data.tags !== null && !Array.isArray(data.tags))
+  ) {
+    message.warning('流程标识、关联字段或状态无效，请刷新后重试');
+    return;
+  }
+  try {
+    return {
+      category_id: data.category_id,
+      definition: cloneDeep(toRaw(data.definition)),
+      description: data.description,
+      form_design_id: data.form_design_id,
+      is_default: nextDefault,
+      name: data.name,
+      status: nextStatus,
+      tags:
+        data.tags === undefined || data.tags === null
+          ? data.tags
+          : [...data.tags],
+    };
+  } catch {
+    message.warning('流程定义无法读取，请刷新后重试');
+  }
+};
+
+const initialProcessForm = (): CreateWorkorderProcessReq & { id?: number } => ({
+  category_id: undefined,
+  definition: createDefaultProcessDefinition(),
+  description: '',
+  form_design_id: 0,
+  is_default: 2,
+  name: '',
+  status: ProcessStatus.Draft,
+  tags: [],
+});
 
 // 列定义
 const columns = [
@@ -126,7 +244,7 @@ const total = ref(0);
 const editMode = ref('basic');
 
 // 组件引用
-const basicConfigRef = ref();
+const basicConfigRef = ref<{ validate: () => Promise<boolean> }>();
 
 // 统计数据
 const stats = reactive({
@@ -156,23 +274,41 @@ const paginationConfig = computed(() => ({
 const processDialog = reactive({
   visible: false,
   isEdit: false,
-  form: {
-    id: undefined,
-    name: '',
-    description: '',
-    form_design_id: 0,
-    category_id: undefined,
-    status: ProcessStatus.Draft,
-    tags: [],
-    is_default: 2,
-    definition: createDefaultProcessDefinition(),
-  } as CreateWorkorderProcessReq & { id?: number },
+  form: initialProcessForm(),
 });
 
 // 详情对话框
 const detailDialog = reactive({
   visible: false,
   process: null as WorkorderProcessItem | null,
+});
+
+watch(
+  pageOwner,
+  () => {
+    invalidateInteraction();
+    ++listRevision;
+    ++categoryRevision;
+    ++formsRevision;
+    loading.value = false;
+    processDialog.visible = false;
+    processDialog.form = initialProcessForm();
+    detailDialog.visible = false;
+    detailDialog.process = null;
+    processList.value = [];
+    categories.value = [];
+    formDesigns.value = [];
+    total.value = 0;
+    Object.assign(stats, { archived: 0, draft: 0, published: 0, total: 0 });
+  },
+  { flush: 'sync' },
+);
+onUnmounted(() => {
+  disposed = true;
+  invalidateInteraction();
+  ++listRevision;
+  ++categoryRevision;
+  ++formsRevision;
 });
 
 const formDialogWidth = computed(() => {
@@ -212,7 +348,15 @@ const handleTableChange = (pagination: any): void => {
  */
 const loadError = ref('');
 
-const loadProcesses = async (): Promise<void> => {
+const loadProcesses = async (
+  stillCurrent: () => boolean = () => true,
+): Promise<void> => {
+  const revision = ++listRevision;
+  const owner = pageOwner();
+  const ownsRequest = () =>
+    !disposed && revision === listRevision && owner === pageOwner();
+  const isCurrent = () => ownsRequest() && stillCurrent();
+  if (!isCurrent()) return;
   loading.value = true;
   loadError.value = '';
   try {
@@ -225,6 +369,7 @@ const loadProcesses = async (): Promise<void> => {
     };
 
     const res = (await listWorkorderProcess(params)) as any;
+    if (!isCurrent()) return;
     if (res && res.items) {
       processList.value = res.items || [];
       total.value = res.total || 0;
@@ -243,13 +388,14 @@ const loadProcesses = async (): Promise<void> => {
       ).length;
     }
   } catch (error: any) {
+    if (!isCurrent()) return;
     processList.value = [];
     total.value = 0;
     Object.assign(stats, { total: 0, published: 0, draft: 0, archived: 0 });
     if (shouldRecordPageError(error)) loadError.value = '加载流程数据失败';
     if (shouldNotifyPageError(error)) message.error(loadError.value);
   } finally {
-    loading.value = false;
+    if (ownsRequest()) loading.value = false;
   }
 };
 
@@ -257,6 +403,10 @@ const loadProcesses = async (): Promise<void> => {
  * 加载分类数据 - 实现真分页
  */
 const loadCategories = async (): Promise<void> => {
+  const revision = ++categoryRevision;
+  const owner = pageOwner();
+  const isCurrent = () =>
+    !disposed && revision === categoryRevision && owner === pageOwner();
   try {
     let allCategories: any[] = [];
     let currentPage = 1;
@@ -264,6 +414,7 @@ const loadCategories = async (): Promise<void> => {
     let hasMoreData = true;
 
     while (hasMoreData) {
+      if (!isCurrent()) return;
       const params = {
         page: currentPage,
         size: pageSize,
@@ -271,6 +422,7 @@ const loadCategories = async (): Promise<void> => {
       };
 
       const res = (await listWorkorderCategory(params)) as any;
+      if (!isCurrent()) return;
       if (res && res.items && res.items.length > 0) {
         allCategories = [...allCategories, ...res.items];
 
@@ -290,7 +442,7 @@ const loadCategories = async (): Promise<void> => {
 
     categories.value = allCategories;
   } catch {
-    categories.value = [];
+    if (isCurrent()) categories.value = [];
   }
 };
 
@@ -298,6 +450,10 @@ const loadCategories = async (): Promise<void> => {
  * 加载表单列表用于显示 - 实现真分页
  */
 const loadFormDesigns = async (): Promise<void> => {
+  const revision = ++formsRevision;
+  const owner = pageOwner();
+  const isCurrent = () =>
+    !disposed && revision === formsRevision && owner === pageOwner();
   try {
     let allForms: any[] = [];
     let currentPage = 1;
@@ -305,6 +461,7 @@ const loadFormDesigns = async (): Promise<void> => {
     let hasMoreData = true;
 
     while (hasMoreData) {
+      if (!isCurrent()) return;
       const params = {
         page: currentPage,
         size: pageSize,
@@ -313,6 +470,7 @@ const loadFormDesigns = async (): Promise<void> => {
       };
 
       const res = (await listWorkorderFormDesign(params)) as any;
+      if (!isCurrent()) return;
       if (res && res.items && res.items.length > 0) {
         allForms = [...allForms, ...res.items];
 
@@ -332,7 +490,7 @@ const loadFormDesigns = async (): Promise<void> => {
 
     formDesigns.value = allForms;
   } catch {
-    formDesigns.value = [];
+    if (isCurrent()) formDesigns.value = [];
   }
 };
 
@@ -352,312 +510,302 @@ const handleCategoryChange = (): void => {
   loadProcesses();
 };
 
+const closeProcessDialog = (): void => {
+  if (!processDialog.visible) return;
+  invalidateInteraction();
+  processDialog.visible = false;
+};
+
+const closeDetailDialog = (): void => {
+  if (!detailDialog.visible) return;
+  invalidateInteraction();
+  detailDialog.visible = false;
+  detailDialog.process = null;
+};
+
 const handleCreateProcess = (): void => {
+  if (!beginInteraction('/api/workorder/process/create')) return;
+  formOwner = pageOwner();
   processDialog.isEdit = false;
-  processDialog.form = {
-    name: '',
-    description: '',
-    form_design_id: 0,
-    category_id: undefined,
-    status: ProcessStatus.Draft,
-    tags: [],
-    is_default: 2,
-    definition: createDefaultProcessDefinition(),
-  };
+  processDialog.form = initialProcessForm();
   editMode.value = 'basic';
+  detailDialog.visible = false;
+  detailDialog.process = null;
+  formReady.value = true;
   processDialog.visible = true;
+  loadCategories();
+  loadFormDesigns();
 };
 
-const handleEditProcess = async (row: WorkorderProcessItem): Promise<void> => {
-  processDialog.isEdit = true;
-  loading.value = true;
-
+const readProcess = async (
+  row: WorkorderProcessItem,
+  mode: 'edit' | 'view',
+): Promise<void> => {
+  const id = row.id;
+  if (!validId(id)) {
+    message.warning('流程标识无效，请刷新后重试');
+    return;
+  }
+  const scope = beginInteraction(
+    mode === 'edit'
+      ? '/api/workorder/process/update/:id'
+      : '/api/workorder/process/detail/:id',
+  );
+  if (!scope) return;
+  const isCurrent = () => scope.isCurrent() && row.id === id;
+  detailDialog.process = null;
+  detailDialog.visible = mode === 'view';
+  processDialog.visible = mode === 'edit';
+  if (mode === 'edit') {
+    formOwner = pageOwner();
+    processDialog.isEdit = true;
+    processDialog.form = { ...initialProcessForm(), id };
+    editMode.value = 'basic';
+  }
+  detailLoading.value = true;
   try {
-    const res = (await detailWorkorderProcess({
-      id: row.id!,
-    })) as WorkorderProcessItem;
-    if (res) {
+    const result: WorkorderProcessItem = await detailWorkorderProcess({ id });
+    if (!isCurrent()) return;
+    if (!result || result.id !== id) throw new Error('流程详情标识不匹配');
+    if (mode === 'edit') {
+      const payload = capturePayload(result);
+      if (!payload) return;
       processDialog.form = {
-        id: res.id,
-        name: res.name,
-        description: res.description,
-        form_design_id: res.form_design_id,
-        category_id: res.category_id,
-        status: res.status,
-        tags: res.tags || [],
-        is_default: res.is_default as 1 | 2,
-        definition: res.definition || createDefaultProcessDefinition(),
+        ...payload,
+        definition: payload.definition || createDefaultProcessDefinition(),
+        id,
+        tags: payload.tags || [],
       };
-
-      editMode.value = 'basic';
-      processDialog.visible = true;
-      detailDialog.visible = false;
+      formReady.value = true;
+      loadCategories();
+      loadFormDesigns();
+    } else {
+      detailDialog.process = result;
     }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error('获取流程详情失败');
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('获取流程详情失败');
   } finally {
-    loading.value = false;
+    if (scope.ownsInteraction()) detailLoading.value = false;
   }
 };
 
-const handleViewProcess = async (row: WorkorderProcessItem): Promise<void> => {
-  loading.value = true;
+const handleEditProcess = (row: WorkorderProcessItem) =>
+  readProcess(row, 'edit');
+const handleViewProcess = (row: WorkorderProcessItem) =>
+  readProcess(row, 'view');
 
+type ProcessTransition = 'activate' | 'archive' | 'publish' | 'setDefault';
+const transitionProcess = async (
+  record: WorkorderProcessItem,
+  action: ProcessTransition,
+): Promise<void> => {
+  const id = record.id;
+  if (!validId(id) || actionLoading.value) return;
+  const scope = beginInteraction('/api/workorder/process/update/:id');
+  if (!scope) return;
+  const status =
+    action === 'setDefault'
+      ? record.status
+      : {
+          activate: ProcessStatus.Draft,
+          archive: ProcessStatus.Archived,
+          publish: ProcessStatus.Published,
+        }[action];
+  const payload = capturePayload(
+    record,
+    status,
+    action === 'setDefault' ? 1 : record.is_default,
+  );
+  if (!payload) return;
+  const isCurrent = () => scope.isCurrent() && record.id === id;
+  processDialog.visible = false;
+  detailDialog.visible = false;
+  actionLoading.value = true;
   try {
-    const res = (await detailWorkorderProcess({
-      id: row.id!,
-    })) as WorkorderProcessItem;
-    if (res) {
-      detailDialog.process = res;
-      detailDialog.visible = true;
-    }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error('获取流程详情失败');
+    await updateWorkorderProcess({
+      ...payload,
+      description: payload.description || '',
+      id,
+    });
+    if (!isCurrent()) return;
+    const resultText = {
+      activate: '已激活',
+      archive: '已归档',
+      publish: '已发布',
+      setDefault: '已设为默认',
+    }[action];
+    message.success(`流程 "${payload.name}" ${resultText}`);
+    await loadProcesses(isCurrent);
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error(
+        {
+          activate: '激活流程失败',
+          archive: '归档流程失败',
+          publish: '发布流程失败',
+          setDefault: '设置默认流程失败',
+        }[action],
+      );
   } finally {
-    loading.value = false;
+    if (scope.ownsInteraction()) actionLoading.value = false;
   }
+};
+
+const confirmDelete = (record: WorkorderProcessItem): void => {
+  const id = record.id;
+  if (!validId(id)) return;
+  const scope = beginInteraction('/api/workorder/process/delete/:id');
+  if (!scope) return;
+  const name = record.name;
+  const page = currentPage.value;
+  const items = processList.value;
+  const isCurrent = () => scope.isCurrent() && record.id === id;
+  processDialog.visible = false;
+  detailDialog.visible = false;
+  let consumed = false;
+  deleteDialog = Modal.confirm({
+    cancelText: '取消',
+    content: `确定要删除流程 "${name}" 吗？这个操作不可恢复！`,
+    okText: '删除',
+    okType: 'danger',
+    onCancel() {
+      if (scope.ownsInteraction()) invalidateInteraction();
+    },
+    async onOk() {
+      if (consumed || !isCurrent()) return;
+      consumed = true;
+      actionLoading.value = true;
+      try {
+        await deleteWorkorderProcess({ id });
+        if (!isCurrent()) return;
+        message.success(`流程 "${name}" 已删除`);
+        if (
+          currentPage.value === page &&
+          processList.value === items &&
+          items.length === 1 &&
+          page > 1
+        )
+          currentPage.value = page - 1;
+        await loadProcesses(isCurrent);
+      } catch (error: unknown) {
+        if (isCurrent() && shouldNotifyPageError(error))
+          message.error('删除流程失败');
+      } finally {
+        if (scope.ownsInteraction()) actionLoading.value = false;
+      }
+    },
+    title: '警告',
+  });
 };
 
 const handleCommand = async (
   command: string,
   row: WorkorderProcessItem,
 ): Promise<void> => {
-  switch (command) {
-    case 'publish': {
-      await publishProcess(row);
-      break;
-    }
-    case 'archive': {
-      await archiveProcess(row);
-      break;
-    }
-    case 'activate': {
-      await activateProcess(row);
-      break;
-    }
-    case 'setDefault': {
-      await setDefaultProcess(row);
-      break;
-    }
-    case 'delete': {
-      confirmDelete(row);
-      break;
-    }
-  }
+  if (command === 'delete') confirmDelete(row);
+  else if (
+    command === 'publish' ||
+    command === 'archive' ||
+    command === 'activate' ||
+    command === 'setDefault'
+  )
+    await transitionProcess(row, command);
 };
 
-const publishProcess = async (process: WorkorderProcessItem): Promise<void> => {
-  loading.value = true;
+const formFingerprint = (): string | undefined => {
   try {
-    const params: UpdateWorkorderProcessReq = {
-      id: process.id!,
-      name: process.name,
-      description: process.description || '',
-      form_design_id: process.form_design_id,
-      category_id: process.category_id,
-      status: ProcessStatus.Published,
-      tags: process.tags,
-      is_default: process.is_default as 1 | 2,
-      definition: process.definition,
-    };
-
-    await updateWorkorderProcess(params);
-    message.success(`流程 "${process.name}" 已发布`);
-    loadProcesses();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(`发布流程失败: ${error.message || '未知错误'}`);
-  } finally {
-    loading.value = false;
+    return JSON.stringify(processDialog.form);
+  } catch {
+    return undefined;
   }
-};
-
-const archiveProcess = async (process: WorkorderProcessItem): Promise<void> => {
-  loading.value = true;
-  try {
-    const params: UpdateWorkorderProcessReq = {
-      id: process.id!,
-      name: process.name,
-      description: process.description || '',
-      form_design_id: process.form_design_id,
-      category_id: process.category_id,
-      status: ProcessStatus.Archived,
-      tags: process.tags,
-      is_default: process.is_default as 1 | 2,
-      definition: process.definition,
-    };
-
-    await updateWorkorderProcess(params);
-    message.success(`流程 "${process.name}" 已归档`);
-    loadProcesses();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(`归档流程失败: ${error.message || '未知错误'}`);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const activateProcess = async (
-  process: WorkorderProcessItem,
-): Promise<void> => {
-  loading.value = true;
-  try {
-    const params: UpdateWorkorderProcessReq = {
-      id: process.id!,
-      name: process.name,
-      description: process.description || '',
-      form_design_id: process.form_design_id,
-      category_id: process.category_id,
-      status: ProcessStatus.Draft,
-      tags: process.tags,
-      is_default: process.is_default as 1 | 2,
-      definition: process.definition,
-    };
-
-    await updateWorkorderProcess(params);
-    message.success(`流程 "${process.name}" 已激活`);
-    loadProcesses();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(`激活流程失败: ${error.message || '未知错误'}`);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const setDefaultProcess = async (
-  process: WorkorderProcessItem,
-): Promise<void> => {
-  loading.value = true;
-  try {
-    const params: UpdateWorkorderProcessReq = {
-      id: process.id!,
-      name: process.name,
-      description: process.description || '',
-      form_design_id: process.form_design_id,
-      category_id: process.category_id,
-      status: process.status,
-      tags: process.tags,
-      is_default: 1 as 1 | 2,
-      definition: process.definition,
-    };
-
-    await updateWorkorderProcess(params);
-    message.success(`流程 "${process.name}" 已设为默认`);
-    loadProcesses();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(`设置默认流程失败: ${error.message || '未知错误'}`);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const confirmDelete = (process: WorkorderProcessItem): void => {
-  Modal.confirm({
-    title: '警告',
-    content: `确定要删除流程 "${process.name}" 吗？这个操作不可恢复！`,
-    okText: '删除',
-    okType: 'danger',
-    cancelText: '取消',
-    async onOk() {
-      try {
-        loading.value = true;
-        await deleteWorkorderProcess({ id: process.id! });
-        message.success(`流程 "${process.name}" 已删除`);
-
-        // 如果删除后当前页没有数据且不是第一页，则返回上一页
-        if (processList.value.length === 1 && currentPage.value > 1) {
-          currentPage.value = currentPage.value - 1;
-        }
-
-        loadProcesses();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(`删除流程失败: ${error.message || '未知错误'}`);
-      } finally {
-        loading.value = false;
-      }
-    },
-  });
 };
 
 const saveProcess = async (): Promise<void> => {
+  if (
+    !processDialog.visible ||
+    !formReady.value ||
+    submitLoading.value ||
+    disposed
+  )
+    return;
+  const owner = formOwner;
+  const form = basicConfigRef.value;
+  if (!owner || owner !== pageOwner() || !userStore.userInfo?.userId) return;
+  if (
+    !form ||
+    typeof form.validate !== 'function' ||
+    editMode.value !== 'basic'
+  ) {
+    message.warning('表单尚未就绪，请稍后重试');
+    return;
+  }
+  const data = processDialog.form;
+  const isEdit = processDialog.isEdit;
+  const id = data.id;
+  if (isEdit && !validId(id)) {
+    message.warning('流程标识无效，请刷新后重试');
+    return;
+  }
+  let snapshot: typeof data;
   try {
-    // 验证基础配置
-    if (editMode.value === 'basic') {
-      const isValid = await basicConfigRef.value?.validate();
-      if (!isValid) {
-        return;
-      }
-    }
-
-    if (!processDialog.form.name.trim()) {
-      message.error('流程名称不能为空');
-      return;
-    }
-
-    if (!processDialog.form.form_design_id) {
-      message.error('请选择关联表单');
-      return;
-    }
-
-    loading.value = true;
-
-    if (processDialog.isEdit && processDialog.form.id) {
-      const updateData: UpdateWorkorderProcessReq = {
-        id: processDialog.form.id,
-        name: processDialog.form.name,
-        description: processDialog.form.description || '',
-        form_design_id: processDialog.form.form_design_id,
-        definition: processDialog.form.definition,
-        category_id: processDialog.form.category_id,
-        status: processDialog.form.status,
-        tags: processDialog.form.tags,
-        is_default: processDialog.form.is_default,
-      };
-
-      await updateWorkorderProcess(updateData);
-      message.success(`流程 "${processDialog.form.name}" 已更新`);
+    snapshot = cloneDeep(toRaw(data));
+  } catch {
+    message.warning('流程定义无法读取，请刷新后重试');
+    return;
+  }
+  const fingerprint = formFingerprint();
+  if (fingerprint === undefined) return;
+  const revision = interactionRevision;
+  const ticket = ++submitRevision;
+  const permission = isEdit
+    ? '/api/workorder/process/update/:id'
+    : '/api/workorder/process/create';
+  const ownsOperation = () =>
+    !disposed &&
+    revision === interactionRevision &&
+    ticket === submitRevision &&
+    owner === pageOwner();
+  const isCurrent = () =>
+    ownsOperation() &&
+    hasPerm(permission) &&
+    processDialog.visible &&
+    processDialog.isEdit === isEdit &&
+    processDialog.form === data &&
+    data.id === id &&
+    basicConfigRef.value === form &&
+    editMode.value === 'basic' &&
+    formFingerprint() === fingerprint;
+  if (!isCurrent()) return;
+  submitLoading.value = true;
+  try {
+    const valid = await form.validate();
+    if (!isCurrent() || valid !== true) return;
+    const payload = capturePayload(snapshot);
+    if (!payload) return;
+    if (isEdit) {
+      if (!validId(id)) return;
+      await updateWorkorderProcess({
+        ...payload,
+        description: payload.description || '',
+        id,
+      });
+      if (!isCurrent()) return;
+      message.success(`流程 "${payload.name}" 已更新`);
     } else {
-      const createData: CreateWorkorderProcessReq = {
-        name: processDialog.form.name,
-        description: processDialog.form.description,
-        form_design_id: processDialog.form.form_design_id,
-        definition: processDialog.form.definition,
-        category_id: processDialog.form.category_id,
-        status: processDialog.form.status,
-        tags: processDialog.form.tags,
-        is_default: processDialog.form.is_default,
-      };
-
-      await createWorkorderProcess(createData);
-      message.success(`流程 "${processDialog.form.name}" 已创建`);
+      await createWorkorderProcess(payload);
+      if (!isCurrent()) return;
+      message.success(`流程 "${payload.name}" 已创建`);
       currentPage.value = 1;
     }
-
     processDialog.visible = false;
-    loadProcesses();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(
-        processDialog.isEdit
-          ? `更新流程失败: ${error.message || '未知错误'}`
-          : `创建流程失败: ${error.message || '未知错误'}`,
-      );
+    await loadProcesses(() => ownsOperation() && hasPerm(permission));
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error(isEdit ? '更新流程失败' : '创建流程失败');
   } finally {
-    loading.value = false;
+    if (ownsOperation()) submitLoading.value = false;
   }
-};
-
-// 对话框关闭方法
-const closeProcessDialog = (): void => {
-  processDialog.visible = false;
-};
-
-const closeDetailDialog = (): void => {
-  detailDialog.visible = false;
 };
 
 const formatDate = (dateStr: string | undefined): string => {
@@ -747,25 +895,7 @@ const getStatusText = (status: number): string => {
 };
 
 const getAvatarColor = (name: string | undefined): string => {
-  if (!name) return '#1890ff';
-
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  return colors[Math.abs(hash) % colors.length] || '#1890ff';
+  return avatarColor(name || '');
 };
 
 const getFormName = (formId: number | undefined): string => {
@@ -793,16 +923,10 @@ const formatDefinitionForDisplay = (definition: any): string => {
 };
 
 // 初始化
-onMounted(async (): Promise<void> => {
-  loading.value = true;
-  try {
-    await Promise.all([loadProcesses(), loadCategories(), loadFormDesigns()]);
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(`初始化数据加载失败: ${error.message || '未知错误'}`);
-  } finally {
-    loading.value = false;
-  }
+onMounted(() => {
+  loadProcesses();
+  loadCategories();
+  loadFormDesigns();
 });
 </script>
 
@@ -919,7 +1043,7 @@ onMounted(async (): Promise<void> => {
 
     <a-alert v-if="loadError" :message="loadError" show-icon type="error">
       <template #action>
-        <a-button size="small" @click="loadProcesses">重试</a-button>
+        <a-button size="small" @click="loadProcesses()">重试</a-button>
       </template>
     </a-alert>
 
@@ -928,7 +1052,7 @@ onMounted(async (): Promise<void> => {
         <a-table
           :columns="columns"
           :data-source="processList"
-          :loading="loading"
+          :loading="loading || actionLoading"
           :pagination="paginationConfig"
           :scroll="{ x: 1200 }"
           bordered
@@ -1077,8 +1201,9 @@ onMounted(async (): Promise<void> => {
 
     <!-- 流程创建/编辑对话框 -->
     <a-modal
-      :confirm-loading="loading"
+      :confirm-loading="submitLoading"
       :destroy-on-close="true"
+      :ok-button-props="{ disabled: !formReady }"
       :open="processDialog.visible"
       :title="processDialog.isEdit ? '编辑流程' : '创建流程'"
       :width="formDialogWidth"
@@ -1086,12 +1211,20 @@ onMounted(async (): Promise<void> => {
       @cancel="closeProcessDialog"
       @ok="saveProcess"
     >
-      <div class="modal-content">
+      <a-spin v-if="detailLoading" />
+      <a-alert
+        v-else-if="!formReady"
+        message="流程详情读取失败，请关闭后重新打开"
+        show-icon
+        type="error"
+      />
+      <div v-else class="modal-content">
         <!-- 流程编辑模式切换 -->
         <div class="edit-mode-tabs">
           <a-tabs v-model:activeKey="editMode" type="card">
             <a-tab-pane key="basic" tab="基本信息">
               <ProcessBasicConfig
+                :key="interactionRevision"
                 ref="basicConfigRef"
                 v-model="processDialog.form"
                 :categories="categories"
@@ -1112,7 +1245,14 @@ onMounted(async (): Promise<void> => {
       title="流程详情"
       @cancel="closeDetailDialog"
     >
-      <div v-if="detailDialog.process" class="process-details">
+      <a-spin v-if="detailLoading" />
+      <a-alert
+        v-else-if="!detailDialog.process"
+        message="流程详情读取失败，请关闭后重新打开"
+        show-icon
+        type="error"
+      />
+      <div v-else class="process-details">
         <div class="detail-header">
           <h2>{{ detailDialog.process.name }}</h2>
           <a-tag :color="getStatusColor(detailDialog.process.status)">

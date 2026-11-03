@@ -365,3 +365,13 @@ CSV要求当前listOwner并显式检查首行，中文列名、顺序和值映�
 - auth16+history/SFC405及请求/路由/Scope/table/scanner等，764项定向通过；其中真实Pinia getter同步watch、原时序、数字签名、state不持久化epoch均有回归。
 - 四个owned文件逐规则lint无新增，shared/tests0/0；全仓四protected/parser门禁通过，原lint债另行记录。
 - 根在其它模块收口后再次完整应用类型检查通过；全量/构建将在下一整合冻结点验证，不以本阶段定向数冒称全套。
+
+## 阶段三十：流程编辑、状态与提交快照
+
+Process清除7处不安全ID，编辑缺ID不能退回create。真实BasicConfig.validate必须返回true；validate前捕获表单引用/模式/深复制definition与tags及字段fingerprint，每个await后复核UID/authGeneration、交互与提交票据。详情/4类status/default操作/自有删除确认分别持有原目标及loading，one-shot不借用新窗口。关联分页及BasicConfig子实例按交互key隔离，不让旧选项回执污染新窗。
+
+根复查发现structuredClone是新的生产浏览器依赖，与现有目标不匹配；改用仓库已导出的泛型cloneDeep/toRaw，无新依赖。保留JSON定义与完整payload合同，并补全局structuredClone缺失时create/edit仍成功及深复制隔离。兼容补丁合并的一处重复import被编译拦下，去重及去除重复测试后完整复验，不把失败版本当完成。
+
+- 新51项真实SFC/AntD及实际BasicConfig回归，连旧Process/Design/scanner共83项通过，类型检查通过。
+- 生产ESLint85→37，各规则无增；新Safety0/0，旧Process测试只补真实Pinia/auth依赖，没有删原4项业务断言。
+- 第二次统一冻结：149文件3069项全量、类型及11项构建通过，四类lint门禁0/parser0。完整lint仍10443 errors/5 warnings；SFC脚本剩11，不宣称全部清零。没有真实工单提交或部署。

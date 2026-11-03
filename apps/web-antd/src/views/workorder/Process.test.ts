@@ -1,5 +1,8 @@
+import { useUserStore } from '@vben/stores';
+
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { message } from 'ant-design-vue';
+import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -8,6 +11,10 @@ import {
 } from '#/utils/permission/forbidden';
 
 import Process from './Process.vue';
+
+vi.mock('#/store/auth', () => ({
+  useAuthStore: () => ({ getAuthGeneration: () => 0 }),
+}));
 
 function required<T>(value: null | T | undefined): T {
   if (value === null || value === undefined) {
@@ -33,6 +40,14 @@ vi.mock('#/api/request', () => ({ requestClient: client }));
 let wrapper: VueWrapper;
 beforeEach(() => {
   vi.clearAllMocks();
+  const pinia = createPinia();
+  setActivePinia(pinia);
+  useUserStore().setUserInfo({
+    avatar: '',
+    realName: '',
+    userId: '1',
+    username: 'operator',
+  });
   client.get.mockImplementation((url: string) =>
     Promise.resolve({
       items:
@@ -68,7 +83,7 @@ beforeEach(() => {
   );
   wrapper = mount(Process, {
     attachTo: document.body,
-    global: { plugins: [Antd] },
+    global: { plugins: [Antd, pinia] },
   });
 });
 afterEach(() => {
