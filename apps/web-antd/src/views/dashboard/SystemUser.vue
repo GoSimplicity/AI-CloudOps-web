@@ -1,6 +1,9 @@
 <script lang="ts" setup>
 import OpsPage from '#/components/ops/OpsPage.vue';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+
+import { useUserStore } from '@vben/stores';
+
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import type { FormInstance } from 'ant-design-vue';
@@ -25,10 +28,13 @@ import {
   revokeRolesFromUserApi,
 } from '#/api/core/system/system';
 
+import { useAuthStore } from '#/store/auth';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
+const userStore = useUserStore();
+const authStore = useAuthStore();
 
 // 类型定义
 interface UserStatistics {
@@ -89,6 +95,107 @@ const userList = ref<UserInfo[]>([]);
 const roleList = ref<UserRole[]>([]);
 const currentUser = ref<UserInfo | null>(null);
 const assignedRoles = ref<UserRole[]>([]);
+const rolesLoading = ref(false);
+const rolesLoaded = ref(false);
+const roleOperationLoading = ref(false);
+let pageDisposed = false;
+let roleWindowRevision = 0;
+let roleReadRevision = 0;
+let roleActionRevision = 0;
+let userListRevision = 0;
+let userStatisticsRevision = 0;
+let roleCatalogRevision = 0;
+let roleWindowOwner: string | undefined;
+const roleReadPermission = '/api/role/user_roles/:id';
+
+const pageOwner = () =>
+  JSON.stringify([
+    userStore.userInfo?.userId ?? '',
+    authStore.getAuthGeneration(),
+  ]);
+
+const isValidRoleTargetId = (id: number) => Number.isSafeInteger(id) && id > 0;
+
+const invalidateRoleWindow = () => {
+  ++roleWindowRevision;
+  ++roleReadRevision;
+  ++roleActionRevision;
+  roleWindowOwner = undefined;
+  currentUser.value = null;
+  assignedRoles.value = [];
+  rolesLoading.value = false;
+  rolesLoaded.value = false;
+  roleOperationLoading.value = false;
+};
+
+const captureRoleWindow = () => {
+  const userId = currentUser.value?.id;
+  if (
+    pageDisposed ||
+    !userStore.userInfo?.userId ||
+    !roleModalVisible.value ||
+    userId === undefined ||
+    !isValidRoleTargetId(userId) ||
+    roleWindowOwner !== pageOwner() ||
+    !hasPerm(roleReadPermission)
+  ) {
+    return;
+  }
+  return {
+    owner: roleWindowOwner,
+    userId,
+    windowRevision: roleWindowRevision,
+  };
+};
+
+type RoleWindowTarget = NonNullable<ReturnType<typeof captureRoleWindow>>;
+
+const isCurrentRoleWindow = (target: RoleWindowTarget) =>
+  !pageDisposed &&
+  roleModalVisible.value &&
+  roleWindowRevision === target.windowRevision &&
+  currentUser.value?.id === target.userId &&
+  roleWindowOwner === target.owner &&
+  pageOwner() === target.owner &&
+  hasPerm(roleReadPermission);
+
+watch(
+  roleModalVisible,
+  (visible) => {
+    if (!visible) invalidateRoleWindow();
+  },
+  { flush: 'sync' },
+);
+watch(
+  pageOwner,
+  () => {
+    invalidateRoleWindow();
+    roleModalVisible.value = false;
+    roleList.value = [];
+    ++roleCatalogRevision;
+    ++userListRevision;
+    ++userStatisticsRevision;
+    loading.value = false;
+  },
+  { flush: 'sync' },
+);
+watch(
+  () => hasPerm(roleReadPermission),
+  (allowed) => {
+    if (!allowed) {
+      invalidateRoleWindow();
+      roleModalVisible.value = false;
+    }
+  },
+  { flush: 'sync' },
+);
+onUnmounted(() => {
+  pageDisposed = true;
+  invalidateRoleWindow();
+  ++roleCatalogRevision;
+  ++userListRevision;
+  ++userStatisticsRevision;
+});
 const viewUserData = ref<UserInfo | null>(null);
 const userStatistics = ref<UserStatistics>({
   admin_count: 0,
@@ -199,7 +306,7 @@ const formChangPwdRules = computed(() => {
 
 // 计算属性
 const availableRoles = computed(() => {
-  if (!currentUser.value) return [];
+  if (!currentUser.value || !rolesLoaded.value) return [];
   const assignedIds = assignedRoles.value.map((role) => role.id);
   return roleList.value.filter((role) => !assignedIds.includes(role.id));
 });
@@ -307,7 +414,13 @@ const isAdminUser = (user: UserInfo) => {
 };
 
 // API 调用
-const fetchUserList = async () => {
+const fetchUserList = async (stillCurrent: () => boolean = () => true) => {
+  const owner = pageOwner();
+  const revision = ++userListRevision;
+  const ownsRequest = () =>
+    !pageDisposed && revision === userListRevision && owner === pageOwner();
+  const isCurrent = () => ownsRequest() && stillCurrent();
+  if (!isCurrent()) return;
   loading.value = true;
   try {
     const params: GetUserListReq = {
@@ -327,20 +440,25 @@ const fetchUserList = async () => {
     }
 
     const response = await getUserList(params);
-
+    if (!isCurrent()) return;
     userList.value = response.items || [];
     paginationConfig.total = response.total || 0;
   } catch (error: any) {
+    if (!isCurrent()) return;
     if (shouldNotifyPageError(error))
       message.error(error.message || '获取用户列表失败');
     userList.value = [];
     paginationConfig.total = 0;
   } finally {
-    loading.value = false;
+    if (ownsRequest()) loading.value = false;
   }
 };
 
 const fetchRoleList = async () => {
+  const owner = pageOwner();
+  const revision = ++roleCatalogRevision;
+  const isCurrent = () =>
+    !pageDisposed && revision === roleCatalogRevision && owner === pageOwner();
   try {
     let allRoles: any[] = [];
     let currentPage = 1;
@@ -348,10 +466,12 @@ const fetchRoleList = async () => {
     let hasMoreData = true;
 
     while (hasMoreData) {
+      if (!isCurrent()) return;
       const response = await listRolesApi({
         page: currentPage,
         size: pageSize,
       });
+      if (!isCurrent()) return;
 
       if (response && response.items && response.items.length > 0) {
         allRoles = [...allRoles, ...response.items];
@@ -371,27 +491,55 @@ const fetchRoleList = async () => {
 
     roleList.value = allRoles;
   } catch (error: any) {
+    if (!isCurrent()) return;
     if (shouldNotifyPageError(error))
       message.error(error.message || '获取角色列表失败');
     roleList.value = [];
   }
 };
 
-const fetchUserRoles = async (userId: number) => {
+const fetchUserRoles = async (
+  target: RoleWindowTarget,
+  stillCurrent: () => boolean = () => true,
+) => {
+  if (!isCurrentRoleWindow(target) || !stillCurrent()) return;
+  const revision = ++roleReadRevision;
+  const ownsRequest = () =>
+    revision === roleReadRevision && isCurrentRoleWindow(target);
+  const isCurrent = () => ownsRequest() && stillCurrent();
+  rolesLoading.value = true;
+  rolesLoaded.value = false;
   try {
-    const response = await getUserRolesApi(userId);
+    const response = await getUserRolesApi(target.userId);
+    if (!isCurrent()) return;
     assignedRoles.value = response.items || [];
+    rolesLoaded.value = true;
+    return true;
   } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取用户角色失败');
+    if (!isCurrent()) return;
+    if (shouldNotifyPageError(error)) message.error('获取用户角色失败');
+  } finally {
+    if (ownsRequest()) rolesLoading.value = false;
   }
 };
 
-const fetchUserStatistics = async () => {
+const fetchUserStatistics = async (
+  stillCurrent: () => boolean = () => true,
+) => {
+  const owner = pageOwner();
+  const revision = ++userStatisticsRevision;
+  const isCurrent = () =>
+    !pageDisposed &&
+    revision === userStatisticsRevision &&
+    owner === pageOwner() &&
+    stillCurrent();
+  if (!isCurrent()) return;
   try {
     const response = await getUserStatistics();
+    if (!isCurrent()) return;
     userStatistics.value = response;
   } catch (error: any) {
+    if (!isCurrent()) return;
     if (shouldNotifyPageError(error))
       message.error(error.message || '获取用户统计失败');
     // 设置默认值避免显示undefined
@@ -484,9 +632,22 @@ const handleView = async (user: UserInfo) => {
 };
 
 const handleRoleManagement = async (user: UserInfo) => {
+  if (
+    pageDisposed ||
+    !userStore.userInfo?.userId ||
+    !isValidRoleTargetId(user.id) ||
+    !hasPerm(roleReadPermission)
+  ) {
+    message.warning('用户标识无效或无权读取角色，请刷新后重试');
+    return;
+  }
+  invalidateRoleWindow();
   currentUser.value = user;
-  await fetchUserRoles(user.id);
+  roleWindowOwner = pageOwner();
   roleModalVisible.value = true;
+  if (roleList.value.length === 0) fetchRoleList();
+  const target = captureRoleWindow();
+  if (target) await fetchUserRoles(target);
 };
 
 const handleDelete = async (user: UserInfo) => {
@@ -628,37 +789,49 @@ const handleSubmit = async () => {
   }
 };
 
-const handleAssignRole = async (role: UserRole) => {
+const updateUserRole = async (role: UserRole, action: 'assign' | 'revoke') => {
+  const target = captureRoleWindow();
+  const roleId = role.id;
+  const permission =
+    action === 'assign' ? '/api/role/assign_users' : '/api/role/revoke_users';
+  if (
+    !target ||
+    !rolesLoaded.value ||
+    roleOperationLoading.value ||
+    !isValidRoleTargetId(roleId) ||
+    !hasPerm(permission)
+  ) {
+    return;
+  }
+  const revision = ++roleActionRevision;
+  const ownsOperation = () =>
+    revision === roleActionRevision && isCurrentRoleWindow(target);
+  const isCurrent = () => ownsOperation() && hasPerm(permission);
+  roleOperationLoading.value = true;
   try {
-    await assignRolesToUserApi({
-      user_id: currentUser.value!.id,
-      role_ids: [role.id],
-    });
-    message.success('角色分配成功');
-    await fetchUserRoles(currentUser.value!.id);
-    await fetchUserList();
-    await fetchUserStatistics(); // 角色变更后更新统计
+    const request = { role_ids: [roleId], user_id: target.userId };
+    const changeRoles =
+      action === 'assign' ? assignRolesToUserApi : revokeRolesFromUserApi;
+    await changeRoles(request);
+    if (!isCurrent()) return;
+    message.success(action === 'assign' ? '角色分配成功' : '角色移除成功');
+    if (!(await fetchUserRoles(target, isCurrent))) return;
+    if (!isCurrent()) return;
+    await fetchUserList(isCurrent);
+    if (!isCurrent()) return;
+    await fetchUserStatistics(isCurrent);
   } catch (error: any) {
+    if (!isCurrent()) return;
     if (shouldNotifyPageError(error))
-      message.error(error.message || '角色分配失败');
+      message.error(action === 'assign' ? '角色分配失败' : '角色移除失败');
+  } finally {
+    if (ownsOperation()) roleOperationLoading.value = false;
   }
 };
 
-const handleRevokeRole = async (role: UserRole) => {
-  try {
-    await revokeRolesFromUserApi({
-      user_id: currentUser.value!.id,
-      role_ids: [role.id],
-    });
-    message.success('角色移除成功');
-    await fetchUserRoles(currentUser.value!.id);
-    await fetchUserList();
-    await fetchUserStatistics(); // 角色变更后更新统计
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '角色移除失败');
-  }
-};
+const handleAssignRole = (role: UserRole) => updateUserRole(role, 'assign');
+
+const handleRevokeRole = (role: UserRole) => updateUserRole(role, 'revoke');
 
 // 初始化
 onMounted(() => {
@@ -1125,7 +1298,14 @@ onMounted(() => {
           <h4>{{ currentUser.real_name || currentUser.username }} 的角色</h4>
         </div>
 
-        <a-tabs>
+        <a-spin v-if="rolesLoading" />
+        <a-alert
+          v-else-if="!rolesLoaded"
+          message="用户角色读取失败，请重新打开角色管理后重试"
+          show-icon
+          type="error"
+        />
+        <a-tabs v-else>
           <a-tab-pane key="assigned" tab="已分配角色">
             <div class="role-list">
               <div v-if="assignedRoles.length === 0" class="empty-state">
@@ -1143,6 +1323,7 @@ onMounted(() => {
                   </div>
                 </div>
                 <a-button
+                  :loading="roleOperationLoading"
                   danger
                   size="small"
                   type="text"
@@ -1171,6 +1352,7 @@ onMounted(() => {
                   </div>
                 </div>
                 <a-button
+                  :loading="roleOperationLoading"
                   size="small"
                   type="primary"
                   @click="handleAssignRole(role)"
