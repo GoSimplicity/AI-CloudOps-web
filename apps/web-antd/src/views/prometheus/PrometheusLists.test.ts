@@ -104,6 +104,7 @@ const pages: {
     component: MonitorAlertRecord,
     title: '记录规则',
     path: '/monitor/record_rules/list',
+    expectedFailure: '加载记录规则列表失败',
     create: '新增记录',
   },
   {

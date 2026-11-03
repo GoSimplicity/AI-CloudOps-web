@@ -1,14 +1,22 @@
 <script setup lang="ts">
+import type { FormInstance } from 'ant-design-vue';
+
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
 
 import { useUserStore } from '@vben/stores';
 
 import { message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
-import type { FormInstance } from 'ant-design-vue';
 import {
   createMonitorRecordRuleApi,
   deleteMonitorRecordRuleApi,
@@ -25,7 +33,7 @@ import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
 
 // 定义 Pool 类型
 interface Pool {
@@ -110,22 +118,28 @@ const columns = [
 
 // 状态数据
 const loading = ref(false);
-const { loadError, beginRequest } = useListRequest(loading);
+const {
+  loadError,
+  beginRequest,
+  invalidate: invalidateList,
+} = useListRequest(loading);
 const submitLoading = ref(false);
 const validatingExpr = ref(false);
 const searchText = ref('');
 const enabledFilter = ref<1 | 2 | undefined>(undefined);
 const data = ref<MonitorRecordRule[]>([]);
 const poolOptions = ref<Pool[]>([]);
+const poolNameCache = new Map<number, string>();
+let poolCacheOwner: string | undefined;
 const showPoolPagination = ref(false);
 
 // 防抖处理
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+let poolSearchTimeout: null | ReturnType<typeof setTimeout> = null;
 onBeforeUnmount(() => {
   if (searchTimeout) clearTimeout(searchTimeout);
   if (poolSearchTimeout) clearTimeout(poolSearchTimeout);
 });
-let poolSearchTimeout: any = null;
 
 // 分页配置
 const paginationConfig = reactive({
@@ -170,7 +184,7 @@ const addForm = reactive({
   ip_address: '',
   enable: 2 as 1 | 2,
   expr: '',
-  labels: [],
+  labels: [] as string[],
 });
 
 // 编辑表单
@@ -181,7 +195,7 @@ const editForm = reactive({
   ip_address: '',
   enable: 1 as 1 | 2,
   expr: '',
-  labels: [],
+  labels: [] as string[],
 });
 
 // 详情对话框数据
@@ -189,19 +203,84 @@ const detailDialog = reactive({
   form: null as MonitorRecordRule | null,
 });
 
+type RecordFormMode = 'add' | 'edit';
+const formRevision = ref(0);
+let submissionRevision = 0;
+let expressionRevision = 0;
+let poolRevision = 0;
+let formOwner: string | undefined;
+const formPermission = (mode: RecordFormMode) =>
+  hasPerm(
+    `/api/monitor/record_rules/${mode === 'add' ? 'create' : 'update/:id'}`,
+  );
+const clearFormScope = () => {
+  formRevision.value += 1;
+  submissionRevision += 1;
+  expressionRevision += 1;
+  poolRevision += 1;
+  formOwner = undefined;
+  isAddModalVisible.value = false;
+  isEditModalVisible.value = false;
+  submitLoading.value = false;
+  validatingExpr.value = false;
+  showPoolPagination.value = false;
+  poolOptions.value = [];
+  poolPagination.current = 1;
+  poolPagination.search = '';
+  poolPagination.total = 0;
+  if (poolSearchTimeout) clearTimeout(poolSearchTimeout);
+  poolSearchTimeout = null;
+};
+const captureFormScope = (mode: RecordFormMode) => {
+  const owner = formOwner;
+  const revision = formRevision.value;
+  const model = mode === 'add' ? addForm : editForm;
+  const visible = () =>
+    mode === 'add' ? isAddModalVisible.value : isEditModalVisible.value;
+  if (
+    disposed ||
+    !owner ||
+    owner !== operationOwner() ||
+    !visible() ||
+    !formPermission(mode)
+  )
+    return;
+  return {
+    model,
+    mode,
+    owner,
+    revision,
+    isCurrent: () =>
+      !disposed &&
+      visible() &&
+      formRevision.value === revision &&
+      formOwner === owner &&
+      operationOwner() === owner &&
+      formPermission(mode),
+  };
+};
+
 // 表单验证规则
 const formRules = {
   name: [
     { required: true, message: '请输入记录名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
+    { min: 1, max: 50, message: '长度应为1到50个字符', trigger: 'blur' },
   ],
-  pool_id: [{ required: true, message: '请选择实例池', trigger: 'change' }],
+  pool_id: [
+    {
+      required: true,
+      validator: (_rule: unknown, value: unknown) =>
+        validRecordId(value)
+          ? Promise.resolve()
+          : Promise.reject(new Error('请选择有效的实例池')),
+      trigger: 'change',
+    },
+  ],
   ip_address: [
-    { required: true, message: '请输入IP地址', trigger: 'blur' },
     {
       validator: (_rule: any, value: string) => {
         if (!value) {
-          return Promise.reject('请输入IP地址');
+          return Promise.resolve();
         }
         // 支持 IP:PORT 格式，如 192.168.1.100:9090 或 localhost:9090
         const ipPortPattern =
@@ -271,8 +350,14 @@ const updateStats = () => {
 };
 
 // 数据加载
-const fetchRecordRules = async (): Promise<void> => {
+const fetchRecordRulesForScope = async (
+  stillCurrent: () => boolean = () => true,
+): Promise<void> => {
+  const owner = operationOwner();
+  if (disposed || !owner || !stillCurrent()) return;
   const request = beginRequest();
+  const isCurrent = () =>
+    request.isCurrent() && owner === operationOwner() && stillCurrent();
   try {
     const response = await getMonitorRecordRuleListApi({
       page: paginationConfig.current,
@@ -280,12 +365,16 @@ const fetchRecordRules = async (): Promise<void> => {
       search: searchText.value || undefined,
       enable: enabledFilter.value,
     });
-    if (!request.isCurrent()) return;
+    if (!isCurrent()) return;
     data.value = response.items || [];
     paginationConfig.total = response.total || 0;
     updateStats();
   } catch (error: any) {
-    if (!request.fail(error, '加载记录规则列表失败')) return;
+    if (
+      !isCurrent() ||
+      !request.fail(new Error('加载记录规则列表失败'), '加载记录规则列表失败')
+    )
+      return;
     data.value = [];
     paginationConfig.total = 0;
     updateStats();
@@ -295,28 +384,84 @@ const fetchRecordRules = async (): Promise<void> => {
   }
 };
 
+const fetchRecordRules = () => fetchRecordRulesForScope();
+
+// Keep only a current selection's known label when paging or reopening.
+const setPoolOptions = (items: Pool[], owner: string) => {
+  if (poolCacheOwner !== owner) {
+    poolNameCache.clear();
+    poolCacheOwner = owner;
+  }
+  for (const pool of items) {
+    if (
+      validRecordId(pool.id) &&
+      typeof pool.name === 'string' &&
+      pool.name.trim()
+    ) {
+      poolNameCache.set(pool.id, pool.name);
+    }
+  }
+  let selectedId: number | undefined;
+  if (isEditModalVisible.value) selectedId = editForm.pool_id;
+  else if (isAddModalVisible.value) selectedId = addForm.pool_id;
+  const name = validRecordId(selectedId)
+    ? poolNameCache.get(selectedId)
+    : undefined;
+  poolOptions.value =
+    validRecordId(selectedId) &&
+    name !== undefined &&
+    !items.some((pool) => pool.id === selectedId)
+      ? [{ id: selectedId, name }, ...items]
+      : items;
+};
+
 // 获取Prometheus实例池数据（支持分页和搜索）
 const loadPools = async () => {
+  const owner = operationOwner();
+  const revision = formRevision.value;
+  if (disposed || !owner) return;
+  const ticket = ++poolRevision;
+  const isCurrent = () =>
+    !disposed &&
+    owner === operationOwner() &&
+    revision === formRevision.value &&
+    ticket === poolRevision;
   try {
     const response = await getMonitorScrapePoolListApi({
       page: poolPagination.current,
       size: poolPagination.pageSize,
       search: poolPagination.search,
     });
-    poolOptions.value = response.items;
+    if (!isCurrent()) return;
+    setPoolOptions(
+      (response.items || []).filter((pool: Pool) => validRecordId(pool.id)),
+      owner,
+    );
     poolPagination.total = response.total;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    if (!isCurrent()) return;
+    setPoolOptions([], owner);
+    poolPagination.total = 0;
     if (shouldNotifyPageError(error))
-      message.error(error.message || '获取实例池数据失败，请稍后重试');
+      message.error('获取实例池数据失败，请稍后重试');
   }
 };
 
 // 处理实例池搜索
 const handlePoolSearch = (value: string) => {
+  poolRevision += 1;
   if (poolSearchTimeout) {
     clearTimeout(poolSearchTimeout);
   }
+  const owner = operationOwner();
+  const revision = formRevision.value;
   poolSearchTimeout = setTimeout(() => {
+    if (
+      disposed ||
+      owner !== operationOwner() ||
+      revision !== formRevision.value
+    )
+      return;
     poolPagination.search = value;
     poolPagination.current = 1;
     loadPools();
@@ -478,17 +623,36 @@ const handleEnableRecord = (record: MonitorRecordRule): Promise<void> =>
 const handleDisableRecord = (record: MonitorRecordRule): Promise<void> =>
   setRecordEnabled(record, 2);
 
+const closeDetailDialog = (): void => {
+  detailRevision += 1;
+  detailDialogVisible.value = false;
+};
+
 // 模态框操作
 const showAddModal = (): void => {
+  const owner = operationOwner();
+  if (disposed || !owner || !formPermission('add')) return;
+  clearFormScope();
+  closeDetailDialog();
+  formOwner = owner;
   resetAddForm();
   isAddModalVisible.value = true;
+  loadPools();
 };
 
 const closeAddModal = (): void => {
-  isAddModalVisible.value = false;
+  if (isAddModalVisible.value) clearFormScope();
 };
 
 const showEditModal = (record: MonitorRecordRule): void => {
+  const owner = operationOwner();
+  if (disposed || !owner || !formPermission('edit')) return;
+  if (!validRecordId(record.id)) {
+    message.warning('记录规则标识无效，请刷新后重试');
+    return;
+  }
+  clearFormScope();
+  formOwner = owner;
   detailRevision += 1;
   Object.assign(editForm, {
     id: record.id,
@@ -497,19 +661,22 @@ const showEditModal = (record: MonitorRecordRule): void => {
     ip_address: record.ip_address,
     enable: record.enable,
     expr: record.expr,
-    labels: record.labels,
+    labels: Array.isArray(record.labels) ? [...record.labels] : [],
   });
   isEditModalVisible.value = true;
   detailDialogVisible.value = false;
+  const selected =
+    validRecordId(record.pool_id) &&
+    typeof record.pool_name === 'string' &&
+    record.pool_name.trim()
+      ? [{ id: record.pool_id, name: record.pool_name }]
+      : [];
+  setPoolOptions(selected, owner);
+  loadPools();
 };
 
 const closeEditModal = (): void => {
-  isEditModalVisible.value = false;
-};
-
-const closeDetailDialog = (): void => {
-  detailRevision += 1;
-  detailDialogVisible.value = false;
+  if (isEditModalVisible.value) clearFormScope();
 };
 
 // 重置新增表单
@@ -522,60 +689,68 @@ const resetAddForm = (): void => {
   addForm.labels = [];
 };
 
-// 提交新增记录
-const handleAdd = async (): Promise<void> => {
+// Validation and API callbacks only own the window that started them.
+const submitRecordForm = async (mode: RecordFormMode): Promise<void> => {
+  const context = captureFormScope(mode);
+  if (!context || submitLoading.value) return;
+  const form = mode === 'add' ? addFormRef.value : editFormRef.value;
+  if (!form || typeof form.validate !== 'function') return;
+  const id = mode === 'edit' ? editForm.id : undefined;
+  if (mode === 'edit' && !validRecordId(id)) {
+    message.warning('记录规则标识无效，请刷新后重试');
+    return;
+  }
+  const { model } = context;
+  if (
+    !validRecordId(model.pool_id) ||
+    ![1, 2].includes(model.enable) ||
+    !Array.isArray(model.labels) ||
+    model.labels.some((value) => typeof value !== 'string')
+  ) {
+    message.warning('记录规则配置无效，请重新检查');
+    return;
+  }
+  const fingerprint = JSON.stringify(model);
+  const payload = {
+    name: model.name,
+    pool_id: model.pool_id,
+    ip_address: model.ip_address,
+    enable: model.enable,
+    expr: model.expr,
+    labels: [...model.labels],
+  };
+  const ticket = ++submissionRevision;
+  const isCurrent = () =>
+    context.isCurrent() &&
+    ticket === submissionRevision &&
+    (mode === 'add' ? addFormRef.value : editFormRef.value) === form &&
+    JSON.stringify(model) === fingerprint &&
+    (mode === 'add' || editForm.id === id);
+  submitLoading.value = true;
   try {
-    await addFormRef.value?.validate();
-    submitLoading.value = true;
-
-    const payload = {
-      name: addForm.name,
-      pool_id: addForm.pool_id,
-      ip_address: addForm.ip_address,
-      enable: Number(addForm.enable) as 1 | 2,
-      expr: addForm.expr,
-      labels: addForm.labels,
-    };
-
-    await createMonitorRecordRuleApi(payload);
-    message.success('新增记录成功');
-    fetchRecordRules();
-    closeAddModal();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '新增记录失败');
+    try {
+      await form.validate();
+    } catch {
+      return;
+    }
+    if (!isCurrent()) return;
+    if (mode === 'edit' && validRecordId(id))
+      await updateMonitorRecordRuleApi({ ...payload, id });
+    else if (mode === 'add') await createMonitorRecordRuleApi(payload);
+    else return;
+    if (!isCurrent()) return;
+    message.success(mode === 'add' ? '新增记录成功' : '更新记录规则成功');
+    await fetchRecordRulesForScope(isCurrent);
+    if (isCurrent()) clearFormScope();
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error(mode === 'add' ? '新增记录失败' : '更新记录规则失败');
   } finally {
-    submitLoading.value = false;
+    if (submissionRevision === ticket) submitLoading.value = false;
   }
 };
-
-// 提交更新记录
-const handleUpdate = async (): Promise<void> => {
-  try {
-    await editFormRef.value?.validate();
-    submitLoading.value = true;
-
-    const payload = {
-      id: editForm.id,
-      name: editForm.name,
-      pool_id: editForm.pool_id,
-      ip_address: editForm.ip_address,
-      enable: Number(editForm.enable) as 1 | 2,
-      expr: editForm.expr,
-      labels: editForm.labels,
-    };
-
-    await updateMonitorRecordRuleApi(payload);
-    message.success('更新记录规则成功');
-    fetchRecordRules();
-    closeEditModal();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '更新记录规则失败');
-  } finally {
-    submitLoading.value = false;
-  }
-};
+const handleAdd = () => submitRecordForm('add');
+const handleUpdate = () => submitRecordForm('edit');
 
 // 处理删除记录规则
 const handleDelete = (record: MonitorRecordRule): void => {
@@ -623,43 +798,55 @@ const handleDelete = (record: MonitorRecordRule): void => {
   });
 };
 
-// 表达式验证（新增）
-const validateAddExpression = async () => {
+const validateExpression = async (mode: RecordFormMode) => {
+  const context = captureFormScope(mode);
+  if (!context || validatingExpr.value) return;
+  const expression = context.model.expr;
+  if (!expression) {
+    message.error('表达式不能为空');
+    return;
+  }
+  const ticket = ++expressionRevision;
+  const isCurrent = () =>
+    context.isCurrent() &&
+    ticket === expressionRevision &&
+    context.model.expr === expression;
+  validatingExpr.value = true;
   try {
-    if (!addForm.expr) {
-      message.error('表达式不能为空');
-      return;
-    }
-    validatingExpr.value = true;
-    const payload = { promql_expr: addForm.expr };
-    await promqlExprCheckApi(payload);
-    message.success('表达式验证成功');
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '表达式验证失败，请稍后重试');
+    await promqlExprCheckApi({ promql_expr: expression });
+    if (isCurrent()) message.success('表达式验证成功');
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('表达式验证失败，请稍后重试');
   } finally {
-    validatingExpr.value = false;
+    if (ticket === expressionRevision) validatingExpr.value = false;
   }
 };
+const validateAddExpression = () => validateExpression('add');
+const validateEditExpression = () => validateExpression('edit');
 
-// 表达式验证（编辑）
-const validateEditExpression = async () => {
-  try {
-    if (!editForm.expr) {
-      message.error('表达式不能为空');
-      return;
-    }
-    validatingExpr.value = true;
-    const payload = { promql_expr: editForm.expr };
-    await promqlExprCheckApi(payload);
-    message.success('表达式验证成功');
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '表达式验证失败，请稍后重试');
-  } finally {
-    validatingExpr.value = false;
-  }
-};
+watch(
+  operationOwner,
+  () => {
+    clearFormScope();
+    poolNameCache.clear();
+    poolCacheOwner = undefined;
+    detailRevision += 1;
+    detailDialogVisible.value = false;
+    detailDialog.form = null;
+    mutationVersions.clear();
+    invalidateList();
+    data.value = [];
+    paginationConfig.total = 0;
+    updateStats();
+  },
+  { flush: 'sync' },
+);
+onBeforeUnmount(() => {
+  clearFormScope();
+  poolNameCache.clear();
+  poolCacheOwner = undefined;
+});
 
 // 生命周期钩子
 onMounted(() => {
@@ -910,6 +1097,7 @@ onMounted(() => {
       @ok="handleAdd"
     >
       <a-form
+        :key="formRevision"
         ref="addFormRef"
         :model="addForm"
         :rules="formRules"
@@ -1031,6 +1219,7 @@ onMounted(() => {
       @ok="handleUpdate"
     >
       <a-form
+        :key="formRevision"
         ref="editFormRef"
         :model="editForm"
         :rules="formRules"

@@ -22,7 +22,7 @@ vi.mock('#/store', () => ({
   useAuthStore: () => ({ getAuthGeneration: () => owner.generation }),
 }));
 vi.mock('#/utils/permission', () => ({
-  usePermission: () => ({ can: () => true }),
+  usePermission: () => ({ can: () => true, hasPerm: () => true }),
 }));
 
 function required<T>(value: null | T | undefined): T {
