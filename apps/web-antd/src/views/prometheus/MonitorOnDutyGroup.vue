@@ -1,8 +1,18 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
+
+import { useUserStore } from '@vben/stores';
+
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import { useRouter } from 'vue-router';
@@ -26,10 +36,29 @@ import {
 import dayjs, { type Dayjs } from 'dayjs';
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 
+import { useAuthStore } from '#/store';
+import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
+
+const operationOwner = (): string | undefined => {
+  const userId = Number(useUserStore().userInfo?.userId);
+  if (!Number.isSafeInteger(userId) || userId <= 0) return;
+  return JSON.stringify([userId, useAuthStore().getAuthGeneration()]);
+};
+const validPositiveId = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+let disposed = false;
+let changeWindowRevision = 0;
+let changeReadRevision = 0;
+let changeFormRevision = 0;
+let changeUsersRevision = 0;
+let userListRevision = 0;
+let changeDialogOwner: string | undefined;
+let changeFormOwner: string | undefined;
+const changeSubmitting = ref(false);
 
 const router = useRouter();
 
@@ -116,7 +145,7 @@ const loading = ref(false);
 const { loadError, beginRequest } = useListRequest(loading);
 const addFormRef = ref();
 const editFormRef = ref();
-const createChangeFormRef = ref();
+const createChangeFormRef = ref<FormInstance>();
 
 // 防抖处理
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -215,6 +244,12 @@ const createChangeForm = reactive<{
 const changeUserOptions = ref<{ label: string; value: number }[]>([]);
 const changeUsersLoading = ref(false);
 const changeUserSearchText = ref('');
+const changeUserPagination = reactive({
+  current: 1,
+  hasMore: true,
+  pageSize: 20,
+  total: 0,
+});
 
 // 详情对话框数据
 const detailDialog = reactive({
@@ -296,6 +331,138 @@ const changeFormRules = {
   ],
 };
 
+const captureChangeWindow = () => {
+  const groupId = changeDialog.groupId;
+  const owner = changeDialogOwner;
+  if (
+    disposed ||
+    !changeDialogVisible.value ||
+    !owner ||
+    owner !== operationOwner() ||
+    !validPositiveId(groupId)
+  )
+    return;
+  return { groupId, owner, revision: changeWindowRevision };
+};
+type ChangeWindow = NonNullable<ReturnType<typeof captureChangeWindow>>;
+const ownsChangeWindow = (window: ChangeWindow) =>
+  !disposed &&
+  changeDialogVisible.value &&
+  changeWindowRevision === window.revision &&
+  changeDialog.groupId === window.groupId &&
+  changeDialogOwner === window.owner &&
+  operationOwner() === window.owner;
+
+const invalidateChangeForm = () => {
+  ++changeFormRevision;
+  ++changeUsersRevision;
+  changeFormOwner = undefined;
+  changeSubmitting.value = false;
+  changeUsersLoading.value = false;
+  changeUserOptions.value = [];
+  isCreateChangeModalVisible.value = false;
+  Object.assign(createChangeForm, {
+    date: null,
+    on_duty_group_id: 0,
+    on_duty_user_id: null,
+    origin_user_id: null,
+    reason: '',
+  });
+};
+const invalidateChangeWindow = () => {
+  ++changeWindowRevision;
+  ++changeReadRevision;
+  changeDialogOwner = undefined;
+  invalidateChangeForm();
+  changeDialogVisible.value = false;
+  changeDialog.data = [];
+  changeDialog.groupId = 0;
+  changeDialog.groupName = '';
+  changeDialog.loading = false;
+  changePaginationConfig.current = 1;
+  changePaginationConfig.total = 0;
+};
+watch(
+  operationOwner,
+  () => {
+    invalidateChangeWindow();
+    ++userListRevision;
+    userOptions.value = [];
+    userCache.value.clear();
+    usersLoading.value = false;
+  },
+  { flush: 'sync' },
+);
+onBeforeUnmount(() => {
+  disposed = true;
+  invalidateChangeWindow();
+  ++userListRevision;
+});
+
+interface ChangeUserOptionSource {
+  id?: number;
+  real_name?: string;
+  realName?: string;
+  user_id?: number;
+  userId?: number;
+  username?: string;
+}
+const fetchChangeUsers = async (page = 1, search = ''): Promise<void> => {
+  const window = captureChangeWindow();
+  const formRevision = changeFormRevision;
+  const owner = changeFormOwner;
+  if (!window || !isCreateChangeModalVisible.value || owner !== window.owner)
+    return;
+  const ticket = ++changeUsersRevision;
+  const isCurrent = () =>
+    ownsChangeWindow(window) &&
+    ticket === changeUsersRevision &&
+    formRevision === changeFormRevision &&
+    isCreateChangeModalVisible.value &&
+    changeFormOwner === owner;
+  changeUsersLoading.value = true;
+  try {
+    const response = await getUserList({
+      page,
+      search,
+      size: changeUserPagination.pageSize,
+    });
+    if (!isCurrent()) return;
+    const items = response?.items || response?.list || response?.data || [];
+    const options = Array.isArray(items)
+      ? items.flatMap((user: ChangeUserOptionSource) => {
+          const id = user.id ?? user.userId ?? user.user_id;
+          if (!validPositiveId(id)) return [];
+          const label =
+            user.real_name || user.username || user.realName || `用户${id}`;
+          userCache.value.set(id, label);
+          return [{ label, value: id }];
+        })
+      : [];
+    changeUserOptions.value =
+      page === 1
+        ? options
+        : [
+            ...changeUserOptions.value,
+            ...options.filter(
+              (option) =>
+                !changeUserOptions.value.some(
+                  (existing) => existing.value === option.value,
+                ),
+            ),
+          ];
+    changeUserPagination.current = page;
+    changeUserPagination.total = response?.total || response?.count || 0;
+    changeUserPagination.hasMore =
+      page * changeUserPagination.pageSize < changeUserPagination.total;
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('获取调班用户列表失败');
+  } finally {
+    if (isCurrent()) changeUsersLoading.value = false;
+  }
+};
+
 // 计算属性 - 筛选后的未来排班
 const filteredFuturePlans = computed(() => {
   if (!futurePlanDialog.data?.details) return [];
@@ -324,24 +491,6 @@ const filteredFuturePlans = computed(() => {
   const endIndex = startIndex + planPaginationConfig.pageSize;
   return plans.slice(startIndex, endIndex);
 });
-
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length]!;
-};
 
 const getInitials = (name: string): string => {
   if (!name) return '';
@@ -468,6 +617,10 @@ const fetchOnDutyGroups = async (): Promise<void> => {
 };
 
 const fetchUserList = async (page = 1, search = ''): Promise<void> => {
+  const owner = operationOwner();
+  const ticket = ++userListRevision;
+  const isCurrent = () =>
+    !disposed && ticket === userListRevision && owner === operationOwner();
   try {
     usersLoading.value = true;
     const req: GetUserListReq = {
@@ -476,6 +629,7 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
       search: search || '',
     };
     const res = await getUserList(req);
+    if (!isCurrent()) return;
 
     // 处理返回数据
     const items = res?.items || res?.list || res?.data || [];
@@ -508,10 +662,11 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
     userPaginationConfig.total = total;
     userPaginationConfig.hasMore = page * userPaginationConfig.pageSize < total;
   } catch (error: any) {
+    if (!isCurrent()) return;
     if (shouldNotifyPageError(error))
       message.error(error.message || '获取用户列表失败');
   } finally {
-    usersLoading.value = false;
+    if (isCurrent()) usersLoading.value = false;
   }
 };
 
@@ -538,9 +693,11 @@ const handleUserSearch = (value: string): void => {
 const handleChangeUserSelectScroll = (e: any): void => {
   const { target } = e;
   if (target.scrollTop + target.offsetHeight >= target.scrollHeight - 20) {
-    if (userPaginationConfig.hasMore && !changeUsersLoading.value) {
-      userPaginationConfig.current += 1;
-      fetchUserList(userPaginationConfig.current, changeUserSearchText.value);
+    if (changeUserPagination.hasMore && !changeUsersLoading.value) {
+      fetchChangeUsers(
+        changeUserPagination.current + 1,
+        changeUserSearchText.value,
+      );
     }
   }
 };
@@ -548,9 +705,9 @@ const handleChangeUserSelectScroll = (e: any): void => {
 // 处理调班记录用户搜索
 const handleChangeUserSearch = (value: string): void => {
   changeUserSearchText.value = value;
-  userPaginationConfig.current = 1;
-  userPaginationConfig.hasMore = true;
-  fetchUserList(1, value);
+  changeUserPagination.current = 1;
+  changeUserPagination.hasMore = true;
+  fetchChangeUsers(1, value);
 };
 
 // 获取值班组详情
@@ -628,16 +785,21 @@ const fetchOnDutyHistory = async (
 
 // 获取调班记录
 const fetchChangeRecords = async (page = 1, append = false): Promise<void> => {
+  const context = captureChangeWindow();
+  if (!context || !hasPerm('/api/monitor/onduty_groups/changes/:id')) return;
+  const ticket = ++changeReadRevision;
+  const ownsRequest = () =>
+    ownsChangeWindow(context) && ticket === changeReadRevision;
+  const isCurrent = () =>
+    ownsRequest() && hasPerm('/api/monitor/onduty_groups/changes/:id');
   try {
     changeDialog.loading = true;
 
-    const response = await getMonitorOnDutyGroupChangeListApi(
-      changeDialog.groupId,
-      {
-        page,
-        size: changePaginationConfig.pageSize,
-      },
-    );
+    const response = await getMonitorOnDutyGroupChangeListApi(context.groupId, {
+      page,
+      size: changePaginationConfig.pageSize,
+    });
+    if (!isCurrent()) return;
 
     if (response && response.items) {
       if (append) {
@@ -646,6 +808,7 @@ const fetchChangeRecords = async (page = 1, append = false): Promise<void> => {
         changeDialog.data = response.items;
       }
       changePaginationConfig.total = response.total || 0;
+      changePaginationConfig.current = page;
     } else {
       if (!append) {
         changeDialog.data = [];
@@ -656,6 +819,7 @@ const fetchChangeRecords = async (page = 1, append = false): Promise<void> => {
       }
     }
   } catch (error: any) {
+    if (!isCurrent()) return;
     if (shouldNotifyPageError(error))
       message.error(error.message || '获取调班记录失败');
     if (!append) {
@@ -663,7 +827,7 @@ const fetchChangeRecords = async (page = 1, append = false): Promise<void> => {
     }
     changePaginationConfig.total = 0;
   } finally {
-    changeDialog.loading = false;
+    if (ownsRequest()) changeDialog.loading = false;
   }
 };
 
@@ -974,6 +1138,8 @@ const closeAddModal = (): void => {
 };
 
 const showEditModal = (record: MonitorOnDutyGroup): void => {
+  const owner = operationOwner();
+  const id = record.id;
   editForm.id = record.id;
   editForm.name = record.name;
   editForm.shift_days = record.shift_days;
@@ -984,6 +1150,13 @@ const showEditModal = (record: MonitorOnDutyGroup): void => {
   userSearchText.value = '';
   userPaginationConfig.current = 1;
   fetchUserList(1).then(() => {
+    if (
+      disposed ||
+      owner !== operationOwner() ||
+      !isEditModalVisible.value ||
+      editForm.id !== id
+    )
+      return;
     if (record.users && record.users.length > 0) {
       record.users.forEach((user) => {
         const exists = userOptions.value.some(
@@ -1027,11 +1200,15 @@ const closeHistoryDialog = (): void => {
 };
 
 const closeChangeDialog = (): void => {
-  changeDialogVisible.value = false;
+  invalidateChangeWindow();
 };
 
 const showCreateChangeModal = (): void => {
-  createChangeForm.on_duty_group_id = changeDialog.groupId;
+  const context = captureChangeWindow();
+  if (!context || !hasPerm('/api/monitor/onduty_groups/changes')) return;
+  invalidateChangeForm();
+  changeFormOwner = context.owner;
+  createChangeForm.on_duty_group_id = context.groupId;
   createChangeForm.date = null;
   createChangeForm.origin_user_id = null;
   createChangeForm.on_duty_user_id = null;
@@ -1039,19 +1216,15 @@ const showCreateChangeModal = (): void => {
 
   // 加载用户列表
   changeUserSearchText.value = '';
-  userPaginationConfig.current = 1;
-  fetchUserList(1).then(() => {
-    changeUserOptions.value = [...userOptions.value];
-  });
-
+  changeUserPagination.current = 1;
+  changeUserPagination.hasMore = true;
+  changeUserPagination.total = 0;
   isCreateChangeModalVisible.value = true;
+  fetchChangeUsers(1);
 };
 
 const closeCreateChangeModal = (): void => {
-  if (createChangeFormRef.value) {
-    createChangeFormRef.value.resetFields();
-  }
-  isCreateChangeModalVisible.value = false;
+  invalidateChangeForm();
 };
 
 // CRUD操作
@@ -1117,35 +1290,103 @@ const handleUpdate = async (): Promise<void> => {
 };
 
 const handleCreateChange = async (): Promise<void> => {
+  const context = captureChangeWindow();
+  const form = createChangeFormRef.value;
+  const owner = changeFormOwner;
+  if (
+    !context ||
+    !isCreateChangeModalVisible.value ||
+    changeSubmitting.value ||
+    owner !== context.owner ||
+    !hasPerm('/api/monitor/onduty_groups/changes')
+  )
+    return;
+  if (!form || typeof form.validate !== 'function') {
+    message.warning('表单尚未就绪，请稍后重试');
+    return;
+  }
+  const ticket = changeFormRevision;
+  const date = createChangeForm.date;
+  const dateValue = dayjs.isDayjs(date) ? date.valueOf() : undefined;
+  const snapshot = {
+    groupId: createChangeForm.on_duty_group_id,
+    newUserId: createChangeForm.on_duty_user_id,
+    originUserId: createChangeForm.origin_user_id,
+    reason: createChangeForm.reason,
+  };
+  const ownsOperation = () =>
+    ownsChangeWindow(context) &&
+    ticket === changeFormRevision &&
+    changeFormOwner === owner &&
+    isCreateChangeModalVisible.value;
+  const isCurrent = () =>
+    ownsOperation() &&
+    hasPerm('/api/monitor/onduty_groups/changes') &&
+    createChangeFormRef.value === form &&
+    createChangeForm.on_duty_group_id === context.groupId &&
+    snapshot.groupId === context.groupId &&
+    createChangeForm.date === date &&
+    Object.is(
+      dayjs.isDayjs(createChangeForm.date)
+        ? createChangeForm.date.valueOf()
+        : undefined,
+      dateValue,
+    ) &&
+    createChangeForm.origin_user_id === snapshot.originUserId &&
+    createChangeForm.on_duty_user_id === snapshot.newUserId &&
+    createChangeForm.reason === snapshot.reason;
+  if (!isCurrent()) return;
+  changeSubmitting.value = true;
   try {
-    await createChangeFormRef.value.validate();
-
-    loading.value = true;
+    await form.validate();
+  } catch {
+    if (ownsOperation()) changeSubmitting.value = false;
+    return;
+  }
+  if (!isCurrent()) {
+    if (ownsOperation()) changeSubmitting.value = false;
+    return;
+  }
+  try {
+    const groupId = snapshot.groupId;
+    const originUserId = snapshot.originUserId;
+    const newUserId = snapshot.newUserId;
+    if (
+      !validPositiveId(groupId) ||
+      !validPositiveId(originUserId) ||
+      !validPositiveId(newUserId) ||
+      !dayjs.isDayjs(date) ||
+      !date.isValid()
+    ) {
+      message.warning('请选择有效的调班日期、值班组和人员');
+      return;
+    }
     const payload: CreateMonitorOnDutyGroupChangeReq = {
-      on_duty_group_id: createChangeForm.on_duty_group_id,
-      date: createChangeForm.date!.format('YYYY-MM-DD'),
-      origin_user_id: createChangeForm.origin_user_id!,
-      on_duty_user_id: createChangeForm.on_duty_user_id!,
-      reason: createChangeForm.reason?.trim(),
+      date: date.format('YYYY-MM-DD'),
+      on_duty_group_id: groupId,
+      on_duty_user_id: newUserId,
+      origin_user_id: originUserId,
+      reason: snapshot.reason?.trim(),
     };
 
     const response = await createMonitorOnDutyGroupChangeApi(payload);
+    if (!isCurrent()) return;
 
     if (response) {
       message.success('创建调班记录成功');
       closeCreateChangeModal();
       // 刷新调班记录列表
-      if (changeDialogVisible.value) {
+      if (ownsChangeWindow(context)) {
         await fetchChangeRecords(1);
       }
     } else {
       message.error('创建调班记录失败');
     }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '创建调班记录失败');
+  } catch (error: unknown) {
+    if (!isCurrent()) return;
+    if (shouldNotifyPageError(error)) message.error('创建调班记录失败');
   } finally {
-    loading.value = false;
+    if (ownsOperation()) changeSubmitting.value = false;
   }
 };
 
@@ -1190,21 +1431,23 @@ const handleMenuClick = (command: string, record: MonitorOnDutyGroup): void => {
 };
 
 const handleViewChange = async (record: MonitorOnDutyGroup): Promise<void> => {
+  const owner = operationOwner();
+  if (
+    disposed ||
+    !owner ||
+    !validPositiveId(record.id) ||
+    !hasPerm('/api/monitor/onduty_groups/changes/:id')
+  ) {
+    message.warning('值班组或账号标识无效，请刷新后重试');
+    return;
+  }
+  invalidateChangeWindow();
+  changeDialogOwner = owner;
   changeDialog.groupId = record.id;
   changeDialog.groupName = record.name;
-  changeDialog.loading = true;
   changePaginationConfig.current = 1;
-
-  try {
-    await fetchChangeRecords(1);
-    changeDialogVisible.value = true;
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取调班记录失败');
-    changeDialog.data = [];
-  } finally {
-    changeDialog.loading = false;
-  }
+  changeDialogVisible.value = true;
+  await fetchChangeRecords(1);
 };
 
 const confirmDelete = (record: MonitorOnDutyGroup): void => {
@@ -1247,28 +1490,9 @@ onMounted(async () => {
 
 // 处理调班日期选择
 const handleChangeDateSelect = (date: Dayjs | null): void => {
-  if (date && changeDialog.groupId) {
-    // 根据选择的日期，从未来排班计划中查找原值班人
-    const dateStr = date.format('YYYY-MM-DD');
-
-    // 如果当前有未来排班计划数据，从中查找
-    if (futurePlanDialog.data?.details) {
-      const planDetail = futurePlanDialog.data.details.find(
-        (item: any) => item.date === dateStr,
-      );
-      if (planDetail && planDetail.user) {
-        createChangeForm.origin_user_id = planDetail.user.id;
-      }
-    }
-
-    // 如果没有找到，尝试从值班组详情中获取今日值班人作为默认值
-    if (
-      !createChangeForm.origin_user_id &&
-      detailDialog.data?.today_duty_user
-    ) {
-      createChangeForm.origin_user_id = detailDialog.data.today_duty_user.id;
-    }
-  }
+  createChangeForm.date = date;
+  // Another date has no verified original assignee; require an explicit choice.
+  createChangeForm.origin_user_id = null;
 };
 </script>
 
@@ -2230,7 +2454,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
     <!-- 新增调班记录模态框 -->
     <a-modal
-      :confirmLoading="loading"
+      :confirm-loading="changeSubmitting"
       :destroy-on-close="true"
       :open="isCreateChangeModalVisible"
       :width="formDialogWidth"
