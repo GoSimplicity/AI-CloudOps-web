@@ -53,7 +53,8 @@
     "version": "pnpm exec changeset version && pnpm install --no-frozen-lockfile",
     "test:e2e": "playwright test",
     "check:layout": "node scripts/layout-inventory.mjs --check",
-    "update:layout": "node scripts/layout-inventory.mjs"
+    "update:layout": "node scripts/layout-inventory.mjs",
+    "check:eslint-boundaries": "node scripts/check-eslint-boundaries.mjs"
   },
   "dependencies": {
     "jiti": "^2.3.3",

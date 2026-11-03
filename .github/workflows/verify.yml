@@ -23,6 +23,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:layout
+      - run: pnpm check:eslint-boundaries
       - run: pnpm -F @vben/web-antd typecheck
       - run: pnpm test:unit --run
       - run: pnpm build:antd

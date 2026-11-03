@@ -229,3 +229,12 @@ TypeScript 检查确认 `SshTerminal.test.ts` 的6处断言作用于既有 any �
 - SystemWelcome与MonitorOnDutyGroupTable的4处类型排列规范化，只接受简单union/无重复属性签名；实际compileScript再TypeScript输出JavaScript保持相同，bindings/模板/样式不变。另10个文件因Vue运行时props顺序会变化而拒绝批修，保留可见技术债。
 - 请求账户隔离测试最后1处非空断言改为明确前置请求配置存在性检查，缺失直接失败，不再把缺失配置spread成空对象后继续测试。
 - 相关5文件54项测试与应用类型检查通过。产品11项构建已覆盖这些SFC修改；最后账户改动仅为测试，未重复构建。全仓lint将由下一阶段统一实扫确认，不以局部检查宣称全绿。未访问生产。
+
+## 阶段十六：已清规则的CI回归门禁（2026-11-03）
+
+新增`pnpm check:eslint-boundaries`并接入Verify工作流。使用真实根ESLint配置扫描全仓，严格拒绝已清四类：`@typescript-eslint/no-non-null-assertion`、`no-empty`、`no-undef`、`no-unsafe-finally`。任意解析/工具错误、无配置诊断或空扫描也失败关闭；不输出诊断正文或源码。其它遗留诊断保持原规则和计数，脚本明确声明不能代表full lint通过，没有建立旧错误白名单、债务基线、ignore或关闭规则。
+
+- 真实门禁扫描1085文件，四类现有启用范围诊断0，解析/工具失败0；完整结果仍**11430 errors、5 warnings**。
+- 13项回归验证真实配置中各类拒绝、parser/tool异常、空扫描与配置缺失；新脚本/test定向lint零错误/警告。
+- 整合全量139文件2191项单元测试通过。此前11项产品构建证据保持原范围，本阶段只修改工具、CI及回归。
+- **覆盖边界**：现有JS/TS配置关闭no-undef，需各自类型/运行检查补充；SFC尚未启用TS非空断言规则。额外TS AST盘点发现33个Vue脚本仍106处NonNullExpression，此门禁不代表全代码不存在该语法，下一阶段按模块修复后再统一SFC规则。
