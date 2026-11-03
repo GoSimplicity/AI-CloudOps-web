@@ -5,6 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AssistantSession from './AssistantSession.vue';
 import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const api = vi.hoisted(() => ({ getSessionInfo: vi.fn() }));
 vi.mock('@vben/stores', () => ({
@@ -54,18 +61,18 @@ describe('服务端会话详情', () => {
       global: { plugins: [Antd], stubs: { Icon: true } },
     });
     await wrapper.find('input').setValue('owned');
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text() === '搜索')!
-      .trigger('click');
+    await required(
+      wrapper.findAll('button').find((button) => button.text() === '搜索'),
+    ).trigger('click');
     await flushPromises();
     expect(wrapper.text()).toContain('结果未知');
     expect(wrapper.text()).toContain('private-pending-canary');
     expect(wrapper.text()).toContain('private-answer-canary');
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('添加到历史'))!
-      .trigger('click');
+    await required(
+      wrapper
+        .findAll('button')
+        .find((button) => button.text().includes('添加到历史')),
+    ).trigger('click');
     expect(JSON.stringify(localStorage)).not.toContain(
       'private-question-canary',
     );

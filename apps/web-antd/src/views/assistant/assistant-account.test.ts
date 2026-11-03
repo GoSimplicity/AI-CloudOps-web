@@ -6,6 +6,13 @@ import AssistantQuery from './AssistantQuery.vue';
 import AssistantSession from './AssistantSession.vue';
 import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const api = vi.hoisted(() => ({
   assistantQuery: vi.fn(),
@@ -83,9 +90,9 @@ describe('独立助手页面账户隔离', () => {
     );
     mountScreen(AssistantSession);
     await wrapper.find('input').setValue('expired-id');
-    const button = wrapper
-      .findAll('button')
-      .find((item) => item.text() === '搜索')!;
+    const button = required(
+      wrapper.findAll('button').find((item) => item.text() === '搜索'),
+    );
     await button.trigger('click');
     await flushPromises();
     expect(wrapper.find('[role="alert"]').text()).toContain('会话已过期');
@@ -103,10 +110,9 @@ describe('独立助手页面账户隔离', () => {
     api.getSessionInfo.mockRejectedValueOnce(new Error('账户1私有错误原因'));
     mountScreen(AssistantSession);
     await wrapper.find('input').setValue('one-private-id');
-    await wrapper
-      .findAll('button')
-      .find((item) => item.text() === '搜索')!
-      .trigger('click');
+    await required(
+      wrapper.findAll('button').find((item) => item.text() === '搜索'),
+    ).trigger('click');
     await flushPromises();
     expect(wrapper.text()).toContain('账户1私有错误原因');
     state.user.userInfo = { userId: '2' };
@@ -177,7 +183,7 @@ describe('独立助手页面账户隔离', () => {
     setup().questionInput = 'one private';
     const oldTask = setup().sendMessage();
     await flushPromises();
-    const signal = api.assistantQuery.mock.calls[0]![1].signal;
+    const signal = required(api.assistantQuery.mock.calls[0])[1].signal;
     state.user.userInfo = { userId: '2' };
     expect(signal.aborted).toBe(true);
     expect(setup().chatHistory).toEqual([]);
@@ -187,7 +193,7 @@ describe('独立助手页面账户隔离', () => {
     old.resolve({
       answer: 'one private response',
       session_id: 'old',
-      turn_id: api.assistantQuery.mock.calls[0]![0].turn_id,
+      turn_id: required(api.assistantQuery.mock.calls[0])[0].turn_id,
     });
     await oldTask;
     expect(setup().isLoading).toBe(true);
@@ -195,7 +201,7 @@ describe('独立助手页面账户隔离', () => {
     fresh.resolve({
       answer: 'two response',
       session_id: 'fresh',
-      turn_id: api.assistantQuery.mock.calls[1]![0].turn_id,
+      turn_id: required(api.assistantQuery.mock.calls[1])[0].turn_id,
     });
     await freshTask;
     expect(setup().currentSessionId).toBe('fresh');
@@ -224,7 +230,9 @@ describe('独立助手页面账户隔离', () => {
       await setup().sendMessage();
       await flushPromises();
       expect(api.createAssistantSession).toHaveBeenCalledTimes(1);
-      expect(api.assistantQuery.mock.calls[1]![0].session_id).toBe('old');
+      expect(required(api.assistantQuery.mock.calls[1])[0].session_id).toBe(
+        'old',
+      );
       expect(setup().currentSessionId).toBe('old');
     },
   );
@@ -240,7 +248,7 @@ describe('独立助手页面账户隔离', () => {
     mountScreen(AssistantQuery);
     setup().questionInput = '核对问题';
     await setup().sendMessage();
-    const request = api.assistantQuery.mock.calls[0]![0];
+    const request = required(api.assistantQuery.mock.calls[0])[0];
     expect(request.session_id).toBe('old');
     expect(request.turn_id).toBeTruthy();
     expect(setup().pendingTurn.turnId).toBe(request.turn_id);
@@ -257,7 +265,9 @@ describe('独立助手页面账户隔离', () => {
     });
     await setup().recoverTurn();
     expect(api.assistantQuery).toHaveBeenCalledTimes(2);
-    expect(api.assistantQuery.mock.calls[1]![0].turn_id).toBe(request.turn_id);
+    expect(required(api.assistantQuery.mock.calls[1])[0].turn_id).toBe(
+      request.turn_id,
+    );
     expect(setup().pendingTurn).toBeNull();
     expect(wrapper.text()).toContain('已恢复');
   });

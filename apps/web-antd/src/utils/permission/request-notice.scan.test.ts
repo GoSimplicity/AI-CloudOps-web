@@ -4,6 +4,13 @@ import { join, relative, resolve } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 /**
  * FE-02b 静态扫描（incr3 P3-7 加固）
  *
@@ -42,9 +49,9 @@ export function scriptOf(file: string, text: string): string {
   let out = '';
   let last = 0;
   for (const m of text.matchAll(/(<script\b[^>]*>)([\s\S]*?)(<\/script>)/g)) {
-    out += blank(text.slice(last, m.index! + m[1]!.length));
+    out += blank(text.slice(last, m.index + required(m[1]).length));
     out += m[2];
-    last = m.index! + m[1]!.length + m[2]!.length;
+    last = m.index + required(m[1]).length + required(m[2]).length;
   }
   return out + blank(text.slice(last));
 }
@@ -112,7 +119,7 @@ export function findCatchBodies(text: string): CatchBody[] {
   for (const m of text.matchAll(
     /(?<![.\w$])catch\s*(?:\(\s*(\w+)[^)]*\))?\s*\{/g,
   )) {
-    const open = m.index! + m[0].length - 1;
+    const open = m.index + m[0].length - 1;
     bodies.push({
       param: m[1] ?? '',
       start: open + 1,
@@ -121,7 +128,7 @@ export function findCatchBodies(text: string): CatchBody[] {
     });
   }
   for (const m of text.matchAll(/\.catch\s*\(/g)) {
-    const open = m.index! + m[0].length - 1;
+    const open = m.index + m[0].length - 1;
     const close = matchClose(text, open, '()');
     const arg = text.slice(open + 1, close);
     const fn =

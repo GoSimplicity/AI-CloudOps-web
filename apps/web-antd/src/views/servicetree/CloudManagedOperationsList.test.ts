@@ -4,6 +4,13 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import List from './CloudManagedOperationsList.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const api = vi.hoisted(() => ({
   listManagedOperations: vi.fn(),
   getManagedOperation: vi.fn(),
@@ -40,10 +47,9 @@ function render(superAdmin = false) {
   });
 }
 async function click(name: string) {
-  await wrapper
-    .findAll('button')
-    .find((b) => b.text().replace(/\s/g, '') === name)!
-    .trigger('click');
+  await required(
+    wrapper.findAll('button').find((b) => b.text().replace(/\s/g, '') === name),
+  ).trigger('click');
   await flushPromises();
 }
 beforeEach(() => {
@@ -129,7 +135,7 @@ it('超管显式选择所有用户，同UUID按owner区分查询与核对', asyn
   }));
   render(true);
   await flushPromises();
-  await wrapper.findAll('input[type="checkbox"]')[1]!.setValue(true);
+  await required(wrapper.findAll('input[type="checkbox"]')[1]).setValue(true);
   await flushPromises();
   expect(api.listManagedOperations).toHaveBeenLastCalledWith({
     ...scope,
@@ -139,23 +145,28 @@ it('超管显式选择所有用户，同UUID按owner区分查询与核对', asyn
     all_owners: true,
   });
   expect(wrapper.findAll('tbody tr.ant-table-row')).toHaveLength(2);
-  await wrapper
-    .findAll('button')
-    .filter((b) => b.text().replace(/\s/g, '') === '查看或核对')[1]!
-    .trigger('click');
+  await required(
+    wrapper
+      .findAll('button')
+      .filter((b) => b.text().replace(/\s/g, '') === '查看或核对')[1],
+  ).trigger('click');
   await flushPromises();
   api.getManagedOperation.mockResolvedValue(row(8));
   await click('查询本次操作');
   expect(api.getManagedOperation).toHaveBeenCalledWith(id, 8);
   await click('核对并阻断旧请求');
-  const textarea = document.querySelector<HTMLTextAreaElement>(
-    '#managed-operation-review-reason',
-  )!;
+  const textarea = required(
+    document.querySelector<HTMLTextAreaElement>(
+      '#managed-operation-review-reason',
+    ),
+  );
   textarea.value = '超级管理员已经核对实际资源及本地状态';
   textarea.dispatchEvent(new Event('input', { bubbles: true }));
-  document
-    .querySelector<HTMLInputElement>('.ant-modal input[type="checkbox"]')!
-    .click();
+  required(
+    document.querySelector<HTMLInputElement>(
+      '.ant-modal input[type="checkbox"]',
+    ),
+  ).click();
   await flushPromises();
   const audited = {
     ...row(8),
@@ -167,9 +178,11 @@ it('超管显式选择所有用户，同UUID按owner区分查询与核对', asyn
   };
   api.reviewManagedOperation.mockResolvedValue(audited);
   api.getManagedOperation.mockResolvedValue(audited);
-  document
-    .querySelector<HTMLButtonElement>('.ant-modal-footer .ant-btn-primary')!
-    .click();
+  required(
+    document.querySelector<HTMLButtonElement>(
+      '.ant-modal-footer .ant-btn-primary',
+    ),
+  ).click();
   await flushPromises();
   expect(api.reviewManagedOperation).toHaveBeenCalledWith(id, {
     ...scope,
@@ -246,7 +259,7 @@ it('超管权限撤销后立即移除其他用户记录并切回本人模式', a
   }));
   render(true);
   await flushPromises();
-  await wrapper.findAll('input[type="checkbox"]')[1]!.setValue(true);
+  await required(wrapper.findAll('input[type="checkbox"]')[1]).setValue(true);
   await flushPromises();
   expect(wrapper.text()).toContain(otherID);
   await wrapper.setProps({ superAdmin: false });
@@ -276,7 +289,7 @@ it('已核对记录以只读方式展示原状态、核对人与理由，不再�
   }));
   render();
   await flushPromises();
-  await wrapper.findAll('input[type="checkbox"]')[0]!.setValue(false);
+  await required(wrapper.findAll('input[type="checkbox"]')[0]).setValue(false);
   await flushPromises();
   await click('查看或核对');
   expect(wrapper.text()).toContain('原操作记录缺失，已经人工核对实际资源');

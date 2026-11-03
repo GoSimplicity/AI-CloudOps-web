@@ -203,3 +203,12 @@ TypeScript 检查确认 `SshTerminal.test.ts` 的6处断言作用于既有 any �
 - 新helper及测试定向ESLint为0 errors/0 warnings；no-unsafe-finally消除7处，仍保留其它既有E2E lint债。
 - 工单4文件的8个NodeJS.Timeout改为ReturnType<typeof setTimeout>；真实Vue脚本编译的JavaScript逐字相同，模板/样式不变；应用类型检查通过。
 - Playwright仅执行`--list`，收集29项成功；四个修改后的浏览器场景需后续固定三仓CI实际验收，不能将收集成功说成业务验收通过。未访问生产或真实云。
+
+
+## 阶段十三：应用测试非空断言收尾（2026-11-03）
+
+其余38个应用测试文件的152处非空断言已清除，apps/web-antd/src中的测试不再含NonNullExpression。148处使用显式存在性检查，4处m.index已由TypeScript证明为number，仅删除冗余标记。没有引入any/as、缺失值回退或删除业务断言。
+
+- 首次全测发现AssistantInfoCache的按钮查询也用于“不存在”负向断言，不能让查询helper强制存在。已保留该查询可返回undefined，仅在正向点击/属性读取处校验；10项定向及完整2171项复验通过。首次2170通过/1失败没有当成成功。
+- 最终137文件2171项全量单测、应用类型检查通过；38文件AST归一化核对原业务body/断言保留。
+- 真实ESLint逐规则比较仅减少152处非空断言，其它计数不变；未宣称全仓lint通过。没有外部业务访问或部署。

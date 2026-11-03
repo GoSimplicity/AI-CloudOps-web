@@ -4,6 +4,13 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import Recovery from './CloudManagedOperationRecovery.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const api = vi.hoisted(() => ({
   getManagedOperation: vi.fn(),
   reviewManagedOperation: vi.fn(),
@@ -63,7 +70,9 @@ const render = () => {
   });
 };
 const button = (name: string) =>
-  wrapper.findAll('button').find((b) => b.text().replace(/\s/g, '') === name)!;
+  required(
+    wrapper.findAll('button').find((b) => b.text().replace(/\s/g, '') === name),
+  );
 async function click(name: string) {
   await button(name).trigger('click');
   await flushPromises();
@@ -74,20 +83,26 @@ async function openReview() {
   );
   await click('查询本次操作');
   await click('核对并阻断旧请求');
-  const textarea = document.querySelector<HTMLTextAreaElement>(
-    '#managed-operation-review-reason',
-  )!;
+  const textarea = required(
+    document.querySelector<HTMLTextAreaElement>(
+      '#managed-operation-review-reason',
+    ),
+  );
   textarea.value = '已经核对实际云资源和本地记录的状态';
   textarea.dispatchEvent(new Event('input', { bubbles: true }));
-  document
-    .querySelector<HTMLInputElement>('.ant-modal input[type="checkbox"]')!
-    .click();
+  required(
+    document.querySelector<HTMLInputElement>(
+      '.ant-modal input[type="checkbox"]',
+    ),
+  ).click();
   await flushPromises();
 }
 async function save() {
-  document
-    .querySelector<HTMLButtonElement>('.ant-modal-footer .ant-btn-primary')!
-    .click();
+  required(
+    document.querySelector<HTMLButtonElement>(
+      '.ant-modal-footer .ant-btn-primary',
+    ),
+  ).click();
   await flushPromises();
 }
 beforeEach(() => {
@@ -163,9 +178,11 @@ it('核对结果无法读回时不确认并阻止原对话框再次提交', asyn
   expect(document.body.textContent).toContain('核对结果尚未确认');
   expect(document.body.textContent).not.toContain('private-audit-canary');
   expect(
-    document.querySelector<HTMLButtonElement>(
-      '.ant-modal-footer .ant-btn-primary',
-    )!.disabled,
+    required(
+      document.querySelector<HTMLButtonElement>(
+        '.ant-modal-footer .ant-btn-primary',
+      ),
+    ).disabled,
   ).toBe(true);
 });
 it('用户变化后丢弃迟到读取', async () => {

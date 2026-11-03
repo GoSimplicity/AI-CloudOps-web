@@ -13,6 +13,13 @@ import {
 import { getPermissionCode, usePermission } from '#/utils/permission';
 import ApprovalPanel from '#/views/autofix/ApprovalPanel.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const ALL_KEYS = Object.keys(PERMISSION_CODES) as PermissionKey[];
 
 function mountPanel() {
@@ -70,7 +77,7 @@ describe('危险按钮按权限渲染', () => {
     const wrapper = mountPanel();
     const button = confirmButton(wrapper);
     expect(button).toBeDefined();
-    await button!.trigger('click');
+    await required(button).trigger('click');
     expect(wrapper.emitted('confirm')).toHaveLength(1);
 
     const keys = mountAll()

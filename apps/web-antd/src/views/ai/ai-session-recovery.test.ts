@@ -4,6 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AiAssistant from './ai.vue';
 import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const api = vi.hoisted(() => ({
   assistantQuery: vi.fn(),
@@ -36,7 +43,7 @@ describe('悬浮助手持久会话恢复', () => {
     api.assistantQuery.mockRejectedValueOnce(new Error('offline'));
     wrapper = mount(AiAssistant);
     await setup().sendMessage('private-question-canary');
-    const first = api.assistantQuery.mock.calls[0]![0];
+    const first = required(api.assistantQuery.mock.calls[0])[0];
     expect(first.session_id).toBe('session-one');
     expect(first.turn_id).toMatch(/^[0-9a-f-]{36}$/);
     expect(setup().pendingTurn.turnId).toBe(first.turn_id);
@@ -70,7 +77,7 @@ describe('悬浮助手持久会话恢复', () => {
       turn_id: first.turn_id,
     });
     await setup().recoverTurn();
-    expect(api.assistantQuery.mock.calls[1]![0]).toEqual(first);
+    expect(required(api.assistantQuery.mock.calls[1])[0]).toEqual(first);
     expect(setup().pendingTurn).toBeNull();
     expect(JSON.stringify(setup().chatMessages)).toContain(
       'private-answer-canary',

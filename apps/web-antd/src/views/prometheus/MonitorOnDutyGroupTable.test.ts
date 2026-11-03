@@ -4,6 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import MonitorOnDutyGroupTable from './MonitorOnDutyGroupTable.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const client = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 const navigation = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
@@ -50,9 +57,11 @@ function start() {
   });
 }
 function button(text: string) {
-  return wrapper!
-    .findAll('button')
-    .find((item) => item.text().replace(/\s/g, '').includes(text))!;
+  return required(
+    required(wrapper)
+      .findAll('button')
+      .find((item) => item.text().replace(/\s/g, '').includes(text)),
+  );
 }
 
 describe('值班日历页面真实控件', () => {
@@ -60,19 +69,25 @@ describe('值班日历页面真实控件', () => {
     detail.mockRejectedValueOnce(new Error('离线详情失败'));
     start();
     await flushPromises();
-    expect(wrapper!.find('[role="alert"]').text()).toContain('离线详情失败');
+    expect(required(wrapper).find('[role="alert"]').text()).toContain(
+      '离线详情失败',
+    );
     await button('重试').trigger('click');
     await flushPromises();
-    expect(wrapper!.text()).toContain('离线值班组');
+    expect(required(wrapper).text()).toContain('离线值班组');
     expect(navigation.push).not.toHaveBeenCalled();
   });
 
   it('1月31日切到下月仍为2月并查询对应日期范围', async () => {
     start();
     await flushPromises();
-    await wrapper!.findAll('.calendar-nav button')[1]!.trigger('click');
+    await required(
+      required(wrapper).findAll('.calendar-nav button')[1],
+    ).trigger('click');
     await flushPromises();
-    expect(wrapper!.find('.calendar-title').text()).toContain('2026年2月');
+    expect(required(wrapper).find('.calendar-title').text()).toContain(
+      '2026年2月',
+    );
     expect(client.get).toHaveBeenCalledWith(
       '/monitor/onduty_groups/history/7',
       {
@@ -87,10 +102,10 @@ describe('值班日历页面真实控件', () => {
   it('历史搜索通过实际请求传递日期关键字', async () => {
     start();
     await flushPromises();
-    await wrapper!
+    await required(wrapper)
       .get('input[placeholder="搜索值班历史..."]')
       .setValue('2026-01-05');
-    await wrapper!
+    await required(wrapper)
       .get('input[placeholder="搜索值班历史..."]')
       .trigger('keydown', { key: 'Enter', keyCode: 13 });
     await flushPromises();
@@ -105,13 +120,15 @@ describe('值班日历页面真实控件', () => {
     await flushPromises();
     await button('申请换班').trigger('click');
     await flushPromises();
-    const cancel = [
-      ...document.querySelectorAll<HTMLButtonElement>(
-        '.ant-modal-footer button',
+    const cancel = required(
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '.ant-modal-footer button',
+        ),
+      ].find((item) =>
+        /^(取消|Cancel)$/.test(item.textContent?.replace(/\s/g, '') || ''),
       ),
-    ].find((item) =>
-      /^(取消|Cancel)$/.test(item.textContent?.replace(/\s/g, '') || ''),
-    )!;
+    );
     expect(cancel).toBeDefined();
     cancel.click();
     await flushPromises();

@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { clusterResourceKey, namespacedResourceKey } from './utils';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 describe('kubernetes 表格资源身份', () => {
   it('集群级同名资源仍使用不同选择键', () => {
     expect(clusterResourceKey({ cluster_id: 1, name: 'node' })).not.toBe(
@@ -15,8 +22,8 @@ describe('kubernetes 表格资源身份', () => {
       { cluster_id: 2, namespace: 'alpha', name: 'web' },
     ];
     expect(new Set(records.map(namespacedResourceKey)).size).toBe(3);
-    expect(namespacedResourceKey({ ...records[0]! })).toBe(
-      namespacedResourceKey(records[0]!),
+    expect(namespacedResourceKey({ ...required(records[0]) })).toBe(
+      namespacedResourceKey(required(records[0])),
     );
   });
 });

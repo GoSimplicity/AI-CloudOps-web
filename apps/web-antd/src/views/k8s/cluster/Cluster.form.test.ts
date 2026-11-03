@@ -5,6 +5,13 @@ import { defineComponent, h } from 'vue';
 
 import { useClusterPage } from './Cluster';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const client = vi.hoisted(() => ({
   get: vi.fn(),
   put: vi.fn(),
@@ -86,7 +93,7 @@ const deferred = <T>() => {
 
 const validationErrors = async (page: Page, fields: string[]) => {
   try {
-    await page.formRef.value!.validateFields(fields);
+    await required(page.formRef.value).validateFields(fields);
     return [];
   } catch (error) {
     return (
@@ -115,7 +122,7 @@ describe('kubeconfig 纯空白处理（真实表单校验）', () => {
 
     expect(message.warning).not.toHaveBeenCalled();
     expect(client.put).toHaveBeenCalledTimes(1);
-    const [, body] = client.put.mock.calls[0]!;
+    const [, body] = required(client.put.mock.calls[0]);
     expect(body).not.toHaveProperty('kube_config_content');
   });
 
@@ -224,7 +231,7 @@ describe('取消/保存后清空 kubeconfig 输入', () => {
     await page.submitForm();
 
     expect(client.post).toHaveBeenCalledTimes(1);
-    const [, body] = client.post.mock.calls[0]!;
+    const [, body] = required(client.post.mock.calls[0]);
     expect(body).toMatchObject({ kube_config_content: VALID_KUBECONFIG });
     expect(page.isModalVisible.value).toBe(false);
     expect(page.formModel.value.kube_config_content).toBe('');
@@ -245,7 +252,7 @@ describe('取消/保存后清空 kubeconfig 输入', () => {
     await page.submitForm();
 
     expect(client.put).toHaveBeenCalledTimes(1);
-    const [, body] = client.put.mock.calls[0]!;
+    const [, body] = required(client.put.mock.calls[0]);
     expect(body).toMatchObject({ kube_config_content: VALID_KUBECONFIG });
     expect(page.formModel.value.kube_config_content).toBe('');
   });

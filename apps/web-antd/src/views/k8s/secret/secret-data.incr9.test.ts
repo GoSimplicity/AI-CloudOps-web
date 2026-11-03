@@ -12,6 +12,13 @@ import {
   REDACTED_VALUE_MESSAGE,
 } from './secret-data';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 /**
  * SEC-26 incr9（窝窝头 review-incr8）：P2-1' ReDoS、P3-A（<< 合并键）、P3-B（stringData 的 !!binary）、
  * P3-C（按 Go TrimSpace 去首尾空白、base64 按 UTF-8 解码）。用例编号（p09、w10、f08 …）沿用 review-incr8 报告。
@@ -28,8 +35,7 @@ const HEAD = 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: fake-s\n';
 const FAKE_B64 = b64('fake-value');
 /** 每行 7 个字符折行：避开 ≥8 字符的 token 扫描 */
 const fold7 = (text: string, indent: string) =>
-  text
-    .match(/.{1,7}/g)!
+  required(text.match(/.{1,7}/g))
     .map((part) => `${indent}${part}`)
     .join('\n');
 

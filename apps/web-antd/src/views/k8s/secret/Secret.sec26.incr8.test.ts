@@ -7,6 +7,13 @@ import * as sd from './secret-data';
 import { encodeUtf8ToBase64, REDACTED_PLACEHOLDER } from './secret-data';
 import { useSecretPage } from './Secret';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 /**
  * SEC-26 incr8（窝窝头 review-incr7）——页面组合函数层：
  * - P2-1 / P3-1 / P3-2 / P3-3 在 YAML 更新、YAML 创建两条路径上都拦截、不发请求；
@@ -217,7 +224,7 @@ describe('incr8 P3-5：YAML 更新 validate 前取快照 + 打开序号（与编
     validate.resolve({});
     await submitting;
     expect(api.updateByYaml).toHaveBeenCalledTimes(1);
-    expect(api.updateByYaml.mock.calls[0]![0]).toMatchObject({
+    expect(required(api.updateByYaml.mock.calls[0])[0]).toMatchObject({
       cluster_id: 1,
       namespace: 'ns-a',
       name: 'secret-a',
@@ -246,7 +253,7 @@ describe('incr8 P3-5：YAML 更新 validate 前取快照 + 打开序号（与编
     validate.resolve({});
     await submitting;
     expect(api.updateByYaml).toHaveBeenCalledTimes(1);
-    expect(api.updateByYaml.mock.calls[0]![0]).toMatchObject({
+    expect(required(api.updateByYaml.mock.calls[0])[0]).toMatchObject({
       name: 'secret-a',
       yaml: OK_YAML,
     });

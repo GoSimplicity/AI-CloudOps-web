@@ -13,6 +13,13 @@ import {
   SECRET_UPDATE_PERMISSION_CODE,
 } from '#/constants/permission-codes';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 /**
  * SEC-25/26 第 4 条（窝窝头复审）：详情与明文分层。
  * - 「查看详情」由详情码（普通权限体系，角色 / 通配按旧规则）控制；
@@ -76,7 +83,7 @@ async function mountSecret() {
 async function openDetailByClick() {
   const buttons = detailButtons();
   expect(buttons).toHaveLength(1);
-  buttons[0]!.click();
+  required(buttons[0]).click();
   await settle();
   expect(api.detail).toHaveBeenCalledTimes(1);
   const text = document.body.textContent ?? '';
@@ -164,7 +171,7 @@ describe('secret 详情与明文分层（第 4 条）', () => {
     expect(api.reveal).not.toHaveBeenCalled();
     const view = all('.secret-data-keys .secret-view-plain');
     expect(view).toHaveLength(1);
-    view[0]!.click();
+    required(view[0]).click();
     await settle();
     expect(api.reveal).toHaveBeenCalledTimes(1);
     expect(all('.secret-data-plain')[0]?.textContent).toBe(FAKE);
@@ -234,7 +241,7 @@ describe('incr6 P2-1：「编辑」入口要同时有详情码与更新码', () 
     await mountSecret();
     const buttons = editButtons();
     expect(buttons).toHaveLength(1);
-    buttons[0]!.click();
+    required(buttons[0]).click();
     await settle();
     expect(api.detail).toHaveBeenCalledTimes(1);
     expect(document.body.textContent).toContain('编辑 Secret');

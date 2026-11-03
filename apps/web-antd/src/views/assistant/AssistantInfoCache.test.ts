@@ -4,6 +4,13 @@ import { reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AssistantInfo from './AssistantInfo.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const state = vi.hoisted(() => ({
   user: null as any,
   access: null as any,
@@ -39,9 +46,9 @@ async function screen() {
   await flushPromises();
 }
 function clearButton() {
-  return wrapper!
+  return required(wrapper)
     .findAll('button')
-    .find((button) => button.text().replace(/\s/g, '') === '清除服务缓存')!;
+    .find((button) => button.text().replace(/\s/g, '') === '清除服务缓存');
 }
 beforeEach(() => {
   vi.clearAllMocks();
@@ -78,10 +85,10 @@ describe('助手服务缓存维护', () => {
     state.allowed = false;
     await screen();
     expect(clearButton()).toBeUndefined();
-    wrapper!.unmount();
+    required(wrapper).unmount();
     state.allowed = true;
     await screen();
-    const button = clearButton();
+    const button = required(clearButton());
     state.allowed = false;
     await button.trigger('click');
     expect(api.clearAssistantCache).not.toHaveBeenCalled();
@@ -90,19 +97,19 @@ describe('助手服务缓存维护', () => {
     const pending = deferred();
     api.clearAssistantCache.mockReturnValue(pending.promise);
     await screen();
-    await clearButton().trigger('click');
-    await clearButton().trigger('click');
+    await required(clearButton()).trigger('click');
+    await required(clearButton()).trigger('click');
     expect(api.clearAssistantCache).toHaveBeenCalledTimes(1);
     expect(message.success).not.toHaveBeenCalled();
     pending.resolve({ cleared: true });
     await flushPromises();
     expect(message.success).toHaveBeenCalledWith('服务缓存已清除');
-    expect(clearButton().attributes('disabled')).toBeUndefined();
+    expect(required(clearButton()).attributes('disabled')).toBeUndefined();
   });
   it.each([{}, { cleared: false }])('拒绝未确认响应 %j', async (result) => {
     api.clearAssistantCache.mockResolvedValue(result);
     await screen();
-    await clearButton().trigger('click');
+    await required(clearButton()).trigger('click');
     await flushPromises();
     expect(message.success).not.toHaveBeenCalled();
     expect(message.error).toHaveBeenCalledWith(
@@ -113,7 +120,7 @@ describe('助手服务缓存维护', () => {
   it('失败使用通用提示，不泄露服务错误，也不自动重试', async () => {
     api.clearAssistantCache.mockRejectedValue(new Error('private diagnostic'));
     await screen();
-    await clearButton().trigger('click');
+    await required(clearButton()).trigger('click');
     await flushPromises();
     expect(message.error).toHaveBeenCalledWith(
       '未确认服务缓存清理成功，请核查服务状态后再操作',
@@ -123,7 +130,7 @@ describe('助手服务缓存维护', () => {
   it('取消请求不提示失败', async () => {
     api.clearAssistantCache.mockRejectedValue({ code: 'ERR_CANCELED' });
     await screen();
-    await clearButton().trigger('click');
+    await required(clearButton()).trigger('click');
     await flushPromises();
     expect(message.error).not.toHaveBeenCalled();
   });
@@ -133,10 +140,10 @@ describe('助手服务缓存维护', () => {
       const pending = deferred();
       api.clearAssistantCache.mockReturnValue(pending.promise);
       await screen();
-      await clearButton().trigger('click');
+      await required(clearButton()).trigger('click');
       if (change === 'owner') state.user.userInfo = { userId: '2' };
       if (change === 'logout') state.access.accessToken = '';
-      if (change === 'unmount') wrapper!.unmount();
+      if (change === 'unmount') required(wrapper).unmount();
       await flushPromises();
       pending.resolve({ cleared: true });
       await flushPromises();
@@ -151,13 +158,13 @@ describe('助手服务缓存维护', () => {
       .mockReturnValueOnce(old.promise)
       .mockReturnValueOnce(current.promise);
     await screen();
-    await clearButton().trigger('click');
+    await required(clearButton()).trigger('click');
     state.user.userInfo = { userId: '2' };
     await flushPromises();
-    await clearButton().trigger('click');
+    await required(clearButton()).trigger('click');
     old.reject(new Error('old failure'));
     await flushPromises();
-    expect(clearButton().attributes('disabled')).toBeDefined();
+    expect(required(clearButton()).attributes('disabled')).toBeDefined();
     expect(message.error).not.toHaveBeenCalled();
     current.resolve({ cleared: true });
     await flushPromises();

@@ -2,6 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useClusterPage } from './Cluster';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const client = vi.hoisted(() => ({
   get: vi.fn(),
   put: vi.fn(),
@@ -138,7 +145,7 @@ describe('kubeconfig 不在前端回显（P1 安全）', () => {
     client.get.mockResolvedValueOnce({ items: [], total: 0 }); // 刷新列表
     await page.submitForm();
     expect(client.put).toHaveBeenCalledTimes(1);
-    const [url, body] = client.put.mock.calls[0]!;
+    const [url, body] = required(client.put.mock.calls[0]);
     expect(url).toBe('/k8s/cluster/1/update');
     expect(body).not.toHaveProperty('kube_config_content');
   });
@@ -156,7 +163,7 @@ describe('kubeconfig 不在前端回显（P1 安全）', () => {
     page.formModel.value.kube_config_content = replacement;
     client.put.mockResolvedValueOnce({});
     await page.submitForm();
-    const [, body] = client.put.mock.calls[0]!;
+    const [, body] = required(client.put.mock.calls[0]);
     expect(body).toMatchObject({ kube_config_content: replacement });
   });
 

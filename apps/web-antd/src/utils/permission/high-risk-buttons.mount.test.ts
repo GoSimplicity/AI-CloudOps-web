@@ -13,6 +13,13 @@ import {
   SECRET_DETAIL_PERMISSION_CODE,
 } from '#/constants/permission-codes';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 /**
  * FE-02 v3 一审 P3-1：高危按钮挂载级断言（码集口径见清单 v4 6.1）。
  * permission-coverage.test 只按源码字符串找 can('key')，写在注释里或写成 `can(x) || true` 也能通过；
@@ -116,13 +123,13 @@ async function selectFirstRow() {
     '.ant-table-tbody .ant-checkbox-input',
   );
   expect(box).not.toBeNull();
-  box!.click();
+  required(box).click();
   await flushPromises();
 }
 
 /** 打开 Secret 详情弹窗并填入脱敏详情（值为空，只有 data_keys） */
 async function openRedactedSecretDetail() {
-  const vm = wrapper!.vm as any;
+  const vm = required(wrapper).vm as any;
   vm.currentSecretDetail = {
     cluster_id: 1,
     namespace: 'ns-a',

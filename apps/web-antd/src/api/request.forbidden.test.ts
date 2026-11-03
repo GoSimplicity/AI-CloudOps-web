@@ -52,6 +52,13 @@ import {
 
 import { requestClient } from './request';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 function reply(config: any, status: number, data: unknown) {
   const response = {
     config,
@@ -75,7 +82,7 @@ function sequence(...replies: [number, unknown][]) {
   const authorizations: string[] = [];
   const adapter: AxiosAdapter = async (config) => {
     authorizations.push(String(config.headers?.Authorization));
-    const [status, data] = replies[authorizations.length - 1]!;
+    const [status, data] = required(replies[authorizations.length - 1]);
     return reply(config, status, data);
   };
   return { adapter, authorizations };

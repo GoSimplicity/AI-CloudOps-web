@@ -8,6 +8,13 @@ import { usePodPage } from '#/views/k8s/pod/Pod';
 import TerminalConnect from '#/views/servicetree/TerminalConnect.vue';
 import WebTerminal from '#/views/servicetree/WebTerminal.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const { connections, access } = vi.hoisted(() => ({
   connections: vi.fn(),
   access: { accessToken: 'test.jwt.signature' },
@@ -80,7 +87,7 @@ afterEach(() => {
 
 function expectHandshake(path: string, search = '') {
   expect(connections).toHaveBeenCalledTimes(1);
-  const [url, protocols] = connections.mock.calls[0]!;
+  const [url, protocols] = required(connections.mock.calls[0]);
   expect(new URL(url).pathname).toBe(path);
   expect(new URL(url).search).toBe(search);
   expect(url.includes(access.accessToken)).toBe(false);
@@ -150,7 +157,7 @@ describe('三个终端客户端的握手契约', () => {
       '/api/k8s/pod/1/example/web-pod/containers/main/exec',
       '?shell=sh',
     );
-    const socket = connections.mock.calls[0]![2];
+    const socket = required(connections.mock.calls[0])[2];
     socket.readyState = WebSocket.OPEN;
     socket.onopen();
     expect(JSON.parse(socket.send.mock.calls[0][0])).toEqual({
@@ -165,7 +172,9 @@ describe('三个终端客户端的握手契约', () => {
     });
     const longPaste = 'a'.repeat(65_535) + '中文😀\0'.repeat(12_000);
     const beforePaste = socket.send.mock.calls.length;
-    const onData = vi.mocked(page.terminal.value!.onData).mock.calls[0]![0];
+    const onData = required(
+      vi.mocked(required(page.terminal.value).onData).mock.calls[0],
+    )[0];
     onData(longPaste);
     const frames = socket.send.mock.calls
       .slice(beforePaste)
@@ -181,14 +190,15 @@ describe('三个终端客户端的握手契约', () => {
     expect(frames.map((frame: { data: string }) => frame.data).join('')).toBe(
       longPaste,
     );
-    const firstInput = vi.mocked(page.terminal.value!.onData).mock.results[0]!
-      .value;
+    const firstInput = required(
+      vi.mocked(required(page.terminal.value).onData).mock.results[0],
+    ).value;
     socket.onclose({ code: 1006, wasClean: false });
     expect(page.isTerminalConnected.value).toBe(false);
     expect(page.terminalLoading.value).toBe(true);
     access.accessToken = 'fresh.jwt.signature';
     vi.advanceTimersByTime(3000);
-    const latest = connections.mock.calls.at(-1)!;
+    const latest = required(connections.mock.calls.at(-1));
     expect(latest[1]).toEqual([
       'cloudops-v1',
       'cloudops-auth.fresh.jwt.signature',
@@ -204,7 +214,7 @@ describe('三个终端客户端的握手契约', () => {
 
   it('pod 页面作用域销毁时关闭终端与日志流', () => {
     const scope = effectScope();
-    const page = scope.run(() => usePodPage())!;
+    const page = required(scope.run(() => usePodPage()));
     const closeTerminal = vi.fn();
     const closeLogs = vi.fn();
     page.terminalConnection.value = {

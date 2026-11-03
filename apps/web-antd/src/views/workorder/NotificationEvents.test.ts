@@ -9,6 +9,13 @@ import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import NotificationEvents from './NotificationEvents.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const api = vi.hoisted(() => ({
   getCurrentPermissions: vi.fn(),
@@ -90,7 +97,7 @@ async function click(text: string, selector = 'button') {
     ...document.querySelectorAll<HTMLButtonElement>(selector),
   ].find((item) => item.textContent?.replace(/\s/g, '') === text);
   expect(button, `missing ${text}`).toBeDefined();
-  button!.click();
+  required(button).click();
   await flushPromises();
 }
 async function enterReason(value = '已经核对发送记录') {
@@ -98,7 +105,7 @@ async function enterReason(value = '已经核对发送记录') {
     '#notification-action-reason',
   );
   expect(input).not.toBeNull();
-  await new DOMWrapper(input!).setValue(value);
+  await new DOMWrapper(required(input)).setValue(value);
 }
 beforeEach(() => {
   vi.resetAllMocks();
@@ -170,7 +177,7 @@ it('分页按后端 page/size 查询，迟到的前一页结果不覆盖当前�
     '.ant-pagination-item-2',
   );
   expect(pageTwo).not.toBeNull();
-  pageTwo!.click();
+  required(pageTwo).click();
   await flushPromises();
   expect(api.listNotificationEvents).toHaveBeenLastCalledWith({
     page: 2,
@@ -178,13 +185,13 @@ it('分页按后端 page/size 查询，迟到的前一页结果不覆盖当前�
   });
   stale.resolve({ items: [{ ...event(), id: 11 }], total: 40 });
   await flushPromises();
-  expect(wrapper!.text()).toContain('22');
-  expect(wrapper!.text()).not.toContain('11');
+  expect(required(wrapper).text()).toContain('22');
+  expect(required(wrapper).text()).not.toContain('11');
 });
 
 it('严格拒绝无精确权限和伪造通配码', async () => {
   api.getCurrentPermissions.mockResolvedValue(
-    permission([allCodes[0]!, 'POST /api/workorder/*', '*']),
+    permission([required(allCodes[0]), 'POST /api/workorder/*', '*']),
   );
   await start();
   expect(document.body.textContent).not.toContain('取消排期');
@@ -375,7 +382,7 @@ it('身份在确认授权过程中变化，不对新身份提交旧操作', asyn
   const ok = [
     ...document.querySelectorAll<HTMLButtonElement>('.ant-modal-footer button'),
   ].find((item) => item.textContent?.replace(/\s/g, '') === '确认');
-  ok!.click();
+  required(ok).click();
   await flushPromises();
   account.user.userInfo = { userId: '2' };
   account.access.accessToken = 'second-token';
@@ -391,9 +398,13 @@ it('同一账户轮换令牌不会解除在途操作锁或重复提交', async (
   await start();
   await click('取消排期');
   await enterReason();
-  const ok = [
-    ...document.querySelectorAll<HTMLButtonElement>('.ant-modal-footer button'),
-  ].find((item) => item.textContent?.replace(/\s/g, '') === '确认')!;
+  const ok = required(
+    [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '.ant-modal-footer button',
+      ),
+    ].find((item) => item.textContent?.replace(/\s/g, '') === '确认'),
+  );
   ok.click();
   await flushPromises();
   expect(api.cancelNotificationEvent).toHaveBeenCalledTimes(1);

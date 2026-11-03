@@ -4,6 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Management from './Management.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const client = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
@@ -88,22 +95,28 @@ describe('定时任务编辑完整交互', () => {
       global: { plugins: [Antd] },
     });
     await flushPromises();
-    const open = wrapper
-      .findAll('button')
-      .find((button) => button.text().replace(/\s/g, '') === '创建任务')!;
+    const open = required(
+      wrapper
+        .findAll('button')
+        .find((button) => button.text().replace(/\s/g, '') === '创建任务'),
+    );
     await open.trigger('click');
     await flushPromises();
-    const status = document
-      .querySelector('#cron-create-status')!
-      .closest('.ant-select')!;
+    const status = required(
+      required(document.querySelector('#cron-create-status')).closest(
+        '.ant-select',
+      ),
+    );
     expect(status.textContent).toContain('启用');
-    status
-      .querySelector<HTMLElement>('.ant-select-selector')!
-      .dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    required(
+      status.querySelector<HTMLElement>('.ant-select-selector'),
+    ).dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     await flushPromises();
-    [...document.querySelectorAll<HTMLElement>('.ant-select-item-option')]
-      .find((item) => item.textContent?.trim() === '停用（仅保存）')!
-      .click();
+    required(
+      [
+        ...document.querySelectorAll<HTMLElement>('.ant-select-item-option'),
+      ].find((item) => item.textContent?.trim() === '停用（仅保存）'),
+    ).click();
     await flushPromises();
     await changeInput('input[placeholder="请输入任务名称"]', '停用HTTP配置');
     await changeInput(
@@ -135,8 +148,11 @@ describe('定时任务编辑完整交互', () => {
     await open.trigger('click');
     await flushPromises();
     expect(
-      document.querySelector('#cron-create-status')!.closest('.ant-select')!
-        .textContent,
+      required(
+        required(document.querySelector('#cron-create-status')).closest(
+          '.ant-select',
+        ),
+      ).textContent,
     ).toContain('启用');
   });
 
@@ -149,7 +165,7 @@ describe('定时任务编辑完整交互', () => {
     const editButton = wrapper
       .find('tr[data-row-key="3"]')
       .findAll('.k8s-action-column button')[1];
-    await editButton!.trigger('click');
+    await required(editButton).trigger('click');
     await flushPromises();
     await changeInput(
       'input[placeholder="例：0 0 * * * (每天午夜执行)"]',

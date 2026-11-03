@@ -6,6 +6,13 @@ import axios, { AxiosError } from 'axios';
 import { RequestClient, RequestOwnerChangedError } from '@vben/request';
 import { createAssistantAccountScope } from '#/utils/assistant-account-scope';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const state = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const api = vi.hoisted(() => ({
   assistantQuery: vi.fn(),
@@ -105,13 +112,13 @@ describe('悬浮助手真实状态隔离', () => {
     wrapper = mount(AiAssistant);
     const oldTask = setup().sendMessage('first private question');
     await flushPromises();
-    const oldSignal = api.assistantQuery.mock.calls[0]![1].signal;
+    const oldSignal = required(api.assistantQuery.mock.calls[0])[1].signal;
     state.user.userInfo = { userId: '2' };
     expect(oldSignal.aborted).toBe(true);
     const freshTask = setup().sendMessage('second question');
     await flushPromises();
-    const oldParams = api.assistantQuery.mock.calls[0]![0];
-    const freshParams = api.assistantQuery.mock.calls[1]![0];
+    const oldParams = required(api.assistantQuery.mock.calls[0])[0];
+    const freshParams = required(api.assistantQuery.mock.calls[1])[0];
     old.resolve({
       answer: 'old private answer',
       session_id: oldParams.session_id,
@@ -181,7 +188,9 @@ describe('悬浮助手真实状态隔离', () => {
       expect(setup().sending).toBe(false);
       expect(setup().chatHistory).toEqual([]);
       await setup().sendMessage('new question');
-      expect(api.assistantQuery.mock.calls[1]![0].session_id).toBe('fresh');
+      expect(required(api.assistantQuery.mock.calls[1])[0].session_id).toBe(
+        'fresh',
+      );
       expect(setup().sessionId).toBe('fresh');
     },
   );

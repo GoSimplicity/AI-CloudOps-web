@@ -4,6 +4,13 @@ import { markRequestLayerNotice } from '#/utils/permission/request-notice';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Notification from './Notification.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
@@ -45,9 +52,11 @@ const menu = async (text: string) => {
   await vi.waitFor(() =>
     expect(document.querySelector('.ant-dropdown-menu-item')).not.toBeNull(),
   );
-  [...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item')]
-    .find((el) => el.textContent?.includes(text))!
-    .click();
+  required(
+    [...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item')].find(
+      (el) => el.textContent?.includes(text),
+    ),
+  ).click();
   await flushPromises();
 };
 beforeEach(() => {
@@ -141,7 +150,7 @@ describe('通知配置真实控件', () => {
       total: 1,
     });
     await menu('发送记录');
-    const modal = document.querySelector('.ant-modal')!;
+    const modal = required(document.querySelector('.ant-modal'));
     expect(modal.textContent).toContain('safe@example.test');
     expect(modal.textContent).toContain('成功');
     expect(modal.textContent).toContain('2026-10-23');
@@ -153,15 +162,15 @@ describe('通知配置真实控件', () => {
       document.querySelector('.ant-modal input[placeholder="请输入接收地址"]'),
     ).not.toBeNull();
     expect(client.post).not.toHaveBeenCalled();
-    [
-      ...document.querySelectorAll<HTMLButtonElement>(
-        '.ant-modal-footer button',
-      ),
-    ]
-      .find((button) =>
+    required(
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '.ant-modal-footer button',
+        ),
+      ].find((button) =>
         button.textContent?.replace(/\s/g, '').match(/^(取消|Cancel)$/),
-      )!
-      .click();
+      ),
+    ).click();
     await flushPromises();
     expect(client.post).not.toHaveBeenCalled();
   });
@@ -170,17 +179,21 @@ describe('通知配置真实控件', () => {
     await menu('测试发送');
     const pending = Promise.withResolvers<any>();
     client.post.mockReturnValueOnce(pending.promise);
-    const input = document.querySelector<HTMLInputElement>(
-      '.ant-modal input[placeholder="请输入接收地址"]',
-    )!;
+    const input = required(
+      document.querySelector<HTMLInputElement>(
+        '.ant-modal input[placeholder="请输入接收地址"]',
+      ),
+    );
     input.value = ' safe@example.test ';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     await flushPromises();
-    const send = [
-      ...document.querySelectorAll<HTMLButtonElement>(
-        '.ant-modal-footer button',
-      ),
-    ].find((button) => button.textContent?.replace(/\s/g, '') === '发送')!;
+    const send = required(
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '.ant-modal-footer button',
+        ),
+      ].find((button) => button.textContent?.replace(/\s/g, '') === '发送'),
+    );
     send.click();
     send.click();
     await flushPromises();
@@ -211,13 +224,13 @@ describe('通知配置真实控件', () => {
     await vi.waitFor(() =>
       expect(document.querySelector('.ant-modal-confirm')).not.toBeNull(),
     );
-    [
-      ...document.querySelectorAll<HTMLButtonElement>(
-        '.ant-modal-confirm button',
-      ),
-    ]
-      .find((button) => button.textContent?.replace(/\s/g, '') === '删除')!
-      .click();
+    required(
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '.ant-modal-confirm button',
+        ),
+      ].find((button) => button.textContent?.replace(/\s/g, '') === '删除'),
+    ).click();
     await flushPromises();
     expect(client.delete).toHaveBeenCalledWith(
       '/workorder/notification/delete/7',
@@ -261,13 +274,13 @@ describe('通知配置真实控件', () => {
       await vi.waitFor(() =>
         expect(document.querySelector('.ant-modal-confirm')).not.toBeNull(),
       );
-      [
-        ...document.querySelectorAll<HTMLButtonElement>(
-          '.ant-modal-confirm button',
-        ),
-      ]
-        .find((button) => button.textContent?.replace(/\s/g, '') === '删除')!
-        .click();
+      required(
+        [
+          ...document.querySelectorAll<HTMLButtonElement>(
+            '.ant-modal-confirm button',
+          ),
+        ].find((button) => button.textContent?.replace(/\s/g, '') === '删除'),
+      ).click();
       await flushPromises();
       expect(spy).toHaveBeenCalledTimes(times);
       if (times) expect(spy).toHaveBeenCalledWith('配置正在使用中，无法删除');
@@ -282,15 +295,15 @@ describe('通知配置真实控件', () => {
     expect(
       (document.querySelector('.ant-modal input') as HTMLInputElement)?.value,
     ).toContain('副本');
-    [
-      ...document.querySelectorAll<HTMLButtonElement>(
-        '.ant-modal-footer button',
-      ),
-    ]
-      .find((button) =>
+    required(
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '.ant-modal-footer button',
+        ),
+      ].find((button) =>
         button.textContent?.replace(/\s/g, '').match(/^(取消|Cancel)$/),
-      )!
-      .click();
+      ),
+    ).click();
     await flushPromises();
     expect(client.post).not.toHaveBeenCalled();
     expect(client.put).not.toHaveBeenCalled();

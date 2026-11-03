@@ -2,6 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { createRouterGuard } from './guard';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const state = vi.hoisted(() => ({
   access: null as any,
   user: null as any,
@@ -49,7 +56,7 @@ describe('路由守卫账户归属', () => {
       });
       const before = vi.spyOn(router, 'beforeEach');
       createRouterGuard(router);
-      const guard = before.mock.calls[1]![0];
+      const guard = required(before.mock.calls[1])[0];
       const pending = Promise.withResolvers<any>();
       access.generateAccess.mockReturnValue(pending.promise);
       const task = Promise.resolve(

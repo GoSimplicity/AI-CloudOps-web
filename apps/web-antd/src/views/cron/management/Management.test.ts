@@ -8,6 +8,13 @@ import { markRequestLayerTrace } from '#/utils/permission/request-notice';
 
 import { useCronJobPage } from './Management';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const client = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
@@ -64,7 +71,7 @@ describe('定时任务请求与操作边界', () => {
       page.createFormRules.http_url,
       page.editFormRules.http_url,
     ]) {
-      const rule = rules.find((item) => 'validator' in item)!;
+      const rule = required(rules.find((item) => 'validator' in item));
       if (!('validator' in rule) || typeof rule.validator !== 'function')
         throw new Error('URL validator missing');
       const result = rule.validator({}, url as string);

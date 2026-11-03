@@ -14,6 +14,13 @@ import {
 
 import SystemRole from './SystemRole.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
@@ -66,9 +73,11 @@ afterEach(() => {
 });
 
 function button(text: string) {
-  return wrapper
-    .findAll('button')
-    .find((button) => button.text().replace(/\s/g, '').includes(text))!;
+  return required(
+    wrapper
+      .findAll('button')
+      .find((button) => button.text().replace(/\s/g, '').includes(text)),
+  );
 }
 
 describe('角色列表真实控件交互', () => {
@@ -94,13 +103,15 @@ describe('角色列表真实控件交互', () => {
     expect(document.querySelector('.ant-modal-title')?.textContent).toBe(
       '新建角色',
     );
-    const cancel = [
-      ...document.querySelectorAll<HTMLButtonElement>(
-        '.ant-modal-footer button',
+    const cancel = required(
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '.ant-modal-footer button',
+        ),
+      ].find((button) =>
+        /^(取消|Cancel)$/.test(button.textContent?.replace(/\s/g, '') || ''),
       ),
-    ].find((button) =>
-      /^(取消|Cancel)$/.test(button.textContent?.replace(/\s/g, '') || ''),
-    )!;
+    );
     cancel.click();
     await flushPromises();
     expect(api.createRoleApi).not.toHaveBeenCalled();
@@ -111,14 +122,20 @@ describe('角色列表真实控件交互', () => {
     await button('新建角色').trigger('click');
     await flushPromises();
     await new DOMWrapper(
-      document.querySelector<HTMLInputElement>('.ant-modal input[id$=name]')!,
+      required(
+        document.querySelector<HTMLInputElement>('.ant-modal input[id$=name]'),
+      ),
     ).setValue('值班员');
     await new DOMWrapper(
-      document.querySelector<HTMLInputElement>('.ant-modal input[id$=code]')!,
+      required(
+        document.querySelector<HTMLInputElement>('.ant-modal input[id$=code]'),
+      ),
     ).setValue('oncall');
-    const submit = document.querySelector<HTMLButtonElement>(
-      '.ant-modal-footer .ant-btn-primary',
-    )!;
+    const submit = required(
+      document.querySelector<HTMLButtonElement>(
+        '.ant-modal-footer .ant-btn-primary',
+      ),
+    );
     submit.click();
     await vi.waitFor(() =>
       expect(api.createRoleApi).toHaveBeenCalledWith(

@@ -9,6 +9,13 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import LocalResource from './LocalResourceManagement.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
@@ -82,15 +89,15 @@ async function action(text: string, selector = 'button') {
     (item) => item.textContent?.replace(/\s/g, '') === text,
   );
   expect(element, `缺少操作 ${text}`).toBeDefined();
-  await new DOMWrapper(element!).trigger('click');
+  await new DOMWrapper(required(element)).trigger('click');
   await flushPromises();
 }
 it('对象标签按键值显示，编辑已有密钥主机不要求重新输入凭据', async () => {
   await start();
-  expect(wrapper!.text()).toContain('team=ops');
+  expect(required(wrapper).text()).toContain('team=ops');
   await action('编辑');
   await new DOMWrapper(
-    document.querySelector('.ant-modal input[placeholder="root"]')!,
+    required(document.querySelector('.ant-modal input[placeholder="root"]')),
   ).setValue('operator');
   await action('更新');
   expect(client.put).toHaveBeenCalledOnce();
@@ -101,16 +108,18 @@ it('对象标签按键值显示，编辑已有密钥主机不要求重新输入�
       tags: [{ key: 'team', value: 'ops' }],
     }),
   );
-  expect(client.put.mock.calls[0]![1]).not.toHaveProperty('key');
-  expect(client.put.mock.calls[0]![1]).not.toHaveProperty('password');
+  expect(required(client.put.mock.calls[0])[1]).not.toHaveProperty('key');
+  expect(required(client.put.mock.calls[0])[1]).not.toHaveProperty('password');
 });
 it('新增标签提交对象数组，同键标签不能重复', async () => {
   await start();
   await action('编辑');
   const tag = new DOMWrapper(
-    document.querySelector(
-      'input[placeholder="输入标签（如 team=ops），按回车添加"]',
-    )!,
+    required(
+      document.querySelector(
+        'input[placeholder="输入标签（如 team=ops），按回车添加"]',
+      ),
+    ),
   );
   await tag.setValue('zone=local');
   await action('添加标签');
@@ -132,9 +141,11 @@ it('校验期间锁定重复提交，旧请求完成不关闭重新打开的表�
   client.put.mockReturnValue(pending.promise);
   await start();
   await action('编辑');
-  const save = [...document.querySelectorAll('.ant-modal button')].find(
-    (item) => item.textContent?.replace(/\s/g, '') === '更新',
-  )!;
+  const save = required(
+    [...document.querySelectorAll('.ant-modal button')].find(
+      (item) => item.textContent?.replace(/\s/g, '') === '更新',
+    ),
+  );
   save.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   save.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   await flushPromises();

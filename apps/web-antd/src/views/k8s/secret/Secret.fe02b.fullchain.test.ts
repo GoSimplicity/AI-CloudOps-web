@@ -3,6 +3,13 @@ import { $t } from '@vben/locales';
 import axios, { type AxiosAdapter, AxiosError } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 /**
  * FE-02b incr3（并入 SEC-26 遗留第 21 项）：Secret 页 YAML 更新 / 创建 / 删除 / 批量删除的 catch
  * 统一按 shouldNotifyPageError 决定页面是否自己提示（不再只看 isPermissionDeniedError）。
@@ -206,7 +213,7 @@ const operations: [
     'Secret 删除失败',
     async (page) => {
       page.deleteSecret(record);
-      await confirm.mock.calls.at(-1)![0].onOk();
+      await required(confirm.mock.calls.at(-1))[0].onOk();
     },
     'DELETE /k8s/secret/1/default/s1/delete',
   ],
@@ -216,7 +223,7 @@ const operations: [
     async (page) => {
       page.selectedRows.value = [record];
       page.batchOperation('删除');
-      await confirm.mock.calls.at(-1)![0].onOk();
+      await required(confirm.mock.calls.at(-1))[0].onOk();
     },
     'DELETE /k8s/secret/1/default/s1/delete',
   ],

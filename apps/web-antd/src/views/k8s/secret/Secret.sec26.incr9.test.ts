@@ -14,6 +14,13 @@ import {
 } from './secret-data';
 import { useSecretPage } from './Secret';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 /**
  * SEC-26 incr9（窝窝头 review-incr8）——页面组合函数层：
  * - P3-A/B/C 的对抗矩阵用例在 YAML 更新、YAML 创建两条路径上都拦截、不发请求；
@@ -100,8 +107,7 @@ function createYamlPage(text: string) {
 
 const secretVueSource = readFileSync(resolve(__dirname, 'Secret.vue'), 'utf8');
 const fold7 = (text: string, indent: string) =>
-  text
-    .match(/.{1,7}/g)!
+  required(text.match(/.{1,7}/g))
     .map((part) => `${indent}${part}`)
     .join('\n');
 const FAKE_B64 = encodeUtf8ToBase64('fake-value');

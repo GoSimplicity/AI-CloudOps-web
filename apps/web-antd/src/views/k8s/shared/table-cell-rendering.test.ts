@@ -18,6 +18,13 @@ import { defineComponent } from 'vue';
 import { compileTemplate, parse } from 'vue/compiler-sfc';
 import ts from 'typescript';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const require = createRequire(import.meta.url);
 const vueRequire = createRequire(require.resolve('vue'));
 const { parse: parseDOM } = vueRequire('@vue/compiler-dom');
@@ -34,7 +41,9 @@ function mountCells(
   scope: object = {},
 ) {
   const filename = resolve(views, page);
-  const template = parse(readFileSync(filename, 'utf8')).descriptor.template!;
+  const template = required(
+    parse(readFileSync(filename, 'utf8')).descriptor.template,
+  );
   const tables: any[] = [];
   const visit = (node: any) => {
     if (node.type === 1 && node.tag === 'a-table') tables.push(node);
@@ -194,7 +203,7 @@ describe('ant Table bodyCell migration', () => {
       const buttons = wrapper.findAll('tbody button');
       expect(buttons).toHaveLength(allowed ? 1 : 0);
       if (allowed) {
-        await buttons[0]!.trigger('click');
+        await required(buttons[0]).trigger('click');
         expect(detail).toHaveBeenCalledWith(record);
       }
       expect(wrapper.text()).not.toContain('fake-secret');

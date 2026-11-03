@@ -71,6 +71,13 @@ import {
   usePodPage,
 } from './Pod';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const LOG_PARAMS = {
   cluster_id: 1,
   container: 'app',
@@ -144,7 +151,7 @@ class FakeWebSocket {
 }
 
 function lastSocket() {
-  return FakeWebSocket.instances.at(-1)!;
+  return required(FakeWebSocket.instances.at(-1));
 }
 
 function expectSingleLoginExpiredNotice() {
@@ -555,7 +562,7 @@ describe('pod 终端 exec WS：令牌刷新与重连', () => {
 
     it('c) 组件卸载后没有残留计时器', async () => {
       const scope = effectScope();
-      const page = scope.run(() => usePodPage())!;
+      const page = required(scope.run(() => usePodPage()));
       page.terminalConnection.value = page.execK8sPodWebSocket(
         EXEC_PARAMS,
         vi.fn(),

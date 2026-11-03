@@ -10,6 +10,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PredictAnalysis from './PredictAnalysis.vue';
 import PredictDashboard from './PredictDashboard.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const api = vi.hoisted(() => ({
   predictQps: vi.fn(),
@@ -41,7 +48,7 @@ vi.mock('echarts/core', () => ({
   },
 }));
 let wrapper: VueWrapper | undefined;
-const state = () => (wrapper!.vm as any).$.setupState;
+const state = () => (required(wrapper).vm as any).$.setupState;
 function render(component: any, actual = false) {
   wrapper = (actual ? mount : shallowMount)(component, {
     global: {
@@ -253,7 +260,7 @@ describe('预测显式调用与结果完整性', () => {
   it('挂载后立即离开不会迟到注册窗口监听器', async () => {
     const add = vi.spyOn(window, 'addEventListener');
     render(PredictDashboard);
-    wrapper!.unmount();
+    required(wrapper).unmount();
     await flushPromises();
     expect(add.mock.calls.filter((call) => call[0] === 'resize')).toEqual([]);
   });
@@ -282,9 +289,9 @@ describe('预测置信度与降级边界', () => {
     state().formData.currentValue = 0;
     await state().startAnalysis();
     await flushPromises();
-    expect(wrapper!.text()).toContain('模型准确率: 未知');
-    expect(wrapper!.text()).toContain('置信度: 未知');
-    expect(wrapper!.text()).not.toContain('private-one');
+    expect(required(wrapper).text()).toContain('模型准确率: 未知');
+    expect(required(wrapper).text()).toContain('置信度: 未知');
+    expect(required(wrapper).text()).not.toContain('private-one');
     expect(state().hasConfidenceBounds).toBe(false);
     expect(message.success).not.toHaveBeenCalled();
   });
@@ -306,7 +313,7 @@ describe('预测置信度与降级边界', () => {
     fillDashboard();
     await state().refreshAllPredictions();
     await flushPromises();
-    expect(wrapper!.text()).toContain('置信度: 0.0%');
+    expect(required(wrapper).text()).toContain('置信度: 0.0%');
     expect(state().aiInsights).not.toContain('QPS：private-one');
     expect(message.success).not.toHaveBeenCalled();
   });

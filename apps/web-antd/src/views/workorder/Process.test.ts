@@ -9,6 +9,13 @@ import {
 
 import Process from './Process.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
@@ -105,13 +112,15 @@ describe('工单流程列表交互', () => {
       '创建流程',
     );
     expect(document.querySelector('.process-basic-config')).not.toBeNull();
-    const cancel = [
-      ...document.querySelectorAll<HTMLButtonElement>(
-        '.ant-modal-footer button',
+    const cancel = required(
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '.ant-modal-footer button',
+        ),
+      ].find((button) =>
+        /^(取消|Cancel)$/.test(button.textContent?.replace(/\s/g, '') || ''),
       ),
-    ].find((button) =>
-      /^(取消|Cancel)$/.test(button.textContent?.replace(/\s/g, '') || ''),
-    )!;
+    );
     cancel.click();
     await flushPromises();
     expect(client.post).not.toHaveBeenCalled();

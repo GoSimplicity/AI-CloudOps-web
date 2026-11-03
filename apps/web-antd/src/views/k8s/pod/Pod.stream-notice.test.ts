@@ -97,6 +97,13 @@ import {
 
 import { STREAM_MAX_RECONNECT_ATTEMPTS, usePodPage } from './Pod';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const POD = {
   cluster_id: 1,
   name: 'web-0',
@@ -144,7 +151,7 @@ class FakeWebSocket {
   }
 }
 
-const lastSocket = () => FakeWebSocket.instances.at(-1)!;
+const lastSocket = () => required(FakeWebSocket.instances.at(-1));
 const allNotices = () => notices.log;
 const LOGIN_EXPIRED_ONLY = [['warning', LOGIN_EXPIRED_MESSAGE]];
 

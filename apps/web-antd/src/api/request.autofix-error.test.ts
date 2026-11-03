@@ -64,6 +64,13 @@ import {
   requestClientAIOps,
 } from './request';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 function reply(config: any, status: number, data: unknown) {
   const response = {
     config,
@@ -158,7 +165,7 @@ describe('autofix 错误提示 · 请求链路集成', () => {
       expect(inline).toBe(text);
       const visible = visibleNotices();
       expect(visible.size).toBe(1);
-      const [key, content] = [...visible][0]!;
+      const [key, content] = required([...visible][0]);
       expect(key.startsWith(HTTP_ERROR_MESSAGE_KEY_PREFIX)).toBe(true);
       expect(content).toBe(text);
     },
@@ -204,7 +211,7 @@ describe('autofix 错误提示 · 请求链路集成', () => {
   it('403：只有权限提示一条', async () => {
     await confirmWith(adapterOf(403, ERROR_BODY('WORKFLOW_APPROVAL_ERROR')));
     expect(notices.error).toHaveBeenCalledTimes(1);
-    expect(notices.error.mock.calls[0]![0].key).toBe(
+    expect(required(notices.error.mock.calls[0])[0].key).toBe(
       PERMISSION_DENIED_MESSAGE_KEY,
     );
     expect(noticeContents()).toEqual([PERMISSION_DENIED_MESSAGE]);
@@ -216,7 +223,7 @@ describe('autofix 错误提示 · 请求链路集成', () => {
     );
     expect(inline).toBe(AUTOFIX_ERROR_TEXT.generic);
     expect(notices.error).toHaveBeenCalledTimes(1);
-    expect(notices.error.mock.calls[0]![0].key).toBe(
+    expect(required(notices.error.mock.calls[0])[0].key).toBe(
       `${BUSINESS_ERROR_MESSAGE_KEY_PREFIX}业务失败`,
     );
     expect(noticeContents()).toEqual(['业务失败']);

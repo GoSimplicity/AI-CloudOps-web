@@ -6,6 +6,13 @@ import { CronJobType, type UpdateCronJobReq } from '#/api/core/cron/cron';
 
 import CronEditFields from './CronEditFields.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 let wrapper: VueWrapper;
 beforeEach(() => {
   vi.stubGlobal(
@@ -77,18 +84,20 @@ describe('已有任务的执行配置', () => {
     const add = view
       .findAll('button')
       .find((button) => button.text().includes('添加请求头'));
-    await add!.trigger('click');
-    await view
-      .findAll('input[placeholder="Header名称"]')[1]!
-      .setValue('X-Request');
-    await view
-      .findAll('input[placeholder="Header值"]')[1]!
-      .setValue('new-value');
+    await required(add).trigger('click');
+    await required(view.findAll('input[placeholder="Header名称"]')[1]).setValue(
+      'X-Request',
+    );
+    await required(view.findAll('input[placeholder="Header值"]')[1]).setValue(
+      'new-value',
+    );
     expect(updatedModel(view).http_headers).toEqual([
       { key: 'Authorization', value: 'replacement-secret' },
       { key: 'X-Request', value: 'new-value' },
     ]);
-    await view.findAll('.k8s-key-value-row button')[0]!.trigger('click');
+    await required(view.findAll('.k8s-key-value-row button')[0]).trigger(
+      'click',
+    );
     expect(updatedModel(view).http_headers).toEqual([
       { key: 'X-Request', value: 'new-value' },
     ]);
@@ -127,7 +136,7 @@ describe('已有任务的执行配置', () => {
       ...document.querySelectorAll<HTMLElement>('.ant-select-item-option'),
     ].find((item) => item.textContent?.includes('测试主机'));
     expect(option).toBeTruthy();
-    option!.click();
+    required(option).click();
     await flushPromises();
     expect(updatedModel(view).ssh_resource_id).toBe(24);
   });
@@ -168,7 +177,7 @@ describe('已有任务的执行配置', () => {
       ...document.querySelectorAll<HTMLElement>('.ant-select-item-option'),
     ].find((item) => item.textContent?.includes('Node.js'));
     expect(node).toBeTruthy();
-    node!.click();
+    required(node).click();
     await flushPromises();
     expect(updatedModel(script).script_type).toBe('node');
   });

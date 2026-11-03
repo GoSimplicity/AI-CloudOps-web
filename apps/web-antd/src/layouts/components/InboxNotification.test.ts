@@ -4,6 +4,13 @@ import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import InboxNotification from './InboxNotification.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const account = vi.hoisted(() => ({ user: null as any, access: null as any }));
 const api = vi.hoisted(() => ({
   getInboxPermissions: vi.fn(),
@@ -72,7 +79,7 @@ async function start() {
   await flushPromises();
 }
 async function open() {
-  await wrapper!.find('[aria-label="站内消息"]').trigger('click');
+  await required(wrapper).find('[aria-label="站内消息"]').trigger('click');
   await flushPromises();
   await vi.waitFor(
     () => expect(document.querySelector('.inbox')).not.toBeNull(),
@@ -87,7 +94,7 @@ async function click(text: string, selector = 'button') {
   await vi.waitFor(() => expect(find()).toBeDefined(), { timeout: 2000 });
   const button = find();
   expect(button, `missing ${text}`).toBeDefined();
-  button!.click();
+  required(button).click();
   await flushPromises();
 }
 beforeEach(() => {
@@ -146,7 +153,7 @@ it('单条已读、全部已读与确认删除走独立API并刷新', async () =
   expect(api.getInboxMessages.mock.calls.length).toBeGreaterThanOrEqual(4);
 });
 it('无精确权限不读取列表和不展示写操作，伪造通配码无效', async () => {
-  api.getInboxPermissions.mockResolvedValue(perms([codes[1]!, '*']));
+  api.getInboxPermissions.mockResolvedValue(perms([required(codes[1]), '*']));
   await start();
   await open();
   expect(api.getInboxUnreadCount).toHaveBeenCalled();
@@ -195,7 +202,7 @@ it('用户切换清空旧消息，迟到响应不能显示给新用户', async (
   await flushPromises();
   expect(document.body.textContent).not.toContain('old-private-content');
   expect(
-    wrapper!.find('[aria-label="站内消息"]').attributes('title'),
+    required(wrapper).find('[aria-label="站内消息"]').attributes('title'),
   ).toContain('未读 2');
 });
 it('用户切换或关闭面板时取消未发出的授权确认', async () => {
@@ -207,9 +214,11 @@ it('用户切换或关闭面板时取消未发出的授权确认', async () => {
     .mockResolvedValue(perms());
   await start();
   await open();
-  const button = [
-    ...document.querySelectorAll<HTMLButtonElement>('button'),
-  ].find((item) => item.textContent?.replace(/\s/g, '') === '标记已读')!;
+  const button = required(
+    [...document.querySelectorAll<HTMLButtonElement>('button')].find(
+      (item) => item.textContent?.replace(/\s/g, '') === '标记已读',
+    ),
+  );
   button.click();
   await flushPromises();
   account.user.userInfo = { userId: '2' };
@@ -241,7 +250,7 @@ it('未读筛选与分页参数一致，旧请求不会覆盖新结果', async (
     '.inbox input[type="checkbox"]',
   );
   expect(checkbox).not.toBeNull();
-  checkbox!.click();
+  required(checkbox).click();
   await flushPromises();
   expect(api.getInboxMessages).toHaveBeenLastCalledWith({
     page: 1,
@@ -252,7 +261,7 @@ it('未读筛选与分页参数一致，旧请求不会覆盖新结果', async (
     '.inbox .ant-pagination-item-2',
   );
   expect(page2).not.toBeNull();
-  page2!.click();
+  required(page2).click();
   await flushPromises();
   expect(api.getInboxMessages).toHaveBeenLastCalledWith({
     page: 2,

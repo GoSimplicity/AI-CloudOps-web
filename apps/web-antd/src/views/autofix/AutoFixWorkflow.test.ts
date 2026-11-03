@@ -5,6 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AutoFixWorkflow from './AutoFixWorkflow.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
@@ -249,10 +256,11 @@ describe('autoFixWorkflow.vue', () => {
 
     expect(autofixMocks.getAutoFixInfo).toHaveBeenCalledTimes(1);
     expect(autofixMocks.getAutoFixReady).not.toHaveBeenCalled();
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('检查服务依赖'))!
-      .trigger('click');
+    await required(
+      wrapper
+        .findAll('button')
+        .find((button) => button.text().includes('检查服务依赖')),
+    ).trigger('click');
     await flushPromises();
     expect(autofixMocks.getAutoFixReady).toHaveBeenCalledTimes(1);
     expect(wrapper.text()).toContain('AutoFix Service');
@@ -358,7 +366,7 @@ describe('autoFixWorkflow.vue', () => {
 
     expect(runButton).toBeDefined();
 
-    await runButton!.trigger('click');
+    await required(runButton).trigger('click');
     await flushPromises();
 
     expect(autofixMocks.executeAutoFixWorkflow).toHaveBeenCalledWith({
@@ -387,7 +395,7 @@ describe('autoFixWorkflow.vue', () => {
       .find((button) => button.text().includes('确认并继续执行'));
     expect(confirmButton).toBeDefined();
 
-    await confirmButton!.trigger('click');
+    await required(confirmButton).trigger('click');
     await flushPromises();
 
     expect(autofixMocks.confirmAutoFixWorkflow).toHaveBeenCalledWith({
