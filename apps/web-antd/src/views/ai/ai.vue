@@ -95,95 +95,6 @@ const accessStore = useAccessStore();
 const userStore = useUserStore();
 const accountScope = createAssistantAccountScope(localStorage);
 
-const persistState = () => {
-  try {
-    const uiState = {
-      windowPosition: { x: windowPosition.x, y: windowPosition.y },
-      windowSize: { width: windowSize.width, height: windowSize.height },
-      isMinimized: isMinimized.value,
-      isExpanded: isExpanded.value,
-      currentMode: currentMode.value,
-      showAdvancedOptions: showAdvancedOptions.value,
-    };
-    localStorage.setItem(UI_STATE_KEY, JSON.stringify(uiState));
-
-    const chatState = {
-      sessionId: sessionId.value,
-    };
-    accountScope.write('chat', chatState);
-    accountScope.write('sessions', {
-      sessions: sessions.value.map((s) => ({
-        localId: s.localId,
-        name: s.name,
-        createdAt: s.createdAt,
-        serverId: s.serverId || '',
-      })),
-      currentLocalSessionId: currentLocalSessionId.value,
-    });
-  } catch {}
-};
-
-const loadState = () => {
-  try {
-    const uiRaw = localStorage.getItem(UI_STATE_KEY);
-    if (uiRaw) {
-      const ui = JSON.parse(uiRaw);
-      if (ui?.windowPosition) {
-        windowPosition.x = Math.max(
-          0,
-          Math.min(window.innerWidth - 320, Number(ui.windowPosition.x) || 0),
-        );
-        windowPosition.y = Math.max(
-          0,
-          Math.min(window.innerHeight - 100, Number(ui.windowPosition.y) || 0),
-        );
-      }
-      if (ui?.windowSize) {
-        windowSize.width = Math.max(
-          320,
-          Math.min(600, Number(ui.windowSize.width) || 380),
-        );
-        windowSize.height = Math.max(
-          400,
-          Math.min(800, Number(ui.windowSize.height) || 600),
-        );
-      }
-      isMinimized.value = !!ui?.isMinimized;
-      isExpanded.value = !!ui?.isExpanded;
-      currentMode.value = ui?.currentMode === 2 ? 2 : 1;
-      showAdvancedOptions.value = !!ui?.showAdvancedOptions;
-    }
-
-    const chat = accountScope.read('chat');
-    sessionId.value = chat?.sessionId || '';
-    isConnected.value = false;
-    chatHistory.value = [];
-    initChatMessages();
-
-    const ses = accountScope.read('sessions');
-    if (ses) {
-      sessions.value = Array.isArray(ses.sessions) ? ses.sessions : [];
-      currentLocalSessionId.value = ses.currentLocalSessionId || '';
-    }
-    if (!sessions.value.length) {
-      createNewSession(true);
-    } else {
-      const selected =
-        sessions.value.find((s) => s.localId === currentLocalSessionId.value) ||
-        sessions.value[0];
-      currentLocalSessionId.value = selected.localId;
-      if (selected && !selected.serverId && sessionId.value)
-        selected.serverId = sessionId.value;
-      sessionId.value = selected?.serverId || '';
-      if (sessionId.value) void restoreCurrentSession();
-    }
-    // 覆盖旧版本本地对话副本，仅保留服务端会话指针。
-    persistState();
-  } catch {
-    initChatMessages();
-  }
-};
-
 // 模式管理 - 1=RAG模式，2=MCP模式
 const currentMode = ref(1); // 默认为RAG模式
 const chatHistory = ref([]); // 聊天历史记录
@@ -239,53 +150,6 @@ const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
 
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
-  }
-};
-
-// 错误分类处理
-const handleApiError = (error, context = '') => {
-  // 取消类（停止生成、账户切换取消旧请求）不写错误横幅，也不提示（FE-02b 拍板 3）
-  if (!shouldRecordPageError(error)) return 'canceled';
-  const status = error?.response?.status;
-  const errorData = error?.response?.data;
-  const errorMsg = errorData?.message || error?.message || '未知错误';
-
-  if (status === 429) {
-    showError('请求频率过高，请稍后再试', 3000);
-    return 'rate_limit';
-  } else if (status === 403 || status === 404) {
-    accountScope.invalidate();
-    abortController.value?.abort();
-    abortController.value = null;
-    sending.value = false;
-    sessionId.value = '';
-    lastFailedQuestion.value = '';
-    chatHistory.value = [];
-    isConnected.value = false;
-    initChatMessages();
-    persistState();
-    showError(
-      status === 403
-        ? '无权访问该会话，已清除本地内容，请新建会话'
-        : '会话已失效，请重新提问以新建会话',
-    );
-    return 'invalid_session';
-  } else if (status === 401) {
-    showError('认证失败，正在重新建立连接...');
-    // 清除会话状态
-    sessionId.value = '';
-    chatHistory.value = [];
-    isConnected.value = false;
-    return 'auth_error';
-  } else if (status >= 500) {
-    showError(`服务器错误: ${errorMsg}`);
-    return 'server_error';
-  } else if (error.code === 'NETWORK_ERROR' || !status) {
-    showError('网络连接错误，请检查网络状态');
-    return 'network_error';
-  } else {
-    showError(`${context}: ${errorMsg}`);
-    return 'unknown_error';
   }
 };
 
@@ -354,6 +218,110 @@ const chatMessages = reactive([
   },
 ]);
 
+// 初始化聊天记录
+const initChatMessages = () => {
+  chatMessages.length = 0;
+  chatMessages.push({
+    content:
+      '👋 您好！我是AI-CloudOps助手，专注于为您提供智能运维服务。\n\n我可以帮助您：\n• 🔍 监控云服务器状态\n• 📊 分析性能指标\n• 🛠️ 故障诊断与修复\n• 📋 生成运维报告\n\n请问有什么我可以为您服务的吗？',
+    type: 'ai',
+    time: formatTime(new Date()),
+  });
+};
+
+const persistState = () => {
+  try {
+    const uiState = {
+      windowPosition: { x: windowPosition.x, y: windowPosition.y },
+      windowSize: { width: windowSize.width, height: windowSize.height },
+      isMinimized: isMinimized.value,
+      isExpanded: isExpanded.value,
+      currentMode: currentMode.value,
+      showAdvancedOptions: showAdvancedOptions.value,
+    };
+    localStorage.setItem(UI_STATE_KEY, JSON.stringify(uiState));
+
+    const chatState = {
+      sessionId: sessionId.value,
+    };
+    accountScope.write('chat', chatState);
+    accountScope.write('sessions', {
+      sessions: sessions.value.map((s) => ({
+        localId: s.localId,
+        name: s.name,
+        createdAt: s.createdAt,
+        serverId: s.serverId || '',
+      })),
+      currentLocalSessionId: currentLocalSessionId.value,
+    });
+  } catch {}
+};
+
+// 错误分类处理
+const handleApiError = (error, context = '') => {
+  // 取消类（停止生成、账户切换取消旧请求）不写错误横幅，也不提示（FE-02b 拍板 3）
+  if (!shouldRecordPageError(error)) return 'canceled';
+  const status = error?.response?.status;
+  const errorData = error?.response?.data;
+  const errorMsg = errorData?.message || error?.message || '未知错误';
+
+  if (status === 429) {
+    showError('请求频率过高，请稍后再试', 3000);
+    return 'rate_limit';
+  } else if (status === 403 || status === 404) {
+    accountScope.invalidate();
+    abortController.value?.abort();
+    abortController.value = null;
+    sending.value = false;
+    sessionId.value = '';
+    lastFailedQuestion.value = '';
+    chatHistory.value = [];
+    isConnected.value = false;
+    initChatMessages();
+    persistState();
+    showError(
+      status === 403
+        ? '无权访问该会话，已清除本地内容，请新建会话'
+        : '会话已失效，请重新提问以新建会话',
+    );
+    return 'invalid_session';
+  } else if (status === 401) {
+    showError('认证失败，正在重新建立连接...');
+    // 清除会话状态
+    sessionId.value = '';
+    chatHistory.value = [];
+    isConnected.value = false;
+    return 'auth_error';
+  } else if (status >= 500) {
+    showError(`服务器错误: ${errorMsg}`);
+    return 'server_error';
+  } else if (error.code === 'NETWORK_ERROR' || !status) {
+    showError('网络连接错误，请检查网络状态');
+    return 'network_error';
+  } else {
+    showError(`${context}: ${errorMsg}`);
+    return 'unknown_error';
+  }
+};
+
+// 输入框自适应高度
+const autoResizeTextarea = () => {
+  const el = messageInput.value;
+  if (!el) return;
+  el.style.height = 'auto';
+  const maxHeight = 160;
+  el.style.height = Math.min(el.scrollHeight, maxHeight) + 'px';
+};
+
+const scrollToBottom = () => {
+  if (messagesContainer.value) {
+    messagesContainer.value.scrollTo({
+      top: messagesContainer.value.scrollHeight,
+      behavior: 'smooth',
+    });
+  }
+};
+
 // 悬浮窗控制
 const toggleFloatWindow = () => {
   isFloatWindowVisible.value = !isFloatWindowVisible.value;
@@ -395,21 +363,6 @@ const resetWindow = () => {
   initChatMessages();
 };
 
-// 拖拽功能
-const startDrag = (e) => {
-  if (isExpanded.value) return;
-
-  isDragging.value = true;
-  dragStart.x = e.clientX;
-  dragStart.y = e.clientY;
-  dragStart.windowX = windowPosition.x;
-  dragStart.windowY = windowPosition.y;
-
-  document.addEventListener('mousemove', onDrag);
-  document.addEventListener('mouseup', stopDrag);
-  e.preventDefault();
-};
-
 const onDrag = (e) => {
   if (!isDragging.value) return;
 
@@ -435,18 +388,18 @@ const stopDrag = () => {
   document.removeEventListener('mouseup', stopDrag);
 };
 
-// 调整大小功能
-const startResize = (e) => {
-  if (isExpanded.value || isMinimized.value) return;
+// 拖拽功能
+const startDrag = (e) => {
+  if (isExpanded.value) return;
 
-  isResizing.value = true;
-  resizeStart.x = e.clientX;
-  resizeStart.y = e.clientY;
-  resizeStart.startWidth = windowSize.width;
-  resizeStart.startHeight = windowSize.height;
+  isDragging.value = true;
+  dragStart.x = e.clientX;
+  dragStart.y = e.clientY;
+  dragStart.windowX = windowPosition.x;
+  dragStart.windowY = windowPosition.y;
 
-  document.addEventListener('mousemove', onResize);
-  document.addEventListener('mouseup', stopResize);
+  document.addEventListener('mousemove', onDrag);
+  document.addEventListener('mouseup', stopDrag);
   e.preventDefault();
 };
 
@@ -472,15 +425,19 @@ const stopResize = () => {
   document.removeEventListener('mouseup', stopResize);
 };
 
-// 初始化聊天记录
-const initChatMessages = () => {
-  chatMessages.length = 0;
-  chatMessages.push({
-    content:
-      '👋 您好！我是AI-CloudOps助手，专注于为您提供智能运维服务。\n\n我可以帮助您：\n• 🔍 监控云服务器状态\n• 📊 分析性能指标\n• 🛠️ 故障诊断与修复\n• 📋 生成运维报告\n\n请问有什么我可以为您服务的吗？',
-    type: 'ai',
-    time: formatTime(new Date()),
-  });
+// 调整大小功能
+const startResize = (e) => {
+  if (isExpanded.value || isMinimized.value) return;
+
+  isResizing.value = true;
+  resizeStart.x = e.clientX;
+  resizeStart.y = e.clientY;
+  resizeStart.startWidth = windowSize.width;
+  resizeStart.startHeight = windowSize.height;
+
+  document.addEventListener('mousemove', onResize);
+  document.addEventListener('mouseup', stopResize);
+  e.preventDefault();
 };
 
 // 模拟流式渲染工具
@@ -812,6 +769,104 @@ const refreshKnowledge = async () => {
   }
 };
 
+// 停止生成
+const cancelGeneration = () => {
+  accountScope.invalidate();
+  if (abortController.value) {
+    try {
+      abortController.value.abort();
+    } catch {}
+    abortController.value = null;
+    sending.value = false;
+    if (pendingTurn.value)
+      sessionNotice.value = '已停止等待，请先查询请求结果。';
+    message.info('已停止等待');
+  }
+  sending.value = false;
+};
+
+// 会话管理
+const createNewSession = (silent = false) => {
+  cancelGeneration();
+  const newSession = {
+    localId: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: `会话 ${sessions.value.length + 1}`,
+    createdAt: Date.now(),
+  };
+  sessions.value.push(newSession);
+  currentLocalSessionId.value = newSession.localId;
+  // 重置服务端会话，但保留本地消息历史的第一条欢迎消息
+  sessionId.value = '';
+  pendingTurn.value = null;
+  sessionNotice.value = '';
+  chatHistory.value = [];
+  isConnected.value = false;
+  initChatMessages();
+  persistState();
+  if (!silent) message.success('已新建会话');
+};
+
+const loadState = () => {
+  try {
+    const uiRaw = localStorage.getItem(UI_STATE_KEY);
+    if (uiRaw) {
+      const ui = JSON.parse(uiRaw);
+      if (ui?.windowPosition) {
+        windowPosition.x = Math.max(
+          0,
+          Math.min(window.innerWidth - 320, Number(ui.windowPosition.x) || 0),
+        );
+        windowPosition.y = Math.max(
+          0,
+          Math.min(window.innerHeight - 100, Number(ui.windowPosition.y) || 0),
+        );
+      }
+      if (ui?.windowSize) {
+        windowSize.width = Math.max(
+          320,
+          Math.min(600, Number(ui.windowSize.width) || 380),
+        );
+        windowSize.height = Math.max(
+          400,
+          Math.min(800, Number(ui.windowSize.height) || 600),
+        );
+      }
+      isMinimized.value = !!ui?.isMinimized;
+      isExpanded.value = !!ui?.isExpanded;
+      currentMode.value = ui?.currentMode === 2 ? 2 : 1;
+      showAdvancedOptions.value = !!ui?.showAdvancedOptions;
+    }
+
+    const chat = accountScope.read('chat');
+    sessionId.value = chat?.sessionId || '';
+    isConnected.value = false;
+    chatHistory.value = [];
+    initChatMessages();
+
+    const ses = accountScope.read('sessions');
+    if (ses) {
+      sessions.value = Array.isArray(ses.sessions) ? ses.sessions : [];
+      currentLocalSessionId.value = ses.currentLocalSessionId || '';
+    }
+    if (!sessions.value.length) {
+      createNewSession(true);
+    } else {
+      const selected =
+        sessions.value.find((s) => s.localId === currentLocalSessionId.value) ||
+        sessions.value[0];
+      currentLocalSessionId.value = selected.localId;
+      if (selected && !selected.serverId && sessionId.value)
+        selected.serverId = sessionId.value;
+      sessionId.value = selected?.serverId || '';
+      if (sessionId.value) void restoreCurrentSession();
+    }
+    // 覆盖旧版本本地对话副本，仅保留服务端会话指针。
+    persistState();
+  } catch {
+    initChatMessages();
+  }
+};
+
 // 清空聊天
 const clearChat = () => {
   if (pendingTurn.value) {
@@ -821,6 +876,13 @@ const clearChat = () => {
   if (!confirm('新建会话会清空当前显示；旧服务端会话按保留期过期。继续？'))
     return;
   createNewSession();
+};
+
+// 其他功能函数
+const handleSearch = () => {
+  const msg = globalInputMessage.value.trim();
+  if (!msg || sending.value) return;
+  sendMessage(msg);
 };
 
 // 快捷消息发送
@@ -915,22 +977,6 @@ print(f"系统状态: {result}")
   handleSearch();
 };
 
-// 其他功能函数
-const handleSearch = () => {
-  const msg = globalInputMessage.value.trim();
-  if (!msg || sending.value) return;
-  sendMessage(msg);
-};
-
-// 输入框自适应高度
-const autoResizeTextarea = () => {
-  const el = messageInput.value;
-  if (!el) return;
-  el.style.height = 'auto';
-  const maxHeight = 160;
-  el.style.height = Math.min(el.scrollHeight, maxHeight) + 'px';
-};
-
 const onInputChange = () => {
   autoResizeTextarea();
 };
@@ -982,43 +1028,6 @@ const resendMessage = async (index) => {
     return sendMessage(msg.content);
   }
   message.warning('只能重发用户消息');
-};
-
-// 停止生成
-const cancelGeneration = () => {
-  accountScope.invalidate();
-  if (abortController.value) {
-    try {
-      abortController.value.abort();
-    } catch {}
-    abortController.value = null;
-    sending.value = false;
-    if (pendingTurn.value)
-      sessionNotice.value = '已停止等待，请先查询请求结果。';
-    message.info('已停止等待');
-  }
-  sending.value = false;
-};
-
-// 会话管理
-const createNewSession = (silent = false) => {
-  cancelGeneration();
-  const newSession = {
-    localId: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    name: `会话 ${sessions.value.length + 1}`,
-    createdAt: Date.now(),
-  };
-  sessions.value.push(newSession);
-  currentLocalSessionId.value = newSession.localId;
-  // 重置服务端会话，但保留本地消息历史的第一条欢迎消息
-  sessionId.value = '';
-  pendingTurn.value = null;
-  sessionNotice.value = '';
-  chatHistory.value = [];
-  isConnected.value = false;
-  initChatMessages();
-  persistState();
-  if (!silent) message.success('已新建会话');
 };
 
 const switchToSession = (localId) => {
@@ -1098,6 +1107,12 @@ const toggleLike = (index) => {
     chatMessages[index].liked = !chatMessages[index].liked;
     message.success(chatMessages[index].liked ? '已点赞' : '已取消点赞');
   }
+};
+
+const escapeHtml = (text) => {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 };
 
 // 简单的代码高亮函数
@@ -1234,12 +1249,6 @@ marked.setOptions({
   },
 });
 
-const escapeHtml = (text) => {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-};
-
 const renderMarkdown = (content) => {
   if (!content) return '';
 
@@ -1326,15 +1335,6 @@ const renderMarkdown = (content) => {
   } catch {
     // 如果解析失败，返回原始内容（转义HTML）
     return escapeHtml(content).replace(/\n/g, '<br>');
-  }
-};
-
-const scrollToBottom = () => {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTo({
-      top: messagesContainer.value.scrollHeight,
-      behavior: 'smooth',
-    });
   }
 };
 

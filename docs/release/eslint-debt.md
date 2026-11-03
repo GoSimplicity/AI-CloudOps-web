@@ -701,3 +701,12 @@ FormDesign、Process、Template、ProcessDesign和WorkorderTimeline五个SFC搬�
 - 仅两个helper新导入、两个读取调用和选定字段排序，既有import声明原文顺序不变；Instance长错误提示做必要换行。其它AST、模板/style和原binding保持。没有更改helper、业务条件、规则、ignore或数据初始化。
 - fresh两文件lint234→224，sort-objects119→109减少10，sort-imports15不变，逐文件各规则无新增；22已知键、12未知/原型/fallback和两继承getter执行证明通过。
 - 工单目录及既有helper共13文件270测试、最终应用类型检查与差异检查通过；没有新增镜像测试、真实工单操作或通知，未重复全仓与构建，未上线。
+
+## 阶段七十：悬浮助手的完整回调依赖闭环
+
+ai.vue搬移14段完整const-arrow声明，no-use-before-define 30→0。保留kind、名称、函数体、同一script作用域和捕获binding；所有固定statement原文顺序、模板和style保持。没有移动状态/ref/reactive、账户存储构造、marked.setOptions、watch或任何业务调用，也未改变会话恢复和聊天协议。
+
+- persistState和聊天初始化依赖的数据完成初始化后才创建相关回调；loadState声明延后到新建会话依赖之后；拖拽、缩放、滚动和搜索按真实闭包依赖排列，escapeHtml提前到高亮函数之前。stopDrag/stopResize的自引用事件移除协议保持，没有转换函数种类或消除真实递归。
+- 已安装marked的setOptions仅合并defaults，不执行highlight回调；唯一immediate账户watch仍在原位置。原/新实际编译setup使用真实Vue、账户scope、marked及私有内存DOM存储，以Fake API覆盖空缓存/已有会话与恢复成功/失败四种组合：即时账户初始化、读取和持久化、拖拽缩放、新建会话、换账号与清理轨迹相同。已有会话在原immediate watch阶段读取，不误称所有setup均零请求；没有真实模型或网络调用，此为受控setup/生命周期探针而非DOM挂载验收。
+- 磁盘源码与提案逐字匹配，14段完整声明、其它statement原文顺序、compileScript binding分类及生产DOM/SSR render一致；单文件lint133→103 errors、1 warning保持，逐规则无新增，其余既有债保留。
+- AI与独立助手页面及账户scope现有7文件53项测试、应用类型检查通过，包含账户切换隔离、旧流取消、持久化和会话恢复等既有回归。没有修改测试断言、规则或ignore，没有重复全仓测试和构建；其它初始化类前引保留待独立验证，未上线。
