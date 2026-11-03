@@ -2,8 +2,11 @@
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
 
-import { computed, onMounted, reactive, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+
+import { useUserStore } from '@vben/stores';
+
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 import {
   DownOutlined,
   MinusCircleOutlined,
@@ -34,10 +37,35 @@ import {
   type MonitorSendGroup,
 } from '#/api/core/prometheus/prometheus_send_group';
 
+import { useAuthStore } from '#/store';
+import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
+
+let disposed = false;
+let addRevision = 0;
+let editRevision = 0;
+let addOwner: string | undefined;
+let editOwner: string | undefined;
+const addSubmitting = ref(false);
+const editSubmitting = ref(false);
+
+const operationOwner = (): string | undefined => {
+  const userId = Number(useUserStore().userInfo?.userId);
+  if (!Number.isSafeInteger(userId) || userId <= 0) return undefined;
+  return JSON.stringify([userId, useAuthStore().getAuthGeneration()]);
+};
+
+const validPositiveId = (id: unknown): id is number =>
+  typeof id === 'number' && Number.isSafeInteger(id) && id > 0;
+
+onBeforeUnmount(() => {
+  disposed = true;
+  addRevision += 1;
+  editRevision += 1;
+});
 
 const ENABLE_STATUS = {
   ENABLED: 1,
@@ -85,11 +113,30 @@ const createInitialForm = () => ({
   grafana_link: '',
 });
 
-const handleApiError = (error: any, defaultMessage: string) => {
-  const errorMessage =
-    error?.response?.data?.message || error.message || defaultMessage;
-  // 请求层已提示（403、业务错误、HTTP / 网络错误）或取消类：页面不再提示（FE-02b）
+const handleApiError = (error: unknown, defaultMessage: string): void => {
   if (!shouldNotifyPageError(error)) return;
+  let errorMessage = defaultMessage;
+  if (error && typeof error === 'object') {
+    if (
+      'message' in error &&
+      typeof error.message === 'string' &&
+      error.message
+    )
+      errorMessage = error.message;
+    const response = 'response' in error ? error.response : undefined;
+    const data =
+      response && typeof response === 'object' && 'data' in response
+        ? response.data
+        : undefined;
+    if (
+      data &&
+      typeof data === 'object' &&
+      'message' in data &&
+      typeof data.message === 'string' &&
+      data.message
+    )
+      errorMessage = data.message;
+  }
   message.error(errorMessage);
 };
 
@@ -99,8 +146,8 @@ const { loadError, beginRequest } = useListRequest(loading);
 const data = ref<MonitorAlertRule[]>([]);
 const scrapePools = ref<MonitorAlertManagerPool[]>([]);
 const sendGroups = ref<MonitorSendGroup[]>([]);
-const addFormRef = ref();
-const editFormRef = ref();
+const addFormRef = ref<FormInstance>();
+const editFormRef = ref<FormInstance>();
 const currentRecord = ref<MonitorAlertRule | null>(null);
 
 // --- 筛选与分页 ---
@@ -174,6 +221,9 @@ const formRules = {
     },
   ],
   expr: [{ required: true, message: '请输入PromQL表达式', trigger: 'blur' }],
+  send_group_id: [
+    { message: '请选择发送组', required: true, trigger: 'change' },
+  ],
   severity: [{ required: true, message: '请选择严重性', trigger: 'change' }],
   for_time: [{ required: true, message: '请输入持续时间', trigger: 'blur' }],
 };
@@ -285,41 +335,121 @@ const fetchAlertRules = async () => {
   }
 };
 
-const fetchScrapePools = async (page = 1, size = 20) => {
+let optionsOwner: string | undefined;
+let poolRequestRevision = 0;
+let sendRequestRevision = 0;
+
+const ensureOptionOwner = (): string | undefined => {
+  const owner = operationOwner();
+  if (optionsOwner !== owner) {
+    optionsOwner = owner;
+    poolRequestRevision += 1;
+    sendRequestRevision += 1;
+    scrapePools.value = [];
+    sendGroups.value = [];
+    poolPagination.total = 0;
+    poolPagination.current = 1;
+    sendGroupPagination.total = 0;
+    sendGroupPagination.current = 1;
+    poolLoading.value = false;
+    sendGroupLoading.value = false;
+  }
+  return owner;
+};
+
+const fetchScrapePools = async (page = 1, size = 20): Promise<void> => {
+  const owner = ensureOptionOwner();
+  if (disposed || !owner) return;
+  const ticket = ++poolRequestRevision;
+  const isCurrent = () =>
+    !disposed &&
+    poolRequestRevision === ticket &&
+    optionsOwner === owner &&
+    operationOwner() === owner;
   poolLoading.value = true;
   try {
     const response = await getMonitorAlertManagerPoolListApi({ page, size });
-    const items = response.items || [];
+    if (!isCurrent()) return;
+    const items: MonitorAlertManagerPool[] = (response.items || []).filter(
+      (pool: MonitorAlertManagerPool) => validPositiveId(pool.id),
+    );
     if (page === 1) {
-      scrapePools.value = items;
+      const selected = scrapePools.value.filter(
+        (pool) =>
+          (isAddModalVisible.value &&
+            addOwner === owner &&
+            pool.id === addForm.pool_id) ||
+          (isEditModalVisible.value &&
+            editOwner === owner &&
+            pool.id === editForm.pool_id),
+      );
+      scrapePools.value = [
+        ...items,
+        ...selected.filter(
+          (pool) => !items.some((item) => item.id === pool.id),
+        ),
+      ];
     } else {
-      scrapePools.value.push(...items);
+      scrapePools.value.push(
+        ...items.filter(
+          (pool) => !scrapePools.value.some((item) => item.id === pool.id),
+        ),
+      );
     }
     poolPagination.total = response.total || 0;
     poolPagination.current = page;
-  } catch (error: any) {
-    handleApiError(error, '获取实例池数据失败');
+  } catch (error: unknown) {
+    if (isCurrent()) handleApiError(error, '获取实例池数据失败');
   } finally {
-    poolLoading.value = false;
+    if (isCurrent()) poolLoading.value = false;
   }
 };
 
-const fetchSendGroups = async (page = 1, size = 20) => {
+const fetchSendGroups = async (page = 1, size = 20): Promise<void> => {
+  const owner = ensureOptionOwner();
+  if (disposed || !owner) return;
+  const ticket = ++sendRequestRevision;
+  const isCurrent = () =>
+    !disposed &&
+    sendRequestRevision === ticket &&
+    optionsOwner === owner &&
+    operationOwner() === owner;
   sendGroupLoading.value = true;
   try {
     const response = await getMonitorSendGroupListApi({ page, size });
-    const items = response.items || [];
+    if (!isCurrent()) return;
+    const items: MonitorSendGroup[] = (response.items || []).filter(
+      (group: MonitorSendGroup) => validPositiveId(group.id),
+    );
     if (page === 1) {
-      sendGroups.value = items;
+      const selected = sendGroups.value.filter(
+        (group) =>
+          (isAddModalVisible.value &&
+            addOwner === owner &&
+            group.id === addForm.send_group_id) ||
+          (isEditModalVisible.value &&
+            editOwner === owner &&
+            group.id === editForm.send_group_id),
+      );
+      sendGroups.value = [
+        ...items,
+        ...selected.filter(
+          (group) => !items.some((item) => item.id === group.id),
+        ),
+      ];
     } else {
-      sendGroups.value.push(...items);
+      sendGroups.value.push(
+        ...items.filter(
+          (group) => !sendGroups.value.some((item) => item.id === group.id),
+        ),
+      );
     }
     sendGroupPagination.total = response.total || 0;
     sendGroupPagination.current = page;
-  } catch (error: any) {
-    handleApiError(error, '获取发送组数据失败');
+  } catch (error: unknown) {
+    if (isCurrent()) handleApiError(error, '获取发送组数据失败');
   } finally {
-    sendGroupLoading.value = false;
+    if (isCurrent()) sendGroupLoading.value = false;
   }
 };
 
@@ -350,12 +480,14 @@ const handleSendGroupScroll = (e: any) => {
 };
 
 const onPoolDropdownChange = (open: boolean) => {
+  if (open) ensureOptionOwner();
   if (open && scrapePools.value.length === 0) {
     fetchScrapePools(1, poolPagination.pageSize);
   }
 };
 
 const onSendGroupDropdownChange = (open: boolean) => {
+  if (open) ensureOptionOwner();
   if (open && sendGroups.value.length === 0) {
     fetchSendGroups(1, sendGroupPagination.pageSize);
   }
@@ -384,73 +516,110 @@ const handleReset = () => {
   fetchAlertRules();
 };
 
-const handleMenuClick = (key: string, record: MonitorAlertRule) => {
-  if (key === 'delete' && record.id != null) {
-    handleDelete(record.id);
-  }
-};
+const validSeverities = new Set<number>([
+  AlertRuleSeverity.Critical,
+  AlertRuleSeverity.Info,
+  AlertRuleSeverity.Warning,
+]);
+const validSeverity = (value: unknown): value is AlertRuleSeverity =>
+  typeof value === 'number' && validSeverities.has(value);
 
-const handleDelete = (id: number) => {
+let editTarget: MonitorAlertRule | undefined;
+let expressionRevision = 0;
+
+const handleDelete = (record: MonitorAlertRule): void => {
+  const id = record.id;
+  const owner = operationOwner();
+  if (disposed || !validPositiveId(id) || !owner) {
+    message.warning('告警规则或账号标识无效，请刷新后重试');
+    return;
+  }
+  const isCurrent = () =>
+    !disposed && record.id === id && operationOwner() === owner;
+  let confirmationConsumed = false;
   Modal.confirm({
     title: '确认删除',
     content: '您确定要删除这条告警规则吗？此操作不可撤销。',
     okText: '确认',
     cancelText: '取消',
     onOk: async () => {
+      if (confirmationConsumed || !isCurrent()) return;
+      confirmationConsumed = true;
       try {
         await deleteMonitorAlertRuleApi(id);
+        if (!isCurrent()) return;
         message.success('删除成功');
         fetchAlertRules();
-      } catch (error: any) {
-        handleApiError(error, '删除失败');
+      } catch (error: unknown) {
+        if (isCurrent()) handleApiError(error, '删除失败');
       }
     },
   });
 };
 
-// --- 模态框操作 ---
-const showAddModal = () => {
+const handleMenuClick = (key: string, record: MonitorAlertRule): void => {
+  if (key === 'delete') handleDelete(record);
+};
+
+const resetAddForm = (): void => {
+  Object.assign(addForm, createInitialForm());
+};
+
+const showAddModal = (): void => {
+  const owner = ensureOptionOwner();
+  if (disposed || !owner) return;
+  addRevision += 1;
+  addOwner = owner;
+  addSubmitting.value = false;
   resetAddForm();
   isAddModalVisible.value = true;
 };
 
-const closeAddModal = () => {
+const closeAddModal = (): void => {
+  addRevision += 1;
+  addOwner = undefined;
+  addSubmitting.value = false;
   isAddModalVisible.value = false;
 };
 
-const showEditModal = async (record: MonitorAlertRule) => {
-  // --- 确保关联数据显示 ---
-  // 确保关联的实例池在选项列表中，以便正确显示名称
-  if (
-    record.pool_id &&
-    !scrapePools.value.some((p) => p.id === record.pool_id)
-  ) {
-    try {
-      const pool = await getMonitorAlertManagerPoolApi(record.pool_id);
-      if (pool) {
-        // 使用 unshift 将其添加到列表开头，以便用户能立即看到
-        scrapePools.value.unshift(pool);
-      }
-    } catch (error) {
-      handleApiError(error, `加载实例池 ${record.pool_id} 详情失败`);
-    }
-  }
+const closeEditModal = (): void => {
+  editRevision += 1;
+  editOwner = undefined;
+  editTarget = undefined;
+  editSubmitting.value = false;
+  isEditModalVisible.value = false;
+};
 
-  // 确保关联的发送组在选项列表中
-  if (
-    record.send_group_id &&
-    !sendGroups.value.some((g) => g.id === record.send_group_id)
-  ) {
-    try {
-      const group = await getMonitorSendGroupDetailApi(record.send_group_id);
-      if (group) {
-        sendGroups.value.unshift(group);
-      }
-    } catch (error) {
-      handleApiError(error, `加载发送组 ${record.send_group_id} 详情失败`);
-    }
-  }
+const showDetailModal = (record: MonitorAlertRule): void => {
+  currentRecord.value = record;
+  detailModalVisible.value = true;
+};
 
+const closeDetailModal = (): void => {
+  detailModalVisible.value = false;
+  currentRecord.value = null;
+};
+
+const showEditModal = async (record: MonitorAlertRule): Promise<void> => {
+  const id = record.id;
+  const owner = ensureOptionOwner();
+  if (disposed || !owner || !validPositiveId(id)) {
+    message.warning('告警规则或账号标识无效，请刷新后重试');
+    return;
+  }
+  const ticket = ++editRevision;
+  editOwner = owner;
+  editTarget = record;
+  editSubmitting.value = false;
+  const isCurrent = () =>
+    !disposed &&
+    isEditModalVisible.value &&
+    editRevision === ticket &&
+    editOwner === owner &&
+    operationOwner() === owner &&
+    editTarget === record &&
+    record.id === id &&
+    editForm.id === id;
   const [ip, port] = record.ip_address?.split(':') || ['', ''];
   const parseItems = (items: string[] | undefined) =>
     items?.length && items[0] !== ''
@@ -459,9 +628,9 @@ const showEditModal = async (record: MonitorAlertRule) => {
           return { key: Date.now() + Math.random(), labelKey, labelValue };
         })
       : [{ key: Date.now(), labelKey: '', labelValue: '' }];
-
+  // 先绑定原记录；关联选项的慢请求不能延后覆盖另一条记录的表单。
   Object.assign(editForm, {
-    id: record.id,
+    id,
     name: record.name,
     pool_id: record.pool_id,
     send_group_id: record.send_group_id,
@@ -476,91 +645,202 @@ const showEditModal = async (record: MonitorAlertRule) => {
     grafana_link: record.grafana_link || '',
   });
   isEditModalVisible.value = true;
-  detailModalVisible.value = false;
+  closeDetailModal();
+
+  const poolId = record.pool_id;
+  const groupId = record.send_group_id;
+  if (
+    validPositiveId(poolId) &&
+    !scrapePools.value.some((pool) => pool.id === poolId)
+  ) {
+    try {
+      const pool = await getMonitorAlertManagerPoolApi(poolId);
+      if (!isCurrent()) return;
+      if (pool?.id !== poolId) throw new Error('实例池详情标识无效');
+      scrapePools.value.unshift(pool);
+    } catch (error: unknown) {
+      if (!isCurrent()) return;
+      handleApiError(error, '加载实例池详情失败');
+    }
+  }
+  if (!isCurrent()) return;
+  if (
+    validPositiveId(groupId) &&
+    !sendGroups.value.some((group) => group.id === groupId)
+  ) {
+    try {
+      const group = await getMonitorSendGroupDetailApi(groupId);
+      if (!isCurrent()) return;
+      if (group?.id !== groupId) throw new Error('发送组详情标识无效');
+      sendGroups.value.unshift(group);
+    } catch (error: unknown) {
+      if (isCurrent()) handleApiError(error, '加载发送组详情失败');
+    }
+  }
 };
 
-const closeEditModal = () => {
-  isEditModalVisible.value = false;
-};
-
-const showDetailModal = (record: MonitorAlertRule) => {
-  currentRecord.value = record;
-  detailModalVisible.value = true;
-};
-
-const closeDetailModal = () => {
-  detailModalVisible.value = false;
-  currentRecord.value = null;
-};
-
-// --- 表单操作 ---
-const resetAddForm = () => {
-  Object.assign(addForm, createInitialForm());
-};
-
-const formatItemsForApi = (items: LabelOrAnnotationItem[]) => {
-  return items
+const formatItemsForApi = (items: LabelOrAnnotationItem[]) =>
+  items
     .filter((item) => item.labelKey && item.labelValue)
     .map((item) => `${item.labelKey},${item.labelValue}`);
-};
 
-const handleAdd = async () => {
+const handleAdd = async (): Promise<void> => {
+  if (disposed || addSubmitting.value || !isAddModalVisible.value) return;
+  const owner = addOwner;
+  const form = addFormRef.value;
+  if (!owner || operationOwner() !== owner) return;
+  if (!form || typeof form.validate !== 'function') {
+    message.warning('表单尚未就绪，请稍后重试');
+    return;
+  }
+  const ticket = addRevision;
+  const fingerprint = JSON.stringify(addForm);
+  const isCurrent = () =>
+    !disposed &&
+    isAddModalVisible.value &&
+    addRevision === ticket &&
+    addOwner === owner &&
+    operationOwner() === owner &&
+    JSON.stringify(addForm) === fingerprint;
+  addSubmitting.value = true;
   try {
-    await addFormRef.value?.validate();
+    await form.validate();
+    if (!isCurrent()) return;
+    const poolId = addForm.pool_id;
+    const groupId = addForm.send_group_id;
+    const severity = addForm.severity;
+    if (
+      !validPositiveId(poolId) ||
+      !validPositiveId(groupId) ||
+      !validSeverity(severity)
+    ) {
+      message.warning('请选择有效的实例池、发送组和严重性');
+      return;
+    }
     const apiData: CreateMonitorAlertRuleReq = {
       ...addForm,
       ip_address: `${addForm.ip}:${addForm.port}`,
-      pool_id: addForm.pool_id!,
-      send_group_id: addForm.send_group_id!,
-      severity: addForm.severity!,
+      pool_id: poolId,
+      send_group_id: groupId,
+      severity,
       labels: formatItemsForApi(addForm.labels),
       annotations: formatItemsForApi(addForm.annotations),
       grafana_link: addForm.grafana_link,
     };
     await createMonitorAlertRuleApi(apiData);
+    if (!isCurrent()) return;
     message.success('新增成功');
     closeAddModal();
     fetchAlertRules();
-  } catch (error: any) {
-    handleApiError(error, '操作失败');
+  } catch (error: unknown) {
+    if (isCurrent()) handleApiError(error, '操作失败');
+  } finally {
+    if (addRevision === ticket) addSubmitting.value = false;
   }
 };
 
-const handleEdit = async () => {
+const handleEdit = async (): Promise<void> => {
+  if (disposed || editSubmitting.value || !isEditModalVisible.value) return;
+  const owner = editOwner;
+  const form = editFormRef.value;
+  const record = editTarget;
+  const id = editForm.id;
+  if (
+    !owner ||
+    operationOwner() !== owner ||
+    !record ||
+    record.id !== id ||
+    !validPositiveId(id)
+  )
+    return;
+  if (!form || typeof form.validate !== 'function') {
+    message.warning('表单尚未就绪，请稍后重试');
+    return;
+  }
+  const ticket = editRevision;
+  const fingerprint = JSON.stringify(editForm);
+  const isCurrent = () =>
+    !disposed &&
+    isEditModalVisible.value &&
+    editRevision === ticket &&
+    editOwner === owner &&
+    operationOwner() === owner &&
+    editTarget === record &&
+    record.id === id &&
+    editForm.id === id &&
+    JSON.stringify(editForm) === fingerprint;
+  editSubmitting.value = true;
   try {
-    await editFormRef.value?.validate();
+    await form.validate();
+    if (!isCurrent()) return;
+    const poolId = editForm.pool_id;
+    const groupId = editForm.send_group_id;
+    const severity = editForm.severity;
+    if (
+      !validPositiveId(poolId) ||
+      !validPositiveId(groupId) ||
+      !validSeverity(severity)
+    ) {
+      message.warning('请选择有效的实例池、发送组和严重性');
+      return;
+    }
     const apiData: UpdateMonitorAlertRuleReq = {
       ...editForm,
+      id,
       ip_address: `${editForm.ip}:${editForm.port}`,
       enable: editForm.enableSwitch
         ? ENABLE_STATUS.ENABLED
         : ENABLE_STATUS.DISABLED,
-      pool_id: editForm.pool_id!,
-      send_group_id: editForm.send_group_id!,
-      severity: editForm.severity!,
+      pool_id: poolId,
+      send_group_id: groupId,
+      severity,
       labels: formatItemsForApi(editForm.labels),
       annotations: formatItemsForApi(editForm.annotations),
       grafana_link: editForm.grafana_link,
     };
     await updateMonitorAlertRuleApi(apiData);
+    if (!isCurrent()) return;
     message.success('更新成功');
     closeEditModal();
     fetchAlertRules();
-  } catch (error: any) {
-    handleApiError(error, '操作失败');
+  } catch (error: unknown) {
+    if (isCurrent()) handleApiError(error, '操作失败');
+  } finally {
+    if (editRevision === ticket) editSubmitting.value = false;
   }
 };
 
-const validateExpression = async (expr: string) => {
+const validateExpression = async (
+  expr: string,
+  mode: 'add' | 'edit',
+): Promise<void> => {
+  const owner = mode === 'add' ? addOwner : editOwner;
+  const ticket = mode === 'add' ? addRevision : editRevision;
+  const version = ++expressionRevision;
+  const isCurrent = () =>
+    !disposed &&
+    owner !== undefined &&
+    operationOwner() === owner &&
+    expressionRevision === version &&
+    (mode === 'add'
+      ? isAddModalVisible.value &&
+        addRevision === ticket &&
+        addOwner === owner &&
+        addForm.expr === expr
+      : isEditModalVisible.value &&
+        editRevision === ticket &&
+        editOwner === owner &&
+        editForm.expr === expr);
+  if (!isCurrent()) return;
   if (!expr) {
     message.warning('请输入表达式');
     return;
   }
   try {
     await promqlExprCheckApi({ promql_expr: expr });
-    message.success('表达式验证通过');
-  } catch (error: any) {
-    handleApiError(error, '表达式验证失败');
+    if (isCurrent()) message.success('表达式验证通过');
+  } catch (error: unknown) {
+    if (isCurrent()) handleApiError(error, '表达式验证失败');
   }
 };
 
@@ -625,24 +905,6 @@ const getPoolName = (poolId?: number) =>
 
 const getSendGroupName = (groupId?: number) =>
   sendGroups.value.find((g) => g.id === groupId)?.name || `ID: ${groupId}`;
-
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length]!;
-};
 
 const getInitials = (name?: string): string => {
   if (!name) return '';
@@ -1021,6 +1283,7 @@ onMounted(() => {
 
     <!-- 新建告警规则对话框 -->
     <a-modal
+      :confirm-loading="addSubmitting"
       :destroy-on-close="true"
       :open="isAddModalVisible"
       :width="formDialogWidth"
@@ -1129,7 +1392,10 @@ onMounted(() => {
             />
           </a-form-item>
           <a-form-item>
-            <a-button type="primary" @click="validateExpression(addForm.expr)">
+            <a-button
+              type="primary"
+              @click="validateExpression(addForm.expr, 'add')"
+            >
               验证表达式
             </a-button>
           </a-form-item>
@@ -1241,6 +1507,7 @@ onMounted(() => {
 
     <!-- 编辑AlertRule对话框 -->
     <a-modal
+      :confirm-loading="editSubmitting"
       :destroy-on-close="true"
       :open="isEditModalVisible"
       :width="formDialogWidth"
@@ -1359,7 +1626,10 @@ onMounted(() => {
             />
           </a-form-item>
           <a-form-item>
-            <a-button type="primary" @click="validateExpression(editForm.expr)">
+            <a-button
+              type="primary"
+              @click="validateExpression(editForm.expr, 'edit')"
+            >
               验证表达式
             </a-button>
           </a-form-item>
@@ -1525,7 +1795,10 @@ onMounted(() => {
 
         <div class="detail-footer">
           <a-button @click="closeDetailModal">关闭</a-button>
-          <a-button type="primary" @click="showEditModal(currentRecord!)">
+          <a-button
+            type="primary"
+            @click="currentRecord && showEditModal(currentRecord)"
+          >
             编辑
           </a-button>
         </div>

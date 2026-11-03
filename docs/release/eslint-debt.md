@@ -333,3 +333,14 @@ Category按合法safe-int ID、UID/authGeneration及交互票据隔离view/edit/
 - 新31项真实SFC+AntD/Mock回归，连原Process/scanner共58项通过；应用类型检查通过。
 - 生产ESLint33→26且其它规则无增，新测试0/0；清除6处隐藏SFC语法，未扩大规则作用域。
 - 有意NaN ID反例有Vue invalid-key warning，未隐藏。Process尚未修改、真实工单API未访问，全量/构建另待整合检查点。
+
+## 阶段二十七：监控配置与告警规则表单闭环（2026-11-03）
+
+MonitorConfig补齐原先模板存在但脚本未声明的FormInstance引用并强制validate；MonitorAlertRule不再以optional validate在缺ref时继续。关联/目标safe-int、类型/级别/状态等明确enum在外发前验证；窗口busy、防重及owner/authGeneration/字段fingerprint覆盖验证等待、关闭重开与每个await回执。Rule同步填表再门禁关联预加载，选中项与慢分页合并；PromQL提示仅写原窗口及原表达式；delete确认一次消费。保持已有API路径、enableSwitch/labels及字段合同，Rule复用头像函数。
+
+独立审查补两项实际遗漏：Config有效打开create/edit会失效旧详情读取，不让A旧详情盖住B编辑；status严格数字1/2，非法或缺失值不提交。类型/枚举不靠类型断言充当运行校验。
+
+- 新89项真实控件/延迟场景，连原列表与scanner共149项通过；含真实AntD必填验证、真正dropdown触发的慢第一页及view→edit/create/关重开反例。
+- 两生产文件ESLint71/66，新测试0/0，四protected类别0；13处script隐藏断言及额外1处模板断言清除。
+- 所有写入方冻结后的整合检查：146文件2867项全量测试、应用类型检查、11项构建通过。完整扫描1094files仍10503 errors/5 warnings，protected/parser/tool0，SFC语法盘点剩12文件33处，不宣称lint全绿。
+- 整合首轮3个CMDB旧fixture缺少新会话依赖而失败，补同principal依赖后完整复跑2867通过；未将2864/3failed算作成功。没有真实Prometheus操作或上线。

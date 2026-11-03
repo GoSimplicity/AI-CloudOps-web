@@ -2,7 +2,10 @@
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
+
+import { useUserStore } from '@vben/stores';
+
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
@@ -24,13 +27,39 @@ import {
   type MonitorScrapePool,
 } from '#/api/core/prometheus/prometheus_scrape_pool';
 
+import { useAuthStore } from '#/store';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 const { can } = usePermission();
 
+let disposed = false;
+let addRevision = 0;
+let editRevision = 0;
+let detailRevision = 0;
+let addOwner: string | undefined;
+let editOwner: string | undefined;
+const addSubmitting = ref(false);
+const editSubmitting = ref(false);
+
+const operationOwner = (): string | undefined => {
+  const userId = Number(useUserStore().userInfo?.userId);
+  if (!Number.isSafeInteger(userId) || userId <= 0) return undefined;
+  return JSON.stringify([userId, useAuthStore().getAuthGeneration()]);
+};
+
+const validPositiveId = (id: unknown): id is number =>
+  typeof id === 'number' && Number.isSafeInteger(id) && id > 0;
+
+onBeforeUnmount(() => {
+  disposed = true;
+  addRevision += 1;
+  editRevision += 1;
+  detailRevision += 1;
+});
+
 // 实例池接口
-type PoolOption = Pick<MonitorScrapePool, 'id' | 'name'>;
+type PoolOption = { id: number } & Pick<MonitorScrapePool, 'name'>;
 
 // 分页接口
 interface PaginationConfig {
@@ -172,6 +201,8 @@ const previewConfig = ref<MonitorConfigItem | null>(null);
 const detailConfig = ref<MonitorConfigItem | null>(null);
 
 // 表单数据
+const addFormRef = ref<FormInstance>();
+const editFormRef = ref<FormInstance>();
 const addForm = reactive<ConfigForm>({
   name: '',
   pool_id: undefined,
@@ -313,7 +344,18 @@ const fetchConfigs = async (): Promise<void> => {
 };
 
 // 加载实例池数据
+let poolOptionsRevision = 0;
+let poolOptionsOwner: string | undefined;
 const loadPoolOptions = async (): Promise<void> => {
+  const owner = operationOwner();
+  const ticket = ++poolOptionsRevision;
+  if (poolOptionsOwner !== owner) {
+    poolOptionsOwner = owner;
+    poolOptions.value = [];
+  }
+  const isCurrent = () =>
+    !disposed && poolOptionsRevision === ticket && operationOwner() === owner;
+  if (disposed || !owner) return;
   try {
     let allPools: MonitorScrapePool[] = [];
     let currentPage = 1;
@@ -326,6 +368,7 @@ const loadPoolOptions = async (): Promise<void> => {
         size: pageSize,
       });
 
+      if (!isCurrent()) return;
       if (res?.items && res.items.length > 0) {
         allPools = allPools.concat(res.items);
 
@@ -338,14 +381,13 @@ const loadPoolOptions = async (): Promise<void> => {
       }
     }
 
-    poolOptions.value = allPools
-      .filter((item: MonitorScrapePool) => item.id !== undefined)
-      .map((item: MonitorScrapePool) => ({
-        id: item.id!,
-        name: item.name,
-      }));
+    if (!isCurrent()) return;
+    poolOptions.value = allPools.flatMap((item) => {
+      const id = item.id;
+      return validPositiveId(id) ? [{ id, name: item.name }] : [];
+    });
   } catch {
-    poolOptions.value = [];
+    if (isCurrent()) poolOptions.value = [];
   }
 };
 
@@ -398,27 +440,68 @@ const handleMenuClick = (command: string, record: MonitorConfigItem): void => {
   }
 };
 
+const validConfigTypes = new Set<number>([
+  ConfigType.AlertManager,
+  ConfigType.AlertRule,
+  ConfigType.Prometheus,
+  ConfigType.RecordRule,
+  ConfigType.WebhookFile,
+]);
+const validConfigType = (value: unknown): value is ConfigType =>
+  typeof value === 'number' && validConfigTypes.has(value);
+
+const validConfigStatuses = new Set<number>([
+  ConfigStatus.Active,
+  ConfigStatus.Inactive,
+]);
+const validConfigStatus = (value: unknown): value is ConfigStatus =>
+  typeof value === 'number' && validConfigStatuses.has(value);
+
+const errorText = (error: unknown, fallback = '未知错误'): string =>
+  error &&
+  typeof error === 'object' &&
+  'message' in error &&
+  typeof error.message === 'string' &&
+  error.message
+    ? error.message
+    : fallback;
+
+let editTarget: MonitorConfigItem | undefined;
+
 const confirmDelete = (record: MonitorConfigItem): void => {
+  if (disposed) return;
+  const id = record.id;
+  const owner = operationOwner();
+  if (!validPositiveId(id) || !owner) {
+    message.warning('配置或账号标识无效，请刷新后重试');
+    return;
+  }
+  const name = record.name;
+  const isCurrent = () =>
+    !disposed && record.id === id && operationOwner() === owner;
+  let confirmationConsumed = false;
   Modal.confirm({
     title: '警告',
-    content: `确定要删除配置 "${record.name}" 吗？`,
+    content: `确定要删除配置 "${name}" 吗？`,
     okText: '删除',
     okType: 'danger',
     cancelText: '取消',
     async onOk() {
+      if (confirmationConsumed || !isCurrent()) return;
+      confirmationConsumed = true;
       try {
-        await deleteMonitorConfigApi({ id: record.id });
-        message.success(`配置 "${record.name}" 已删除`);
+        await deleteMonitorConfigApi({ id });
+        if (!isCurrent()) return;
+        message.success(`配置 "${name}" 已删除`);
         fetchConfigs();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(error.message || '删除配置失败');
+      } catch (error: unknown) {
+        if (isCurrent() && shouldNotifyPageError(error))
+          message.error(errorText(error, '删除配置失败'));
       }
     },
   });
 };
 
-// 表单处理
 const resetAddForm = (): void => {
   Object.assign(addForm, {
     name: '',
@@ -430,37 +513,97 @@ const resetAddForm = (): void => {
   });
 };
 
+const closeDetailModal = (): void => {
+  detailRevision += 1;
+  isDetailModalVisible.value = false;
+  detailConfig.value = null;
+};
+
 const showAddModal = (): void => {
+  const owner = operationOwner();
+  if (disposed || !owner) return;
+  closeDetailModal();
+  addRevision += 1;
+  addOwner = owner;
+  if (poolOptionsOwner !== owner) loadPoolOptions();
+  addSubmitting.value = false;
   resetAddForm();
   isAddModalVisible.value = true;
 };
 
 const closeAddModal = (): void => {
+  addRevision += 1;
+  addOwner = undefined;
+  addSubmitting.value = false;
   isAddModalVisible.value = false;
 };
 
 const handleAdd = async (): Promise<void> => {
+  if (disposed || addSubmitting.value || !isAddModalVisible.value) return;
+  const owner = addOwner;
+  const form = addFormRef.value;
+  if (!owner || operationOwner() !== owner) return;
+  if (!form || typeof form.validate !== 'function') {
+    message.warning('表单尚未就绪，请稍后重试');
+    return;
+  }
+  const ticket = addRevision;
+  const fingerprint = JSON.stringify(addForm);
+  const isCurrent = () =>
+    !disposed &&
+    isAddModalVisible.value &&
+    addRevision === ticket &&
+    addOwner === owner &&
+    operationOwner() === owner &&
+    JSON.stringify(addForm) === fingerprint;
+  addSubmitting.value = true;
   try {
+    await form.validate();
+    if (!isCurrent()) return;
+    const poolId = addForm.pool_id;
+    const configType = addForm.config_type;
+    const status = addForm.status;
+    if (
+      !validPositiveId(poolId) ||
+      !validConfigType(configType) ||
+      !validConfigStatus(status)
+    ) {
+      message.warning('请选择有效的实例池、配置类型和状态');
+      return;
+    }
     const params: CreateMonitorConfigParams = {
       name: addForm.name,
-      pool_id: addForm.pool_id!,
+      pool_id: poolId,
       instance_ip: addForm.instance_ip,
-      config_type: addForm.config_type!,
+      config_type: configType,
       config_content: addForm.config_content,
-      status: addForm.status,
+      status,
     };
-
     await createMonitorConfigApi(params);
+    if (!isCurrent()) return;
     closeAddModal();
     fetchConfigs();
     message.success('新增配置成功');
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error('新增配置失败: ' + (error.message || '未知错误'));
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('新增配置失败: ' + errorText(error));
+  } finally {
+    if (addRevision === ticket) addSubmitting.value = false;
   }
 };
 
 const showEditModal = (record: MonitorConfigItem): void => {
+  const owner = operationOwner();
+  if (disposed || !owner || !validPositiveId(record.id)) {
+    message.warning('配置或账号标识无效，请刷新后重试');
+    return;
+  }
+  closeDetailModal();
+  editRevision += 1;
+  editOwner = owner;
+  if (poolOptionsOwner !== owner) loadPoolOptions();
+  editTarget = record;
+  editSubmitting.value = false;
   editForm.id = record.id;
   editForm.name = record.name;
   editForm.pool_id = record.pool_id;
@@ -472,44 +615,106 @@ const showEditModal = (record: MonitorConfigItem): void => {
 };
 
 const showEditModalFromDetail = (record: MonitorConfigItem): void => {
-  closeDetailModal();
   showEditModal(record);
 };
 
 const closeEditModal = (): void => {
+  editRevision += 1;
+  editOwner = undefined;
+  editTarget = undefined;
+  editSubmitting.value = false;
   isEditModalVisible.value = false;
 };
 
 const handleEdit = async (): Promise<void> => {
+  if (disposed || editSubmitting.value || !isEditModalVisible.value) return;
+  const owner = editOwner;
+  const form = editFormRef.value;
+  const record = editTarget;
+  const id = editForm.id;
+  if (
+    !owner ||
+    operationOwner() !== owner ||
+    !record ||
+    record.id !== id ||
+    !validPositiveId(id)
+  )
+    return;
+  if (!form || typeof form.validate !== 'function') {
+    message.warning('表单尚未就绪，请稍后重试');
+    return;
+  }
+  const ticket = editRevision;
+  const fingerprint = JSON.stringify(editForm);
+  const isCurrent = () =>
+    !disposed &&
+    isEditModalVisible.value &&
+    editRevision === ticket &&
+    editOwner === owner &&
+    operationOwner() === owner &&
+    editTarget === record &&
+    record.id === id &&
+    editForm.id === id &&
+    JSON.stringify(editForm) === fingerprint;
+  editSubmitting.value = true;
   try {
+    await form.validate();
+    if (!isCurrent()) return;
+    const poolId = editForm.pool_id;
+    const configType = editForm.config_type;
+    const status = editForm.status;
+    if (
+      !validPositiveId(poolId) ||
+      !validConfigType(configType) ||
+      !validConfigStatus(status)
+    ) {
+      message.warning('请选择有效的实例池、配置类型和状态');
+      return;
+    }
     const params: UpdateMonitorConfigParams = {
-      id: editForm.id!,
+      id,
       name: editForm.name,
-      pool_id: editForm.pool_id!,
+      pool_id: poolId,
       instance_ip: editForm.instance_ip,
-      config_type: editForm.config_type!,
+      config_type: configType,
       config_content: editForm.config_content,
-      status: editForm.status,
+      status,
     };
-
     await updateMonitorConfigApi(params);
+    if (!isCurrent()) return;
     closeEditModal();
     fetchConfigs();
     message.success('更新配置成功');
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error('更新配置失败: ' + (error.message || '未知错误'));
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('更新配置失败: ' + errorText(error));
+  } finally {
+    if (editRevision === ticket) editSubmitting.value = false;
   }
 };
 
 const handleViewDetail = async (record: MonitorConfigItem): Promise<void> => {
+  const owner = operationOwner();
+  const id = record.id;
+  if (disposed || !owner || !validPositiveId(id)) {
+    message.warning('配置或账号标识无效，请刷新后重试');
+    return;
+  }
+  const ticket = ++detailRevision;
+  const isCurrent = () =>
+    !disposed &&
+    detailRevision === ticket &&
+    operationOwner() === owner &&
+    record.id === id;
   try {
-    const detail = await getMonitorConfigApi({ id: record.id });
+    const detail = await getMonitorConfigApi({ id });
+    if (!isCurrent()) return;
+    if (detail?.id !== id) throw new Error('配置详情标识无效，请刷新后重试');
     detailConfig.value = detail;
     isDetailModalVisible.value = true;
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error('获取配置详情失败: ' + (error.message || '未知错误'));
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('获取配置详情失败: ' + errorText(error));
   }
 };
 
@@ -521,11 +726,6 @@ const showPreviewModal = (record: MonitorConfigItem): void => {
 const closePreviewModal = (): void => {
   isPreviewModalVisible.value = false;
   previewConfig.value = null;
-};
-
-const closeDetailModal = (): void => {
-  isDetailModalVisible.value = false;
-  detailConfig.value = null;
 };
 
 // 生命周期
@@ -806,6 +1006,7 @@ onMounted(() => {
 
     <!-- 新增配置模态框 -->
     <a-modal
+      :confirm-loading="addSubmitting"
       :destroy-on-close="true"
       :open="isAddModalVisible"
       :width="formDialogWidth"
@@ -933,6 +1134,7 @@ onMounted(() => {
 
     <!-- 编辑配置模态框 -->
     <a-modal
+      :confirm-loading="editSubmitting"
       :destroy-on-close="true"
       :open="isEditModalVisible"
       :width="formDialogWidth"
