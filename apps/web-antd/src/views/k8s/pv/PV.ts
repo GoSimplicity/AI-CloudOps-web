@@ -284,50 +284,6 @@ export function usePVPage() {
     clusters.value = [];
   };
 
-  // api calls
-  const fetchClusters = async (reset = false) => {
-    if (reset) {
-      resetClusters();
-    }
-    try {
-      clustersLoading.value = true;
-      clustersError.value = '';
-      const params: ListClustersReq = {
-        page: clustersPage.value,
-        size: clustersSize.value,
-      };
-      const res = await getClustersListApi(params);
-      if (clustersPage.value === 1) {
-        clusters.value = res?.items || [];
-      } else {
-        clusters.value = [...clusters.value, ...(res?.items || [])];
-      }
-      clustersTotal.value = res?.total || 0;
-
-      // 如果当前没有选择集群且有可用集群，自动选择第一个
-      if (!filterClusterId.value && clusters.value.length > 0) {
-        const firstCluster = clusters.value[0];
-        if (firstCluster?.id) {
-          filterClusterId.value = firstCluster.id;
-          // 自动加载该集群的命名空间和PV数据
-          await fetchPVs();
-        }
-      }
-    } catch (error) {
-      if (clustersPage.value === 1) {
-        clusters.value = [];
-        clustersTotal.value = 0;
-        filterClusterId.value = undefined;
-        clearPVs();
-      }
-      if (shouldRecordPageError(error))
-        clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(error)) message.error(clustersError.value);
-    } finally {
-      clustersLoading.value = false;
-    }
-  };
-
   const fetchPVs = async () => {
     const clusterId = filterClusterId.value;
     if (!clusterId) {
@@ -376,6 +332,50 @@ export function usePVPage() {
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
+    }
+  };
+
+  // api calls
+  const fetchClusters = async (reset = false) => {
+    if (reset) {
+      resetClusters();
+    }
+    try {
+      clustersLoading.value = true;
+      clustersError.value = '';
+      const params: ListClustersReq = {
+        page: clustersPage.value,
+        size: clustersSize.value,
+      };
+      const res = await getClustersListApi(params);
+      if (clustersPage.value === 1) {
+        clusters.value = res?.items || [];
+      } else {
+        clusters.value = [...clusters.value, ...(res?.items || [])];
+      }
+      clustersTotal.value = res?.total || 0;
+
+      // 如果当前没有选择集群且有可用集群，自动选择第一个
+      if (!filterClusterId.value && clusters.value.length > 0) {
+        const firstCluster = clusters.value[0];
+        if (firstCluster?.id) {
+          filterClusterId.value = firstCluster.id;
+          // 自动加载该集群的命名空间和PV数据
+          await fetchPVs();
+        }
+      }
+    } catch (error) {
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearPVs();
+      }
+      if (shouldRecordPageError(error))
+        clustersError.value = '获取集群列表失败，请重试';
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
+    } finally {
+      clustersLoading.value = false;
     }
   };
 
@@ -430,6 +430,24 @@ export function usePVPage() {
       if (shouldNotifyPageError(error))
         message.error(error?.message || '获取PV YAML失败');
     }
+  };
+
+  // form helpers
+  const resetCreateForm = () => {
+    createFormModel.value = {
+      name: '',
+      capacity: '',
+      access_modes: ['ReadWriteOnce'],
+      reclaim_policy: 'Retain',
+      storage_class: '',
+      volume_mode: 'Filesystem',
+      volume_type: 'hostPath',
+      volume_source: { path: '', type: '' }, // 默认 hostPath 的必需字段
+      node_affinity: {},
+      labels: {},
+      annotations: {},
+    };
+    formRef.value?.resetFields();
   };
 
   const createPV = async () => {
@@ -533,6 +551,13 @@ export function usePVPage() {
     }
   };
 
+  const resetCreateYamlForm = () => {
+    createYamlFormModel.value = {
+      yaml: '',
+    };
+    createYamlFormRef.value?.resetFields();
+  };
+
   const createPVByYaml = async () => {
     if (!filterClusterId.value) {
       message.error('请先选择集群');
@@ -559,6 +584,22 @@ export function usePVPage() {
     } finally {
       submitLoading.value = false;
     }
+  };
+
+  const resetEditForm = () => {
+    editFormModel.value = {
+      name: '',
+      capacity: '',
+      access_modes: [],
+      reclaim_policy: '',
+      storage_class: '',
+      volume_mode: '',
+      volume_source: {},
+      node_affinity: {},
+      labels: {},
+      annotations: {},
+    };
+    formRef.value?.resetFields();
   };
 
   const updatePV = async () => {
@@ -611,6 +652,13 @@ export function usePVPage() {
     } finally {
       submitLoading.value = false;
     }
+  };
+
+  const resetYamlForm = () => {
+    yamlFormModel.value = {
+      yaml: '',
+    };
+    yamlFormRef.value?.resetFields();
   };
 
   const updatePVByYaml = async () => {
@@ -816,24 +864,6 @@ export function usePVPage() {
     yamlFormModel.value.yaml = currentYamlContent.value;
   };
 
-  // form helpers
-  const resetCreateForm = () => {
-    createFormModel.value = {
-      name: '',
-      capacity: '',
-      access_modes: ['ReadWriteOnce'],
-      reclaim_policy: 'Retain',
-      storage_class: '',
-      volume_mode: 'Filesystem',
-      volume_type: 'hostPath',
-      volume_source: { path: '', type: '' }, // 默认 hostPath 的必需字段
-      node_affinity: {},
-      labels: {},
-      annotations: {},
-    };
-    formRef.value?.resetFields();
-  };
-
   // 判断某个字段是否为必需字段
   const isRequiredField = (volumeType: string, fieldKey: string): boolean => {
     const requiredFields: Record<string, string[]> = {
@@ -870,36 +900,6 @@ export function usePVPage() {
     createFormModel.value.volume_source = defaultConfigs[type] || {};
 
     message.info(`已切换到 ${type} 卷类型，请填写必需的配置参数`);
-  };
-
-  const resetEditForm = () => {
-    editFormModel.value = {
-      name: '',
-      capacity: '',
-      access_modes: [],
-      reclaim_policy: '',
-      storage_class: '',
-      volume_mode: '',
-      volume_source: {},
-      node_affinity: {},
-      labels: {},
-      annotations: {},
-    };
-    formRef.value?.resetFields();
-  };
-
-  const resetYamlForm = () => {
-    yamlFormModel.value = {
-      yaml: '',
-    };
-    yamlFormRef.value?.resetFields();
-  };
-
-  const resetCreateYamlForm = () => {
-    createYamlFormModel.value = {
-      yaml: '',
-    };
-    createYamlFormRef.value?.resetFields();
   };
 
   // filter handlers

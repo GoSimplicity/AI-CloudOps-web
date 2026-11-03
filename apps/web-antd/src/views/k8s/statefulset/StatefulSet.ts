@@ -435,57 +435,18 @@ export function useStatefulSetPage() {
     selectedRows.value = [];
   };
 
+  const resetNamespaces = () => {
+    namespacesPage.value = 1;
+    namespaces.value = [];
+    namespacesTotal.value = 0;
+  };
+
   const clearNamespaces = () => {
     namespaceRequestId++;
     namespacesLoading.value = false;
     namespacesError.value = '';
     resetNamespaces();
     filterNamespace.value = undefined;
-  };
-
-  const fetchClusters = async (reset = false) => {
-    if (reset) {
-      resetClusters();
-    }
-    try {
-      clustersLoading.value = true;
-      clustersError.value = '';
-      const params: ListClustersReq = {
-        page: clustersPage.value,
-        size: clustersSize.value,
-      };
-      const res = await getClustersListApi(params);
-      if (clustersPage.value === 1) {
-        clusters.value = res?.items || [];
-      } else {
-        clusters.value = [...clusters.value, ...(res?.items || [])];
-      }
-      clustersTotal.value = res?.total || 0;
-
-      // 如果当前没有选择集群且有可用集群，自动选择第一个
-      if (!filterClusterId.value && clusters.value.length > 0) {
-        const firstCluster = clusters.value[0];
-        if (firstCluster?.id) {
-          filterClusterId.value = firstCluster.id;
-          // 自动加载该集群的命名空间和StatefulSet数据
-          await fetchNamespaces();
-          await fetchStatefulSets();
-        }
-      }
-    } catch (error) {
-      if (clustersPage.value === 1) {
-        clusters.value = [];
-        clustersTotal.value = 0;
-        filterClusterId.value = undefined;
-        clearNamespaces();
-        clearStatefulSets();
-      }
-      if (shouldRecordPageError(error))
-        clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(error)) message.error(clustersError.value);
-    } finally {
-      clustersLoading.value = false;
-    }
   };
 
   const fetchNamespaces = async (reset = false) => {
@@ -592,6 +553,57 @@ export function useStatefulSetPage() {
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
+    }
+  };
+
+  // 重置集群列表
+  const resetClusters = () => {
+    clustersPage.value = 1;
+    clusters.value = [];
+  };
+
+  const fetchClusters = async (reset = false) => {
+    if (reset) {
+      resetClusters();
+    }
+    try {
+      clustersLoading.value = true;
+      clustersError.value = '';
+      const params: ListClustersReq = {
+        page: clustersPage.value,
+        size: clustersSize.value,
+      };
+      const res = await getClustersListApi(params);
+      if (clustersPage.value === 1) {
+        clusters.value = res?.items || [];
+      } else {
+        clusters.value = [...clusters.value, ...(res?.items || [])];
+      }
+      clustersTotal.value = res?.total || 0;
+
+      // 如果当前没有选择集群且有可用集群，自动选择第一个
+      if (!filterClusterId.value && clusters.value.length > 0) {
+        const firstCluster = clusters.value[0];
+        if (firstCluster?.id) {
+          filterClusterId.value = firstCluster.id;
+          // 自动加载该集群的命名空间和StatefulSet数据
+          await fetchNamespaces();
+          await fetchStatefulSets();
+        }
+      }
+    } catch (error) {
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearNamespaces();
+        clearStatefulSets();
+      }
+      if (shouldRecordPageError(error))
+        clustersError.value = '获取集群列表失败，请重试';
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
+    } finally {
+      clustersLoading.value = false;
     }
   };
 
@@ -1190,18 +1202,6 @@ export function useStatefulSetPage() {
     }
     namespacesPage.value += 1;
     await fetchNamespaces();
-  };
-
-  // 重置集群列表
-  const resetClusters = () => {
-    clustersPage.value = 1;
-    clusters.value = [];
-  };
-
-  const resetNamespaces = () => {
-    namespacesPage.value = 1;
-    namespaces.value = [];
-    namespacesTotal.value = 0;
   };
 
   // 分页变化处理

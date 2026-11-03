@@ -255,49 +255,9 @@ export function useTaskPage() {
     filterTemplateId.value = undefined;
   };
 
-  const fetchClusters = async (reset = false) => {
-    if (reset) {
-      resetClusters();
-    }
-    try {
-      clustersLoading.value = true;
-      clustersError.value = '';
-      const params: ListClustersReq = {
-        page: clustersPage.value,
-        size: clustersSize.value,
-      };
-      const res = await getClustersListApi(params);
-      if (clustersPage.value === 1) {
-        clusters.value = res?.items || [];
-      } else {
-        clusters.value = [...clusters.value, ...(res?.items || [])];
-      }
-      clustersTotal.value = res?.total || 0;
-
-      // 如果当前没有选择集群且有可用集群，自动选择第一个
-      if (!filterClusterId.value && clusters.value.length > 0) {
-        const firstCluster = clusters.value[0];
-        if (firstCluster?.id) {
-          filterClusterId.value = firstCluster.id;
-          // 加载所选集群的资源目录
-          await fetchTemplates();
-          await fetchTasks();
-        }
-      }
-    } catch (error) {
-      if (clustersPage.value === 1) {
-        clusters.value = [];
-        clustersTotal.value = 0;
-        filterClusterId.value = undefined;
-        clearTasks();
-        clearTemplates();
-      }
-      if (shouldRecordPageError(error))
-        clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(error)) message.error(clustersError.value);
-    } finally {
-      clustersLoading.value = false;
-    }
+  const resetTemplates = () => {
+    templatesPage.value = 1;
+    templates.value = [];
   };
 
   const fetchTemplates = async (reset = false) => {
@@ -389,6 +349,57 @@ export function useTaskPage() {
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
+    }
+  };
+
+  // 重置集群/模板列表
+  const resetClusters = () => {
+    clustersPage.value = 1;
+    clusters.value = [];
+  };
+
+  const fetchClusters = async (reset = false) => {
+    if (reset) {
+      resetClusters();
+    }
+    try {
+      clustersLoading.value = true;
+      clustersError.value = '';
+      const params: ListClustersReq = {
+        page: clustersPage.value,
+        size: clustersSize.value,
+      };
+      const res = await getClustersListApi(params);
+      if (clustersPage.value === 1) {
+        clusters.value = res?.items || [];
+      } else {
+        clusters.value = [...clusters.value, ...(res?.items || [])];
+      }
+      clustersTotal.value = res?.total || 0;
+
+      // 如果当前没有选择集群且有可用集群，自动选择第一个
+      if (!filterClusterId.value && clusters.value.length > 0) {
+        const firstCluster = clusters.value[0];
+        if (firstCluster?.id) {
+          filterClusterId.value = firstCluster.id;
+          // 加载所选集群的资源目录
+          await fetchTemplates();
+          await fetchTasks();
+        }
+      }
+    } catch (error) {
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearTasks();
+        clearTemplates();
+      }
+      if (shouldRecordPageError(error))
+        clustersError.value = '获取集群列表失败，请重试';
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
+    } finally {
+      clustersLoading.value = false;
     }
   };
 
@@ -785,17 +796,6 @@ export function useTaskPage() {
     }
     templatesPage.value += 1;
     await fetchTemplates();
-  };
-
-  // 重置集群/模板列表
-  const resetClusters = () => {
-    clustersPage.value = 1;
-    clusters.value = [];
-  };
-
-  const resetTemplates = () => {
-    templatesPage.value = 1;
-    templates.value = [];
   };
 
   // 分页变化处理

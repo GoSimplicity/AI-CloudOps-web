@@ -478,57 +478,18 @@ export function usePodPage() {
     selectedRows.value = [];
   };
 
+  const resetNamespaces = () => {
+    namespacesPage.value = 1;
+    namespaces.value = [];
+    namespacesTotal.value = 0;
+  };
+
   const clearNamespaces = () => {
     namespaceRequestId++;
     namespacesLoading.value = false;
     namespacesError.value = '';
     resetNamespaces();
     filterNamespace.value = undefined;
-  };
-
-  const fetchClusters = async (reset = false) => {
-    if (reset) {
-      resetClusters();
-    }
-    try {
-      clustersLoading.value = true;
-      clustersError.value = '';
-      const params: ListClustersReq = {
-        page: clustersPage.value,
-        size: clustersSize.value,
-      };
-      const res = await getClustersListApi(params);
-      if (clustersPage.value === 1) {
-        clusters.value = res?.items || [];
-      } else {
-        clusters.value = [...clusters.value, ...(res?.items || [])];
-      }
-      clustersTotal.value = res?.total || 0;
-
-      // 如果当前没有选择集群且有可用集群，自动选择第一个
-      if (!filterClusterId.value && clusters.value.length > 0) {
-        const firstCluster = clusters.value[0];
-        if (firstCluster?.id) {
-          filterClusterId.value = firstCluster.id;
-          // 自动加载该集群的命名空间和Pod数据
-          await fetchNamespaces();
-          await fetchPods();
-        }
-      }
-    } catch (error) {
-      if (clustersPage.value === 1) {
-        clusters.value = [];
-        clustersTotal.value = 0;
-        filterClusterId.value = undefined;
-        clearNamespaces();
-        clearPods();
-      }
-      if (shouldRecordPageError(error))
-        clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(error)) message.error(clustersError.value);
-    } finally {
-      clustersLoading.value = false;
-    }
   };
 
   const fetchNamespaces = async (reset = false) => {
@@ -642,6 +603,57 @@ export function usePodPage() {
       if (shouldNotifyPageError(error)) message.error(loadError.value);
     } finally {
       if (requestId === resourceRequestId) loading.value = false;
+    }
+  };
+
+  // 重置集群列表
+  const resetClusters = () => {
+    clustersPage.value = 1;
+    clusters.value = [];
+  };
+
+  const fetchClusters = async (reset = false) => {
+    if (reset) {
+      resetClusters();
+    }
+    try {
+      clustersLoading.value = true;
+      clustersError.value = '';
+      const params: ListClustersReq = {
+        page: clustersPage.value,
+        size: clustersSize.value,
+      };
+      const res = await getClustersListApi(params);
+      if (clustersPage.value === 1) {
+        clusters.value = res?.items || [];
+      } else {
+        clusters.value = [...clusters.value, ...(res?.items || [])];
+      }
+      clustersTotal.value = res?.total || 0;
+
+      // 如果当前没有选择集群且有可用集群，自动选择第一个
+      if (!filterClusterId.value && clusters.value.length > 0) {
+        const firstCluster = clusters.value[0];
+        if (firstCluster?.id) {
+          filterClusterId.value = firstCluster.id;
+          // 自动加载该集群的命名空间和Pod数据
+          await fetchNamespaces();
+          await fetchPods();
+        }
+      }
+    } catch (error) {
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearNamespaces();
+        clearPods();
+      }
+      if (shouldRecordPageError(error))
+        clustersError.value = '获取集群列表失败，请重试';
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
+    } finally {
+      clustersLoading.value = false;
     }
   };
 
@@ -1307,6 +1319,23 @@ export function usePodPage() {
     }
   };
 
+  // 停止SSE实时日志流
+  const stopLogsStream = () => {
+    try {
+      if (logsStreamConnection.value) {
+        logsStreamConnection.value.close();
+        logsStreamConnection.value = null;
+      }
+    } catch {
+      // 关闭已失效的流失败时仍在 finally 复位页面状态，不展示底层异常。
+    } finally {
+      // 确保状态被正确重置
+      isLogsStreaming.value = false;
+      logsLoading.value = false;
+      message.info('实时日志流已停止');
+    }
+  };
+
   const closeLogsModal = () => {
     // 停止SSE连接
     stopLogsStream();
@@ -1326,13 +1355,6 @@ export function usePodPage() {
       tail_lines: 100,
       limit_bytes: 0,
     };
-  };
-
-  const fetchPodLogs = () => {
-    if (!currentOperationPod.value || !logsFormModel.value.container) return;
-
-    // 直接启动实时流模式
-    startLogsStream();
   };
 
   // SSE流式获取Pod日志 - 移动到Pod.ts中的业务逻辑
@@ -1699,21 +1721,11 @@ export function usePodPage() {
     }
   };
 
-  // 停止SSE实时日志流
-  const stopLogsStream = () => {
-    try {
-      if (logsStreamConnection.value) {
-        logsStreamConnection.value.close();
-        logsStreamConnection.value = null;
-      }
-    } catch {
-      // 关闭已失效的流失败时仍在 finally 复位页面状态，不展示底层异常。
-    } finally {
-      // 确保状态被正确重置
-      isLogsStreaming.value = false;
-      logsLoading.value = false;
-      message.info('实时日志流已停止');
-    }
+  const fetchPodLogs = () => {
+    if (!currentOperationPod.value || !logsFormModel.value.container) return;
+
+    // 直接启动实时流模式
+    startLogsStream();
   };
 
   // 执行命令 - 使用WebSocket终端
@@ -1742,6 +1754,29 @@ export function usePodPage() {
       isExecModalVisible.value = true;
     } catch (error) {
       if (shouldNotifyPageError(error)) message.error('获取 Pod 容器列表失败');
+    }
+  };
+
+  // 断开终端连接
+  const disconnectTerminal = () => {
+    try {
+      completeTerminalCleanup(() => terminalResizeObserver?.disconnect());
+      terminalResizeObserver = undefined;
+      completeTerminalCleanup(() => terminalInputSubscription?.dispose());
+      terminalInputSubscription = undefined;
+      completeTerminalCleanup(() => terminalConnection.value?.close());
+      terminalConnection.value = null;
+      fitAddon.value = null;
+      completeTerminalCleanup(() => terminal.value?.dispose());
+    } finally {
+      // 即使第三方资源的清理抛错，也不能留下可复用的失效引用或连接状态。
+      terminalResizeObserver = undefined;
+      terminalInputSubscription = undefined;
+      terminalConnection.value = null;
+      terminal.value = null;
+      fitAddon.value = null;
+      isTerminalConnected.value = false;
+      terminalLoading.value = false;
     }
   };
 
@@ -2264,29 +2299,6 @@ export function usePodPage() {
     }
   };
 
-  // 断开终端连接
-  const disconnectTerminal = () => {
-    try {
-      completeTerminalCleanup(() => terminalResizeObserver?.disconnect());
-      terminalResizeObserver = undefined;
-      completeTerminalCleanup(() => terminalInputSubscription?.dispose());
-      terminalInputSubscription = undefined;
-      completeTerminalCleanup(() => terminalConnection.value?.close());
-      terminalConnection.value = null;
-      fitAddon.value = null;
-      completeTerminalCleanup(() => terminal.value?.dispose());
-    } finally {
-      // 即使第三方资源的清理抛错，也不能留下可复用的失效引用或连接状态。
-      terminalResizeObserver = undefined;
-      terminalInputSubscription = undefined;
-      terminalConnection.value = null;
-      terminal.value = null;
-      fitAddon.value = null;
-      isTerminalConnected.value = false;
-      terminalLoading.value = false;
-    }
-  };
-
   // 保留原有的简单执行命令函数作为备用
   const executePodCommand = async () => {
     if (!execFormRef.value || !currentOperationPod.value) return;
@@ -2604,18 +2616,6 @@ export function usePodPage() {
     }
     namespacesPage.value += 1;
     await fetchNamespaces();
-  };
-
-  // 重置集群列表
-  const resetClusters = () => {
-    clustersPage.value = 1;
-    clusters.value = [];
-  };
-
-  const resetNamespaces = () => {
-    namespacesPage.value = 1;
-    namespaces.value = [];
-    namespacesTotal.value = 0;
   };
 
   // 分页变化处理

@@ -276,6 +276,53 @@ export function useClusterRoleBindingPage() {
     clustersPage.value = 1;
   };
 
+  const fetchClusterRoleBindings = async () => {
+    const clusterId = filterClusterId.value;
+    if (!clusterId) {
+      clearClusterRoleBindings();
+      return;
+    }
+    const requestId = ++resourceRequestId;
+    try {
+      loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
+      const params: GetClusterRoleBindingListReq = {
+        cluster_id: clusterId,
+        search: searchText.value || undefined,
+        page: currentPage.value,
+        size: pageSize.value,
+      };
+
+      const response = await getClusterRoleBindingListApi(params);
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      clusterRoleBindings.value = (response?.items || []).map(
+        (record: K8sClusterRoleBinding) => ({
+          ...record,
+          cluster_id: record.cluster_id || clusterId,
+        }),
+      );
+      total.value = response?.total || 0;
+    } catch (error) {
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      clearClusterRoleBindings();
+      if (shouldRecordPageError(error))
+        loadError.value = '获取 ClusterRoleBinding 列表失败，请重试';
+      if (shouldNotifyPageError(error)) message.error(loadError.value);
+    } finally {
+      if (requestId === resourceRequestId) loading.value = false;
+    }
+  };
+
   // operations
   const fetchClusters = async (reset = false) => {
     if (reset) {
@@ -329,53 +376,6 @@ export function useClusterRoleBindingPage() {
     }
     clustersPage.value += 1;
     await fetchClusters();
-  };
-
-  const fetchClusterRoleBindings = async () => {
-    const clusterId = filterClusterId.value;
-    if (!clusterId) {
-      clearClusterRoleBindings();
-      return;
-    }
-    const requestId = ++resourceRequestId;
-    try {
-      loading.value = true;
-      loadError.value = '';
-      selectedRowKeys.value = [];
-      selectedRows.value = [];
-      const params: GetClusterRoleBindingListReq = {
-        cluster_id: clusterId,
-        search: searchText.value || undefined,
-        page: currentPage.value,
-        size: pageSize.value,
-      };
-
-      const response = await getClusterRoleBindingListApi(params);
-      if (
-        requestId !== resourceRequestId ||
-        filterClusterId.value !== clusterId
-      )
-        return;
-      clusterRoleBindings.value = (response?.items || []).map(
-        (record: K8sClusterRoleBinding) => ({
-          ...record,
-          cluster_id: record.cluster_id || clusterId,
-        }),
-      );
-      total.value = response?.total || 0;
-    } catch (error) {
-      if (
-        requestId !== resourceRequestId ||
-        filterClusterId.value !== clusterId
-      )
-        return;
-      clearClusterRoleBindings();
-      if (shouldRecordPageError(error))
-        loadError.value = '获取 ClusterRoleBinding 列表失败，请重试';
-      if (shouldNotifyPageError(error)) message.error(loadError.value);
-    } finally {
-      if (requestId === resourceRequestId) loading.value = false;
-    }
   };
 
   // detail operations
@@ -483,22 +483,6 @@ export function useClusterRoleBindingPage() {
     }
   };
 
-  // create operations
-  const openCreateModal = () => {
-    if (!filterClusterId.value) {
-      message.error('请先选择集群');
-      return;
-    }
-
-    resetCreateForm();
-    isCreateModalVisible.value = true;
-  };
-
-  const closeCreateModal = () => {
-    isCreateModalVisible.value = false;
-    resetCreateForm();
-  };
-
   const resetCreateForm = () => {
     createFormModel.value = {
       name: '',
@@ -518,6 +502,22 @@ export function useClusterRoleBindingPage() {
       annotations: {},
     };
     formRef.value?.resetFields();
+  };
+
+  // create operations
+  const openCreateModal = () => {
+    if (!filterClusterId.value) {
+      message.error('请先选择集群');
+      return;
+    }
+
+    resetCreateForm();
+    isCreateModalVisible.value = true;
+  };
+
+  const closeCreateModal = () => {
+    isCreateModalVisible.value = false;
+    resetCreateForm();
   };
 
   const submitCreateForm = async () => {

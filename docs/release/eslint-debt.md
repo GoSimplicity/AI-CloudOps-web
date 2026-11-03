@@ -628,3 +628,12 @@ API管理使用明确create/edit模式和响应式窗口key，真实必需Form�
 - 根配置lint为0错误/警告，既有29项边界工具测试通过。调用完整边界检查及额外指令审计：1127文件、5类保护规则0、parser/tool失败0、41文件补审。
 - 普通源码lint仍9996 errors/5 warnings，包含上一阶段Namespace的2条真实修复；移除生成报告扫描的3条不充作清理成果。新的完整结果已按当前源码采集，本地和CI源码范围一致。
 - 本阶段不改应用代码、测试数据或报告内容，没有新增复述配置的测试，也未重跑应用构建或业务测试。未上线。
+
+## 阶段六十二：K8s hook的箭头函数依赖闭环
+
+17个K8s hook按真实scope/symbol依赖图搬移72段完整const-arrow声明，保留函数种类、名称、函数体和同一hook作用域。所有其它statement原文与相对顺序、捕获binding依赖及hook外源码保持，没有移动ref/computed/let或history scope初始化语句，没有添加断言或修改Namespace与非hook的secret-data。
+
+- 五个跨history/computed/具名函数边界的模块额外比对真实导出factory：使用真实Vue及原history helper、Fake API，factory零请求；成功与失败两种流程的构造事件、请求顺序、分页和清理状态新旧一致。边界没有接收或观察被前移的reset函数。
+- 17文件定向lint总诊断2337→2241，no-use-before-define 101→5，逐文件各规则无新增。Pod内层SSE和WebSocket两个重连SCC保留原文，仍有createFetchSSE两条及connect三条前引，没有用改函数种类或豁免掩盖循环。
+- 全部K8s目录现有26个测试文件1203项及应用类型检查通过；独立AST/源码比对确认72个完整声明、所有其它statement顺序及捕获绑定保持。未新增镜像测试或重跑全仓。
+- 这是在已验证合同内完成的批次，不宣称其它域的声明顺序或Pod重连循环已全部修复。全部API替身，没有连接真实集群，未上线。

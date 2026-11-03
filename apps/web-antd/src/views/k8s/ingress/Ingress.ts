@@ -363,57 +363,18 @@ export function useIngressPage() {
     selectedRows.value = [];
   };
 
+  const resetNamespaces = () => {
+    namespacesPage.value = 1;
+    namespaces.value = [];
+    namespacesTotal.value = 0;
+  };
+
   const clearNamespaces = () => {
     namespaceRequestId++;
     namespacesLoading.value = false;
     namespacesError.value = '';
     resetNamespaces();
     filterNamespace.value = undefined;
-  };
-
-  const fetchClusters = async (reset = false) => {
-    if (reset) {
-      resetClusters();
-    }
-    try {
-      clustersLoading.value = true;
-      clustersError.value = '';
-      const params: ListClustersReq = {
-        page: clustersPage.value,
-        size: clustersSize.value,
-      };
-      const res = await getClustersListApi(params);
-      if (clustersPage.value === 1) {
-        clusters.value = res?.items || [];
-      } else {
-        clusters.value = [...clusters.value, ...(res?.items || [])];
-      }
-      clustersTotal.value = res?.total || 0;
-
-      // 如果当前没有选择集群且有可用集群，自动选择第一个
-      if (!filterClusterId.value && clusters.value.length > 0) {
-        const firstCluster = clusters.value[0];
-        if (firstCluster?.id) {
-          filterClusterId.value = firstCluster.id;
-          // 自动加载该集群的命名空间和Ingress数据
-          await fetchNamespaces();
-          await fetchIngresses();
-        }
-      }
-    } catch (error) {
-      if (clustersPage.value === 1) {
-        clusters.value = [];
-        clustersTotal.value = 0;
-        filterClusterId.value = undefined;
-        clearNamespaces();
-        clearIngresses();
-      }
-      if (shouldRecordPageError(error))
-        clustersError.value = '获取集群列表失败，请重试';
-      if (shouldNotifyPageError(error)) message.error(clustersError.value);
-    } finally {
-      clustersLoading.value = false;
-    }
   };
 
   const fetchNamespaces = async (reset = false) => {
@@ -461,6 +422,37 @@ export function useIngressPage() {
       if (shouldNotifyPageError(error)) message.error(namespacesError.value);
     } finally {
       if (requestId === namespaceRequestId) namespacesLoading.value = false;
+    }
+  };
+
+  // 提取主机列表
+  const extractHosts = (rules?: IngressRule[]): string[] => {
+    if (!rules || rules.length === 0) return [];
+    return rules
+      .map((rule) => rule.host)
+      .filter((host) => host && host.trim() !== '');
+  };
+
+  // 计算年龄
+  const calculateAge = (createdAt?: string): string => {
+    if (!createdAt) return '-';
+
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffMs = now.getTime() - created.getTime();
+
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(
+      (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+    );
+    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (diffDays > 0) {
+      return `${diffDays}d ${diffHours}h`;
+    } else if (diffHours > 0) {
+      return `${diffHours}h ${diffMinutes}m`;
+    } else {
+      return `${diffMinutes}m`;
     }
   };
 
@@ -525,34 +517,54 @@ export function useIngressPage() {
     }
   };
 
-  // 提取主机列表
-  const extractHosts = (rules?: IngressRule[]): string[] => {
-    if (!rules || rules.length === 0) return [];
-    return rules
-      .map((rule) => rule.host)
-      .filter((host) => host && host.trim() !== '');
+  // 重置集群列表
+  const resetClusters = () => {
+    clustersPage.value = 1;
+    clusters.value = [];
   };
 
-  // 计算年龄
-  const calculateAge = (createdAt?: string): string => {
-    if (!createdAt) return '-';
+  const fetchClusters = async (reset = false) => {
+    if (reset) {
+      resetClusters();
+    }
+    try {
+      clustersLoading.value = true;
+      clustersError.value = '';
+      const params: ListClustersReq = {
+        page: clustersPage.value,
+        size: clustersSize.value,
+      };
+      const res = await getClustersListApi(params);
+      if (clustersPage.value === 1) {
+        clusters.value = res?.items || [];
+      } else {
+        clusters.value = [...clusters.value, ...(res?.items || [])];
+      }
+      clustersTotal.value = res?.total || 0;
 
-    const created = new Date(createdAt);
-    const now = new Date();
-    const diffMs = now.getTime() - created.getTime();
-
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor(
-      (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
-    );
-    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (diffDays > 0) {
-      return `${diffDays}d ${diffHours}h`;
-    } else if (diffHours > 0) {
-      return `${diffHours}h ${diffMinutes}m`;
-    } else {
-      return `${diffMinutes}m`;
+      // 如果当前没有选择集群且有可用集群，自动选择第一个
+      if (!filterClusterId.value && clusters.value.length > 0) {
+        const firstCluster = clusters.value[0];
+        if (firstCluster?.id) {
+          filterClusterId.value = firstCluster.id;
+          // 自动加载该集群的命名空间和Ingress数据
+          await fetchNamespaces();
+          await fetchIngresses();
+        }
+      }
+    } catch (error) {
+      if (clustersPage.value === 1) {
+        clusters.value = [];
+        clustersTotal.value = 0;
+        filterClusterId.value = undefined;
+        clearNamespaces();
+        clearIngresses();
+      }
+      if (shouldRecordPageError(error))
+        clustersError.value = '获取集群列表失败，请重试';
+      if (shouldNotifyPageError(error)) message.error(clustersError.value);
+    } finally {
+      clustersLoading.value = false;
     }
   };
 
@@ -978,18 +990,6 @@ export function useIngressPage() {
     }
     namespacesPage.value += 1;
     await fetchNamespaces();
-  };
-
-  // 重置集群列表
-  const resetClusters = () => {
-    clustersPage.value = 1;
-    clusters.value = [];
-  };
-
-  const resetNamespaces = () => {
-    namespacesPage.value = 1;
-    namespaces.value = [];
-    namespacesTotal.value = 0;
   };
 
   // 分页变化处理

@@ -241,6 +241,54 @@ export function useTemplatePage() {
     selectedRows.value = [];
   };
 
+  // crud operations
+  const fetchTemplates = async () => {
+    const clusterId = filterClusterId.value;
+    if (!clusterId) {
+      clearTemplates();
+      return;
+    }
+    const requestId = ++resourceRequestId;
+    try {
+      loading.value = true;
+      loadError.value = '';
+      selectedRowKeys.value = [];
+      selectedRows.value = [];
+      const params: YamlTemplateListReq = {
+        page: currentPage.value,
+        size: pageSize.value,
+        cluster_id: clusterId,
+        search: searchText.value || undefined,
+      };
+      const res = await getYamlTemplateList(params);
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      templates.value = res?.items || [];
+      total.value = res?.total || 0;
+    } catch (error) {
+      if (
+        requestId !== resourceRequestId ||
+        filterClusterId.value !== clusterId
+      )
+        return;
+      clearTemplates();
+      if (shouldRecordPageError(error))
+        loadError.value = '获取 YAML 模板列表失败，请重试';
+      if (shouldNotifyPageError(error)) message.error(loadError.value);
+    } finally {
+      if (requestId === resourceRequestId) loading.value = false;
+    }
+  };
+
+  // 重置集群列表
+  const resetClusters = () => {
+    clustersPage.value = 1;
+    clusters.value = [];
+  };
+
   const fetchClusters = async (reset = false) => {
     if (reset) {
       resetClusters();
@@ -281,48 +329,6 @@ export function useTemplatePage() {
       if (shouldNotifyPageError(error)) message.error(clustersError.value);
     } finally {
       clustersLoading.value = false;
-    }
-  };
-
-  // crud operations
-  const fetchTemplates = async () => {
-    const clusterId = filterClusterId.value;
-    if (!clusterId) {
-      clearTemplates();
-      return;
-    }
-    const requestId = ++resourceRequestId;
-    try {
-      loading.value = true;
-      loadError.value = '';
-      selectedRowKeys.value = [];
-      selectedRows.value = [];
-      const params: YamlTemplateListReq = {
-        page: currentPage.value,
-        size: pageSize.value,
-        cluster_id: clusterId,
-        search: searchText.value || undefined,
-      };
-      const res = await getYamlTemplateList(params);
-      if (
-        requestId !== resourceRequestId ||
-        filterClusterId.value !== clusterId
-      )
-        return;
-      templates.value = res?.items || [];
-      total.value = res?.total || 0;
-    } catch (error) {
-      if (
-        requestId !== resourceRequestId ||
-        filterClusterId.value !== clusterId
-      )
-        return;
-      clearTemplates();
-      if (shouldRecordPageError(error))
-        loadError.value = '获取 YAML 模板列表失败，请重试';
-      if (shouldNotifyPageError(error)) message.error(loadError.value);
-    } finally {
-      if (requestId === resourceRequestId) loading.value = false;
     }
   };
 
@@ -668,12 +674,6 @@ export function useTemplatePage() {
     }
     clustersPage.value += 1;
     await fetchClusters();
-  };
-
-  // 重置集群列表
-  const resetClusters = () => {
-    clustersPage.value = 1;
-    clusters.value = [];
   };
 
   // 分页变化处理

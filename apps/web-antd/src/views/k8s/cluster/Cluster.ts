@@ -322,53 +322,6 @@ export function useClusterPage() {
     clearKubeConfigInput();
   };
 
-  const submitForm = async () => {
-    if (!formRef.value) return;
-
-    try {
-      // 先把纯空白归一为空串，再进行表单验证
-      normalizeKubeConfigInput();
-      await formRef.value.validate();
-
-      // 检查是否需要二次确认
-      const needsConfirmation = await checkDangerousOperations();
-      if (needsConfirmation && !(await showDangerousOperationConfirm())) {
-        return;
-      }
-
-      submitLoading.value = true;
-      if (
-        isEdit.value &&
-        (formModel.value as UpdateClusterReq & { id?: number }).id
-      ) {
-        const m = formModel.value as UpdateClusterReq & { id?: number };
-        const payload: UpdateClusterReq = { ...(m as UpdateClusterReq) };
-        // 留空 = 保留原 kubeconfig，不把空串发给后端
-        if (!payload.kube_config_content?.trim()) {
-          delete payload.kube_config_content;
-        }
-        await updateClusterApi(m.id as number, payload);
-        message.success('集群更新成功');
-      } else {
-        await createClusterApi({ ...formModel.value } as CreateClusterReq);
-        message.success('集群创建成功');
-      }
-      formSessionId++;
-      isModalVisible.value = false;
-      clearKubeConfigInput();
-      await fetchClusters();
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'errorFields' in error) {
-        // 表单验证错误
-        message.warning('请检查表单填写是否正确');
-        return;
-      }
-      message.error(isEdit.value ? '集群更新失败' : '集群创建失败');
-    } finally {
-      submitLoading.value = false;
-    }
-  };
-
   // 检查是否为危险操作
   const checkDangerousOperations = async (): Promise<boolean> => {
     if (!isEdit.value) return false; // 新建不需要确认
@@ -429,6 +382,53 @@ export function useClusterPage() {
         onCancel: () => resolve(false),
       });
     });
+  };
+
+  const submitForm = async () => {
+    if (!formRef.value) return;
+
+    try {
+      // 先把纯空白归一为空串，再进行表单验证
+      normalizeKubeConfigInput();
+      await formRef.value.validate();
+
+      // 检查是否需要二次确认
+      const needsConfirmation = await checkDangerousOperations();
+      if (needsConfirmation && !(await showDangerousOperationConfirm())) {
+        return;
+      }
+
+      submitLoading.value = true;
+      if (
+        isEdit.value &&
+        (formModel.value as UpdateClusterReq & { id?: number }).id
+      ) {
+        const m = formModel.value as UpdateClusterReq & { id?: number };
+        const payload: UpdateClusterReq = { ...(m as UpdateClusterReq) };
+        // 留空 = 保留原 kubeconfig，不把空串发给后端
+        if (!payload.kube_config_content?.trim()) {
+          delete payload.kube_config_content;
+        }
+        await updateClusterApi(m.id as number, payload);
+        message.success('集群更新成功');
+      } else {
+        await createClusterApi({ ...formModel.value } as CreateClusterReq);
+        message.success('集群创建成功');
+      }
+      formSessionId++;
+      isModalVisible.value = false;
+      clearKubeConfigInput();
+      await fetchClusters();
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        // 表单验证错误
+        message.warning('请检查表单填写是否正确');
+        return;
+      }
+      message.error(isEdit.value ? '集群更新失败' : '集群创建失败');
+    } finally {
+      submitLoading.value = false;
+    }
   };
 
   const confirmDelete = (record: K8sCluster) => {
