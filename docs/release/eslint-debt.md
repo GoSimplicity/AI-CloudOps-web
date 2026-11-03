@@ -601,3 +601,12 @@ API管理使用明确create/edit模式和响应式窗口key，真实必需Form�
 - 17文件定向lint总诊断2271→2252，逐文件各规则无新增，parser/tool失败0。其余2252条是既有债，不代表全仓lint通过。
 - Task、Namespace、Pod表单和workload scope四份现有测试91项及应用类型检查通过；没有增加复述实现的测试。无集群或其他真实外部调用，未上线。
 - 完整边界检查1129文件通过：5类受保护规则0、parser/tool失败0，额外指令补审41文件；全仓仍10040 errors/5 warnings，继续处理剩余债务。
+
+## 阶段五十九：模板对象的同名属性简写
+
+20个SFC的39处同名属性改为property shorthand，仅包含分页对象的`pageSize`、`total`以及SystemAudit行选择对象的`selectedRowKeys`。不排序属性、不转换method，不包含computed key或`__proto__`，不做整文件格式化。
+
+- script/style字节及39处fix之外全部源码保持；使用各自真实binding metadata、实际scoped设置和同一文件ID编译，20份生产compiled script、完整DOM render和SSR render输出均逐字相同。
+- 20文件定向lint总诊断1460→1421，vue/object-shorthand 39→0，逐文件各规则无新增。其余1421条为既有债，不代表全仓lint通过。
+- Management、Namespace、workload scope三份现有分页相关测试79项，以及按“审计”筛选的4项真实挂载用例通过；该挂载文件另外24项非审计用例未执行。应用类型检查通过，没有新增镜像测试或重跑全仓。
+- 本轮只读分类的324条no-use-before-define均指向运行时变量或箭头函数，类型引用和真正FunctionDeclaration候选均为0，未为压数字移动这些声明。无真实接口、集群或权限数据操作，未上线。

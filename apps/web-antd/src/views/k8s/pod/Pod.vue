@@ -937,8 +937,8 @@ const handleCloseFileManagerModal = () => {
         :loading="loading"
         :pagination="{
           current: currentPage,
-          pageSize: pageSize,
-          total: total,
+          pageSize,
+          total,
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total: number, range: number[]) =>

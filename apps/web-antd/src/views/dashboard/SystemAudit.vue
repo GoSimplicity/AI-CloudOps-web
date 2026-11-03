@@ -610,7 +610,7 @@ onMounted(() => {
         :loading="loading"
         :pagination="paginationConfig"
         :row-selection="{
-          selectedRowKeys: selectedRowKeys,
+          selectedRowKeys,
           onChange: onSelectChange,
         }"
         :scroll="{ x: 'max-content' }"
