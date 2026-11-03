@@ -75,8 +75,8 @@ export function useNamespacePage() {
 
   // 标签/注解表单模型
   const labelFormModel = ref<{
-    labels: Record<string, string>;
     annotations: Record<string, string>;
+    labels: Record<string, string>;
   }>({
     labels: {},
     annotations: {},
@@ -84,9 +84,9 @@ export function useNamespacePage() {
 
   // 创建命名空间表单模型
   const createFormModel = ref<{
-    name: string;
-    labels: Record<string, string>;
     annotations: Record<string, string>;
+    labels: Record<string, string>;
+    name: string;
   }>({
     name: '',
     labels: {},
@@ -95,8 +95,8 @@ export function useNamespacePage() {
 
   // 删除命名空间表单模型
   const deleteFormModel = ref<{
-    grace_period_seconds: number;
     force: 1 | 2;
+    grace_period_seconds: number;
   }>({
     grace_period_seconds: 30,
     force: 2, // 默认非强制删除

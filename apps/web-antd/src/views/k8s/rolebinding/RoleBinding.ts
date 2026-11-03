@@ -212,12 +212,12 @@ export function useRoleBindingPage() {
 
   // form models
   const createFormModel = ref<{
+    annotations: Record<string, string>;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
     role_ref: RoleRef;
     subjects: Subject[];
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     namespace: '',
@@ -238,12 +238,12 @@ export function useRoleBindingPage() {
   });
 
   const editFormModel = ref<{
+    annotations: Record<string, string>;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
     role_ref: RoleRef;
     subjects: Subject[];
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     namespace: '',

@@ -95,17 +95,17 @@ export function usePVPage() {
 
   // form models
   const createFormModel = ref<{
-    name: string;
-    capacity: string;
     access_modes: string[];
+    annotations: Record<string, string>;
+    capacity: string;
+    labels: Record<string, string>;
+    name: string;
+    node_affinity: Record<string, any>;
     reclaim_policy: string;
     storage_class: string;
     volume_mode: string;
-    volume_type: string; // 卷类型
     volume_source: Record<string, any>;
-    node_affinity: Record<string, any>;
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
+    volume_type: string; // 卷类型
   }>({
     name: '',
     capacity: '',
@@ -121,16 +121,16 @@ export function usePVPage() {
   });
 
   const editFormModel = ref<{
-    name: string;
-    capacity: string;
     access_modes: string[];
+    annotations: Record<string, string>;
+    capacity: string;
+    labels: Record<string, string>;
+    name: string;
+    node_affinity: Record<string, any>;
     reclaim_policy: string;
     storage_class: string;
     volume_mode: string;
     volume_source: Record<string, any>;
-    node_affinity: Record<string, any>;
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     capacity: '',

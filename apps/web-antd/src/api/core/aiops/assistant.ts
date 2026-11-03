@@ -41,7 +41,7 @@ export interface SessionInfoResponse {
   last_turn_id?: null | string;
   active_question?: null | string;
   active_mode?: null | number;
-  conversation_history?: Array<{ q: string; a: string; mode: number }>;
+  conversation_history?: Array<{ a: string; mode: number; q: string }>;
 }
 
 // 服务信息响应模型

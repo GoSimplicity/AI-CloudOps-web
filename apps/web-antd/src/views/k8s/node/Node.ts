@@ -131,8 +131,8 @@ export function useNodePage() {
 
   // 污点表单模型
   const taintFormModel = ref<{
-    taints: CoreTaint[];
     originalTaints: CoreTaint[]; // 用于跟踪原始污点
+    taints: CoreTaint[];
     taintsToDelete: string[]; // 用于跟踪要删除的污点键
   }>({
     taints: [],
@@ -160,10 +160,10 @@ export function useNodePage() {
 
   // 驱逐表单模型
   const drainFormModel = ref<{
-    force: number;
-    ignore_daemon_sets: number;
     delete_local_data: number;
+    force: number;
     grace_period_seconds?: number;
+    ignore_daemon_sets: number;
     timeout_seconds?: number;
   }>({
     force: 2,

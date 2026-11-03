@@ -2,8 +2,8 @@ export type BearerTokenAction = 'keep' | 'replace' | 'clear';
 
 /** 编辑时不从读取接口重建密钥，省略字段与显式清除具有不同含义 */
 export function bearerTokenPayload(options: {
-  editing: boolean;
   action: BearerTokenAction;
+  editing: boolean;
   hasExisting: boolean;
   token: string;
   tokenFile: string;

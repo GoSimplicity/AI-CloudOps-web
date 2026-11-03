@@ -87,7 +87,7 @@ export interface CreateCloudAccountRegionItem {
 
 // 获取可用区域列表请求参数
 export type GetAvailableRegionsReq =
-  | { provider: number; cloud_account_id?: never }
+  | { cloud_account_id?: never; provider: number }
   | { cloud_account_id: number; provider?: never };
 
 // 可用区域信息

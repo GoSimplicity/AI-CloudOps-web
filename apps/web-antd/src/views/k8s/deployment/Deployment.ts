@@ -132,12 +132,12 @@ export function useDeploymentPage() {
 
   // form models
   const createFormModel = ref<{
+    annotations: Record<string, string>;
+    images: string[];
+    labels: Record<string, string>;
     name: string;
     namespace: string;
     replicas: number;
-    images: string[];
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     namespace: '',
@@ -148,12 +148,12 @@ export function useDeploymentPage() {
   });
 
   const editFormModel = ref<{
+    annotations: Record<string, string>;
+    images: string[];
+    labels: Record<string, string>;
     name: string;
     namespace: string;
     replicas: number;
-    images: string[];
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     namespace: '',

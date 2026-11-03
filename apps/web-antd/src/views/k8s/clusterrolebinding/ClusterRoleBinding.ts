@@ -96,11 +96,11 @@ export function useClusterRoleBindingPage() {
 
   // form models
   const createFormModel = ref<{
+    annotations: Record<string, string>;
+    labels: Record<string, string>;
     name: string;
     role_ref: RoleRef;
     subjects: Subject[];
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     role_ref: {
@@ -120,11 +120,11 @@ export function useClusterRoleBindingPage() {
   });
 
   const editFormModel = ref<{
+    annotations: Record<string, string>;
+    labels: Record<string, string>;
     name: string;
     role_ref: RoleRef;
     subjects: Subject[];
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     role_ref: {

@@ -102,16 +102,16 @@ export function useTemplatePage() {
 
   // form models
   const createFormModel = ref<{
-    name: string;
     content: string;
+    name: string;
   }>({
     name: '',
     content: '',
   });
 
   const editFormModel = ref<{
-    name: string;
     content: string;
+    name: string;
   }>({
     name: '',
     content: '',

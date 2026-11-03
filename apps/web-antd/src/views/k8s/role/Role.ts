@@ -102,11 +102,11 @@ export function useRolePage() {
 
   // form models
   const createFormModel = ref<{
+    annotations: Record<string, string>;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
     rules: PolicyRuleParam[];
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     namespace: '',
@@ -123,11 +123,11 @@ export function useRolePage() {
   });
 
   const editFormModel = ref<{
+    annotations: Record<string, string>;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
     rules: PolicyRuleParam[];
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     namespace: '',

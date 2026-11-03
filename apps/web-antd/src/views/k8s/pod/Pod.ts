@@ -192,8 +192,8 @@ export function usePodPage() {
   let terminalInputSubscription: { dispose: () => void } | undefined;
   let terminalResizeObserver: ResizeObserver | undefined;
   const terminalConnection = ref<{
-    sendCommand: (cmd: string) => void;
     close: () => void;
+    sendCommand: (cmd: string) => void;
   } | null>(null);
   const fitAddon = ref<FitAddon | null>(null);
 
@@ -207,21 +207,21 @@ export function usePodPage() {
 
   // form models
   const createFormModel = ref<{
-    name: string;
-    namespace: string;
-    labels: Record<string, string>;
+    affinity: any;
     annotations: Record<string, string>;
     containers: CreatePodContainer[];
-    init_containers: CreatePodContainer[];
-    restart_policy: string;
-    node_selector: Record<string, string>;
-    tolerations: any[];
-    affinity: any;
-    volumes: any[];
+    dns_policy: string;
     host_network: boolean;
     host_pid: boolean;
-    dns_policy: string;
+    init_containers: CreatePodContainer[];
+    labels: Record<string, string>;
+    name: string;
+    namespace: string;
+    node_selector: Record<string, string>;
+    restart_policy: string;
     service_account: string;
+    tolerations: any[];
+    volumes: any[];
   }>({
     name: '',
     namespace: '',
@@ -256,10 +256,10 @@ export function usePodPage() {
   });
 
   const editFormModel = ref<{
+    annotations: Record<string, string>;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     namespace: '',
@@ -282,12 +282,12 @@ export function usePodPage() {
   const logsFormModel = ref<{
     container: string;
     follow: boolean;
+    limit_bytes: number;
     previous: boolean;
     since_seconds: number;
     since_time: string;
-    timestamps: boolean;
     tail_lines: number;
-    limit_bytes: number;
+    timestamps: boolean;
   }>({
     container: '',
     follow: false,

@@ -94,13 +94,13 @@ export function useIngressPage() {
 
   // form models
   const createFormModel = ref<{
+    annotations: Record<string, string>;
+    ingress_class_name?: string;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
-    ingress_class_name?: string;
     rules: IngressRule[];
     tls: IngressTLS[];
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     namespace: '',
@@ -132,13 +132,13 @@ export function useIngressPage() {
   });
 
   const editFormModel = ref<{
+    annotations: Record<string, string>;
+    ingress_class_name?: string;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
-    ingress_class_name?: string;
     rules: IngressRule[];
     tls: IngressTLS[];
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     namespace: '',

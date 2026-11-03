@@ -31,7 +31,7 @@ export function useAiRequestScope(resetForOwner: () => void) {
       begin() {
         return { owner: owner.value, generation, version: ++version };
       },
-      current(ticket: { owner: string; generation: number; version: number }) {
+      current(ticket: { generation: number; owner: string; version: number }) {
         return (
           !disposed &&
           !!owner.value &&

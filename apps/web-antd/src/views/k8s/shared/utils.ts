@@ -119,8 +119,8 @@ export const getRelativeTime = (dateStr: string): string => {
 /** 集群内同名资源可跨命名空间存在，选择状态必须使用完整身份 */
 export const namespacedResourceKey = (record: {
   cluster_id: number;
-  namespace: string;
   name: string;
+  namespace: string;
 }): string => `${record.cluster_id}/${record.namespace}/${record.name}`;
 
 /** 集群级资源不使用命名空间，仍需隔离集群身份 */

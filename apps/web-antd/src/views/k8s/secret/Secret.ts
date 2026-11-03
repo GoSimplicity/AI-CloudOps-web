@@ -142,14 +142,14 @@ export function useSecretPage() {
 
   // form models
   const createFormModel = ref<{
+    annotations: Record<string, string>;
+    data: Record<string, Uint8Array>;
+    immutable: boolean;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
-    type: K8sSecretType;
-    data: Record<string, Uint8Array>;
     string_data: Record<string, string>;
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
-    immutable: boolean;
+    type: K8sSecretType;
   }>({
     name: '',
     namespace: '',
@@ -162,12 +162,12 @@ export function useSecretPage() {
   });
 
   const editFormModel = ref<{
+    annotations: Record<string, string>;
+    data: Record<string, Uint8Array>;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
-    data: Record<string, Uint8Array>;
     string_data: Record<string, string>;
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     namespace: '',

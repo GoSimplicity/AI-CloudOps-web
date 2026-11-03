@@ -117,10 +117,10 @@ export function usePVCPage() {
   const currentYamlContent = ref('');
   const currentPVCPods = ref<any[]>([]);
   const createFormModel = ref<{
+    annotations: Record<string, string>;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
     spec: PVCSpec;
   }>({
     name: '',
@@ -138,10 +138,10 @@ export function usePVCPage() {
   });
 
   const editFormModel = ref<{
+    annotations: Record<string, string>;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
     spec: PVCSpec;
   }>({
     name: '',

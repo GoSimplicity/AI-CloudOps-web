@@ -151,13 +151,13 @@ export function useStatefulSetPage() {
 
   // form models
   const createFormModel = ref<{
+    annotations: Record<string, string>;
+    images: string[];
+    labels: Record<string, string>;
     name: string;
     namespace: string;
     replicas: number;
     service_name: string;
-    images: string[];
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
   }>({
     name: '',
     namespace: '',
@@ -169,13 +169,13 @@ export function useStatefulSetPage() {
   });
 
   const editFormModel = ref<{
+    annotations: KeyValueList;
+    images: string[];
+    labels: KeyValueList;
     name: string;
     namespace: string;
     replicas: number;
     service_name: string;
-    images: string[];
-    labels: KeyValueList;
-    annotations: KeyValueList;
   }>({
     name: '',
     namespace: '',

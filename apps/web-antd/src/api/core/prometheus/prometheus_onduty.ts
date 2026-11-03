@@ -161,7 +161,7 @@ export async function getMonitorOnDutyGroupDetailApi(id: number) {
 // 获取未来值班计划
 export async function getMonitorOnDutyGroupFuturePlanApi(
   id: number,
-  params?: { start_time: string; end_time: string },
+  params?: { end_time: string; start_time: string },
 ) {
   return requestClient.get(`/monitor/onduty_groups/future_plan/${id}`, {
     params,
@@ -172,11 +172,11 @@ export async function getMonitorOnDutyGroupFuturePlanApi(
 export async function getMonitorOnDutyHistoryApi(
   id: number,
   params?: {
-    start_date?: string;
     end_date?: string;
-    search?: string;
     page?: number;
+    search?: string;
     size?: number;
+    start_date?: string;
   },
 ) {
   return requestClient.get(`/monitor/onduty_groups/history/${id}`, { params });

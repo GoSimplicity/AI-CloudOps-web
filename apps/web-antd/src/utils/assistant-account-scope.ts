@@ -42,7 +42,7 @@ export function createAssistantAccountScope(storage: Storage) {
     identity() {
       return { owner, generation };
     },
-    sameOwner(ticket: { owner: string; generation: number }) {
+    sameOwner(ticket: { generation: number; owner: string }) {
       return (
         !!owner && ticket.owner === owner && ticket.generation === generation
       );
@@ -50,7 +50,7 @@ export function createAssistantAccountScope(storage: Storage) {
     ticket() {
       return { owner, generation, request: ++request };
     },
-    current(ticket: { owner: string; generation: number; request: number }) {
+    current(ticket: { generation: number; owner: string; request: number }) {
       return (
         !!owner &&
         ticket.owner === owner &&

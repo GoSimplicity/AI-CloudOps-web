@@ -471,13 +471,13 @@ export const getManagedSyncHistory = (
     { params },
   );
 export const syncManagedResources = (
-  data: ManagedCloudScope & { resource_ids: string[]; operation_id: string },
+  data: ManagedCloudScope & { operation_id: string; resource_ids: string[] },
 ) =>
   requestClient.post<ManagedCloudSyncResult>('/tree/cloud/managed/sync', data);
 
 export const resolveManagedHistory = (
   id: number,
-  data: ManagedCloudScope & { resources_verified: true; reason: string },
+  data: ManagedCloudScope & { reason: string; resources_verified: true },
 ) => requestClient.post(`/tree/cloud/managed/history/${id}/resolve`, data);
 
 export interface ManagedCloudOperation extends ManagedCloudScope {
@@ -505,10 +505,10 @@ export const getManagedOperation = (operationID: string, ownerID?: number) =>
 export const reviewManagedOperation = (
   operationID: string,
   data: ManagedCloudScope & {
+    owner_id?: number;
+    reason: string;
     resource_ids: string[];
     resources_verified: true;
-    reason: string;
-    owner_id?: number;
   },
 ) =>
   requestClient.post<ManagedCloudOperation>(
@@ -523,10 +523,10 @@ export interface ManagedCloudOperationList {
 }
 export const listManagedOperations = (
   params: ManagedCloudScope & {
+    all_owners?: boolean;
     page: number;
     size: number;
     unconfirmed_only: boolean;
-    all_owners?: boolean;
   },
 ) =>
   requestClient.get<ManagedCloudOperationList>(

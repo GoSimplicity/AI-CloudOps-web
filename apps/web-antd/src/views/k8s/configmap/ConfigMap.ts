@@ -107,13 +107,13 @@ export function useConfigMapPage() {
 
   // form models
   const createFormModel = ref<{
+    annotations: Record<string, string>;
+    binary_data: Record<string, string>;
+    data: Record<string, string>;
+    immutable: boolean;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
-    data: Record<string, string>;
-    binary_data: Record<string, string>;
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
-    immutable: boolean;
   }>({
     name: '',
     namespace: '',
@@ -125,13 +125,13 @@ export function useConfigMapPage() {
   });
 
   const editFormModel = ref<{
+    annotations: Record<string, string>;
+    binary_data: Record<string, string>;
+    data: Record<string, string>;
+    immutable: boolean;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
-    data: Record<string, string>;
-    binary_data: Record<string, string>;
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
-    immutable: boolean;
   }>({
     name: '',
     namespace: '',

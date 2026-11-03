@@ -24,11 +24,11 @@ export function useRcaCache() {
   const clearOperationForm = reactive({ operation: '' });
   const operationHistory = ref<
     Array<{
+      cleared_count?: number;
+      message: string;
       operation: string;
       success: boolean;
-      message: string;
       timestamp: string;
-      cleared_count?: number;
     }>
   >([]);
   const scope = useAiRequestScope(() => {

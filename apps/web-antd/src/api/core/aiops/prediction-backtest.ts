@@ -17,14 +17,14 @@ export interface PredictionBacktestResult {
   wape: null | number;
   evidence: string;
   calibration: {
-    method: string;
-    window: number;
-    minimum_history: number;
     evaluated_count: number;
+    method: string;
+    minimum_history: number;
     observed_coverage: null | number;
+    reference_time: string;
     residual_lower: null | number;
     residual_upper: null | number;
-    reference_time: string;
+    window: number;
   };
 }
 

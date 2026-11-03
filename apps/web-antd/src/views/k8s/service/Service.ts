@@ -93,13 +93,13 @@ export function useServicePage() {
 
   // form models
   const createFormModel = ref<{
+    annotations: Record<string, string>;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
-    type: string;
     ports: ServicePort[];
     selector: Record<string, string>;
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
+    type: string;
   }>({
     name: '',
     namespace: '',
@@ -111,13 +111,13 @@ export function useServicePage() {
   });
 
   const editFormModel = ref<{
+    annotations: Record<string, string>;
+    labels: Record<string, string>;
     name: string;
     namespace: string;
-    type: string;
     ports: ServicePort[];
     selector: Record<string, string>;
-    labels: Record<string, string>;
-    annotations: Record<string, string>;
+    type: string;
   }>({
     name: '',
     namespace: '',

@@ -132,11 +132,11 @@ export function useDaemonSetPage() {
 
   // form models
   const createFormModel = ref<{
-    name: string;
-    namespace: string;
+    annotations: Record<string, string>;
     images: string[];
     labels: Record<string, string>;
-    annotations: Record<string, string>;
+    name: string;
+    namespace: string;
   }>({
     name: '',
     namespace: '',
@@ -146,11 +146,11 @@ export function useDaemonSetPage() {
   });
 
   const editFormModel = ref<{
-    name: string;
-    namespace: string;
+    annotations: Record<string, string>;
     image: string;
     labels: Record<string, string>;
-    annotations: Record<string, string>;
+    name: string;
+    namespace: string;
   }>({
     name: '',
     namespace: '',
