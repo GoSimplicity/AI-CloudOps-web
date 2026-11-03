@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import type { FormInstance } from 'ant-design-vue';
+
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
@@ -6,7 +8,6 @@ import { useUserStore } from '@vben/stores';
 
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
-import type { FormInstance } from 'ant-design-vue';
 
 import {
   changePassword,

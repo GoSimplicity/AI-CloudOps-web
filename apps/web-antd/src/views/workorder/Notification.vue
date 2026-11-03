@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { FormInstance } from 'ant-design-vue';
+
 import {
   computed,
   onBeforeUnmount,
@@ -21,7 +23,7 @@ import {
   notificationScheduleFingerprint,
   type NotificationSchedulePayload,
 } from './notification-schedule';
-import type { FormInstance } from 'ant-design-vue';
+
 import {
   BellOutlined,
   CheckCircleOutlined,

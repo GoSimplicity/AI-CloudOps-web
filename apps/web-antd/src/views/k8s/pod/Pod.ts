@@ -1,3 +1,5 @@
+import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+
 import { utf8Chunks } from '#/utils/terminal-input';
 import {
   computed,
@@ -8,7 +10,7 @@ import {
   ref,
 } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+
 import yaml from 'js-yaml';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';

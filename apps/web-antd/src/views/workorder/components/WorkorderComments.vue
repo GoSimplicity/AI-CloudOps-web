@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { WorkorderInstanceItem } from '#/api/core/workorder/workorder_instance';
+
 import { formatCommentContent } from '#/utils/comment-content';
 import { computed, nextTick, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
@@ -9,7 +11,7 @@ import {
   type GetInstanceCommentsTreeReq,
   type WorkorderInstanceCommentItem,
 } from '#/api/core/workorder/workorder_instance_comment';
-import type { WorkorderInstanceItem } from '#/api/core/workorder/workorder_instance';
+
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 withDefaults(defineProps<Props>(), {

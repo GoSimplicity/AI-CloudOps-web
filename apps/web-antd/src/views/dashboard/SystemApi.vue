@@ -1,9 +1,10 @@
 <script lang="ts" setup>
+import type { FormInstance } from 'ant-design-vue';
+
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
-import type { FormInstance } from 'ant-design-vue';
 
 import {
   createApiApi,

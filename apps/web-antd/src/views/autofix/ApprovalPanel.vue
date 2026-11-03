@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AutoFixAction } from '#/api/core/aiops/autofix';
+
 import { getActionLabel } from './autofix-format';
 
 import { usePermission } from '#/utils/permission';

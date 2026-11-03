@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import type {
+  AssistantRequest,
+  AssistantResponse,
+  SessionInfoResponse,
+} from '#/api/core/aiops/assistant';
+
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
@@ -16,11 +22,7 @@ import {
   createAssistantSession,
   getSessionInfo,
 } from '#/api/core/aiops/assistant';
-import type {
-  AssistantRequest,
-  AssistantResponse,
-  SessionInfoResponse,
-} from '#/api/core/aiops/assistant';
+
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // 路由

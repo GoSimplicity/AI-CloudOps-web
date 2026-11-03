@@ -1,6 +1,8 @@
+import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+
 import { computed, ref, toRaw } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import type { FormInstance, Rule } from 'ant-design-vue/es/form';
+
 import {
   addK8sNodeTaints,
   type AddK8sNodeTaintsReq,
