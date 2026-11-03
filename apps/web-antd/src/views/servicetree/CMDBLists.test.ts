@@ -9,6 +9,13 @@ import CloudResource from './CloudResourceManager.vue';
 import LocalResource from './LocalResourceManagement.vue';
 import TreeNodes from './TreeNodeManager.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
@@ -110,7 +117,7 @@ function render(component: Component) {
   return wrapper;
 }
 function button(text: string) {
-  const found = wrapper!
+  const found = required(wrapper)
     .findAll('button')
     .find((button) => button.text().replace(/\s/g, '') === text);
   if (!found) throw new Error(`Missing visible action: ${text}`);
@@ -132,15 +139,17 @@ for (const page of pages) {
       });
       render(page.component);
       await flushPromises();
-      expect(wrapper!.text()).toContain('PREVIOUS-RESOURCE');
+      expect(required(wrapper).text()).toContain('PREVIOUS-RESOURCE');
       await button('刷新').trigger('click');
       await flushPromises();
-      expect(wrapper!.text()).not.toContain('PREVIOUS-RESOURCE');
-      expect(wrapper!.find('.ant-alert').text()).toContain('失败');
+      expect(required(wrapper).text()).not.toContain('PREVIOUS-RESOURCE');
+      expect(required(wrapper).find('.ant-alert').text()).toContain('失败');
       await button('重试').trigger('click');
       await flushPromises();
-      expect(wrapper!.text()).toContain('RECOVERED-RESOURCE');
-      expect(wrapper!.find('.ops-page .ant-alert').exists()).toBe(false);
+      expect(required(wrapper).text()).toContain('RECOVERED-RESOURCE');
+      expect(required(wrapper).find('.ops-page .ant-alert').exists()).toBe(
+        false,
+      );
     });
 
     it('用户切换查询后迟到结果不能覆盖新范围', async () => {
@@ -155,11 +164,11 @@ for (const page of pages) {
       render(page.component);
       await flushPromises();
       if (page.hasSearch) {
-        const input = wrapper!.find('.ops-page__filters input');
+        const input = required(wrapper).find('.ops-page__filters input');
         await input.setValue('second');
         await input.trigger('keydown', { key: 'Enter', keyCode: 13 });
       } else {
-        const select = wrapper!.findComponent({ name: 'ASelect' });
+        const select = required(wrapper).findComponent({ name: 'ASelect' });
         select.vm.$emit('update:value', 1);
         select.vm.$emit('change', 1);
       }
@@ -167,8 +176,8 @@ for (const page of pages) {
       expect(calls).toBeGreaterThan(1);
       old.resolve(result('older-stale'));
       await flushPromises();
-      expect(wrapper!.text()).toContain('second-current');
-      expect(wrapper!.text()).not.toContain('older-stale');
+      expect(required(wrapper).text()).toContain('second-current');
+      expect(required(wrapper).text()).not.toContain('older-stale');
     });
 
     it('创建或同步确认前及取消都不写API', async () => {
@@ -194,7 +203,7 @@ for (const page of pages) {
         ),
       );
       expect(cancel).toBeDefined();
-      cancel!.click();
+      required(cancel).click();
       await flushPromises();
       expect(client.post).not.toHaveBeenCalled();
       expect(client.put).not.toHaveBeenCalled();

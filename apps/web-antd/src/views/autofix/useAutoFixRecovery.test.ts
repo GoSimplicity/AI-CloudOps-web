@@ -3,6 +3,13 @@ import { defineComponent, h, reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAutoFixWorkflow } from './useAutoFixWorkflow';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const account = vi.hoisted(() => ({
   user: null as any,
   access: null as any,
@@ -130,7 +137,7 @@ describe('自动修复跨刷新恢复', () => {
     vm.formData.problem_description = 'private-diagnosis-canary';
     vm.formData.event = 'private-event-canary';
     await vm.runWorkflow();
-    const sent = api.executeAutoFixWorkflow.mock.calls[0]![0];
+    const sent = required(api.executeAutoFixWorkflow.mock.calls[0])[0];
     expect(sent.operation_id).toMatch(/^[0-9a-f-]{36}$/);
     expect(vm.operationState).toBe('unverified');
     expect(vm.canStartWorkflow).toBe(false);
@@ -138,7 +145,7 @@ describe('自动修复跨刷新恢复', () => {
     expect(stored).toContain(sent.operation_id);
     expect(stored).not.toContain('private-diagnosis-canary');
     expect(stored).not.toContain('private-event-canary');
-    wrapper!.unmount();
+    required(wrapper).unmount();
     wrapper = undefined;
     vm = await mountHarness();
     expect(vm.currentOperationId).toBe(sent.operation_id);
@@ -158,7 +165,7 @@ describe('自动修复跨刷新恢复', () => {
     const vm = await mountHarness();
     vm.formData.problem_description = 'original';
     await vm.runWorkflow();
-    const first = api.executeAutoFixWorkflow.mock.calls[0]![0];
+    const first = required(api.executeAutoFixWorkflow.mock.calls[0])[0];
     api.getAutoFixOperation.mockRejectedValueOnce(reject(404));
     await vm.checkOperation();
     expect(vm.operationState).toBe('not_found');
@@ -169,7 +176,9 @@ describe('自动修复跨刷新恢复', () => {
     vm.formData.problem_description = 'original';
     await vm.runWorkflow();
     expect(api.executeAutoFixWorkflow).toHaveBeenCalledTimes(2);
-    expect(api.executeAutoFixWorkflow.mock.calls[1]![0]).toEqual(first);
+    expect(required(api.executeAutoFixWorkflow.mock.calls[1])[0]).toEqual(
+      first,
+    );
   });
 
   it.each(['building', 'executing', 'uncertain'])(
@@ -179,7 +188,8 @@ describe('自动修复跨刷新恢复', () => {
       const vm = await mountHarness();
       vm.formData.problem_description = 'original';
       await vm.runWorkflow();
-      const id = api.executeAutoFixWorkflow.mock.calls[0]![0].operation_id;
+      const id = required(api.executeAutoFixWorkflow.mock.calls[0])[0]
+        .operation_id;
       api.getAutoFixOperation.mockResolvedValueOnce(operation(id, state));
       await vm.checkOperation();
       expect(['running', 'uncertain']).toContain(vm.operationState);
@@ -207,7 +217,8 @@ describe('自动修复跨刷新恢复', () => {
     const vm = await mountHarness();
     vm.formData.problem_description = 'original';
     await vm.runWorkflow();
-    const id = api.executeAutoFixWorkflow.mock.calls[0]![0].operation_id;
+    const id = required(api.executeAutoFixWorkflow.mock.calls[0])[0]
+      .operation_id;
     const old = deferred<any>();
     api.getAutoFixOperation.mockReturnValueOnce(old.promise);
     const task = vm.checkOperation();
@@ -226,7 +237,8 @@ describe('自动修复跨刷新恢复', () => {
     const vm = await mountHarness();
     vm.formData.problem_description = 'original';
     const task = vm.runWorkflow();
-    const id = api.executeAutoFixWorkflow.mock.calls[0]![0].operation_id;
+    const id = required(api.executeAutoFixWorkflow.mock.calls[0])[0]
+      .operation_id;
     account.access.accessToken = 'refreshed-token';
     expect(vm.currentOperationId).toBe(id);
     expect(vm.operationState).toBe('unverified');
@@ -245,7 +257,8 @@ describe('自动修复跨刷新恢复', () => {
     const vm = await mountHarness();
     vm.formData.problem_description = 'original';
     await vm.runWorkflow();
-    const id = api.executeAutoFixWorkflow.mock.calls[0]![0].operation_id;
+    const id = required(api.executeAutoFixWorkflow.mock.calls[0])[0]
+      .operation_id;
     const old = deferred<any>();
     api.getAutoFixOperation.mockReturnValueOnce(old.promise);
     const task = vm.checkOperation();
@@ -301,8 +314,8 @@ describe('自动修复跨刷新恢复', () => {
     let vm = await mountHarness();
     vm.formData.problem_description = 'private-original';
     await vm.runWorkflow();
-    const first = api.executeAutoFixWorkflow.mock.calls[0]![0];
-    wrapper!.unmount();
+    const first = required(api.executeAutoFixWorkflow.mock.calls[0])[0];
+    required(wrapper).unmount();
     wrapper = undefined;
     vm = await mountHarness();
     expect(vm.formData.problem_description).toBe('');
@@ -310,7 +323,9 @@ describe('自动修复跨刷新恢复', () => {
     await vm.checkOperation();
     vm.formData.problem_description = 'private-original';
     await vm.runWorkflow();
-    expect(api.executeAutoFixWorkflow.mock.calls[1]![0]).toEqual(first);
+    expect(required(api.executeAutoFixWorkflow.mock.calls[1])[0]).toEqual(
+      first,
+    );
     expect(JSON.stringify(sessionStorage)).not.toContain('private-original');
   });
 
@@ -347,7 +362,8 @@ describe('自动修复跨刷新恢复', () => {
     const vm = await mountHarness();
     vm.formData.problem_description = 'original';
     await vm.runWorkflow();
-    const id = api.executeAutoFixWorkflow.mock.calls[0]![0].operation_id;
+    const id = required(api.executeAutoFixWorkflow.mock.calls[0])[0]
+      .operation_id;
     api.getAutoFixOperation.mockResolvedValueOnce({
       ...operation(id, 'completed'),
       execution_summary: { status: 'failed' },
@@ -382,7 +398,8 @@ describe('自动修复跨刷新恢复', () => {
     const vm = await mountHarness();
     vm.formData.problem_description = 'original';
     await vm.runWorkflow();
-    const id = api.executeAutoFixWorkflow.mock.calls[0]![0].operation_id;
+    const id = required(api.executeAutoFixWorkflow.mock.calls[0])[0]
+      .operation_id;
     api.getAutoFixOperation.mockResolvedValueOnce(operation(id));
     await vm.checkOperation();
     expect(vm.workflowResult).toBeDefined();
@@ -398,7 +415,8 @@ describe('自动修复跨刷新恢复', () => {
     const vm = await mountHarness();
     vm.formData.problem_description = 'original';
     await vm.runWorkflow();
-    const id = api.executeAutoFixWorkflow.mock.calls[0]![0].operation_id;
+    const id = required(api.executeAutoFixWorkflow.mock.calls[0])[0]
+      .operation_id;
     api.getAutoFixOperation.mockResolvedValueOnce({
       ...operation(id),
       result: { ...pendingResult(), plan: { plan_id: 'different' } },

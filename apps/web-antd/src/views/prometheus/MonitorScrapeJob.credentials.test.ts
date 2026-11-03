@@ -9,6 +9,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import MonitorScrapeJob from './MonitorScrapeJob.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
@@ -79,10 +86,11 @@ async function start(edit = true) {
   });
   await flushPromises();
   if (edit) {
-    await wrapper
-      .findAll('button')
-      .find((item) => item.text().replace(/\s/g, '') === '编辑')!
-      .trigger('click');
+    await required(
+      wrapper
+        .findAll('button')
+        .find((item) => item.text().replace(/\s/g, '') === '编辑'),
+    ).trigger('click');
     await flushPromises();
   }
 }
@@ -91,26 +99,30 @@ async function action(value: string) {
     `input[type="radio"][value="${value}"]`,
   );
   expect(input).not.toBeNull();
-  await new DOMWrapper(input!).setValue(true);
+  await new DOMWrapper(required(input)).setValue(true);
 }
 async function fill(placeholder: string, value: string) {
   const input = document.querySelector<HTMLInputElement>(
     `input[placeholder="${placeholder}"]`,
   );
   expect(input).not.toBeNull();
-  await new DOMWrapper(input!).setValue(value);
+  await new DOMWrapper(required(input)).setValue(value);
 }
 async function footer(save = true) {
   const pattern = save ? /^(确定|保存|OK)$/ : /^(取消|Cancel)$/;
-  const button = [
-    ...document.querySelectorAll<HTMLButtonElement>('.ant-modal-footer button'),
-  ].find((item) => pattern.test(item.textContent?.replace(/\s/g, '') || ''))!;
+  const button = required(
+    [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '.ant-modal-footer button',
+      ),
+    ].find((item) => pattern.test(item.textContent?.replace(/\s/g, '') || '')),
+  );
   expect(button).toBeDefined();
   button.click();
   await flushPromises();
 }
 function payload() {
-  return client.put.mock.calls.at(-1)![1];
+  return required(client.put.mock.calls.at(-1))[1];
 }
 
 describe('采集任务凭据更新合同', () => {
@@ -177,10 +189,11 @@ describe('采集任务凭据更新合同', () => {
   it('详情只显示配置状态，旧服务残留原文也不填入编辑框', async () => {
     record.bearer_token = 'legacy-value-must-not-copy';
     await start(false);
-    await wrapper!
-      .findAll('button')
-      .find((item) => item.text().replace(/\s/g, '') === '查看')!
-      .trigger('click');
+    await required(
+      required(wrapper)
+        .findAll('button')
+        .find((item) => item.text().replace(/\s/g, '') === '查看'),
+    ).trigger('click');
     await flushPromises();
     expect(document.querySelector('.ant-modal-body')?.textContent).toContain(
       '已配置',
@@ -188,9 +201,13 @@ describe('采集任务凭据更新合同', () => {
     expect(document.body.textContent).not.toContain(
       'legacy-value-must-not-copy',
     );
-    const edit = [
-      ...document.querySelectorAll<HTMLButtonElement>('.ant-modal-body button'),
-    ].find((item) => item.textContent?.replace(/\s/g, '') === '编辑')!;
+    const edit = required(
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '.ant-modal-body button',
+        ),
+      ].find((item) => item.textContent?.replace(/\s/g, '') === '编辑'),
+    );
     edit.click();
     await flushPromises();
     expect(
@@ -206,15 +223,18 @@ describe('采集任务凭据更新合同', () => {
     record.has_bearer_token = false;
     record.bearer_token_file = '/run/token';
     await start(false);
-    await wrapper!
-      .findAll('button')
-      .find((item) => item.text().includes('更多'))!
-      .trigger('mouseenter');
+    await required(
+      required(wrapper)
+        .findAll('button')
+        .find((item) => item.text().includes('更多')),
+    ).trigger('mouseenter');
     await new Promise((resolve) => setTimeout(resolve, 180));
     await flushPromises();
-    const menu = [
-      ...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item'),
-    ].find((item) => item.textContent?.includes('禁用'))!;
+    const menu = required(
+      [
+        ...document.querySelectorAll<HTMLElement>('.ant-dropdown-menu-item'),
+      ].find((item) => item.textContent?.includes('禁用')),
+    );
     expect(menu).toBeDefined();
     menu.click();
     await flushPromises();

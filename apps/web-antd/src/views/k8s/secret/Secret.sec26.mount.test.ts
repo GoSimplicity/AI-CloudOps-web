@@ -11,6 +11,13 @@ import { SECRET_REVEAL_PERMISSION_CODE } from '#/constants/permission-codes';
 
 import { EMPTY_VALUE_MESSAGE } from './secret-data';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 /** SEC-25/26 Secret 页面挂载级断言（假值） */
 vi.setConfig({ testTimeout: 15_000 });
 
@@ -115,7 +122,7 @@ describe('secret 详情：脱敏展示 + 按键 reveal', () => {
     expect(document.body.textContent).not.toContain(FAKE);
     expect(api.reveal).not.toHaveBeenCalled();
 
-    all('.secret-data-keys button.secret-view-plain')[0]!.click();
+    required(all('.secret-data-keys button.secret-view-plain')[0]).click();
     await settle();
     expect(api.reveal).toHaveBeenCalledWith({
       cluster_id: 1,
@@ -125,11 +132,11 @@ describe('secret 详情：脱敏展示 + 按键 reveal', () => {
     });
     expect(all('.secret-data-plain')[0]?.textContent).toBe(FAKE);
 
-    all('.secret-data-keys button.secret-hide-plain')[0]!.click();
+    required(all('.secret-data-keys button.secret-hide-plain')[0]).click();
     await settle();
     expect(document.body.textContent).not.toContain(FAKE);
 
-    all('.secret-data-keys button.secret-view-plain')[0]!.click();
+    required(all('.secret-data-keys button.secret-view-plain')[0]).click();
     await settle();
     vm.closeDetailModal();
     await settle();
@@ -147,15 +154,15 @@ describe('secret 编辑：data 行', () => {
       '.secret-edit-data-row input[type="password"]',
     );
     expect(input).not.toBeNull();
-    expect(input!.value).toBe('');
-    expect(input!.placeholder).toBe('已脱敏，留空保留原值');
+    expect(required(input).value).toBe('');
+    expect(required(input).placeholder).toBe('已脱敏，留空保留原值');
     expect(document.body.textContent).not.toContain(EMPTY_VALUE_MESSAGE);
 
-    input!.value = FAKE;
-    input!.dispatchEvent(new Event('input'));
+    required(input).value = FAKE;
+    required(input).dispatchEvent(new Event('input'));
     await settle();
-    input!.value = '';
-    input!.dispatchEvent(new Event('input'));
+    required(input).value = '';
+    required(input).dispatchEvent(new Event('input'));
     await settle();
     expect(document.body.textContent).toContain(EMPTY_VALUE_MESSAGE);
     expect(document.body.textContent).toContain('撤销修改');
@@ -173,7 +180,7 @@ describe('secret 编辑：打开时重新拉详情（P2/P3-2）', () => {
     });
     await settle();
     const okButton = () =>
-      all('.ant-modal-footer button.ant-btn-primary').at(-1)!;
+      required(all('.ant-modal-footer button.ant-btn-primary').at(-1));
     expect(
       document.body.querySelector('.secret-edit-data .ant-spin-spinning'),
     ).not.toBeNull();

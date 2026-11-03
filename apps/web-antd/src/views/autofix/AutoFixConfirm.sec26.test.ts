@@ -5,6 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AutoFixWorkflow from './AutoFixWorkflow.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 /**
  * SEC-25/26 规则 3（pending 判定）/ 规则 4（逐项 + 批量确认，无拒绝按钮，404 计划已失效）。
  * 按「有按钮权限」渲染；权限判断见 utils/permission/*.test.ts。
@@ -132,11 +139,11 @@ async function startAndRun() {
   await wrapper
     .get('textarea[placeholder="描述当前故障现象、涉及资源和期望处理方式"]')
     .setValue('测试用故障描述');
-  await button('执行工作流')!.trigger('click');
+  await required(button('执行工作流')).trigger('click');
   await flushPromises();
 }
 function buttons(text: string) {
-  return wrapper!
+  return required(wrapper)
     .findAll('button')
     .filter((item) => item.text().replace(/\s/g, '').includes(text));
 }
@@ -158,21 +165,21 @@ describe('规则 4：逐项确认 / 批量确认', () => {
   it('逐项确认：只提交这一项；部分确认后仍为 pending，剩余项继续可确认', async () => {
     api.confirmAutoFixWorkflow.mockResolvedValueOnce(pending(['a2']));
     await startAndRun();
-    await buttons('确认此项')[0]!.trigger('click');
+    await required(buttons('确认此项')[0]).trigger('click');
     await flushPromises();
     expect(api.confirmAutoFixWorkflow).toHaveBeenCalledWith({
       plan_id: 'fake-plan-id',
       approved_action_ids: ['a1'],
     });
     expect(buttons('确认此项')).toHaveLength(1);
-    expect(wrapper!.text()).toContain('原计划动作 a2');
+    expect(required(wrapper).text()).toContain('原计划动作 a2');
     expect(message.warning).toHaveBeenCalled();
   });
 
   it('全部确认：一次提交全部可确认项', async () => {
     api.confirmAutoFixWorkflow.mockResolvedValueOnce(completed());
     await startAndRun();
-    await button('全部确认')!.trigger('click');
+    await required(button('全部确认')).trigger('click');
     await flushPromises();
     expect(api.confirmAutoFixWorkflow).toHaveBeenCalledTimes(1);
     expect(api.confirmAutoFixWorkflow).toHaveBeenCalledWith({
@@ -180,7 +187,7 @@ describe('规则 4：逐项确认 / 批量确认', () => {
       approved_action_ids: ['a1', 'a2'],
     });
     expect(message.success).toHaveBeenCalled();
-    expect(wrapper!.find('.confirm-panel').exists()).toBe(false);
+    expect(required(wrapper).find('.confirm-panel').exists()).toBe(false);
   });
 
   it('404：结果不确定时提示先核对并清掉计划', async () => {
@@ -188,12 +195,12 @@ describe('规则 4：逐项确认 / 批量确认', () => {
       Object.assign(new Error('审批计划不存在'), { response: { status: 404 } }),
     );
     await startAndRun();
-    await buttons('确认此项')[0]!.trigger('click');
+    await required(buttons('确认此项')[0]).trigger('click');
     await flushPromises();
-    expect(wrapper!.find('[role="alert"]').text()).toContain(
+    expect(required(wrapper).find('[role="alert"]').text()).toContain(
       '操作结果尚未确认',
     );
-    expect(wrapper!.find('.confirm-panel').exists()).toBe(false);
+    expect(required(wrapper).find('.confirm-panel').exists()).toBe(false);
     expect(buttons('确认此项')).toHaveLength(0);
   });
 });
@@ -231,7 +238,7 @@ describe('规则 3：pending 由 status + approval 字段共同决定', () => {
     api.confirmAutoFixWorkflow.mockResolvedValueOnce(completed());
     await startAndRun();
     expect(buttons('确认此项')).toHaveLength(1);
-    await button('全部确认')!.trigger('click');
+    await required(button('全部确认')).trigger('click');
     await flushPromises();
     expect(api.confirmAutoFixWorkflow).toHaveBeenCalledWith({
       plan_id: 'fake-plan-id',

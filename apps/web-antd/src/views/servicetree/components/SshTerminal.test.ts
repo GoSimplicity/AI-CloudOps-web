@@ -3,6 +3,13 @@ import { reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SshTerminal from './SshTerminal.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const transport = vi.hoisted(() => ({
   connections: vi.fn(),
   terminals: [] as any[],
@@ -66,7 +73,8 @@ class Socket {
   }
 }
 let wrapper: VueWrapper | undefined;
-const latest = () => transport.connections.mock.calls.at(-1)![2] as Socket;
+const latest = () =>
+  required(transport.connections.mock.calls.at(-1))[2] as Socket;
 function render(resourceId = '42') {
   wrapper = mount(SshTerminal, {
     props: { kind: 'local', resourceId },
@@ -75,9 +83,11 @@ function render(resourceId = '42') {
   return wrapper;
 }
 function reconnect() {
-  return wrapper!
-    .findAll('button')
-    .find((button) => button.text().replace(/\s/g, '') === '重新连接')!;
+  return required(
+    required(wrapper)
+      .findAll('button')
+      .find((button) => button.text().replace(/\s/g, '') === '重新连接'),
+  );
 }
 beforeEach(() => {
   vi.clearAllMocks();
@@ -104,7 +114,7 @@ afterEach(() => {
 describe('sSH PTY交互合同', () => {
   it('干净URL声明PTY与初始尺寸，凭证仅在认证子协议，二进制输入保留控制按键', async () => {
     render();
-    const [url, protocols] = transport.connections.mock.calls[0]!;
+    const [url, protocols] = required(transport.connections.mock.calls[0]);
     expect(new URL(url).search).toBe('?terminal_mode=pty-v1&cols=96&rows=37');
     expect(url).not.toContain(access.accessToken);
     expect(protocols).toEqual([
@@ -119,7 +129,7 @@ describe('sSH PTY交互合同', () => {
     const binary = socket.send.mock.calls.filter(
       (call) => typeof call[0] !== 'string',
     );
-    expect(new TextDecoder().decode(binary[0]![0])).toBe(
+    expect(new TextDecoder().decode(required(binary[0])[0])).toBe(
       '中\r\x03\x1b[A\x7f\0',
     );
     expect(terminal.write).not.toHaveBeenCalled();
@@ -159,7 +169,7 @@ describe('sSH PTY交互合同', () => {
     terminal.cols = 120;
     terminal.rows = 42;
     terminal.resized();
-    expect(JSON.parse(socket.send.mock.calls.at(-1)![0])).toEqual({
+    expect(JSON.parse(required(socket.send.mock.calls.at(-1))[0])).toEqual({
       col_size: 120,
       op: 'resize',
       row_size: 42,
@@ -175,8 +185,8 @@ describe('sSH PTY交互合同', () => {
     render();
     const first = latest();
     first.open();
-    const lateClose = first.onclose!;
-    const lateMessage = first.onmessage!;
+    const lateClose = required(first.onclose);
+    const lateMessage = required(first.onmessage);
     access.accessToken = 'fresh.token.signature';
     await reconnect().trigger('click');
     const second = latest();
@@ -184,10 +194,12 @@ describe('sSH PTY交互合同', () => {
     lateClose();
     lateMessage({ data: 'OLD-OUTPUT' });
     await flushPromises();
-    expect(transport.connections.mock.calls.at(-1)![1]).toContain(
+    expect(required(transport.connections.mock.calls.at(-1))[1]).toContain(
       'cloudops-auth.fresh.token.signature',
     );
-    expect(wrapper!.find('[role="status"]').text()).toContain('连接已建立');
+    expect(required(wrapper).find('[role="status"]').text()).toContain(
+      '连接已建立',
+    );
     expect(transport.terminals[0].write).not.toHaveBeenCalledWith('OLD-OUTPUT');
     expect(first.close).toHaveBeenCalled();
   });
@@ -201,8 +213,8 @@ describe('sSH PTY交互合同', () => {
     await flushPromises();
     expect(socket.close).toHaveBeenCalled();
     expect(terminal.reset).toHaveBeenCalledTimes(2);
-    expect(wrapper!.text()).toContain('登录已失效');
-    wrapper!.unmount();
+    expect(required(wrapper).text()).toContain('登录已失效');
+    required(wrapper).unmount();
     wrapper = undefined;
     expect(terminal.inputDisposed).toHaveBeenCalledOnce();
     expect(terminal.sizeDisposed).toHaveBeenCalledOnce();
@@ -215,7 +227,7 @@ describe('sSH PTY交互合同', () => {
     vi.advanceTimersByTime(20_000);
     await flushPromises();
     expect(first.close).toHaveBeenCalled();
-    expect(wrapper!.text()).toContain('连接超时');
+    expect(required(wrapper).text()).toContain('连接超时');
     await reconnect().trigger('click');
     const second = latest();
     second.open();
@@ -227,7 +239,7 @@ describe('sSH PTY交互合同', () => {
   it('非法资源ID或无凭证不会创建连接', () => {
     render('-1');
     expect(transport.connections).not.toHaveBeenCalled();
-    wrapper!.unmount();
+    required(wrapper).unmount();
     wrapper = undefined;
     access.accessToken = '';
     render();

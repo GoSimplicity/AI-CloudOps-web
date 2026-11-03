@@ -7,6 +7,13 @@ import { PERMISSION_DENIED_MESSAGE } from '#/utils/permission/forbidden';
 
 import AutoFixWorkflow from './AutoFixWorkflow.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const recoveryPermission = vi.hoisted(() => ({ allowed: true }));
 // FE-02：本文件验证业务行为，按「有按钮权限」渲染；权限判断本身见 utils/permission/*.test.ts
 vi.mock('#/utils/permission', async (importOriginal) => ({
@@ -133,22 +140,26 @@ async function start() {
   await flushPromises();
 }
 function button(text: string) {
-  return wrapper!
-    .findAll('button')
-    .find((item) => item.text().replace(/\s/g, '').includes(text))!;
+  return required(
+    required(wrapper)
+      .findAll('button')
+      .find((item) => item.text().replace(/\s/g, '').includes(text)),
+  );
 }
 async function fillAndRun() {
-  await wrapper!
+  await required(wrapper)
     .get('input[placeholder="例如 payment-service"]')
     .setValue('owned-api');
-  await wrapper!
+  await required(wrapper)
     .get('textarea[placeholder="描述当前故障现象、涉及资源和期望处理方式"]')
     .setValue('本次隔离验收的真实描述');
   await button('执行工作流').trigger('click');
   await flushPromises();
 }
 async function selectAndConfirm() {
-  const checkbox = wrapper!.find('.confirm-panel input[type="checkbox"]');
+  const checkbox = required(wrapper).find(
+    '.confirm-panel input[type="checkbox"]',
+  );
   if (checkbox.exists() && !checkbox.attributes('disabled'))
     await checkbox.setValue(true);
   await nextTick();
@@ -168,11 +179,11 @@ describe('自动修复页面的显式调用和审批状态', () => {
   it('身份切换立即清除旧计划和私有结论', async () => {
     await start();
     await fillAndRun();
-    expect(wrapper!.text()).toContain('账户1私有审批结论');
+    expect(required(wrapper).text()).toContain('账户1私有审批结论');
     account.user.userInfo = { userId: '2' };
     await nextTick();
-    expect(wrapper!.text()).not.toContain('账户1私有审批结论');
-    expect(wrapper!.find('.confirm-panel').exists()).toBe(false);
+    expect(required(wrapper).text()).not.toContain('账户1私有审批结论');
+    expect(required(wrapper).find('.confirm-panel').exists()).toBe(false);
     expect(api.executeAutoFixWorkflow).toHaveBeenCalledTimes(1);
   });
   it('另一身份不能收到迟到的工作流结果', async () => {
@@ -189,7 +200,7 @@ describe('自动修复页面的显式调用和审批状态', () => {
     await nextTick();
     complete(plan());
     await flushPromises();
-    expect(wrapper!.text()).not.toContain('账户1私有审批结论');
+    expect(required(wrapper).text()).not.toContain('账户1私有审批结论');
   });
   it.each([
     [403, PERMISSION_DENIED_MESSAGE],
@@ -210,8 +221,8 @@ describe('自动修复页面的显式调用和审批状态', () => {
       await fillAndRun();
       await selectAndConfirm();
       expect(api.confirmAutoFixWorkflow).toHaveBeenCalledTimes(1);
-      expect(wrapper!.find('.confirm-panel').exists()).toBe(false);
-      const alert = wrapper!.find('[role="alert"]').text();
+      expect(required(wrapper).find('.confirm-panel').exists()).toBe(false);
+      const alert = required(wrapper).find('[role="alert"]').text();
       expect(alert).toContain(text);
       expect(alert).not.toContain('WORKFLOW_APPROVAL_ERROR');
       expect(message.success).not.toHaveBeenCalled();
@@ -223,7 +234,7 @@ describe('自动修复页面的显式调用和审批状态', () => {
     );
     await start();
     await fillAndRun();
-    expect(wrapper!.find('[role="alert"]').text()).toContain(
+    expect(required(wrapper).find('[role="alert"]').text()).toContain(
       '操作结果尚未确认',
     );
   });
@@ -231,9 +242,10 @@ describe('自动修复页面的显式调用和审批状态', () => {
     api.executeAutoFixWorkflow.mockRejectedValueOnce(new Error('offline'));
     await start();
     await fillAndRun();
-    const id = api.executeAutoFixWorkflow.mock.calls[0]![0].operation_id;
-    expect(wrapper!.text()).toContain('待核对');
-    expect(wrapper!.text()).toContain('不要重复执行');
+    const id = required(api.executeAutoFixWorkflow.mock.calls[0])[0]
+      .operation_id;
+    expect(required(wrapper).text()).toContain('待核对');
+    expect(required(wrapper).text()).toContain('不要重复执行');
     api.getAutoFixOperation.mockResolvedValueOnce({
       operation_id: id,
       plan_id: 'opaque-plan-one',
@@ -243,26 +255,27 @@ describe('自动修复页面的显式调用和审批状态', () => {
     });
     await button('查询当前状态').trigger('click');
     await flushPromises();
-    expect(wrapper!.text()).toContain('待审批');
-    expect(wrapper!.find('.confirm-panel').exists()).toBe(true);
+    expect(required(wrapper).text()).toContain('待审批');
+    expect(required(wrapper).find('.confirm-panel').exists()).toBe(true);
     expect(api.executeAutoFixWorkflow).toHaveBeenCalledTimes(1);
   });
   it('没有历史查询权限时明确提示，不发查询', async () => {
     recoveryPermission.allowed = false;
     await start();
-    expect(wrapper!.text()).toContain('没有操作历史查询权限');
+    expect(required(wrapper).text()).toContain('没有操作历史查询权限');
     expect(api.getAutoFixHistory).not.toHaveBeenCalled();
     expect(api.getAutoFixOperation).not.toHaveBeenCalled();
   });
 
   it('硬权限失败的动作不提供可选审批框', async () => {
     const result = plan();
-    result.blocked_actions[0]!.risk_assessment.permission_allowed = false;
+    required(result.blocked_actions[0]).risk_assessment.permission_allowed =
+      false;
     api.executeAutoFixWorkflow.mockResolvedValueOnce(result);
     await start();
     await fillAndRun();
     expect(
-      wrapper!.find('.confirm-panel input[type="checkbox"]').exists(),
+      required(wrapper).find('.confirm-panel input[type="checkbox"]').exists(),
     ).toBe(false);
     expect(api.confirmAutoFixWorkflow).not.toHaveBeenCalled();
   });
@@ -300,13 +313,13 @@ describe('自动修复页面的显式调用和审批状态', () => {
   });
   it('状态加载失败清除旧健康与服务资料', async () => {
     await start();
-    expect(wrapper!.text()).toContain('测试修复服务');
+    expect(required(wrapper).text()).toContain('测试修复服务');
     api.getAutoFixInfo.mockRejectedValueOnce(new Error('元数据不可用'));
     api.getAutoFixReady.mockRejectedValueOnce(new Error('就绪检查不可用'));
     await button('检查服务依赖').trigger('click');
     await flushPromises();
-    expect(wrapper!.text()).not.toContain('测试修复服务');
-    expect(wrapper!.find('[role="alert"]').exists()).toBe(true);
+    expect(required(wrapper).text()).not.toContain('测试修复服务');
+    expect(required(wrapper).find('[role="alert"]').exists()).toBe(true);
   });
   it('后端失败结果不显示工作流完成的成功提示', async () => {
     api.executeAutoFixWorkflow.mockResolvedValueOnce({

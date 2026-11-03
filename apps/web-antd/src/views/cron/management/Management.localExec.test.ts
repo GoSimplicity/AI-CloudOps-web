@@ -4,6 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Management from './Management.vue';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 const client = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
@@ -69,19 +76,21 @@ async function start(allowLocalExec?: boolean) {
 
 // 按行取操作列按钮：0 详情、1 编辑、2 启停、3 立即执行、4 删除
 function actionButtons(id: number) {
-  const row = wrapper!.find(`tr[data-row-key="${id}"]`);
+  const row = required(wrapper).find(`tr[data-row-key="${id}"]`);
   return row.findAll('.k8s-action-column button');
 }
 
 async function openJobTypeOptions() {
-  const create = wrapper!
-    .findAll('button')
-    .find((item) => item.text().replace(/\s/g, '').includes('创建任务'))!;
+  const create = required(
+    required(wrapper)
+      .findAll('button')
+      .find((item) => item.text().replace(/\s/g, '').includes('创建任务')),
+  );
   await create.trigger('click');
   await flushPromises();
-  const select = document.body.querySelectorAll(
-    '.ant-modal .ant-select-selector',
-  )[0]!;
+  const select = required(
+    document.body.querySelectorAll('.ant-modal .ant-select-selector')[0],
+  );
   select.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
   await flushPromises();
   return [...document.body.querySelectorAll('.ant-select-item-option')].map(
@@ -123,13 +132,13 @@ describe('sEC-03A 本地命令/脚本开关（真实页面）', () => {
     await start(false);
     for (const id of [2, 4]) {
       const buttons = actionButtons(id);
-      expect(buttons[1]!.attributes('disabled')).toBeDefined();
-      expect(buttons[3]!.attributes('disabled')).toBeDefined();
+      expect(required(buttons[1]).attributes('disabled')).toBeDefined();
+      expect(required(buttons[3]).attributes('disabled')).toBeDefined();
     }
     for (const id of [3, 5]) {
       const buttons = actionButtons(id);
-      expect(buttons[1]!.attributes('disabled')).toBeUndefined();
-      expect(buttons[3]!.attributes('disabled')).toBeUndefined();
+      expect(required(buttons[1]).attributes('disabled')).toBeUndefined();
+      expect(required(buttons[3]).attributes('disabled')).toBeUndefined();
     }
   });
 
@@ -138,10 +147,10 @@ describe('sEC-03A 本地命令/脚本开关（真实页面）', () => {
       await start(flag);
       for (const id of [2, 4]) {
         const buttons = actionButtons(id);
-        expect(buttons[1]!.attributes('disabled')).toBeUndefined();
-        expect(buttons[3]!.attributes('disabled')).toBeUndefined();
+        expect(required(buttons[1]).attributes('disabled')).toBeUndefined();
+        expect(required(buttons[3]).attributes('disabled')).toBeUndefined();
       }
-      wrapper!.unmount();
+      required(wrapper).unmount();
       wrapper = undefined;
     }
   });

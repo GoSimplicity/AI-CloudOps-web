@@ -13,11 +13,17 @@ import {
 } from './secret-data';
 import { useSecretPage } from './Secret';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 /**
  * SEC-26 incr7（窝窝头 review-incr6）——页面组合函数层：YAML 更新 / YAML 创建 / 表单创建 / 编辑提交。
  * 只用明显的假值；断言里不出现任何真实凭据。新导出经 `sd.xxx` 访问，实现前逐条红。
  */
-const msg = sd as unknown as Record<string, (...args: any[]) => string>;
 const api = vi.hoisted(() => ({
   create: vi.fn(),
   createByYaml: vi.fn(),
@@ -136,7 +142,7 @@ describe('incr7 P2-A：YAML 更新 `token:|`（无空格）不再被编码成占
     await page.submitYamlForm();
     expect(api.updateByYaml).not.toHaveBeenCalled();
     expect(message.warning).toHaveBeenCalledWith(
-      msg.yamlDataMissingSpaceMessage!('token'),
+      sd.yamlDataMissingSpaceMessage('token'),
     );
   });
 });
@@ -163,7 +169,7 @@ describe('incr7 兜底：编码后 data 里任何值解码为占位符 → 拦�
     await page.submitCreateYamlForm();
     expect(api.createByYaml).not.toHaveBeenCalled();
     expect(message.warning).toHaveBeenCalledWith(
-      msg.yamlDataEncodedRedactedMessage!('token'),
+      sd.yamlDataEncodedRedactedMessage('token'),
     );
   });
 
@@ -172,7 +178,7 @@ describe('incr7 兜底：编码后 data 里任何值解码为占位符 → 拦�
     await page.submitCreateYamlForm();
     expect(api.createByYaml).not.toHaveBeenCalled();
     expect(message.warning).toHaveBeenCalledWith(
-      msg.yamlDataNotBase64Message!('token'),
+      sd.yamlDataNotBase64Message('token'),
     );
   });
 
@@ -237,7 +243,7 @@ describe('incr7 P3-C：YAML 更新 data 下值写在下一行 → 提示写在�
     expect(api.updateByYaml).not.toHaveBeenCalled();
     expect(message.warning).toHaveBeenCalledTimes(1);
     expect(message.warning).toHaveBeenCalledWith(
-      msg.yamlDataNextLineMessage!('token'),
+      sd.yamlDataNextLineMessage('token'),
     );
   });
 });
@@ -268,7 +274,9 @@ describe('incr7 总兜底：各种写法的明文都不会出现在发出的 YAM
         expect(message.warning).toHaveBeenCalledTimes(1);
         return;
       }
-      expectSafeSentData(api.updateByYaml.mock.calls[0]![0].yaml as string);
+      expectSafeSentData(
+        required(api.updateByYaml.mock.calls[0])[0].yaml as string,
+      );
     },
   );
 
@@ -279,7 +287,7 @@ describe('incr7 总兜底：各种写法的明文都不会出现在发出的 YAM
     await page.submitYamlForm();
     expect(api.updateByYaml).not.toHaveBeenCalled();
     expect(message.warning).toHaveBeenCalledWith(
-      msg.yamlDataNotBase64Message!('k'),
+      sd.yamlDataNotBase64Message('k'),
     );
   });
 
@@ -289,7 +297,7 @@ describe('incr7 总兜底：各种写法的明文都不会出现在发出的 YAM
     await page.submitYamlForm();
     expect(message.warning).not.toHaveBeenCalled();
     expect(api.updateByYaml).toHaveBeenCalledTimes(1);
-    expect(api.updateByYaml.mock.calls[0]![0].yaml).toBe(original);
+    expect(required(api.updateByYaml.mock.calls[0])[0].yaml).toBe(original);
   });
 });
 
@@ -299,7 +307,7 @@ describe('incr7 P3-B：编辑提交 validate 返回后再核对打开序号；�
     const validate = deferred<unknown>();
     page.formRef.value = { validate: vi.fn(() => validate.promise) } as any;
     await page.openEditModal(RECORD);
-    page.setEditDataValue(page.editDataRows.value[0]!, FAKE);
+    page.setEditDataValue(required(page.editDataRows.value[0]), FAKE);
     return { page, validate };
   }
 
@@ -339,7 +347,7 @@ describe('incr7 P3-B：编辑提交 validate 返回后再核对打开序号；�
     validate.resolve({});
     await submitting;
     expect(api.update).toHaveBeenCalledTimes(1);
-    expect(api.update.mock.calls[0]![0]).toMatchObject({
+    expect(required(api.update.mock.calls[0])[0]).toMatchObject({
       cluster_id: 1,
       namespace: 'ns-a',
       name: 'secret-a',
@@ -355,6 +363,6 @@ describe('incr7 P3-B：编辑提交 validate 返回后再核对打开序号；�
     validate.resolve({});
     await submitting;
     expect(api.update).toHaveBeenCalledTimes(1);
-    expect(api.update.mock.calls[0]![0].name).toBe('secret-a');
+    expect(required(api.update.mock.calls[0])[0].name).toBe('secret-a');
   });
 });

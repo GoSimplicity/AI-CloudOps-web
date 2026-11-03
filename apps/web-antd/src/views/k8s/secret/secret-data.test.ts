@@ -17,6 +17,13 @@ import {
   yamlHasQuotedRedacted,
 } from './secret-data';
 
+function required<T>(value: null | T | undefined): T {
+  if (value === null || value === undefined) {
+    throw new Error('测试前置条件缺失');
+  }
+  return value;
+}
+
 /**
  * SEC-25/26 规则 2：PUT /k8s/secret/:cluster_id/:namespace/:name/update 的 data 语义
  * （AI-CloudOps@ed683ef internal/k8s/service/secret_service.go preserveRedactedData）：
@@ -61,8 +68,8 @@ describe('buildSecretDataPayload', () => {
   it('改了某个键：发全部键，未改的为 ""，改的为新值 base64', () => {
     const original = ['a', 'b', 'c'];
     const current = rows(original);
-    current[1]!.value = FAKE;
-    current[1]!.modified = true;
+    required(current[1]).value = FAKE;
+    required(current[1]).modified = true;
     expect(isDataEdited(original, current)).toBe(true);
     expect(buildSecretDataPayload(original, current)).toEqual({
       a: '',
@@ -97,17 +104,19 @@ describe('buildSecretDataPayload', () => {
 
   it('uTF-8 值按字节编码', () => {
     const current = rows(['a']);
-    current[0]!.value = '测试假值';
-    current[0]!.modified = true;
-    const payload = buildSecretDataPayload(['a'], current)!;
-    const bytes = Uint8Array.from(atob(payload.a!), (c) => c.charCodeAt(0));
+    required(current[0]).value = '测试假值';
+    required(current[0]).modified = true;
+    const payload = required(buildSecretDataPayload(['a'], current));
+    const bytes = Uint8Array.from(atob(required(payload.a)), (c) =>
+      c.charCodeAt(0),
+    );
     expect(new TextDecoder().decode(bytes)).toBe('测试假值');
   });
 
   it('改成空值：表单拦截，提示「不支持设为空值，请删除该键」，不生成 payload', () => {
     const current = rows(['a']);
-    current[0]!.value = '';
-    current[0]!.modified = true;
+    required(current[0]).value = '';
+    required(current[0]).modified = true;
     expect(EMPTY_VALUE_MESSAGE).toBe('不支持设为空值，请删除该键');
     expect(validateDataRows(current)).toBe(EMPTY_VALUE_MESSAGE);
     expect(() => buildSecretDataPayload(['a'], current)).toThrow(
@@ -130,8 +139,8 @@ describe('buildSecretDataPayload', () => {
     '值为脱敏占位符 %j：拦截，不会被编码发出',
     (value) => {
       const current = rows(['a']);
-      current[0]!.value = value;
-      current[0]!.modified = true;
+      required(current[0]).value = value;
+      required(current[0]).modified = true;
       expect(validateDataRows(current)).toContain(REDACTED_PLACEHOLDER);
       expect(() => buildSecretDataPayload(['a'], current)).toThrow();
     },
