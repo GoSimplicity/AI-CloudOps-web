@@ -43,6 +43,8 @@ import {
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
 
+import { useWorkloadHistoryScope } from '../shared/use-workload-rollback-scope';
+
 // YAML 模板常量
 const DAEMONSET_YAML_TEMPLATE = `apiVersion: apps/v1
 kind: DaemonSet
@@ -873,33 +875,20 @@ export function useDaemonSetPage() {
     daemonSetPods.value = [];
   };
 
-  // 查看版本历史
-  const showHistoryModal = async (record: K8sDaemonSet) => {
-    const clusterId = validateClusterId(record);
-    if (!clusterId) return;
-
-    try {
-      submitLoading.value = true;
-      currentOperationDaemonSet.value = { ...record, cluster_id: clusterId };
-      const res = await getDaemonSetHistoryApi(
-        clusterId,
-        record.namespace,
-        record.name,
-      );
-      daemonSetHistory.value = res?.items || [];
-      isHistoryModalVisible.value = true;
-    } catch (error) {
-      if (shouldNotifyPageError(error)) message.error('获取版本历史失败');
-    } finally {
-      submitLoading.value = false;
-    }
-  };
-
-  const closeHistoryModal = () => {
-    isHistoryModalVisible.value = false;
-    currentOperationDaemonSet.value = null;
-    daemonSetHistory.value = [];
-  };
+  // 历史窗口及其读取结果只能属于发起时的资源和登录会话。
+  const {
+    close: closeHistoryModal,
+    isCurrent: isHistoryCurrent,
+    loading: historyLoading,
+    show: showHistoryModal,
+  } = useWorkloadHistoryScope({
+    cluster: filterClusterId,
+    history: daemonSetHistory,
+    namespace: filterNamespace,
+    read: getDaemonSetHistoryApi,
+    target: currentOperationDaemonSet,
+    visible: isHistoryModalVisible,
+  });
 
   // 标签过滤管理
   const addFilterLabel = (key: string, value: string) => {
@@ -1428,6 +1417,8 @@ export function useDaemonSetPage() {
     closePodModal,
 
     // history operations
+    historyLoading,
+    isHistoryCurrent,
     showHistoryModal,
     closeHistoryModal,
 

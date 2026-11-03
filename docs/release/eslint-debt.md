@@ -300,3 +300,16 @@ SystemUser角色读取/分配/移除清除4处隐藏非空断言。窗口打开�
 - 新43项真实SFC+AntD延迟场景，连同SystemRole与请求通知scanner共71项通过；应用类型检查通过。
 - 生产文件ESLint79→76且其它规则无新增，新测试0 errors/0 warnings；4项SFC语法未在旧规则作用域，未错误计入诊断减少。
 - 故意NaN ID负例会产生Vue invalid-key warning，保留真实记录，不宣称测试输出零warning。没有真实权限变更；其它用户CRUD工作流不在本阶段重写范围。
+
+## 阶段二十四：Kubernetes回滚与版本历史闭环（2026-11-03）
+
+Deployment/DaemonSet/StatefulSet回滚不再从确认时已变化的ref重读目标：捕获合法cluster/revision、原样name/namespace、UID/authGeneration、筛选条件及历史窗口世代，重复/取消/过期确认不外发，迟到回执不关闭或刷新新窗口。保持三类API各自原请求字段差异。
+
+审查发现仅确认隔离不足：旧历史A可迟到显示为B的revision，因此同阶段限定修改三个业务.ts的history show/close链，复用共享历史scope。历史读取清旧数据、绑定原目标及会话，乱序/同资源关重开/卸载不更新新窗口；独立historyLoading不影响其它CRUD，sameUID重登后旧已加载历史不能用于新确认。三个.ts其它CRUD AST核对未改。
+
+历史读取与回滚捕获共同拒绝非法路径段：非空且原样无首尾空白，禁止斜杠、反斜杠、?#%、ASCII空白/控制及DEL、单独点或双点；不是完整Kubernetes DNS命名schema。错误不回显目标值。
+
+- 新399项真实SFC/history/Fake客户端回归及相邻资源/表格/scanner等119项，共518项通过；应用类型检查通过。
+- 路径矩阵覆盖name/namespace及三类页面、正常点号/横线合同；目标/账号/会话/筛选/窗口切换、旧成功/失败/finally、重复与取消确认均验证。
+- 新共享模块/测试ESLint0/0，6生产文件逐规则计数不增加，差异检查通过。本阶段未扩大SFC全局TS规则，13处原script非空断言清除。
+- 已发出的远端操作不能靠忽略UI回执追溯撤销；测试全部Fake，没有连接真实K8s、执行真实回滚或上线。全量与构建另待统一冻结复验。

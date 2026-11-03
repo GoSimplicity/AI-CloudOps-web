@@ -33,6 +33,8 @@ import {
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
+import { useWorkloadRollbackScope } from '../shared/use-workload-rollback-scope';
+
 const { can } = usePermission();
 
 const {
@@ -157,6 +159,8 @@ const {
   closePodModal,
 
   // history operations
+  historyLoading,
+  isHistoryCurrent,
   showHistoryModal,
   closeHistoryModal,
 
@@ -383,44 +387,53 @@ const resetFilters = () => {
   clearNamespaces();
 };
 
+const rollbackScope = useWorkloadRollbackScope({
+  cluster: filterClusterId,
+  namespace: filterNamespace,
+  target: currentOperationStatefulSet,
+  visible: isHistoryModalVisible,
+});
+
 // 快速回滚到指定版本
 const rollbackToVersion = (revision: number) => {
-  if (!currentOperationStatefulSet.value) return;
+  if (!isHistoryCurrent()) return;
+  const ticket = rollbackScope.capture(revision);
+  if (!ticket) return;
 
   Modal.confirm({
     title: '回滚确认',
-    content: `确定要将 StatefulSet "${currentOperationStatefulSet.value.name}" 回滚到版本 ${revision} 吗？`,
+    content: `确定要将 StatefulSet "${ticket.name}" 回滚到版本 ${ticket.revision} 吗？`,
     okText: '确认回滚',
     okType: 'primary',
     cancelText: '取消',
     centered: true,
+    onCancel: () => rollbackScope.cancel(ticket),
     onOk: async () => {
+      if (!isHistoryCurrent() || !rollbackScope.begin(ticket)) return;
       try {
-        const clusterId =
-          currentOperationStatefulSet.value!.cluster_id ||
-          filterClusterId.value;
-        if (!clusterId || clusterId === 0) {
-          message.error('无效的集群ID，请重新选择集群');
-          return;
-        }
-
         await rollbackStatefulSetApi(
-          clusterId,
-          currentOperationStatefulSet.value!.namespace,
-          currentOperationStatefulSet.value!.name,
+          ticket.clusterId,
+          ticket.namespace,
+          ticket.name,
           {
-            cluster_id: clusterId,
-            namespace: currentOperationStatefulSet.value!.namespace,
-            name: currentOperationStatefulSet.value!.name,
-            revision,
+            cluster_id: ticket.clusterId,
+            namespace: ticket.namespace,
+            name: ticket.name,
+            revision: ticket.revision,
           },
         );
-        message.success(`StatefulSet 回滚到版本 ${revision} 成功`);
+        if (!isHistoryCurrent() || !rollbackScope.current(ticket)) return;
+        message.success(`StatefulSet 回滚到版本 ${ticket.revision} 成功`);
         closeHistoryModal();
-        await fetchStatefulSets();
+        if (rollbackScope.sameOwnerAndFilters(ticket))
+          await fetchStatefulSets();
       } catch (error) {
-        if (shouldNotifyPageError(error))
-          message.error(`StatefulSet 回滚到版本 ${revision} 失败`);
+        if (
+          isHistoryCurrent() &&
+          rollbackScope.current(ticket) &&
+          shouldNotifyPageError(error)
+        )
+          message.error(`StatefulSet 回滚到版本 ${ticket.revision} 失败`);
       }
     },
   });
@@ -2088,7 +2101,7 @@ onMounted(async () => {
     >
       <a-table
         :data-source="statefulSetHistory"
-        :loading="submitLoading"
+        :loading="historyLoading"
         :pagination="false"
         class="k8s-table"
         size="small"
