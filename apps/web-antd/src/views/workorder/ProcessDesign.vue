@@ -129,9 +129,10 @@ const selectedStep = computed(() => {
 });
 
 const otherStepsOptions = computed(() => {
-  if (!selectedStep.value) return [];
+  const currentStep = selectedStep.value;
+  if (!currentStep) return [];
   return processSteps.value
-    .filter((step) => step.id !== selectedStep.value!.id)
+    .filter((step) => step.id !== currentStep.id)
     .map((step) => ({
       label: `${step.name} (${getStepTypeText(step.type)})`,
       value: step.id,
@@ -140,9 +141,10 @@ const otherStepsOptions = computed(() => {
 
 const selectedStepConnections = computed({
   get() {
-    if (!selectedStep.value) return [];
+    const currentStep = selectedStep.value;
+    if (!currentStep) return [];
     return connections.value
-      .filter((c) => c.from === selectedStep.value!.id)
+      .filter((c) => c.from === currentStep.id)
       .map((c) => c.to);
   },
   set(newTargetIds: string[]) {

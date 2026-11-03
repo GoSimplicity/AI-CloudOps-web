@@ -128,6 +128,43 @@ describe('表单设计真实控件合同', () => {
       new Set(fields.map((field: { name: string }) => field.name)).size,
     ).toBe(2);
   });
+  it('真实移动控件交换完整字段并保持保存顺序', async () => {
+    await draft();
+    await button('文本框');
+    await required(wrapper).get('.field-panel .anticon-down').trigger('click');
+    await button('保存设计');
+    const fields = required(client.post.mock.calls[0])[1].schema.fields;
+    expect(fields.map((field: { name: string }) => field.name)).toEqual([
+      'text_field_2',
+      'text_field_1',
+    ]);
+    expect(
+      fields.every((field: { type: string }) => field.type === 'text'),
+    ).toBe(true);
+  });
+  it('过期或非法移动索引不能丢失字段或产生空字段', async () => {
+    await draft();
+    await button('文本框');
+    const setup = Reflect.get(required(wrapper).vm.$, 'setupState');
+    const moveField = Reflect.get(setup, 'moveField');
+    expect(moveField).toBeTypeOf('function');
+    for (const [index, direction] of [
+      [-1, 1],
+      [2, -1],
+      [0.5, 1],
+      [0, Number.NaN],
+      [0, Number.POSITIVE_INFINITY],
+      [0, -1],
+    ]) {
+      moveField(index, direction);
+    }
+    await button('保存设计');
+    const fields = required(client.post.mock.calls[0])[1].schema.fields;
+    expect(fields.map((field: { name: string }) => field.name)).toEqual([
+      'text_field_1',
+      'text_field_2',
+    ]);
+  });
   it('清空需要确认，取消不丢草稿；预览校验不伪造工单提交', async () => {
     await draft();
     await button('清空表单');

@@ -190,9 +190,13 @@ async function perform(kind: 'delete' | 'read' | 'readAll', id?: number) {
     }
     if (kind !== 'readAll' && !messages.value.some((item) => item.id === id))
       return;
-    if (kind === 'read') await markInboxRead(id!);
-    else if (kind === 'delete') await deleteInboxMessage(id!);
-    else await markAllInboxRead();
+    if (kind === 'readAll') {
+      await markAllInboxRead();
+    } else {
+      if (!safeId(id)) return;
+      if (kind === 'read') await markInboxRead(id);
+      else await deleteInboxMessage(id);
+    }
     if (!current(epoch)) return;
     await Promise.all([refreshCount(), refreshList()]);
   } catch {
@@ -324,7 +328,8 @@ onBeforeUnmount(() => {
                 </div>
                 <p class="inbox-content">{{ messageText(item.content) }}</p>
                 <div class="inbox-footer">
-                  <span>{{ dateText(item.created_at) }}</span><a-space>
+                  <span>{{ dateText(item.created_at) }}</span
+                  ><a-space>
                     <a-button
                       v-if="!item.read_at && allow(codes.read)"
                       type="link"

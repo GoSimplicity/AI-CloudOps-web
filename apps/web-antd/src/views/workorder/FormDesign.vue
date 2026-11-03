@@ -288,15 +288,23 @@ const removeField = (index: number) => {
 
 // 移动字段
 const moveField = (index: number, direction: number) => {
-  if (saving.value) return;
-  importRequest++;
+  if (
+    saving.value ||
+    !Number.isSafeInteger(index) ||
+    !Number.isSafeInteger(direction) ||
+    index < 0 ||
+    index >= formSchema.fields.length
+  )
+    return;
   const newIndex = index + direction;
-  if (newIndex >= 0 && newIndex < formSchema.fields.length) {
-    const temp = formSchema.fields[index];
-    formSchema.fields[index] = formSchema.fields[newIndex]!;
-    formSchema.fields[newIndex] = temp!;
-    message.success('字段位置已调整');
-  }
+  if (newIndex < 0 || newIndex >= formSchema.fields.length) return;
+  const field = formSchema.fields[index];
+  const target = formSchema.fields[newIndex];
+  if (!field || !target) return;
+  importRequest++;
+  formSchema.fields[index] = target;
+  formSchema.fields[newIndex] = field;
+  message.success('字段位置已调整');
 };
 
 // 切换预览模式
