@@ -304,7 +304,7 @@ function buildProviderCredentials(
   if (
     !/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(project_id) ||
     !service_account_json ||
-    new TextEncoder().encode(service_account_json).length > 16384
+    new TextEncoder().encode(service_account_json).length > 16_384
   )
     throw new Error('请完整填写有效的 GCP 项目 ID 和服务账号 JSON');
   let parsed: unknown;

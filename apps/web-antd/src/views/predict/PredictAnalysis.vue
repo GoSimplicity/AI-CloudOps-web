@@ -186,7 +186,7 @@ const getCurrentValueUnit = () => {
 const getCurrentValueMax = () => {
   switch (formData.predictionType) {
     case 'qps': {
-      return 10000;
+      return 10_000;
     }
     case 'cpu':
     case 'memory':

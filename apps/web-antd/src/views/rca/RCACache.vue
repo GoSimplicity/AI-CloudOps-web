@@ -63,8 +63,8 @@ const formatTTL = (ttl?: number) => {
   if (ttl === undefined || ttl === null) return 'N/A';
   if (ttl < 60) return `${ttl}秒`;
   if (ttl < 3600) return `${Math.floor(ttl / 60)}分钟`;
-  if (ttl < 86400) return `${Math.floor(ttl / 3600)}小时`;
-  return `${Math.floor(ttl / 86400)}天`;
+  if (ttl < 86_400) return `${Math.floor(ttl / 3600)}小时`;
+  return `${Math.floor(ttl / 86_400)}天`;
 };
 
 // 格式化缓存键数量

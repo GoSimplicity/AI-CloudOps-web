@@ -460,7 +460,7 @@ const startAutoRefresh = () => {
     if (!loading.value) {
       refreshAllDiagnosis();
     }
-  }, 30000);
+  }, 30_000);
 
   message.info('已明确开启每30秒诊断，离开页面或切换账户会停止');
 };

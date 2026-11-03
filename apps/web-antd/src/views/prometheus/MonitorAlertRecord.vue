@@ -216,7 +216,7 @@ const formRules = {
           const portStr = value.split(':')[1];
           if (portStr) {
             const port = parseInt(portStr);
-            if (port < 1 || port > 65535) {
+            if (port < 1 || port > 65_535) {
               return Promise.reject('端口必须在1-65535之间');
             }
           }

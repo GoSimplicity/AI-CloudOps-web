@@ -34,7 +34,7 @@ export function buildNotificationSchedule(
       typeof delayMinutes !== 'number' ||
       !Number.isInteger(delayMinutes) ||
       delayMinutes < 1 ||
-      delayMinutes > 10080
+      delayMinutes > 10_080
     )
       throw new Error('延迟分钟须为1至10080的整数');
     payload.delay_minutes = delayMinutes;
@@ -81,7 +81,7 @@ export function buildNotificationSchedule(
     if (
       !Number.isInteger(form.repeatInterval) ||
       form.repeatInterval < 1 ||
-      form.repeatInterval > 10080 ||
+      form.repeatInterval > 10_080 ||
       !Number.isInteger(form.repeatCount) ||
       form.repeatCount < 2 ||
       form.repeatCount > 100

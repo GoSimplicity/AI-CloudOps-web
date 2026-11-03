@@ -209,8 +209,8 @@ function formatBytes(bytes: unknown): string {
 function formatUptime(seconds: unknown): string {
   const value = finite(seconds);
   if (value === null) return '未知';
-  const days = Math.floor(value / 86400),
-    hours = Math.floor((value % 86400) / 3600),
+  const days = Math.floor(value / 86_400),
+    hours = Math.floor((value % 86_400) / 3600),
     minutes = Math.floor((value % 3600) / 60);
   return days
     ? `${days}天 ${hours}小时`
@@ -500,7 +500,7 @@ function activate() {
   timeTimer = setInterval(updateTime, 1000);
   dataTimer = setInterval(() => {
     void fetchAllSystemData();
-  }, 30000);
+  }, 30_000);
   window.addEventListener('resize', resizeCharts);
   themeObserver = new MutationObserver(() => {
     if (active && !disposed) updateCharts();

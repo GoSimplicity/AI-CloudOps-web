@@ -590,7 +590,7 @@ async function sync() {
     selectionAtStart = selection,
     userId = owner.value.id;
   if (!target || !userId || !canSync.value) return;
-  if (idsText.value.length > 12000) {
+  if (idsText.value.length > 12_000) {
     message.warning('资源 ID 文本不能超过12000字符');
     return;
   }

@@ -397,7 +397,7 @@ const formRules = computed(() => ({
     {
       type: 'integer' as const,
       min: 0,
-      max: 65535,
+      max: 65_535,
       message: '端口必须为0或1-65535的整数',
       trigger: 'blur',
     },

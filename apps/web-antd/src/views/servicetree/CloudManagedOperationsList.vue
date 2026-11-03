@@ -145,7 +145,11 @@ function choose(row: ManagedCloudOperation) {
   );
 }
 function useResourceIDs() {
-  if (!selected.value || reviewBusy.value || resourceInput.value.length > 12000)
+  if (
+    !selected.value ||
+    reviewBusy.value ||
+    resourceInput.value.length > 12_000
+  )
     return;
   const ids = resourceInput.value.split(/[\s,，]+/).filter(Boolean);
   const marker = parseManagedMarker(

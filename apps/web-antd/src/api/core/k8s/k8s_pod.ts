@@ -467,7 +467,7 @@ export const downloadK8sPodFile = (params: PodFileDownloadReq) => {
   const config = {
     responseType: 'blob' as const,
     params: queryParams,
-    timeout: 300000, // 5分钟超时
+    timeout: 300_000, // 5分钟超时
     headers: {
       Accept: 'application/octet-stream, */*',
     },

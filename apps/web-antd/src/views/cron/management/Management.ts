@@ -184,7 +184,7 @@ const validateHttpRequestURL = async (
     const httpProtocol = ['http:', 'https:'].includes(parsed.protocol);
     const validPort =
       !parsed.port ||
-      (Number(parsed.port) >= 1 && Number(parsed.port) <= 65535);
+      (Number(parsed.port) >= 1 && Number(parsed.port) <= 65_535);
     if (
       invalidCharacters ||
       !explicitAuthority ||

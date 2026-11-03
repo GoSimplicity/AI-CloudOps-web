@@ -9,7 +9,7 @@ const resourceID = /^[A-Za-z0-9][A-Za-z0-9-]{1,99}$/;
 export function parseManagedMarker(
   raw: string | null,
 ): ManagedOperationMarker | null {
-  if (!raw || raw.length > 15000) return null;
+  if (!raw || raw.length > 15_000) return null;
   try {
     const value = JSON.parse(raw);
     if (

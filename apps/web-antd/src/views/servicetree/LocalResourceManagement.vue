@@ -143,7 +143,7 @@ const formRules = computed(() => ({
     {
       type: 'number',
       min: 1,
-      max: 65535,
+      max: 65_535,
       message: '端口范围为1-65535',
       trigger: 'blur',
     },

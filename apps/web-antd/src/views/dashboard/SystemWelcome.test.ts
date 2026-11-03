@@ -64,7 +64,7 @@ const sample = (overrides: Record<string, unknown> = {}) => ({
   load_avg_1: 0,
   load_avg_5: 0,
   load_avg_15: 0,
-  last_update_time: 1792740000,
+  last_update_time: 1_792_740_000,
   ...overrides,
 });
 let wrapper: VueWrapper | undefined;
