@@ -2,9 +2,12 @@
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { onBeforeUnmount } from 'vue';
 
-import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Empty, message, Modal } from 'ant-design-vue';
+
+import { useUserStore } from '@vben/stores';
+
+import { Empty, type FormInstance, message, Modal } from 'ant-design-vue';
 import {
   ApiOutlined,
   CodeOutlined,
@@ -34,10 +37,10 @@ import {
   unbindTreeLocal,
   type UnBindTreeLocalResourceReq,
   updateTreeLocal,
-  type UpdateTreeLocalResourceReq,
 } from '#/api/core/tree/tree_local';
 import { getTreeList } from '#/api/core/tree/tree_node';
 
+import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import {
@@ -45,12 +48,37 @@ import {
   shouldRecordPageError,
 } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
 
 const loadError = ref<null | string>(null);
 let listRequest = 0;
 let detailRequest = 0;
 let formRequest = 0;
+const formWindow = ref(0);
+let active = true;
+let formOwner: string | undefined;
+let listOwner: string | undefined;
+let detailOwner: string | undefined;
+let editTarget: TreeLocalResource | undefined;
+let deleteDialog: ReturnType<typeof Modal.confirm> | undefined;
+let deleteRevision = 0;
+const validResourceId = (id: unknown): id is number =>
+  typeof id === 'number' && Number.isSafeInteger(id) && id > 0;
+const pageOwner = (): string | undefined => {
+  const id = useUserStore().userInfo?.userId;
+  const generation = useAuthStore().getAuthGeneration();
+  if (
+    (typeof id !== 'string' && typeof id !== 'number') ||
+    !String(id).trim() ||
+    String(id).trim() === '0' ||
+    !Number.isSafeInteger(generation) ||
+    generation < 0
+  )
+    return;
+  return JSON.stringify([String(id).trim(), generation]);
+};
+const formPermission = (editing: boolean) =>
+  hasPerm(editing ? '/api/tree/local/update/:id' : '/api/tree/local/create');
 const existingAuthMode = ref<AuthMode>();
 
 const loading = ref(false);
@@ -68,7 +96,7 @@ const unbindLoading = ref(false);
 const router = useRouter();
 const { width: windowWidth } = useWindowSize();
 
-const formRef = ref();
+const formRef = ref<FormInstance>();
 const newTag = ref('');
 const tagInputRef = ref();
 const selectedTreeNodeIds = ref<number[]>([]);
@@ -312,8 +340,14 @@ const fetchTreeData = async (): Promise<void> => {
   }
 };
 
-const fetchLocalResources = async (): Promise<void> => {
+const fetchLocalResourcesForScope = async (
+  stillCurrent: () => boolean = () => true,
+): Promise<void> => {
+  const owner = pageOwner();
+  if (!active || !owner || !stillCurrent()) return;
   const ticket = ++listRequest;
+  const isCurrent = () =>
+    active && ticket === listRequest && pageOwner() === owner && stillCurrent();
   loadError.value = null;
   loading.value = true;
   try {
@@ -327,17 +361,18 @@ const fetchLocalResources = async (): Promise<void> => {
     }
 
     const response = await getTreeLocalList(params);
-    if (ticket !== listRequest) return;
+    if (!isCurrent()) return;
 
     // 确保返回的数据包含 tree_nodes 字段
     const items = response.items || [];
+    listOwner = owner;
     localResources.value = items.map((item: TreeLocalResource) => ({
       ...item,
       tree_nodes: item.tree_nodes || [],
     }));
     pagination.total = response.total || 0;
   } catch (error) {
-    if (ticket !== listRequest) return;
+    if (!isCurrent()) return;
     if (shouldRecordPageError(error))
       loadError.value = '获取本地资源列表失败，请重试';
     if (shouldNotifyPageError(error)) message.error('获取本地资源列表失败');
@@ -348,6 +383,8 @@ const fetchLocalResources = async (): Promise<void> => {
     if (ticket === listRequest) loading.value = false;
   }
 };
+
+const fetchLocalResources = () => fetchLocalResourcesForScope();
 
 const handleSearch = (): void => {
   pagination.current = 1;
@@ -374,16 +411,49 @@ const handleTableChange = (pag: {
   fetchLocalResources();
 };
 
-const handleConnectTerminal = (record: TreeLocalResource) => {
-  if (record.id) {
-    router.push({ name: 'WebTerminal', params: { id: record.id } });
-  } else {
+function clearDraftSecrets(): void {
+  formData.value.password = '';
+  formData.value.key = '';
+}
+function invalidateForm(): void {
+  formRequest += 1;
+  formWindow.value += 1;
+  formOwner = undefined;
+  editTarget = undefined;
+  clearDraftSecrets();
+  newTag.value = '';
+  submitLoading.value = false;
+  modalVisible.value = false;
+}
+const closeDetails = (): void => {
+  detailRequest += 1;
+  detailOwner = undefined;
+  detailVisible.value = false;
+  detailLoading.value = false;
+  currentDetail.value = null;
+};
+function savedResource(record: TreeLocalResource, owner: string): boolean {
+  return (
+    (listOwner === owner && localResources.value.includes(record)) ||
+    (detailOwner === owner &&
+      detailVisible.value &&
+      currentDetail.value === record)
+  );
+}
+
+const handleConnectTerminal = (record: TreeLocalResource): void => {
+  const owner = pageOwner();
+  if (!active || !owner || !can('tree.local.terminal')) return;
+  if (!validResourceId(record.id) || !savedResource(record, owner)) {
     message.error('无效的资源ID');
+    return;
   }
+  // Only the saved resource ID leaves this page; draft connection fields never do.
+  router.push({ name: 'WebTerminal', params: { id: record.id } });
 };
 
-// 修复：重置表单数据的函数
 const resetFormData = (): void => {
+  clearDraftSecrets();
   formData.value = {
     name: '',
     environment: 'local',
@@ -400,24 +470,31 @@ const resetFormData = (): void => {
     key: '',
   };
   newTag.value = '';
-  if (formRef.value) {
-    formRef.value.resetFields();
-  }
 };
 
 const showCreateModal = (): void => {
-  formRequest++;
-  submitLoading.value = false;
+  const owner = pageOwner();
+  if (!active || !owner || !formPermission(false)) return;
+  invalidateForm();
+  closeDetails();
+  formOwner = owner;
   existingAuthMode.value = undefined;
   isEdit.value = false;
   resetFormData();
   modalVisible.value = true;
 };
 
-// 修复：编辑时的数据复制
 const handleEdit = (record: TreeLocalResource): void => {
-  formRequest++;
-  submitLoading.value = false;
+  const owner = pageOwner();
+  if (!active || !owner || !formPermission(true)) return;
+  if (!validResourceId(record.id) || !savedResource(record, owner)) {
+    message.error('无效的资源ID');
+    return;
+  }
+  invalidateForm();
+  closeDetails();
+  formOwner = owner;
+  editTarget = record;
   existingAuthMode.value = record.auth_mode;
   isEdit.value = true;
   formData.value = {
@@ -429,37 +506,47 @@ const handleEdit = (record: TreeLocalResource): void => {
     ip_addr: record.ip_addr,
     port: record.port,
     username: record.username,
-    password: '', // 密码不回显
+    password: '',
     os_type: record.os_type,
     os_name: record.os_name,
     image_name: record.image_name,
     auth_mode: record.auth_mode,
-    key: '', // 私钥不回显
+    key: '',
   };
   modalVisible.value = true;
-  if (detailVisible.value) {
-    detailVisible.value = false;
-  }
 };
 
 const handleViewDetail = async (record: TreeLocalResource): Promise<void> => {
+  const owner = pageOwner();
+  const id = record.id;
+  if (!active || !owner || !hasPerm('/api/tree/local/detail/:id')) return;
+  if (!validResourceId(id) || !savedResource(record, owner)) {
+    message.error('无效的资源ID');
+    return;
+  }
   const ticket = ++detailRequest;
+  detailOwner = owner;
+  const isCurrent = () =>
+    active &&
+    ticket === detailRequest &&
+    detailVisible.value &&
+    pageOwner() === owner &&
+    record.id === id &&
+    hasPerm('/api/tree/local/detail/:id');
   currentDetail.value = null;
   detailVisible.value = true;
   detailLoading.value = true;
-
   try {
-    const response = await getTreeLocalDetail(record.id);
-    if (ticket !== detailRequest || !detailVisible.value) return;
-    // 确保详情数据包含 tree_nodes 字段
+    const response = await getTreeLocalDetail(id);
+    if (!isCurrent()) return;
+    if (response?.id !== id) throw new Error('资源详情标识无效');
     currentDetail.value = {
       ...response,
       tree_nodes: response.tree_nodes || [],
     };
-  } catch (error) {
-    if (ticket !== detailRequest) return;
-
-    if (shouldNotifyPageError(error)) message.error('获取资源详情失败');
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('获取资源详情失败');
   } finally {
     if (ticket === detailRequest) detailLoading.value = false;
   }
@@ -614,37 +701,95 @@ const handleUnbind = async (): Promise<void> => {
 };
 
 const cancelForm = (): void => {
-  formRequest++;
-  submitLoading.value = false;
-  modalVisible.value = false;
+  invalidateForm();
 };
 
 const handleSubmit = async (): Promise<void> => {
-  if (submitLoading.value) return;
-  submitLoading.value = true;
-  const ticket = ++formRequest;
+  if (!active || submitLoading.value || !modalVisible.value) return;
+  const owner = formOwner;
+  const form = formRef.value;
+  const model = formData.value;
   const editing = isEdit.value;
-  const { id, ...data } = {
-    ...formData.value,
-    tags: formData.value.tags?.map((tag) => ({ ...tag })) ?? [],
+  const target = editTarget;
+  const id = model.id;
+  if (!owner || owner !== pageOwner() || !formPermission(editing)) return;
+  if (!form || typeof form.validate !== 'function') {
+    message.warning('表单尚未就绪，请稍后重试');
+    return;
+  }
+  if (editing && (!validResourceId(id) || !target || target.id !== id)) {
+    message.error('无效的资源ID');
+    return;
+  }
+  if (
+    (model.auth_mode !== AuthMode.PASSWORD &&
+      model.auth_mode !== AuthMode.KEY) ||
+    typeof model.port !== 'number' ||
+    !Number.isInteger(model.port) ||
+    model.port < 1 ||
+    model.port > 65_535 ||
+    !Array.isArray(model.tags) ||
+    model.tags.some(
+      (tag) => typeof tag.key !== 'string' || typeof tag.value !== 'string',
+    )
+  ) {
+    message.warning('服务器配置无效，请重新检查');
+    return;
+  }
+  const originalMode = existingAuthMode.value;
+  const fingerprint = JSON.stringify(model);
+  const { id: _draftId, ...data } = {
+    ...model,
+    tags: model.tags.map((tag) => ({ ...tag })),
   };
-  if (!data.key) delete data.key;
-  if (!data.password) delete data.password;
+  if (!data.key || data.auth_mode !== AuthMode.KEY) delete data.key;
+  if (!data.password || data.auth_mode !== AuthMode.PASSWORD)
+    delete data.password;
+  const ticket = ++formRequest;
+  const windowRevision = formWindow.value;
+  const isCurrent = () =>
+    active &&
+    modalVisible.value &&
+    formRequest === ticket &&
+    formWindow.value === windowRevision &&
+    formOwner === owner &&
+    pageOwner() === owner &&
+    formData.value === model &&
+    isEdit.value === editing &&
+    existingAuthMode.value === originalMode &&
+    formRef.value === form &&
+    formPermission(editing) &&
+    JSON.stringify(model) === fingerprint &&
+    (!editing ||
+      (editTarget === target && target?.id === id && model.id === id));
+  submitLoading.value = true;
   try {
-    await formRef.value?.validate();
-    if (ticket !== formRequest) return;
+    try {
+      await form.validate();
+    } catch {
+      return;
+    }
+    if (!isCurrent()) return;
+    const needsCredential = !editing || originalMode !== data.auth_mode;
+    if (
+      needsCredential &&
+      (data.auth_mode === AuthMode.PASSWORD ? !data.password : !data.key)
+    ) {
+      message.warning('更改认证方式时请提供新的凭据');
+      return;
+    }
     if (editing) {
-      if (!id) throw new Error('缺少资源ID');
-      await updateTreeLocal(id, data as UpdateTreeLocalResourceReq);
+      if (!validResourceId(id)) return;
+      await updateTreeLocal(id, { ...data, id });
     } else {
       await createTreeLocal(data);
     }
-    if (ticket !== formRequest) return;
+    if (!isCurrent()) return;
     message.success(editing ? '服务器信息更新成功' : '服务器添加成功');
-    modalVisible.value = false;
-    await fetchLocalResources();
-  } catch (error) {
-    if (ticket === formRequest && shouldNotifyPageError(error))
+    await fetchLocalResourcesForScope(isCurrent);
+    if (isCurrent()) invalidateForm();
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
       message.error(editing ? '更新服务器失败' : '添加服务器失败');
   } finally {
     if (ticket === formRequest) submitLoading.value = false;
@@ -652,28 +797,90 @@ const handleSubmit = async (): Promise<void> => {
 };
 
 const handleDelete = (record: TreeLocalResource): void => {
-  Modal.confirm({
+  const owner = pageOwner();
+  const id = record.id;
+  if (!active || !owner || !can('tree.local.delete')) return;
+  if (!validResourceId(id) || !savedResource(record, owner)) {
+    message.error('无效的资源ID');
+    return;
+  }
+  const request = ++deleteRevision;
+  const windowRevision = formWindow.value;
+  const details = detailRequest;
+  const list = listRequest;
+  const isCurrent = () =>
+    active &&
+    deleteRevision === request &&
+    pageOwner() === owner &&
+    record.id === id &&
+    can('tree.local.delete') &&
+    formWindow.value === windowRevision &&
+    detailRequest === details &&
+    listRequest === list;
+  deleteDialog?.destroy();
+  let consumed = false;
+  const dialog = Modal.confirm({
     title: '确定要删除此服务器吗？',
     content: `您正在删除服务器: ${record.name} (${record.ip_addr})，该操作不可恢复。`,
     okText: '确认删除',
     okType: 'danger',
     cancelText: '取消',
+    onCancel() {
+      if (deleteRevision === request) {
+        deleteRevision += 1;
+        if (deleteDialog === dialog) deleteDialog = undefined;
+      }
+    },
     async onOk() {
+      if (consumed || !isCurrent() || deleteDialog !== dialog) return;
+      consumed = true;
       try {
-        await deleteTreeLocal(record.id);
+        await deleteTreeLocal(id);
+        if (!isCurrent()) return;
         message.success('服务器删除成功');
-
-        if (detailVisible.value && currentDetail.value?.id === record.id) {
-          detailVisible.value = false;
-        }
-
-        await fetchLocalResources();
-      } catch (error) {
-        if (shouldNotifyPageError(error)) message.error('删除服务器失败');
+        if (detailVisible.value && currentDetail.value?.id === id)
+          closeDetails();
+        await fetchLocalResourcesForScope(
+          () =>
+            active &&
+            deleteRevision === request &&
+            owner === pageOwner() &&
+            formWindow.value === windowRevision,
+        );
+      } catch (error: unknown) {
+        if (isCurrent() && shouldNotifyPageError(error))
+          message.error('删除服务器失败');
+      } finally {
+        if (deleteDialog === dialog) deleteDialog = undefined;
       }
     },
   });
+  deleteDialog = dialog;
 };
+
+watch(
+  pageOwner,
+  () => {
+    invalidateForm();
+    closeDetails();
+    listRequest += 1;
+    listOwner = undefined;
+    localResources.value = [];
+    pagination.total = 0;
+    loading.value = false;
+    loadError.value = null;
+    deleteDialog?.destroy();
+    deleteDialog = undefined;
+  },
+  { flush: 'sync' },
+);
+watch(
+  () => formPermission(isEdit.value),
+  (allowed) => {
+    if (!allowed && modalVisible.value) invalidateForm();
+  },
+  { flush: 'sync' },
+);
 
 onMounted(async () => {
   try {
@@ -684,16 +891,14 @@ onMounted(async () => {
   }
 });
 onBeforeUnmount(() => {
+  active = false;
+  invalidateForm();
+  closeDetails();
   listRequest++;
-  detailRequest++;
-  formRequest++;
+  listOwner = undefined;
+  deleteDialog?.destroy();
+  deleteDialog = undefined;
 });
-const closeDetails = () => {
-  detailRequest++;
-  detailVisible.value = false;
-  detailLoading.value = false;
-  currentDetail.value = null;
-};
 </script>
 
 <template>
@@ -1013,6 +1218,7 @@ const closeDetails = () => {
       @cancel="cancelForm"
     >
       <a-form
+        :key="formWindow"
         ref="formRef"
         :model="formData"
         :rules="formRules"
@@ -1270,9 +1476,7 @@ const closeDetails = () => {
                   :color="currentDetail.os_type === 'linux' ? 'blue' : 'green'"
                   class="tech-tag"
                 >
-                  <WindowsOutlined
-                    v-if="currentDetail.os_type === 'windows'"
-                  />
+                  <WindowsOutlined v-if="currentDetail.os_type === 'windows'" />
                   <DesktopOutlined v-else />
                   {{ currentDetail.os_type === 'linux' ? 'Linux' : 'Windows' }}
                 </a-tag>
