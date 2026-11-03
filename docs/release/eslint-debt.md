@@ -506,3 +506,11 @@ Cron 参数和 Pod 资源输入移除模板非空断言：读取允许缺值，�
 - 55项真实根配置/解析器及分类测试通过，原6fixtures内容和期望保留；配置包类型检查及owned lint通过。增强门禁快照为1111文件、protected/parser0，额外41文件；普通lint仍10178 errors/5 warnings。该快照后补审覆盖校验进一步收紧，未用此结果宣称全lint通过，后续整合再取当前快照。
 - 唯一历史保护抑制about.vue的no-undef移除，精确声明实际Vite插件注入的readonly metadata全局。JavaScript/Turbo/Vue中3条已无效ts-expect-error仅删除注释，未修改运行时导入或旧规则。
 - ESLint配置包新增typecheck并进入Verify CI；Vite配置工程独立tsc也实跑通过并加入CI，保留原应用typecheck、全量Vitest（含internal tests）、构建及浏览器验证。配置YAML实际解析通过，未升级依赖、变更忽略规则或设置债务基线。
+
+## 阶段四十七：值班组CRUD目标与回执
+
+值班组新增/编辑执行真实Form验证，trim后的名称1..50、描述255、正整数周期与成员ID按Go合同检查，成员顺序及副本保留。响应式窗口世代与Form key分离交互和提交；独立submitting不借用列表loading，校验等待、旧写入及finally不能移到新目标。启停每ID单飞，删除确认one-shot，详情和成员读取latest-only；详情enable=2明确显示禁用。
+
+- 新50项CRUD、原调班33项、列表37项与提示扫描29项在统一218项中全部通过；应用类型检查通过。页面lint106→94，各规则无新增，新Safety0/0。
+- 独立审查未发现确定新阻断；保留{}成功响应及已交调班日期/DTO，进入CRUD取消旧调班交互。原错误fixture仅更新本页固定文案，不删除清理/重试断言。
+- 原“无效成员”表组曾被Vitest拆成单个参数，已改用真实数组对象并复验；未将误输入当成数组边界覆盖。全Fake，未真实排班或上线。

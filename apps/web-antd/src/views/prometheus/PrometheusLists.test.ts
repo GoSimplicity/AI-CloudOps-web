@@ -123,6 +123,7 @@ const pages: {
     component: MonitorOnDutyGroup,
     title: '值班组',
     path: '/monitor/onduty_groups/list',
+    expectedFailure: '获取值班组列表失败',
     create: '新增值班组',
   },
   {

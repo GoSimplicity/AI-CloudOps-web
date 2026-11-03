@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { useListRequest } from './useListRequest';
 import {
   computed,
   onBeforeUnmount,
   onMounted,
   reactive,
   ref,
+  toRaw,
   watch,
 } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { useUserStore } from '@vben/stores';
+import { cloneDeep } from '@vben/utils';
 
-import { type FormInstance, message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
-import { useRouter } from 'vue-router';
+import { type FormInstance, message, Modal } from 'ant-design-vue';
+import dayjs, { type Dayjs } from 'dayjs';
+
 import {
   createMonitorOnDutyGroupApi,
   createMonitorOnDutyGroupChangeApi,
@@ -33,13 +35,14 @@ import {
   updateMonitorOnDutyGroupApi,
   type UpdateMonitorOnDutyGroupReq,
 } from '#/api/core/prometheus/prometheus_onduty';
-import dayjs, { type Dayjs } from 'dayjs';
 import { getUserList, type GetUserListReq } from '#/api/core/system/user';
-
+import OpsPage from '#/components/ops/OpsPage.vue';
 import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+import { useListRequest } from './useListRequest';
 
 const { can, hasPerm } = usePermission();
 
@@ -59,6 +62,12 @@ let userListRevision = 0;
 let changeDialogOwner: string | undefined;
 let changeFormOwner: string | undefined;
 const changeSubmitting = ref(false);
+
+const crudRevision = ref(0);
+const crudSubmitting = ref(false);
+let crudOwner: string | undefined;
+let deleteDialog: ReturnType<typeof Modal.confirm> | undefined;
+const statusTickets = new Map<number, symbol>();
 
 const router = useRouter();
 
@@ -142,9 +151,9 @@ const data = ref<MonitorOnDutyGroup[]>([]);
 const searchText = ref('');
 const enableFilter = ref<1 | 2 | undefined>(undefined);
 const loading = ref(false);
-const { loadError, beginRequest } = useListRequest(loading);
-const addFormRef = ref();
-const editFormRef = ref();
+const { loadError, beginRequest, invalidate } = useListRequest(loading);
+const addFormRef = ref<FormInstance>();
+const editFormRef = ref<FormInstance>();
 const createChangeFormRef = ref<FormInstance>();
 
 // 防抖处理
@@ -313,9 +322,31 @@ const historyDateRange = ref<[Dayjs, Dayjs] | null>(null);
 const formRules = {
   name: [
     { required: true, message: '请输入值班组名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '长度应为2到50个字符', trigger: 'blur' },
+    {
+      min: 1,
+      max: 50,
+      message: '长度应为1到50个字符',
+      transform: (value: string) => value.trim(),
+      trigger: 'blur',
+    },
   ],
-  shift_days: [{ required: true, message: '请输入轮班周期', trigger: 'blur' }],
+  shift_days: [
+    {
+      required: true,
+      type: 'integer' as const,
+      min: 1,
+      message: '请输入正整数轮班周期',
+      trigger: 'blur',
+    },
+  ],
+  description: [
+    {
+      max: 255,
+      message: '描述最多255个字符',
+      transform: (value?: string) => value?.trim(),
+      trigger: 'blur',
+    },
+  ],
   user_ids: [
     { required: true, message: '请选择至少一个值班成员', trigger: 'change' },
   ],
@@ -386,6 +417,19 @@ watch(
   operationOwner,
   () => {
     invalidateChangeWindow();
+    invalidateCrud();
+    statusTickets.clear();
+    addForm.user_ids = [];
+    editForm.user_ids = [];
+    addForm.name = '';
+    editForm.name = '';
+    addForm.description = '';
+    editForm.description = '';
+    editForm.id = 0;
+    invalidate();
+    data.value = [];
+    paginationConfig.total = 0;
+    updateStats();
     ++userListRevision;
     userOptions.value = [];
     userCache.value.clear();
@@ -396,6 +440,7 @@ watch(
 onBeforeUnmount(() => {
   disposed = true;
   invalidateChangeWindow();
+  invalidateCrud();
   ++userListRevision;
 });
 
@@ -554,7 +599,7 @@ const filterOption = (input: string, option: any) => {
 };
 
 // 更新统计数据
-const updateStats = (): void => {
+function updateStats(): void {
   stats.total = paginationConfig.total;
 
   if (data.value.length > 0) {
@@ -578,10 +623,12 @@ const updateStats = (): void => {
     stats.avgShiftDays = 0;
     stats.todayOnDuty = 0;
   }
-};
+}
 
 // 数据加载
 const fetchOnDutyGroups = async (): Promise<void> => {
+  const owner = operationOwner();
+  if (disposed || !owner) return;
   const request = beginRequest();
   try {
     const params: GetMonitorOnDutyGroupListReq = {
@@ -591,7 +638,7 @@ const fetchOnDutyGroups = async (): Promise<void> => {
       enable: enableFilter.value,
     };
     const response = await getMonitorOnDutyGroupListApi(params);
-    if (!request.isCurrent()) return;
+    if (!request.isCurrent() || owner !== operationOwner()) return;
 
     if (response && response.items) {
       data.value = response.items;
@@ -606,7 +653,11 @@ const fetchOnDutyGroups = async (): Promise<void> => {
       }
     }
   } catch (error: any) {
-    if (!request.fail(error, '获取值班组列表失败')) return;
+    if (
+      owner !== operationOwner() ||
+      !request.fail(new Error('获取值班组列表失败'), '获取值班组列表失败')
+    )
+      return;
     data.value = [];
     paginationConfig.total = 0;
     updateStats();
@@ -618,9 +669,14 @@ const fetchOnDutyGroups = async (): Promise<void> => {
 
 const fetchUserList = async (page = 1, search = ''): Promise<void> => {
   const owner = operationOwner();
+  if (!owner || disposed) return;
+  const revision = crudRevision.value;
   const ticket = ++userListRevision;
   const isCurrent = () =>
-    !disposed && ticket === userListRevision && owner === operationOwner();
+    !disposed &&
+    ticket === userListRevision &&
+    owner === operationOwner() &&
+    revision === crudRevision.value;
   try {
     usersLoading.value = true;
     const req: GetUserListReq = {
@@ -635,19 +691,26 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
     const items = res?.items || res?.list || res?.data || [];
     const total = res?.total || res?.count || 0;
 
-    const newOptions = items.map((user: any) => {
-      const userId = user.id || user.userId || user.user_id;
-      const userName =
-        user.real_name || user.username || user.realName || `用户${userId}`;
+    const newOptions = items.flatMap(
+      (user: {
+        id?: number;
+        real_name?: string;
+        realName?: string;
+        user_id?: number;
+        userId?: number;
+        username?: string;
+      }) => {
+        const userId = user.id ?? user.userId ?? user.user_id;
+        if (!validPositiveId(userId)) return [];
+        const userName =
+          user.real_name || user.username || user.realName || `用户${userId}`;
 
-      // 缓存用户信息
-      userCache.value.set(userId, userName);
+        // 缓存用户信息
+        userCache.value.set(userId, userName);
 
-      return {
-        value: userId,
-        label: userName,
-      };
-    });
+        return [{ value: userId, label: userName }];
+      },
+    );
 
     if (page === 1) {
       userOptions.value = newOptions;
@@ -663,8 +726,7 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
     userPaginationConfig.hasMore = page * userPaginationConfig.pageSize < total;
   } catch (error: any) {
     if (!isCurrent()) return;
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取用户列表失败');
+    if (shouldNotifyPageError(error)) message.error('获取用户列表失败');
   } finally {
     if (isCurrent()) usersLoading.value = false;
   }
@@ -711,20 +773,6 @@ const handleChangeUserSearch = (value: string): void => {
 };
 
 // 获取值班组详情
-const fetchOnDutyGroupDetail = async (id: number): Promise<void> => {
-  try {
-    const response = await getMonitorOnDutyGroupDetailApi(id);
-    if (response) {
-      detailDialog.data = response;
-    } else {
-      message.error('获取值班组详情失败');
-    }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取值班组详情失败');
-  }
-};
-
 // 获取未来排班计划
 
 // 获取值班历史
@@ -875,49 +923,79 @@ const handleEnableChange = async (
   record: MonitorOnDutyGroup & { statusLoading?: boolean },
   checked: boolean,
 ): Promise<void> => {
+  const owner = operationOwner();
+  const id = record.id;
+  if (!owner || disposed || !validPositiveId(id) || statusTickets.has(id))
+    return;
+  const userIds = record.users?.map((user) => user.id) ?? [];
+  const payload: UpdateMonitorOnDutyGroupReq = {
+    description: record.description,
+    enable: checked ? 1 : 2,
+    id,
+    name: record.name,
+    shift_days: record.shift_days,
+    user_ids: [...userIds],
+  };
+  if (!validGroupPayload(payload)) {
+    message.error('值班组信息不合法');
+    return;
+  }
+  const fingerprint = JSON.stringify({ ...payload, enable: record.enable });
+  const ticket = Symbol('status-request');
+  statusTickets.set(id, ticket);
+  const ownsRequest = () =>
+    !disposed && owner === operationOwner() && statusTickets.get(id) === ticket;
+  const current = () =>
+    ownsRequest() &&
+    data.value.includes(record) &&
+    fingerprint ===
+      JSON.stringify({
+        description: record.description,
+        enable: record.enable,
+        id: record.id,
+        name: record.name,
+        shift_days: record.shift_days,
+        user_ids: record.users?.map((user) => user.id) ?? [],
+      });
+  record.statusLoading = true;
   try {
-    record.statusLoading = true;
-
-    // 如果users为空，尝试从data.value中找
-    let userIds = record.users?.map((user) => user.id);
-    if (!userIds || userIds.length === 0) {
-      const found = data.value.find((item) => item.id === record.id);
-      if (found && found.users && found.users.length > 0) {
-        userIds = found.users.map((user) => user.id);
-      }
-    }
-
-    const payload: UpdateMonitorOnDutyGroupReq = {
-      id: record.id,
-      name: record.name,
-      shift_days: record.shift_days,
-      user_ids: userIds,
-      enable: checked ? 1 : 2,
-      description: record.description,
-    };
-
-    const response = await updateMonitorOnDutyGroupApi(payload);
-
-    if (response) {
-      record.enable = checked ? 1 : 2;
-      message.success(`值班组已${checked ? '启用' : '禁用'}`);
-    } else {
-      message.error(`${checked ? '启用' : '禁用'}值班组失败`);
-    }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '更新值班组状态失败');
+    await updateMonitorOnDutyGroupApi(payload);
+    if (!current()) return;
+    record.enable = checked ? 1 : 2;
+    message.success(`值班组已${checked ? '启用' : '禁用'}`);
+  } catch (error: unknown) {
+    if (current() && shouldNotifyPageError(error))
+      message.error('更新值班组状态失败');
   } finally {
-    if (record) {
+    if (ownsRequest()) {
       record.statusLoading = false;
+      statusTickets.delete(id);
     }
   }
 };
 
-// 查看详情
 const handleViewDetail = async (record: MonitorOnDutyGroup): Promise<void> => {
-  await fetchOnDutyGroupDetail(record.id);
+  const id = record.id;
+  if (!validPositiveId(id)) {
+    message.error('记录ID不合法');
+    return;
+  }
+  if (!beginCrud()) return;
+  const current = captureCrud();
+  detailDialog.data = null;
   detailDialogVisible.value = true;
+  try {
+    const response = await getMonitorOnDutyGroupDetailApi(id);
+    if (!current()) return;
+    if (!response || response.id !== id)
+      throw new Error('Invalid group response');
+    detailDialog.data = response;
+  } catch (error: unknown) {
+    if (current()) {
+      detailDialogVisible.value = false;
+      if (shouldNotifyPageError(error)) message.error('获取值班组详情失败');
+    }
+  }
 };
 
 // 查看未来排班计划
@@ -1113,8 +1191,56 @@ const exportHistory = async (): Promise<void> => {
   }
 };
 
+function invalidateCrud() {
+  crudRevision.value += 1;
+  ++userListRevision;
+  deleteDialog?.destroy();
+  deleteDialog = undefined;
+  isAddModalVisible.value = false;
+  isEditModalVisible.value = false;
+  detailDialogVisible.value = false;
+  detailDialog.data = null;
+  crudSubmitting.value = false;
+  usersLoading.value = false;
+  userOptions.value = [];
+}
+function beginCrud() {
+  const owner = operationOwner();
+  if (!owner || disposed) return false;
+  invalidateCrud();
+  invalidateChangeWindow();
+  crudOwner = owner;
+  return true;
+}
+function captureCrud() {
+  const revision = crudRevision.value;
+  const owner = crudOwner;
+  return () =>
+    !disposed &&
+    owner !== undefined &&
+    owner === operationOwner() &&
+    revision === crudRevision.value;
+}
+function validGroupPayload(
+  payload: CreateMonitorOnDutyGroupReq | UpdateMonitorOnDutyGroupReq,
+) {
+  const length = [...payload.name].length;
+  return (
+    length >= 1 &&
+    length <= 50 &&
+    [...(payload.description ?? '')].length <= 255 &&
+    Number.isSafeInteger(payload.shift_days) &&
+    payload.shift_days > 0 &&
+    payload.user_ids.length > 0 &&
+    payload.user_ids.every((id) => validPositiveId(id)) &&
+    new Set(payload.user_ids).size === payload.user_ids.length &&
+    (!('enable' in payload) || payload.enable === 1 || payload.enable === 2)
+  );
+}
+
 // 模态框控制
 const showAddModal = (): void => {
+  if (!beginCrud()) return;
   resetAddForm();
   userSearchText.value = '';
   userPaginationConfig.current = 1;
@@ -1134,12 +1260,18 @@ const resetAddForm = (): void => {
 
 const closeAddModal = (): void => {
   resetAddForm();
-  isAddModalVisible.value = false;
+  invalidateCrud();
 };
 
 const showEditModal = (record: MonitorOnDutyGroup): void => {
-  const owner = operationOwner();
+  if (!validPositiveId(record.id)) {
+    message.error('记录ID不合法');
+    return;
+  }
+  if (!beginCrud()) return;
+  const current = captureCrud();
   const id = record.id;
+  const selectedUsers = cloneDeep(record.users ?? []);
   editForm.id = record.id;
   editForm.name = record.name;
   editForm.shift_days = record.shift_days;
@@ -1150,25 +1282,14 @@ const showEditModal = (record: MonitorOnDutyGroup): void => {
   userSearchText.value = '';
   userPaginationConfig.current = 1;
   fetchUserList(1).then(() => {
-    if (
-      disposed ||
-      owner !== operationOwner() ||
-      !isEditModalVisible.value ||
-      editForm.id !== id
-    )
-      return;
-    if (record.users && record.users.length > 0) {
-      record.users.forEach((user) => {
-        const exists = userOptions.value.some(
-          (option) => option.value === user.id,
-        );
-        if (!exists) {
-          userOptions.value.unshift({
-            value: user.id,
-            label: user.username,
-          });
-        }
-      });
+    if (!current() || !isEditModalVisible.value || editForm.id !== id) return;
+    for (const user of selectedUsers) {
+      if (
+        validPositiveId(user.id) &&
+        !userOptions.value.some((option) => option.value === user.id)
+      ) {
+        userOptions.value.push({ value: user.id, label: user.username });
+      }
     }
   });
 
@@ -1179,11 +1300,11 @@ const closeEditModal = (): void => {
   if (editFormRef.value) {
     editFormRef.value.resetFields();
   }
-  isEditModalVisible.value = false;
+  invalidateCrud();
 };
 
 const closeDetailDialog = (): void => {
-  detailDialogVisible.value = false;
+  invalidateCrud();
 };
 
 const closeFuturePlanDialog = (): void => {
@@ -1228,66 +1349,72 @@ const closeCreateChangeModal = (): void => {
 };
 
 // CRUD操作
-const handleAdd = async (): Promise<void> => {
+const saveGroup = async (mode: 'add' | 'edit'): Promise<void> => {
+  const form = mode === 'add' ? addForm : editForm;
+  const formRef = mode === 'add' ? addFormRef.value : editFormRef.value;
+  const current = captureCrud();
+  const id = mode === 'edit' ? editForm.id : undefined;
+  if (
+    !current() ||
+    crudSubmitting.value ||
+    !(mode === 'add' ? isAddModalVisible.value : isEditModalVisible.value) ||
+    (mode === 'edit' && !validPositiveId(id))
+  )
+    return;
+  if (!formRef || typeof formRef.validate !== 'function') {
+    message.error('表单尚未就绪');
+    return;
+  }
+  const snapshot = cloneDeep(toRaw(form));
+  const fingerprint = JSON.stringify(snapshot);
+  const currentFields = () => current() && fingerprint === JSON.stringify(form);
+  crudSubmitting.value = true;
   try {
-    await addFormRef.value.validate();
-
-    loading.value = true;
+    try {
+      await formRef.validate();
+    } catch {
+      return;
+    }
+    if (!currentFields()) return;
     const payload: CreateMonitorOnDutyGroupReq = {
-      name: addForm.name.trim(),
-      user_ids: addForm.user_ids,
-      shift_days: addForm.shift_days,
-      description: addForm.description?.trim(),
+      description: snapshot.description?.trim(),
+      name: snapshot.name.trim(),
+      shift_days: snapshot.shift_days,
+      user_ids: [...snapshot.user_ids],
     };
-
-    const response = await createMonitorOnDutyGroupApi(payload);
-
-    if (response) {
-      message.success('新增值班组成功');
-      paginationConfig.current = 1;
-      await fetchOnDutyGroups();
-      closeAddModal();
-    } else {
-      message.error('新增值班组失败');
+    if (!validGroupPayload(payload)) {
+      message.error('值班组信息不合法');
+      return;
     }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '新增值班组失败');
+    if (mode === 'edit') {
+      if (
+        !validPositiveId(id) ||
+        !('enable' in snapshot) ||
+        (snapshot.enable !== 1 && snapshot.enable !== 2)
+      ) {
+        message.error('值班组信息不合法');
+        return;
+      }
+      await updateMonitorOnDutyGroupApi({
+        ...payload,
+        id,
+        enable: snapshot.enable,
+      });
+    } else await createMonitorOnDutyGroupApi(payload);
+    if (!currentFields()) return;
+    message.success(mode === 'add' ? '新增值班组成功' : '更新值班组成功');
+    if (mode === 'add') paginationConfig.current = 1;
+    invalidateCrud();
+    await fetchOnDutyGroups();
+  } catch (error: unknown) {
+    if (currentFields() && shouldNotifyPageError(error))
+      message.error(mode === 'add' ? '新增值班组失败' : '更新值班组失败');
   } finally {
-    loading.value = false;
+    if (current()) crudSubmitting.value = false;
   }
 };
-
-const handleUpdate = async (): Promise<void> => {
-  try {
-    await editFormRef.value.validate();
-
-    loading.value = true;
-    const payload: UpdateMonitorOnDutyGroupReq = {
-      id: editForm.id,
-      name: editForm.name.trim(),
-      shift_days: editForm.shift_days,
-      user_ids: editForm.user_ids,
-      description: editForm.description?.trim(),
-      enable: editForm.enable,
-    };
-
-    const response = await updateMonitorOnDutyGroupApi(payload);
-
-    if (response) {
-      message.success('更新值班组成功');
-      await fetchOnDutyGroups();
-      closeEditModal();
-    } else {
-      message.error('更新值班组失败');
-    }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '更新值班组失败');
-  } finally {
-    loading.value = false;
-  }
-};
+const handleAdd = () => saveGroup('add');
+const handleUpdate = () => saveGroup('edit');
 
 const handleCreateChange = async (): Promise<void> => {
   const context = captureChangeWindow();
@@ -1451,30 +1578,37 @@ const handleViewChange = async (record: MonitorOnDutyGroup): Promise<void> => {
 };
 
 const confirmDelete = (record: MonitorOnDutyGroup): void => {
-  Modal.confirm({
+  const id = record.id;
+  const name = record.name;
+  if (!validPositiveId(id)) {
+    message.error('记录ID不合法');
+    return;
+  }
+  if (!beginCrud()) return;
+  const current = captureCrud();
+  let consumed = false;
+  deleteDialog = Modal.confirm({
     title: '警告',
-    content: `确定要删除值班组 "${record.name}" 吗？`,
+    content: `确定要删除值班组 "${name}" 吗？`,
     okText: '删除',
     okType: 'danger',
     cancelText: '取消',
+    onCancel() {
+      consumed = true;
+    },
     async onOk() {
+      if (consumed || !current() || record.id !== id) return;
+      consumed = true;
       try {
-        const response = await deleteMonitorOnDutyGroupApi(record.id);
-
-        if (response) {
-          message.success(`值班组 "${record.name}" 已删除`);
-
-          if (data.value.length === 1 && paginationConfig.current > 1) {
-            paginationConfig.current--;
-          }
-
-          fetchOnDutyGroups();
-        } else {
+        await deleteMonitorOnDutyGroupApi(id);
+        if (!current()) return;
+        message.success(`值班组 "${name}" 已删除`);
+        if (data.value.length === 1 && paginationConfig.current > 1)
+          paginationConfig.current--;
+        await fetchOnDutyGroups();
+      } catch (error: unknown) {
+        if (current() && shouldNotifyPageError(error))
           message.error('删除值班组失败');
-        }
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(error.message || '删除值班组失败');
       }
     },
   });
@@ -1780,7 +1914,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
     <!-- 新增值班组模态框 -->
     <a-modal
-      :confirmLoading="loading"
+      :confirm-loading="crudSubmitting"
       :destroy-on-close="true"
       :open="isAddModalVisible"
       :width="formDialogWidth"
@@ -1790,6 +1924,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
       @ok="handleAdd"
     >
       <a-form
+        :key="crudRevision"
         ref="addFormRef"
         :model="addForm"
         :rules="formRules"
@@ -1812,7 +1947,6 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
               <a-form-item label="轮班周期（天）" name="shift_days">
                 <a-input-number
                   v-model:value="addForm.shift_days"
-                  :max="365"
                   :min="1"
                   class="full-width"
                 />
@@ -1860,7 +1994,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
 
     <!-- 编辑值班组模态框 -->
     <a-modal
-      :confirmLoading="loading"
+      :confirm-loading="crudSubmitting"
       :destroy-on-close="true"
       :open="isEditModalVisible"
       :width="formDialogWidth"
@@ -1870,6 +2004,7 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
       @ok="handleUpdate"
     >
       <a-form
+        :key="crudRevision"
         ref="editFormRef"
         :model="editForm"
         :rules="formRules"
@@ -1892,7 +2027,6 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
               <a-form-item label="轮班周期（天）" name="shift_days">
                 <a-input-number
                   v-model:value="editForm.shift_days"
-                  :max="365"
                   :min="1"
                   class="full-width"
                 />
@@ -1963,8 +2097,8 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
         <div class="detail-header">
           <h2>{{ detailDialog.data.name }}</h2>
           <div class="detail-badges">
-            <a-tag :color="detailDialog.data.enable ? 'green' : 'red'">
-              {{ detailDialog.data.enable ? '启用' : '禁用' }}
+            <a-tag :color="detailDialog.data.enable === 1 ? 'green' : 'red'">
+              {{ detailDialog.data.enable === 1 ? '启用' : '禁用' }}
             </a-tag>
             <a-tag color="blue">
               {{ detailDialog.data.shift_days }}天轮班
@@ -1986,8 +2120,8 @@ const handleChangeDateSelect = (date: Dayjs | null): void => {
             {{ detailDialog.data.shift_days }}天
           </a-descriptions-item>
           <a-descriptions-item label="状态">
-            <a-tag :color="detailDialog.data.enable ? 'green' : 'red'">
-              {{ detailDialog.data.enable ? '启用' : '禁用' }}
+            <a-tag :color="detailDialog.data.enable === 1 ? 'green' : 'red'">
+              {{ detailDialog.data.enable === 1 ? '启用' : '禁用' }}
             </a-tag>
           </a-descriptions-item>
           <a-descriptions-item label="描述">
