@@ -12,6 +12,7 @@ import {
   type WorkorderInstanceCommentItem,
 } from '#/api/core/workorder/workorder_instance_comment';
 
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 withDefaults(defineProps<Props>(), {
@@ -26,23 +27,23 @@ const emit = defineEmits<{
 // 图标组件
 const IconComponent = ({ icon }: { icon: string }) => {
   const iconMap: Record<string, string> = {
+    close: '✕',
+    comment: '💬',
+    copy: '📋',
+    'empty-comment': '💭',
+    like: '👍',
+    more: '⋯',
+    quote: '❝',
+    refresh: '🔄',
+    replies: '💬',
+    reply: '↩️',
+    send: '📤',
+    sort: '🔀',
+    suggestion: '💡',
     system: '⚙️',
     time: '⏰',
-    suggestion: '💡',
-    comment: '💬',
-    refresh: '🔄',
-    sort: '🔀',
-    send: '📤',
-    'empty-comment': '💭',
-    more: '⋯',
-    reply: '↩️',
-    quote: '❝',
-    copy: '📋',
-    like: '👍',
-    replies: '💬',
-    close: '✕',
   };
-  return iconMap[icon] || '';
+  return getOwnLookupValue(iconMap, icon) || '';
 };
 
 // 定义props

@@ -693,3 +693,11 @@ FormDesign、Process、Template、ProcessDesign和WorkorderTimeline五个SFC搬�
 - 已安装Vue的computed构造保存getter，读取时才求值；ProcessDesign的selectedStep watcher非immediate。保留该页searchUsers的debounce调用初始化前引1条，不移动调用来消除诊断。五文件no-use-before-define 12→1、总lint292→281 errors，0 warnings，逐文件各规则无新增。
 - 磁盘源码逐字匹配提案，9段声明原文及其它statement顺序保持，真实compileScript binding和生产DOM/SSR render一致。Template与Timeline原/新实际编译setup在Fake API下的成功/失败四组轨迹相同：factory零请求，受控mounted读取、分页大小改变重置页码及失败清理保持；Timeline四种筛选和正反排序的具体ID序列、expose/open请求保持。这是setup与受控mounted调用探针，不冒称DOM挂载。
 - 工单目录现有12文件260项测试及应用类型检查通过；没有新增镜像测试或修改断言、规则与ignore，没有重复全仓测试和构建。未扩展预测/RCA复杂初始化边界，未调用真实工单或通知服务，未上线。
+
+## 阶段六十九：工单动作与图标的自有映射
+
+补完阶段67因并行写入排除的Instance动作名和WorkorderComments图标字典：两个局部对象22个primitive字段、各唯一只读引用复用已交`getOwnLookupValue`，未知原型键返回undefined后仍走原惰性fallback。已知动作、图标、0值及未知值保持约定，继承getter不会执行。
+
+- 仅两个helper新导入、两个读取调用和选定字段排序，既有import声明原文顺序不变；Instance长错误提示做必要换行。其它AST、模板/style和原binding保持。没有更改helper、业务条件、规则、ignore或数据初始化。
+- fresh两文件lint234→224，sort-objects119→109减少10，sort-imports15不变，逐文件各规则无新增；22已知键、12未知/原型/fallback和两继承getter执行证明通过。
+- 工单目录及既有helper共13文件270测试、最终应用类型检查与差异检查通过；没有新增镜像测试、真实工单操作或通知，未重复全仓与构建，未上线。

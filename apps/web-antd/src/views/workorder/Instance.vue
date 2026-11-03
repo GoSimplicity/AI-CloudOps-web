@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { downloadCsv } from '#/utils/export-csv';
+import { getOwnLookupValue } from '#/utils/own-lookup';
+
 import {
   computed,
   h,
@@ -1900,15 +1902,17 @@ const handleActionWithPermission = async (
     );
     if (!normalizedActions.includes(action)) {
       const actionMap: Record<string, string> = {
-        submit: '提交',
-        assign: '分配',
         approve: '审批',
-        reject: '拒绝',
+        assign: '分配',
         cancel: '取消',
         complete: '完成',
+        reject: '拒绝',
         return: '退回',
+        submit: '提交',
       };
-      message.error(`您没有${actionMap[action] || action}此工单的权限`);
+      message.error(
+        `您没有${getOwnLookupValue(actionMap, action) || action}此工单的权限`,
+      );
       return;
     }
 
