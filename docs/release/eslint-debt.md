@@ -610,3 +610,12 @@ API管理使用明确create/edit模式和响应式窗口key，真实必需Form�
 - 20文件定向lint总诊断1460→1421，vue/object-shorthand 39→0，逐文件各规则无新增。其余1421条为既有债，不代表全仓lint通过。
 - Management、Namespace、workload scope三份现有分页相关测试79项，以及按“审计”筛选的4项真实挂载用例通过；该挂载文件另外24项非审计用例未执行。应用类型检查通过，没有新增镜像测试或重跑全仓。
 - 本轮只读分类的324条no-use-before-define均指向运行时变量或箭头函数，类型引用和真正FunctionDeclaration候选均为0，未为压数字移动这些声明。无真实接口、集群或权限数据操作，未上线。
+
+## 阶段六十：Namespace箭头函数的依赖顺序
+
+基于该模块实际依赖图，仅将`fetchNamespaces`和`resetClusters`两个完整const-arrow声明按原相对顺序移到`fetchClusters`前、`clearNamespaces`后。保持同一useNamespacePage作用域、函数种类/名称/声明及函数体原文，所有其它语句原文和相对顺序不变，没有添加断言或改动状态与业务流程。
+
+- AST识别39个顶层箭头函数，完整依赖图无环；两段移动跨越的24条语句全部为纯const-arrow创建，没有ref/computed调用或其它即时执行语句。所需state及clearNamespaces/recordToKeyValueList已在前面定义，创建箭头函数时不会立即读取捕获变量。
+- 原模块与实际移动后的导出函数使用真实Vue ref/computed和Fake API比对：factory不发请求；reset先清页码/列表，再读取集群、自动加载首个命名空间、加载更多，以及集群失败清理的请求与状态轨迹一致。页面onMounted在factory返回后调用fetchClusters。
+- 现有Namespace测试5项和应用类型检查通过；该模块no-use-before-define 2→0，定向lint总诊断91→89，各规则无新增，其余89条既有债保留。没有新增镜像测试或重跑全仓。
+- 这是按真实依赖闭环处理箭头函数的单模块验证，不把2条减少当作原324条全部完成；没有改函数为function声明或连接真实集群，未上线。
