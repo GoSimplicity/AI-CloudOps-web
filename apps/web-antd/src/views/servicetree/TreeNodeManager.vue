@@ -349,23 +349,29 @@ const loadAvailableResources = async (): Promise<void> => {
 const handleTreeSelect = async (selectedKeys: number[]): Promise<void> => {
   const ticket = ++detailRequest;
   selectedNode.value = null;
-  if (selectedKeys.length > 0) {
-    const nodeId = selectedKeys[0];
-    detailLoading.value = true;
-    try {
-      const response = await getNodeDetail(nodeId!);
-      if (ticket === detailRequest)
-        selectedNode.value = response as TreeNodeWithRelations;
-    } catch (error: any) {
-      if (ticket !== detailRequest) return;
-
-      if (shouldNotifyPageError(error))
-        message.error(error.message || '获取节点详情失败');
-    } finally {
-      if (ticket === detailRequest) detailLoading.value = false;
+  detailLoading.value = false;
+  const nodeId = selectedKeys[0];
+  if (
+    typeof nodeId !== 'number' ||
+    !Number.isSafeInteger(nodeId) ||
+    nodeId <= 0
+  )
+    return;
+  detailLoading.value = true;
+  try {
+    const response = await getNodeDetail(nodeId);
+    if (ticket !== detailRequest) return;
+    if (response?.id !== nodeId) throw new Error('节点详情标识不匹配');
+    selectedNode.value = response as TreeNodeWithRelations;
+  } catch (error: unknown) {
+    if (ticket !== detailRequest) return;
+    if (shouldNotifyPageError(error)) {
+      message.error(
+        error instanceof Error ? error.message : '获取节点详情失败',
+      );
     }
-  } else {
-    selectedNode.value = null;
+  } finally {
+    if (ticket === detailRequest) detailLoading.value = false;
   }
 };
 
@@ -914,7 +920,8 @@ onBeforeUnmount(() => {
                     <template #overlay>
                       <a-menu
                         @click="
-                          (e: any) => handleMenuClick(e.key, selectedNode!)
+                          (e: any) =>
+                            selectedNode && handleMenuClick(e.key, selectedNode)
                         "
                       >
                         <a-menu-item key="move">移动节点</a-menu-item>

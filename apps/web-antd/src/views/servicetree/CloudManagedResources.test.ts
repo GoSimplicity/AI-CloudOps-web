@@ -995,3 +995,28 @@ it.each([
   await click('详情');
   expect(required(wrapper).text().includes('资源详情读取失败')).toBe(visible);
 });
+
+it('匿名状态不读写未知操作标记，并保持阻塞', async () => {
+  await start();
+  account.user.userInfo = null;
+  account.access.accessToken = null;
+  await flushPromises();
+  const getItem = vi.spyOn(Storage.prototype, 'getItem');
+  const removeItem = vi.spyOn(Storage.prototype, 'removeItem');
+  const setup = Reflect.get(required(wrapper).vm.$, 'setupState');
+  const read = Reflect.get(setup, 'readLocal');
+  const clear = Reflect.get(setup, 'clearReviewedMarker');
+  expect(read).toBeTypeOf('function');
+  expect(clear).toBeTypeOf('function');
+  const target = {
+    cloud_account_id: 7,
+    cloud_account_region_id: 11,
+    kind: 'rds',
+  };
+  expect(read(target)).toBe(true);
+  clear(target, []);
+  expect(getItem).not.toHaveBeenCalled();
+  expect(removeItem).not.toHaveBeenCalled();
+  expect(Reflect.get(setup, 'localBlocked')).toBe(true);
+  expect(Reflect.get(setup, 'pendingOperation')).toBeNull();
+});

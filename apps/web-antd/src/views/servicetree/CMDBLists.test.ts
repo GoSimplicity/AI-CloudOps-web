@@ -218,3 +218,43 @@ for (const page of pages) {
     });
   });
 }
+
+it.each([0, -1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])(
+  '节点选择拒绝无效ID %s且不读取详情',
+  async (id) => {
+    const instance = render(TreeNodes);
+    await flushPromises();
+    client.get.mockClear();
+    const setup = Reflect.get(instance.vm.$, 'setupState');
+    const select = Reflect.get(setup, 'handleTreeSelect');
+    expect(select).toBeTypeOf('function');
+    await select([id]);
+    expect(client.get).not.toHaveBeenCalled();
+    expect(Reflect.get(setup, 'detailLoading')).toBe(false);
+  },
+);
+
+it('取消节点选择立即收停详情loading，迟到结果不能恢复旧节点', async () => {
+  const instance = render(TreeNodes);
+  await flushPromises();
+  let complete: ((value: ReturnType<typeof row>) => void) | undefined;
+  const pending = new Promise<ReturnType<typeof row>>((resolve) => {
+    complete = resolve;
+  });
+  client.get.mockImplementation((path: string) =>
+    path === '/tree/node/detail/7'
+      ? pending
+      : Promise.resolve({ items: [], total: 0 }),
+  );
+  const setup = Reflect.get(instance.vm.$, 'setupState');
+  const select = Reflect.get(setup, 'handleTreeSelect');
+  expect(select).toBeTypeOf('function');
+  const request = select([7]);
+  expect(Reflect.get(setup, 'detailLoading')).toBe(true);
+  await select([]);
+  expect(Reflect.get(setup, 'detailLoading')).toBe(false);
+  required(complete)(row('late-node'));
+  await request;
+  expect(Reflect.get(setup, 'selectedNode')).toBeNull();
+  expect(Reflect.get(setup, 'detailLoading')).toBe(false);
+});

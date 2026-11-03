@@ -386,3 +386,13 @@ Process清除7处不安全ID，编辑缺ID不能退回create。真实BasicConfig
 - 清除8处隐藏SFC断言。声明清理中dispose hook曾被误移块外，4个真实unmount红测试与unused import共同发现，按精确AST恢复；最终每页真正script内唯一hook、块外仅空白注释、真实script/template编译及CSS字节不变均确认。
 - 列表仅这两页旧原始异常文案断言改为固定脱敏expectedFailure，原错误区/清旧列表/重试/请求及其它7页断言保留。
 - 最终149文件3069项全量、类型/11构建通过。没有真实Prometheus、K8s或云连接，未将临时脚本错误或中间失败算作验收。
+
+## 阶段三十二：CMDB只读边界与地域查询确认归属
+
+收敛4页7处隐藏script断言及树模板额外1处：托管云未知操作标记单次捕获合法owner，匿名不读写本地标记且保持保守阻塞；资源CSV显式首行guard，原列顺序不变；树节点选择必须合法safe ID且详情ID匹配，取消选择立即清loading，旧详情不能恢复选择；地域metadata单次Map读取，保留project_id显式空值并省略缺失值。
+
+额外修复地域查询子组件的真实P1：其全局确认框独立于父凭据窗口，旧确认须绑定UID/authGeneration、account/provider与权限/启用/禁用状态。多getter同步watch只在身份或关键props真正变化时失效，单纯同UID profile刷新不取消；自有Modal在取消/卸载/作用域变化销毁且one-shot。请求前后及匹配ticket finally确保旧结果/错误不覆盖新查询，非响应式适配器旧读也只自清。完成后的退场旧cancel也不能清掉已采纳结果。没有自动查询、使用未保存密钥或真实云请求。
+
+- 新16地域安全/metadata、6节点非法ID/取消loading、1匿名标记回归；连相关9文件共259项通过。最终样式/控制分支整理后73项重点复验也通过，类型检查通过。
+- 新地域test lint0/0；4生产文件逐规则唯一变化为import间距/新纯导入位置规范化，sort-imports29→26，没有重排旧value imports或新诊断。模板只改指定null/disabled表达式，styles不变。
+- 与其它已冻结阶段统一149文件3069项、类型/11构建通过；全仓1097文件仍10443 errors/5 warnings，四protected/parser0。下一阶段仍有11处SFC script语法未受原TS规则覆盖，不能以现门禁冒称全源码无断言。未上线。

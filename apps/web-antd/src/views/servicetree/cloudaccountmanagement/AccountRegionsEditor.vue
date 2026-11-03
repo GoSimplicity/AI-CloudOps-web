@@ -4,12 +4,19 @@ import {
   CloudProvider,
 } from '#/api/core/tree/tree_account';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+
+import { useUserStore } from '@vben/stores';
+
 import { FormItemRest, message, Modal } from 'ant-design-vue';
+
 import {
   type AvailableRegion,
   getAvailableRegions,
+  type GetAvailableRegionsReq,
 } from '#/api/core/tree/tree_account_region';
+import { useAuthStore } from '#/store';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
 import { computeProviderName, isSupportedAccountProvider } from './provider';
 
 const props = defineProps<{
@@ -24,78 +31,146 @@ const available = ref<AvailableRegion[]>([]);
 const loading = ref(false);
 let request = 0;
 let alive = true;
+const userStore = useUserStore();
+const authStore = useAuthStore();
+let regionDialog: ReturnType<typeof Modal.confirm> | undefined;
+let confirmation = 0;
+function regionOwner() {
+  const id = userStore.userInfo?.userId;
+  const generation = authStore.getAuthGeneration();
+  if (
+    !id ||
+    !String(id).trim() ||
+    String(id).trim() === '0' ||
+    !Number.isSafeInteger(generation) ||
+    generation < 0
+  )
+    return '';
+  return JSON.stringify([String(id).trim(), generation]);
+}
+function invalidateRegionScope() {
+  request++;
+  confirmation++;
+  available.value = [];
+  loading.value = false;
+  const dialog = regionDialog;
+  regionDialog = undefined;
+  dialog?.destroy();
+}
 watch(
-  () => [
-    props.provider,
-    props.accountId,
-    props.canRead,
-    props.accountEnabled,
-    props.disabled,
+  [
+    () => props.provider,
+    () => props.accountId,
+    () => props.canRead,
+    () => props.accountEnabled,
+    () => props.disabled,
+    regionOwner,
   ],
-  () => {
-    request++;
-    available.value = [];
-    loading.value = false;
-  },
+  invalidateRegionScope,
+  { flush: 'sync' },
 );
 onBeforeUnmount(() => {
   alive = false;
-  request++;
+  invalidateRegionScope();
 });
 
+function validAccountId(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+
 async function loadRegions(live: boolean) {
+  const owner = regionOwner();
   if (
     !alive ||
+    !owner ||
     props.disabled ||
     !props.canRead ||
-    !isSupportedAccountProvider(props.provider) ||
-    (live && (!props.accountId || !props.accountEnabled))
+    !isSupportedAccountProvider(props.provider)
   )
     return;
+  let query: GetAvailableRegionsReq;
+  if (live) {
+    const accountId = props.accountId;
+    if (!validAccountId(accountId) || !props.accountEnabled) return;
+    query = { cloud_account_id: accountId };
+  } else {
+    query = { provider: props.provider };
+  }
   const ticket = ++request;
   loading.value = true;
   try {
-    const result = await getAvailableRegions(
-      live
-        ? { cloud_account_id: props.accountId! }
-        : { provider: props.provider },
-    );
+    const result = await getAvailableRegions(query);
     if (
       ticket === request &&
       alive &&
+      owner === regionOwner() &&
       props.canRead &&
       !props.disabled &&
       (!live || props.accountEnabled)
     )
       available.value = Array.isArray(result?.regions) ? result.regions : [];
   } catch (error) {
-    if (ticket === request && shouldNotifyPageError(error))
+    if (
+      ticket === request &&
+      owner === regionOwner() &&
+      shouldNotifyPageError(error)
+    )
       message.error('地域查询失败，请重试或手动填写');
   } finally {
-    if (ticket === request) loading.value = false;
+    if (ticket === request) {
+      if (owner === regionOwner()) loading.value = false;
+      else invalidateRegionScope();
+    }
   }
 }
 function confirmLiveRegions() {
-  if (!props.accountId || !props.accountEnabled || !props.canRead) return;
   const accountId = props.accountId;
+  const owner = regionOwner();
+  if (
+    !alive ||
+    !owner ||
+    props.disabled ||
+    !validAccountId(accountId) ||
+    !props.accountEnabled ||
+    !props.canRead
+  )
+    return;
   const provider = props.provider;
-  Modal.confirm({
+  invalidateRegionScope();
+  const ticket = confirmation;
+  let submitted = false;
+  const current = () =>
+    alive &&
+    owner === regionOwner() &&
+    ticket === confirmation &&
+    !props.disabled &&
+    props.canRead &&
+    props.accountEnabled &&
+    props.accountId === accountId &&
+    props.provider === provider;
+  regionDialog = Modal.confirm({
     title: '查询云端可用地域',
     content: `将使用已保存的账户凭据查询${computeProviderName(provider)}，不会使用表单中未保存的密钥。`,
     okText: '确认查询',
     cancelText: '取消',
-    onOk: () => {
-      if (
-        !alive ||
-        props.disabled ||
-        props.accountId !== accountId ||
-        props.provider !== provider
-      )
-        return;
-      return loadRegions(true);
+    onCancel: () => {
+      if (ticket === confirmation) invalidateRegionScope();
+    },
+    onOk: async () => {
+      if (submitted || !current()) return;
+      submitted = true;
+      try {
+        await loadRegions(true);
+      } finally {
+        if (ticket === confirmation) {
+          regionDialog = undefined;
+          confirmation++;
+        }
+      }
     },
   });
 }
+
 const codes = computed({
   get: () => regions.value.map((item) => item.region),
   set: (values: string[]) => {
@@ -112,16 +187,18 @@ const codes = computed({
     const nextDefault = unique.includes(previousDefault ?? '')
       ? previousDefault
       : unique[0];
-    regions.value = unique.map((region) => ({
-      region,
-      region_name:
-        existing.get(region)?.region_name || regionNames.get(region) || '',
-      description: existing.get(region)?.description ?? '',
-      is_default: region === nextDefault,
-      ...(existing.get(region)?.project_id !== undefined
-        ? { project_id: existing.get(region)!.project_id }
-        : {}),
-    }));
+    regions.value = unique.map((region) => {
+      const previous = existing.get(region);
+      return {
+        region,
+        region_name: previous?.region_name || regionNames.get(region) || '',
+        description: previous?.description ?? '',
+        is_default: region === nextDefault,
+        ...(previous?.project_id !== undefined
+          ? { project_id: previous.project_id }
+          : {}),
+      };
+    });
   },
 });
 function updateProjectID(region: string, value: string) {
@@ -203,7 +280,9 @@ const options = computed(() => {
       </a-button>
       <a-button
         v-if="accountId"
-        :disabled="disabled || loading || !accountEnabled"
+        :disabled="
+          disabled || loading || !accountEnabled || !validAccountId(accountId)
+        "
         @click="confirmLiveRegions"
       >
         查询云端地域

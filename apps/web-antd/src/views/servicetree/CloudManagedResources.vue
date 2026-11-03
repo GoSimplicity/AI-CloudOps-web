@@ -173,9 +173,14 @@ function keyFor(target: ManagedCloudScope, userId: string) {
   return `cloudops-managed-unconfirmed:${userId}:${target.cloud_account_id}:${target.cloud_account_region_id}:${target.kind}`;
 }
 function readLocal(target: ManagedCloudScope): boolean {
+  const userId = owner.value.id;
+  if (!authenticated() || !userId) {
+    pendingOperation.value = null;
+    return true;
+  }
   try {
     storageUnavailable.value = false;
-    const raw = localStorage.getItem(keyFor(target, owner.value.id!));
+    const raw = localStorage.getItem(keyFor(target, userId));
     pendingOperation.value = parseManagedMarker(raw);
     return raw !== null;
   } catch {
@@ -411,14 +416,21 @@ function clearReviewedMarker(
   target: ManagedCloudScope,
   entries: ManagedCloudHistory[],
 ) {
+  const userId = owner.value.id;
+  if (!authenticated() || !userId) {
+    pendingOperation.value = null;
+    localBlocked.value = true;
+    return;
+  }
+  const key = keyFor(target, userId);
   try {
-    const marker = localStorage.getItem(keyFor(target, owner.value.id!));
+    const marker = localStorage.getItem(key);
     if (
       entries.some(
         (item) => marker === `history:${item.id}` && isReviewed(item),
       )
     ) {
-      localStorage.removeItem(keyFor(target, owner.value.id!));
+      localStorage.removeItem(key);
     }
     localBlocked.value = readLocal(target);
   } catch {

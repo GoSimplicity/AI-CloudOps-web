@@ -1211,8 +1211,10 @@ const exportToExcel = (data: TreeCloudResource[]) => {
     .replace(/[:.]/g, '-')
     .substring(0, 19);
   const filename = `云资源列表_${timestamp}.csv`;
+  const firstRow = exportData[0];
+  if (!firstRow) return;
   downloadCsv(filename, [
-    Object.keys(exportData[0]!),
+    Object.keys(firstRow),
     ...exportData.map((row) => Object.values(row)),
   ]);
   message.success(`导出成功：${filename}`);
