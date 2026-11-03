@@ -1,8 +1,17 @@
 <script setup lang="ts">
+import { useUserStore } from '@vben/stores';
+
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 import {
   DownOutlined,
   MinusCircleOutlined,
@@ -11,20 +20,41 @@ import {
 import { Icon } from '@iconify/vue';
 import {
   createMonitorScrapePoolApi,
-  type CreateMonitorScrapePoolReq,
   deleteMonitorScrapePoolApi,
   getMonitorScrapePoolDetailApi,
   getMonitorScrapePoolListApi,
   type GetMonitorScrapePoolListReq,
   type MonitorScrapePool,
   updateMonitorScrapePoolApi,
-  type UpdateMonitorScrapePoolReq,
 } from '#/api/core/prometheus/prometheus_scrape_pool';
-
+import { useAuthStore } from '#/store';
+import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
+let disposed = false;
+let formRevision = 0;
+let detailRevision = 0;
+let listRevision = 0;
+let listOwner: string | undefined;
+let formOwner: string | undefined;
+let detailOwner: string | undefined;
+const formRef = ref<FormInstance>();
+const submitting = ref(false);
+const deleteTickets = new Map<number, object>();
+
+const operationOwner = (): string | undefined => {
+  const userId = Number(useUserStore().userInfo?.userId);
+  if (!Number.isSafeInteger(userId) || userId <= 0) return undefined;
+  return JSON.stringify([userId, useAuthStore().getAuthGeneration()]);
+};
+const validPositiveId = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+const permission = (action: 'create' | 'detail' | 'update') =>
+  hasPerm(
+    `/api/monitor/scrape_pools/${action}${action === 'create' ? '' : '/:id'}`,
+  );
 
 // 动态表单项接口
 interface DynamicItem {
@@ -106,7 +136,11 @@ const columns = [
 
 // 状态数据
 const loading = ref(false);
-const { loadError, beginRequest } = useListRequest(loading);
+const {
+  loadError,
+  beginRequest,
+  invalidate: invalidateList,
+} = useListRequest(loading);
 const searchQuery = ref('');
 const supportAlertFilter = ref<1 | 2 | undefined>(undefined);
 const supportRecordFilter = ref<1 | 2 | undefined>(undefined);
@@ -114,9 +148,6 @@ const scrapePoolList = ref<MonitorScrapePool[]>([]);
 
 // 防抖处理
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-onBeforeUnmount(() => {
-  if (searchTimeout) clearTimeout(searchTimeout);
-});
 
 // 分页配置
 const paginationConfig = reactive({
@@ -165,13 +196,67 @@ const formDialog = reactive({
 // 详情对话框数据
 const detailDialog = reactive({
   form: null as MonitorScrapePool | null,
+  loading: false,
 });
+
+interface RecordTicket {
+  detail: boolean;
+  detailRevision: number;
+  fingerprint: string;
+  id: number;
+  list: MonitorScrapePool[];
+  listRevision: number;
+  owner: string;
+  record: MonitorScrapePool;
+}
+function recordTicket(record: MonitorScrapePool): RecordTicket | undefined {
+  const owner = operationOwner();
+  if (disposed || !owner || owner !== listOwner || !validPositiveId(record.id))
+    return;
+  const detail =
+    detailDialogVisible.value &&
+    detailDialog.form === record &&
+    detailOwner === owner;
+  if (!scrapePoolList.value.includes(record) && !detail) return;
+  return {
+    detail,
+    detailRevision,
+    fingerprint: JSON.stringify(record),
+    id: record.id,
+    listRevision,
+    owner,
+    record,
+    list: scrapePoolList.value,
+  };
+}
+function currentRecord(ticket: RecordTicket) {
+  return (
+    !disposed &&
+    ticket.owner === operationOwner() &&
+    ticket.owner === listOwner &&
+    ticket.listRevision === listRevision &&
+    ticket.list === scrapePoolList.value &&
+    ticket.record.id === ticket.id &&
+    JSON.stringify(ticket.record) === ticket.fingerprint &&
+    (ticket.detail
+      ? detailDialogVisible.value &&
+        ticket.detailRevision === detailRevision &&
+        detailOwner === ticket.owner &&
+        detailDialog.form === ticket.record
+      : scrapePoolList.value.includes(ticket.record))
+  );
+}
 
 // 表单验证规则
 const formRules = {
   name: [
-    { required: true, message: '请输入采集池名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
+    {
+      required: true,
+      message: '请输入采集池名称',
+      trigger: 'blur',
+      whitespace: true,
+    },
+    { min: 1, max: 50, message: '长度应为1到50个字符', trigger: 'blur' },
   ],
   scrape_interval: [
     { required: true, message: '请输入采集间隔', trigger: 'blur' },
@@ -190,24 +275,6 @@ const getPoolStatusClass = (record: MonitorScrapePool): string => {
   if (record.support_alert === 1 || record.support_record === 1)
     return 'status-partial';
   return 'status-none';
-};
-
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length]!;
 };
 
 const getInitials = (name: string): string => {
@@ -249,6 +316,9 @@ const updateStats = () => {
 
 // 数据加载
 const loadScrapePoolList = async (): Promise<void> => {
+  const owner = operationOwner();
+  if (disposed || !owner) return;
+  listRevision++;
   const request = beginRequest();
   try {
     const params: GetMonitorScrapePoolListReq = {
@@ -260,20 +330,25 @@ const loadScrapePoolList = async (): Promise<void> => {
     };
 
     const response = await getMonitorScrapePoolListApi(params);
-    if (!request.isCurrent()) return;
+    if (!request.isCurrent() || owner !== operationOwner()) return;
+    listOwner = owner;
     if (response) {
       scrapePoolList.value = response.items || [];
       paginationConfig.total = response.total || 0;
       updateStats();
     }
-  } catch (error: any) {
-    if (!request.fail(error, '加载采集池列表失败')) return;
+  } catch (error) {
+    if (
+      owner !== operationOwner() ||
+      !request.fail(new Error('加载采集池列表失败'), '加载采集池列表失败')
+    )
+      return;
     scrapePoolList.value = [];
     paginationConfig.total = 0;
     updateStats();
     if (shouldNotifyPageError(error)) message.error(loadError.value);
   } finally {
-    request.finish();
+    if (owner === operationOwner()) request.finish();
   }
 };
 
@@ -318,12 +393,20 @@ const handleResetFilters = (): void => {
 };
 
 const handleCreateScrapePool = (): void => {
+  const owner = operationOwner();
+  if (disposed || !owner || !permission('create')) return;
+  closeFormDialog();
+  formOwner = owner;
   formDialog.isEdit = false;
   resetFormDialog();
   formDialogVisible.value = true;
 };
 
 const handleEditScrapePool = (record: MonitorScrapePool): void => {
+  const scope = recordTicket(record);
+  if (!scope || !permission('update')) return;
+  closeFormDialog();
+  formOwner = scope.owner;
   formDialog.isEdit = true;
   formDialog.form = {
     id: record.id,
@@ -345,19 +428,42 @@ const handleEditScrapePool = (record: MonitorScrapePool): void => {
     tags: record.tags ? [...record.tags] : [],
   };
   formDialogVisible.value = true;
-  detailDialogVisible.value = false;
+  closeDetailDialog();
 };
 
 const handleViewScrapePool = async (
   record: MonitorScrapePool,
 ): Promise<void> => {
+  const scope = recordTicket(record);
+  if (!scope || !permission('detail')) return;
+  const revision = ++detailRevision;
+  detailOwner = scope.owner;
+  detailDialogVisible.value = true;
+  detailDialog.form = null;
+  detailDialog.loading = true;
+  const ownsWindow = () =>
+    !disposed &&
+    revision === detailRevision &&
+    detailOwner === scope.owner &&
+    detailDialogVisible.value &&
+    scope.owner === operationOwner();
+  const current = () => ownsWindow() && permission('detail');
   try {
-    const response = await getMonitorScrapePoolDetailApi(record.id!);
+    const response = await getMonitorScrapePoolDetailApi(scope.id);
+    if (!current()) return;
+    if (!response || response.id !== scope.id) {
+      message.error('获取采集池详情失败');
+      closeDetailDialog();
+      return;
+    }
     detailDialog.form = response;
-    detailDialogVisible.value = true;
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取采集池详情失败');
+  } catch (error) {
+    if (!ownsWindow()) return;
+    if (permission('detail') && shouldNotifyPageError(error))
+      message.error('获取采集池详情失败');
+    closeDetailDialog();
+  } finally {
+    if (ownsWindow()) detailDialog.loading = false;
   }
 };
 
@@ -371,78 +477,122 @@ const handleMenuClick = (command: string, record: MonitorScrapePool): void => {
 };
 
 const confirmDelete = (record: MonitorScrapePool): void => {
+  const ticket = recordTicket(record);
+  if (!ticket || !can('monitor.scrapePool.delete')) return;
+  deleteTickets.set(ticket.id, ticket);
+  let submitted = false;
+  const current = () =>
+    deleteTickets.get(ticket.id) === ticket &&
+    currentRecord(ticket) &&
+    can('monitor.scrapePool.delete');
   Modal.confirm({
     title: '警告',
     content: `确定要删除采集池 "${record.name}" 吗？`,
     okText: '删除',
     okType: 'danger',
     cancelText: '取消',
+    onCancel: () => {
+      if (deleteTickets.get(ticket.id) === ticket)
+        deleteTickets.delete(ticket.id);
+    },
     async onOk() {
+      if (submitted || !current()) return;
+      submitted = true;
       try {
-        await deleteMonitorScrapePoolApi(record.id!);
-        message.success(`采集池 "${record.name}" 已删除`);
-        loadScrapePoolList();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(error.message || '删除采集池失败');
+        await deleteMonitorScrapePoolApi(ticket.id);
+        if (!current()) return;
+        message.success(`采集池 "${ticket.record.name}" 已删除`);
+
+        void loadScrapePoolList();
+      } catch (error) {
+        if (current() && shouldNotifyPageError(error))
+          message.error('删除采集池失败');
+      } finally {
+        if (deleteTickets.get(ticket.id) === ticket)
+          deleteTickets.delete(ticket.id);
       }
     },
   });
 };
 
 // 表单保存
+
 const saveScrapePool = async (): Promise<void> => {
-  if (!formDialog.form.name.trim()) {
-    message.error('采集池名称不能为空');
-    return;
-  }
-
-  if (
-    formDialog.form.prometheus_instances.length === 0 ||
-    !formDialog.form.prometheus_instances[0]?.value
-  ) {
-    message.error('请至少添加一个Prometheus实例');
-    return;
-  }
-
+  const owner = formOwner;
+  const form = formRef.value;
+  const editing = formDialog.isEdit;
+  const revision = formRevision;
+  const draft = formDialog.form;
+  const fingerprint = JSON.stringify(draft);
+  const ownsWindow = () =>
+    !disposed &&
+    owner !== undefined &&
+    owner === operationOwner() &&
+    formOwner === owner &&
+    revision === formRevision &&
+    formDialogVisible.value &&
+    formDialog.isEdit === editing &&
+    formDialog.form === draft;
+  const current = () =>
+    ownsWindow() &&
+    JSON.stringify(formDialog.form) === fingerprint &&
+    permission(editing ? 'update' : 'create');
+  if (!form || submitting.value || !current()) return;
+  submitting.value = true;
   try {
-    const formData = {
-      ...formDialog.form,
-      user_id: 1, // 这里应该从用户上下文获取
-      prometheus_instances: formDialog.form.prometheus_instances
-        .map((item) => item.value)
-        .filter((v) => v.trim() !== ''),
-      support_alert: formDialog.form.support_alert ? 1 : 2,
-      support_record: formDialog.form.support_record ? 1 : 2,
-      tags: Array.isArray(formDialog.form.tags)
-        ? formDialog.form.tags.filter((t) => String(t).trim() !== '')
-        : [],
-    };
-
-    if (formDialog.isEdit && formDialog.form.id) {
-      const updateData: UpdateMonitorScrapePoolReq = {
-        ...(formData as any),
-        id: formDialog.form.id!,
-      } as UpdateMonitorScrapePoolReq;
-      await updateMonitorScrapePoolApi(updateData);
-      message.success(`采集池 "${formDialog.form.name}" 已更新`);
-    } else {
-      const createData: CreateMonitorScrapePoolReq =
-        formData as CreateMonitorScrapePoolReq;
-      await createMonitorScrapePoolApi(createData);
-      message.success(`采集池 "${formDialog.form.name}" 已创建`);
+    await form.validate();
+    if (!current()) return;
+    const id = draft.id;
+    if (editing && !validPositiveId(id)) {
+      message.error('采集池标识无效，请刷新后重试');
+      return;
     }
+    // Go pool service rejects non-positive scrape timing and timeout > interval; zero remote timeout is not rejected here.
+    if (
+      !Number.isSafeInteger(draft.scrape_interval) ||
+      !Number.isSafeInteger(draft.scrape_timeout) ||
+      draft.scrape_interval <= 0 ||
+      draft.scrape_timeout <= 0 ||
+      draft.scrape_timeout > draft.scrape_interval
+    ) {
+      message.error('采集间隔和超时必须为正整数，且超时不能大于间隔');
+      return;
+    }
+    const userId = Number(useUserStore().userInfo?.userId);
+    if (!validPositiveId(userId)) return;
+    const formData = {
+      ...draft,
+      user_id: userId,
+      prometheus_instances: draft.prometheus_instances
+        .map((item) => item.value)
+        .filter((value) => value.trim() !== ''),
+      support_alert: draft.support_alert ? 1 : 2,
+      support_record: draft.support_record ? 1 : 2,
+      tags: draft.tags.filter((value) => String(value).trim() !== ''),
+    };
+    if (editing) {
+      if (!validPositiveId(id)) return;
+      await updateMonitorScrapePoolApi({ ...formData, id });
+    } else {
+      const { id: _id, ...createData } = formData;
+      await createMonitorScrapePoolApi(createData);
+    }
+    if (!current()) return;
+    message.success(`采集池 "${draft.name}" 已${editing ? '更新' : '创建'}`);
 
-    formDialogVisible.value = false;
-    loadScrapePoolList();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '保存采集池失败');
+    closeFormDialog();
+    void loadScrapePoolList();
+  } catch (error) {
+    if (!current()) return;
+    if (error && typeof error === 'object' && 'errorFields' in error) return;
+    if (shouldNotifyPageError(error)) message.error('保存采集池失败');
+  } finally {
+    if (ownsWindow()) submitting.value = false;
   }
 };
 
 // 重置表单对话框
-const resetFormDialog = (): void => {
+function resetFormDialog(): void {
   formDialog.form = {
     id: undefined,
     name: '',
@@ -459,7 +609,7 @@ const resetFormDialog = (): void => {
     prometheus_instances: [{ value: '', key: Date.now() }],
     tags: [],
   };
-};
+}
 
 // 动态表单项操作
 const addPrometheusInstance = (): void => {
@@ -477,13 +627,64 @@ const removePrometheusInstance = (item: DynamicItem): void => {
 };
 
 // 对话框关闭
-const closeFormDialog = (): void => {
+function closeFormDialog(): void {
+  formRevision++;
+  formOwner = undefined;
+  submitting.value = false;
   formDialogVisible.value = false;
-};
+  resetFormDialog();
+}
 
-const closeDetailDialog = (): void => {
+function closeDetailDialog(): void {
+  detailRevision++;
+  detailOwner = undefined;
+  detailDialog.form = null;
+  detailDialog.loading = false;
   detailDialogVisible.value = false;
-};
+}
+
+onBeforeUnmount(() => {
+  disposed = true;
+  formRevision++;
+  detailRevision++;
+  deleteTickets.clear();
+  if (searchTimeout) clearTimeout(searchTimeout);
+});
+watch(
+  () => [
+    formDialogVisible.value,
+    formDialog.isEdit,
+    permission('create'),
+    permission('update'),
+    detailDialogVisible.value,
+    permission('detail'),
+  ],
+  () => {
+    if (
+      formDialogVisible.value &&
+      !permission(formDialog.isEdit ? 'update' : 'create')
+    )
+      closeFormDialog();
+    if (detailDialogVisible.value && !permission('detail')) closeDetailDialog();
+  },
+  { flush: 'sync' },
+);
+
+watch(
+  operationOwner,
+  () => {
+    listOwner = undefined;
+    listRevision++;
+    invalidateList();
+    scrapePoolList.value = [];
+    paginationConfig.total = 0;
+    deleteTickets.clear();
+    closeFormDialog();
+    closeDetailDialog();
+    updateStats();
+  },
+  { flush: 'sync' },
+);
 
 // 生命周期钩子
 onMounted(() => {
@@ -764,6 +965,7 @@ onMounted(() => {
 
     <!-- 创建/编辑采集池对话框 -->
     <a-modal
+      :confirm-loading="submitting"
       :destroy-on-close="true"
       :open="formDialogVisible"
       :title="formDialog.isEdit ? '编辑采集池' : '创建采集池'"
@@ -783,7 +985,7 @@ onMounted(() => {
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item
-                :rules="[{ required: true, message: '请输入采集池名称' }]"
+                :rules="formRules.name"
                 label="采集池名称"
                 name="name"
               >
@@ -804,7 +1006,11 @@ onMounted(() => {
             :key="instance.key"
             :label="index === 0 ? 'Prometheus实例' : ''"
             :name="['prometheus_instances', index, 'value']"
-            :rules="{ required: true, message: '请输入Prometheus实例地址' }"
+            :rules="{
+              required: true,
+              message: '请输入Prometheus实例地址',
+              whitespace: true,
+            }"
           >
             <div class="dynamic-input-container">
               <a-input
@@ -977,6 +1183,7 @@ onMounted(() => {
       title="采集池详情"
       @cancel="closeDetailDialog"
     >
+      <a-skeleton v-if="detailDialog.loading" active />
       <div v-if="detailDialog.form" class="pool-details">
         <div class="detail-header">
           <h2>{{ detailDialog.form.name }}</h2>
@@ -1053,7 +1260,9 @@ onMounted(() => {
           <a-button @click="closeDetailDialog">关闭</a-button>
           <a-button
             type="primary"
-            @click="handleEditScrapePool(detailDialog.form)"
+            @click="
+              detailDialog.form && handleEditScrapePool(detailDialog.form)
+            "
           >
             编辑
           </a-button>

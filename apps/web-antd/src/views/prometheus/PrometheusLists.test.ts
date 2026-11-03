@@ -71,6 +71,7 @@ const pages: {
   title: string;
   path: string;
   create?: string;
+  expectedFailure?: string;
   modalTitle?: string;
 }[] = [
   {
@@ -78,12 +79,14 @@ const pages: {
     title: '采集池',
     path: '/monitor/scrape_pools/list',
     create: '创建采集池',
+    expectedFailure: '加载采集池列表失败',
   },
   {
     component: MonitorScrapeJob,
     title: '采集任务',
     path: '/monitor/scrape_jobs/list',
     create: '创建采集任务',
+    expectedFailure: '加载采集任务列表失败',
   },
   {
     component: MonitorSend,
@@ -186,7 +189,9 @@ describe.each(pages)('$title 页面真实控件', (page) => {
     await flushPromises();
     expect(message.success).not.toHaveBeenCalled();
     expect(required(wrapper).text()).not.toContain('旧记录');
-    expect(required(wrapper).text()).toContain('离线测试失败');
+    expect(required(wrapper).text()).toContain(
+      page.expectedFailure ?? '离线测试失败',
+    );
     await button('重试').trigger('click');
     await flushPromises();
     expect(required(wrapper).text()).toContain('恢复记录');

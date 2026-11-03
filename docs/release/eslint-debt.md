@@ -375,3 +375,14 @@ Process清除7处不安全ID，编辑缺ID不能退回create。真实BasicConfig
 - 新51项真实SFC/AntD及实际BasicConfig回归，连旧Process/Design/scanner共83项通过，类型检查通过。
 - 生产ESLint85→37，各规则无增；新Safety0/0，旧Process测试只补真实Pinia/auth依赖，没有删原4项业务断言。
 - 第二次统一冻结：149文件3069项全量、类型及11项构建通过，四类lint门禁0/parser0。完整lint仍10443 errors/5 warnings；SFC脚本剩11，不宣称全部清零。没有真实工单提交或部署。
+
+## 阶段三十一：采集Job/Pool真实校验与凭据快照
+
+两页原来template有formRef但脚本无声明/未validate，现补真实FormInstance与动态必填；safe ID/enable枚举、UID/authGeneration、窗口/详情/关联分页及字段fingerprint覆盖每个await。delete/status确认及回执不借新身份/新行，Pool不再硬编码user_id=1而使用已验证当前数字UID，字段仍保留以免Go更新owner成0。Bearer仅通过原helper构造，旧掩码不回填/重传，保留/替换/清除合同与owner清理均验证，错误使用固定脱敏文案。
+
+规则按实际Go合同收敛：Job名1..50；Pool interval/timeout按已有服务规则>0且timeout<=interval；独立port允许0或1..65535整数，Job timing/refresh及remoteTimeout合法0不盲拒。Static地址保留单主机/IP、host:port、IPv6及显式0端口原文，不重写payload；拒绝scheme/path/query/fragment/凭据/空白/坏格式，纯解析不进行DNS/HTTP探测。提示说明嵌入端口原样优先，避免新真实validate将旧合法host:port误拒。
+
+- 新116项Safety及原凭据7、列表37、scanner23共183项通过，类型检查通过。两页生产lint逐规则无新增、合计减少10；newSafety0/0。
+- 清除8处隐藏SFC断言。声明清理中dispose hook曾被误移块外，4个真实unmount红测试与unused import共同发现，按精确AST恢复；最终每页真正script内唯一hook、块外仅空白注释、真实script/template编译及CSS字节不变均确认。
+- 列表仅这两页旧原始异常文案断言改为固定脱敏expectedFailure，原错误区/清旧列表/重试/请求及其它7页断言保留。
+- 最终149文件3069项全量、类型/11构建通过。没有真实Prometheus、K8s或云连接，未将临时脚本错误或中间失败算作验收。

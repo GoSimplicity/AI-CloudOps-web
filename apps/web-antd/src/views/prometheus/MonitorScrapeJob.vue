@@ -1,17 +1,25 @@
 <script setup lang="ts">
+import { useUserStore } from '@vben/stores';
+
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
 import {
   type BearerTokenAction,
   bearerTokenPayload,
 } from './scrapeJobCredentials';
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
   createMonitorScrapeJobApi,
-  type CreateMonitorScrapeJobReq,
   deleteMonitorScrapeJobApi,
   getMonitorScrapeJobDetailApi,
   getMonitorScrapeJobListApi,
@@ -23,11 +31,38 @@ import {
 } from '#/api/core/prometheus/prometheus_scrape_job';
 import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_scrape_pool';
 import { getTreeList, type TreeNode } from '#/api/core/tree/tree_node';
-
+import { useAuthStore } from '#/store';
+import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
+let disposed = false;
+let formRevision = 0;
+let detailRevision = 0;
+let listRevision = 0;
+let listOwner: string | undefined;
+let formOwner: string | undefined;
+let detailOwner: string | undefined;
+const formRef = ref<FormInstance>();
+const submitting = ref(false);
+const deleteTickets = new Map<number, object>();
+const statusTickets = new Map<number, object>();
+let dialogPoolRequest = 0;
+let poolsRequest = 0;
+let treeRequest = 0;
+
+const operationOwner = (): string | undefined => {
+  const userId = Number(useUserStore().userInfo?.userId);
+  if (!Number.isSafeInteger(userId) || userId <= 0) return undefined;
+  return JSON.stringify([userId, useAuthStore().getAuthGeneration()]);
+};
+const validPositiveId = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+const permission = (action: 'create' | 'detail' | 'update') =>
+  hasPerm(
+    `/api/monitor/scrape_jobs/${action}${action === 'create' ? '' : '/:id'}`,
+  );
 
 // 采集池接口
 interface Pool {
@@ -109,7 +144,11 @@ const columns = [
 
 // 状态数据
 const loading = ref(false);
-const { loadError, beginRequest } = useListRequest(loading);
+const {
+  loadError,
+  beginRequest,
+  invalidate: invalidateList,
+} = useListRequest(loading);
 const searchQuery = ref('');
 const enableFilter = ref<1 | 2 | undefined>(undefined);
 const poolFilter = ref<number | undefined>(undefined);
@@ -130,13 +169,10 @@ const dialogPoolLoading = ref(false);
 const dialogPoolSearch = ref('');
 const dialogPoolPage = ref(1);
 const dialogPoolHasMore = ref(true);
-let poolSearchDebounce: any;
+let poolSearchDebounce: ReturnType<typeof setTimeout> | undefined;
 
 // 防抖处理
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-onBeforeUnmount(() => {
-  if (searchTimeout) clearTimeout(searchTimeout);
-});
 
 // 分页配置
 const paginationConfig = reactive({
@@ -199,15 +235,125 @@ const detailDialog = reactive({
   loading: false,
 });
 
+interface RecordTicket {
+  detail: boolean;
+  detailRevision: number;
+  fingerprint: string;
+  id: number;
+  list: MonitorScrapeJob[];
+  listRevision: number;
+  owner: string;
+  record: MonitorScrapeJob;
+}
+function recordTicket(record: MonitorScrapeJob): RecordTicket | undefined {
+  const owner = operationOwner();
+  if (disposed || !owner || owner !== listOwner || !validPositiveId(record.id))
+    return;
+  const detail =
+    detailDialogVisible.value &&
+    detailDialog.form === record &&
+    detailOwner === owner;
+  if (!scrapeJobList.value.includes(record) && !detail) return;
+  return {
+    detail,
+    detailRevision,
+    fingerprint: JSON.stringify(record),
+    id: record.id,
+    listRevision,
+    owner,
+    record,
+    list: scrapeJobList.value,
+  };
+}
+function currentRecord(ticket: RecordTicket) {
+  return (
+    !disposed &&
+    ticket.owner === operationOwner() &&
+    ticket.owner === listOwner &&
+    ticket.listRevision === listRevision &&
+    ticket.list === scrapeJobList.value &&
+    ticket.record.id === ticket.id &&
+    JSON.stringify(ticket.record) === ticket.fingerprint &&
+    (ticket.detail
+      ? detailDialogVisible.value &&
+        ticket.detailRevision === detailRevision &&
+        detailOwner === ticket.owner &&
+        detailDialog.form === ticket.record
+      : scrapeJobList.value.includes(ticket.record))
+  );
+}
+
 // YAML 验证相关状态
 const yamlError = ref<string>('');
 const yamlSuccess = ref<boolean>(false);
 
+// 只验证单个抓取目标的结构，不解析DNS，也不重写后端已发布的目标字符串。
+function validStaticTarget(value: unknown): boolean {
+  if (typeof value !== 'string' || !value || /[\s/\\?#@,;]/u.test(value))
+    return false;
+  const validPort = (port: string) =>
+    /^\d+$/.test(port) &&
+    Number.isSafeInteger(Number(port)) &&
+    Number(port) <= 65_535;
+  const ipv6 = (host: string) => {
+    const [address, zone, extra] = host.split('%');
+    if (
+      !address ||
+      extra !== undefined ||
+      (zone !== undefined && !/^[\w.-]+$/.test(zone))
+    )
+      return false;
+    try {
+      return !!new URL(`http://[${address}]`).hostname;
+    } catch {
+      return false;
+    }
+  };
+  if (value.startsWith('[')) {
+    const parsed = /^\[([^\]]+)\](?::(\d+))?$/u.exec(value);
+    const host = parsed?.[1];
+    const port = parsed?.[2];
+    return !!host && ipv6(host) && (port === undefined || validPort(port));
+  }
+  if (value.includes('[') || value.includes(']')) return false;
+  const parts = value.split(':');
+  // 未加方括号的IPv6整体按裸地址处理，不猜测最后一段是不是端口。
+  if (parts.length > 2) return ipv6(value);
+  const host = parts[0];
+  const port = parts[1];
+  if (
+    !host ||
+    host.includes('%') ||
+    host === '.' ||
+    host === '..' ||
+    (port !== undefined && !validPort(port))
+  )
+    return false;
+  try {
+    const parsed = new URL(`http://${host}`);
+    return (
+      !!parsed.hostname &&
+      parsed.pathname === '/' &&
+      !parsed.username &&
+      !parsed.password &&
+      !parsed.search &&
+      !parsed.hash
+    );
+  } catch {
+    return false;
+  }
+}
+
 // 表单验证规则（动态）
 const formRules = computed(() => ({
   name: [
-    { required: true, message: '请输入采集任务名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
+    {
+      required: true,
+      message: '请输入采集任务名称',
+      trigger: 'blur',
+      whitespace: true,
+    },
+    { min: 1, max: 50, message: '长度应为1到50个字符', trigger: 'blur' },
   ],
   service_discovery_type: [
     { required: true, message: '请选择服务发现类型', trigger: 'change' },
@@ -219,33 +365,56 @@ const formRules = computed(() => ({
   pool_id: [{ required: true, message: '请选择关联采集池', trigger: 'change' }],
   scrape_interval: [
     { required: true, message: '请输入采集间隔', trigger: 'blur' },
+    {
+      message: '采集间隔必须为非负整数',
+      min: 0,
+      trigger: 'blur',
+      type: 'integer',
+    },
   ],
   scrape_timeout: [
     { required: true, message: '请输入采集超时', trigger: 'blur' },
+    {
+      message: '采集超时必须为非负整数',
+      min: 0,
+      trigger: 'blur',
+      type: 'integer',
+    },
   ],
   refresh_interval: [
     { required: true, message: '请输入刷新间隔', trigger: 'blur' },
+    {
+      message: '刷新间隔必须为非负整数',
+      min: 0,
+      trigger: 'blur',
+      type: 'integer',
+    },
   ],
   port: [
     ...(formDialog.form.service_discovery_type === ServiceDiscoveryType.Static
       ? [{ required: true, message: '请输入端口', trigger: 'blur' }]
       : []),
     {
-      type: 'number',
-      min: 1,
+      type: 'integer' as const,
+      min: 0,
       max: 65535,
-      message: '端口必须在1-65535之间',
+      message: '端口必须为0或1-65535的整数',
       trigger: 'blur',
     },
   ],
   ip_address: [
     ...(formDialog.form.service_discovery_type === ServiceDiscoveryType.Static
-      ? [{ required: true, message: '请输入IP地址', trigger: 'blur' }]
+      ? [{ required: true, message: '请输入目标主机或IP地址', trigger: 'blur' }]
       : []),
     {
-      pattern: /^(\d{1,3}\.){3}\d{1,3}$/,
-      message: '请输入正确的IP地址格式',
       trigger: 'blur',
+      validator: (_rule: unknown, value: unknown) => {
+        if (value === undefined || value === null || value === '')
+          return Promise.resolve();
+        return validStaticTarget(value)
+          ? Promise.resolve()
+          : Promise.reject(new Error('请输入单个有效主机/IP地址，可带端口'));
+      },
     },
   ],
 }));
@@ -253,24 +422,6 @@ const formRules = computed(() => ({
 const getJobStatusClass = (record: MonitorScrapeJob): string => {
   if (record.enable === 1) return 'status-enabled';
   return 'status-disabled';
-};
-
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length]!;
 };
 
 const getInitials = (name: string): string => {
@@ -337,7 +488,7 @@ const getDiscoveryTypeColor = (type: ServiceDiscoveryType): string => {
 };
 
 const loadDialogPools = async (isNewSearch = false) => {
-  if (dialogPoolLoading.value) return;
+  if (dialogPoolLoading.value && !isNewSearch) return;
 
   if (isNewSearch) {
     dialogPoolPage.value = 1;
@@ -347,14 +498,29 @@ const loadDialogPools = async (isNewSearch = false) => {
 
   if (!dialogPoolHasMore.value) return;
 
+  const owner = operationOwner();
+  const revision = formRevision;
+  const request = ++dialogPoolRequest;
+  const page = dialogPoolPage.value;
+  const search = dialogPoolSearch.value;
+  if (!owner || owner !== formOwner || !formDialogVisible.value) return;
+  const current = () =>
+    !disposed &&
+    owner === operationOwner() &&
+    owner === formOwner &&
+    revision === formRevision &&
+    request === dialogPoolRequest &&
+    formDialogVisible.value &&
+    search === dialogPoolSearch.value;
   dialogPoolLoading.value = true;
   try {
     const response = await getMonitorScrapePoolListApi({
-      page: dialogPoolPage.value,
+      page,
       size: 20,
-      search: dialogPoolSearch.value,
+      search,
     });
 
+    if (!current()) return;
     if (response && response.items && response.items.length > 0) {
       const newPools = response.items.map((p: any) => ({
         id: p.id,
@@ -368,17 +534,26 @@ const loadDialogPools = async (isNewSearch = false) => {
     } else {
       dialogPoolHasMore.value = false;
     }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取采集池数据失败');
+  } catch (error) {
+    if (current() && shouldNotifyPageError(error))
+      message.error('获取采集池数据失败');
   } finally {
-    dialogPoolLoading.value = false;
+    if (current()) dialogPoolLoading.value = false;
   }
 };
 
 const handleDialogPoolSearch = (value: string) => {
   clearTimeout(poolSearchDebounce);
+  const owner = formOwner;
+  const revision = formRevision;
   poolSearchDebounce = setTimeout(() => {
+    if (
+      disposed ||
+      revision !== formRevision ||
+      owner !== operationOwner() ||
+      !formDialogVisible.value
+    )
+      return;
     dialogPoolSearch.value = value;
     loadDialogPools(true);
   }, 300);
@@ -414,6 +589,9 @@ const updateStats = () => {
 
 // 数据加载
 const loadScrapeJobList = async (): Promise<void> => {
+  const owner = operationOwner();
+  if (disposed || !owner) return;
+  listRevision++;
   const request = beginRequest();
   try {
     const params: GetMonitorScrapeJobListReq = {
@@ -425,7 +603,8 @@ const loadScrapeJobList = async (): Promise<void> => {
     };
 
     const response = await getMonitorScrapeJobListApi(params);
-    if (!request.isCurrent()) return;
+    if (!request.isCurrent() || owner !== operationOwner()) return;
+    listOwner = owner;
     if (response && response.items) {
       scrapeJobList.value = response.items as MonitorScrapeJob[];
       paginationConfig.total = response.total || 0;
@@ -434,19 +613,31 @@ const loadScrapeJobList = async (): Promise<void> => {
       scrapeJobList.value = [];
       paginationConfig.total = 0;
     }
-  } catch (error: any) {
-    if (!request.fail(error, '加载采集任务列表失败')) return;
+  } catch (error) {
+    if (
+      owner !== operationOwner() ||
+      !request.fail(new Error('加载采集任务列表失败'), '加载采集任务列表失败')
+    )
+      return;
     scrapeJobList.value = [];
     paginationConfig.total = 0;
     updateStats();
     if (shouldNotifyPageError(error)) message.error(loadError.value);
   } finally {
-    request.finish();
+    if (owner === operationOwner()) request.finish();
   }
 };
 
 // 获取采集池数据 - 使用合理的分页大小
 const loadPools = async (): Promise<void> => {
+  const owner = operationOwner();
+  const request = ++poolsRequest;
+  const current = () =>
+    !disposed &&
+    owner !== undefined &&
+    owner === operationOwner() &&
+    request === poolsRequest;
+  if (!current()) return;
   try {
     let allPools: Pool[] = [];
     let currentPage = 1;
@@ -459,6 +650,7 @@ const loadPools = async (): Promise<void> => {
         size: pageSize,
         search: '',
       });
+      if (!current()) return;
 
       if (response && response.items && response.items.length > 0) {
         const pagePools = response.items.map((pool: any) => ({
@@ -482,11 +674,11 @@ const loadPools = async (): Promise<void> => {
       }
     }
 
-    pools.value = allPools;
-  } catch (error: any) {
+    if (current()) pools.value = allPools;
+  } catch (error) {
+    if (!current()) return;
     pools.value = [];
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取采集池数据失败');
+    if (shouldNotifyPageError(error)) message.error('获取采集池数据失败');
   }
 };
 
@@ -535,14 +727,26 @@ const handleResetFilters = (): void => {
 };
 
 const handleCreateScrapeJob = (): void => {
+  const owner = operationOwner();
+  if (disposed || !owner || !permission('create')) return;
+  closeFormDialog();
+  formOwner = owner;
   formDialog.isEdit = false;
   resetFormDialog();
   dialogPoolSearch.value = '';
-  loadDialogPools(true);
   formDialogVisible.value = true;
+  void loadDialogPools(true);
 };
 
 const handleEditScrapeJob = (record: MonitorScrapeJob): void => {
+  const scope = recordTicket(record);
+  if (!scope || !permission('update')) return;
+  if (record.enable !== 1 && record.enable !== 2) {
+    message.error('采集任务状态无效，请刷新后重试');
+    return;
+  }
+  closeFormDialog();
+  formOwner = scope.owner;
   formDialog.isEdit = true;
   bearerTokenAction.value = 'keep';
   hasExistingBearerToken.value = record.has_bearer_token === true;
@@ -580,7 +784,17 @@ const handleEditScrapeJob = (record: MonitorScrapeJob): void => {
   yamlSuccess.value = false;
 
   dialogPoolSearch.value = '';
+  formDialogVisible.value = true;
+  const revision = formRevision;
   loadDialogPools(true).then(() => {
+    if (
+      disposed ||
+      formRevision !== revision ||
+      scope.owner !== operationOwner() ||
+      formOwner !== scope.owner ||
+      !formDialogVisible.value
+    )
+      return;
     const selectedPoolInList = dialogPools.value.some(
       (p) => p.id === record.pool_id,
     );
@@ -593,22 +807,40 @@ const handleEditScrapeJob = (record: MonitorScrapeJob): void => {
   });
 
   formDialogVisible.value = true;
-  detailDialogVisible.value = false;
+  closeDetailDialog();
 };
 
 const handleViewScrapeJob = async (record: MonitorScrapeJob): Promise<void> => {
+  const scope = recordTicket(record);
+  if (!scope || !permission('detail')) return;
+  const revision = ++detailRevision;
+  detailOwner = scope.owner;
   detailDialogVisible.value = true;
-  detailDialog.loading = true;
   detailDialog.form = null;
+  detailDialog.loading = true;
+  const ownsWindow = () =>
+    !disposed &&
+    revision === detailRevision &&
+    detailOwner === scope.owner &&
+    detailDialogVisible.value &&
+    scope.owner === operationOwner();
+  const current = () => ownsWindow() && permission('detail');
   try {
-    const response = await getMonitorScrapeJobDetailApi(record.id!);
-    detailDialog.form = response as MonitorScrapeJob;
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取任务详情失败');
-    detailDialogVisible.value = false;
+    const response = await getMonitorScrapeJobDetailApi(scope.id);
+    if (!current()) return;
+    if (!response || response.id !== scope.id) {
+      message.error('获取采集任务详情失败');
+      closeDetailDialog();
+      return;
+    }
+    detailDialog.form = response;
+  } catch (error) {
+    if (!ownsWindow()) return;
+    if (permission('detail') && shouldNotifyPageError(error))
+      message.error('获取采集任务详情失败');
+    closeDetailDialog();
   } finally {
-    detailDialog.loading = false;
+    if (ownsWindow()) detailDialog.loading = false;
   }
 };
 
@@ -626,10 +858,21 @@ const handleMenuClick = (command: string, record: MonitorScrapeJob): void => {
 };
 
 const toggleJobStatus = async (record: MonitorScrapeJob): Promise<void> => {
+  const ticket = recordTicket(record);
+  if (!ticket || !permission('update') || statusTickets.has(ticket.id)) return;
+  if (record.enable !== 1 && record.enable !== 2) {
+    message.error('采集任务状态无效，请刷新后重试');
+    return;
+  }
+  statusTickets.set(ticket.id, ticket);
+  const current = () =>
+    statusTickets.get(ticket.id) === ticket &&
+    currentRecord(ticket) &&
+    permission('update');
   try {
     const newStatus = record.enable === 1 ? 2 : 1;
     const updateData: UpdateMonitorScrapeJobReq = {
-      id: record.id!,
+      id: ticket.id,
       name: record.name,
       enable: newStatus,
       service_discovery_type: record.service_discovery_type,
@@ -647,112 +890,182 @@ const toggleJobStatus = async (record: MonitorScrapeJob): Promise<void> => {
       tls_ca_content: record.tls_ca_content || '',
       bearer_token_file: record.bearer_token_file || '',
       kubernetes_sd_role: record.kubernetes_sd_role || '',
-      tree_node_ids: record.tree_node_ids || [],
-      tags: record.tags || [],
+      tree_node_ids: [...(record.tree_node_ids || [])],
+      tags: [...(record.tags || [])],
     };
 
     await updateMonitorScrapeJobApi(updateData);
+    if (!current()) return;
     message.success(`采集任务已${newStatus === 1 ? '启用' : '禁用'}`);
-    loadScrapeJobList();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '切换采集任务状态失败');
+    void loadScrapeJobList();
+  } catch (error) {
+    if (current() && shouldNotifyPageError(error))
+      message.error('切换采集任务状态失败');
+  } finally {
+    if (statusTickets.get(ticket.id) === ticket)
+      statusTickets.delete(ticket.id);
   }
 };
 
 const confirmDelete = (record: MonitorScrapeJob): void => {
+  const ticket = recordTicket(record);
+  if (!ticket || !can('monitor.scrapeJob.delete')) return;
+  deleteTickets.set(ticket.id, ticket);
+  let submitted = false;
+  const current = () =>
+    deleteTickets.get(ticket.id) === ticket &&
+    currentRecord(ticket) &&
+    can('monitor.scrapeJob.delete');
   Modal.confirm({
     title: '警告',
     content: `确定要删除采集任务 "${record.name}" 吗？`,
     okText: '删除',
     okType: 'danger',
     cancelText: '取消',
+    onCancel: () => {
+      if (deleteTickets.get(ticket.id) === ticket)
+        deleteTickets.delete(ticket.id);
+    },
     async onOk() {
+      if (submitted || !current()) return;
+      submitted = true;
       try {
-        await deleteMonitorScrapeJobApi(record.id!);
-        message.success(`采集任务 "${record.name}" 已删除`);
-
-        // 如果当前页只有一条数据且不是第一页，则删除后返回上一页
-        if (scrapeJobList.value.length === 1 && paginationConfig.current > 1) {
+        await deleteMonitorScrapeJobApi(ticket.id);
+        if (!current()) return;
+        message.success(`采集任务 "${ticket.record.name}" 已删除`);
+        if (scrapeJobList.value.length === 1 && paginationConfig.current > 1)
           paginationConfig.current--;
-        }
-
-        loadScrapeJobList();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(error.message || '删除采集任务失败');
+        void loadScrapeJobList();
+      } catch (error) {
+        if (current() && shouldNotifyPageError(error))
+          message.error('删除采集任务失败');
+      } finally {
+        if (deleteTickets.get(ticket.id) === ticket)
+          deleteTickets.delete(ticket.id);
       }
     },
   });
 };
 
 // 表单保存
+
 const saveScrapeJob = async (): Promise<void> => {
-  if (!formDialog.form.name.trim()) {
-    message.error('采集任务名称不能为空');
-    return;
-  }
-
-  if (!formDialog.form.pool_id) {
-    message.error('请选择关联采集池');
-    return;
-  }
-
-  if (formDialog.form.service_discovery_type === ServiceDiscoveryType.Static) {
-    if (
-      !formDialog.form.ip_address ||
-      formDialog.form.ip_address.trim() === ''
-    ) {
-      message.error('请输入IP地址');
+  const owner = formOwner;
+  const form = formRef.value;
+  const editing = formDialog.isEdit;
+  const revision = formRevision;
+  const draft = formDialog.form;
+  const fingerprint = JSON.stringify([
+    draft,
+    bearerTokenAction.value,
+    hasExistingBearerToken.value,
+  ]);
+  const ownsWindow = () =>
+    !disposed &&
+    owner !== undefined &&
+    owner === operationOwner() &&
+    formOwner === owner &&
+    revision === formRevision &&
+    formDialogVisible.value &&
+    formDialog.isEdit === editing &&
+    formDialog.form === draft;
+  const current = () =>
+    ownsWindow() &&
+    JSON.stringify([
+      formDialog.form,
+      bearerTokenAction.value,
+      hasExistingBearerToken.value,
+    ]) === fingerprint &&
+    permission(editing ? 'update' : 'create');
+  if (!form || submitting.value || !current()) return;
+  submitting.value = true;
+  try {
+    await form.validate();
+    if (!current()) return;
+    const id = draft.id;
+    if (editing && !validPositiveId(id)) {
+      message.error('采集任务标识无效，请刷新后重试');
       return;
     }
-  }
-
-  try {
-    const { bearer_token, enableSwitch, ...configuration } = formDialog.form;
-    const credentials = bearerTokenPayload({
-      editing: formDialog.isEdit,
-      action: bearerTokenAction.value,
-      hasExisting: hasExistingBearerToken.value,
-      token: bearer_token,
-      tokenFile: configuration.bearer_token_file,
-    });
+    const poolId = draft.pool_id;
+    if (!validPositiveId(poolId)) {
+      message.error('请选择有效的关联采集池');
+      return;
+    }
+    if (
+      draft.port !== undefined &&
+      (!Number.isSafeInteger(draft.port) ||
+        draft.port < 0 ||
+        draft.port > 65_535)
+    ) {
+      message.error('端口必须为0或1-65535的整数');
+      return;
+    }
+    if (
+      ![
+        ServiceDiscoveryType.Http,
+        ServiceDiscoveryType.K8s,
+        ServiceDiscoveryType.Static,
+      ].includes(draft.service_discovery_type)
+    ) {
+      message.error('服务发现类型无效');
+      return;
+    }
+    if (typeof draft.enableSwitch !== 'boolean') {
+      message.error('采集任务状态无效');
+      return;
+    }
+    if (draft.tls_ca_content.trim() && draft.tls_ca_file_path.trim()) {
+      message.error('TLS CA内容和文件路径只能配置一种');
+      return;
+    }
+    const { bearer_token, enableSwitch, ...configuration } = draft;
+    let credentials: ReturnType<typeof bearerTokenPayload>;
+    try {
+      credentials = bearerTokenPayload({
+        editing,
+        action: bearerTokenAction.value,
+        hasExisting: hasExistingBearerToken.value,
+        token: bearer_token,
+        tokenFile: configuration.bearer_token_file,
+      });
+    } catch (error) {
+      message.error(
+        error instanceof Error ? error.message : '采集凭据配置无效',
+      );
+      return;
+    }
     const formData = {
       ...configuration,
       ...credentials,
       enable: enableSwitch ? 1 : 2,
-      tree_node_ids: Array.isArray((formDialog.form as any).tree_node_ids)
-        ? (formDialog.form as any).tree_node_ids.map((id: number) => String(id))
-        : [],
-      tags: Array.isArray((formDialog.form as any).tags)
-        ? (formDialog.form as any).tags
-        : [],
+      pool_id: poolId,
+      tree_node_ids: draft.tree_node_ids.map((value) => String(value)),
+      tags: [...draft.tags],
     };
-
-    if (formDialog.isEdit && formDialog.form.id) {
-      const updateData: UpdateMonitorScrapeJobReq =
-        formData as UpdateMonitorScrapeJobReq;
-      await updateMonitorScrapeJobApi(updateData);
-      message.success(`采集任务 "${formDialog.form.name}" 已更新`);
+    if (editing) {
+      if (!validPositiveId(id)) return;
+      await updateMonitorScrapeJobApi({ ...formData, id });
     } else {
-      const createData: CreateMonitorScrapeJobReq =
-        formData as CreateMonitorScrapeJobReq;
+      const { id: _id, ...createData } = formData;
       await createMonitorScrapeJobApi(createData);
-      message.success(`采集任务 "${formDialog.form.name}" 已创建`);
-      // 创建后返回第一页
-      paginationConfig.current = 1;
     }
-
-    formDialogVisible.value = false;
-    loadScrapeJobList();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '保存采集任务失败');
+    if (!current()) return;
+    message.success(`采集任务 "${draft.name}" 已${editing ? '更新' : '创建'}`);
+    if (!editing) paginationConfig.current = 1;
+    closeFormDialog();
+    void loadScrapeJobList();
+  } catch (error) {
+    if (!current()) return;
+    if (error && typeof error === 'object' && 'errorFields' in error) return;
+    if (shouldNotifyPageError(error)) message.error('保存采集任务失败');
+  } finally {
+    if (ownsWindow()) submitting.value = false;
   }
 };
 
 // 重置表单对话框
-const resetFormDialog = (): void => {
+function resetFormDialog(): void {
   bearerTokenAction.value = 'keep';
   hasExistingBearerToken.value = false;
   formDialog.form = {
@@ -782,7 +1095,7 @@ const resetFormDialog = (): void => {
   // 重置 YAML 验证状态
   yamlError.value = '';
   yamlSuccess.value = false;
-};
+}
 
 // YAML 相关方法
 const validateYaml = (): void => {
@@ -920,16 +1233,82 @@ const insertYamlTemplate = (): void => {
 };
 
 // 对话框关闭
-const closeFormDialog = (): void => {
+function closeFormDialog(): void {
+  formRevision++;
+  dialogPoolRequest++;
+  clearTimeout(poolSearchDebounce);
+  dialogPoolLoading.value = false;
+  formOwner = undefined;
+  submitting.value = false;
   formDialogVisible.value = false;
+  resetFormDialog();
   // 重置 YAML 验证状态
   yamlError.value = '';
   yamlSuccess.value = false;
-};
+}
 
-const closeDetailDialog = (): void => {
+function closeDetailDialog(): void {
+  detailRevision++;
+  detailOwner = undefined;
+  detailDialog.form = null;
+  detailDialog.loading = false;
   detailDialogVisible.value = false;
-};
+}
+
+onBeforeUnmount(() => {
+  disposed = true;
+  formRevision++;
+  detailRevision++;
+  deleteTickets.clear();
+  statusTickets.clear();
+  dialogPoolRequest++;
+  poolsRequest++;
+  treeRequest++;
+  clearTimeout(poolSearchDebounce);
+  formDialog.form.bearer_token = '';
+  if (searchTimeout) clearTimeout(searchTimeout);
+});
+watch(
+  () => [
+    formDialogVisible.value,
+    formDialog.isEdit,
+    permission('create'),
+    permission('update'),
+    detailDialogVisible.value,
+    permission('detail'),
+  ],
+  () => {
+    if (
+      formDialogVisible.value &&
+      !permission(formDialog.isEdit ? 'update' : 'create')
+    )
+      closeFormDialog();
+    if (detailDialogVisible.value && !permission('detail')) closeDetailDialog();
+  },
+  { flush: 'sync' },
+);
+
+watch(
+  operationOwner,
+  () => {
+    listOwner = undefined;
+    listRevision++;
+    invalidateList();
+    scrapeJobList.value = [];
+    paginationConfig.total = 0;
+    deleteTickets.clear();
+    statusTickets.clear();
+    poolsRequest++;
+    treeRequest++;
+    pools.value = [];
+    dialogPools.value = [];
+    treeData.value = [];
+    closeFormDialog();
+    closeDetailDialog();
+    updateStats();
+  },
+  { flush: 'sync' },
+);
 
 // 生命周期钩子
 onMounted(() => {
@@ -945,10 +1324,20 @@ onMounted(() => {
 
 // 加载服务树数据
 const loadTreeData = async (): Promise<void> => {
+  const owner = operationOwner();
+  const request = ++treeRequest;
+  const current = () =>
+    !disposed &&
+    owner !== undefined &&
+    owner === operationOwner() &&
+    request === treeRequest;
+  if (!current()) return;
   try {
     const response = await getTreeList();
+    if (!current()) return;
     treeData.value = response.items || [];
   } catch (error) {
+    if (!current()) return;
     if (shouldNotifyPageError(error)) message.error('获取服务树数据失败');
     treeData.value = [];
   }
@@ -1249,6 +1638,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
 
     <!-- 创建/编辑采集任务对话框 -->
     <a-modal
+      :confirm-loading="submitting"
       :destroy-on-close="true"
       :open="formDialogVisible"
       :title="formDialog.isEdit ? '编辑采集任务' : '创建采集任务'"
@@ -1268,7 +1658,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
           <a-row :gutter="16">
             <a-col :sm="12" :xs="24">
               <a-form-item
-                :rules="[{ required: true, message: '请输入采集任务名称' }]"
+                :rules="formRules.name"
                 label="采集任务名称"
                 name="name"
               >
@@ -1378,16 +1768,13 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
           <a-row :gutter="16">
             <a-col :sm="12" :xs="24">
               <a-form-item
-                :rules="[
-                  { required: true, message: '请输入采集间隔' },
-                  { type: 'number', min: 1, message: '采集间隔必须大于0' },
-                ]"
+                :rules="formRules.scrape_interval"
                 label="采集间隔（秒）"
                 name="scrape_interval"
               >
                 <a-input-number
                   v-model:value="formDialog.form.scrape_interval"
-                  :min="1"
+                  :min="0"
                   class="full-width"
                   placeholder="请输入采集间隔（秒）"
                 />
@@ -1395,16 +1782,13 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
             </a-col>
             <a-col :sm="12" :xs="24">
               <a-form-item
-                :rules="[
-                  { required: true, message: '请输入采集超时' },
-                  { type: 'number', min: 1, message: '采集超时必须大于0' },
-                ]"
+                :rules="formRules.scrape_timeout"
                 label="采集超时（秒）"
                 name="scrape_timeout"
               >
                 <a-input-number
                   v-model:value="formDialog.form.scrape_timeout"
-                  :min="1"
+                  :min="0"
                   class="full-width"
                   placeholder="请输入采集超时（秒）"
                 />
@@ -1415,16 +1799,13 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
           <a-row :gutter="16">
             <a-col :sm="12" :xs="24">
               <a-form-item
-                :rules="[
-                  { required: true, message: '请输入刷新间隔' },
-                  { type: 'number', min: 1, message: '刷新间隔必须大于0' },
-                ]"
+                :rules="formRules.refresh_interval"
                 label="刷新间隔（秒）"
                 name="refresh_interval"
               >
                 <a-input-number
                   v-model:value="formDialog.form.refresh_interval"
-                  :min="1"
+                  :min="0"
                   class="full-width"
                   placeholder="请输入刷新间隔（秒）"
                 />
@@ -1442,7 +1823,7 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
                 <a-input-number
                   v-model:value="formDialog.form.port"
                   :max="65535"
-                  :min="1"
+                  :min="0"
                   class="full-width"
                   placeholder="请输入端口"
                 />
@@ -1461,16 +1842,16 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
           <div class="section-title">目标地址配置</div>
           <a-form-item
             :rules="formRules.ip_address"
-            label="IP地址"
+            label="目标主机/IP"
             name="ip_address"
           >
             <a-input
               v-model:value="formDialog.form.ip_address"
-              placeholder="请输入IP地址，如：192.168.1.100"
+              placeholder="请输入单个主机或IP地址，可带端口"
             />
             <div class="form-help-text">
               <Icon icon="ant-design:info-circle-outlined" />
-              请输入单个IP地址，端口配置在上方端口字段
+              支持单个主机/IP，可带端口；已含端口原样保留。IPv6带端口请使用[地址]:端口。
             </div>
           </a-form-item>
         </div>
@@ -1804,7 +2185,9 @@ const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
             <a-button @click="closeDetailDialog">关闭</a-button>
             <a-button
               type="primary"
-              @click="handleEditScrapeJob(detailDialog.form!)"
+              @click="
+                detailDialog.form && handleEditScrapeJob(detailDialog.form)
+              "
             >
               编辑
             </a-button>
