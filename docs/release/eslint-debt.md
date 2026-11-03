@@ -728,3 +728,11 @@ CloudAccountManagement仅将normalizeRegions、regionSignature两段完整const-
 - 磁盘源码与提案逐字匹配，完整声明和其它statement原文顺序、compileScript binding分类及生产DOM/SSR render一致；单文件lint105→103 errors，0 warnings，逐规则无新增，其余既有债保留。
 - 原/新实际编译setup使用真实Vue、Fake API，在读取成功/失败两种流程下factory零请求，受控mounted读取、Azure/GCP/华为/阿里云地域校验矩阵、签名与输入不变、关闭清理轨迹相同。这是setup/受控生命周期探针，不代替真实DOM挂载验收。
 - CloudAccountSafety、CloudAccount.contract和CMDBLists现有3文件131项测试及应用类型检查通过，保留账户与窗口隔离、失败清理和provider凭据等既有回归；未改测试断言、规则或ignore，未重跑全仓测试和构建。没有真实云、凭据验证或网络调用，未上线。
+
+## 阶段七十三：本地资源分页回调的完整依赖顺序
+
+LocalResourceManagement仅将fetchLocalResourcesForScope、fetchLocalResources和handleTableChange三段完整const-arrow按依赖顺序提前到paginationConfig之前，no-use-before-define 2→0。捕获的pagination/filterForm及其它state已初始化；函数创建不读取这些数据或发送请求，实际分页回调和读取仍在原调用时机执行。
+
+- 三段声明kind、函数体、同一作用域与捕获binding，以及其它fixed statement原文顺序、data/computed/watch/call初始化位置、模板/style保持。磁盘源码与提案逐字匹配，compileScript binding分类及生产DOM/SSR render一致；单文件lint84→82 errors，0 warnings，逐规则无新增。
+- 原/新实际编译setup以真实Vue和Fake API比对成功/失败两组轨迹：factory零请求，受控mounted读取树及列表的顺序相同，实际paginationConfig的onChange(3,20)及onShowSizeChange(1,50)产生相同params、filter、rows、loading和错误清理。这是setup/受控生命周期探针，不替代真实DOM挂载测试。
+- LocalResource.contract、LocalResourceSafety、LocalResourceBindingSafety及CMDBLists现有4文件141项测试和应用类型检查通过，保留既有账户隔离、窗口/请求竞态、绑定及失败回归；未新增镜像测试、改断言、规则或ignore，未重复全仓测试和构建。该单模块闭环不代表其它域的前引全部完成，没有真实资源、SSH或网络操作，未上线。

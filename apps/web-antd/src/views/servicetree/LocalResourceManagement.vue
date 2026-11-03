@@ -186,6 +186,63 @@ const modalWidth = computed(() => {
   return '900px';
 });
 
+const fetchLocalResourcesForScope = async (
+  stillCurrent: () => boolean = () => true,
+): Promise<void> => {
+  const owner = pageOwner();
+  if (!active || !owner || !stillCurrent()) return;
+  const ticket = ++listRequest;
+  const isCurrent = () =>
+    active && ticket === listRequest && pageOwner() === owner && stillCurrent();
+  loadError.value = null;
+  loading.value = true;
+  try {
+    const params: GetTreeLocalResourceListReq = {
+      page: pagination.current,
+      size: pagination.pageSize,
+    };
+
+    if (filterForm.status) {
+      params.status = filterForm.status;
+    }
+
+    const response = await getTreeLocalList(params);
+    if (!isCurrent()) return;
+
+    // 确保返回的数据包含 tree_nodes 字段
+    const items = response.items || [];
+    listOwner = owner;
+    localResources.value = items.map((item: TreeLocalResource) => ({
+      ...item,
+      tree_nodes: item.tree_nodes || [],
+    }));
+    pagination.total = response.total || 0;
+  } catch (error) {
+    if (!isCurrent()) return;
+    if (shouldRecordPageError(error))
+      loadError.value = '获取本地资源列表失败，请重试';
+    if (shouldNotifyPageError(error)) message.error('获取本地资源列表失败');
+
+    localResources.value = [];
+    pagination.total = 0;
+  } finally {
+    if (ticket === listRequest) loading.value = false;
+  }
+};
+
+const fetchLocalResources = () => fetchLocalResourcesForScope();
+
+const handleTableChange = (pag: {
+  current?: number;
+  pageSize?: number;
+}): void => {
+  pagination.current = pag.current || pagination.current;
+  pagination.pageSize = pag.pageSize || pagination.pageSize;
+  filterForm.page = pagination.current;
+  filterForm.size = pagination.pageSize;
+  fetchLocalResources();
+};
+
 const paginationConfig = computed(() => ({
   ...pagination,
   onChange: (page: number, pageSize: number) =>
@@ -397,52 +454,6 @@ const fetchTreeData = async (
   }
 };
 
-const fetchLocalResourcesForScope = async (
-  stillCurrent: () => boolean = () => true,
-): Promise<void> => {
-  const owner = pageOwner();
-  if (!active || !owner || !stillCurrent()) return;
-  const ticket = ++listRequest;
-  const isCurrent = () =>
-    active && ticket === listRequest && pageOwner() === owner && stillCurrent();
-  loadError.value = null;
-  loading.value = true;
-  try {
-    const params: GetTreeLocalResourceListReq = {
-      page: pagination.current,
-      size: pagination.pageSize,
-    };
-
-    if (filterForm.status) {
-      params.status = filterForm.status;
-    }
-
-    const response = await getTreeLocalList(params);
-    if (!isCurrent()) return;
-
-    // 确保返回的数据包含 tree_nodes 字段
-    const items = response.items || [];
-    listOwner = owner;
-    localResources.value = items.map((item: TreeLocalResource) => ({
-      ...item,
-      tree_nodes: item.tree_nodes || [],
-    }));
-    pagination.total = response.total || 0;
-  } catch (error) {
-    if (!isCurrent()) return;
-    if (shouldRecordPageError(error))
-      loadError.value = '获取本地资源列表失败，请重试';
-    if (shouldNotifyPageError(error)) message.error('获取本地资源列表失败');
-
-    localResources.value = [];
-    pagination.total = 0;
-  } finally {
-    if (ticket === listRequest) loading.value = false;
-  }
-};
-
-const fetchLocalResources = () => fetchLocalResourcesForScope();
-
 const handleSearch = (): void => {
   pagination.current = 1;
   filterForm.page = 1;
@@ -455,17 +466,6 @@ const resetFilter = (): void => {
   filterForm.page = 1;
   fetchLocalResources();
   message.success('过滤条件已重置');
-};
-
-const handleTableChange = (pag: {
-  current?: number;
-  pageSize?: number;
-}): void => {
-  pagination.current = pag.current || pagination.current;
-  pagination.pageSize = pag.pageSize || pagination.pageSize;
-  filterForm.page = pagination.current;
-  filterForm.size = pagination.pageSize;
-  fetchLocalResources();
 };
 
 function clearDraftSecrets(): void {
