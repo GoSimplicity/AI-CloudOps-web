@@ -285,36 +285,6 @@
     "route": "/api/user/statistics"
   },
   {
-    "file": "tree/tree.ts",
-    "method": "GET",
-    "route": "/api/tree/node/list"
-  },
-  {
-    "file": "tree/tree.ts",
-    "method": "GET",
-    "route": "/api/tree/node/detail/:value"
-  },
-  {
-    "file": "tree/tree.ts",
-    "method": "GET",
-    "route": "/api/tree/node/statistics"
-  },
-  {
-    "file": "tree/tree.ts",
-    "method": "POST",
-    "route": "/api/tree/node/create"
-  },
-  {
-    "file": "tree/tree.ts",
-    "method": "DELETE",
-    "route": "/api/tree/node/delete/:value"
-  },
-  {
-    "file": "tree/tree.ts",
-    "method": "POST",
-    "route": "/api/tree/node/member/add"
-  },
-  {
     "file": "tree/tree_cloud.ts",
     "method": "GET",
     "route": "/api/user/permissions"
