@@ -11,6 +11,7 @@ import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
 import AI from '#/views/ai/ai.vue';
 
+import DemoModeNotice from './components/DemoModeNotice.vue';
 import InboxNotification from './components/InboxNotification.vue';
 
 const projectURL = 'https://github.com/GoSimplicity/AI-CloudOps';
@@ -62,6 +63,9 @@ async function handleLogout() {
 
 <template>
   <BasicLayout @clear-preferences-and-logout="handleLogout">
+    <template #header-left-1>
+      <DemoModeNotice />
+    </template>
     <template #user-dropdown>
       <UserDropdown
         :avatar

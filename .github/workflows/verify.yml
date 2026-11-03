@@ -28,6 +28,7 @@ jobs:
       - run: pnpm -F @vben/web-antd typecheck
       - run: pnpm exec tsc --noEmit -p apps/web-antd/tsconfig.node.json
       - run: pnpm test:unit --run
+      - run: pnpm test:demo
       - run: pnpm build:antd
       - run: pnpm exec playwright install --with-deps chromium
       - name: Verify production login bootstrap

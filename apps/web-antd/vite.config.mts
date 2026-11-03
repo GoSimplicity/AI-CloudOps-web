@@ -1,5 +1,6 @@
 import { defineConfig } from '@vben/vite-config';
-import type { ProxyOptions } from 'vite';
+import { loadEnv, type ProxyOptions } from 'vite';
+import process from 'node:process';
 import path from 'path'; // 引入 path 模块
 
 // 浏览器与 Vite 同源，上游无需对本地开发端口再次执行 CORS 校验
@@ -8,7 +9,15 @@ const configureHttpProxy: NonNullable<ProxyOptions['configure']> = (proxy) => {
   proxy.on('proxyReq', (request) => request.removeHeader('origin'));
 };
 
-export default defineConfig(async () => {
+export default defineConfig(async (environment) => {
+  const demo =
+    environment?.command === 'serve' &&
+    environment.mode === 'demo' &&
+    !environment.isPreview &&
+    loadEnv(environment.mode, process.cwd(), 'VITE_').VITE_CLOUDOPS_DEMO === 'true';
+  const proxyTarget = demo
+    ? 'http://127.0.0.1:18089'
+    : process.env.VITE_PROXY_TARGET || 'http://localhost:8889';
   return {
     application: {},
     vite: {
@@ -18,14 +27,14 @@ export default defineConfig(async () => {
           '/api/v1': {
             changeOrigin: true,
             configure: configureHttpProxy,
-            target: process.env.VITE_PROXY_TARGET || 'http://localhost:8889',
+            target: proxyTarget,
             ws: true,
           },
           '/api': {
             changeOrigin: true,
             configure: configureHttpProxy,
             rewrite: (path) => path.replace(/^\/api/, ''),
-            target: `${process.env.VITE_PROXY_TARGET || 'http://localhost:8889'}/api`,
+            target: `${proxyTarget}/api`,
             ws: true,
           },
         },

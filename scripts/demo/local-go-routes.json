@@ -1,0 +1,562 @@
+[
+  {
+    "file": "cron/cron.ts",
+    "method": "GET",
+    "route": "/api/cron/job/list"
+  },
+  {
+    "file": "cron/cron.ts",
+    "method": "GET",
+    "route": "/api/cron/job/:value/detail"
+  },
+  {
+    "file": "prometheus/prometheus_alert_event.ts",
+    "method": "GET",
+    "route": "/api/monitor/alert_events/list"
+  },
+  {
+    "file": "prometheus/prometheus_alert_pool.ts",
+    "method": "GET",
+    "route": "/api/monitor/alert_manager_pools/list"
+  },
+  {
+    "file": "prometheus/prometheus_alert_pool.ts",
+    "method": "GET",
+    "route": "/api/monitor/alert_manager_pools/detail/:value"
+  },
+  {
+    "file": "prometheus/prometheus_alert_record.ts",
+    "method": "GET",
+    "route": "/api/monitor/record_rules/list"
+  },
+  {
+    "file": "prometheus/prometheus_alert_record.ts",
+    "method": "GET",
+    "route": "/api/monitor/record_rules/detail/:value"
+  },
+  {
+    "file": "prometheus/prometheus_alert_rule.ts",
+    "method": "GET",
+    "route": "/api/monitor/alert_rules/list"
+  },
+  {
+    "file": "prometheus/prometheus_alert_rule.ts",
+    "method": "GET",
+    "route": "/api/monitor/alert_rules/detail/:value"
+  },
+  {
+    "file": "prometheus/prometheus_config.ts",
+    "method": "GET",
+    "route": "/api/monitor/configs/list"
+  },
+  {
+    "file": "prometheus/prometheus_config.ts",
+    "method": "GET",
+    "route": "/api/monitor/configs/detail/:value"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "GET",
+    "route": "/api/monitor/onduty_groups/list"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "GET",
+    "route": "/api/monitor/onduty_groups/detail/:value"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "GET",
+    "route": "/api/monitor/onduty_groups/future_plan/:value"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "GET",
+    "route": "/api/monitor/onduty_groups/history/:value"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "GET",
+    "route": "/api/monitor/onduty_groups/changes/:value"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_job.ts",
+    "method": "GET",
+    "route": "/api/monitor/scrape_jobs/list"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_job.ts",
+    "method": "GET",
+    "route": "/api/monitor/scrape_jobs/detail/:value"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_pool.ts",
+    "method": "GET",
+    "route": "/api/monitor/scrape_pools/list"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_pool.ts",
+    "method": "GET",
+    "route": "/api/monitor/scrape_pools/detail/:value"
+  },
+  {
+    "file": "prometheus/prometheus_send_group.ts",
+    "method": "GET",
+    "route": "/api/monitor/send_groups/list"
+  },
+  {
+    "file": "prometheus/prometheus_send_group.ts",
+    "method": "GET",
+    "route": "/api/monitor/send_groups/detail/:value"
+  },
+  {
+    "file": "system/api.ts",
+    "method": "GET",
+    "route": "/api/apis/list"
+  },
+  {
+    "file": "system/api.ts",
+    "method": "GET",
+    "route": "/api/apis/detail/:value"
+  },
+  {
+    "file": "system/api.ts",
+    "method": "GET",
+    "route": "/api/apis/statistics"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "GET",
+    "route": "/api/audit/list"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "GET",
+    "route": "/api/audit/detail/:value"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "GET",
+    "route": "/api/audit/search"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "GET",
+    "route": "/api/audit/statistics"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "GET",
+    "route": "/api/audit/types"
+  },
+  {
+    "file": "system/auth.ts",
+    "method": "POST",
+    "route": "/api/user/login"
+  },
+  {
+    "file": "system/auth.ts",
+    "method": "POST",
+    "route": "/api/user/refresh_token"
+  },
+  {
+    "file": "system/auth.ts",
+    "method": "POST",
+    "route": "/api/user/logout"
+  },
+  {
+    "file": "system/auth.ts",
+    "method": "GET",
+    "route": "/api/user/codes"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/role/list"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "POST",
+    "route": "/api/role/create"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "PUT",
+    "route": "/api/role/update/:value"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "DELETE",
+    "route": "/api/role/delete/:value"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/role/detail/:value"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "POST",
+    "route": "/api/role/assign-apis"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "POST",
+    "route": "/api/role/revoke-apis"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/role/apis/:value"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "POST",
+    "route": "/api/role/assign_users"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "POST",
+    "route": "/api/role/revoke_users"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/role/users/:value"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/role/user_roles/:value"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "POST",
+    "route": "/api/role/check_permission"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/role/user_permissions/:value"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "GET",
+    "route": "/api/user/profile"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "GET",
+    "route": "/api/user/list"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "POST",
+    "route": "/api/user/signup"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "POST",
+    "route": "/api/user/change_password"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "DELETE",
+    "route": "/api/user/:value/delete"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "PUT",
+    "route": "/api/user/profile/update/:value"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "GET",
+    "route": "/api/user/detail/:value"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "POST",
+    "route": "/api/user/write_off"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "GET",
+    "route": "/api/user/statistics"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "GET",
+    "route": "/api/tree/node/list"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "GET",
+    "route": "/api/tree/node/detail/:value"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "GET",
+    "route": "/api/tree/node/statistics"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/node/create"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "DELETE",
+    "route": "/api/tree/node/delete/:value"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/node/member/add"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/user/permissions"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "GET",
+    "route": "/api/tree/local/list"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "GET",
+    "route": "/api/tree/local/detail/:value"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "POST",
+    "route": "/api/tree/local/create"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "PUT",
+    "route": "/api/tree/local/update/:value"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "DELETE",
+    "route": "/api/tree/local/delete/:value"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "POST",
+    "route": "/api/tree/local/bind/:value"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "POST",
+    "route": "/api/tree/local/unbind/:value"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "GET",
+    "route": "/api/tree/node/list"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "GET",
+    "route": "/api/tree/node/detail/:value"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "GET",
+    "route": "/api/tree/node/children/:value"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "GET",
+    "route": "/api/tree/node/statistics"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "POST",
+    "route": "/api/tree/node/create"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "PUT",
+    "route": "/api/tree/node/update/:value"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "DELETE",
+    "route": "/api/tree/node/delete/:value"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "PUT",
+    "route": "/api/tree/node/move/:value"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "GET",
+    "route": "/api/tree/node/members/:value"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "POST",
+    "route": "/api/tree/node/member/add"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "DELETE",
+    "route": "/api/tree/node/member/remove/:value"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "POST",
+    "route": "/api/tree/node/resource/bind"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "POST",
+    "route": "/api/tree/node/resource/unbind"
+  },
+  {
+    "file": "workorder/inbox.ts",
+    "method": "GET",
+    "route": "/api/user/permissions"
+  },
+  {
+    "file": "workorder/notification-events.ts",
+    "method": "GET",
+    "route": "/api/user/permissions"
+  },
+  {
+    "file": "workorder/notification-events.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/events"
+  },
+  {
+    "file": "workorder/notification-events.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/events/:value/deliveries"
+  },
+  {
+    "file": "workorder/notification-events.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/events/:value/resolutions"
+  },
+  {
+    "file": "workorder/workorder_category.ts",
+    "method": "GET",
+    "route": "/api/workorder/category/list"
+  },
+  {
+    "file": "workorder/workorder_category.ts",
+    "method": "GET",
+    "route": "/api/workorder/category/detail/:value"
+  },
+  {
+    "file": "workorder/workorder_form_design.ts",
+    "method": "GET",
+    "route": "/api/workorder/form-design/list"
+  },
+  {
+    "file": "workorder/workorder_form_design.ts",
+    "method": "GET",
+    "route": "/api/workorder/form-design/detail/:value"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/detail/:value"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/list"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/actions/:value"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/current-step/:value"
+  },
+  {
+    "file": "workorder/workorder_instance_comment.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/comment/detail/:value"
+  },
+  {
+    "file": "workorder/workorder_instance_comment.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/comment/list"
+  },
+  {
+    "file": "workorder/workorder_instance_comment.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/comment/tree/:value"
+  },
+  {
+    "file": "workorder/workorder_instance_flow.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/flow/list"
+  },
+  {
+    "file": "workorder/workorder_instance_flow.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/flow/detail/:value"
+  },
+  {
+    "file": "workorder/workorder_instance_time_line.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/timeline/list"
+  },
+  {
+    "file": "workorder/workorder_instance_time_line.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/timeline/detail/:value"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/list"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/detail/:value"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/logs"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/channels"
+  },
+  {
+    "file": "workorder/workorder_process.ts",
+    "method": "GET",
+    "route": "/api/workorder/process/list"
+  },
+  {
+    "file": "workorder/workorder_process.ts",
+    "method": "GET",
+    "route": "/api/workorder/process/detail/:value"
+  },
+  {
+    "file": "workorder/workorder_template.ts",
+    "method": "GET",
+    "route": "/api/workorder/template/list"
+  },
+  {
+    "file": "workorder/workorder_template.ts",
+    "method": "GET",
+    "route": "/api/workorder/template/detail/:value"
+  }
+]

@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { updatePreferences, usePreferences } from '@vben/preferences';
 
+import DemoModeNotice from './components/DemoModeNotice.vue';
+
 const { isDark } = usePreferences();
 function toggleTheme() {
   updatePreferences({ theme: { mode: isDark.value ? 'light' : 'dark' } });
@@ -13,6 +15,7 @@ function toggleTheme() {
       <a aria-label="CloudOps 首页" class="ops-wordmark" href="/"
         >CLOUD<span>OPS</span></a
       >
+      <DemoModeNotice />
       <button class="ops-theme-switch" type="button" @click="toggleTheme">
         {{ isDark ? '切换浅色' : '切换深色' }}
       </button>

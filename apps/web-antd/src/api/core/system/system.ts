@@ -2,6 +2,7 @@ import { requestClient } from '#/api/request';
 
 // 系统硬件信息接口
 export interface System {
+  source?: 'simulated'; // 本地演示采样标记，真实后端不设置
   id?: number;
   hostname: string; // 主机名
   os: string; // 操作系统

@@ -1,0 +1,3327 @@
+[
+  {
+    "file": "aiops/assistant.ts",
+    "method": "POST",
+    "route": "/api/v1/assistant/query",
+    "example": "/api/v1/assistant/query",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/assistant.ts",
+    "method": "POST",
+    "route": "/api/v1/assistant/session",
+    "example": "/api/v1/assistant/session",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/assistant.ts",
+    "method": "GET",
+    "route": "/api/v1/assistant/session/:value",
+    "example": "/api/v1/assistant/session/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "aiops/assistant.ts",
+    "method": "POST",
+    "route": "/api/v1/assistant/refresh",
+    "example": "/api/v1/assistant/refresh",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/assistant.ts",
+    "method": "GET",
+    "route": "/api/v1/assistant/health",
+    "example": "/api/v1/assistant/health",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/assistant.ts",
+    "method": "GET",
+    "route": "/api/v1/assistant/ready",
+    "example": "/api/v1/assistant/ready",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/assistant.ts",
+    "method": "POST",
+    "route": "/api/v1/assistant/clear-cache",
+    "example": "/api/v1/assistant/clear-cache",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/assistant.ts",
+    "method": "POST",
+    "route": "/api/v1/assistant/upload-knowledge-file",
+    "example": "/api/v1/assistant/upload-knowledge-file",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "aiops/assistant.ts",
+    "method": "POST",
+    "route": "/api/v1/assistant/add-document",
+    "example": "/api/v1/assistant/add-document",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/assistant.ts",
+    "method": "GET",
+    "route": "/api/v1/assistant/config",
+    "example": "/api/v1/assistant/config",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/assistant.ts",
+    "method": "GET",
+    "route": "/api/v1/assistant/info",
+    "example": "/api/v1/assistant/info",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/autofix.ts",
+    "method": "POST",
+    "route": "/api/v1/autofix/workflow",
+    "example": "/api/v1/autofix/workflow",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/autofix.ts",
+    "method": "POST",
+    "route": "/api/v1/autofix/workflow/confirm",
+    "example": "/api/v1/autofix/workflow/confirm",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "aiops/autofix.ts",
+    "method": "GET",
+    "route": "/api/v1/autofix/info",
+    "example": "/api/v1/autofix/info",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/autofix.ts",
+    "method": "GET",
+    "route": "/api/v1/autofix/ready",
+    "example": "/api/v1/autofix/ready",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/autofix.ts",
+    "method": "GET",
+    "route": "/api/v1/autofix/workflow/history",
+    "example": "/api/v1/autofix/workflow/history",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/autofix.ts",
+    "method": "GET",
+    "route": "/api/v1/autofix/workflow/operations/:value",
+    "example": "/api/v1/autofix/workflow/operations/00000000-0000-4000-8000-000000000001",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/autofix.ts",
+    "method": "GET",
+    "route": "/api/v1/autofix/workflow/plans/:value",
+    "example": "/api/v1/autofix/workflow/plans/00000000-0000-4000-8000-000000000002",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/predict.ts",
+    "method": "POST",
+    "route": "/api/v1/predict/qps",
+    "example": "/api/v1/predict/qps",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/predict.ts",
+    "method": "POST",
+    "route": "/api/v1/predict/cpu",
+    "example": "/api/v1/predict/cpu",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/predict.ts",
+    "method": "POST",
+    "route": "/api/v1/predict/memory",
+    "example": "/api/v1/predict/memory",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/predict.ts",
+    "method": "POST",
+    "route": "/api/v1/predict/disk",
+    "example": "/api/v1/predict/disk",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/predict.ts",
+    "method": "GET",
+    "route": "/api/v1/predict/health",
+    "example": "/api/v1/predict/health",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/predict.ts",
+    "method": "GET",
+    "route": "/api/v1/predict/ready",
+    "example": "/api/v1/predict/ready",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/predict.ts",
+    "method": "GET",
+    "route": "/api/v1/predict/info",
+    "example": "/api/v1/predict/info",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/predict.ts",
+    "method": "GET",
+    "route": "/api/v1/predict/models",
+    "example": "/api/v1/predict/models",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/prediction-backtest.ts",
+    "method": "POST",
+    "route": "/api/v1/predict/backtest",
+    "example": "/api/v1/predict/backtest",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "POST",
+    "route": "/api/v1/rca/analyze",
+    "example": "/api/v1/rca/analyze",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "GET",
+    "route": "/api/v1/rca/metrics",
+    "example": "/api/v1/rca/metrics",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "GET",
+    "route": "/api/v1/rca/health",
+    "example": "/api/v1/rca/health",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "GET",
+    "route": "/api/v1/rca/ready",
+    "example": "/api/v1/rca/ready",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "GET",
+    "route": "/api/v1/rca/config",
+    "example": "/api/v1/rca/config",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "POST",
+    "route": "/api/v1/rca/quick-diagnosis",
+    "example": "/api/v1/rca/quick-diagnosis",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "POST",
+    "route": "/api/v1/rca/event-patterns",
+    "example": "/api/v1/rca/event-patterns",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "POST",
+    "route": "/api/v1/rca/error-summary",
+    "example": "/api/v1/rca/error-summary",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "POST",
+    "route": "/api/v1/rca/data/metrics",
+    "example": "/api/v1/rca/data/metrics",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "POST",
+    "route": "/api/v1/rca/data/events",
+    "example": "/api/v1/rca/data/events",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "POST",
+    "route": "/api/v1/rca/data/logs",
+    "example": "/api/v1/rca/data/logs",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "GET",
+    "route": "/api/v1/rca/cache/stats",
+    "example": "/api/v1/rca/cache/stats",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "DELETE",
+    "route": "/api/v1/rca/cache/clear",
+    "example": "/api/v1/rca/cache/clear",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "POST",
+    "route": "/api/v1/rca/cache/clear/namespace",
+    "example": "/api/v1/rca/cache/clear/namespace",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "POST",
+    "route": "/api/v1/rca/cache/clear/operation",
+    "example": "/api/v1/rca/cache/clear/operation",
+    "treatment": "simulated"
+  },
+  {
+    "file": "aiops/rca.ts",
+    "method": "GET",
+    "route": "/api/v1/rca/info",
+    "example": "/api/v1/rca/info",
+    "treatment": "simulated"
+  },
+  {
+    "file": "cron/cron.ts",
+    "method": "GET",
+    "route": "/api/cron/job/list",
+    "example": "/api/cron/job/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "cron/cron.ts",
+    "method": "GET",
+    "route": "/api/cron/job/:value/detail",
+    "example": "/api/cron/job/demo-session/detail",
+    "treatment": "local-go"
+  },
+  {
+    "file": "cron/cron.ts",
+    "method": "POST",
+    "route": "/api/cron/job/create",
+    "example": "/api/cron/job/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "cron/cron.ts",
+    "method": "PUT",
+    "route": "/api/cron/job/:value/update",
+    "example": "/api/cron/job/demo-session/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "cron/cron.ts",
+    "method": "DELETE",
+    "route": "/api/cron/job/:value/delete",
+    "example": "/api/cron/job/demo-session/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "cron/cron.ts",
+    "method": "POST",
+    "route": "/api/cron/job/:value/enable",
+    "example": "/api/cron/job/demo-session/enable",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "cron/cron.ts",
+    "method": "POST",
+    "route": "/api/cron/job/:value/disable",
+    "example": "/api/cron/job/demo-session/disable",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "cron/cron.ts",
+    "method": "POST",
+    "route": "/api/cron/job/:value/trigger",
+    "example": "/api/cron/job/demo-session/trigger",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "cron/cron.ts",
+    "method": "POST",
+    "route": "/api/cron/validate-schedule",
+    "example": "/api/cron/validate-schedule",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_cluster.ts",
+    "method": "GET",
+    "route": "/api/k8s/cluster/list",
+    "example": "/api/k8s/cluster/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_cluster.ts",
+    "method": "GET",
+    "route": "/api/k8s/cluster/:value/detail",
+    "example": "/api/k8s/cluster/9001/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_cluster.ts",
+    "method": "POST",
+    "route": "/api/k8s/cluster/create",
+    "example": "/api/k8s/cluster/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_cluster.ts",
+    "method": "PUT",
+    "route": "/api/k8s/cluster/:value/update",
+    "example": "/api/k8s/cluster/9001/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_cluster.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/cluster/:value/delete",
+    "example": "/api/k8s/cluster/9001/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_cluster.ts",
+    "method": "POST",
+    "route": "/api/k8s/clusters/:value/refresh",
+    "example": "/api/k8s/clusters/9001/refresh",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_clusterrolebinding.ts",
+    "method": "GET",
+    "route": "/api/k8s/clusterrolebinding/:value/list",
+    "example": "/api/k8s/clusterrolebinding/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_clusterrolebinding.ts",
+    "method": "GET",
+    "route": "/api/k8s/clusterrolebinding/:value/:value/detail",
+    "example": "/api/k8s/clusterrolebinding/9001/demo-cluster-binding/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_clusterrolebinding.ts",
+    "method": "GET",
+    "route": "/api/k8s/clusterrolebinding/:value/:value/detail/yaml",
+    "example": "/api/k8s/clusterrolebinding/9001/demo-cluster-binding/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_clusterrolebinding.ts",
+    "method": "POST",
+    "route": "/api/k8s/clusterrolebinding/:value/create",
+    "example": "/api/k8s/clusterrolebinding/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_clusterrolebinding.ts",
+    "method": "POST",
+    "route": "/api/k8s/clusterrolebinding/:value/create/yaml",
+    "example": "/api/k8s/clusterrolebinding/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_clusterrolebinding.ts",
+    "method": "PUT",
+    "route": "/api/k8s/clusterrolebinding/:value/:value/update",
+    "example": "/api/k8s/clusterrolebinding/9001/demo-cluster-binding/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_clusterrolebinding.ts",
+    "method": "PUT",
+    "route": "/api/k8s/clusterrolebinding/:value/:value/update/yaml",
+    "example": "/api/k8s/clusterrolebinding/9001/demo-cluster-binding/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_clusterrolebinding.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/clusterrolebinding/:value/:value/delete",
+    "example": "/api/k8s/clusterrolebinding/9001/demo-cluster-binding/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_configmap.ts",
+    "method": "GET",
+    "route": "/api/k8s/configmap/:value/list",
+    "example": "/api/k8s/configmap/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_configmap.ts",
+    "method": "GET",
+    "route": "/api/k8s/configmap/:value/:value/:value/detail",
+    "example": "/api/k8s/configmap/9001/demo/demo-web-config/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_configmap.ts",
+    "method": "GET",
+    "route": "/api/k8s/configmap/:value/:value/:value/detail/yaml",
+    "example": "/api/k8s/configmap/9001/demo/demo-web-config/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_configmap.ts",
+    "method": "POST",
+    "route": "/api/k8s/configmap/:value/create",
+    "example": "/api/k8s/configmap/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_configmap.ts",
+    "method": "POST",
+    "route": "/api/k8s/configmap/:value/create/yaml",
+    "example": "/api/k8s/configmap/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_configmap.ts",
+    "method": "PUT",
+    "route": "/api/k8s/configmap/:value/:value/:value/update",
+    "example": "/api/k8s/configmap/9001/demo/demo-web-config/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_configmap.ts",
+    "method": "PUT",
+    "route": "/api/k8s/configmap/:value/:value/:value/update/yaml",
+    "example": "/api/k8s/configmap/9001/demo/demo-web-config/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_configmap.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/configmap/:value/:value/:value/delete",
+    "example": "/api/k8s/configmap/9001/demo/demo-web-config/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_daemonset.ts",
+    "method": "GET",
+    "route": "/api/k8s/daemonset/:value/list",
+    "example": "/api/k8s/daemonset/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_daemonset.ts",
+    "method": "GET",
+    "route": "/api/k8s/daemonset/:value/:value/:value/detail",
+    "example": "/api/k8s/daemonset/9001/demo/demo-agent/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_daemonset.ts",
+    "method": "GET",
+    "route": "/api/k8s/daemonset/:value/:value/:value/detail/yaml",
+    "example": "/api/k8s/daemonset/9001/demo/demo-agent/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_daemonset.ts",
+    "method": "POST",
+    "route": "/api/k8s/daemonset/:value/create",
+    "example": "/api/k8s/daemonset/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_daemonset.ts",
+    "method": "POST",
+    "route": "/api/k8s/daemonset/:value/create/yaml",
+    "example": "/api/k8s/daemonset/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_daemonset.ts",
+    "method": "PUT",
+    "route": "/api/k8s/daemonset/:value/:value/:value/update",
+    "example": "/api/k8s/daemonset/9001/demo/demo-agent/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_daemonset.ts",
+    "method": "PUT",
+    "route": "/api/k8s/daemonset/:value/:value/:value/update/yaml",
+    "example": "/api/k8s/daemonset/9001/demo/demo-agent/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_daemonset.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/daemonset/:value/:value/:value/delete",
+    "example": "/api/k8s/daemonset/9001/demo/demo-agent/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_daemonset.ts",
+    "method": "POST",
+    "route": "/api/k8s/daemonset/:value/:value/:value/restart",
+    "example": "/api/k8s/daemonset/9001/demo/demo-agent/restart",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_daemonset.ts",
+    "method": "POST",
+    "route": "/api/k8s/daemonset/:value/:value/:value/rollback",
+    "example": "/api/k8s/daemonset/9001/demo/demo-agent/rollback",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_daemonset.ts",
+    "method": "GET",
+    "route": "/api/k8s/daemonset/:value/:value/:value/pods",
+    "example": "/api/k8s/daemonset/9001/demo/demo-agent/pods",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_daemonset.ts",
+    "method": "GET",
+    "route": "/api/k8s/daemonset/:value/:value/:value/history",
+    "example": "/api/k8s/daemonset/9001/demo/demo-agent/history",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "GET",
+    "route": "/api/k8s/deployment/:value/list",
+    "example": "/api/k8s/deployment/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "GET",
+    "route": "/api/k8s/deployment/:value/:value/:value/detail",
+    "example": "/api/k8s/deployment/9001/demo/demo-web/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "GET",
+    "route": "/api/k8s/deployment/:value/:value/:value/detail/yaml",
+    "example": "/api/k8s/deployment/9001/demo/demo-web/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "POST",
+    "route": "/api/k8s/deployment/:value/create",
+    "example": "/api/k8s/deployment/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "POST",
+    "route": "/api/k8s/deployment/:value/create/yaml",
+    "example": "/api/k8s/deployment/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "PUT",
+    "route": "/api/k8s/deployment/:value/:value/:value/update",
+    "example": "/api/k8s/deployment/9001/demo/demo-web/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "PUT",
+    "route": "/api/k8s/deployment/:value/:value/:value/update/yaml",
+    "example": "/api/k8s/deployment/9001/demo/demo-web/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/deployment/:value/:value/:value/delete",
+    "example": "/api/k8s/deployment/9001/demo/demo-web/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "POST",
+    "route": "/api/k8s/deployment/:value/:value/:value/restart",
+    "example": "/api/k8s/deployment/9001/demo/demo-web/restart",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "POST",
+    "route": "/api/k8s/deployment/:value/:value/:value/scale",
+    "example": "/api/k8s/deployment/9001/demo/demo-web/scale",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "POST",
+    "route": "/api/k8s/deployment/:value/:value/:value/pause",
+    "example": "/api/k8s/deployment/9001/demo/demo-web/pause",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "POST",
+    "route": "/api/k8s/deployment/:value/:value/:value/resume",
+    "example": "/api/k8s/deployment/9001/demo/demo-web/resume",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "POST",
+    "route": "/api/k8s/deployment/:value/:value/:value/rollback",
+    "example": "/api/k8s/deployment/9001/demo/demo-web/rollback",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "GET",
+    "route": "/api/k8s/deployment/:value/:value/:value/pods",
+    "example": "/api/k8s/deployment/9001/demo/demo-web/pods",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_deployment.ts",
+    "method": "GET",
+    "route": "/api/k8s/deployment/:value/:value/:value/history",
+    "example": "/api/k8s/deployment/9001/demo/demo-web/history",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_ingress.ts",
+    "method": "GET",
+    "route": "/api/k8s/ingress/:value/list",
+    "example": "/api/k8s/ingress/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_ingress.ts",
+    "method": "GET",
+    "route": "/api/k8s/ingress/:value/:value/:value/detail",
+    "example": "/api/k8s/ingress/9001/demo/demo-web/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_ingress.ts",
+    "method": "GET",
+    "route": "/api/k8s/ingress/:value/:value/:value/detail/yaml",
+    "example": "/api/k8s/ingress/9001/demo/demo-web/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_ingress.ts",
+    "method": "POST",
+    "route": "/api/k8s/ingress/:value/create",
+    "example": "/api/k8s/ingress/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_ingress.ts",
+    "method": "POST",
+    "route": "/api/k8s/ingress/:value/create/yaml",
+    "example": "/api/k8s/ingress/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_ingress.ts",
+    "method": "PUT",
+    "route": "/api/k8s/ingress/:value/:value/:value/update",
+    "example": "/api/k8s/ingress/9001/demo/demo-web/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_ingress.ts",
+    "method": "PUT",
+    "route": "/api/k8s/ingress/:value/:value/:value/update/yaml",
+    "example": "/api/k8s/ingress/9001/demo/demo-web/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_ingress.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/ingress/:value/:value/:value/delete",
+    "example": "/api/k8s/ingress/9001/demo/demo-web/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_namespace.ts",
+    "method": "GET",
+    "route": "/api/k8s/clusters/:value/namespace/list",
+    "example": "/api/k8s/clusters/9001/namespace/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_namespace.ts",
+    "method": "POST",
+    "route": "/api/k8s/clusters/:value/namespace/create",
+    "example": "/api/k8s/clusters/9001/namespace/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_namespace.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/clusters/:value/namespace/:value/delete",
+    "example": "/api/k8s/clusters/9001/namespace/demo/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_namespace.ts",
+    "method": "GET",
+    "route": "/api/k8s/clusters/:value/namespace/:value/detail",
+    "example": "/api/k8s/clusters/9001/namespace/demo/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_namespace.ts",
+    "method": "PUT",
+    "route": "/api/k8s/clusters/:value/namespace/:value/update",
+    "example": "/api/k8s/clusters/9001/namespace/demo/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_node.ts",
+    "method": "GET",
+    "route": "/api/k8s/node/:value/list",
+    "example": "/api/k8s/node/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_node.ts",
+    "method": "GET",
+    "route": "/api/k8s/node/:value/:value/detail",
+    "example": "/api/k8s/node/9001/demo-node-1/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_node.ts",
+    "method": "POST",
+    "route": "/api/k8s/node/:value/:value/labels/update",
+    "example": "/api/k8s/node/9001/demo-node-1/labels/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_node.ts",
+    "method": "POST",
+    "route": "/api/k8s/node/:value/:value/drain",
+    "example": "/api/k8s/node/9001/demo-node-1/drain",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_node.ts",
+    "method": "POST",
+    "route": "/api/k8s/node/:value/:value/cordon",
+    "example": "/api/k8s/node/9001/demo-node-1/cordon",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_node.ts",
+    "method": "POST",
+    "route": "/api/k8s/node/:value/:value/uncordon",
+    "example": "/api/k8s/node/9001/demo-node-1/uncordon",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_node.ts",
+    "method": "GET",
+    "route": "/api/k8s/node/:value/:value/taints/list",
+    "example": "/api/k8s/node/9001/demo-node-1/taints/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_node.ts",
+    "method": "POST",
+    "route": "/api/k8s/node/:value/:value/taints/add",
+    "example": "/api/k8s/node/9001/demo-node-1/taints/add",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_node.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/node/:value/:value/taints/delete",
+    "example": "/api/k8s/node/9001/demo-node-1/taints/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_node.ts",
+    "method": "POST",
+    "route": "/api/k8s/node/:value/:value/taints/check",
+    "example": "/api/k8s/node/9001/demo-node-1/taints/check",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "GET",
+    "route": "/api/k8s/pod/:value/list",
+    "example": "/api/k8s/pod/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "GET",
+    "route": "/api/k8s/pod/:value/:value/:value/detail",
+    "example": "/api/k8s/pod/9001/demo/demo-web-1/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "GET",
+    "route": "/api/k8s/pod/:value/:value/:value/detail/yaml",
+    "example": "/api/k8s/pod/9001/demo/demo-web-1/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "POST",
+    "route": "/api/k8s/pod/:value/create",
+    "example": "/api/k8s/pod/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "POST",
+    "route": "/api/k8s/pod/:value/create/yaml",
+    "example": "/api/k8s/pod/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "PUT",
+    "route": "/api/k8s/pod/:value/:value/:value/update",
+    "example": "/api/k8s/pod/9001/demo/demo-web-1/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "PUT",
+    "route": "/api/k8s/pod/:value/:value/:value/update/yaml",
+    "example": "/api/k8s/pod/9001/demo/demo-web-1/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/pod/:value/:value/:value/delete",
+    "example": "/api/k8s/pod/9001/demo/demo-web-1/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "GET",
+    "route": "/api/k8s/pod/:value/node/:value/pods",
+    "example": "/api/k8s/pod/9001/node/demo-node-1/pods",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "GET",
+    "route": "/api/k8s/pod/:value/:value/:value/containers",
+    "example": "/api/k8s/pod/9001/demo/demo-web-1/containers",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "GET",
+    "route": "/api/k8s/pod/:value/:value/:value/containers/:value/logs",
+    "example": "/api/k8s/pod/9001/demo/demo-web-1/containers/web/logs",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "GET",
+    "route": "/api/k8s/pod/:value/:value/:value/containers/:value/exec",
+    "example": "/api/k8s/pod/9001/demo/demo-web-1/containers/web/exec",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "POST",
+    "route": "/api/k8s/pod/:value/:value/:value/containers/:value/exec",
+    "example": "/api/k8s/pod/9001/demo/demo-web-1/containers/web/exec",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "POST",
+    "route": "/api/k8s/pod/:value/:value/:value/port-forward",
+    "example": "/api/k8s/pod/9001/demo/demo-web-1/port-forward",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pod.ts",
+    "method": "POST",
+    "route": "/api/k8s/pod/:value/:value/:value/containers/:value/files/upload",
+    "example": "/api/k8s/pod/9001/demo/demo-web-1/containers/web/files/upload",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pv.ts",
+    "method": "GET",
+    "route": "/api/k8s/pv/:value/list",
+    "example": "/api/k8s/pv/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_pv.ts",
+    "method": "GET",
+    "route": "/api/k8s/pv/:value/:value/detail",
+    "example": "/api/k8s/pv/9001/demo-volume/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_pv.ts",
+    "method": "GET",
+    "route": "/api/k8s/pv/:value/:value/detail/yaml",
+    "example": "/api/k8s/pv/9001/demo-volume/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_pv.ts",
+    "method": "POST",
+    "route": "/api/k8s/pv/:value/create",
+    "example": "/api/k8s/pv/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pv.ts",
+    "method": "POST",
+    "route": "/api/k8s/pv/:value/create/yaml",
+    "example": "/api/k8s/pv/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pv.ts",
+    "method": "PUT",
+    "route": "/api/k8s/pv/:value/:value/update",
+    "example": "/api/k8s/pv/9001/demo-volume/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pv.ts",
+    "method": "PUT",
+    "route": "/api/k8s/pv/:value/:value/update/yaml",
+    "example": "/api/k8s/pv/9001/demo-volume/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pv.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/pv/:value/:value/delete",
+    "example": "/api/k8s/pv/9001/demo-volume/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pv.ts",
+    "method": "POST",
+    "route": "/api/k8s/pv/:value/:value/reclaim",
+    "example": "/api/k8s/pv/9001/demo-volume/reclaim",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pvc.ts",
+    "method": "GET",
+    "route": "/api/k8s/pvc/:value/list",
+    "example": "/api/k8s/pvc/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_pvc.ts",
+    "method": "GET",
+    "route": "/api/k8s/pvc/:value/:value/:value/detail",
+    "example": "/api/k8s/pvc/9001/demo/demo-data/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_pvc.ts",
+    "method": "GET",
+    "route": "/api/k8s/pvc/:value/:value/:value/detail/yaml",
+    "example": "/api/k8s/pvc/9001/demo/demo-data/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_pvc.ts",
+    "method": "POST",
+    "route": "/api/k8s/pvc/:value/create",
+    "example": "/api/k8s/pvc/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pvc.ts",
+    "method": "POST",
+    "route": "/api/k8s/pvc/:value/create/yaml",
+    "example": "/api/k8s/pvc/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pvc.ts",
+    "method": "PUT",
+    "route": "/api/k8s/pvc/:value/:value/:value/update",
+    "example": "/api/k8s/pvc/9001/demo/demo-data/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pvc.ts",
+    "method": "PUT",
+    "route": "/api/k8s/pvc/:value/:value/:value/update/yaml",
+    "example": "/api/k8s/pvc/9001/demo/demo-data/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pvc.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/pvc/:value/:value/:value/delete",
+    "example": "/api/k8s/pvc/9001/demo/demo-data/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pvc.ts",
+    "method": "POST",
+    "route": "/api/k8s/pvc/:value/:value/:value/expand",
+    "example": "/api/k8s/pvc/9001/demo/demo-data/expand",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_pvc.ts",
+    "method": "GET",
+    "route": "/api/k8s/pvc/:value/:value/:value/pods",
+    "example": "/api/k8s/pvc/9001/demo/demo-data/pods",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_role.ts",
+    "method": "GET",
+    "route": "/api/k8s/role/:value/list",
+    "example": "/api/k8s/role/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_role.ts",
+    "method": "GET",
+    "route": "/api/k8s/role/:value/:value/:value/detail",
+    "example": "/api/k8s/role/9001/demo/demo-reader/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_role.ts",
+    "method": "GET",
+    "route": "/api/k8s/role/:value/:value/:value/detail/yaml",
+    "example": "/api/k8s/role/9001/demo/demo-reader/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_role.ts",
+    "method": "POST",
+    "route": "/api/k8s/role/:value/create",
+    "example": "/api/k8s/role/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_role.ts",
+    "method": "POST",
+    "route": "/api/k8s/role/:value/create/yaml",
+    "example": "/api/k8s/role/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_role.ts",
+    "method": "PUT",
+    "route": "/api/k8s/role/:value/:value/:value/update",
+    "example": "/api/k8s/role/9001/demo/demo-reader/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_role.ts",
+    "method": "PUT",
+    "route": "/api/k8s/role/:value/:value/:value/update/yaml",
+    "example": "/api/k8s/role/9001/demo/demo-reader/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_role.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/role/:value/:value/:value/delete",
+    "example": "/api/k8s/role/9001/demo/demo-reader/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_rolebinding.ts",
+    "method": "GET",
+    "route": "/api/k8s/rolebinding/:value/list",
+    "example": "/api/k8s/rolebinding/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_rolebinding.ts",
+    "method": "GET",
+    "route": "/api/k8s/rolebinding/:value/:value/:value/detail",
+    "example": "/api/k8s/rolebinding/9001/demo/demo-reader-binding/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_rolebinding.ts",
+    "method": "GET",
+    "route": "/api/k8s/rolebinding/:value/:value/:value/detail/yaml",
+    "example": "/api/k8s/rolebinding/9001/demo/demo-reader-binding/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_rolebinding.ts",
+    "method": "POST",
+    "route": "/api/k8s/rolebinding/:value/create",
+    "example": "/api/k8s/rolebinding/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_rolebinding.ts",
+    "method": "POST",
+    "route": "/api/k8s/rolebinding/:value/create/yaml",
+    "example": "/api/k8s/rolebinding/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_rolebinding.ts",
+    "method": "PUT",
+    "route": "/api/k8s/rolebinding/:value/:value/:value/update",
+    "example": "/api/k8s/rolebinding/9001/demo/demo-reader-binding/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_rolebinding.ts",
+    "method": "PUT",
+    "route": "/api/k8s/rolebinding/:value/:value/:value/update/yaml",
+    "example": "/api/k8s/rolebinding/9001/demo/demo-reader-binding/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_rolebinding.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/rolebinding/:value/:value/:value/delete",
+    "example": "/api/k8s/rolebinding/9001/demo/demo-reader-binding/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_secret.ts",
+    "method": "GET",
+    "route": "/api/k8s/secret/:value/list",
+    "example": "/api/k8s/secret/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_secret.ts",
+    "method": "GET",
+    "route": "/api/k8s/secret/:value/:value/:value/detail",
+    "example": "/api/k8s/secret/9001/demo/demo-placeholder/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_secret.ts",
+    "method": "GET",
+    "route": "/api/k8s/secret/:value/:value/:value/reveal",
+    "example": "/api/k8s/secret/9001/demo/demo-placeholder/reveal",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_secret.ts",
+    "method": "GET",
+    "route": "/api/k8s/secret/:value/:value/:value/detail/yaml",
+    "example": "/api/k8s/secret/9001/demo/demo-placeholder/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_secret.ts",
+    "method": "POST",
+    "route": "/api/k8s/secret/:value/create",
+    "example": "/api/k8s/secret/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_secret.ts",
+    "method": "PUT",
+    "route": "/api/k8s/secret/:value/:value/:value/update",
+    "example": "/api/k8s/secret/9001/demo/demo-placeholder/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_secret.ts",
+    "method": "POST",
+    "route": "/api/k8s/secret/:value/create/yaml",
+    "example": "/api/k8s/secret/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_secret.ts",
+    "method": "PUT",
+    "route": "/api/k8s/secret/:value/:value/:value/update/yaml",
+    "example": "/api/k8s/secret/9001/demo/demo-placeholder/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_secret.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/secret/:value/:value/:value/delete",
+    "example": "/api/k8s/secret/9001/demo/demo-placeholder/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_service.ts",
+    "method": "GET",
+    "route": "/api/k8s/service/:value/list",
+    "example": "/api/k8s/service/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_service.ts",
+    "method": "GET",
+    "route": "/api/k8s/service/:value/:value/:value/detail",
+    "example": "/api/k8s/service/9001/demo/demo-web/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_service.ts",
+    "method": "GET",
+    "route": "/api/k8s/service/:value/:value/:value/detail/yaml",
+    "example": "/api/k8s/service/9001/demo/demo-web/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_service.ts",
+    "method": "POST",
+    "route": "/api/k8s/service/:value/create",
+    "example": "/api/k8s/service/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_service.ts",
+    "method": "POST",
+    "route": "/api/k8s/service/:value/create/yaml",
+    "example": "/api/k8s/service/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_service.ts",
+    "method": "PUT",
+    "route": "/api/k8s/service/:value/:value/:value/update",
+    "example": "/api/k8s/service/9001/demo/demo-web/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_service.ts",
+    "method": "PUT",
+    "route": "/api/k8s/service/:value/:value/:value/update/yaml",
+    "example": "/api/k8s/service/9001/demo/demo-web/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_service.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/service/:value/:value/:value/delete",
+    "example": "/api/k8s/service/9001/demo/demo-web/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_service.ts",
+    "method": "GET",
+    "route": "/api/k8s/service/:value/:value/:value/endpoints",
+    "example": "/api/k8s/service/9001/demo/demo-web/endpoints",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_serviceaccount.ts",
+    "method": "GET",
+    "route": "/api/k8s/serviceaccount/:value/list",
+    "example": "/api/k8s/serviceaccount/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_serviceaccount.ts",
+    "method": "GET",
+    "route": "/api/k8s/serviceaccount/:value/:value/:value/detail",
+    "example": "/api/k8s/serviceaccount/9001/demo/demo-reader/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_serviceaccount.ts",
+    "method": "GET",
+    "route": "/api/k8s/serviceaccount/:value/:value/:value/detail/yaml",
+    "example": "/api/k8s/serviceaccount/9001/demo/demo-reader/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_serviceaccount.ts",
+    "method": "POST",
+    "route": "/api/k8s/serviceaccount/:value/create",
+    "example": "/api/k8s/serviceaccount/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_serviceaccount.ts",
+    "method": "POST",
+    "route": "/api/k8s/serviceaccount/:value/create/yaml",
+    "example": "/api/k8s/serviceaccount/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_serviceaccount.ts",
+    "method": "PUT",
+    "route": "/api/k8s/serviceaccount/:value/:value/:value/update",
+    "example": "/api/k8s/serviceaccount/9001/demo/demo-reader/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_serviceaccount.ts",
+    "method": "PUT",
+    "route": "/api/k8s/serviceaccount/:value/:value/:value/update/yaml",
+    "example": "/api/k8s/serviceaccount/9001/demo/demo-reader/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_serviceaccount.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/serviceaccount/:value/:value/:value/delete",
+    "example": "/api/k8s/serviceaccount/9001/demo/demo-reader/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_serviceaccount.ts",
+    "method": "GET",
+    "route": "/api/k8s/serviceaccount/:value/:value/:value/token",
+    "example": "/api/k8s/serviceaccount/9001/demo/demo-reader/token",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_serviceaccount.ts",
+    "method": "POST",
+    "route": "/api/k8s/serviceaccount/:value/:value/:value/token",
+    "example": "/api/k8s/serviceaccount/9001/demo/demo-reader/token",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_statefulset.ts",
+    "method": "GET",
+    "route": "/api/k8s/statefulset/:value/list",
+    "example": "/api/k8s/statefulset/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_statefulset.ts",
+    "method": "GET",
+    "route": "/api/k8s/statefulset/:value/:value/:value/detail",
+    "example": "/api/k8s/statefulset/9001/demo/demo-cache/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_statefulset.ts",
+    "method": "GET",
+    "route": "/api/k8s/statefulset/:value/:value/:value/detail/yaml",
+    "example": "/api/k8s/statefulset/9001/demo/demo-cache/detail/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_statefulset.ts",
+    "method": "POST",
+    "route": "/api/k8s/statefulset/:value/create",
+    "example": "/api/k8s/statefulset/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_statefulset.ts",
+    "method": "POST",
+    "route": "/api/k8s/statefulset/:value/create/yaml",
+    "example": "/api/k8s/statefulset/9001/create/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_statefulset.ts",
+    "method": "PUT",
+    "route": "/api/k8s/statefulset/:value/:value/:value/update",
+    "example": "/api/k8s/statefulset/9001/demo/demo-cache/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_statefulset.ts",
+    "method": "PUT",
+    "route": "/api/k8s/statefulset/:value/:value/:value/update/yaml",
+    "example": "/api/k8s/statefulset/9001/demo/demo-cache/update/yaml",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_statefulset.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/statefulset/:value/:value/:value/delete",
+    "example": "/api/k8s/statefulset/9001/demo/demo-cache/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_statefulset.ts",
+    "method": "POST",
+    "route": "/api/k8s/statefulset/:value/:value/:value/restart",
+    "example": "/api/k8s/statefulset/9001/demo/demo-cache/restart",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_statefulset.ts",
+    "method": "POST",
+    "route": "/api/k8s/statefulset/:value/:value/:value/scale",
+    "example": "/api/k8s/statefulset/9001/demo/demo-cache/scale",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_statefulset.ts",
+    "method": "POST",
+    "route": "/api/k8s/statefulset/:value/:value/:value/rollback",
+    "example": "/api/k8s/statefulset/9001/demo/demo-cache/rollback",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_statefulset.ts",
+    "method": "GET",
+    "route": "/api/k8s/statefulset/:value/:value/:value/pods",
+    "example": "/api/k8s/statefulset/9001/demo/demo-cache/pods",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_statefulset.ts",
+    "method": "GET",
+    "route": "/api/k8s/statefulset/:value/:value/:value/history",
+    "example": "/api/k8s/statefulset/9001/demo/demo-cache/history",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_yaml.ts",
+    "method": "GET",
+    "route": "/api/k8s/yaml_template/:value/list",
+    "example": "/api/k8s/yaml_template/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_yaml.ts",
+    "method": "POST",
+    "route": "/api/k8s/yaml_template/:value/create",
+    "example": "/api/k8s/yaml_template/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_yaml.ts",
+    "method": "POST",
+    "route": "/api/k8s/yaml_template/:value/check",
+    "example": "/api/k8s/yaml_template/9001/check",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_yaml.ts",
+    "method": "POST",
+    "route": "/api/k8s/yaml_template/:value/:value/update",
+    "example": "/api/k8s/yaml_template/9001/9701/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_yaml.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/yaml_template/:value/:value/delete",
+    "example": "/api/k8s/yaml_template/9001/9701/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_yaml.ts",
+    "method": "GET",
+    "route": "/api/k8s/yaml_template/:value/:value/yaml",
+    "example": "/api/k8s/yaml_template/9001/9701/yaml",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_yaml.ts",
+    "method": "GET",
+    "route": "/api/k8s/yaml_task/:value/:value/detail",
+    "example": "/api/k8s/yaml_task/9001/9702/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_yaml.ts",
+    "method": "GET",
+    "route": "/api/k8s/yaml_task/:value/list",
+    "example": "/api/k8s/yaml_task/9001/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "k8s/k8s_yaml.ts",
+    "method": "POST",
+    "route": "/api/k8s/yaml_task/:value/create",
+    "example": "/api/k8s/yaml_task/9001/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_yaml.ts",
+    "method": "POST",
+    "route": "/api/k8s/yaml_task/:value/:value/update",
+    "example": "/api/k8s/yaml_task/9001/9702/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_yaml.ts",
+    "method": "POST",
+    "route": "/api/k8s/yaml_task/:value/:value/apply",
+    "example": "/api/k8s/yaml_task/9001/9702/apply",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "k8s/k8s_yaml.ts",
+    "method": "DELETE",
+    "route": "/api/k8s/yaml_task/:value/:value/delete",
+    "example": "/api/k8s/yaml_task/9001/9702/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_alert_event.ts",
+    "method": "GET",
+    "route": "/api/monitor/alert_events/list",
+    "example": "/api/monitor/alert_events/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_alert_event.ts",
+    "method": "POST",
+    "route": "/api/monitor/alert_events/silence/:value",
+    "example": "/api/monitor/alert_events/silence/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_alert_event.ts",
+    "method": "POST",
+    "route": "/api/monitor/alert_events/claim/:value",
+    "example": "/api/monitor/alert_events/claim/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_alert_event.ts",
+    "method": "POST",
+    "route": "/api/monitor/alert_events/unsilence/:value",
+    "example": "/api/monitor/alert_events/unsilence/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_alert_pool.ts",
+    "method": "GET",
+    "route": "/api/monitor/alert_manager_pools/list",
+    "example": "/api/monitor/alert_manager_pools/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_alert_pool.ts",
+    "method": "POST",
+    "route": "/api/monitor/alert_manager_pools/create",
+    "example": "/api/monitor/alert_manager_pools/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_alert_pool.ts",
+    "method": "PUT",
+    "route": "/api/monitor/alert_manager_pools/update/:value",
+    "example": "/api/monitor/alert_manager_pools/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_alert_pool.ts",
+    "method": "DELETE",
+    "route": "/api/monitor/alert_manager_pools/delete/:value",
+    "example": "/api/monitor/alert_manager_pools/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_alert_pool.ts",
+    "method": "GET",
+    "route": "/api/monitor/alert_manager_pools/detail/:value",
+    "example": "/api/monitor/alert_manager_pools/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_alert_record.ts",
+    "method": "GET",
+    "route": "/api/monitor/record_rules/list",
+    "example": "/api/monitor/record_rules/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_alert_record.ts",
+    "method": "POST",
+    "route": "/api/monitor/record_rules/create",
+    "example": "/api/monitor/record_rules/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_alert_record.ts",
+    "method": "PUT",
+    "route": "/api/monitor/record_rules/update/:value",
+    "example": "/api/monitor/record_rules/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_alert_record.ts",
+    "method": "DELETE",
+    "route": "/api/monitor/record_rules/delete/:value",
+    "example": "/api/monitor/record_rules/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_alert_record.ts",
+    "method": "GET",
+    "route": "/api/monitor/record_rules/detail/:value",
+    "example": "/api/monitor/record_rules/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_alert_rule.ts",
+    "method": "GET",
+    "route": "/api/monitor/alert_rules/list",
+    "example": "/api/monitor/alert_rules/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_alert_rule.ts",
+    "method": "POST",
+    "route": "/api/monitor/alert_rules/create",
+    "example": "/api/monitor/alert_rules/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_alert_rule.ts",
+    "method": "PUT",
+    "route": "/api/monitor/alert_rules/update/:value",
+    "example": "/api/monitor/alert_rules/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_alert_rule.ts",
+    "method": "DELETE",
+    "route": "/api/monitor/alert_rules/delete/:value",
+    "example": "/api/monitor/alert_rules/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_alert_rule.ts",
+    "method": "GET",
+    "route": "/api/monitor/alert_rules/detail/:value",
+    "example": "/api/monitor/alert_rules/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_alert_rule.ts",
+    "method": "POST",
+    "route": "/api/monitor/alert_rules/promql_check",
+    "example": "/api/monitor/alert_rules/promql_check",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_config.ts",
+    "method": "GET",
+    "route": "/api/monitor/configs/list",
+    "example": "/api/monitor/configs/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_config.ts",
+    "method": "GET",
+    "route": "/api/monitor/configs/detail/:value",
+    "example": "/api/monitor/configs/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_config.ts",
+    "method": "POST",
+    "route": "/api/monitor/configs/create",
+    "example": "/api/monitor/configs/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_config.ts",
+    "method": "PUT",
+    "route": "/api/monitor/configs/update/:value",
+    "example": "/api/monitor/configs/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_config.ts",
+    "method": "DELETE",
+    "route": "/api/monitor/configs/delete/:value",
+    "example": "/api/monitor/configs/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "GET",
+    "route": "/api/monitor/onduty_groups/list",
+    "example": "/api/monitor/onduty_groups/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "POST",
+    "route": "/api/monitor/onduty_groups/create",
+    "example": "/api/monitor/onduty_groups/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "POST",
+    "route": "/api/monitor/onduty_groups/changes",
+    "example": "/api/monitor/onduty_groups/changes",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "PUT",
+    "route": "/api/monitor/onduty_groups/update/:value",
+    "example": "/api/monitor/onduty_groups/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "DELETE",
+    "route": "/api/monitor/onduty_groups/delete/:value",
+    "example": "/api/monitor/onduty_groups/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "GET",
+    "route": "/api/monitor/onduty_groups/detail/:value",
+    "example": "/api/monitor/onduty_groups/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "GET",
+    "route": "/api/monitor/onduty_groups/future_plan/:value",
+    "example": "/api/monitor/onduty_groups/future_plan/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "GET",
+    "route": "/api/monitor/onduty_groups/history/:value",
+    "example": "/api/monitor/onduty_groups/history/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_onduty.ts",
+    "method": "GET",
+    "route": "/api/monitor/onduty_groups/changes/:value",
+    "example": "/api/monitor/onduty_groups/changes/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_job.ts",
+    "method": "GET",
+    "route": "/api/monitor/scrape_jobs/list",
+    "example": "/api/monitor/scrape_jobs/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_job.ts",
+    "method": "POST",
+    "route": "/api/monitor/scrape_jobs/create",
+    "example": "/api/monitor/scrape_jobs/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_job.ts",
+    "method": "PUT",
+    "route": "/api/monitor/scrape_jobs/update/:value",
+    "example": "/api/monitor/scrape_jobs/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_job.ts",
+    "method": "DELETE",
+    "route": "/api/monitor/scrape_jobs/delete/:value",
+    "example": "/api/monitor/scrape_jobs/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_job.ts",
+    "method": "GET",
+    "route": "/api/monitor/scrape_jobs/detail/:value",
+    "example": "/api/monitor/scrape_jobs/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_pool.ts",
+    "method": "GET",
+    "route": "/api/monitor/scrape_pools/list",
+    "example": "/api/monitor/scrape_pools/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_pool.ts",
+    "method": "POST",
+    "route": "/api/monitor/scrape_pools/create",
+    "example": "/api/monitor/scrape_pools/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_pool.ts",
+    "method": "PUT",
+    "route": "/api/monitor/scrape_pools/update/:value",
+    "example": "/api/monitor/scrape_pools/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_pool.ts",
+    "method": "DELETE",
+    "route": "/api/monitor/scrape_pools/delete/:value",
+    "example": "/api/monitor/scrape_pools/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_scrape_pool.ts",
+    "method": "GET",
+    "route": "/api/monitor/scrape_pools/detail/:value",
+    "example": "/api/monitor/scrape_pools/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_send_group.ts",
+    "method": "GET",
+    "route": "/api/monitor/send_groups/list",
+    "example": "/api/monitor/send_groups/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_send_group.ts",
+    "method": "GET",
+    "route": "/api/monitor/send_groups/detail/:value",
+    "example": "/api/monitor/send_groups/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "prometheus/prometheus_send_group.ts",
+    "method": "POST",
+    "route": "/api/monitor/send_groups/create",
+    "example": "/api/monitor/send_groups/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_send_group.ts",
+    "method": "PUT",
+    "route": "/api/monitor/send_groups/update/:value",
+    "example": "/api/monitor/send_groups/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "prometheus/prometheus_send_group.ts",
+    "method": "DELETE",
+    "route": "/api/monitor/send_groups/delete/:value",
+    "example": "/api/monitor/send_groups/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "system/api.ts",
+    "method": "GET",
+    "route": "/api/apis/list",
+    "example": "/api/apis/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/api.ts",
+    "method": "POST",
+    "route": "/api/apis/create",
+    "example": "/api/apis/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "system/api.ts",
+    "method": "PUT",
+    "route": "/api/apis/update/:value",
+    "example": "/api/apis/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "system/api.ts",
+    "method": "DELETE",
+    "route": "/api/apis/delete/:value",
+    "example": "/api/apis/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "system/api.ts",
+    "method": "GET",
+    "route": "/api/apis/detail/:value",
+    "example": "/api/apis/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/api.ts",
+    "method": "GET",
+    "route": "/api/apis/statistics",
+    "example": "/api/apis/statistics",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "GET",
+    "route": "/api/audit/list",
+    "example": "/api/audit/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "GET",
+    "route": "/api/audit/detail/:value",
+    "example": "/api/audit/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "GET",
+    "route": "/api/audit/search",
+    "example": "/api/audit/search",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "GET",
+    "route": "/api/audit/statistics",
+    "example": "/api/audit/statistics",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "GET",
+    "route": "/api/audit/types",
+    "example": "/api/audit/types",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "DELETE",
+    "route": "/api/audit/:value",
+    "example": "/api/audit/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "POST",
+    "route": "/api/audit/batch-delete",
+    "example": "/api/audit/batch-delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "POST",
+    "route": "/api/audit/archive",
+    "example": "/api/audit/archive",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "POST",
+    "route": "/api/audit/create",
+    "example": "/api/audit/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "system/audit.ts",
+    "method": "POST",
+    "route": "/api/audit/batch-create",
+    "example": "/api/audit/batch-create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "system/auth.ts",
+    "method": "POST",
+    "route": "/api/user/login",
+    "example": "/api/user/login",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/auth.ts",
+    "method": "POST",
+    "route": "/api/user/refresh_token",
+    "example": "/api/user/refresh_token",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/auth.ts",
+    "method": "POST",
+    "route": "/api/user/logout",
+    "example": "/api/user/logout",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/auth.ts",
+    "method": "GET",
+    "route": "/api/user/codes",
+    "example": "/api/user/codes",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/system/info",
+    "example": "/api/system/info",
+    "treatment": "simulated"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/system/metrics",
+    "example": "/api/system/metrics",
+    "treatment": "simulated"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "POST",
+    "route": "/api/system/refresh",
+    "example": "/api/system/refresh",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/role/list",
+    "example": "/api/role/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "POST",
+    "route": "/api/role/create",
+    "example": "/api/role/create",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "PUT",
+    "route": "/api/role/update/:value",
+    "example": "/api/role/update/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "DELETE",
+    "route": "/api/role/delete/:value",
+    "example": "/api/role/delete/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/role/detail/:value",
+    "example": "/api/role/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "POST",
+    "route": "/api/role/assign-apis",
+    "example": "/api/role/assign-apis",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "POST",
+    "route": "/api/role/revoke-apis",
+    "example": "/api/role/revoke-apis",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/role/apis/:value",
+    "example": "/api/role/apis/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "POST",
+    "route": "/api/role/assign_users",
+    "example": "/api/role/assign_users",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "POST",
+    "route": "/api/role/revoke_users",
+    "example": "/api/role/revoke_users",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/role/users/:value",
+    "example": "/api/role/users/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/role/user_roles/:value",
+    "example": "/api/role/user_roles/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "POST",
+    "route": "/api/role/check_permission",
+    "example": "/api/role/check_permission",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/system.ts",
+    "method": "GET",
+    "route": "/api/role/user_permissions/:value",
+    "example": "/api/role/user_permissions/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "GET",
+    "route": "/api/user/profile",
+    "example": "/api/user/profile",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "GET",
+    "route": "/api/user/list",
+    "example": "/api/user/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "POST",
+    "route": "/api/user/signup",
+    "example": "/api/user/signup",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "POST",
+    "route": "/api/user/change_password",
+    "example": "/api/user/change_password",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "DELETE",
+    "route": "/api/user/:value/delete",
+    "example": "/api/user/demo-session/delete",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "PUT",
+    "route": "/api/user/profile/update/:value",
+    "example": "/api/user/profile/update/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "GET",
+    "route": "/api/user/detail/:value",
+    "example": "/api/user/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "POST",
+    "route": "/api/user/write_off",
+    "example": "/api/user/write_off",
+    "treatment": "local-go"
+  },
+  {
+    "file": "system/user.ts",
+    "method": "GET",
+    "route": "/api/user/statistics",
+    "example": "/api/user/statistics",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/vpc/list",
+    "example": "/api/tree/vpc/list",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/vpc/create",
+    "example": "/api/tree/vpc/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/vpc/detail",
+    "example": "/api/tree/vpc/detail",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "DELETE",
+    "route": "/api/tree/vpc/delete",
+    "example": "/api/tree/vpc/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "GET",
+    "route": "/api/tree/ecs/list",
+    "example": "/api/tree/ecs/list",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "GET",
+    "route": "/api/tree/ecs/detail/:value",
+    "example": "/api/tree/ecs/detail/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/ecs/create",
+    "example": "/api/tree/ecs/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "PUT",
+    "route": "/api/tree/ecs/update/:value",
+    "example": "/api/tree/ecs/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/ecs/start",
+    "example": "/api/tree/ecs/start",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/ecs/stop",
+    "example": "/api/tree/ecs/stop",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/ecs/restart",
+    "example": "/api/tree/ecs/restart",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "DELETE",
+    "route": "/api/tree/ecs/delete/:value",
+    "example": "/api/tree/ecs/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/ecs/instance_options",
+    "example": "/api/tree/ecs/instance_options",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/security_group/create",
+    "example": "/api/tree/security_group/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "DELETE",
+    "route": "/api/tree/security_group/delete",
+    "example": "/api/tree/security_group/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/security_group/list",
+    "example": "/api/tree/security_group/list",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/security_group/detail",
+    "example": "/api/tree/security_group/detail",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "GET",
+    "route": "/api/tree/node/list",
+    "example": "/api/tree/node/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "GET",
+    "route": "/api/tree/node/detail/:value",
+    "example": "/api/tree/node/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "GET",
+    "route": "/api/tree/node/statistics",
+    "example": "/api/tree/node/statistics",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/node/create",
+    "example": "/api/tree/node/create",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/node/update",
+    "example": "/api/tree/node/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "DELETE",
+    "route": "/api/tree/node/delete/:value",
+    "example": "/api/tree/node/delete/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/node/member/add",
+    "example": "/api/tree/node/member/add",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree.ts",
+    "method": "POST",
+    "route": "/api/tree/node/member/remove",
+    "example": "/api/tree/node/member/remove",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_account.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/account/list",
+    "example": "/api/tree/cloud/account/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_account.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/account/:value/detail",
+    "example": "/api/tree/cloud/account/9101/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_account.ts",
+    "method": "POST",
+    "route": "/api/tree/cloud/account/create",
+    "example": "/api/tree/cloud/account/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_account.ts",
+    "method": "PUT",
+    "route": "/api/tree/cloud/account/:value/update",
+    "example": "/api/tree/cloud/account/9101/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_account.ts",
+    "method": "DELETE",
+    "route": "/api/tree/cloud/account/:value/delete",
+    "example": "/api/tree/cloud/account/9101/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_account.ts",
+    "method": "PUT",
+    "route": "/api/tree/cloud/account/:value/status",
+    "example": "/api/tree/cloud/account/9101/status",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_account.ts",
+    "method": "POST",
+    "route": "/api/tree/cloud/account/:value/verify",
+    "example": "/api/tree/cloud/account/9101/verify",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_account_region.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/account/region/list",
+    "example": "/api/tree/cloud/account/region/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_account_region.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/account/region/:value/detail",
+    "example": "/api/tree/cloud/account/region/9201/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_account_region.ts",
+    "method": "POST",
+    "route": "/api/tree/cloud/account/region/create",
+    "example": "/api/tree/cloud/account/region/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_account_region.ts",
+    "method": "POST",
+    "route": "/api/tree/cloud/account/region/batch-create",
+    "example": "/api/tree/cloud/account/region/batch-create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_account_region.ts",
+    "method": "PUT",
+    "route": "/api/tree/cloud/account/region/:value/update",
+    "example": "/api/tree/cloud/account/region/9201/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_account_region.ts",
+    "method": "DELETE",
+    "route": "/api/tree/cloud/account/region/:value/delete",
+    "example": "/api/tree/cloud/account/region/9201/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_account_region.ts",
+    "method": "PUT",
+    "route": "/api/tree/cloud/account/region/:value/status",
+    "example": "/api/tree/cloud/account/region/9201/status",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_account_region.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/account/region/available-regions",
+    "example": "/api/tree/cloud/account/region/available-regions",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/list",
+    "example": "/api/tree/cloud/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/:value/detail",
+    "example": "/api/tree/cloud/9301/detail",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "PUT",
+    "route": "/api/tree/cloud/:value/update",
+    "example": "/api/tree/cloud/9301/update",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "DELETE",
+    "route": "/api/tree/cloud/:value/delete",
+    "example": "/api/tree/cloud/9301/delete",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "POST",
+    "route": "/api/tree/cloud/:value/bind",
+    "example": "/api/tree/cloud/9301/bind",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "POST",
+    "route": "/api/tree/cloud/:value/unbind",
+    "example": "/api/tree/cloud/9301/unbind",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "POST",
+    "route": "/api/tree/cloud/sync",
+    "example": "/api/tree/cloud/sync",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/sync/history",
+    "example": "/api/tree/cloud/sync/history",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/changelog",
+    "example": "/api/tree/cloud/changelog",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/:value/node",
+    "example": "/api/tree/cloud/9301/node",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/:value/terminal",
+    "example": "/api/tree/cloud/9301/terminal",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "PUT",
+    "route": "/api/tree/cloud/:value/status",
+    "example": "/api/tree/cloud/9301/status",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/user/permissions",
+    "example": "/api/user/permissions",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/managed/list",
+    "example": "/api/tree/cloud/managed/list",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/managed/detail/:value",
+    "example": "/api/tree/cloud/managed/detail/9401",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/managed/history",
+    "example": "/api/tree/cloud/managed/history",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "POST",
+    "route": "/api/tree/cloud/managed/sync",
+    "example": "/api/tree/cloud/managed/sync",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "POST",
+    "route": "/api/tree/cloud/managed/history/:value/resolve",
+    "example": "/api/tree/cloud/managed/history/9301/resolve",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/managed/operations/:value",
+    "example": "/api/tree/cloud/managed/operations/simulated-rds-operation",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/managed/operations/:value",
+    "example": "/api/tree/cloud/managed/operations/simulated-rds-operation",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "POST",
+    "route": "/api/tree/cloud/managed/operations/:value/resolve",
+    "example": "/api/tree/cloud/managed/operations/simulated-rds-operation/resolve",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "tree/tree_cloud.ts",
+    "method": "GET",
+    "route": "/api/tree/cloud/managed/operations",
+    "example": "/api/tree/cloud/managed/operations",
+    "treatment": "simulated"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "GET",
+    "route": "/api/tree/local/list",
+    "example": "/api/tree/local/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "GET",
+    "route": "/api/tree/local/detail/:value",
+    "example": "/api/tree/local/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "POST",
+    "route": "/api/tree/local/create",
+    "example": "/api/tree/local/create",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "PUT",
+    "route": "/api/tree/local/update/:value",
+    "example": "/api/tree/local/update/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "DELETE",
+    "route": "/api/tree/local/delete/:value",
+    "example": "/api/tree/local/delete/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "POST",
+    "route": "/api/tree/local/bind/:value",
+    "example": "/api/tree/local/bind/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_local.ts",
+    "method": "POST",
+    "route": "/api/tree/local/unbind/:value",
+    "example": "/api/tree/local/unbind/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "GET",
+    "route": "/api/tree/node/list",
+    "example": "/api/tree/node/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "GET",
+    "route": "/api/tree/node/detail/:value",
+    "example": "/api/tree/node/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "GET",
+    "route": "/api/tree/node/children/:value",
+    "example": "/api/tree/node/children/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "GET",
+    "route": "/api/tree/node/statistics",
+    "example": "/api/tree/node/statistics",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "POST",
+    "route": "/api/tree/node/create",
+    "example": "/api/tree/node/create",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "PUT",
+    "route": "/api/tree/node/update/:value",
+    "example": "/api/tree/node/update/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "DELETE",
+    "route": "/api/tree/node/delete/:value",
+    "example": "/api/tree/node/delete/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "PUT",
+    "route": "/api/tree/node/move/:value",
+    "example": "/api/tree/node/move/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "GET",
+    "route": "/api/tree/node/members/:value",
+    "example": "/api/tree/node/members/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "POST",
+    "route": "/api/tree/node/member/add",
+    "example": "/api/tree/node/member/add",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "DELETE",
+    "route": "/api/tree/node/member/remove/:value",
+    "example": "/api/tree/node/member/remove/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "POST",
+    "route": "/api/tree/node/resource/bind",
+    "example": "/api/tree/node/resource/bind",
+    "treatment": "local-go"
+  },
+  {
+    "file": "tree/tree_node.ts",
+    "method": "POST",
+    "route": "/api/tree/node/resource/unbind",
+    "example": "/api/tree/node/resource/unbind",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/inbox.ts",
+    "method": "GET",
+    "route": "/api/user/permissions",
+    "example": "/api/user/permissions",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/inbox.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/inbox",
+    "example": "/api/workorder/notification/inbox",
+    "treatment": "simulated"
+  },
+  {
+    "file": "workorder/inbox.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/inbox/unread",
+    "example": "/api/workorder/notification/inbox/unread",
+    "treatment": "simulated"
+  },
+  {
+    "file": "workorder/inbox.ts",
+    "method": "POST",
+    "route": "/api/workorder/notification/inbox/:value/read",
+    "example": "/api/workorder/notification/inbox/9801/read",
+    "treatment": "simulated"
+  },
+  {
+    "file": "workorder/inbox.ts",
+    "method": "POST",
+    "route": "/api/workorder/notification/inbox/read-all",
+    "example": "/api/workorder/notification/inbox/read-all",
+    "treatment": "simulated"
+  },
+  {
+    "file": "workorder/inbox.ts",
+    "method": "DELETE",
+    "route": "/api/workorder/notification/inbox/:value",
+    "example": "/api/workorder/notification/inbox/9801",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/notification-events.ts",
+    "method": "GET",
+    "route": "/api/user/permissions",
+    "example": "/api/user/permissions",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/notification-events.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/events",
+    "example": "/api/workorder/notification/events",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/notification-events.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/events/:value/deliveries",
+    "example": "/api/workorder/notification/events/demo-session/deliveries",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/notification-events.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/events/:value/resolutions",
+    "example": "/api/workorder/notification/events/demo-session/resolutions",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/notification-events.ts",
+    "method": "POST",
+    "route": "/api/workorder/notification/events/:value/cancel",
+    "example": "/api/workorder/notification/events/demo-session/cancel",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/notification-events.ts",
+    "method": "POST",
+    "route": "/api/workorder/notification/events/:value/retry",
+    "example": "/api/workorder/notification/events/demo-session/retry",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/notification-events.ts",
+    "method": "POST",
+    "route": "/api/workorder/notification/events/:value/resolve",
+    "example": "/api/workorder/notification/events/demo-session/resolve",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_category.ts",
+    "method": "POST",
+    "route": "/api/workorder/category/create",
+    "example": "/api/workorder/category/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_category.ts",
+    "method": "PUT",
+    "route": "/api/workorder/category/update/:value",
+    "example": "/api/workorder/category/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_category.ts",
+    "method": "DELETE",
+    "route": "/api/workorder/category/delete/:value",
+    "example": "/api/workorder/category/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_category.ts",
+    "method": "GET",
+    "route": "/api/workorder/category/list",
+    "example": "/api/workorder/category/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_category.ts",
+    "method": "GET",
+    "route": "/api/workorder/category/detail/:value",
+    "example": "/api/workorder/category/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_form_design.ts",
+    "method": "POST",
+    "route": "/api/workorder/form-design/create",
+    "example": "/api/workorder/form-design/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_form_design.ts",
+    "method": "PUT",
+    "route": "/api/workorder/form-design/update/:value",
+    "example": "/api/workorder/form-design/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_form_design.ts",
+    "method": "DELETE",
+    "route": "/api/workorder/form-design/delete/:value",
+    "example": "/api/workorder/form-design/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_form_design.ts",
+    "method": "GET",
+    "route": "/api/workorder/form-design/list",
+    "example": "/api/workorder/form-design/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_form_design.ts",
+    "method": "GET",
+    "route": "/api/workorder/form-design/detail/:value",
+    "example": "/api/workorder/form-design/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "POST",
+    "route": "/api/workorder/instance/create",
+    "example": "/api/workorder/instance/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "POST",
+    "route": "/api/workorder/instance/create-from-template/:value",
+    "example": "/api/workorder/instance/create-from-template/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "PUT",
+    "route": "/api/workorder/instance/update/:value",
+    "example": "/api/workorder/instance/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "DELETE",
+    "route": "/api/workorder/instance/delete/:value",
+    "example": "/api/workorder/instance/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/detail/:value",
+    "example": "/api/workorder/instance/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/list",
+    "example": "/api/workorder/instance/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "POST",
+    "route": "/api/workorder/instance/submit/:value",
+    "example": "/api/workorder/instance/submit/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "POST",
+    "route": "/api/workorder/instance/assign/:value",
+    "example": "/api/workorder/instance/assign/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "POST",
+    "route": "/api/workorder/instance/approve/:value",
+    "example": "/api/workorder/instance/approve/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "POST",
+    "route": "/api/workorder/instance/reject/:value",
+    "example": "/api/workorder/instance/reject/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "POST",
+    "route": "/api/workorder/instance/cancel/:value",
+    "example": "/api/workorder/instance/cancel/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "POST",
+    "route": "/api/workorder/instance/complete/:value",
+    "example": "/api/workorder/instance/complete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "POST",
+    "route": "/api/workorder/instance/return/:value",
+    "example": "/api/workorder/instance/return/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/actions/:value",
+    "example": "/api/workorder/instance/actions/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_instance.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/current-step/:value",
+    "example": "/api/workorder/instance/current-step/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_instance_comment.ts",
+    "method": "POST",
+    "route": "/api/workorder/instance/comment/create",
+    "example": "/api/workorder/instance/comment/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance_comment.ts",
+    "method": "PUT",
+    "route": "/api/workorder/instance/comment/update/:value",
+    "example": "/api/workorder/instance/comment/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance_comment.ts",
+    "method": "DELETE",
+    "route": "/api/workorder/instance/comment/delete/:value",
+    "example": "/api/workorder/instance/comment/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance_comment.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/comment/detail/:value",
+    "example": "/api/workorder/instance/comment/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_instance_comment.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/comment/list",
+    "example": "/api/workorder/instance/comment/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_instance_comment.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/comment/tree/:value",
+    "example": "/api/workorder/instance/comment/tree/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_instance_flow.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/flow/list",
+    "example": "/api/workorder/instance/flow/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_instance_flow.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/flow/detail/:value",
+    "example": "/api/workorder/instance/flow/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_instance_time_line.ts",
+    "method": "POST",
+    "route": "/api/workorder/instance/timeline/create",
+    "example": "/api/workorder/instance/timeline/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance_time_line.ts",
+    "method": "PUT",
+    "route": "/api/workorder/instance/timeline/update/:value",
+    "example": "/api/workorder/instance/timeline/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance_time_line.ts",
+    "method": "DELETE",
+    "route": "/api/workorder/instance/timeline/delete/:value",
+    "example": "/api/workorder/instance/timeline/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_instance_time_line.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/timeline/list",
+    "example": "/api/workorder/instance/timeline/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_instance_time_line.ts",
+    "method": "GET",
+    "route": "/api/workorder/instance/timeline/detail/:value",
+    "example": "/api/workorder/instance/timeline/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/list",
+    "example": "/api/workorder/notification/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/detail/:value",
+    "example": "/api/workorder/notification/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "POST",
+    "route": "/api/workorder/notification/create",
+    "example": "/api/workorder/notification/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "PUT",
+    "route": "/api/workorder/notification/update/:value",
+    "example": "/api/workorder/notification/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "DELETE",
+    "route": "/api/workorder/notification/delete/:value",
+    "example": "/api/workorder/notification/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "PUT",
+    "route": "/api/workorder/notification/update/:value",
+    "example": "/api/workorder/notification/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/logs",
+    "example": "/api/workorder/notification/logs",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "POST",
+    "route": "/api/workorder/notification/test/send",
+    "example": "/api/workorder/notification/test/send",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "GET",
+    "route": "/api/workorder/notification/channels",
+    "example": "/api/workorder/notification/channels",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_notification.ts",
+    "method": "POST",
+    "route": "/api/workorder/notification/send",
+    "example": "/api/workorder/notification/send",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_process.ts",
+    "method": "POST",
+    "route": "/api/workorder/process/create",
+    "example": "/api/workorder/process/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_process.ts",
+    "method": "PUT",
+    "route": "/api/workorder/process/update/:value",
+    "example": "/api/workorder/process/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_process.ts",
+    "method": "DELETE",
+    "route": "/api/workorder/process/delete/:value",
+    "example": "/api/workorder/process/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_process.ts",
+    "method": "GET",
+    "route": "/api/workorder/process/list",
+    "example": "/api/workorder/process/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_process.ts",
+    "method": "GET",
+    "route": "/api/workorder/process/detail/:value",
+    "example": "/api/workorder/process/detail/demo-session",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_template.ts",
+    "method": "POST",
+    "route": "/api/workorder/template/create",
+    "example": "/api/workorder/template/create",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_template.ts",
+    "method": "PUT",
+    "route": "/api/workorder/template/update/:value",
+    "example": "/api/workorder/template/update/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_template.ts",
+    "method": "DELETE",
+    "route": "/api/workorder/template/delete/:value",
+    "example": "/api/workorder/template/delete/demo-session",
+    "treatment": "explicitly-rejected"
+  },
+  {
+    "file": "workorder/workorder_template.ts",
+    "method": "GET",
+    "route": "/api/workorder/template/list",
+    "example": "/api/workorder/template/list",
+    "treatment": "local-go"
+  },
+  {
+    "file": "workorder/workorder_template.ts",
+    "method": "GET",
+    "route": "/api/workorder/template/detail/:value",
+    "example": "/api/workorder/template/detail/demo-session",
+    "treatment": "local-go"
+  }
+]

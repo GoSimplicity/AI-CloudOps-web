@@ -298,3 +298,11 @@ describe('系统欢迎页真实采样合同', () => {
     ).toBe(true);
   });
 });
+
+it('marks simulated metrics without describing them as real host sampling', async () => {
+  api.getSystemMetricsApi.mockResolvedValue(sample({ source: 'simulated' }));
+  render();
+  await flushPromises();
+  expect(required(wrapper).text()).toContain('不代表真实主机监控');
+  expect(required(wrapper).text()).not.toContain('后端运行主机的最近采样');
+});

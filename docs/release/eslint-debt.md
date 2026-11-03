@@ -530,3 +530,12 @@ Cron 参数和 Pod 资源输入移除模板非空断言：读取允许缺值，�
 - 新72项BindingSafety连已交A48/contract3/CMDBLists18/提示扫描29/权限82，共252项通过；应用类型检查通过。页面lint84→84逐规则不增，新Safety0/0。
 - 独立审查和72项独立执行无确定阻断；两处fixture的非叶枚举从0修正为真实2后再次72项通过，未将非规范样例冒称真实DTO。A的48用例及原contract未改。
 - 全部API替身，无SSH/云连接；窗口失效只拒绝旧回执，不撤销已经发送的远端写入。
+
+## 阶段五十：可视化本地演示环境
+
+新增显式demo mode：仅本机开发serve切换到独立loopback演示API，普通dev/build/preview保持原上游；补optional ConfigEnv与isPreview边界，防止preview使用demo却隐藏提示。认证与白名单业务数据由本地Go处理，K8s、云、AI及首页指标合成；头部/登录页常驻演示标识，首页来源文案不再称合成指标为真实主机采样。未覆盖、外部执行、SSH、通知等明确拒绝，不伪造写成功。
+
+- 27项Node专项进入Verify CI；真实SDK配置模式矩阵含preview，合成/拒绝路径断言零上游。完整Vitest163文件3560项、三类类型检查、11项构建通过；五保护类/parser0，普通lint仍10164 errors/5 warnings，未隐藏。
+- 57静态叶路由逐页打开无JS异常；一次profile401刷新后恢复，未谎报零HTTP错误。四指标预测曲线及RCA降级示例实际点击验证；动态终端及真实执行不在验收范围。
+- 同步后端有88条本机幂等业务样例、4条演示进程内收件箱；真实消息账本和任务队列未伪造。新增角色无API授权、用户冻结、无凭据、内置/用户Cron禁用。恢复工具只支持已准备环境，不声称fresh安装。
+- 两条无真实handler的旧写路径移出白名单，拒绝回归通过；API静态清单475含重复/动态限制，不能作为全接口实现证明。详见scripts/demo/README.md及docs/demo/taste-contract.md。没有发布或上线。

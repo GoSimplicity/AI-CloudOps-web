@@ -90,6 +90,7 @@ const host = computed(() => ({
   ...moduleData.value.systemInfo,
   ...moduleData.value.systemMetrics,
 }));
+const simulated = computed(() => host.value.source === 'simulated');
 const metrics = computed(() =>
   definitions.map((definition) => {
     const value = sampleValue(definition.key);
@@ -537,7 +538,11 @@ onBeforeUnmount(() => {
 <template>
   <OpsPage
     class="dashboard-container"
-    description="后端运行主机的最近采样，每30秒读取一次；页面展示采样范围内的状态"
+    :description="
+      simulated
+        ? '演示主机的合成采样，每30秒刷新样例；不代表真实主机监控'
+        : '后端运行主机的最近采样，每30秒读取一次；页面展示采样范围内的状态'
+    "
     title="系统欢迎页"
   >
     <template #actions>
