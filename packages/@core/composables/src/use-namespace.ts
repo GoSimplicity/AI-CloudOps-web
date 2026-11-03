@@ -58,7 +58,7 @@ const useNamespace = (block: string) => {
       : '';
 
   // for css var
-  // --el-xxx: value;
+  // --el-component-token: value;
   const cssVar = (object: Record<string, string>) => {
     const styles: Record<string, string> = {};
     for (const key in object) {

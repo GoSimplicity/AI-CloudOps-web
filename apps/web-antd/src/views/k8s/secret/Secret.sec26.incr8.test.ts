@@ -18,7 +18,7 @@ function required<T>(value: null | T | undefined): T {
  * SEC-26 incr8（窝窝头 review-incr7）——页面组合函数层：
  * - P2-1 / P3-1 / P3-2 / P3-3 在 YAML 更新、YAML 创建两条路径上都拦截、不发请求；
  * - P3-5：YAML 更新与编辑表单一致，validate 前取快照 + 打开序号，validate 期间关闭 / 换成别的 Secret 静默放弃。
- * 只用明显的假值；新导出经 `sd.xxx` 访问，实现前逐条红。
+ * 只用明显的假值；新导出经 数据模块的导出 访问，实现前逐条红。
  */
 const msg = sd as unknown as Record<string, any>;
 const api = vi.hoisted(() => ({

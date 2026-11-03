@@ -22,7 +22,7 @@ function required<T>(value: null | T | undefined): T {
 
 /**
  * SEC-26 incr7（窝窝头 review-incr6）——页面组合函数层：YAML 更新 / YAML 创建 / 表单创建 / 编辑提交。
- * 只用明显的假值；断言里不出现任何真实凭据。新导出经 `sd.xxx` 访问，实现前逐条红。
+ * 只用明显的假值；断言里不出现任何真实凭据。新导出经 数据模块的导出 访问，实现前逐条红。
  */
 const api = vi.hoisted(() => ({
   create: vi.fn(),

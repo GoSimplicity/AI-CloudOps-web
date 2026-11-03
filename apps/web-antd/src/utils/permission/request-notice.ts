@@ -15,8 +15,8 @@
  *   baseRequestClient（无拦截器）、原生 fetch 等没经过拦截器的错误不会被当作已提示而吞掉。
  *
  * 页面 catch 写法：
- * - 错误状态：`if (shouldRecordPageError(error)) loadError.value = 'xxx失败'`（取消类不写，FE-02b 拍板 3）；
- * - 提示：`if (shouldNotifyPageError(error)) message.error('xxx失败')`。
+ * - 错误状态：`if (shouldRecordPageError(error)) loadError.value = '操作失败'`（取消类不写，FE-02b 拍板 3）；
+ * - 提示：`if (shouldNotifyPageError(error)) message.error('操作失败')`。
  * loading 等收尾照常在 finally / catch 里清，取消类只跳过错误状态的写入。
  */
 import { RequestOwnerChangedError } from '@vben/request';

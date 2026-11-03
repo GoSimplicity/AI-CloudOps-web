@@ -23,7 +23,7 @@ function required<T>(value: null | T | undefined): T {
  * SEC-26 incr9（窝窝头 review-incr8）：P2-1' ReDoS、P3-A（<< 合并键）、P3-B（stringData 的 !!binary）、
  * P3-C（按 Go TrimSpace 去首尾空白、base64 按 UTF-8 解码）。用例编号（p09、w10、f08 …）沿用 review-incr8 报告。
  * 只用明显的假值（fake-*）；`<redacted>` 是占位符本身，`PHJlZGFjdGVkPg==` 是它的 base64，都不是凭据。
- * 新导出经 `sd.xxx` 访问：实现前这些用例逐条红，而不是整个文件加载失败。
+ * 新导出经 数据模块的导出 访问：实现前这些用例逐条红，而不是整个文件加载失败。
  */
 const api = sd as unknown as Record<string, any>;
 const PH = REDACTED_PLACEHOLDER;

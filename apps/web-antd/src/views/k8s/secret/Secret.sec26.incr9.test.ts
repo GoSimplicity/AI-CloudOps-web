@@ -25,7 +25,7 @@ function required<T>(value: null | T | undefined): T {
  * SEC-26 incr9（窝窝头 review-incr8）——页面组合函数层：
  * - P3-A/B/C 的对抗矩阵用例在 YAML 更新、YAML 创建两条路径上都拦截、不发请求；
  * - P3-D：「查看 YAML」await 之后核对打开序号，丢弃迟到的响应；加载中 isYamlLoading 为 true（按钮禁用）。
- * 只用明显的假值；新导出经 `sd.xxx` / `page.xxx` 访问，实现前逐条红。
+ * 只用明显的假值；新导出经 数据模块与页面组合函数的导出 访问，实现前逐条红。
  */
 const msg = sd as unknown as Record<string, any>;
 const api = vi.hoisted(() => ({
