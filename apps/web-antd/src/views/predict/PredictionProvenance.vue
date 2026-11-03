@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import type { PredictionResponse } from '#/api/core/aiops/predict';
+
+import { computed } from 'vue';
 
 const props = defineProps<{
   result: PredictionResponse;

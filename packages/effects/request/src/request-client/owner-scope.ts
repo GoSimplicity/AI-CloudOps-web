@@ -1,5 +1,6 @@
-import { type AxiosRequestConfig, CanceledError } from 'axios';
 import type { ResponseInterceptorConfig } from './types';
+
+import { type AxiosRequestConfig, CanceledError } from 'axios';
 
 export interface RequestOwnerContext {
   uid: string;

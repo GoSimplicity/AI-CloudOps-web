@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { PlusOutlined } from '@ant-design/icons-vue';
 import type { KeyValue } from '#/api/core/cron/cron';
+
+import { PlusOutlined } from '@ant-design/icons-vue';
 
 const props = defineProps<{
   items: KeyValue[];

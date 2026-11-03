@@ -5,6 +5,8 @@ import type {
   CreateAxiosDefaults,
 } from 'axios';
 
+import type { RequestOwnerScope } from './owner-scope';
+
 import { merge } from '@vben/utils';
 
 import axios from 'axios';
@@ -13,7 +15,6 @@ import { FileDownloader } from './modules/downloader';
 import { InterceptorManager } from './modules/interceptor';
 import { FileUploader } from './modules/uploader';
 import { type RequestClientOptions } from './types';
-import type { RequestOwnerScope } from './owner-scope';
 
 class RequestClient {
   private readonly instance: AxiosInstance;

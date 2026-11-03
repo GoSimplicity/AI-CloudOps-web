@@ -1,13 +1,16 @@
 <script setup lang="ts">
+import type { ManagedOperationMarker } from './managed-operation-marker';
+
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+
 import {
   getManagedOperation,
   type ManagedCloudOperation,
   type ManagedCloudScope,
   reviewManagedOperation,
 } from '#/api/core/tree/tree_cloud';
+
 import { validManagedOperation } from './managed-operation-contract';
-import type { ManagedOperationMarker } from './managed-operation-marker';
 
 const props = defineProps<{
   marker: ManagedOperationMarker;

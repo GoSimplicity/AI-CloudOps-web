@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { PlusOutlined } from '@ant-design/icons-vue';
+
 import {
   CronJobType,
   type TreeLocalResource,
   type UpdateCronJobReq,
 } from '#/api/core/cron/cron';
+
 import CronKeyValueFields from './CronKeyValueFields.vue';
 
 defineProps<{ resources: TreeLocalResource[]; loading: boolean }>();

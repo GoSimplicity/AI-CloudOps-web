@@ -1,8 +1,9 @@
+import type { Component } from 'vue';
+
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd from 'ant-design-vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Component } from 'vue';
 
 import AssistantInfo from './AssistantInfo.vue';
 import AssistantKnowledge from './AssistantKnowledge.vue';

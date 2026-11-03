@@ -1,11 +1,13 @@
+import type { PredictionResponse } from '#/api/core/aiops/predict';
+
 import { describe, expect, it } from 'vitest';
+
 import {
   alignForecasts,
   confidenceValues,
   forecastPoints,
   formatPredictionTime,
 } from './prediction-series';
-import type { PredictionResponse } from '#/api/core/aiops/predict';
 
 const response = (points: any[]): PredictionResponse =>
   ({ current_value: 0, predicted_data: points }) as PredictionResponse;

@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import type { RCACollection } from '#/api/core/aiops/rca';
+
+import { computed } from 'vue';
+
 import { analysisStatus, coverageText, sourceText } from './collection';
 
 const props = defineProps<{ status?: string; collection?: RCACollection }>();
