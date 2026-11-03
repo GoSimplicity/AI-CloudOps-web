@@ -1460,7 +1460,7 @@ export function usePodPage() {
     };
 
     // 使用fetch API替换EventSource以支持自定义headers
-    const createFetchSSE = async () => {
+    async function createFetchSSE() {
       try {
         abortController = new AbortController();
 
@@ -1579,7 +1579,7 @@ export function usePodPage() {
           reader = null;
         }
       }
-    };
+    }
 
     // 启动连接
     createFetchSSE();
@@ -2037,7 +2037,7 @@ export function usePodPage() {
       connect();
     };
 
-    const connect = () => {
+    function connect() {
       clearUnauthorizedRefreshResetTimer();
       try {
         // 清理之前的连接
@@ -2157,7 +2157,7 @@ export function usePodPage() {
       } catch {
         onError?.(new Event('connection_failed'));
       }
-    };
+    }
 
     // 发送命令到容器
     const sendCommand = (command: string) => {

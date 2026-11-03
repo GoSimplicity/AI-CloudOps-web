@@ -637,3 +637,13 @@ API管理使用明确create/edit模式和响应式窗口key，真实必需Form�
 - 17文件定向lint总诊断2337→2241，no-use-before-define 101→5，逐文件各规则无新增。Pod内层SSE和WebSocket两个重连SCC保留原文，仍有createFetchSSE两条及connect三条前引，没有用改函数种类或豁免掩盖循环。
 - 全部K8s目录现有26个测试文件1203项及应用类型检查通过；独立AST/源码比对确认72个完整声明、所有其它statement顺序及捕获绑定保持。未新增镜像测试或重跑全仓。
 - 这是在已验证合同内完成的批次，不宣称其它域的声明顺序或Pod重连循环已全部修复。全部API替身，没有连接真实集群，未上线。
+
+## 阶段六十三：Pod私有重连入口的可提升声明
+
+真实SSE/WS互相递归仍保留，仅将私有`createFetchSSE`改为同名async function声明、私有`connect`改为同名function声明。两段函数体、参数、作用域、statement位置和初次连接调用点保持，声明外源码逐字相同。沿用已有no-use-before-define的functions:false/variables:true配置，没有修改规则或豁免。
+
+- 实际AST/symbol核对两个入口只有3/4处内部无参直接调用，无binding重赋值、构造调用、函数prototype或反射观察；函数体无this/arguments/super/new.target，私有scope无direct eval。可提升绑定在现有初始化前不被观察，首次I/O仍由原位置启动。
+- 原/新真实usePodPage导出函数使用Fake fetch/WS和定时器比对：factory零I/O、返回API key不变；SSE 401刷新、读取和取消，以及WS 4401刷新、重连、发送和关闭轨迹一致，没有剩余定时器或真实网络。
+- Pod和流式认证/提示、WebSocket客户端/URL、终端UTF-8分片六份现有测试72项及应用类型检查通过。该文件定向lint249→244，no-use-before-define 5→0，各规则无新增，其余244条既有债保留；没有新增镜像测试或重跑全仓。
+- 该阶段明确改变两个私有入口的声明种类以表达真实递归，不把const-arrow批量替换成function，也不宣称消除了重连逻辑循环。没有真实Pod、终端或集群操作，未上线。
+- 完整边界及指令审计1127文件通过，5类保护规则0、parser/tool失败0、补审41文件；当前普通源码lint仍9895 errors/5 warnings，不代表全lint通过。
