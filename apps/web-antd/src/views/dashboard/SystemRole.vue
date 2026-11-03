@@ -31,14 +31,14 @@ const formRef = ref<FormInstance>();
 
 // 表格列配置
 const tableColumns = [
-  { title: '角色', key: 'role', width: 200, fixed: 'left' },
-  { title: '类型', key: 'type', width: 100, align: 'center' },
-  { title: '状态', key: 'status', width: 80, align: 'center' },
-  { title: '描述', key: 'description', width: 200 },
-  { title: '权限数', key: 'apis', width: 80, align: 'center' },
-  { title: '用户数', key: 'users', width: 80, align: 'center' },
-  { title: '创建时间', key: 'created_at', width: 120 },
-  { title: '操作', key: 'actions', width: 160, fixed: 'right' },
+  { fixed: 'left', key: 'role', title: '角色', width: 200 },
+  { align: 'center', key: 'type', title: '类型', width: 100 },
+  { align: 'center', key: 'status', title: '状态', width: 80 },
+  { key: 'description', title: '描述', width: 200 },
+  { align: 'center', key: 'apis', title: '权限数', width: 80 },
+  { align: 'center', key: 'users', title: '用户数', width: 80 },
+  { key: 'created_at', title: '创建时间', width: 120 },
+  { fixed: 'right', key: 'actions', title: '操作', width: 160 },
 ];
 
 // 状态管理

@@ -189,26 +189,26 @@ const copyYamlContent = () => {
 };
 
 const columns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
+  { dataIndex: 'id', key: 'id', title: 'ID', width: 80 },
   {
-    title: '名称',
     dataIndex: 'name',
-    key: 'name',
-    width: 150,
     ellipsis: true,
     fixed: 'left',
+    key: 'name',
+    title: '名称',
+    width: 150,
   },
-  { title: '所属集群', dataIndex: 'cluster_id', key: 'cluster_id', width: 130 },
-  { title: '创建用户', dataIndex: 'user_id', key: 'user_id', width: 120 },
-  { title: 'YAML 内容', dataIndex: 'content', key: 'content', width: 250 },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
-  { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: 160 },
+  { dataIndex: 'cluster_id', key: 'cluster_id', title: '所属集群', width: 130 },
+  { dataIndex: 'user_id', key: 'user_id', title: '创建用户', width: 120 },
+  { dataIndex: 'content', key: 'content', title: 'YAML 内容', width: 250 },
+  { dataIndex: 'created_at', key: 'created_at', title: '创建时间', width: 160 },
+  { dataIndex: 'updated_at', key: 'updated_at', title: '更新时间', width: 160 },
   {
-    title: '操作',
-    key: 'actions',
-    width: 200,
-    fixed: 'right',
     align: 'center',
+    fixed: 'right',
+    key: 'actions',
+    title: '操作',
+    width: 200,
   },
 ];
 

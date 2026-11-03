@@ -37,44 +37,44 @@ const { can } = usePermission();
  */
 const tableColumns = [
   {
-    title: '分类名称',
     dataIndex: 'name',
+    ellipsis: true,
     key: 'name',
+    title: '分类名称',
     width: 200,
-    ellipsis: true,
   },
   {
-    title: '描述',
     dataIndex: 'description',
-    key: 'description',
-    width: 250,
     ellipsis: true,
+    key: 'description',
+    title: '描述',
+    width: 250,
   },
   {
-    title: '状态',
+    align: 'center' as const,
     dataIndex: 'status',
     key: 'status',
+    title: '状态',
     width: 100,
-    align: 'center' as const,
   },
   {
-    title: '操作人',
     dataIndex: 'operator_name',
     key: 'operator',
+    title: '操作人',
     width: 150,
   },
   {
-    title: '创建时间',
     dataIndex: 'created_at',
     key: 'created_at',
+    title: '创建时间',
     width: 180,
   },
   {
-    title: '操作',
-    key: 'action',
-    width: 200,
     align: 'center' as const,
     fixed: 'right' as const,
+    key: 'action',
+    title: '操作',
+    width: 200,
   },
 ];
 

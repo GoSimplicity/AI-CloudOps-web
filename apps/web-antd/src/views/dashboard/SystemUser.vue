@@ -65,13 +65,13 @@ const formRef = ref<FormInstance>();
 
 // 表格列配置
 const tableColumns = [
-  { title: '用户', key: 'user', width: 200, fixed: 'left' },
-  { title: '联系方式', key: 'contact', width: 160 },
-  { title: '类型', key: 'type', width: 100, align: 'center' },
-  { title: '状态', key: 'status', width: 80, align: 'center' },
-  { title: '角色数', key: 'roles', width: 80, align: 'center' },
-  { title: '注册时间', key: 'created_at', width: 120 },
-  { title: '操作', key: 'actions', width: 160, fixed: 'right' },
+  { fixed: 'left', key: 'user', title: '用户', width: 200 },
+  { key: 'contact', title: '联系方式', width: 160 },
+  { align: 'center', key: 'type', title: '类型', width: 100 },
+  { align: 'center', key: 'status', title: '状态', width: 80 },
+  { align: 'center', key: 'roles', title: '角色数', width: 80 },
+  { key: 'created_at', title: '注册时间', width: 120 },
+  { fixed: 'right', key: 'actions', title: '操作', width: 160 },
 ];
 
 // 状态管理

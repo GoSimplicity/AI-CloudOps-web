@@ -38,18 +38,18 @@ const formRef = ref<FormInstance>();
 
 // 表格列配置
 const tableColumns = [
-  { title: 'API信息', key: 'api', width: 300, fixed: 'left' },
+  { fixed: 'left', key: 'api', title: 'API信息', width: 300 },
   {
-    title: 'API描述',
-    key: 'description',
     dataIndex: 'description',
     ellipsis: true,
+    key: 'description',
+    title: 'API描述',
   },
-  { title: '版本', key: 'version', width: 100, align: 'center' },
-  { title: '分类', key: 'category', width: 100, align: 'center' },
-  { title: '访问权限', key: 'access', width: 100, align: 'center' },
-  { title: '创建时间', key: 'created_at', width: 120 },
-  { title: '操作', key: 'actions', width: 160, fixed: 'right' },
+  { align: 'center', key: 'version', title: '版本', width: 100 },
+  { align: 'center', key: 'category', title: '分类', width: 100 },
+  { align: 'center', key: 'access', title: '访问权限', width: 100 },
+  { key: 'created_at', title: '创建时间', width: 120 },
+  { fixed: 'right', key: 'actions', title: '操作', width: 160 },
 ];
 
 // 状态管理

@@ -205,43 +205,43 @@ const getResultPreview = (result: string) => {
 };
 
 const columns = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
+  { dataIndex: 'id', key: 'id', title: 'ID', width: 80 },
   {
-    title: '名称',
     dataIndex: 'name',
-    key: 'name',
-    width: 150,
     ellipsis: true,
     fixed: 'left',
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 90,
-    align: 'center',
-  },
-  {
-    title: '使用模板',
-    dataIndex: 'template_id',
-    key: 'template_id',
+    key: 'name',
+    title: '名称',
     width: 150,
   },
-  { title: '变量', dataIndex: 'variables', key: 'variables', width: 150 },
   {
-    title: '执行结果',
+    align: 'center',
+    dataIndex: 'status',
+    key: 'status',
+    title: '状态',
+    width: 90,
+  },
+  {
+    dataIndex: 'template_id',
+    key: 'template_id',
+    title: '使用模板',
+    width: 150,
+  },
+  { dataIndex: 'variables', key: 'variables', title: '变量', width: 150 },
+  {
     dataIndex: 'apply_result',
     key: 'apply_result',
+    title: '执行结果',
     width: 200,
   },
-  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
-  { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', width: 160 },
+  { dataIndex: 'created_at', key: 'created_at', title: '创建时间', width: 160 },
+  { dataIndex: 'updated_at', key: 'updated_at', title: '更新时间', width: 160 },
   {
-    title: '操作',
-    key: 'actions',
-    width: 200,
-    fixed: 'right',
     align: 'center',
+    fixed: 'right',
+    key: 'actions',
+    title: '操作',
+    width: 200,
   },
 ];
 

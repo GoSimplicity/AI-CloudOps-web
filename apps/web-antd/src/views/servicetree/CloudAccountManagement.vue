@@ -331,14 +331,14 @@ const formRules = computed(() => ({
 
 // 表格列定义
 const columns = [
-  { title: '账户名称', dataIndex: 'name', key: 'name', width: 200 },
-  { title: '云厂商', dataIndex: 'provider', key: 'provider', width: 130 },
-  { title: '地域', dataIndex: 'region', key: 'region', width: 150 },
-  { title: '账户信息', key: 'account_info', width: 250 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 120 },
-  { title: '创建人', key: 'creator', width: 140 },
-  { title: '创建时间', key: 'created_at', width: 180 },
-  { title: '操作', key: 'action', width: 180, align: 'center' as const },
+  { dataIndex: 'name', key: 'name', title: '账户名称', width: 200 },
+  { dataIndex: 'provider', key: 'provider', title: '云厂商', width: 130 },
+  { dataIndex: 'region', key: 'region', title: '地域', width: 150 },
+  { key: 'account_info', title: '账户信息', width: 250 },
+  { dataIndex: 'status', key: 'status', title: '状态', width: 120 },
+  { key: 'creator', title: '创建人', width: 140 },
+  { key: 'created_at', title: '创建时间', width: 180 },
+  { align: 'center' as const, key: 'action', title: '操作', width: 180 },
 ];
 
 // ========== 辅助方法 ==========

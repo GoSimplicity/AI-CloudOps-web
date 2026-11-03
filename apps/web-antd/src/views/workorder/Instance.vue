@@ -123,50 +123,50 @@ const canEditInstance = () => hasPerm('/api/workorder/instance/update/:id');
 // 列定义
 const columns = [
   {
-    title: '工单标题',
     dataIndex: 'title',
-    key: 'title',
-    width: 250,
     fixed: 'left',
+    key: 'title',
+    title: '工单标题',
+    width: 250,
   },
   {
-    title: '状态',
+    align: 'center' as const,
     dataIndex: 'status',
     key: 'status',
+    title: '状态',
     width: 100,
-    align: 'center' as const,
   },
   {
-    title: '优先级',
+    align: 'center' as const,
     dataIndex: 'priority',
     key: 'priority',
+    title: '优先级',
     width: 100,
-    align: 'center' as const,
   },
   {
-    title: '创建人',
     dataIndex: 'operator_name',
     key: 'operator',
+    title: '创建人',
     width: 150,
   },
   {
-    title: '处理人',
     dataIndex: 'assignee_id',
     key: 'assignee',
+    title: '处理人',
     width: 150,
   },
   {
-    title: '创建时间',
     dataIndex: 'created_at',
     key: 'createdAt',
+    title: '创建时间',
     width: 180,
   },
   {
-    title: '操作',
-    key: 'action',
-    width: 200,
     align: 'center' as const,
     fixed: 'right',
+    key: 'action',
+    title: '操作',
+    width: 200,
   },
 ];
 

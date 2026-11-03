@@ -184,33 +184,33 @@ const showUnbindModal = (record: TreeLocalResource): void => {
 
 // 表格列定义
 const columns = [
-  { title: '服务器名称', dataIndex: 'name', key: 'name', width: 200 },
+  { dataIndex: 'name', key: 'name', title: '服务器名称', width: 200 },
   {
-    title: '连接信息',
     dataIndex: 'connection_info',
     key: 'connection_info',
+    title: '连接信息',
     width: 150,
   },
-  { title: '用户名', dataIndex: 'username', key: 'username', width: 100 },
-  { title: '操作系统', dataIndex: 'os_type', key: 'os_type', width: 120 },
-  { title: '环境', dataIndex: 'environment', key: 'environment', width: 100 },
-  { title: '认证方式', dataIndex: 'auth_mode', key: 'auth_mode', width: 100 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
+  { dataIndex: 'username', key: 'username', title: '用户名', width: 100 },
+  { dataIndex: 'os_type', key: 'os_type', title: '操作系统', width: 120 },
+  { dataIndex: 'environment', key: 'environment', title: '环境', width: 100 },
+  { dataIndex: 'auth_mode', key: 'auth_mode', title: '认证方式', width: 100 },
+  { dataIndex: 'status', key: 'status', title: '状态', width: 100 },
   {
-    title: '服务树节点',
     dataIndex: 'tree_nodes',
     key: 'tree_nodes',
+    title: '服务树节点',
     width: 200,
   },
-  { title: '标签', dataIndex: 'tags', key: 'tags', width: 200, ellipsis: true },
+  { dataIndex: 'tags', ellipsis: true, key: 'tags', title: '标签', width: 200 },
   {
-    title: '创建人',
     dataIndex: 'create_user_name',
     key: 'creator',
+    title: '创建人',
     width: 120,
   },
-  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'action', width: 200, align: 'center' as const },
+  { dataIndex: 'created_at', key: 'createdAt', title: '创建时间', width: 180 },
+  { align: 'center' as const, key: 'action', title: '操作', width: 200 },
 ];
 
 const getServerStatusClass = (record: TreeLocalResource): string => {

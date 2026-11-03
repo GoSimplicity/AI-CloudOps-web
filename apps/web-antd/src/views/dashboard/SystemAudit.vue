@@ -42,14 +42,14 @@ interface AuditLogWithUser extends AuditLog {
 
 // 表格列配置
 const tableColumns = [
-  { title: '时间', key: 'time', width: 150 },
-  { title: '用户/Trace', key: 'user', width: 180 },
-  { title: '操作类型', key: 'operation', width: 120, align: 'center' },
-  { title: '请求信息', key: 'request', width: 200 },
-  { title: '状态码', key: 'status', width: 80, align: 'center' },
-  { title: '耗时', key: 'duration', width: 80, align: 'center' },
-  { title: 'IP地址', key: 'ip', width: 120 },
-  { title: '操作', key: 'actions', width: 120, fixed: 'right' },
+  { key: 'time', title: '时间', width: 150 },
+  { key: 'user', title: '用户/Trace', width: 180 },
+  { align: 'center', key: 'operation', title: '操作类型', width: 120 },
+  { key: 'request', title: '请求信息', width: 200 },
+  { align: 'center', key: 'status', title: '状态码', width: 80 },
+  { align: 'center', key: 'duration', title: '耗时', width: 80 },
+  { key: 'ip', title: 'IP地址', width: 120 },
+  { fixed: 'right', key: 'actions', title: '操作', width: 120 },
 ];
 
 // 状态管理

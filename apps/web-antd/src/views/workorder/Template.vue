@@ -52,60 +52,60 @@ const { can } = usePermission();
 // 列定义 - 修复嵌套数据显示问题
 const columns = [
   {
-    title: '模板名称',
     dataIndex: 'name',
-    key: 'name',
-    width: 200,
     fixed: 'left',
-  },
-  {
-    title: '描述',
-    dataIndex: 'description',
-    key: 'description',
+    key: 'name',
+    title: '模板名称',
     width: 200,
-    ellipsis: true,
   },
   {
-    title: '状态',
+    dataIndex: 'description',
+    ellipsis: true,
+    key: 'description',
+    title: '描述',
+    width: 200,
+  },
+  {
+    align: 'center' as const,
     dataIndex: 'status',
     key: 'status',
+    title: '状态',
     width: 120,
-    align: 'center' as const,
   },
   {
-    title: '分类',
+    align: 'center' as const,
     key: 'category', // 修改：移除嵌套路径，使用 key 标识
+    title: '分类',
     width: 120,
-    align: 'center' as const,
   },
   {
-    title: '关联流程',
     key: 'process', // 修改：移除嵌套路径，使用 key 标识
+    title: '关联流程',
     width: 150,
   },
   {
-    title: '关联表单',
     key: 'form_design', // 修改：移除嵌套路径，使用 key 标识
+    title: '关联表单',
     width: 150,
   },
   {
-    title: '创建人',
     dataIndex: 'operator_name',
     key: 'creator',
+    title: '创建人',
     width: 150,
   },
   {
-    title: '创建时间',
     dataIndex: 'created_at',
     key: 'createdAt',
+    title: '创建时间',
     width: 180,
   },
   {
-    title: '操作',
-    key: 'action',
-    width: 200,
     align: 'center' as const,
     fixed: 'right',
+    key: 'action',
+    title: '操作',
+    width: 200,
   },
 ];
 
