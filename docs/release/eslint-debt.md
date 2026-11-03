@@ -719,3 +719,12 @@ ProcessDesign将完整searchUsers debounce构造提前到selectedStep watcher前
 - 两文件四段完整statement及其它statement原文顺序、同一作用域、模板/style、compileScript binding分类和生产DOM/SSR render保持。no-use-before-define 4→0，总lint109→105 errors，0 warnings，逐文件各规则无新增。
 - 原/新实际编译setup使用真实Vue与实际lodash debounce、Fake API和受控时钟，成功/失败四组轨迹相同：factory零请求/零timer，299/300ms执行边界、步骤切换取消、三种目录搜索、关闭及卸载取消保持，两个卸载hook仍按原顺序注册。这是setup与受控生命周期调用探针，不替代DOM挂载回归。
 - ProcessDesign.contract、MonitorSendSafety、PrometheusLists及PrometheusFormSafety现有4文件178项测试和应用类型检查通过。未新增镜像测试、改断言/规则/ignore或扩展其它前引项；没有真实通知、云或模型调用，未上线。
+
+## 阶段七十二：云账户地域校验的私有函数依赖
+
+CloudAccountManagement仅将normalizeRegions、regionSignature两段完整const-arrow按依赖顺序提前到formRules computed之前，no-use-before-define 2→0。声明kind、函数体、同一作用域与捕获binding保持，所有其它statement、状态/watch/data/call初始化顺序及模板style字节保持，没有改动地域或凭据业务。
+
+- 创建这两个函数不读取地域数据，不执行map、JSON或sort。实际调用时normalizeRegions仍产生新数组与对象，regionSignature仅排序该新数组，不修改调用方原始地域列表；computed校验规则及validator调用时机原样。
+- 磁盘源码与提案逐字匹配，完整声明和其它statement原文顺序、compileScript binding分类及生产DOM/SSR render一致；单文件lint105→103 errors，0 warnings，逐规则无新增，其余既有债保留。
+- 原/新实际编译setup使用真实Vue、Fake API，在读取成功/失败两种流程下factory零请求，受控mounted读取、Azure/GCP/华为/阿里云地域校验矩阵、签名与输入不变、关闭清理轨迹相同。这是setup/受控生命周期探针，不代替真实DOM挂载验收。
+- CloudAccountSafety、CloudAccount.contract和CMDBLists现有3文件131项测试及应用类型检查通过，保留账户与窗口隔离、失败清理和provider凭据等既有回归；未改测试断言、规则或ignore，未重跑全仓测试和构建。没有真实云、凭据验证或网络调用，未上线。

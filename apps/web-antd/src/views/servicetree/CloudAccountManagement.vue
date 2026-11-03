@@ -361,6 +361,19 @@ const paginationConfig = computed(() => ({
   pageSizeOptions: ['10', '20', '50', '100'],
 }));
 
+const normalizeRegions = (regions: CloudAccountRegionInput[] = []) =>
+  regions.map((item) => ({
+    region: item.region,
+    region_name: item.region_name ?? '',
+    description: item.description ?? '',
+    is_default: !!item.is_default,
+    ...(item.project_id !== undefined ? { project_id: item.project_id } : {}),
+  }));
+const regionSignature = (regions: CloudAccountRegionInput[]) =>
+  JSON.stringify(
+    normalizeRegions(regions).sort((a, b) => a.region.localeCompare(b.region)),
+  );
+
 const formRules = computed(() => ({
   name: [
     { required: true, message: '请输入云账户名称', trigger: 'blur' },
@@ -634,19 +647,6 @@ const showCreateModal = (): void => {
   };
   modalVisible.value = true;
 };
-
-const normalizeRegions = (regions: CloudAccountRegionInput[] = []) =>
-  regions.map((item) => ({
-    region: item.region,
-    region_name: item.region_name ?? '',
-    description: item.description ?? '',
-    is_default: !!item.is_default,
-    ...(item.project_id !== undefined ? { project_id: item.project_id } : {}),
-  }));
-const regionSignature = (regions: CloudAccountRegionInput[]) =>
-  JSON.stringify(
-    normalizeRegions(regions).sort((a, b) => a.region.localeCompare(b.region)),
-  );
 const closeForm = () => {
   formRequest++;
   formOwner = '';
