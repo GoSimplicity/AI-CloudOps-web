@@ -1,8 +1,20 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  toRaw,
+  watch,
+} from 'vue';
+
+import { useUserStore } from '@vben/stores';
+import { cloneDeep } from '@vben/utils';
+
+import { type FormInstance, message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
@@ -18,22 +30,46 @@ import {
 } from '#/api/core/prometheus/prometheus_send_group';
 import { getUserList } from '#/api/core/system/user';
 import {
-  getMonitorScrapePoolListApi,
-  type MonitorScrapePool,
-} from '#/api/core/prometheus/prometheus_scrape_pool';
+  getMonitorAlertManagerPoolApi,
+  getMonitorAlertManagerPoolListApi,
+  type MonitorAlertManagerPool,
+} from '#/api/core/prometheus/prometheus_alert_pool';
 import {
   getMonitorOnDutyGroupListApi,
   type MonitorOnDutyGroup,
 } from '#/api/core/prometheus/prometheus_onduty';
 
+import { useAuthStore } from '#/store';
+import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
+const formRef = ref<FormInstance>();
+const submitting = ref(false);
+const detailLoading = ref(false);
+let disposed = false;
+let interactionRevision = 0;
+let catalogRevision = 0;
+let poolRevision = 0;
+let dutyRevision = 0;
+let usersRevision = 0;
+let formOwner: string | undefined;
+let catalogOwner: string | undefined;
+let deleteDialog: ReturnType<typeof Modal.confirm> | undefined;
+
+const operationOwner = (): string | undefined => {
+  const userId = Number(useUserStore().userInfo?.userId);
+  if (!Number.isSafeInteger(userId) || userId <= 0) return;
+  return JSON.stringify([userId, useAuthStore().getAuthGeneration()]);
+};
+const validPositiveId = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 
 // 修复类型定义
 interface UserOption {
   label: string;
+  username?: string;
   value: number;
 }
 
@@ -46,7 +82,7 @@ interface UserInfo {
 
 // interface MenuClickEvent { key: string } // 未使用
 
-// 采集池简化接口
+// AlertManager池简化接口：发送组pool_id用于生成AlertManager路由。
 interface Pool {
   id: number;
   name: string;
@@ -129,7 +165,11 @@ const columns = [
 
 // 状态数据
 const loading = ref(false);
-const { loadError, beginRequest } = useListRequest(loading);
+const {
+  loadError,
+  beginRequest,
+  invalidate: invalidateList,
+} = useListRequest(loading);
 const searchQuery = ref('');
 const enableFilter = ref<1 | 2 | undefined>(undefined);
 const upgradeFilter = ref<1 | 2 | undefined>(undefined);
@@ -168,7 +208,7 @@ const formDialogVisible = ref(false);
 const detailDialogVisible = ref(false);
 
 // 选项数据
-const scrapePools = ref<MonitorScrapePool[]>([]);
+const alertManagerPools = ref<Pool[]>([]);
 const onDutyGroups = ref<MonitorOnDutyGroup[]>([]);
 const userOptions = ref<UserOption[]>([]);
 
@@ -183,7 +223,7 @@ const dialogOnDutyGroupLoading = ref(false);
 const dialogOnDutyGroupSearch = ref('');
 const dialogOnDutyGroupPage = ref(1);
 const dialogOnDutyGroupHasMore = ref(true);
-const dialogOnDutyGroups = ref<MonitorOnDutyGroup[]>([]);
+const dialogOnDutyGroups = ref<Pool[]>([]);
 
 const dialogUserLoading = ref(false);
 const dialogUserSearch = ref('');
@@ -192,35 +232,139 @@ const dialogUserHasMore = ref(true);
 const dialogUsers = ref<UserOption[]>([]);
 
 // 防抖变量
-let poolSearchDebounce: any;
-let onDutyGroupSearchDebounce: any;
-let userSearchDebounce: any;
+let poolSearchDebounce: ReturnType<typeof setTimeout> | undefined;
+let onDutyGroupSearchDebounce: ReturnType<typeof setTimeout> | undefined;
+let userSearchDebounce: ReturnType<typeof setTimeout> | undefined;
 
-// 表单对话框数据 - 修复类型
+interface SendForm {
+  enable: boolean;
+  fei_shu_qun_robot_token: string;
+  first_upgrade_users: number[];
+  id?: number;
+  name: string;
+  name_zh: string;
+  need_upgrade: boolean;
+  notify_methods: string[];
+  on_duty_group_id: null | number;
+  pool_id: null | number;
+  repeat_interval: string;
+  second_upgrade_users: number[];
+  send_resolved: boolean;
+  static_receive_users: number[];
+  upgrade_minutes: number;
+}
+const initialSendForm = (): SendForm => ({
+  enable: false,
+  fei_shu_qun_robot_token: '',
+  first_upgrade_users: [],
+  id: undefined,
+  name: '',
+  name_zh: '',
+  need_upgrade: false,
+  notify_methods: [],
+  on_duty_group_id: null,
+  pool_id: null,
+  repeat_interval: '30s',
+  second_upgrade_users: [],
+  send_resolved: false,
+  static_receive_users: [],
+  upgrade_minutes: 0,
+});
+
+// 表单对话框数据
 const formDialog = reactive({
   isEdit: false,
-  form: {
-    id: undefined as number | undefined,
-    name: '',
-    name_zh: '',
-    enable: false,
-    pool_id: null as null | number,
-    on_duty_group_id: null as null | number,
-    repeat_interval: '30s',
-    send_resolved: false,
-    need_upgrade: false,
-    upgrade_minutes: 0,
-    fei_shu_qun_robot_token: '',
-    static_receive_users: [] as number[],
-    notify_methods: [] as string[],
-    first_upgrade_users: [] as number[],
-    second_upgrade_users: [] as number[],
-  },
+  form: initialSendForm(),
 });
 
 // 详情对话框数据
 const detailDialog = reactive({
   form: null as MonitorSendGroup | null,
+});
+
+const invalidateInteraction = () => {
+  ++interactionRevision;
+  ++poolRevision;
+  ++dutyRevision;
+  ++usersRevision;
+  formOwner = undefined;
+  submitting.value = false;
+  detailLoading.value = false;
+  dialogPoolLoading.value = false;
+  dialogOnDutyGroupLoading.value = false;
+  dialogUserLoading.value = false;
+  clearTimeout(poolSearchDebounce);
+  clearTimeout(onDutyGroupSearchDebounce);
+  clearTimeout(userSearchDebounce);
+  const dialog = deleteDialog;
+  deleteDialog = undefined;
+  dialog?.destroy();
+};
+const captureForm = () => {
+  const owner = formOwner;
+  if (
+    disposed ||
+    !formDialogVisible.value ||
+    !owner ||
+    owner !== operationOwner()
+  )
+    return;
+  const revision = interactionRevision;
+  const id = formDialog.form.id;
+  const isEdit = formDialog.isEdit;
+  return {
+    id,
+    isEdit,
+    owner,
+    revision,
+    isCurrent: () =>
+      !disposed &&
+      formDialogVisible.value &&
+      revision === interactionRevision &&
+      owner === operationOwner() &&
+      owner === formOwner &&
+      formDialog.isEdit === isEdit &&
+      formDialog.form.id === id,
+  };
+};
+const poolOptions = (items: MonitorAlertManagerPool[]): Pool[] =>
+  items.flatMap((pool) => {
+    const id = pool.id;
+    return validPositiveId(id) ? [{ id, name: pool.name }] : [];
+  });
+
+watch(
+  operationOwner,
+  () => {
+    invalidateInteraction();
+    ++catalogRevision;
+    catalogOwner = undefined;
+    formDialogVisible.value = false;
+    formDialog.form = initialSendForm();
+    detailDialogVisible.value = false;
+    detailDialog.form = null;
+    alertManagerPools.value = [];
+    onDutyGroups.value = [];
+    userOptions.value = [];
+    dialogPools.value = [];
+    dialogOnDutyGroups.value = [];
+    dialogUsers.value = [];
+    sendGroupList.value = [];
+    paginationConfig.total = 0;
+    Object.assign(stats, {
+      associatedPools: 0,
+      enabled: 0,
+      needUpgrade: 0,
+      total: 0,
+    });
+    invalidateList();
+  },
+  { flush: 'sync' },
+);
+onBeforeUnmount(() => {
+  disposed = true;
+  invalidateInteraction();
+  ++catalogRevision;
 });
 
 // 表单验证规则
@@ -233,6 +377,9 @@ const formRules = {
     { required: true, message: '请输入发送组中文名称', trigger: 'blur' },
     { min: 2, max: 50, message: '长度应为2到50个字符', trigger: 'blur' },
   ],
+  pool_id: [
+    { required: true, message: '请选择关联AlertManager池', trigger: 'change' },
+  ],
 };
 
 const getPoolStatusClass = (record: MonitorSendGroup): string => {
@@ -241,39 +388,22 @@ const getPoolStatusClass = (record: MonitorSendGroup): string => {
   return 'status-none';
 };
 
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length] || '#1890ff';
-};
-
 const getInitials = (name: string): string => {
   if (!name) return '';
   return name.slice(0, 2).toUpperCase();
 };
 
 const maskToken = (token: string): string => {
-  if (!token || token.length <= 8) return token;
-  return token.substring(0, 4) + '****' + token.substring(token.length - 4);
+  return token ? '********' : '';
 };
 
 // 通过ID获取名称
 const getPoolName = (poolId?: number): string => {
   if (!poolId) return '';
-  const pool = scrapePools.value.find((p) => p.id === poolId);
-  return pool?.name || '';
+  const pool = alertManagerPools.value.find((p) => p.id === poolId);
+  return (
+    pool?.name || (validPositiveId(poolId) ? `AlertManager池ID: ${poolId}` : '')
+  );
 };
 
 const getOnDutyGroupName = (groupId?: number): string => {
@@ -356,8 +486,14 @@ const updateStats = () => {
 };
 
 // 数据加载
-const loadSendGroupList = async (): Promise<void> => {
+const loadSendGroupList = async (
+  stillCurrent: () => boolean = () => true,
+): Promise<void> => {
+  const owner = operationOwner();
+  if (disposed || !stillCurrent()) return;
   const request = beginRequest();
+  const isCurrent = () =>
+    request.isCurrent() && owner === operationOwner() && stillCurrent();
   try {
     const params: GetMonitorSendGroupListReq = {
       page: paginationConfig.current,
@@ -369,7 +505,7 @@ const loadSendGroupList = async (): Promise<void> => {
     const response = (await getMonitorSendGroupListApi(
       params,
     )) as ApiListResponse<MonitorSendGroup>;
-    if (!request.isCurrent()) return;
+    if (!isCurrent()) return;
     if (response) {
       let list = response.items || [];
 
@@ -381,41 +517,20 @@ const loadSendGroupList = async (): Promise<void> => {
       }
 
       // 规范数据结构
-      list = list.map((item: MonitorSendGroup) => {
-        // 确保static_receive_users是数组
-        if (!Array.isArray(item.static_receive_users)) {
-          item.static_receive_users = [] as any;
-        }
-
-        // 确保notify_methods是数组
-        if (!Array.isArray(item.notify_methods)) {
-          item.notify_methods = [] as any;
-        } else {
-          // 处理可能的字符串数组
-          item.notify_methods = item.notify_methods
-            .map((method: any) => {
-              if (typeof method === 'string') {
-                try {
-                  if (method.startsWith('[') && method.endsWith(']')) {
-                    return JSON.parse(method);
-                  }
-                } catch {
-                  // ignore
-                }
-              }
-              return method;
-            })
-            .flat();
-        }
-
-        return item;
-      });
+      list = list.map((item: MonitorSendGroup) => ({
+        ...item,
+        notify_methods: getNotifyMethods(item),
+        static_receive_users: Array.isArray(item.static_receive_users)
+          ? item.static_receive_users
+          : [],
+      }));
 
       sendGroupList.value = list;
       paginationConfig.total = response.total || 0;
       updateStats();
     }
   } catch (error: any) {
+    if (!isCurrent()) return;
     if (!request.fail(error, '加载发送组列表失败')) return;
     sendGroupList.value = [];
     paginationConfig.total = 0;
@@ -428,30 +543,39 @@ const loadSendGroupList = async (): Promise<void> => {
 
 // 加载选项数据
 const loadOptionsData = async (): Promise<void> => {
+  const owner = operationOwner();
+  if (disposed || !owner) return;
+  if (catalogOwner !== owner) {
+    alertManagerPools.value = [];
+    onDutyGroups.value = [];
+    userOptions.value = [];
+  }
+  catalogOwner = owner;
+  const ticket = ++catalogRevision;
+  const isCurrent = () =>
+    !disposed && ticket === catalogRevision && owner === operationOwner();
   try {
     const pageSize = 50;
 
-    // 加载采集池
-    let allScrapePools: MonitorScrapePool[] = [];
+    // 加载AlertManager池
+    let allAlertManagerPools: MonitorAlertManagerPool[] = [];
     let currentPage = 1;
     let hasMoreData = true;
 
     while (hasMoreData) {
-      const scrapePoolResponse = (await getMonitorScrapePoolListApi({
+      if (!isCurrent()) return;
+      const poolResponse = (await getMonitorAlertManagerPoolListApi({
         page: currentPage,
         size: pageSize,
-      })) as ApiListResponse<MonitorScrapePool>;
+      })) as ApiListResponse<MonitorAlertManagerPool>;
+      if (!isCurrent()) return;
 
-      if (
-        scrapePoolResponse &&
-        scrapePoolResponse.items &&
-        scrapePoolResponse.items.length > 0
-      ) {
-        allScrapePools = [...allScrapePools, ...scrapePoolResponse.items];
+      if (poolResponse && poolResponse.items && poolResponse.items.length > 0) {
+        allAlertManagerPools = [...allAlertManagerPools, ...poolResponse.items];
 
         if (
-          scrapePoolResponse.items.length < pageSize ||
-          allScrapePools.length >= (scrapePoolResponse.total || 0)
+          poolResponse.items.length < pageSize ||
+          allAlertManagerPools.length >= (poolResponse.total || 0)
         ) {
           hasMoreData = false;
         } else {
@@ -461,7 +585,7 @@ const loadOptionsData = async (): Promise<void> => {
         hasMoreData = false;
       }
     }
-    scrapePools.value = allScrapePools;
+    alertManagerPools.value = poolOptions(allAlertManagerPools);
 
     // 加载值班组 - 实现真分页
     let allOnDutyGroups: MonitorOnDutyGroup[] = [];
@@ -469,10 +593,12 @@ const loadOptionsData = async (): Promise<void> => {
     hasMoreData = true;
 
     while (hasMoreData) {
+      if (!isCurrent()) return;
       const onDutyGroupResponse = (await getMonitorOnDutyGroupListApi({
         page: currentPage,
         size: pageSize,
       })) as ApiListResponse<MonitorOnDutyGroup>;
+      if (!isCurrent()) return;
 
       if (
         onDutyGroupResponse &&
@@ -493,7 +619,9 @@ const loadOptionsData = async (): Promise<void> => {
         hasMoreData = false;
       }
     }
-    onDutyGroups.value = allOnDutyGroups;
+    onDutyGroups.value = allOnDutyGroups.filter((group) =>
+      validPositiveId(group.id),
+    );
 
     // 加载用户列表 - 实现真分页
     let allUsers: UserInfo[] = [];
@@ -501,11 +629,13 @@ const loadOptionsData = async (): Promise<void> => {
     hasMoreData = true;
 
     while (hasMoreData) {
+      if (!isCurrent()) return;
       const userResponse = (await getUserList({
         page: currentPage,
         size: pageSize,
         search: '',
       })) as ApiListResponse<UserInfo>;
+      if (!isCurrent()) return;
 
       if (userResponse && userResponse.items && userResponse.items.length > 0) {
         allUsers = [...allUsers, ...userResponse.items];
@@ -523,160 +653,252 @@ const loadOptionsData = async (): Promise<void> => {
       }
     }
 
-    userOptions.value = allUsers.map((user: UserInfo) => ({
-      label: user.username,
-      value: user.id,
-    }));
+    userOptions.value = allUsers.flatMap((user: UserInfo) =>
+      validPositiveId(user.id)
+        ? [
+            {
+              label: user.username,
+              username: user.username,
+              value: user.id,
+            },
+          ]
+        : [],
+    );
   } catch (error: any) {
-    if (shouldNotifyPageError(error)) message.error('加载选项数据失败');
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('加载选项数据失败');
   }
 };
 
-// 动态加载采集池数据
+// 动态加载AlertManager池数据
 const loadDialogPools = async (isNewSearch = false) => {
-  if (dialogPoolLoading.value) return;
+  const context = captureForm();
+  if (!context || (!isNewSearch && dialogPoolLoading.value)) return;
 
   if (isNewSearch) {
     dialogPoolPage.value = 1;
     dialogPoolHasMore.value = true;
-    dialogPools.value = [];
+    dialogPools.value = dialogPools.value.filter(
+      (pool) => pool.id === formDialog.form.pool_id,
+    );
   }
 
   if (!dialogPoolHasMore.value) return;
 
+  const ticket = ++poolRevision;
+  const page = dialogPoolPage.value;
+  const search = dialogPoolSearch.value;
+  const ownsRequest = () => context.isCurrent() && ticket === poolRevision;
+  const isCurrent = () => ownsRequest() && search === dialogPoolSearch.value;
   dialogPoolLoading.value = true;
   try {
-    const response = (await getMonitorScrapePoolListApi({
-      page: dialogPoolPage.value,
+    const response = (await getMonitorAlertManagerPoolListApi({
+      page,
       size: 20,
-      search: dialogPoolSearch.value,
-    })) as ApiListResponse<MonitorScrapePool>;
+      search,
+    })) as ApiListResponse<MonitorAlertManagerPool>;
+    if (!isCurrent()) return;
 
     if (response && response.items && response.items.length > 0) {
-      const newPools = response.items.map((p: MonitorScrapePool) => ({
-        id: p.id!,
-        name: p.name,
-      }));
-      dialogPools.value.push(...newPools);
-      dialogPoolPage.value++;
-      if (dialogPools.value.length >= (response.total || 0)) {
-        dialogPoolHasMore.value = false;
-      }
+      const items = poolOptions(response.items);
+      const retained = dialogPools.value.filter(
+        (pool) =>
+          (page !== 1 || pool.id === formDialog.form.pool_id) &&
+          !items.some((item) => item.id === pool.id),
+      );
+      dialogPools.value =
+        page === 1
+          ? [...items, ...retained]
+          : [
+              ...dialogPools.value,
+              ...items.filter(
+                (item) =>
+                  !dialogPools.value.some(
+                    (existing) => existing.id === item.id,
+                  ),
+              ),
+            ];
+      dialogPoolPage.value = page + 1;
+      dialogPoolHasMore.value = page * 20 < (response.total || 0);
     } else {
       dialogPoolHasMore.value = false;
     }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取采集池数据失败');
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('获取AlertManager池数据失败');
   } finally {
-    dialogPoolLoading.value = false;
+    if (ownsRequest()) dialogPoolLoading.value = false;
   }
 };
 
 // 动态加载值班组数据
 const loadDialogOnDutyGroups = async (isNewSearch = false) => {
-  if (dialogOnDutyGroupLoading.value) return;
+  const context = captureForm();
+  if (!context || (!isNewSearch && dialogOnDutyGroupLoading.value)) return;
 
   if (isNewSearch) {
     dialogOnDutyGroupPage.value = 1;
     dialogOnDutyGroupHasMore.value = true;
-    dialogOnDutyGroups.value = [];
+    dialogOnDutyGroups.value = dialogOnDutyGroups.value.filter(
+      (group) => group.id === formDialog.form.on_duty_group_id,
+    );
   }
 
   if (!dialogOnDutyGroupHasMore.value) return;
 
+  const ticket = ++dutyRevision;
+  const page = dialogOnDutyGroupPage.value;
+  const search = dialogOnDutyGroupSearch.value;
+  const ownsRequest = () => context.isCurrent() && ticket === dutyRevision;
+  const isCurrent = () =>
+    ownsRequest() && search === dialogOnDutyGroupSearch.value;
   dialogOnDutyGroupLoading.value = true;
   try {
     const response = (await getMonitorOnDutyGroupListApi({
-      page: dialogOnDutyGroupPage.value,
+      page,
       size: 20,
-      search: dialogOnDutyGroupSearch.value,
+      search,
     })) as ApiListResponse<MonitorOnDutyGroup>;
+    if (!isCurrent()) return;
 
     if (response && response.items && response.items.length > 0) {
-      dialogOnDutyGroups.value.push(...response.items);
-      dialogOnDutyGroupPage.value++;
-      if (dialogOnDutyGroups.value.length >= (response.total || 0)) {
-        dialogOnDutyGroupHasMore.value = false;
-      }
+      const items = response.items.flatMap((group) =>
+        validPositiveId(group.id) ? [{ id: group.id, name: group.name }] : [],
+      );
+      const retained = dialogOnDutyGroups.value.filter(
+        (group) =>
+          (page !== 1 || group.id === formDialog.form.on_duty_group_id) &&
+          !items.some((item) => item.id === group.id),
+      );
+      dialogOnDutyGroups.value =
+        page === 1
+          ? [...items, ...retained]
+          : [
+              ...dialogOnDutyGroups.value,
+              ...items.filter(
+                (item) =>
+                  !dialogOnDutyGroups.value.some(
+                    (existing) => existing.id === item.id,
+                  ),
+              ),
+            ];
+      dialogOnDutyGroupPage.value = page + 1;
+      dialogOnDutyGroupHasMore.value = page * 20 < (response.total || 0);
     } else {
       dialogOnDutyGroupHasMore.value = false;
     }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取值班组数据失败');
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('获取值班组数据失败');
   } finally {
-    dialogOnDutyGroupLoading.value = false;
+    if (ownsRequest()) dialogOnDutyGroupLoading.value = false;
   }
 };
 
 // 动态加载用户数据
 const loadDialogUsers = async (isNewSearch = false) => {
-  if (dialogUserLoading.value) return;
+  const context = captureForm();
+  if (!context || (!isNewSearch && dialogUserLoading.value)) return;
 
   if (isNewSearch) {
     dialogUserPage.value = 1;
     dialogUserHasMore.value = true;
-    dialogUsers.value = [];
+    const selected = new Set([
+      ...formDialog.form.first_upgrade_users,
+      ...formDialog.form.second_upgrade_users,
+      ...formDialog.form.static_receive_users,
+    ]);
+    dialogUsers.value = dialogUsers.value.filter((user) =>
+      selected.has(user.value),
+    );
   }
 
   if (!dialogUserHasMore.value) return;
 
+  const ticket = ++usersRevision;
+  const page = dialogUserPage.value;
+  const search = dialogUserSearch.value;
+  const ownsRequest = () => context.isCurrent() && ticket === usersRevision;
+  const isCurrent = () => ownsRequest() && search === dialogUserSearch.value;
   dialogUserLoading.value = true;
   try {
     const response = (await getUserList({
-      page: dialogUserPage.value,
+      page,
       size: 20,
-      search: dialogUserSearch.value,
+      search,
     })) as ApiListResponse<UserInfo>;
+    if (!isCurrent()) return;
 
     if (response && response.items && response.items.length > 0) {
-      const newUsers = response.items.map((user: UserInfo) => {
+      const items = response.items.flatMap((user: UserInfo) => {
+        if (!validPositiveId(user.id)) return [];
         // 优先使用username，如果没有则使用real_name或name
         const displayName =
           user.username || user.real_name || user.name || `用户ID: ${user.id}`;
-        return {
-          label: displayName,
-          value: user.id,
-        };
+        return [
+          {
+            label: displayName,
+            username: user.username || '',
+            value: user.id,
+          },
+        ];
       });
-      dialogUsers.value.push(...newUsers);
-      dialogUserPage.value++;
-      if (dialogUsers.value.length >= (response.total || 0)) {
-        dialogUserHasMore.value = false;
-      }
+      const selected = new Set([
+        ...formDialog.form.first_upgrade_users,
+        ...formDialog.form.second_upgrade_users,
+        ...formDialog.form.static_receive_users,
+      ]);
+      const retained = dialogUsers.value.filter(
+        (user) =>
+          (page !== 1 || selected.has(user.value)) &&
+          !items.some((item) => item.value === user.value),
+      );
+      dialogUsers.value =
+        page === 1
+          ? [...items, ...retained]
+          : [
+              ...dialogUsers.value,
+              ...items.filter(
+                (item) =>
+                  !dialogUsers.value.some(
+                    (existing) => existing.value === item.value,
+                  ),
+              ),
+            ];
+      dialogUserPage.value = page + 1;
+      dialogUserHasMore.value = page * 20 < (response.total || 0);
     } else {
       dialogUserHasMore.value = false;
     }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取用户数据失败');
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('获取用户数据失败');
   } finally {
-    dialogUserLoading.value = false;
+    if (ownsRequest()) dialogUserLoading.value = false;
   }
 };
 
 // 搜索处理函数
 const handleDialogPoolSearch = (value: string) => {
   clearTimeout(poolSearchDebounce);
+  dialogPoolSearch.value = value;
   poolSearchDebounce = setTimeout(() => {
-    dialogPoolSearch.value = value;
     loadDialogPools(true);
   }, 300);
 };
 
 const handleDialogOnDutyGroupSearch = (value: string) => {
   clearTimeout(onDutyGroupSearchDebounce);
+  dialogOnDutyGroupSearch.value = value;
   onDutyGroupSearchDebounce = setTimeout(() => {
-    dialogOnDutyGroupSearch.value = value;
     loadDialogOnDutyGroups(true);
   }, 300);
 };
 
 const handleDialogUserSearch = (value: string) => {
   clearTimeout(userSearchDebounce);
+  dialogUserSearch.value = value;
   userSearchDebounce = setTimeout(() => {
-    dialogUserSearch.value = value;
     loadDialogUsers(true);
   }, 300);
 };
@@ -743,333 +965,389 @@ const handleResetFilters = (): void => {
   loadSendGroupList();
 };
 
-const handleCreateSendGroup = (): void => {
-  formDialog.isEdit = false;
-  resetFormDialog();
-
-  // 重置并加载动态数据
+const prepareForm = (owner: string) => {
+  invalidateInteraction();
+  formOwner = owner;
   dialogPoolSearch.value = '';
   dialogOnDutyGroupSearch.value = '';
   dialogUserSearch.value = '';
+  dialogPools.value = [];
+  dialogOnDutyGroups.value = [];
+  dialogUsers.value = [];
+  detailDialogVisible.value = false;
+  detailDialog.form = null;
+};
 
+const loadFormOptions = () => {
   loadDialogPools(true);
   loadDialogOnDutyGroups(true);
   loadDialogUsers(true);
+};
 
+const handleCreateSendGroup = (): void => {
+  const owner = operationOwner();
+  if (disposed || !owner || !hasPerm('/api/monitor/send_groups/create')) return;
+  prepareForm(owner);
+  formDialog.isEdit = false;
+  formDialog.form = initialSendForm();
   formDialogVisible.value = true;
+  if (catalogOwner !== owner) loadOptionsData();
+  loadFormOptions();
+};
+
+type SendFormContext = NonNullable<ReturnType<typeof captureForm>>;
+const retainSavedPool = async (
+  context: SendFormContext,
+  id: number,
+): Promise<void> => {
+  const isCurrent = () => context.isCurrent() && formDialog.form.pool_id === id;
+  if (!isCurrent()) return;
+  const cached =
+    catalogOwner === context.owner
+      ? alertManagerPools.value.find((pool) => pool.id === id)
+      : undefined;
+  if (cached) {
+    if (!dialogPools.value.some((pool) => pool.id === id))
+      dialogPools.value.push(cached);
+    return;
+  }
+  try {
+    const pool: MonitorAlertManagerPool =
+      await getMonitorAlertManagerPoolApi(id);
+    if (!isCurrent()) return;
+    const poolId = pool?.id;
+    if (!validPositiveId(poolId) || poolId !== id)
+      throw new Error('AlertManager池详情标识不匹配');
+    if (!dialogPools.value.some((option) => option.id === id))
+      dialogPools.value.push({ id: poolId, name: pool.name });
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('加载已保存AlertManager池失败');
+  }
 };
 
 const handleEditSendGroup = (record: MonitorSendGroup): void => {
-  formDialog.isEdit = true;
-  formDialog.form = {
-    id: record.id,
-    name: record.name,
-    name_zh: record.name_zh,
+  const owner = operationOwner();
+  const id = record.id;
+  if (
+    disposed ||
+    !owner ||
+    !validPositiveId(id) ||
+    !hasPerm('/api/monitor/send_groups/update/:id')
+  ) {
+    message.warning('发送组或账号标识无效，请刷新后重试');
+    return;
+  }
+  const lists = [
+    record.static_receive_users,
+    record.first_upgrade_users,
+    record.second_upgrade_users,
+  ];
+  if (
+    lists.some(
+      (users) =>
+        users !== undefined &&
+        users !== null &&
+        (!Array.isArray(users) ||
+          users.some((user) => !user || !validPositiveId(user.id))),
+    )
+  ) {
+    message.warning('发送组接收人数据无效，请刷新后重试');
+    return;
+  }
+  const methods = getNotifyMethods(record);
+  if (methods.some((method) => typeof method !== 'string')) {
+    message.warning('发送组通知方式无效，请刷新后重试');
+    return;
+  }
+  const data: SendForm = {
     enable: record.enable === 1,
-    pool_id: record.pool_id,
-    on_duty_group_id: record.on_duty_group_id,
-    repeat_interval: record.repeat_interval || '30s',
-    send_resolved: record.send_resolved === 1,
-    need_upgrade: record.need_upgrade === 1,
-    upgrade_minutes: record.upgrade_minutes || 0,
     fei_shu_qun_robot_token: record.fei_shu_qun_robot_token || '',
-    static_receive_users:
-      (record.static_receive_users || []).map((user: any) => user.id) || [],
-    notify_methods: getNotifyMethods(record),
-    first_upgrade_users:
-      (record.first_upgrade_users || []).map((user: any) => user.id) || [],
-    second_upgrade_users:
-      (record.second_upgrade_users || []).map((user: any) => user.id) || [],
+    first_upgrade_users: (record.first_upgrade_users || []).map(
+      (user) => user.id,
+    ),
+    id,
+    name: record.name || '',
+    name_zh: record.name_zh || '',
+    need_upgrade: record.need_upgrade === 1,
+    notify_methods: methods,
+    on_duty_group_id: record.on_duty_group_id,
+    pool_id: record.pool_id,
+    repeat_interval: record.repeat_interval || '30s',
+    second_upgrade_users: (record.second_upgrade_users || []).map(
+      (user) => user.id,
+    ),
+    send_resolved: record.send_resolved === 1,
+    static_receive_users: (record.static_receive_users || []).map(
+      (user) => user.id,
+    ),
+    upgrade_minutes: record.upgrade_minutes || 0,
   };
-
-  // 重置并加载动态数据
-  dialogPoolSearch.value = '';
-  dialogOnDutyGroupSearch.value = '';
-  dialogUserSearch.value = '';
-
-  // 加载动态数据
-  loadDialogPools(true).then(() => {
-    // 确保当前选中的采集池在列表中
-    const selectedPoolInList = dialogPools.value.some(
-      (p) => p.id === record.pool_id,
+  prepareForm(owner);
+  formDialog.isEdit = true;
+  formDialog.form = data;
+  const selectedUsers = [
+    ...(record.static_receive_users || []),
+    ...(record.first_upgrade_users || []),
+    ...(record.second_upgrade_users || []),
+  ];
+  dialogUsers.value = selectedUsers
+    .flatMap((user) =>
+      validPositiveId(user.id)
+        ? [
+            {
+              label: user.username || `用户ID: ${user.id}`,
+              username: user.username || '',
+              value: user.id,
+            },
+          ]
+        : [],
+    )
+    .filter(
+      (user, index, all) =>
+        all.findIndex((other) => other.value === user.value) === index,
     );
-    if (!selectedPoolInList && record.pool_id) {
-      const pool = scrapePools.value.find((p) => p.id === record.pool_id);
-      if (pool) {
-        dialogPools.value.unshift({ id: pool.id!, name: pool.name });
-      }
-    }
-  });
-
-  loadDialogOnDutyGroups(true).then(() => {
-    // 确保当前选中的值班组在列表中
-    const selectedGroupInList = dialogOnDutyGroups.value.some(
-      (g) => g.id === record.on_duty_group_id,
-    );
-    if (!selectedGroupInList && record.on_duty_group_id) {
-      const group = onDutyGroups.value.find(
-        (g) => g.id === record.on_duty_group_id,
-      );
-      if (group) {
-        dialogOnDutyGroups.value.unshift(group);
-      }
-    }
-  });
-
-  loadDialogUsers(true).then(() => {
-    // 确保当前选中的用户在列表中
-    const selectedUserIds = [
-      ...(record.static_receive_users?.map((u: any) => u.id) || []),
-      ...(record.first_upgrade_users?.map((u: any) => u.id) || []),
-      ...(record.second_upgrade_users?.map((u: any) => u.id) || []),
+  const dutyId = record.on_duty_group_id;
+  if (validPositiveId(dutyId)) {
+    const cached =
+      catalogOwner === owner
+        ? onDutyGroups.value.find((group) => group.id === dutyId)
+        : undefined;
+    dialogOnDutyGroups.value = [
+      { id: dutyId, name: cached?.name || `值班组ID: ${dutyId}` },
     ];
-
-    // 将已选用户添加到列表
-    selectedUserIds.forEach((userId) => {
-      const userInList = dialogUsers.value.some((u) => u.value === userId);
-      if (!userInList) {
-        // 尝试从已有用户中获取用户信息
-        const user = userOptions.value.find((u) => u.value === userId);
-        if (user) {
-          dialogUsers.value.unshift(user);
-        } else {
-          // 如果在现有选项中找不到用户，则从记录中获取用户名
-          let username = '';
-
-          // 尝试从static_receive_users中查找
-          const staticUser = record.static_receive_users?.find(
-            (u: any) => u.id === userId,
-          );
-          if (staticUser?.username) {
-            username = staticUser.username;
-          }
-
-          // 尝试从first_upgrade_users中查找
-          if (!username) {
-            const firstUpgradeUser = record.first_upgrade_users?.find(
-              (u: any) => u.id === userId,
-            );
-            if (firstUpgradeUser?.username) {
-              username = firstUpgradeUser.username;
-            }
-          }
-
-          // 尝试从second_upgrade_users中查找
-          if (!username) {
-            const secondUpgradeUser = record.second_upgrade_users?.find(
-              (u) => u.id === userId,
-            );
-            if (secondUpgradeUser?.username) {
-              username = secondUpgradeUser.username;
-            }
-          }
-
-          // 如果找到了用户名，添加到选项列表中
-          if (username) {
-            dialogUsers.value.unshift({
-              label: username,
-              value: userId,
-            });
-          } else {
-            // 如果没有找到用户名，则添加一个带有ID的占位符
-            dialogUsers.value.unshift({
-              label: `用户ID: ${userId}`,
-              value: userId,
-            });
-          }
-        }
-      }
-    });
-  });
-
+  }
   formDialogVisible.value = true;
-  detailDialogVisible.value = false;
+  if (catalogOwner !== owner) loadOptionsData();
+  loadFormOptions();
+  const context = captureForm();
+  if (context && validPositiveId(record.pool_id))
+    retainSavedPool(context, record.pool_id);
 };
 
 const handleViewSendGroup = async (record: MonitorSendGroup): Promise<void> => {
+  const owner = operationOwner();
+  const id = record.id;
+  if (
+    disposed ||
+    !owner ||
+    !validPositiveId(id) ||
+    !hasPerm('/api/monitor/send_groups/detail/:id')
+  )
+    return;
+  invalidateInteraction();
+  formDialogVisible.value = false;
+  formDialog.form = initialSendForm();
+  detailDialog.form = null;
+  detailDialogVisible.value = true;
+  const ticket = interactionRevision;
+  const ownsRequest = () =>
+    !disposed && ticket === interactionRevision && owner === operationOwner();
+  const isCurrent = () =>
+    ownsRequest() &&
+    detailDialogVisible.value &&
+    record.id === id &&
+    hasPerm('/api/monitor/send_groups/detail/:id');
+  detailLoading.value = true;
   try {
-    const response = (await getMonitorSendGroupDetailApi(
-      record.id,
-    )) as MonitorSendGroup;
+    const response: MonitorSendGroup = await getMonitorSendGroupDetailApi(id);
+    if (!isCurrent()) return;
+    if (!response || response.id !== id)
+      throw new Error('发送组详情标识不匹配');
     detailDialog.form = response;
-    detailDialogVisible.value = true;
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取发送组详情失败');
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('获取发送组详情失败');
+  } finally {
+    if (ownsRequest()) detailLoading.value = false;
   }
 };
 
 const handleDeleteClick = (record: MonitorSendGroup): void => {
-  Modal.confirm({
-    title: '警告',
-    content: `确定要删除发送组 "${record.name_zh || record.name}" 吗？`,
+  const id = record.id;
+  const owner = operationOwner();
+  if (
+    disposed ||
+    !owner ||
+    !validPositiveId(id) ||
+    !hasPerm('/api/monitor/send_groups/delete/:id')
+  )
+    return;
+  invalidateInteraction();
+  formDialogVisible.value = false;
+  detailDialogVisible.value = false;
+  const ticket = interactionRevision;
+  const name = record.name_zh || record.name;
+  const isCurrent = () =>
+    !disposed &&
+    ticket === interactionRevision &&
+    owner === operationOwner() &&
+    record.id === id &&
+    hasPerm('/api/monitor/send_groups/delete/:id');
+  let consumed = false;
+  deleteDialog = Modal.confirm({
+    cancelText: '取消',
+    content: `确定要删除发送组 "${name}" 吗？`,
     okText: '删除',
     okType: 'danger',
-    cancelText: '取消',
-    onOk: async () => {
+    onCancel() {
+      if (ticket === interactionRevision && owner === operationOwner())
+        invalidateInteraction();
+    },
+    async onOk() {
+      if (consumed || !isCurrent()) return;
+      consumed = true;
       try {
-        await deleteMonitorSendGroupApi(record.id);
-        message.success(`发送组 "${record.name_zh || record.name}" 已删除`);
-        await loadSendGroupList();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(error.message || '删除发送组失败');
+        await deleteMonitorSendGroupApi(id);
+        if (!isCurrent()) return;
+        message.success(`发送组 "${name}" 已删除`);
+        await loadSendGroupList(isCurrent);
+      } catch (error: unknown) {
+        if (isCurrent() && shouldNotifyPageError(error))
+          message.error('删除发送组失败');
       }
     },
+    title: '警告',
   });
 };
 
-// 表单保存
-const saveSendGroup = async (): Promise<void> => {
-  if (!formDialog.form.name.trim()) {
-    message.error('发送组名称不能为空');
-    return;
-  }
-
-  if (!formDialog.form.name_zh.trim()) {
-    message.error('发送组中文名称不能为空');
-    return;
-  }
-
-  try {
-    const formData = {
-      ...formDialog.form,
-      user_id: 1, // 这里应该从用户上下文获取
-      enable: formDialog.form.enable ? 1 : 2,
-      send_resolved: formDialog.form.send_resolved ? 1 : 2,
-      need_upgrade: formDialog.form.need_upgrade ? 1 : 2,
-      // 修复：确保pool_id和on_duty_group_id不为null时才传递
-      pool_id: formDialog.form.pool_id || 0,
-      on_duty_group_id: formDialog.form.on_duty_group_id || 0,
-    };
-
-    // 获取用户名映射，用于填充username字段
-    const userIdToUsername = new Map<number, string>();
-    dialogUsers.value.forEach((user) => {
-      userIdToUsername.set(user.value, user.label);
-    });
-
-    if (formDialog.isEdit && formDialog.form.id) {
-      // 准备用户数据，确保每个用户对象都有id和username
-      const staticReceiveUsers = formData.static_receive_users.map(
-        (id: number) => ({
-          id,
-          username: userIdToUsername.get(id) || '',
-        }),
-      );
-
-      const firstUpgradeUsers = formData.first_upgrade_users.map(
-        (id: number) => ({
-          id,
-          username: userIdToUsername.get(id) || '',
-        }),
-      );
-
-      const secondUpgradeUsers = formData.second_upgrade_users.map(
-        (id: number) => ({
-          id,
-          username: userIdToUsername.get(id) || '',
-        }),
-      );
-
-      const updateData: UpdateMonitorSendGroupReq = {
-        id: formDialog.form.id,
-        name: formData.name,
-        name_zh: formData.name_zh,
-        enable: formData.enable as 1 | 2,
-        pool_id: formData.pool_id,
-        on_duty_group_id: formData.on_duty_group_id,
-        static_receive_users: staticReceiveUsers,
-        fei_shu_qun_robot_token: formData.fei_shu_qun_robot_token,
-        repeat_interval: formData.repeat_interval,
-        send_resolved: formData.send_resolved as 1 | 2,
-        notify_methods: formData.notify_methods,
-        need_upgrade: formData.need_upgrade as 1 | 2,
-        first_upgrade_users: firstUpgradeUsers,
-        upgrade_minutes: formData.upgrade_minutes,
-        second_upgrade_users: secondUpgradeUsers,
-      };
-      await updateMonitorSendGroupApi(updateData);
-      message.success(`发送组 "${formDialog.form.name_zh}" 已更新`);
-    } else {
-      // 准备用户数据，确保每个用户对象都有id和username
-      const staticReceiveUsers = formData.static_receive_users.map(
-        (id: number) => ({
-          id,
-          username: userIdToUsername.get(id) || '',
-        }),
-      );
-
-      const firstUpgradeUsers = formData.first_upgrade_users.map(
-        (id: number) => ({
-          id,
-          username: userIdToUsername.get(id) || '',
-        }),
-      );
-
-      const secondUpgradeUsers = formData.second_upgrade_users.map(
-        (id: number) => ({
-          id,
-          username: userIdToUsername.get(id) || '',
-        }),
-      );
-
-      const createData: CreateMonitorSendGroupReq = {
-        name: formData.name,
-        name_zh: formData.name_zh,
-        enable: formData.enable as 1 | 2,
-        pool_id: formData.pool_id,
-        on_duty_group_id: formData.on_duty_group_id,
-        static_receive_users: staticReceiveUsers,
-        fei_shu_qun_robot_token: formData.fei_shu_qun_robot_token,
-        repeat_interval: formData.repeat_interval,
-        send_resolved: formData.send_resolved as 1 | 2,
-        notify_methods: formData.notify_methods,
-        need_upgrade: formData.need_upgrade as 1 | 2,
-        first_upgrade_users: firstUpgradeUsers,
-        upgrade_minutes: formData.upgrade_minutes,
-        second_upgrade_users: secondUpgradeUsers,
-      };
-      await createMonitorSendGroupApi(createData);
-      message.success(`发送组 "${formDialog.form.name_zh}" 已创建`);
-    }
-
-    formDialogVisible.value = false;
-    loadSendGroupList();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '保存发送组失败');
-  }
-};
-
-// 重置表单对话框
-const resetFormDialog = (): void => {
-  formDialog.form = {
-    id: undefined,
-    name: '',
-    name_zh: '',
-    enable: false,
-    pool_id: null,
-    on_duty_group_id: null,
-    repeat_interval: '30s',
-    send_resolved: false,
-    need_upgrade: false,
-    upgrade_minutes: 0,
-    fei_shu_qun_robot_token: '',
-    static_receive_users: [],
-    notify_methods: [],
-    first_upgrade_users: [],
-    second_upgrade_users: [],
-  };
-};
-
-// 对话框关闭
 const closeFormDialog = (): void => {
+  if (!formDialogVisible.value) return;
+  invalidateInteraction();
   formDialogVisible.value = false;
+  formDialog.form = initialSendForm();
+  dialogPools.value = [];
+  dialogOnDutyGroups.value = [];
+  dialogUsers.value = [];
+};
+
+const fingerprintForm = (): string | undefined => {
+  try {
+    return JSON.stringify(formDialog.form);
+  } catch {
+    return undefined;
+  }
+};
+
+const saveSendGroup = async (): Promise<void> => {
+  const context = captureForm();
+  const form = formRef.value;
+  if (!context || submitting.value) return;
+  const permission = context.isEdit
+    ? '/api/monitor/send_groups/update/:id'
+    : '/api/monitor/send_groups/create';
+  if (!hasPerm(permission) || (context.isEdit && !validPositiveId(context.id)))
+    return;
+  if (!form || typeof form.validate !== 'function') {
+    message.warning('表单尚未就绪，请稍后重试');
+    return;
+  }
+  const data = formDialog.form;
+  const fingerprint = fingerprintForm();
+  if (fingerprint === undefined) return;
+  const snapshot = cloneDeep(toRaw(data));
+  const names = new Map(
+    dialogUsers.value.map((user) => [user.value, user.username || '']),
+  );
+  const ownsOperation = () =>
+    !disposed &&
+    context.revision === interactionRevision &&
+    context.owner === operationOwner();
+  const isCurrent = () =>
+    context.isCurrent() &&
+    hasPerm(permission) &&
+    formRef.value === form &&
+    formDialog.form === data &&
+    fingerprintForm() === fingerprint;
+  submitting.value = true;
+  try {
+    await form.validate();
+  } catch {
+    if (ownsOperation()) submitting.value = false;
+    return;
+  }
+  if (!isCurrent()) {
+    if (ownsOperation()) submitting.value = false;
+    return;
+  }
+  try {
+    const poolId = snapshot.pool_id;
+    const dutyId = snapshot.on_duty_group_id ?? 0;
+    const recipientLists = [
+      snapshot.static_receive_users,
+      snapshot.first_upgrade_users,
+      snapshot.second_upgrade_users,
+    ];
+    if (
+      !validPositiveId(poolId) ||
+      (dutyId !== 0 && !validPositiveId(dutyId)) ||
+      recipientLists.some(
+        (ids) => !Array.isArray(ids) || ids.some((id) => !validPositiveId(id)),
+      ) ||
+      !Array.isArray(snapshot.notify_methods) ||
+      snapshot.notify_methods.some((method) => typeof method !== 'string') ||
+      !Number.isSafeInteger(snapshot.upgrade_minutes) ||
+      snapshot.upgrade_minutes < 0
+    ) {
+      message.warning('关联池、接收人或升级参数无效，请重新选择');
+      return;
+    }
+    if (!snapshot.name.trim() || !snapshot.name_zh.trim()) {
+      message.warning('请输入有效的发送组名称');
+      return;
+    }
+    const users = (ids: number[]) =>
+      ids.map((id) => ({ id, username: names.get(id) || '' }));
+    const payload: CreateMonitorSendGroupReq = {
+      enable: snapshot.enable ? 1 : 2,
+      fei_shu_qun_robot_token: snapshot.fei_shu_qun_robot_token,
+      first_upgrade_users: users(snapshot.first_upgrade_users),
+      name: snapshot.name,
+      name_zh: snapshot.name_zh,
+      need_upgrade: snapshot.need_upgrade ? 1 : 2,
+      notify_methods: snapshot.notify_methods,
+      on_duty_group_id: dutyId,
+      pool_id: poolId,
+      repeat_interval: snapshot.repeat_interval,
+      second_upgrade_users: users(snapshot.second_upgrade_users),
+      send_resolved: snapshot.send_resolved ? 1 : 2,
+      static_receive_users: users(snapshot.static_receive_users),
+      upgrade_minutes: snapshot.upgrade_minutes,
+    };
+    if (context.isEdit) {
+      const id = context.id;
+      if (!validPositiveId(id)) return;
+      const update: UpdateMonitorSendGroupReq = { ...payload, id };
+      await updateMonitorSendGroupApi(update);
+    } else {
+      await createMonitorSendGroupApi(payload);
+    }
+    if (!isCurrent()) return;
+    message.success(
+      `发送组 "${snapshot.name_zh}" 已${context.isEdit ? '更新' : '创建'}`,
+    );
+    closeFormDialog();
+    const refreshRevision = interactionRevision;
+    await loadSendGroupList(
+      () =>
+        !disposed &&
+        refreshRevision === interactionRevision &&
+        context.owner === operationOwner() &&
+        hasPerm(permission),
+    );
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('保存发送组失败');
+  } finally {
+    if (ownsOperation()) submitting.value = false;
+  }
 };
 
 const closeDetailDialog = (): void => {
+  if (!detailDialogVisible.value) return;
+  invalidateInteraction();
   detailDialogVisible.value = false;
+  detailDialog.form = null;
 };
 
 // 生命周期钩子
@@ -1200,7 +1478,7 @@ onMounted(() => {
       type="error"
     >
       <template #action>
-        <a-button :loading="loading" size="small" @click="loadSendGroupList">
+        <a-button :loading="loading" size="small" @click="loadSendGroupList()">
           重试
         </a-button>
       </template>
@@ -1410,6 +1688,7 @@ onMounted(() => {
 
     <!-- 创建/编辑发送组对话框 -->
     <a-modal
+      :confirm-loading="submitting"
       :destroy-on-close="true"
       :open="formDialogVisible"
       :title="formDialog.isEdit ? '编辑发送组' : '创建发送组'"
@@ -1419,6 +1698,7 @@ onMounted(() => {
       @ok="saveSendGroup"
     >
       <a-form
+        :key="interactionRevision"
         ref="formRef"
         :model="formDialog.form"
         :rules="formRules"
@@ -1458,14 +1738,14 @@ onMounted(() => {
           <div class="section-title">关联配置</div>
           <a-row :gutter="16">
             <a-col :sm="12" :xs="24">
-              <a-form-item label="关联采集池" name="pool_id">
+              <a-form-item label="关联AlertManager池" name="pool_id">
                 <a-select
                   v-model:value="formDialog.form.pool_id"
                   :filter-option="false"
                   :loading="dialogPoolLoading"
                   allow-clear
                   class="full-width"
-                  placeholder="请搜索并选择采集池"
+                  placeholder="请搜索并选择AlertManager池"
                   show-search
                   @popupScroll="handleDialogPoolScroll"
                   @search="handleDialogPoolSearch"
@@ -1660,7 +1940,14 @@ onMounted(() => {
       title="发送组详情"
       @cancel="closeDetailDialog"
     >
-      <div v-if="detailDialog.form" class="pool-details">
+      <a-spin v-if="detailLoading" />
+      <a-alert
+        v-else-if="!detailDialog.form"
+        message="发送组详情读取失败，请关闭后重新打开"
+        show-icon
+        type="error"
+      />
+      <div v-else class="pool-details">
         <div class="detail-header">
           <h2>{{ detailDialog.form.name_zh || detailDialog.form.name }}</h2>
           <div class="detail-badges">
@@ -1702,7 +1989,7 @@ onMounted(() => {
           <a-descriptions-item label="中文名称">
             {{ detailDialog.form.name_zh }}
           </a-descriptions-item>
-          <a-descriptions-item label="关联采集池">
+          <a-descriptions-item label="关联AlertManager池">
             {{ getPoolName(detailDialog.form.pool_id) || '未关联' }}
           </a-descriptions-item>
           <a-descriptions-item label="关联值班组">
