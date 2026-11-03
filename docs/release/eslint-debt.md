@@ -344,3 +344,14 @@ MonitorConfig补齐原先模板存在但脚本未声明的FormInstance引用并�
 - 两生产文件ESLint71/66，新测试0/0，四protected类别0；13处script隐藏断言及额外1处模板断言清除。
 - 所有写入方冻结后的整合检查：146文件2867项全量测试、应用类型检查、11项构建通过。完整扫描1094files仍10503 errors/5 warnings，protected/parser/tool0，SFC语法盘点剩12文件33处，不宣称lint全绿。
 - 整合首轮3个CMDB旧fixture缺少新会话依赖而失败，补同principal依赖后完整复跑2867通过；未将2864/3failed算作成功。没有真实Prometheus操作或上线。
+
+## 阶段二十八：云账户动作、表单归属与导出
+
+云账户delete/status/verify绑定合法ID/provider、UID/authGeneration、原列表及详情代；确认一次消费且实时核对权限，状态每ID最新票据只回写原行/原详情，旧成功/错误/finally不影响新动作。列表/详情读取补owner归属，避免旧列表借新身份开启动作；凭据窗口复用既有closeForm及formRequest作废/清空，validate/API前后另核对formOwner，未改create/update凭据payload构造。
+
+CSV要求当前listOwner并显式检查首行，中文列名、顺序和值映射均保持。验证仍需显式确认、启用状态与权限；没有自动触云。原“取消后重开验证”测试改为选最新确认按钮，拒绝点击退场旧弹窗回调，不删除原覆盖。
+
+- 新61项安全回归、原52合同及scanner23共136项通过；补旧CMDB同principal依赖后连12项为148通过；type通过。CSV及凭据payload initializer做独立AST比对相同。
+- 整合首轮2864通过/3CMDB失败及3unhandled来自旧fixture未初始化新依赖，最小补7行store/auth mocks且原12项测试AST/断言/请求模拟保持；随后完整146文件2867项、类型检查、11项构建全部通过。
+- 新Safety lint0/0，生产SFC与CMDB fixture各规则计数不增；清除2处隐藏script断言。完整门禁1094files的四protected类别及parser/tool0，遗留10503 errors/5 warnings没有隐藏。
+- 测试全部Mock云账户/验证接口，没有真实云、模型、通知或生产操作。票据只隔离前端回执，不宣称撤销已发出的远端操作。

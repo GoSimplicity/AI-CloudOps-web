@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useUserStore } from '@vben/stores';
+
 import OpsPage from '#/components/ops/OpsPage.vue';
 import AccountRegionsEditor from './cloudaccountmanagement/AccountRegionsEditor.vue';
 import {
@@ -50,6 +52,7 @@ import {
   updateCloudAccountStatusApi,
   verifyCloudAccountApi,
 } from '#/api/core/tree/tree_account';
+import { useAuthStore } from '#/store';
 import { downloadCsv } from '#/utils/export-csv';
 
 import { usePermission } from '#/utils/permission';
@@ -64,6 +67,10 @@ const loadError = ref<null | string>(null);
 let listRequest = 0;
 let detailRequest = 0;
 let formRequest = 0;
+let active = true;
+let listOwner = '';
+let detailOwner = '';
+let formOwner = '';
 const formLoading = ref(false);
 let originalRegions = '';
 
@@ -82,6 +89,128 @@ const switchLoading = ref<Record<number, boolean>>({});
 const formRef = ref<FormInstance>();
 const cloudAccounts = ref<CloudAccount[]>([]);
 const currentDetail = ref<CloudAccount | null>(null);
+
+interface AccountActionTicket {
+  detail: CloudAccount | null;
+  detailRequest: number;
+  detailVisible: boolean;
+  id: number;
+  list: CloudAccount[];
+  listRequest: number;
+  owner: string;
+  provider: CloudProvider;
+  record: CloudAccount;
+  source: CloudAccount;
+  sourceIsDetail: boolean;
+}
+
+const statusTickets = new Map<number, AccountActionTicket>();
+const deleteTickets = new Map<number, AccountActionTicket>();
+const verifyTickets = new Map<number, AccountActionTicket>();
+
+function actionOwner(): string {
+  const id = useUserStore().userInfo?.userId;
+  const generation = useAuthStore().getAuthGeneration();
+  if (
+    (typeof id !== 'string' && typeof id !== 'number') ||
+    !String(id).trim() ||
+    String(id).trim() === '0' ||
+    !Number.isSafeInteger(generation) ||
+    generation < 0
+  )
+    return '';
+  return JSON.stringify([String(id).trim(), generation]);
+}
+
+function validAccountId(id: unknown): id is number {
+  return typeof id === 'number' && Number.isSafeInteger(id) && id > 0;
+}
+
+function accountAction(record: CloudAccount): AccountActionTicket | undefined {
+  const owner = actionOwner();
+  const id = record.id;
+  const provider = record.provider;
+  const row = cloudAccounts.value.find(
+    (item) => item.id === id && item.provider === provider,
+  );
+  const sourceIsDetail =
+    detailVisible.value &&
+    currentDetail.value === record &&
+    detailOwner === owner;
+  if (
+    !active ||
+    !owner ||
+    owner !== listOwner ||
+    !validAccountId(id) ||
+    !isSupportedAccountProvider(provider) ||
+    !row ||
+    (row !== record && !sourceIsDetail)
+  )
+    return;
+  return {
+    detail: currentDetail.value,
+    detailRequest,
+    detailVisible: detailVisible.value,
+    id,
+    listRequest,
+    owner,
+    provider,
+    record: row,
+    source: record,
+    sourceIsDetail,
+    list: cloudAccounts.value,
+  };
+}
+
+function currentAccountAction(ticket: AccountActionTicket) {
+  return (
+    active &&
+    ticket.owner === actionOwner() &&
+    ticket.owner === listOwner &&
+    ticket.listRequest === listRequest &&
+    ticket.list === cloudAccounts.value &&
+    ticket.record.id === ticket.id &&
+    ticket.record.provider === ticket.provider &&
+    cloudAccounts.value.includes(ticket.record) &&
+    (!ticket.sourceIsDetail ||
+      (detailVisible.value &&
+        detailOwner === ticket.owner &&
+        ticket.detailRequest === detailRequest &&
+        ticket.source === currentDetail.value))
+  );
+}
+
+function sameActionDetail(ticket: AccountActionTicket) {
+  return (
+    ticket.detailVisible &&
+    detailVisible.value &&
+    detailOwner === ticket.owner &&
+    ticket.detailRequest === detailRequest &&
+    ticket.detail === currentDetail.value &&
+    currentDetail.value?.id === ticket.id &&
+    currentDetail.value.provider === ticket.provider
+  );
+}
+
+function clearAccountActions() {
+  statusTickets.clear();
+  deleteTickets.clear();
+  verifyTickets.clear();
+  switchLoading.value = {};
+}
+watch(
+  () => cloudAccounts.value.map((record) => [record.id, record.provider]),
+  clearAccountActions,
+  { flush: 'sync' },
+);
+
+const closeDetails = () => {
+  detailRequest++;
+  detailOwner = '';
+  detailVisible.value = false;
+  detailLoading.value = false;
+  currentDetail.value = null;
+};
 
 const pagination = reactive({
   current: 1,
@@ -408,6 +537,8 @@ const truncateText = (text: string, maxLength: number): string => {
 };
 
 const fetchCloudAccounts = async (): Promise<void> => {
+  const owner = actionOwner();
+  if (!active || !owner) return;
   const ticket = ++listRequest;
   loadError.value = null;
   loading.value = true;
@@ -423,18 +554,21 @@ const fetchCloudAccounts = async (): Promise<void> => {
     if (filterForm.status !== undefined) params.status = filterForm.status;
 
     const response = await getCloudAccountListApi(params);
-    if (ticket !== listRequest) return;
+    if (!active || ticket !== listRequest || owner !== actionOwner()) return;
+    listOwner = owner;
     cloudAccounts.value = response.items || [];
     pagination.total = response.total || 0;
   } catch (error) {
-    if (ticket !== listRequest) return;
+    if (!active || ticket !== listRequest || owner !== actionOwner()) return;
     if (shouldRecordPageError(error))
       loadError.value = '获取云账户列表失败，请重试';
     if (shouldNotifyPageError(error)) message.error('获取云账户列表失败');
     cloudAccounts.value = [];
+    listOwner = '';
     pagination.total = 0;
   } finally {
-    if (ticket === listRequest) loading.value = false;
+    if (active && ticket === listRequest && owner === actionOwner())
+      loading.value = false;
   }
 };
 
@@ -476,6 +610,9 @@ const showCreateModal = (): void => {
   originalRegions = '';
   clearProviderCredentials();
   if (!hasPerm(CLOUD_ACCOUNT_PERMISSIONS.create)) return;
+  const owner = actionOwner();
+  if (!active || !owner) return;
+  formOwner = owner;
   isEdit.value = false;
   editAccountStatus.value = CloudAccountStatus.Enabled;
   originalCredentialType.value = 'long_term';
@@ -512,8 +649,10 @@ const regionSignature = (regions: CloudAccountRegionInput[]) =>
   );
 const closeForm = () => {
   formRequest++;
+  formOwner = '';
   modalVisible.value = false;
   formLoading.value = false;
+  submitLoading.value = false;
   formData.value.access_key = '';
   formData.value.secret_key = '';
   formData.value.session_token = '';
@@ -522,13 +661,18 @@ const closeForm = () => {
   clearProviderCredentials();
 };
 const handleEdit = async (record: CloudAccount): Promise<void> => {
+  const owner = actionOwner();
   if (
+    !active ||
+    !owner ||
+    owner !== listOwner ||
     !isSupportedAccountProvider(record.provider) ||
     !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) ||
     !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)
   )
     return;
   const ticket = ++formRequest;
+  formOwner = owner;
   clearProviderCredentials();
   formData.value = {
     name: '',
@@ -543,7 +687,13 @@ const handleEdit = async (record: CloudAccount): Promise<void> => {
   detailVisible.value = false;
   try {
     const current = await getCloudAccountDetailApi(record.id);
-    if (ticket !== formRequest || !modalVisible.value) return;
+    if (
+      !active ||
+      ticket !== formRequest ||
+      !modalVisible.value ||
+      owner !== actionOwner()
+    )
+      return;
     if (
       !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.edit) ||
       !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)
@@ -580,11 +730,12 @@ const handleEdit = async (record: CloudAccount): Promise<void> => {
       description: current.description ?? '',
     };
   } catch (error) {
-    if (ticket !== formRequest) return;
+    if (!active || ticket !== formRequest || owner !== actionOwner()) return;
     if (shouldNotifyPageError(error)) message.error('获取账户详情失败，请重试');
     closeForm();
   } finally {
-    if (ticket === formRequest) formLoading.value = false;
+    if (active && ticket === formRequest && owner === actionOwner())
+      formLoading.value = false;
   }
 };
 
@@ -638,6 +789,11 @@ watch(
 );
 
 const handleSubmit = async (): Promise<void> => {
+  const owner = formOwner;
+  if (!active || !owner || owner !== actionOwner()) {
+    closeForm();
+    return;
+  }
   if (
     submitLoading.value ||
     formLoading.value ||
@@ -654,6 +810,10 @@ const handleSubmit = async (): Promise<void> => {
   submitLoading.value = true;
   try {
     await formRef.value?.validate();
+    if (owner !== actionOwner()) {
+      if (ticket === formRequest) closeForm();
+      return;
+    }
     if (
       ticket !== formRequest ||
       !modalVisible.value ||
@@ -771,20 +931,27 @@ const handleSubmit = async (): Promise<void> => {
       }
       await createCloudAccountApi(createData);
     }
-    if (ticket !== formRequest) return;
+    if (!active || ticket !== formRequest || owner !== actionOwner()) return;
     message.success(
       editing ? '云账户已更新' : '云账户已创建，可从列表显式验证凭据',
     );
     closeForm();
     void fetchCloudAccounts();
   } catch (error: any) {
-    if (ticket !== formRequest || error?.errorFields) return;
+    if (
+      !active ||
+      ticket !== formRequest ||
+      owner !== actionOwner() ||
+      error?.errorFields
+    )
+      return;
     if (shouldNotifyPageError(error))
       message.error(
         editing ? '更新云账户失败，已保留表单' : '创建云账户失败，已保留表单',
       );
   } finally {
-    submitLoading.value = false;
+    if (active && ticket === formRequest && owner === actionOwner())
+      submitLoading.value = false;
   }
 };
 
@@ -794,21 +961,39 @@ const handleDelete = (record: CloudAccount): void => {
     !can('tree.cloudAccount.delete')
   )
     return;
+  const ticket = accountAction(record);
+  if (!ticket) return;
+  deleteTickets.set(ticket.id, ticket);
+  let submitted = false;
+  const current = () =>
+    deleteTickets.get(ticket.id) === ticket &&
+    currentAccountAction(ticket) &&
+    can('tree.cloudAccount.delete');
   Modal.confirm({
     title: '确认删除',
     content: `确定要删除云账户 "${record.name}" 吗？此操作不可恢复。`,
     okText: '确定删除',
     okType: 'danger',
     cancelText: '取消',
+    onCancel: () => {
+      if (deleteTickets.get(ticket.id) === ticket)
+        deleteTickets.delete(ticket.id);
+    },
     onOk: async () => {
-      if (!can('tree.cloudAccount.delete')) return;
+      if (submitted || !current()) return;
+      submitted = true;
       try {
-        await deleteCloudAccountApi(record.id);
+        await deleteCloudAccountApi(ticket.id);
+        if (!current()) return;
         message.success('删除成功');
-        detailVisible.value = false;
-        fetchCloudAccounts();
+        if (sameActionDetail(ticket)) closeDetails();
+        void fetchCloudAccounts();
       } catch (error) {
-        if (shouldNotifyPageError(error)) message.error('删除失败');
+        if (current() && shouldNotifyPageError(error))
+          message.error('删除失败');
+      } finally {
+        if (deleteTickets.get(ticket.id) === ticket)
+          deleteTickets.delete(ticket.id);
       }
     },
   });
@@ -819,33 +1004,45 @@ const handleStatusChange = async (
   checked: boolean,
 ): Promise<void> => {
   if (
+    typeof checked !== 'boolean' ||
     !isSupportedAccountProvider(record.provider) ||
     !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.status)
   )
     return;
+  const ticket = accountAction(record);
+  if (!ticket) return;
+  statusTickets.set(ticket.id, ticket);
+  const loadingState = switchLoading.value;
+  const latest = () =>
+    active &&
+    ticket.owner === actionOwner() &&
+    statusTickets.get(ticket.id) === ticket &&
+    loadingState === switchLoading.value;
+  const current = () =>
+    latest() &&
+    currentAccountAction(ticket) &&
+    hasPerm(CLOUD_ACCOUNT_PERMISSIONS.status);
   const newStatus = checked
     ? CloudAccountStatus.Enabled
     : CloudAccountStatus.Disabled;
-  switchLoading.value[record.id] = true;
+  loadingState[ticket.id] = true;
 
   try {
-    await updateCloudAccountStatusApi(record.id, newStatus);
+    await updateCloudAccountStatusApi(ticket.id, newStatus);
+    if (!current()) return;
     message.success(`账户已${checked ? '启用' : '禁用'}`);
-
-    const index = cloudAccounts.value.findIndex(
-      (item) => item.id === record.id,
-    );
-    if (index !== -1 && cloudAccounts.value[index]) {
-      cloudAccounts.value[index]!.status = newStatus;
-    }
-
-    if (currentDetail.value && currentDetail.value.id === record.id) {
+    ticket.record.status = newStatus;
+    if (sameActionDetail(ticket) && currentDetail.value) {
       currentDetail.value.status = newStatus;
     }
   } catch (error) {
-    if (shouldNotifyPageError(error)) message.error('状态更新失败');
+    if (current() && shouldNotifyPageError(error))
+      message.error('状态更新失败');
   } finally {
-    switchLoading.value[record.id] = false;
+    if (latest()) {
+      loadingState[ticket.id] = false;
+      statusTickets.delete(ticket.id);
+    }
   }
 };
 
@@ -856,27 +1053,41 @@ const handleVerify = (record: CloudAccount): void => {
     !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify)
   )
     return;
+  const ticket = accountAction(record);
+  if (!ticket) return;
+  const status = record.status;
+  verifyTickets.set(ticket.id, ticket);
+  let submitted = false;
+  const current = () =>
+    verifyTickets.get(ticket.id) === ticket &&
+    currentAccountAction(ticket) &&
+    status === CloudAccountStatus.Enabled &&
+    ticket.record.status === status &&
+    hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify);
   Modal.confirm({
     title: '验证云账户凭据',
     content: `将向${computeProviderName(record.provider)}验证账户“${record.name}”的凭据，验证失败不会删除账户`,
     okText: '开始验证',
     cancelText: '取消',
+    onCancel: () => {
+      if (verifyTickets.get(ticket.id) === ticket)
+        verifyTickets.delete(ticket.id);
+    },
     onOk: async () => {
-      if (
-        !hasPerm(CLOUD_ACCOUNT_PERMISSIONS.verify) ||
-        record.status !== CloudAccountStatus.Enabled ||
-        !isSupportedAccountProvider(record.provider)
-      )
-        return;
+      if (submitted || !current()) return;
+      submitted = true;
       const hide = message.loading('正在验证凭据...', 0);
       try {
-        await verifyCloudAccountApi(record.id);
+        await verifyCloudAccountApi(ticket.id);
+        if (!current()) return;
         message.success('凭据验证成功');
       } catch (error) {
-        if (shouldNotifyPageError(error))
+        if (current() && shouldNotifyPageError(error))
           message.error('凭据验证失败，账户配置已保留');
       } finally {
         hide();
+        if (verifyTickets.get(ticket.id) === ticket)
+          verifyTickets.delete(ticket.id);
       }
     },
   });
@@ -884,24 +1095,41 @@ const handleVerify = (record: CloudAccount): void => {
 
 const handleViewDetail = async (record: CloudAccount): Promise<void> => {
   if (!hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)) return;
+  const owner = actionOwner();
+  const id = record.id;
+  const provider = record.provider;
+  if (!active || !owner || owner !== listOwner || !validAccountId(id)) return;
   const ticket = ++detailRequest;
+  detailOwner = owner;
   currentDetail.value = null;
   detailVisible.value = true;
   detailLoading.value = true;
 
   try {
-    const response = await getCloudAccountDetailApi(record.id);
-    if (ticket !== detailRequest || !detailVisible.value) return;
+    const response = await getCloudAccountDetailApi(id);
+    if (
+      !active ||
+      ticket !== detailRequest ||
+      !detailVisible.value ||
+      owner !== actionOwner()
+    )
+      return;
     if (!hasPerm(CLOUD_ACCOUNT_PERMISSIONS.detail)) {
       detailVisible.value = false;
       return;
     }
+    if (response.id !== id || response.provider !== provider) {
+      message.error('获取详情失败');
+      closeDetails();
+      return;
+    }
     currentDetail.value = response;
   } catch (error) {
-    if (ticket !== detailRequest) return;
+    if (!active || ticket !== detailRequest || owner !== actionOwner()) return;
     if (shouldNotifyPageError(error)) message.error('获取详情失败');
   } finally {
-    if (ticket === detailRequest) detailLoading.value = false;
+    if (active && ticket === detailRequest && owner === actionOwner())
+      detailLoading.value = false;
   }
 };
 
@@ -909,6 +1137,10 @@ const handleViewDetail = async (record: CloudAccount): Promise<void> => {
 const exportToExcel = (data: CloudAccount[]) => {
   if (!data || data.length === 0) {
     message.warning('没有可导出的数据');
+    return;
+  }
+  if (!active || !listOwner || listOwner !== actionOwner()) {
+    message.warning('账户会话已变化，请刷新列表后导出');
     return;
   }
 
@@ -932,8 +1164,10 @@ const exportToExcel = (data: CloudAccount[]) => {
     .replace(/[:.]/g, '-')
     .substring(0, 19);
   const filename = `云账户列表_${timestamp}.csv`;
+  const firstRow = exportData[0];
+  if (!firstRow) return;
   downloadCsv(filename, [
-    Object.keys(exportData[0]!),
+    Object.keys(firstRow),
     ...exportData.map((row) => Object.values(row)),
   ]);
   message.success(`导出成功：${filename}`);
@@ -944,6 +1178,10 @@ onMounted(() => {
   fetchCloudAccounts();
 });
 onBeforeUnmount(() => {
+  active = false;
+  clearAccountActions();
+  listOwner = '';
+  formOwner = '';
   listRequest++;
   detailRequest++;
   formRequest++;
@@ -953,12 +1191,22 @@ onBeforeUnmount(() => {
   formData.value.credential_expires_at = '';
   clearProviderCredentials();
 });
-const closeDetails = () => {
-  detailRequest++;
-  detailVisible.value = false;
-  detailLoading.value = false;
-  currentDetail.value = null;
-};
+
+watch(
+  actionOwner,
+  () => {
+    listRequest++;
+    listOwner = '';
+    cloudAccounts.value = [];
+    pagination.total = 0;
+    loadError.value = null;
+    loading.value = false;
+    clearAccountActions();
+    closeDetails();
+    closeForm();
+  },
+  { flush: 'sync' },
+);
 </script>
 
 <template>

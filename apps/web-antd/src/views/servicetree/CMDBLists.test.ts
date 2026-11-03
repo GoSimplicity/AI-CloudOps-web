@@ -29,6 +29,13 @@ const client = vi.hoisted(() => ({
   delete: vi.fn(),
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
+vi.mock('@vben/stores', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@vben/stores')>()),
+  useUserStore: () => ({ userInfo: { userId: '1' } }),
+}));
+vi.mock('#/store', () => ({
+  useAuthStore: () => ({ getAuthGeneration: () => 0 }),
+}));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 const pages: {
   component: Component;

@@ -22,6 +22,13 @@ const permissions = vi.hoisted(() => ({
   allowed: null as null | string[],
   allowedRef: null as null | { value: null | string[] },
 }));
+vi.mock('@vben/stores', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@vben/stores')>()),
+  useUserStore: () => ({ userInfo: { userId: '1' } }),
+}));
+vi.mock('#/store', () => ({
+  useAuthStore: () => ({ getAuthGeneration: () => 0 }),
+}));
 // 验证按钮权限以及操作本身
 vi.mock('#/utils/permission', async (importOriginal) => ({
   ...(await importOriginal<typeof import('#/utils/permission')>()),
@@ -329,7 +336,16 @@ it('凭据验证必须显式确认，失败也不删除已创建账户', async (
   client.post.mockRejectedValue(new Error('offline verification fixture'));
   (verify.element.closest('button') as HTMLButtonElement).click();
   await flushPromises();
-  await action('开始验证', '.ant-modal-confirm-btns button');
+  // 取消的旧确认可能仍在退场动画中，只操作这次新开的确认。
+  const retry = [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '.ant-modal-confirm-btns button',
+    ),
+  ]
+    .reverse()
+    .find((button) => button.textContent?.replace(/\s/g, '') === '开始验证');
+  required(retry).click();
+  await flushPromises();
   expect(client.post.mock.calls).toEqual([['/tree/cloud/account/7/verify']]);
   expect(client.delete).not.toHaveBeenCalled();
   expect(required(wrapper).text()).toContain('已有账户');
