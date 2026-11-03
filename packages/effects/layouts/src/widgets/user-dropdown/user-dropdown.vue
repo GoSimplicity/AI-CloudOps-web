@@ -124,17 +124,23 @@ function handleSubmitLogout() {
 
 if (enableShortcutKey.value) {
   const keys = useMagicKeys();
-  whenever(keys['Alt+KeyQ']!, () => {
-    if (enableLogoutShortcutKey.value) {
-      handleLogout();
-    }
-  });
+  whenever(
+    () => keys['Alt+KeyQ']?.value === true,
+    () => {
+      if (enableLogoutShortcutKey.value) {
+        handleLogout();
+      }
+    },
+  );
 
-  whenever(keys['Alt+KeyL']!, () => {
-    if (enableLockScreenShortcutKey.value) {
-      handleOpenLock();
-    }
-  });
+  whenever(
+    () => keys['Alt+KeyL']?.value === true,
+    () => {
+      if (enableLockScreenShortcutKey.value) {
+        handleOpenLock();
+      }
+    },
+  );
 }
 </script>
 

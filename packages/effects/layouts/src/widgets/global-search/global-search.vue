@@ -47,11 +47,14 @@ function handleClose() {
 
 const keys = useMagicKeys();
 const cmd = isWindowsOs() ? keys['ctrl+k'] : keys['cmd+k'];
-whenever(cmd!, () => {
-  if (props.enableShortcutKey) {
-    modalApi.open();
-  }
-});
+whenever(
+  () => cmd?.value === true,
+  () => {
+    if (props.enableShortcutKey) {
+      modalApi.open();
+    }
+  },
+);
 
 whenever(open, () => {
   nextTick(() => {
