@@ -176,7 +176,9 @@ const costEntries = computed(() =>
   ),
 );
 const formatCost = (value?: number) =>
-  Number.isFinite(value) ? value!.toFixed(2) : '未知';
+  typeof value === 'number' && Number.isFinite(value)
+    ? value.toFixed(2)
+    : '未知';
 useChartAppearance(() => {
   initTrendChart();
   initUtilizationChart();
@@ -207,30 +209,45 @@ const refreshAllPredictions = async () => {
     message.warning('请填写完整有效的指标数据');
     return;
   }
+  const input = { ...inputData.value };
+  const { currentCpu, currentDisk, currentMemory, currentQps } = input;
+  if (
+    currentQps === null ||
+    currentCpu === null ||
+    currentMemory === null ||
+    currentDisk === null
+  ) {
+    message.warning('请填写完整有效的指标数据');
+    return;
+  }
   clearPredictions();
   const ticket = predictionLane.begin();
-  const input = { ...inputData.value };
   const hours = Number(timeRange.value);
   const enhanced = aiEnhanced.value;
   loading.value = true;
   try {
     const common = { prediction_hours: hours, enable_ai_insights: enhanced };
     const results = await Promise.allSettled([
-      predictQps({ ...common, current_qps: input.currentQps! }),
-      predictCpu({ ...common, current_cpu_percent: input.currentCpu! }),
+      predictQps({ ...common, current_qps: currentQps }),
+      predictCpu({ ...common, current_cpu_percent: currentCpu }),
       predictMemory({
         ...common,
-        current_memory_percent: input.currentMemory!,
+        current_memory_percent: currentMemory,
       }),
-      predictDisk({ ...common, current_disk_percent: input.currentDisk! }),
+      predictDisk({ ...common, current_disk_percent: currentDisk }),
     ]);
     if (!predictionLane.current(ticket)) return;
     const keys = ['qps', 'cpu', 'memory', 'disk'];
     const labels = ['QPS', 'CPU', '内存', '磁盘'];
     results.forEach((result, index) => {
+      const key = keys[index];
+      const label = labels[index];
+      if (key === undefined || label === undefined) {
+        throw new Error('预测结果与指标定义不匹配');
+      }
       if (result.status === 'rejected') {
         predictionFailures.value.push(
-          `${labels[index]}：${result.reason instanceof Error ? result.reason.message : '服务未返回结果'}`,
+          `${label}：${result.reason instanceof Error ? result.reason.message : '服务未返回结果'}`,
         );
         return;
       }
@@ -238,12 +255,12 @@ const refreshAllPredictions = async () => {
         forecastPoints(result.value);
       } catch (error) {
         predictionFailures.value.push(
-          `${labels[index]}：${error instanceof Error ? error.message : '响应数据无效'}`,
+          `${label}：${error instanceof Error ? error.message : '响应数据无效'}`,
         );
         return;
       }
-      predictionCache.value[keys[index]!] = result.value;
-      updateMetricData(keys[index]!, result.value);
+      predictionCache.value[key] = result.value;
+      updateMetricData(key, result.value);
     });
     hasInitialData.value = Object.keys(predictionCache.value).length > 0;
     predictionContext.value = hasInitialData.value ? { hours } : null;

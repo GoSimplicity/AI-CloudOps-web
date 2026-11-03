@@ -253,12 +253,16 @@ const refreshAllDiagnosis = async () => {
     if (!diagnosisLane.current(ticket)) return;
 
     const labels = ['快速诊断', '事件模式', '错误汇总', '根因分析'];
-    diagnosisFailures.value = results.flatMap((result, index) =>
-      result === null ||
-      ((index === 0 || index === 3) && !usableStatus(result.status))
-        ? [labels[index]!]
-        : [],
-    );
+    diagnosisFailures.value = results.flatMap((result, index) => {
+      const label = labels[index];
+      if (label === undefined) {
+        throw new Error('诊断结果与步骤定义不匹配');
+      }
+      return result === null ||
+        ((index === 0 || index === 3) && !usableStatus(result.status))
+        ? [label]
+        : [];
+    });
     if (results.every((result) => result === null)) {
       diagnosisError.value = '全部诊断失败，请检查服务状态后重试';
       message.error(diagnosisError.value);

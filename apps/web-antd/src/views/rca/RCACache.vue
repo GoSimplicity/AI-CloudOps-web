@@ -31,9 +31,14 @@ const {
 
 // 格式化命中率
 const formatHitRate = (hitRate?: number) => {
-  if (!Number.isFinite(hitRate) || hitRate! < 0 || hitRate! > 100)
+  if (
+    typeof hitRate !== 'number' ||
+    !Number.isFinite(hitRate) ||
+    hitRate < 0 ||
+    hitRate > 100
+  )
     return '未知';
-  const percentage = hitRate!;
+  const percentage = hitRate;
   return `${percentage.toFixed(1)}%`;
 };
 

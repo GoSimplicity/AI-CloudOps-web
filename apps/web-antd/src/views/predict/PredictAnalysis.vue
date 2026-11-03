@@ -461,9 +461,15 @@ const onChartTabChange = (key: string) => {
 };
 
 const getAccuracyColor = (accuracy?: null | number) => {
-  if (formatProbability(accuracy) === '未知') return 'default';
-  if (accuracy! > 0.9) return 'green';
-  if (accuracy! > 0.7) return 'orange';
+  if (
+    typeof accuracy !== 'number' ||
+    !Number.isFinite(accuracy) ||
+    accuracy < 0 ||
+    accuracy > 1
+  )
+    return 'default';
+  if (accuracy > 0.9) return 'green';
+  if (accuracy > 0.7) return 'orange';
   return 'red';
 };
 
