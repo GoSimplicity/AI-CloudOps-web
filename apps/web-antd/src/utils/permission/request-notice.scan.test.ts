@@ -179,6 +179,111 @@ export function isGuardedWrite(
     .includes(`shouldRecordPageError(${param})`);
 }
 
+function guardedByPositiveCall(
+  node: ts.Node,
+  source: ts.SourceFile,
+  guard: string,
+  param: string,
+): boolean {
+  const isGuard = (condition: ts.Expression): boolean => {
+    if (ts.isParenthesizedExpression(condition))
+      return isGuard(condition.expression);
+    if (ts.isBinaryExpression(condition)) {
+      return (
+        condition.operatorToken.kind ===
+          ts.SyntaxKind.AmpersandAmpersandToken &&
+        (isGuard(condition.left) || isGuard(condition.right))
+      );
+    }
+    if (!ts.isCallExpression(condition)) return false;
+    const argument = condition.arguments[0];
+    return (
+      !!param &&
+      ts.isIdentifier(condition.expression) &&
+      condition.expression.text === guard &&
+      condition.arguments.length === 1 &&
+      argument !== undefined &&
+      ts.isIdentifier(argument) &&
+      argument.text === param
+    );
+  };
+  for (
+    let child = node, parent = node.parent;
+    parent;
+    child = parent, parent = parent.parent
+  ) {
+    if (ts.isFunctionLike(parent)) return false;
+    if (ts.isIfStatement(parent) && parent.thenStatement === child) {
+      const condition = parent.expression.getText(source);
+      if (
+        !condition.includes('||') &&
+        !condition.includes('?') &&
+        isGuard(parent.expression)
+      )
+        return true;
+    }
+  }
+  return false;
+}
+
+function notificationToastSummary(raw: string) {
+  const source = ts.createSourceFile(
+    'Notification.ts',
+    stripComments(scriptOf('Notification.vue', raw)),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const result: Record<string, { guarded: number; unguarded: number }> = {};
+  for (const statement of source.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        !ts.isIdentifier(declaration.name) ||
+        !['handleDeleteNotification', 'saveManualSend'].includes(
+          declaration.name.text,
+        ) ||
+        !declaration.initializer
+      )
+        continue;
+      const counts = { guarded: 0, unguarded: 0 };
+      const visitCatch = (node: ts.Node) => {
+        if (ts.isCatchClause(node)) {
+          const binding = node.variableDeclaration?.name;
+          const param = binding && ts.isIdentifier(binding) ? binding.text : '';
+          const visitPopup = (child: ts.Node) => {
+            if (
+              ts.isCallExpression(child) &&
+              ts.isPropertyAccessExpression(child.expression) &&
+              ts.isIdentifier(child.expression.expression) &&
+              child.expression.expression.text === 'message' &&
+              child.expression.name.text === 'error'
+            ) {
+              if (
+                guardedByPositiveCall(
+                  child,
+                  source,
+                  'shouldNotifyPageError',
+                  param,
+                )
+              )
+                counts.guarded++;
+              else counts.unguarded++;
+            }
+            ts.forEachChild(child, visitPopup);
+          };
+          visitPopup(node.block);
+          return;
+        }
+        ts.forEachChild(node, visitCatch);
+      };
+      visitCatch(declaration.initializer);
+      result[declaration.name.text] = counts;
+    }
+  }
+  return result;
+}
+
 export interface ErrorStateWrite {
   file: string;
   functionName: string;
@@ -222,48 +327,6 @@ export function scanErrorStateWrites(
       true,
       ts.ScriptKind.TS,
     );
-    const isGuard = (condition: ts.Expression): boolean => {
-      if (ts.isParenthesizedExpression(condition))
-        return isGuard(condition.expression);
-      if (ts.isBinaryExpression(condition)) {
-        return (
-          condition.operatorToken.kind ===
-            ts.SyntaxKind.AmpersandAmpersandToken &&
-          (isGuard(condition.left) || isGuard(condition.right))
-        );
-      }
-      if (!ts.isCallExpression(condition)) return false;
-      const argument = condition.arguments[0];
-      return (
-        !!body.param &&
-        ts.isIdentifier(condition.expression) &&
-        condition.expression.text === 'shouldRecordPageError' &&
-        condition.arguments.length === 1 &&
-        argument !== undefined &&
-        ts.isIdentifier(argument) &&
-        argument.text === body.param
-      );
-    };
-    const guardedByIf = (node: ts.Node): boolean => {
-      for (
-        let child = node, parent = node.parent;
-        parent;
-        child = parent, parent = parent.parent
-      ) {
-        if (ts.isFunctionLike(parent)) return false;
-        if (ts.isIfStatement(parent) && parent.thenStatement === child) {
-          // Any disjunction or ternary can bypass the guard, matching the original contract.
-          const conditionText = parent.expression.getText(source);
-          if (
-            !conditionText.includes('||') &&
-            !conditionText.includes('?') &&
-            isGuard(parent.expression)
-          )
-            return true;
-        }
-      }
-      return false;
-    };
     const visit = (node: ts.Node) => {
       if (
         ts.isBinaryExpression(node) &&
@@ -280,7 +343,12 @@ export function scanErrorStateWrites(
           writes.push({
             file,
             functionName: functionNameAt(body.start),
-            guarded: guardedByIf(node),
+            guarded: guardedByPositiveCall(
+              node,
+              source,
+              'shouldRecordPageError',
+              body.param,
+            ),
             kind: body.kind,
             lhs,
             line: text.slice(0, body.start + node.getStart(source)).split('\n')
@@ -440,23 +508,38 @@ describe('fE-02b：views 页面 catch 不再使用旧守卫', () => {
     expect(offenders).toEqual({});
   });
 
-  it('notification.vue 删除 / 手动发送两处 catch 已改为 shouldNotifyPageError', () => {
-    const file = 'workorder/Notification.vue';
-    const text = stripComments(
-      scriptOf(file, readFileSync(join(VIEWS_DIR, file), 'utf8')),
+  it('notification.vue 删除 / 手动发送的真实catch弹窗均受正向shouldNotify守卫支配', () => {
+    const text = readFileSync(
+      join(VIEWS_DIR, 'workorder/Notification.vue'),
+      'utf8',
     );
-    for (const prefix of [
-      '删除失败: ${error.message}',
-      '发送失败: ${error.message}',
-    ]) {
-      const start = text.indexOf(prefix);
-      expect(start).toBeGreaterThan(-1);
-      const block = text.slice(start, start + 400);
-      expect(block).toMatch(
-        /if \(shouldNotifyPageError\(error\)\) message\.error\(errorMessage\)/,
-      );
-      expect(block).not.toMatch(/isPermissionDeniedError/);
-    }
+    expect(notificationToastSummary(text)).toEqual({
+      handleDeleteNotification: { guarded: 1, unguarded: 0 },
+      saveManualSend: { guarded: 1, unguarded: 0 },
+    });
+  });
+
+  it.each([
+    'message.error(errorMessage);',
+    'if (shouldNotifyPageError(error)) {} else { message.error(errorMessage); }',
+    'if (shouldNotifyPageError(error)) { Promise.resolve().then(() => message.error(errorMessage)); }',
+    'if (shouldNotifyPageError(error) || fallback) { message.error(errorMessage); }',
+    'if (shouldNotifyPageError(other)) { message.error(errorMessage); }',
+  ])('notification toast scanner rejects bypass: %s', (popup) => {
+    const source = `<script setup>const handleDeleteNotification = () => { try { api(); } catch (error) { const errorMessage = "failure"; ${
+      popup
+    } } };</script>`;
+    expect(notificationToastSummary(source)).toEqual({
+      handleDeleteNotification: { guarded: 0, unguarded: 1 },
+    });
+  });
+
+  it('notification toast scanner accepts multiline positive guards without depending on message text', () => {
+    const source =
+      '<script setup>const handleDeleteNotification = () => { try { api(); } catch (error) { if (isCurrent() &&\n shouldNotifyPageError(error)) { message.error("a different error"); } } };</script>';
+    expect(notificationToastSummary(source)).toEqual({
+      handleDeleteNotification: { guarded: 1, unguarded: 0 },
+    });
   });
 });
 

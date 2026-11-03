@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+
+import { useUserStore } from '@vben/stores';
 import OpsPage from '#/components/ops/OpsPage.vue';
 import NotificationEvents from './NotificationEvents.vue';
 import { useWindowSize } from '@vueuse/core';
@@ -70,6 +72,8 @@ import {
 } from '#/api/core/workorder/workorder_category';
 import { getUserList, type User } from '#/api/core/system/user';
 
+import { useAuthStore } from '#/store';
+import { isBasicNotificationEmail } from '#/utils/notification-email';
 import { usePermission } from '#/utils/permission';
 import {
   shouldNotifyPageError,
@@ -197,6 +201,25 @@ const isLegacyAdvancedTrigger = (record: Notification): boolean =>
     record.repeat_interval != null ||
     record.repeat_count != null);
 let formEpoch = 0;
+let formOwner: string | undefined;
+let formValidationEpoch: number | undefined;
+let disposed = false;
+
+const validNotificationId = (id: unknown): id is number =>
+  typeof id === 'number' && Number.isSafeInteger(id) && id > 0;
+const notificationOwner = (): string | undefined => {
+  const id = useUserStore().userInfo?.userId;
+  const generation = useAuthStore().getAuthGeneration();
+  if (
+    (typeof id !== 'string' && typeof id !== 'number') ||
+    !String(id).trim() ||
+    String(id).trim() === '0' ||
+    !Number.isSafeInteger(generation) ||
+    generation < 0
+  )
+    return;
+  return JSON.stringify([String(id).trim(), generation]);
+};
 const logsError = ref('');
 let listRequest = 0;
 let logsRequest = 0;
@@ -479,12 +502,12 @@ const manualSendRules = {
         }
 
         // 检查是否包含邮件渠道，如果有则验证邮箱格式
-        if (manualSendDialog.form.channels.includes('email')) {
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(value.trim())) {
-            callback(new Error('选择了邮件渠道时，请输入有效的邮箱地址'));
-            return;
-          }
+        if (
+          manualSendDialog.form.channels.includes('email') &&
+          !isBasicNotificationEmail(value)
+        ) {
+          callback(new Error('选择了邮件渠道时，请输入有效的邮箱地址'));
+          return;
         }
 
         // 检查是否包含短信渠道，如果有则验证手机号格式
@@ -958,7 +981,17 @@ const loadSendLogs = async (notificationId: number): Promise<void> => {
 };
 
 // 事件处理
+const closeDetailDialog = (): void => {
+  ++detailRequest;
+  detailDialogVisible.value = false;
+  detailDialog.notification = null;
+};
+
 const handleCreateNotification = (): void => {
+  const owner = notificationOwner();
+  if (disposed || !owner) return;
+  closeDetailDialog();
+  formOwner = owner;
   ++formEpoch;
   recipientError.value = '';
   originalTriggerFingerprint.value = '';
@@ -1000,6 +1033,10 @@ const handleCreateNotification = (): void => {
 };
 
 const handleEditNotification = (record: Notification): void => {
+  const owner = notificationOwner();
+  if (disposed || !owner) return;
+  closeDetailDialog();
+  formOwner = owner;
   ++formEpoch;
   recipientError.value = '';
 
@@ -1051,19 +1088,27 @@ const handleEditNotification = (record: Notification): void => {
 };
 
 const handleViewNotification = async (record: Notification): Promise<void> => {
+  const id = record.id;
+  const owner = notificationOwner();
+  if (disposed || !owner || !validNotificationId(id)) {
+    message.error('通知配置ID不存在或无效');
+    return;
+  }
   const request = ++detailRequest;
+  const isCurrent = () =>
+    !disposed &&
+    request === detailRequest &&
+    record.id === id &&
+    notificationOwner() === owner;
   try {
-    if (record.id) {
-      const res = await getNotificationDetail(record.id);
-      if (request !== detailRequest) return;
-      if (res) {
-        detailDialog.notification = res;
-        detailDialogVisible.value = true;
-      }
-    }
-  } catch (error) {
-    if (request !== detailRequest) return;
-    if (shouldNotifyPageError(error)) message.error('获取通知配置详情失败');
+    const res = await getNotificationDetail(id);
+    if (!isCurrent()) return;
+    if (res?.id !== id) throw new Error('通知配置详情标识无效');
+    detailDialog.notification = res;
+    detailDialogVisible.value = true;
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('获取通知配置详情失败');
   }
 };
 
@@ -1213,11 +1258,25 @@ const handleDuplicateNotification = (record: Notification): void => {
 };
 
 const handleDeleteNotification = (record: Notification): void => {
-  if (!record.id) {
-    message.error('通知配置ID不存在');
+  const id = record.id;
+  const owner = notificationOwner();
+  if (disposed || !owner || !can('workorder.notification.delete')) return;
+  if (!validNotificationId(id)) {
+    message.error('通知配置ID不存在或无效');
     return;
   }
-
+  const epoch = formEpoch;
+  const listEpoch = listRequest;
+  const details = detailRequest;
+  const isCurrent = () =>
+    !disposed &&
+    notificationOwner() === owner &&
+    record.id === id &&
+    formEpoch === epoch &&
+    listRequest === listEpoch &&
+    detailRequest === details &&
+    can('workorder.notification.delete');
+  let confirmationConsumed = false;
   Modal.confirm({
     title: '删除确认',
     content: `确定要删除表单"${getFormName(record.template_id)}"的通知配置吗？`,
@@ -1225,65 +1284,82 @@ const handleDeleteNotification = (record: Notification): void => {
     okType: 'danger',
     cancelText: '取消',
     onOk: async () => {
-      let loadingMessage: any = null;
+      if (confirmationConsumed || !isCurrent()) return;
+      confirmationConsumed = true;
+      let hideLoading: ReturnType<typeof message.loading> | undefined;
       try {
-        loadingMessage = message.loading('正在删除通知配置...', 0);
-        await deleteNotification(record.id!);
-
-        if (loadingMessage) {
-          loadingMessage();
-          loadingMessage = null;
-        }
-
+        hideLoading = message.loading('正在删除通知配置...', 0);
+        await deleteNotification(id);
+        if (!isCurrent()) return;
         message.success('通知配置已删除');
         loadNotifications();
-      } catch (error: any) {
-        if (loadingMessage) {
-          loadingMessage();
-          loadingMessage = null;
-        }
-
-        let errorMessage = '删除失败';
-        if (error.message) {
-          if (
-            error.message.includes('timeout') ||
-            error.message.includes('超时')
-          ) {
+      } catch (error: unknown) {
+        if (isCurrent() && shouldNotifyPageError(error)) {
+          const detail =
+            error &&
+            typeof error === 'object' &&
+            'message' in error &&
+            typeof error.message === 'string'
+              ? error.message
+              : '';
+          let errorMessage = '删除失败';
+          if (detail.includes('timeout') || detail.includes('超时'))
             errorMessage = '删除超时，请稍后重试';
-          } else if (error.message.includes('404')) {
+          else if (detail.includes('404'))
             errorMessage = '通知配置不存在或已被删除';
-          } else if (error.message.includes('403')) {
-            errorMessage = '没有权限执行此操作';
-          } else if (error.message.includes('409')) {
+          else if (detail.includes('403')) errorMessage = '没有权限执行此操作';
+          else if (detail.includes('409'))
             errorMessage = '配置正在使用中，无法删除';
-          } else if (error.message.includes('500')) {
+          else if (detail.includes('500'))
             errorMessage = '服务器内部错误，请联系管理员';
-          } else {
-            errorMessage = `删除失败: ${error.message}`;
-          }
+          else if (detail) errorMessage = `删除失败: ${detail}`;
+          message.error(errorMessage);
         }
-
-        // 请求层已提示（403、已弹原文的业务错误、HTTP / 网络错误）与取消类不再弹；其余错误弹上面拼出的具体原因（incr3：基线写法收口到 shouldNotifyPageError）
-        if (shouldNotifyPageError(error)) message.error(errorMessage);
+      } finally {
+        hideLoading?.();
       }
     },
   });
 };
 
 const saveNotification = async (): Promise<void> => {
-  if (notificationDialog.saving) return;
+  if (
+    notificationDialog.saving ||
+    formValidationEpoch === formEpoch ||
+    disposed ||
+    !notificationDialogVisible.value
+  )
+    return;
   const epoch = formEpoch;
-  recipientError.value = '';
-  try {
-    await formRef.value?.validate();
-  } catch {
+  const owner = formOwner;
+  const formData = notificationDialog.form;
+  const isEdit = notificationDialog.isEdit;
+  const form = formRef.value;
+  if (!owner || notificationOwner() !== owner) return;
+  if (!form || typeof form.validate !== 'function') {
+    message.warning('表单尚未就绪，请稍后重试');
     return;
   }
-
-  if (notificationDialog.saving || epoch !== formEpoch) return;
-  // 增加额外的业务逻辑验证
-  const formData = notificationDialog.form;
-
+  const fingerprint = JSON.stringify(formData);
+  const isCurrent = () =>
+    !disposed &&
+    notificationDialogVisible.value &&
+    formEpoch === epoch &&
+    formOwner === owner &&
+    notificationOwner() === owner &&
+    notificationDialog.form === formData &&
+    notificationDialog.isEdit === isEdit &&
+    JSON.stringify(formData) === fingerprint;
+  recipientError.value = '';
+  formValidationEpoch = epoch;
+  try {
+    await form.validate();
+  } catch {
+    return;
+  } finally {
+    if (formValidationEpoch === epoch) formValidationEpoch = undefined;
+  }
+  if (notificationDialog.saving || !isCurrent()) return;
   if (
     formData.channels.some(
       (channel) => !['email', 'feishu', 'in_app'].includes(channel),
@@ -1303,13 +1379,14 @@ const saveNotification = async (): Promise<void> => {
   }
   // 未修改的历史配置只更新普通字段；明确修改时整体替换触发参数
   const triggerChanged =
-    !notificationDialog.isEdit ||
+    !isEdit ||
     notificationScheduleFingerprint(formData) !==
       originalTriggerFingerprint.value;
   let schedule: NotificationSchedulePayload | undefined;
   if (triggerChanged) {
     try {
       schedule = buildNotificationSchedule(formData);
+      if (!schedule) throw new Error('通知触发配置无效，请重新确认');
     } catch (error) {
       message.error(
         error instanceof Error ? error.message : '通知触发配置无效',
@@ -1388,9 +1465,9 @@ const saveNotification = async (): Promise<void> => {
         ?.filter((d) => d && d.trim())
         .map((d) => d.trim()) || [];
 
-    if (notificationDialog.isEdit) {
+    if (isEdit) {
       // 更新通知配置
-      if (!formData.id) {
+      if (!validNotificationId(formData.id)) {
         message.error('通知配置ID不存在');
         return;
       }
@@ -1402,10 +1479,10 @@ const saveNotification = async (): Promise<void> => {
         process_id: formData.processId,
         template_id: formData.templateId,
         category_id: formData.categoryId,
-        event_types: formData.eventTypes,
+        event_types: [...formData.eventTypes],
         ...(schedule ? { ...schedule, clear_trigger: true } : {}),
-        channels: formData.channels,
-        recipient_types: formData.recipientTypes,
+        channels: [...formData.channels],
+        recipient_types: [...formData.recipientTypes],
         recipient_users: cleanRecipientUsers,
         recipient_roles: cleanRecipientRoles,
         recipient_depts: cleanRecipientDepts,
@@ -1422,20 +1499,24 @@ const saveNotification = async (): Promise<void> => {
       };
 
       await updateNotification(updateReq);
-      if (epoch !== formEpoch) return;
+      if (!isCurrent()) return;
       message.success('通知配置已更新');
     } else {
-      // 创建通知配置
+      // 创建必须使用已经验证完成的触发参数，不允许缺失时隐式降级。
+      if (!schedule) {
+        message.error('通知触发配置无效，请重新确认');
+        return;
+      }
       const createReq: CreateNotificationReq = {
         name: formData.name,
         description: formData.description,
         process_id: formData.processId,
         template_id: formData.templateId,
         category_id: formData.categoryId,
-        event_types: formData.eventTypes,
-        ...schedule!,
-        channels: formData.channels,
-        recipient_types: formData.recipientTypes,
+        event_types: [...formData.eventTypes],
+        ...schedule,
+        channels: [...formData.channels],
+        recipient_types: [...formData.recipientTypes],
         recipient_users: cleanRecipientUsers,
         recipient_roles: cleanRecipientRoles,
         recipient_depts: cleanRecipientDepts,
@@ -1450,16 +1531,16 @@ const saveNotification = async (): Promise<void> => {
       };
 
       await createNotification(createReq);
-      if (epoch !== formEpoch) return;
+      if (!isCurrent()) return;
       message.success('通知配置已创建');
     }
 
     notificationDialogVisible.value = false;
     loadNotifications();
   } catch (error: any) {
-    if (epoch !== formEpoch) return;
+    if (!isCurrent()) return;
     // 根据错误类型提供更具体的错误信息
-    let errorMessage = notificationDialog.isEdit ? '更新失败' : '创建失败';
+    let errorMessage = isEdit ? '更新失败' : '创建失败';
 
     if (error.message) {
       if (
@@ -1502,17 +1583,12 @@ const saveNotification = async (): Promise<void> => {
 const closeNotificationDialog = (): void => {
   if (notificationDialog.saving) return;
   ++formEpoch;
+  formOwner = undefined;
   recipientError.value = '';
   notificationDialogVisible.value = false;
   if (formRef.value) {
     formRef.value.resetFields();
   }
-};
-
-const closeDetailDialog = (): void => {
-  ++detailRequest;
-  detailDialogVisible.value = false;
-  detailDialog.notification = null;
 };
 
 const closeLogsDialog = (): void => {
@@ -1609,6 +1685,8 @@ const saveManualSend = async (): Promise<void> => {
 
 // 生命周期
 onBeforeUnmount(() => {
+  disposed = true;
+  formOwner = undefined;
   ++listRequest;
   ++logsRequest;
   ++detailRequest;
@@ -2664,7 +2742,8 @@ onMounted(() => {
             "
             @change="
               (checked: boolean) =>
-                handleStatusToggle(detailDialog.notification!, checked)
+                detailDialog.notification &&
+                handleStatusToggle(detailDialog.notification, checked)
             "
           />
         </div>
