@@ -328,6 +328,14 @@ export function useWorkloadHistoryScope<Resource extends RollbackResource>(
         message.error('获取版本历史失败');
     } finally {
       if (current(currentTicket)) loading.value = false;
+      else if (
+        ticket === currentTicket &&
+        currentTicket.request === request &&
+        currentTicket.owner !== owner()
+      ) {
+        // Nonreactive adapters still retire their own expired read without touching a newer ticket.
+        close();
+      }
     }
   }
 

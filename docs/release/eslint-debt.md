@@ -355,3 +355,13 @@ CSV要求当前listOwner并显式检查首行，中文列名、顺序和值映�
 - 整合首轮2864通过/3CMDB失败及3unhandled来自旧fixture未初始化新依赖，最小补7行store/auth mocks且原12项测试AST/断言/请求模拟保持；随后完整146文件2867项、类型检查、11项构建全部通过。
 - 新Safety lint0/0，生产SFC与CMDB fixture各规则计数不增；清除2处隐藏script断言。完整门禁1094files的四protected类别及parser/tool0，遗留10503 errors/5 warnings没有隐藏。
 - 测试全部Mock云账户/验证接口，没有真实云、模型、通知或生产操作。票据只隔离前端回执，不宣称撤销已发出的远端操作。
+
+## 阶段二十九：会话世代响应式与历史loading收尾
+
+私有authGeneration改为ref，外部getter仍返回number且不进入Pinia持久化state；login/logout/$reset原先先递增世代、再清用户/token的执行顺序不改。真实Pinia action包装不阻断Vue依赖跟踪，同UID仅世代变化也能及时触发窗口/历史失效。已逐个检查现有相关owner-watch只clear/close，不会由该响应新增HTTP/refresh或logout循环。
+
+独立审查复现旧实现的两项P2：纯epoch变化不触发watch，已加载history仍显示；读取中旧结果虽被拒绝，loading却可能不收停。现在真实reactive epoch主动失效，兼容非响应式适配器时旧read完成也仅在仍占ticket且owner失效时close，不清新ticket。保留所有消费者的显式epoch检查，没有把UI失效当成远端取消。
+
+- auth16+history/SFC405及请求/路由/Scope/table/scanner等，764项定向通过；其中真实Pinia getter同步watch、原时序、数字签名、state不持久化epoch均有回归。
+- 四个owned文件逐规则lint无新增，shared/tests0/0；全仓四protected/parser门禁通过，原lint债另行记录。
+- 根在其它模块收口后再次完整应用类型检查通过；全量/构建将在下一整合冻结点验证，不以本阶段定向数冒称全套。

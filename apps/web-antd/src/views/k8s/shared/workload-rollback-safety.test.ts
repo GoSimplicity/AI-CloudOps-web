@@ -605,6 +605,30 @@ for (const testCase of cases) {
       expect(message.error).not.toHaveBeenCalled();
     });
 
+    it.each(['resolve', 'reject'])(
+      '非响应式epoch适配器过期读取%s也清理自己loading',
+      async (outcome) => {
+        const { page } = await start();
+        const pending = deferred();
+        api.get.mockReturnValueOnce(pending.promise);
+        const old = page.open();
+        captured.generation++;
+        if (outcome === 'resolve')
+          pending.resolve({
+            items: [{ date: '', message: 'obsolete', revision: 3 }],
+          });
+        else pending.fail(new Error('obsolete history failure'));
+        await old;
+        expect(page.historyLoading.value).toBe(false);
+        expect(page.visible.value).toBe(false);
+        expect(page.target.value).toBeNull();
+        expect(page.history.value).toEqual([]);
+        expect(message.error).not.toHaveBeenCalled();
+        await page.open('fresh-owner-workload');
+        expect(page.isHistoryCurrent()).toBe(true);
+      },
+    );
+
     it('同UID重登后旧已加载history不能开启一次新的回滚确认', async () => {
       const { page } = await start();
       captured.generation++;

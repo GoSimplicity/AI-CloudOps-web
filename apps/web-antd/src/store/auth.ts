@@ -27,7 +27,7 @@ export const useAuthStore = defineStore('auth', () => {
   const router = useRouter();
 
   const loginLoading = ref(false);
-  let authGeneration = 0;
+  const authGeneration = ref(0);
 
   function clearAccountAccess() {
     accessStore.setIsAccessChecked(false);
@@ -50,7 +50,7 @@ export const useAuthStore = defineStore('auth', () => {
   ) {
     // 异步处理用户登录操作并获取 accessToken
     let userInfo: null | UserInfo = null;
-    const generation = ++authGeneration;
+    const generation = ++authGeneration.value;
     userStore.setUserInfo(null);
     clearAccountAccess();
     accessStore.setAccessToken(null);
@@ -58,7 +58,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       loginLoading.value = true;
       const { accessToken, refreshToken } = await loginApi(params);
-      if (generation !== authGeneration) throw new Error('登录已取消');
+      if (generation !== authGeneration.value) throw new Error('登录已取消');
       // 如果成功获取到 accessToken
       if (accessToken) {
         accessStore.setAccessToken(accessToken);
@@ -71,7 +71,7 @@ export const useAuthStore = defineStore('auth', () => {
           getAccessCodesApi(),
         ]);
 
-        if (generation !== authGeneration) throw new Error('登录已取消');
+        if (generation !== authGeneration.value) throw new Error('登录已取消');
         userInfo = fetchUserInfoResult;
         const basicUserInfo = {
           ...userInfo,
@@ -99,7 +99,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
     } finally {
-      if (generation === authGeneration) loginLoading.value = false;
+      if (generation === authGeneration.value) loginLoading.value = false;
     }
 
     return {
@@ -108,7 +108,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout(redirect: boolean = true, callApi: boolean = true) {
-    const generation = ++authGeneration;
+    const generation = ++authGeneration.value;
     userStore.setUserInfo(null);
     clearAccountAccess();
     // 只有在非令牌过期的情况下才调用 logout API
@@ -124,7 +124,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
     }
 
-    if (generation !== authGeneration) return;
+    if (generation !== authGeneration.value) return;
     resetAllStores();
     accessStore.setLoginExpired(false);
 
@@ -141,11 +141,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchUserInfo() {
     let userInfo: null | UserInfo = null;
-    const generation = authGeneration;
+    const generation = authGeneration.value;
     const owner = userStore.userInfo?.userId;
     userInfo = await getUserInfoApi();
     if (
-      generation !== authGeneration ||
+      generation !== authGeneration.value ||
       (owner && owner !== userStore.userInfo?.userId) ||
       !accessStore.accessToken
     ) {
@@ -161,7 +161,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function $reset() {
-    authGeneration++;
+    authGeneration.value++;
     loginLoading.value = false;
   }
 
@@ -169,7 +169,7 @@ export const useAuthStore = defineStore('auth', () => {
     $reset,
     authLogin,
     fetchUserInfo,
-    getAuthGeneration: () => authGeneration,
+    getAuthGeneration: () => authGeneration.value,
     loginLoading,
     logout,
   };
