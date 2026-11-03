@@ -175,6 +175,11 @@ const enableFilter = ref<1 | 2 | undefined>(undefined);
 const upgradeFilter = ref<1 | 2 | undefined>(undefined);
 const sendGroupList = ref<MonitorSendGroup[]>([]);
 
+// 防抖变量
+let poolSearchDebounce: ReturnType<typeof setTimeout> | undefined;
+let onDutyGroupSearchDebounce: ReturnType<typeof setTimeout> | undefined;
+let userSearchDebounce: ReturnType<typeof setTimeout> | undefined;
+
 // 防抖处理
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 onBeforeUnmount(() => {
@@ -230,11 +235,6 @@ const dialogUserSearch = ref('');
 const dialogUserPage = ref(1);
 const dialogUserHasMore = ref(true);
 const dialogUsers = ref<UserOption[]>([]);
-
-// 防抖变量
-let poolSearchDebounce: ReturnType<typeof setTimeout> | undefined;
-let onDutyGroupSearchDebounce: ReturnType<typeof setTimeout> | undefined;
-let userSearchDebounce: ReturnType<typeof setTimeout> | undefined;
 
 interface SendForm {
   enable: boolean;

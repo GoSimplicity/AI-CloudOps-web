@@ -710,3 +710,12 @@ ai.vue搬移14段完整const-arrow声明，no-use-before-define 30→0。保留k
 - 已安装marked的setOptions仅合并defaults，不执行highlight回调；唯一immediate账户watch仍在原位置。原/新实际编译setup使用真实Vue、账户scope、marked及私有内存DOM存储，以Fake API覆盖空缓存/已有会话与恢复成功/失败四种组合：即时账户初始化、读取和持久化、拖拽缩放、新建会话、换账号与清理轨迹相同。已有会话在原immediate watch阶段读取，不误称所有setup均零请求；没有真实模型或网络调用，此为受控setup/生命周期探针而非DOM挂载验收。
 - 磁盘源码与提案逐字匹配，14段完整声明、其它statement原文顺序、compileScript binding分类及生产DOM/SSR render一致；单文件lint133→103 errors、1 warning保持，逐规则无新增，其余既有债保留。
 - AI与独立助手页面及账户scope现有7文件53项测试、应用类型检查通过，包含账户切换隔离、旧流取消、持久化和会话恢复等既有回归。没有修改测试断言、规则或ignore，没有重复全仓测试和构建；其它初始化类前引保留待独立验证，未上线。
+
+## 阶段七十一：已验证的防抖构造与未赋值计时器绑定
+
+ProcessDesign将完整searchUsers debounce构造提前到selectedStep watcher前，仍在fetchUserList声明之后。该调用参数仅为纯closure和数值300，已安装lodash-es实现构造时仅分配本地wrapper及cancel/flush，不执行用户回调、调度timer或产生I/O；不据此把任意调用视为无副作用。
+
+- MonitorSend仅提前三个无initializer的let声明，两个onBeforeUnmount的原文位置与注册顺序、所有定时器赋值和任务时点保持。明确允许的内部变化是缩短这三个绑定的TDZ窗口：跨越区间只有不观察这些绑定的ref/reactive数据构造，没有读取、写入或eval；生命周期注册只保存回调，实际首次读取仍在原初始化完成后。没有移动hook来凑数，也不将该结论泛化到有initializer或可被提前观察的let。
+- 两文件四段完整statement及其它statement原文顺序、同一作用域、模板/style、compileScript binding分类和生产DOM/SSR render保持。no-use-before-define 4→0，总lint109→105 errors，0 warnings，逐文件各规则无新增。
+- 原/新实际编译setup使用真实Vue与实际lodash debounce、Fake API和受控时钟，成功/失败四组轨迹相同：factory零请求/零timer，299/300ms执行边界、步骤切换取消、三种目录搜索、关闭及卸载取消保持，两个卸载hook仍按原顺序注册。这是setup与受控生命周期调用探针，不替代DOM挂载回归。
+- ProcessDesign.contract、MonitorSendSafety、PrometheusLists及PrometheusFormSafety现有4文件178项测试和应用类型检查通过。未新增镜像测试、改断言/规则/ignore或扩展其它前引项；没有真实通知、云或模型调用，未上线。

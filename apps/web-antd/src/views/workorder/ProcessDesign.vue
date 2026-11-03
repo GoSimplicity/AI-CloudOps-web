@@ -288,6 +288,9 @@ const fetchUserList = async (loadMore = false) => {
     if (ticket === userRequest) userLoading.value = false;
   }
 };
+const searchUsers = debounce(() => {
+  void fetchUserList(false);
+}, 300);
 
 watch(selectedStep, (newStep) => {
   if (newStep) {
@@ -300,9 +303,6 @@ watch(selectedStep, (newStep) => {
     userPagination.value = { page: 1, pageSize: 20, total: 0 };
   }
 });
-const searchUsers = debounce(() => {
-  void fetchUserList(false);
-}, 300);
 const handleUserSearch = (keyword: string) => {
   userSearchKeyword.value = keyword;
   userRequest++;
