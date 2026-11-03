@@ -1,3 +1,4 @@
+import { withFixtureCleanup } from '../../internal/test-utils/fixture-cleanup';
 import { expect, test } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -84,158 +85,165 @@ test('disabled HTTP cron persists create and execution-field edits without runni
         row.name === name && (id === 0 || row.id === id),
     );
   }
-  try {
-    await page.goto(routePath('/auth/login'));
-    await page.getByLabel('账号', { exact: true }).fill('admin');
-    try {
-      await page.getByLabel('密码', { exact: true }).fill(secret!);
-    } catch {
-      throw new Error(
-        'Private login input unavailable; sensitive detail omitted',
-      );
-    }
-    const login = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === '/api/user/login',
-    );
-    await page.getByRole('button', { name: '登录', exact: true }).click();
-    await page.evaluate(() => {
-      for (const input of document.querySelectorAll<HTMLInputElement>(
-        'input[type="password"]',
-      ))
-        input.value = '';
-    });
-    const authentication = await (await login).json();
-    if (authentication.code !== 0)
-      throw new Error('Private local authentication failed');
-    token = authentication.data.accessToken;
-    await expect(page).not.toHaveURL(/auth\/login/);
-    await page.goto(routePath('/cron/management'));
-    await expect(page.locator('.ops-page h1')).toHaveText('定时任务管理');
-    await page
-      .locator('.ops-page__actions')
-      .getByRole('button', { name: /创建任务/ })
-      .click();
-    const dialog = page.getByRole('dialog');
-    await dialog.getByPlaceholder('请输入任务名称').fill(name);
-    const status = dialog
-      .locator('.ant-form-item')
-      .filter({ has: page.locator('label').filter({ hasText: /^初始状态$/ }) });
-    await status.locator('.ant-select-selector').click();
-    await page
-      .locator('.ant-select-dropdown:visible .ant-select-item-option')
-      .filter({ hasText: '停用（仅保存）' })
-      .click();
-    await dialog
-      .getByPlaceholder('例：0 0 * * * (每天午夜执行)')
-      .fill('@every 1h');
-    await dialog
-      .getByPlaceholder('https://example.com/api/endpoint')
-      .fill('http://127.0.0.1:9/created');
-    await dialog.getByRole('spinbutton', { name: /^自动重投次数/ }).fill('0');
-    const created = page.waitForResponse(
-      (response) =>
-        new URL(response.url()).pathname === '/api/cron/job/create' &&
-        response.request().method() === 'POST',
-    );
-    await dialog.getByRole('button', { name: '创建任务', exact: true }).click();
-    const response = await created;
-    expect(response.request().postDataJSON().status).toBe(2);
-    expect((await response.json()).code).toBe(0);
-    await expect(dialog).not.toBeVisible();
-    const rows = await ownRows();
-    expect(rows.length).toBe(1);
-    id = rows[0].id;
-    expect(rows[0].status).toBe(2);
-    expect(rows[0].run_count).toBe(0);
-    await page.getByPlaceholder('搜索任务名称或描述...').fill(name);
-    await page.getByPlaceholder('搜索任务名称或描述...').press('Enter');
-    const row = page.locator(`.ant-table-tbody tr[data-row-key="${id}"]`);
-    await expect(row).toContainText(name);
-    await expect(
-      row.locator('.k8s-action-column button').nth(3),
-    ).toBeDisabled();
-    await row
-      .locator('button')
-      .filter({ has: page.locator('[aria-label="edit"]') })
-      .click();
-    await expect(dialog.getByPlaceholder('请输入任务名称')).toHaveValue(name);
-    await dialog
-      .getByPlaceholder('例：0 0 * * * (每天午夜执行)')
-      .fill('@every 2h');
-    await dialog
-      .getByPlaceholder('https://example.com/api/endpoint')
-      .fill('http://127.0.0.1:9/updated');
-    const method = dialog
-      .locator('.ant-form-item')
-      .filter({ has: page.locator('label').filter({ hasText: /^请求方法$/ }) });
-    await method.locator('.ant-select-selector').click();
-    await page
-      .locator('.ant-select-dropdown:visible .ant-select-item-option')
-      .filter({ hasText: /^POST$/ })
-      .click();
-    await dialog.getByRole('button', { name: /添加请求头/ }).click();
-    await dialog.getByPlaceholder('Header名称').fill('X-Fixture');
-    await dialog.getByPlaceholder('Header值').fill('owned-fixture');
-    await dialog
-      .getByPlaceholder('POST/PUT请求的数据体')
-      .fill('{"fixture":true}');
-    await dialog.getByRole('spinbutton', { name: /^超时时间/ }).fill('120');
-    const updated = page.waitForResponse(
-      (response) =>
-        new URL(response.url()).pathname === `/api/cron/job/${id}/update`,
-    );
-    await dialog.getByRole('button', { name: '保存修改', exact: true }).click();
-    expect((await (await updated).json()).code).toBe(0);
-    await expect(dialog).not.toBeVisible();
-    const detail = await api(`/cron/job/${id}/detail`);
-    expect(detail).toMatchObject({
-      status: 2,
-      job_type: 3,
-      schedule: '@every 2h',
-      http_url: 'http://127.0.0.1:9/updated',
-      http_method: 'POST',
-      http_headers: [{ key: 'X-Fixture', value: 'owned-fixture' }],
-      http_body: '{"fixture":true}',
-      timeout: 120,
-      max_retry: 0,
-      run_count: 0,
-      last_run_status: 0,
-    });
-    await row
-      .locator('button')
-      .filter({ has: page.locator('[aria-label="delete"]') })
-      .click();
-    const confirmation = page
-      .getByRole('dialog')
-      .filter({ hasText: '确定要删除定时任务' });
-    const removed = page.waitForResponse(
-      (response) =>
-        new URL(response.url()).pathname === `/api/cron/job/${id}/delete` &&
-        response.request().method() === 'DELETE',
-    );
-    await confirmation
-      .getByRole('button', { name: '确认删除', exact: true })
-      .click();
-    expect((await (await removed).json()).code).toBe(0);
-    await expect(row).toHaveCount(0);
-    expect((await ownRows()).length).toBe(0);
-    expect(forbidden).toEqual([]);
-    expect(errors).toEqual([]);
-  } finally {
-    if (token) {
-      const rows = await ownRows();
-      if (rows.length > 1) throw new Error('Ambiguous Cron fixture cleanup');
-      for (const item of rows) {
-        const detail = await api(`/cron/job/${item.id}/detail`);
-        if (
-          detail.name !== name ||
-          detail.status !== 2 ||
-          detail.run_count !== 0
-        )
-          throw new Error('Refusing cleanup of changed or executed fixture');
-        await api(`/cron/job/${item.id}/delete`, 'DELETE');
+  await withFixtureCleanup(
+    async () => {
+      await page.goto(routePath('/auth/login'));
+      await page.getByLabel('账号', { exact: true }).fill('admin');
+      try {
+        await page.getByLabel('密码', { exact: true }).fill(secret!);
+      } catch {
+        throw new Error(
+          'Private login input unavailable; sensitive detail omitted',
+        );
       }
-      await api('/user/logout', 'POST', {});
-    }
-  }
+      const login = page.waitForResponse(
+        (response) => new URL(response.url()).pathname === '/api/user/login',
+      );
+      await page.getByRole('button', { name: '登录', exact: true }).click();
+      await page.evaluate(() => {
+        for (const input of document.querySelectorAll<HTMLInputElement>(
+          'input[type="password"]',
+        ))
+          input.value = '';
+      });
+      const authentication = await (await login).json();
+      if (authentication.code !== 0)
+        throw new Error('Private local authentication failed');
+      token = authentication.data.accessToken;
+      await expect(page).not.toHaveURL(/auth\/login/);
+      await page.goto(routePath('/cron/management'));
+      await expect(page.locator('.ops-page h1')).toHaveText('定时任务管理');
+      await page
+        .locator('.ops-page__actions')
+        .getByRole('button', { name: /创建任务/ })
+        .click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByPlaceholder('请输入任务名称').fill(name);
+      const status = dialog.locator('.ant-form-item').filter({
+        has: page.locator('label').filter({ hasText: /^初始状态$/ }),
+      });
+      await status.locator('.ant-select-selector').click();
+      await page
+        .locator('.ant-select-dropdown:visible .ant-select-item-option')
+        .filter({ hasText: '停用（仅保存）' })
+        .click();
+      await dialog
+        .getByPlaceholder('例：0 0 * * * (每天午夜执行)')
+        .fill('@every 1h');
+      await dialog
+        .getByPlaceholder('https://example.com/api/endpoint')
+        .fill('http://127.0.0.1:9/created');
+      await dialog.getByRole('spinbutton', { name: /^自动重投次数/ }).fill('0');
+      const created = page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === '/api/cron/job/create' &&
+          response.request().method() === 'POST',
+      );
+      await dialog
+        .getByRole('button', { name: '创建任务', exact: true })
+        .click();
+      const response = await created;
+      expect(response.request().postDataJSON().status).toBe(2);
+      expect((await response.json()).code).toBe(0);
+      await expect(dialog).not.toBeVisible();
+      const rows = await ownRows();
+      expect(rows.length).toBe(1);
+      id = rows[0].id;
+      expect(rows[0].status).toBe(2);
+      expect(rows[0].run_count).toBe(0);
+      await page.getByPlaceholder('搜索任务名称或描述...').fill(name);
+      await page.getByPlaceholder('搜索任务名称或描述...').press('Enter');
+      const row = page.locator(`.ant-table-tbody tr[data-row-key="${id}"]`);
+      await expect(row).toContainText(name);
+      await expect(
+        row.locator('.k8s-action-column button').nth(3),
+      ).toBeDisabled();
+      await row
+        .locator('button')
+        .filter({ has: page.locator('[aria-label="edit"]') })
+        .click();
+      await expect(dialog.getByPlaceholder('请输入任务名称')).toHaveValue(name);
+      await dialog
+        .getByPlaceholder('例：0 0 * * * (每天午夜执行)')
+        .fill('@every 2h');
+      await dialog
+        .getByPlaceholder('https://example.com/api/endpoint')
+        .fill('http://127.0.0.1:9/updated');
+      const method = dialog.locator('.ant-form-item').filter({
+        has: page.locator('label').filter({ hasText: /^请求方法$/ }),
+      });
+      await method.locator('.ant-select-selector').click();
+      await page
+        .locator('.ant-select-dropdown:visible .ant-select-item-option')
+        .filter({ hasText: /^POST$/ })
+        .click();
+      await dialog.getByRole('button', { name: /添加请求头/ }).click();
+      await dialog.getByPlaceholder('Header名称').fill('X-Fixture');
+      await dialog.getByPlaceholder('Header值').fill('owned-fixture');
+      await dialog
+        .getByPlaceholder('POST/PUT请求的数据体')
+        .fill('{"fixture":true}');
+      await dialog.getByRole('spinbutton', { name: /^超时时间/ }).fill('120');
+      const updated = page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === `/api/cron/job/${id}/update`,
+      );
+      await dialog
+        .getByRole('button', { name: '保存修改', exact: true })
+        .click();
+      expect((await (await updated).json()).code).toBe(0);
+      await expect(dialog).not.toBeVisible();
+      const detail = await api(`/cron/job/${id}/detail`);
+      expect(detail).toMatchObject({
+        status: 2,
+        job_type: 3,
+        schedule: '@every 2h',
+        http_url: 'http://127.0.0.1:9/updated',
+        http_method: 'POST',
+        http_headers: [{ key: 'X-Fixture', value: 'owned-fixture' }],
+        http_body: '{"fixture":true}',
+        timeout: 120,
+        max_retry: 0,
+        run_count: 0,
+        last_run_status: 0,
+      });
+      await row
+        .locator('button')
+        .filter({ has: page.locator('[aria-label="delete"]') })
+        .click();
+      const confirmation = page
+        .getByRole('dialog')
+        .filter({ hasText: '确定要删除定时任务' });
+      const removed = page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === `/api/cron/job/${id}/delete` &&
+          response.request().method() === 'DELETE',
+      );
+      await confirmation
+        .getByRole('button', { name: '确认删除', exact: true })
+        .click();
+      expect((await (await removed).json()).code).toBe(0);
+      await expect(row).toHaveCount(0);
+      expect((await ownRows()).length).toBe(0);
+      expect(forbidden).toEqual([]);
+      expect(errors).toEqual([]);
+    },
+    async () => {
+      if (token) {
+        const rows = await ownRows();
+        if (rows.length > 1) throw new Error('Ambiguous Cron fixture cleanup');
+        for (const item of rows) {
+          const detail = await api(`/cron/job/${item.id}/detail`);
+          if (
+            detail.name !== name ||
+            detail.status !== 2 ||
+            detail.run_count !== 0
+          )
+            throw new Error('Refusing cleanup of changed or executed fixture');
+          await api(`/cron/job/${item.id}/delete`, 'DELETE');
+        }
+        await api('/user/logout', 'POST', {});
+      }
+    },
+  );
 });

@@ -194,3 +194,12 @@ TypeScript 检查确认 `SshTerminal.test.ts` 的6处断言作用于既有 any �
 - 使用项目实际Vue 3.5.42 compiler-sfc，逐文件比较修改前后的compileScript及compileTemplate输出：TypeScript打印归一化后运行代码相同；块属性、自定义块与样式逐字相同。
 - 当前整合工作区137文件2171项全量单元测试与应用类型检查通过；该工作区同时包含阶段十二的11项清理回归，不把2171全部算作本阶段新增测试。
 - 49文件定向ESLint完成扫描，所选规则减少178项；ProcessDesign同文件剩1条区块顺序留待下一轮。其它lint债未隐藏，未修改规则或ignore。
+
+## 阶段十二：清理失败保留原错误与定时器类型（2026-11-03）
+
+四个业务E2E的finally原来直接抛清理错误，可能覆盖先前的业务失败。新增`withFixtureCleanup`：始终等待清理，单一失败保留原对象，双失败用AggregateError保留业务与清理两者，包括throw undefined/null。四个E2E原业务和清理body逐节点AST核对一致，资源归属、停用状态和异主资源拒绝守卫保留，业务标题没有改变。
+
+- helper11项、相关FormDesign/Instance组件27项测试通过；当前整合工作区全量2171项通过。
+- 新helper及测试定向ESLint为0 errors/0 warnings；no-unsafe-finally消除7处，仍保留其它既有E2E lint债。
+- 工单4文件的8个NodeJS.Timeout改为ReturnType<typeof setTimeout>；真实Vue脚本编译的JavaScript逐字相同，模板/样式不变；应用类型检查通过。
+- Playwright仅执行`--list`，收集29项成功；四个修改后的浏览器场景需后续固定三仓CI实际验收，不能将收集成功说成业务验收通过。未访问生产或真实云。

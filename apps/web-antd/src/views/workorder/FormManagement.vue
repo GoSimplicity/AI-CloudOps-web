@@ -126,7 +126,7 @@ const previewFormData = ref<Record<string, any>>({});
 const formDialogCategories = ref<WorkorderCategoryItem[]>([]);
 const categorySelectorLoading = ref(false);
 const categorySearchKeyword = ref('');
-let categorySearchTimeout: NodeJS.Timeout | null = null;
+let categorySearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 // 分类分页状态
 const categoryPagination = reactive({
@@ -141,7 +141,7 @@ const jsonValidationError = ref('');
 const exampleDialogVisible = ref(false);
 
 // 防抖处理
-let searchTimeout: NodeJS.Timeout | null = null;
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 // 清理定时器
 onBeforeUnmount(() => {

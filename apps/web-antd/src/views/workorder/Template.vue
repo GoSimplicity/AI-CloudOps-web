@@ -182,7 +182,7 @@ const detailDialog = reactive({
 const dialogCategories = ref<WorkorderCategoryItem[]>([]);
 const categorySelectorLoading = ref(false);
 const categorySearchKeyword = ref('');
-let categorySearchTimeout: NodeJS.Timeout | null = null;
+let categorySearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const categoryPagination = reactive({
   current: 1,
@@ -195,7 +195,7 @@ const categoryPagination = reactive({
 const dialogProcesses = ref<WorkorderProcessItem[]>([]);
 const processSelectorLoading = ref(false);
 const processSearchKeyword = ref('');
-let processSearchTimeout: NodeJS.Timeout | null = null;
+let processSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const processPagination = reactive({
   current: 1,
@@ -208,7 +208,7 @@ const processPagination = reactive({
 const dialogForms = ref<WorkorderFormDesignItem[]>([]);
 const formSelectorLoading = ref(false);
 const formSearchKeyword = ref('');
-let formSearchTimeout: NodeJS.Timeout | null = null;
+let formSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const formPagination = reactive({
   current: 1,

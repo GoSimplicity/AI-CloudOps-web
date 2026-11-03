@@ -2293,7 +2293,7 @@ const visualFormData = ref<Record<string, any>>({});
 const dialogProcesses = ref<WorkorderProcessItem[]>([]);
 const processSelectorLoading = ref(false);
 const processSearchKeyword = ref('');
-let processSearchTimeout: NodeJS.Timeout | null = null;
+let processSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const processPagination = reactive({
   current: 1,
@@ -2306,7 +2306,7 @@ const processPagination = reactive({
 const dialogUsers = ref<UserListItem[]>([]);
 const userSelectorLoading = ref(false);
 const userSearchKeyword = ref('');
-let userSearchTimeout: NodeJS.Timeout | null = null;
+let userSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const userPagination = reactive({
   current: 1,

@@ -661,7 +661,7 @@ const searchCategories = () => {
 /**
  * 分类搜索输入变化（去抖处理）
  */
-let searchTimer: NodeJS.Timeout | null = null;
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
 const onCategorySearchInput = () => {
   categoryRequest++;
   if (searchTimer) clearTimeout(searchTimer);
