@@ -341,7 +341,7 @@ export function useStatefulSetPage() {
 
   const getEnvText = (env?: Env | string) => {
     if (env === undefined || env === null) return '未知环境';
-    const value = typeof env === 'string' ? parseInt(env) : env;
+    const value = typeof env === 'string' ? Number.parseInt(env) : env;
     const map: Record<number, string> = {
       [Env.Prod]: '生产',
       [Env.Dev]: '开发',

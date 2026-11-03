@@ -592,3 +592,12 @@ API管理使用明确create/edit模式和响应式窗口key，真实必需Form�
 - 30组实际属性通过Vue SSR和已安装AntD 4.2.6的convertChildrenToData验证，value值/类型、disabled和key一致；没有访问集群或其他外部服务。
 - 12文件定向lint总诊断1054→1024，vue/no-useless-v-bind 30→0，逐文件各规则无新增。剩余1024条为其它既有债，不代表全仓lint通过。
 - Task、Pod表单、Secret挂载、workload scope四份现有测试93项及应用类型检查通过；未新增镜像测试、未重跑或冒称本阶段已完成全仓业务回归。未上线。
+
+## 阶段五十八：数字解析函数的全局别名
+
+17个K8s TypeScript文件的19处全局`parseInt`/`parseFloat`调用统一为`Number.parseInt`/`Number.parseFloat`。TypeScript实际符号解析确认原函数与`Number`均来自全局lib声明、没有局部遮蔽；两个入口是相同内建解析函数，保留全部实参、进制及调用时机。未包含有独立强制转换语义的`isNaN`。
+
+- 仅替换19处callee token，并对共享工具中的一条变长表达式做必要换行；其他业务表达式、对象顺序、导入和类型成员保持。
+- 17文件定向lint总诊断2271→2252，逐文件各规则无新增，parser/tool失败0。其余2252条是既有债，不代表全仓lint通过。
+- Task、Namespace、Pod表单和workload scope四份现有测试91项及应用类型检查通过；没有增加复述实现的测试。无集群或其他真实外部调用，未上线。
+- 完整边界检查1129文件通过：5类受保护规则0、parser/tool失败0，额外指令补审41文件；全仓仍10040 errors/5 warnings，继续处理剩余债务。
