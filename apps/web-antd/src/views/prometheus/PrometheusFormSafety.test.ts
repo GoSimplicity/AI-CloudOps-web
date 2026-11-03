@@ -829,8 +829,8 @@ it('preserves selected rule association names when a slow first options page fin
   await mountPage('rules', [record], false, (path) => {
     if (path === '/monitor/alert_rules/list')
       return Promise.resolve({ total: 1, items: [record] });
-    if (path === '/monitor/alert_manager_pools/list') return options.promise;
-    if (path === '/monitor/alert_manager_pools/detail/2')
+    if (path === '/monitor/scrape_pools/list') return options.promise;
+    if (path === '/monitor/scrape_pools/detail/2')
       return Promise.resolve({ id: 2, name: 'selected pool' });
     if (path === '/monitor/send_groups/detail/1')
       return Promise.resolve({ id: 1, name: 'owned group' });
@@ -849,7 +849,7 @@ it('preserves selected rule association names when a slow first options page fin
   await flushPromises();
   expect(
     client.get.mock.calls.some(
-      ([path]) => path === '/monitor/alert_manager_pools/list',
+      ([path]) => path === '/monitor/scrape_pools/list',
     ),
   ).toBe(true);
   await dialog('rules').get('[data-close]').trigger('click');

@@ -27,10 +27,10 @@ import {
   type UpdateMonitorAlertRuleReq,
 } from '#/api/core/prometheus/prometheus_alert_rule';
 import {
-  getMonitorAlertManagerPoolApi,
-  getMonitorAlertManagerPoolListApi,
-  type MonitorAlertManagerPool,
-} from '#/api/core/prometheus/prometheus_alert_pool';
+  getMonitorScrapePoolDetailApi,
+  getMonitorScrapePoolListApi,
+  type MonitorScrapePool,
+} from '#/api/core/prometheus/prometheus_scrape_pool';
 import {
   getMonitorSendGroupDetailApi,
   getMonitorSendGroupListApi,
@@ -144,7 +144,8 @@ const handleApiError = (error: unknown, defaultMessage: string): void => {
 const loading = ref(false);
 const { loadError, beginRequest } = useListRequest(loading);
 const data = ref<MonitorAlertRule[]>([]);
-const scrapePools = ref<MonitorAlertManagerPool[]>([]);
+const scrapePools = ref<MonitorScrapePool[]>([]);
+const poolSearch = ref('');
 const sendGroups = ref<MonitorSendGroup[]>([]);
 const addFormRef = ref<FormInstance>();
 const editFormRef = ref<FormInstance>();
@@ -349,6 +350,7 @@ const ensureOptionOwner = (): string | undefined => {
     sendGroups.value = [];
     poolPagination.total = 0;
     poolPagination.current = 1;
+    poolSearch.value = '';
     sendGroupPagination.total = 0;
     sendGroupPagination.current = 1;
     poolLoading.value = false;
@@ -368,10 +370,14 @@ const fetchScrapePools = async (page = 1, size = 20): Promise<void> => {
     operationOwner() === owner;
   poolLoading.value = true;
   try {
-    const response = await getMonitorAlertManagerPoolListApi({ page, size });
+    const response = await getMonitorScrapePoolListApi({
+      page,
+      size,
+      ...(poolSearch.value ? { search: poolSearch.value } : {}),
+    });
     if (!isCurrent()) return;
-    const items: MonitorAlertManagerPool[] = (response.items || []).filter(
-      (pool: MonitorAlertManagerPool) => validPositiveId(pool.id),
+    const items: MonitorScrapePool[] = (response.items || []).filter(
+      (pool: MonitorScrapePool) => validPositiveId(pool.id),
     );
     if (page === 1) {
       const selected = scrapePools.value.filter(
@@ -459,7 +465,7 @@ const handlePoolScroll = (e: any) => {
   if (
     scrollTop + clientHeight >= scrollHeight - 10 &&
     !poolLoading.value &&
-    scrapePools.value.length < poolPagination.total
+    poolPagination.current * poolPagination.pageSize < poolPagination.total
   ) {
     fetchScrapePools(poolPagination.current + 1, poolPagination.pageSize);
   }
@@ -479,9 +485,15 @@ const handleSendGroupScroll = (e: any) => {
   }
 };
 
+const handlePoolSearch = (search: string) => {
+  poolSearch.value = search;
+  void fetchScrapePools(1, poolPagination.pageSize);
+};
+
 const onPoolDropdownChange = (open: boolean) => {
   if (open) ensureOptionOwner();
-  if (open && scrapePools.value.length === 0) {
+  if (open) {
+    poolSearch.value = '';
     fetchScrapePools(1, poolPagination.pageSize);
   }
 };
@@ -654,7 +666,7 @@ const showEditModal = async (record: MonitorAlertRule): Promise<void> => {
     !scrapePools.value.some((pool) => pool.id === poolId)
   ) {
     try {
-      const pool = await getMonitorAlertManagerPoolApi(poolId);
+      const pool = await getMonitorScrapePoolDetailApi(poolId);
       if (!isCurrent()) return;
       if (pool?.id !== poolId) throw new Error('实例池详情标识无效');
       scrapePools.value.unshift(pool);
@@ -1315,10 +1327,13 @@ onMounted(() => {
               <a-form-item label="所属实例池" name="pool_id">
                 <a-select
                   v-model:value="addForm.pool_id"
+                  :filter-option="false"
                   :loading="poolLoading"
                   placeholder="请选择所属实例池"
+                  show-search
                   @dropdown-visible-change="onPoolDropdownChange"
                   @popupScroll="handlePoolScroll"
+                  @search="handlePoolSearch"
                 >
                   <a-select-option
                     v-for="pool in scrapePools"
@@ -1539,10 +1554,13 @@ onMounted(() => {
               <a-form-item label="所属实例池" name="pool_id">
                 <a-select
                   v-model:value="editForm.pool_id"
+                  :filter-option="false"
                   :loading="poolLoading"
                   placeholder="请选择所属实例池"
+                  show-search
                   @dropdown-visible-change="onPoolDropdownChange"
                   @popupScroll="handlePoolScroll"
+                  @search="handlePoolSearch"
                 >
                   <a-select-option
                     v-for="pool in scrapePools"
