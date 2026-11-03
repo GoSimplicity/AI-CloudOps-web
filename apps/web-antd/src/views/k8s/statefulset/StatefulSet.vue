@@ -510,9 +510,9 @@ onMounted(async () => {
               </a-select-option>
               <a-select-option
                 v-if="clusters.length > 0 && clusters.length < clustersTotal"
-                :value="'__load_more__'"
                 disabled
                 style="text-align: center; color: var(--ops-muted)"
+                value="__load_more__"
               >
                 <a-spin :spinning="clustersLoading" size="small" />
                 <span v-if="!clustersLoading">滚动加载更多...</span>
@@ -543,9 +543,9 @@ onMounted(async () => {
                 v-if="
                   namespaces.length > 0 && namespaces.length < namespacesTotal
                 "
-                :value="'__load_more_namespaces__'"
                 disabled
                 style="text-align: center; color: var(--ops-muted)"
+                value="__load_more_namespaces__"
               >
                 <a-button
                   :loading="namespacesLoading"
@@ -1095,9 +1095,9 @@ onMounted(async () => {
               v-if="
                 namespaces.length > 0 && namespaces.length < namespacesTotal
               "
-              :value="'__load_more_namespaces_create__'"
               disabled
               style="text-align: center; color: var(--ops-muted)"
+              value="__load_more_namespaces_create__"
             >
               <a-button
                 :loading="namespacesLoading"

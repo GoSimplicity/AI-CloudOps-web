@@ -327,9 +327,9 @@ onMounted(async () => {
               </a-select-option>
               <a-select-option
                 v-if="clusters.length > 0 && clusters.length < clustersTotal"
-                :value="'__load_more__'"
                 disabled
                 style="text-align: center; color: #999"
+                value="__load_more__"
               >
                 <a-spin :spinning="clustersLoading" size="small" />
                 <span v-if="!clustersLoading">滚动加载更多...</span>
@@ -357,9 +357,9 @@ onMounted(async () => {
               </a-select-option>
               <a-select-option
                 v-if="templates.length > 0 && templates.length < templatesTotal"
-                :value="'__load_more_templates__'"
                 disabled
                 style="text-align: center; color: #999"
+                value="__load_more_templates__"
               >
                 <a-button
                   :loading="templatesLoading"
@@ -702,9 +702,9 @@ onMounted(async () => {
             </a-select-option>
             <a-select-option
               v-if="templates.length > 0 && templates.length < templatesTotal"
-              :value="'__load_more_templates_create__'"
               disabled
               style="text-align: center; color: #999"
+              value="__load_more_templates_create__"
             >
               <a-button
                 :loading="templatesLoading"

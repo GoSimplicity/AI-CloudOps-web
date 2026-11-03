@@ -583,3 +583,12 @@ API管理使用明确create/edit模式和响应式窗口key，真实必需Form�
 
 - 原FormSafety89+5协议回归、namespace9/列表37/提示扫描29共169项通过，类型检查通过，页面70→70各规则不增、新改测试0/0。两处get().exists()类型误用改为保同一存在断言的element检查，未删断言或放宽tsconfig。
 - 独立4个first=/空值/旧数据保留删除边界复验通过；未修改Go发布循环或其它模块共享解析函数，无真实数据迁移。
+
+## 阶段五十七：加载更多哨兵的静态属性
+
+12个K8s SFC中30个disabled a-select-option的纯ASCII哨兵由常量字符串`:value`改为静态`value`，只在这些节点内调整所需属性顺序。保留5种哨兵的字符串值、禁用状态、条件和子内容，其余16处未入选绑定不改，不做整文件格式化。
+
+- script/style字节保持，30节点外全部源码逐字相同；仅将目标值属性与属性顺序规范化后，完整模板AST一致。没有移动业务声明、修改事件、动态值、规则或ignore。
+- 30组实际属性通过Vue SSR和已安装AntD 4.2.6的convertChildrenToData验证，value值/类型、disabled和key一致；没有访问集群或其他外部服务。
+- 12文件定向lint总诊断1054→1024，vue/no-useless-v-bind 30→0，逐文件各规则无新增。剩余1024条为其它既有债，不代表全仓lint通过。
+- Task、Pod表单、Secret挂载、workload scope四份现有测试93项及应用类型检查通过；未新增镜像测试、未重跑或冒称本阶段已完成全仓业务回归。未上线。
