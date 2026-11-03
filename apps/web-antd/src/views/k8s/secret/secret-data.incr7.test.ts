@@ -433,7 +433,7 @@ describe('incr7：「打开 YAML、不改直接保存」不改动任何 data 值
   });
 
   it('非 UTF-8 的二进制值：保留 base64（原来解成 U+FFFD，保存即改坏原值）', () => {
-    const value = btoa(String.fromCharCode(0xff, 0xfe, 0x00, 0x80, 0x41));
+    const value = btoa(String.fromCharCode(255, 254, 0x00, 0x80, 0x41));
     const { original, saved, shown } = roundTrip(value);
     expect(shown).toContain(`  k: ${value}\n`);
     expect(saved).toBe(original);

@@ -11,11 +11,11 @@ export function utf8Chunks(input: string, maxBytes = 64 * 1024): string[] {
     const codePoint = character.codePointAt(0);
     if (codePoint === undefined) throw new RangeError('无法确定输入码点');
     const length =
-      codePoint <= 0x7f
+      codePoint <= 127
         ? 1
-        : codePoint <= 0x7ff
+        : codePoint <= 2047
           ? 2
-          : codePoint <= 0xffff
+          : codePoint <= 65_535
             ? 3
             : 4;
     if (length > maxBytes) throw new RangeError('单个码点超过输入分片大小');

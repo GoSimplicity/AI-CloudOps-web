@@ -383,7 +383,7 @@ describe('incr6 P3-2：块标量头匹配不再随行长平方增长', () => {
 
 describe('readRevealedValue', () => {
   const res = {
-    data: { a: FAKE_B64, bin: btoa(String.fromCharCode(0xff, 0xfe)) },
+    data: { a: FAKE_B64, bin: btoa(String.fromCharCode(255, 254)) },
     string_data: { s: FAKE },
     keys: ['a', 's', 'bin'],
   };
