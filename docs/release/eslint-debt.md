@@ -522,3 +522,11 @@ Cron 参数和 Pod 资源输入移除模板非空断言：读取允许缺值，�
 - 新48项Safety、原contract3/CMDBLists18/提示扫描29，在本轮218项统一验证中通过；应用类型检查通过。页面lint86→84，各规则无新增，新Safety0/0，旧contract只补6行真实store mock依赖，原断言不删。
 - 独立审查核对Go更新合同未发现A阶段阻断；补齐一个真正pending detail时卸载的回归，更正原只变generation却命名为unmount的用例，未把afterEach清理算成此场景验收。
 - 绑定/解绑四函数AST与原实现相同，明确留给阶段B修复，不宣称该页所有异步流程已闭环。API/Router全Fake，没有连接SSH、云或主机，没有输出凭据payload或上线。
+
+## 阶段四十九：本地资源绑定解绑窗口
+
+绑定与解绑捕获原saved资源ID、owner/auth世代、窗口模式、目录/关联集合及独立选择快照，单窗单飞；取消、切目标/模式、权限或身份变化使旧回执失效。旧success/failure/finally不能关闭新窗、清新选择或解锁新提交；列表与详情刷新只归原scope，详情还校验原对象、detailRequest及ID，避免A完成后误读B。允许真实非叶节点绑定，拒绝非法或不属于当前目录/关联集合的节点。
+
+- 新72项BindingSafety连已交A48/contract3/CMDBLists18/提示扫描29/权限82，共252项通过；应用类型检查通过。页面lint84→84逐规则不增，新Safety0/0。
+- 独立审查和72项独立执行无确定阻断；两处fixture的非叶枚举从0修正为真实2后再次72项通过，未将非规范样例冒称真实DTO。A的48用例及原contract未改。
+- 全部API替身，无SSH/云连接；窗口失效只拒绝旧回执，不撤销已经发送的远端写入。

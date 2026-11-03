@@ -104,7 +104,49 @@ const selectedUnbindNodeIds = ref<number[]>([]);
 const currentResource = ref<TreeLocalResource | null>(null);
 const localResources = ref<TreeLocalResource[]>([]);
 const currentDetail = ref<TreeLocalResource | null>(null);
-const treeData = ref<TreeNode[]>([]);
+interface BindingTreeNode extends TreeNode {
+  children?: BindingTreeNode[];
+}
+const treeData = ref<BindingTreeNode[]>([]);
+const treeLoading = ref(false);
+let treeOwner: string | undefined;
+let treeRequest = 0;
+const bindingWindow = ref(0);
+const bindingMode = ref<'bind' | 'unbind'>();
+let bindingOwner: string | undefined;
+let bindingTargetId: number | undefined;
+let bindingNodeFingerprint = '';
+const bindingPermission = (mode: 'bind' | 'unbind') =>
+  mode === 'bind'
+    ? hasPerm('/api/tree/local/bind/:id')
+    : hasPerm('/api/tree/local/unbind/:id');
+function invalidateBinding(): void {
+  bindingWindow.value += 1;
+  bindingMode.value = undefined;
+  bindingOwner = undefined;
+  bindingTargetId = undefined;
+  bindingNodeFingerprint = '';
+  bindModalVisible.value = false;
+  unbindModalVisible.value = false;
+  bindLoading.value = false;
+  unbindLoading.value = false;
+  selectedTreeNodeIds.value = [];
+  selectedUnbindNodeIds.value = [];
+  currentResource.value = null;
+}
+function relatedNodeFingerprint(record: TreeLocalResource): string {
+  return JSON.stringify(record.tree_nodes?.map((node) => node.id) ?? []);
+}
+function knownTreeNodeIds(nodes: BindingTreeNode[]): Set<number> {
+  const ids = new Set<number>();
+  for (const node of nodes) {
+    if (!node || typeof node !== 'object') continue;
+    if (validResourceId(node.id)) ids.add(node.id);
+    if (Array.isArray(node.children))
+      for (const id of knownTreeNodeIds(node.children)) ids.add(id);
+  }
+  return ids;
+}
 
 const pagination = reactive({
   current: 1,
@@ -206,9 +248,7 @@ const formRules = computed(() => ({
 }));
 
 const showUnbindModal = (record: TreeLocalResource): void => {
-  currentResource.value = record;
-  selectedUnbindNodeIds.value = record.tree_nodes?.map((node) => node.id) || [];
-  unbindModalVisible.value = true;
+  openBinding(record, 'unbind');
 };
 
 // 表格列定义
@@ -331,12 +371,29 @@ async function validatePrivateKey(_rule: any, value: string): Promise<void> {
   }
 }
 
-const fetchTreeData = async (): Promise<void> => {
+const fetchTreeData = async (
+  stillCurrent: () => boolean = () => true,
+): Promise<void> => {
+  const owner = pageOwner();
+  if (!active || !owner || !stillCurrent()) return;
+  const ticket = ++treeRequest;
+  const isCurrent = () =>
+    active && treeRequest === ticket && pageOwner() === owner && stillCurrent();
+  treeOwner = undefined;
+  treeLoading.value = true;
   try {
     const response = await getTreeList();
-    treeData.value = response.items || [];
-  } catch (error) {
-    if (shouldNotifyPageError(error)) message.error('获取服务树数据失败');
+    if (!isCurrent()) return;
+    if (!Array.isArray(response?.items)) throw new Error('服务树列表无效');
+    treeData.value = response.items;
+    treeOwner = owner;
+  } catch (error: unknown) {
+    if (isCurrent()) {
+      treeData.value = [];
+      if (shouldNotifyPageError(error)) message.error('获取服务树数据失败');
+    }
+  } finally {
+    if (ticket === treeRequest) treeLoading.value = false;
   }
 };
 
@@ -475,6 +532,7 @@ const resetFormData = (): void => {
 const showCreateModal = (): void => {
   const owner = pageOwner();
   if (!active || !owner || !formPermission(false)) return;
+  invalidateBinding();
   invalidateForm();
   closeDetails();
   formOwner = owner;
@@ -491,6 +549,7 @@ const handleEdit = (record: TreeLocalResource): void => {
     message.error('无效的资源ID');
     return;
   }
+  invalidateBinding();
   invalidateForm();
   closeDetails();
   formOwner = owner;
@@ -524,6 +583,7 @@ const handleViewDetail = async (record: TreeLocalResource): Promise<void> => {
     message.error('无效的资源ID');
     return;
   }
+  invalidateBinding();
   const ticket = ++detailRequest;
   detailOwner = owner;
   const isCurrent = () =>
@@ -616,89 +676,174 @@ const removeTag = (index: number): void => {
   }
 };
 
-const showBindModal = (record: TreeLocalResource): void => {
+function openBinding(record: TreeLocalResource, mode: 'bind' | 'unbind'): void {
+  const owner = pageOwner();
+  if (!active || !owner || !bindingPermission(mode)) return;
+  if (!validResourceId(record.id) || !savedResource(record, owner)) {
+    message.error('无效的资源ID');
+    return;
+  }
+  invalidateBinding();
+  invalidateForm();
+  if (detailLoading.value) closeDetails();
+  bindingOwner = owner;
+  bindingTargetId = record.id;
+  bindingMode.value = mode;
+  bindingNodeFingerprint = relatedNodeFingerprint(record);
   currentResource.value = record;
-  selectedTreeNodeIds.value = [];
-  bindModalVisible.value = true;
+  if (mode === 'bind') {
+    bindModalVisible.value = true;
+    if (treeOwner !== owner) {
+      const revision = bindingWindow.value;
+      void fetchTreeData(
+        () =>
+          bindingWindow.value === revision &&
+          bindingMode.value === 'bind' &&
+          bindModalVisible.value &&
+          bindingOwner === owner,
+      );
+    }
+  } else {
+    selectedUnbindNodeIds.value =
+      record.tree_nodes?.map((node) => node.id) ?? [];
+    unbindModalVisible.value = true;
+  }
+}
+
+const showBindModal = (record: TreeLocalResource): void => {
+  openBinding(record, 'bind');
 };
 
-const handleBind = async (): Promise<void> => {
-  if (!currentResource.value || selectedTreeNodeIds.value.length === 0) {
-    message.warning('请选择要绑定的服务树节点');
+const submitBinding = async (mode: 'bind' | 'unbind'): Promise<void> => {
+  const owner = bindingOwner;
+  const record = currentResource.value;
+  const id = record?.id;
+  const revision = bindingWindow.value;
+  const selected =
+    mode === 'bind' ? selectedTreeNodeIds.value : selectedUnbindNodeIds.value;
+  const busy = mode === 'bind' ? bindLoading : unbindLoading;
+  const visible = mode === 'bind' ? bindModalVisible : unbindModalVisible;
+  if (
+    !active ||
+    !visible.value ||
+    busy.value ||
+    bindingMode.value !== mode ||
+    !owner ||
+    owner !== pageOwner() ||
+    !bindingPermission(mode)
+  )
+    return;
+  if (
+    !record ||
+    !validResourceId(id) ||
+    id !== bindingTargetId ||
+    !savedResource(record, owner) ||
+    relatedNodeFingerprint(record) !== bindingNodeFingerprint
+  ) {
+    message.warning('资源或绑定信息已变更，请重新打开窗口');
     return;
   }
-
-  bindLoading.value = true;
-  try {
-    const params: BindTreeLocalResourceReq = {
-      id: currentResource.value.id,
-      tree_node_ids: selectedTreeNodeIds.value,
-    };
-    await bindTreeLocal(currentResource.value.id, params);
-    message.success('绑定成功');
-    bindModalVisible.value = false;
-    selectedTreeNodeIds.value = [];
-
-    // 刷新数据以显示最新绑定的节点
-    await fetchLocalResources();
-
-    // 如果当前有详情显示，也刷新详情
-    if (
-      detailVisible.value &&
-      currentDetail.value &&
-      currentDetail.value.id === currentResource.value.id
-    ) {
-      const response = await getTreeLocalDetail(currentResource.value.id);
-      currentDetail.value = {
-        ...response,
-        tree_nodes: response.tree_nodes || [],
-      };
-    }
-  } catch (error) {
-    if (shouldNotifyPageError(error)) message.error('绑定失败');
-  } finally {
-    bindLoading.value = false;
-  }
-};
-
-const handleUnbind = async (): Promise<void> => {
-  if (!currentResource.value || selectedUnbindNodeIds.value.length === 0) {
-    message.warning('请选择要解绑的节点');
+  if (!Array.isArray(selected)) {
+    message.warning('请选择有效的服务树节点');
     return;
   }
-
-  unbindLoading.value = true;
+  const ids = [...selected];
+  if (
+    ids.length === 0 ||
+    ids.some((nodeId) => !validResourceId(nodeId)) ||
+    new Set(ids).size !== ids.length
+  ) {
+    message.warning(
+      mode === 'bind'
+        ? '请选择有效且不重复的服务树节点'
+        : '请选择有效且不重复的解绑节点',
+    );
+    return;
+  }
+  const allowed =
+    mode === 'bind'
+      ? knownTreeNodeIds(treeData.value)
+      : new Set(record.tree_nodes.map((node) => node.id));
+  if (
+    (mode === 'bind' && (treeOwner !== owner || treeLoading.value)) ||
+    ids.some((nodeId) => !allowed.has(nodeId))
+  ) {
+    message.warning('节点列表尚未就绪或选择已失效，请重新选择');
+    return;
+  }
+  const nodeFingerprint = bindingNodeFingerprint;
+  const selectedFingerprint = JSON.stringify(ids);
+  const ownsWindow = () =>
+    active &&
+    bindingWindow.value === revision &&
+    bindingMode.value === mode &&
+    bindingOwner === owner &&
+    pageOwner() === owner &&
+    currentResource.value === record &&
+    bindingTargetId === id &&
+    record.id === id &&
+    bindingPermission(mode);
+  const current = () =>
+    ownsWindow() &&
+    visible.value &&
+    nodeFingerprint === relatedNodeFingerprint(record) &&
+    selectedFingerprint ===
+      JSON.stringify(
+        mode === 'bind'
+          ? selectedTreeNodeIds.value
+          : selectedUnbindNodeIds.value,
+      );
+  const detail = currentDetail.value;
+  const details = detailRequest;
+  const sameDetail = () =>
+    ownsWindow() &&
+    detailVisible.value &&
+    detailOwner === owner &&
+    currentDetail.value === detail &&
+    detail?.id === id &&
+    detailRequest === details &&
+    hasPerm('/api/tree/local/detail/:id');
+  busy.value = true;
   try {
-    const params: UnBindTreeLocalResourceReq = {
-      id: currentResource.value.id,
-      tree_node_ids: selectedUnbindNodeIds.value,
+    const params: BindTreeLocalResourceReq | UnBindTreeLocalResourceReq = {
+      id,
+      tree_node_ids: ids,
     };
-    await unbindTreeLocal(currentResource.value.id, params);
-    message.success('解绑成功');
-    unbindModalVisible.value = false;
-    selectedUnbindNodeIds.value = [];
-
-    // 刷新数据以显示最新的节点绑定状态
-    await fetchLocalResources();
-
-    // 如果当前有详情显示，也刷新详情
-    if (
-      detailVisible.value &&
-      currentDetail.value &&
-      currentDetail.value.id === currentResource.value.id
-    ) {
-      const response = await getTreeLocalDetail(currentResource.value.id);
-      currentDetail.value = {
-        ...response,
-        tree_nodes: response.tree_nodes || [],
-      };
-    }
-  } catch (error) {
-    if (shouldNotifyPageError(error)) message.error('解绑失败');
+    const mutate = mode === 'bind' ? bindTreeLocal : unbindTreeLocal;
+    await mutate(id, params);
+    if (!current()) return;
+    message.success(mode === 'bind' ? '绑定成功' : '解绑成功');
+    visible.value = false;
+    if (mode === 'bind') selectedTreeNodeIds.value = [];
+    else selectedUnbindNodeIds.value = [];
+    const refreshDetail = async () => {
+      if (!sameDetail()) return;
+      try {
+        const response = await getTreeLocalDetail(id);
+        if (!sameDetail()) return;
+        if (response?.id !== id) throw new Error('资源详情标识无效');
+        currentDetail.value = {
+          ...response,
+          tree_nodes: response.tree_nodes ?? [],
+        };
+      } catch (error: unknown) {
+        if (sameDetail() && shouldNotifyPageError(error))
+          message.error('刷新资源详情失败');
+      }
+    };
+    await Promise.all([
+      fetchLocalResourcesForScope(ownsWindow),
+      refreshDetail(),
+    ]);
+  } catch (error: unknown) {
+    if (current() && shouldNotifyPageError(error))
+      message.error(mode === 'bind' ? '绑定失败' : '解绑失败');
   } finally {
-    unbindLoading.value = false;
+    if (ownsWindow()) busy.value = false;
   }
 };
+const handleBind = () => submitBinding('bind');
+const handleUnbind = () => submitBinding('unbind');
 
 const cancelForm = (): void => {
   invalidateForm();
@@ -804,6 +949,7 @@ const handleDelete = (record: TreeLocalResource): void => {
     message.error('无效的资源ID');
     return;
   }
+  invalidateBinding();
   const request = ++deleteRevision;
   const windowRevision = formWindow.value;
   const details = detailRequest;
@@ -861,6 +1007,11 @@ const handleDelete = (record: TreeLocalResource): void => {
 watch(
   pageOwner,
   () => {
+    invalidateBinding();
+    treeRequest += 1;
+    treeOwner = undefined;
+    treeData.value = [];
+    treeLoading.value = false;
     invalidateForm();
     closeDetails();
     listRequest += 1;
@@ -871,6 +1022,13 @@ watch(
     loadError.value = null;
     deleteDialog?.destroy();
     deleteDialog = undefined;
+  },
+  { flush: 'sync' },
+);
+watch(
+  () => !bindingMode.value || bindingPermission(bindingMode.value),
+  (allowed) => {
+    if (!allowed) invalidateBinding();
   },
   { flush: 'sync' },
 );
@@ -892,6 +1050,11 @@ onMounted(async () => {
 });
 onBeforeUnmount(() => {
   active = false;
+  invalidateBinding();
+  treeRequest += 1;
+  treeOwner = undefined;
+  treeData.value = [];
+  treeLoading.value = false;
   invalidateForm();
   closeDetails();
   listRequest++;
@@ -1395,11 +1558,13 @@ onBeforeUnmount(() => {
 
     <!-- 绑定服务树节点对话框 -->
     <a-modal
-      v-model:open="bindModalVisible"
+      :key="`bind-${bindingWindow}`"
       :confirm-loading="bindLoading"
       :destroy-on-close="true"
+      :open="bindModalVisible"
       class="responsive-modal"
       title="绑定服务树节点"
+      @cancel="invalidateBinding"
       @ok="handleBind"
     >
       <a-form layout="vertical">
@@ -1407,6 +1572,7 @@ onBeforeUnmount(() => {
           <a-tree-select
             v-model:value="selectedTreeNodeIds"
             :field-names="{ children: 'children', label: 'name', value: 'id' }"
+            :loading="treeLoading"
             :tree-data="treeData"
             allow-clear
             multiple
@@ -1419,11 +1585,13 @@ onBeforeUnmount(() => {
 
     <!-- 管理绑定对话框 -->
     <a-modal
-      v-model:open="unbindModalVisible"
+      :key="`unbind-${bindingWindow}`"
       :confirm-loading="unbindLoading"
       :destroy-on-close="true"
+      :open="unbindModalVisible"
       class="responsive-modal"
       title="管理服务树绑定"
+      @cancel="invalidateBinding"
       @ok="handleUnbind"
     >
       <a-form layout="vertical">
