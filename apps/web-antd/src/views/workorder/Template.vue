@@ -635,18 +635,6 @@ const handleFormScroll = (e: Event): void => {
   }
 };
 
-// 表格变化处理
-const handleTableChange = (pagination: any): void => {
-  if (pagination.current !== currentPage.value) {
-    currentPage.value = pagination.current;
-  }
-  if (pagination.pageSize !== pageSize.value) {
-    pageSize.value = pagination.pageSize;
-    currentPage.value = 1;
-  }
-  loadTemplates();
-};
-
 // 数据加载
 const loadError = ref('');
 
@@ -696,6 +684,18 @@ const loadTemplates = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+// 表格变化处理
+const handleTableChange = (pagination: any): void => {
+  if (pagination.current !== currentPage.value) {
+    currentPage.value = pagination.current;
+  }
+  if (pagination.pageSize !== pageSize.value) {
+    pageSize.value = pagination.pageSize;
+    currentPage.value = 1;
+  }
+  loadTemplates();
 };
 
 const loadCategories = async () => {

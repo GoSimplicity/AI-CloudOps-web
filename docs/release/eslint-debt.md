@@ -684,3 +684,12 @@ Instance、Notification和WorkorderComments三个SFC搬移46段完整const-arrow
 - 16源文件定向1372→1307净减65：选中sort-objects减少64，RCA仅新导入位置同时减少1条旧sort-imports，其余逐文件规则不增；helper与测试lint0。Instance和WorkorderComments不在本批，未与阶段66写入交叉。
 - 206项关联测试和最终应用类型通过，Root统一全量166文件3619测试、11构建任务通过。新增helper测试直接验证未知键、惰性fallback、同名遮蔽和继承getter，未新增镜像测试。没有改变规则、ignore或调用真实服务，未上线。
 - 完整边界1129文件通过：5类保护规则0、parser/tool失败0、额外补审41文件；普通源码仍9682 errors/5 warnings，未全清。
+
+## 阶段六十八：工单分页与筛选回调的声明顺序
+
+FormDesign、Process、Template、ProcessDesign和WorkorderTimeline五个SFC搬移9段完整const-arrow声明，保留kind、函数体、同一作用域及捕获binding。其它固定statement原文顺序、模板和style保持，没有移动data/ref/let、watch或调用初始化。
+
+- FormDesign将关闭、选择和搜索分类三个回调延后到searchTimer初始化后；Process和Template各将分页回调延后到读取函数之后，loadError ref及读取函数原位不变。Timeline的两个纯动作判定声明提前到筛选computed前；ProcessDesign的步骤文本和用户读取声明分别提前到对应computed/watch之前，两段modelValue相关watch位置保持。
+- 已安装Vue的computed构造保存getter，读取时才求值；ProcessDesign的selectedStep watcher非immediate。保留该页searchUsers的debounce调用初始化前引1条，不移动调用来消除诊断。五文件no-use-before-define 12→1、总lint292→281 errors，0 warnings，逐文件各规则无新增。
+- 磁盘源码逐字匹配提案，9段声明原文及其它statement顺序保持，真实compileScript binding和生产DOM/SSR render一致。Template与Timeline原/新实际编译setup在Fake API下的成功/失败四组轨迹相同：factory零请求，受控mounted读取、分页大小改变重置页码及失败清理保持；Timeline四种筛选和正反排序的具体ID序列、expose/open请求保持。这是setup与受控mounted调用探针，不冒称DOM挂载。
+- 工单目录现有12文件260项测试及应用类型检查通过；没有新增镜像测试或修改断言、规则与ignore，没有重复全仓测试和构建。未扩展预测/RCA复杂初始化边界，未调用真实工单或通知服务，未上线。

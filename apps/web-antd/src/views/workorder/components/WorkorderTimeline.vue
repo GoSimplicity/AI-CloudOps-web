@@ -146,6 +146,26 @@ const getAvatarColor = (name: string | undefined) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
+// 新增方法
+const isImportantAction = (action: string): boolean => {
+  return [
+    TimelineAction.Create as string,
+    TimelineAction.Submit as string,
+    TimelineAction.Approve as string,
+    TimelineAction.Reject as string,
+    TimelineAction.Complete as string,
+    TimelineAction.Cancel as string,
+  ].includes(action);
+};
+
+const isSystemAction = (action: string): boolean => {
+  return [
+    TimelineAction.Notify as string,
+    TimelineAction.Remind as string,
+    TimelineAction.View as string,
+  ].includes(action);
+};
+
 // 计算属性
 const filteredTimelineList = computed(() => {
   let filtered = [...timelineList.value];
@@ -179,26 +199,6 @@ const filteredTimelineList = computed(() => {
 
   return filtered;
 });
-
-// 新增方法
-const isImportantAction = (action: string): boolean => {
-  return [
-    TimelineAction.Create as string,
-    TimelineAction.Submit as string,
-    TimelineAction.Approve as string,
-    TimelineAction.Reject as string,
-    TimelineAction.Complete as string,
-    TimelineAction.Cancel as string,
-  ].includes(action);
-};
-
-const isSystemAction = (action: string): boolean => {
-  return [
-    TimelineAction.Notify as string,
-    TimelineAction.Remind as string,
-    TimelineAction.View as string,
-  ].includes(action);
-};
 
 const getActionCount = (type: string): number => {
   switch (type) {

@@ -331,18 +331,6 @@ const previewDialogWidth = computed(() => {
   return '80%';
 });
 
-// 表格变化处理 - 实现真分页
-const handleTableChange = (pagination: any): void => {
-  if (pagination.current !== currentPage.value) {
-    currentPage.value = pagination.current;
-  }
-  if (pagination.pageSize !== pageSize.value) {
-    pageSize.value = pagination.pageSize;
-    currentPage.value = 1; // 改变页大小时重置到第一页
-  }
-  loadProcesses();
-};
-
 /**
  * 加载流程列表数据 - 实现真分页
  */
@@ -397,6 +385,18 @@ const loadProcesses = async (
   } finally {
     if (ownsRequest()) loading.value = false;
   }
+};
+
+// 表格变化处理 - 实现真分页
+const handleTableChange = (pagination: any): void => {
+  if (pagination.current !== currentPage.value) {
+    currentPage.value = pagination.current;
+  }
+  if (pagination.pageSize !== pageSize.value) {
+    pageSize.value = pagination.pageSize;
+    currentPage.value = 1; // 改变页大小时重置到第一页
+  }
+  loadProcesses();
 };
 
 /**

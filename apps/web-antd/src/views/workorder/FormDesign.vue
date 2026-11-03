@@ -136,6 +136,11 @@ const loadCategories = async (resetPage = false) => {
 };
 
 /**
+ * 分类搜索输入变化（去抖处理）
+ */
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
  * 关闭分类选择弹窗
  */
 const closeCategoryModal = () => {
@@ -165,11 +170,6 @@ const searchCategories = () => {
   if (searchTimer) clearTimeout(searchTimer);
   loadCategories(true);
 };
-
-/**
- * 分类搜索输入变化（去抖处理）
- */
-let searchTimer: ReturnType<typeof setTimeout> | null = null;
 const onCategorySearchInput = () => {
   categoryRequest++;
   if (searchTimer) clearTimeout(searchTimer);

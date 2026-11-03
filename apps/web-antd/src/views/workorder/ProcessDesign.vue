@@ -128,6 +128,15 @@ const selectedStep = computed(() => {
   if (selectedStepIndex.value === null) return null;
   return processSteps.value[selectedStepIndex.value] || null;
 });
+const getStepTypeText = (type: string): string => {
+  const types: { [key: string]: string } = {
+    approval: '审批',
+    end: '结束',
+    start: '开始',
+    task: '任务',
+  };
+  return getOwnLookupValue(types, type) || '未知';
+};
 
 const otherStepsOptions = computed(() => {
   const currentStep = selectedStep.value;
@@ -232,18 +241,6 @@ watch(
   { deep: true },
 );
 
-watch(selectedStep, (newStep) => {
-  if (newStep) {
-    userSearchKeyword.value = '';
-    fetchUserList(false);
-  } else {
-    userRequest++;
-    searchUsers.cancel();
-    userList.value = [];
-    userPagination.value = { page: 1, pageSize: 20, total: 0 };
-  }
-});
-
 // 方法
 
 // === 获取用户列表方法 ===
@@ -291,6 +288,18 @@ const fetchUserList = async (loadMore = false) => {
     if (ticket === userRequest) userLoading.value = false;
   }
 };
+
+watch(selectedStep, (newStep) => {
+  if (newStep) {
+    userSearchKeyword.value = '';
+    fetchUserList(false);
+  } else {
+    userRequest++;
+    searchUsers.cancel();
+    userList.value = [];
+    userPagination.value = { page: 1, pageSize: 20, total: 0 };
+  }
+});
 const searchUsers = debounce(() => {
   void fetchUserList(false);
 }, 300);
@@ -507,15 +516,6 @@ const getStepIcon = (type: string) => {
   };
   // 【修改点 4】: 直接使用小写的 type 进行查找，不再错误地转为大写
   return icons[type] || EditOutlined;
-};
-const getStepTypeText = (type: string): string => {
-  const types: { [key: string]: string } = {
-    approval: '审批',
-    end: '结束',
-    start: '开始',
-    task: '任务',
-  };
-  return getOwnLookupValue(types, type) || '未知';
 };
 const getAssigneeTypeText = (type: string | undefined): string =>
   type === AssigneeType.User ? '用户' : '系统';
