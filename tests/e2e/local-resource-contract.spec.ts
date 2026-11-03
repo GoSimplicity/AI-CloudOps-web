@@ -3,13 +3,17 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 
+import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
+
 test('local resource metadata preserves credentials and persists structured tags', async ({
   page,
   baseURL,
 }) => {
   test.setTimeout(90_000);
   page.setDefaultTimeout(15_000);
-  expect(['localhost', '127.0.0.1']).toContain(new URL(baseURL!).hostname);
+  expect(['localhost', '127.0.0.1']).toContain(
+    new URL(requireFixtureValue(baseURL)).hostname,
+  );
   const password =
     process.env.CLOUDOPS_TEST_PASSWORD ||
     (process.env.CLOUDOPS_TEST_ENV_FILE
@@ -51,7 +55,9 @@ test('local resource metadata preserves credentials and persists structured tags
       await page.setViewportSize({ width: 1440, height: 1000 });
       await page.goto(route('/auth/login'));
       await page.getByLabel('账号', { exact: true }).fill('admin');
-      await page.getByLabel('密码', { exact: true }).fill(password!);
+      await page
+        .getByLabel('密码', { exact: true })
+        .fill(requireFixtureValue(password));
       const login = page.waitForResponse(
         (response) => new URL(response.url()).pathname === '/api/user/login',
       );

@@ -212,3 +212,13 @@ TypeScript 检查确认 `SshTerminal.test.ts` 的6处断言作用于既有 any �
 - 首次全测发现AssistantInfoCache的按钮查询也用于“不存在”负向断言，不能让查询helper强制存在。已保留该查询可返回undefined，仅在正向点击/属性读取处校验；10项定向及完整2171项复验通过。首次2170通过/1失败没有当成成功。
 - 最终137文件2171项全量单测、应用类型检查通过；38文件AST归一化核对原业务body/断言保留。
 - 真实ESLint逐规则比较仅减少152处非空断言，其它计数不变；未宣称全仓lint通过。没有外部业务访问或部署。
+
+## 阶段十四：E2E前置值与严格类型（2026-11-03）
+
+9个业务spec的71处非空断言清零：69处Node侧使用`requireFixtureValue`，2处浏览器localStorage读取在evaluate闭包内部校验，避免将Node helper带入浏览器。保留业务标题、skip条件、真实API及资源归属守卫，并修复两处既有nullable namespace参数类型错误。
+
+- 所有原业务语句与测试标题经AST核对保留，新增检查仅拒绝缺失前置值，不输出前置值内容。
+- helper7项回归通过，合并既有cleanup helper共18项通过；新helper/test定向lint零错误和警告。
+- 9spec与依赖helper在strict/noUncheckedIndexedAccess/ES2022/Bundler的真实TypeScript program中零诊断。
+- 同一配置下定向ESLint555→484，唯一规则变化为71处非空断言清除；Playwright收集29项/9文件，仍不把收集当实际浏览器验收。
+- 当前产品构建11项通过；浏览器改动需以新固定三仓源码CI实际验收。没有改skip以绕过测试或访问生产。

@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
+import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
+
 function password() {
   if (process.env.CLOUDOPS_TEST_PASSWORD)
     return process.env.CLOUDOPS_TEST_PASSWORD;
@@ -39,7 +41,9 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
   await page.goto(route('/auth/login'));
   await page.getByLabel('账号', { exact: true }).fill('admin');
   try {
-    await page.getByLabel('密码', { exact: true }).fill(privatePassword!);
+    await page
+      .getByLabel('密码', { exact: true })
+      .fill(requireFixtureValue(privatePassword));
   } catch {
     throw new Error('Private login field unavailable; credential omitted');
   }
@@ -105,8 +109,14 @@ test('welcome displays local metrics, read-only refresh and compact themed mobil
       (box) => box.width > 100 && box.width < 200 && box.height < 160,
     ),
   ).toBe(true);
-  expect(Math.abs(boxes[0]!.top - boxes[1]!.top)).toBeLessThan(2);
-  expect(boxes[2]!.top).toBeGreaterThan(boxes[0]!.top);
+  expect(
+    Math.abs(
+      requireFixtureValue(boxes[0]).top - requireFixtureValue(boxes[1]).top,
+    ),
+  ).toBeLessThan(2);
+  expect(requireFixtureValue(boxes[2]).top).toBeGreaterThan(
+    requireFixtureValue(boxes[0]).top,
+  );
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

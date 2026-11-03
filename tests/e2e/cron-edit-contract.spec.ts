@@ -3,6 +3,8 @@ import { expect, test } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
+import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
+
 const routePath = (path: string) =>
   process.env.CLOUDOPS_ROUTER_HISTORY === 'hash' ? `/#${path}` : path;
 function password() {
@@ -23,7 +25,9 @@ test('disabled HTTP cron persists create and execution-field edits without runni
 }) => {
   test.setTimeout(120_000);
   page.setDefaultTimeout(15_000);
-  expect(['localhost', '127.0.0.1']).toContain(new URL(baseURL!).hostname);
+  expect(['localhost', '127.0.0.1']).toContain(
+    new URL(requireFixtureValue(baseURL)).hostname,
+  );
   const secret = password();
   test.skip(!secret, 'Requires an isolated local administrator');
   const name = `cron-ui-${randomUUID().replaceAll('-', '').slice(0, 12)}`;
@@ -90,7 +94,9 @@ test('disabled HTTP cron persists create and execution-field edits without runni
       await page.goto(routePath('/auth/login'));
       await page.getByLabel('账号', { exact: true }).fill('admin');
       try {
-        await page.getByLabel('密码', { exact: true }).fill(secret!);
+        await page
+          .getByLabel('密码', { exact: true })
+          .fill(requireFixtureValue(secret));
       } catch {
         throw new Error(
           'Private login input unavailable; sensitive detail omitted',

@@ -1,6 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
+import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
+
 function password() {
   if (process.env.CLOUDOPS_TEST_PASSWORD)
     return process.env.CLOUDOPS_TEST_PASSWORD;
@@ -40,7 +42,9 @@ test('notification department and explicit addresses persist disabled and preser
   );
   await page.goto(routePath('/auth/login'));
   await page.getByLabel('账号', { exact: true }).fill('admin');
-  await page.getByLabel('密码', { exact: true }).fill(credential!);
+  await page
+    .getByLabel('密码', { exact: true })
+    .fill(requireFixtureValue(credential));
   const login = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname === '/api/user/login' &&
@@ -97,7 +101,10 @@ test('notification department and explicit addresses persist disabled and preser
       description: 'owned disabled notification acceptance',
     });
     departmentId = department.id;
-    expect(Number.isSafeInteger(departmentId) && departmentId! > 0).toBe(true);
+    expect(
+      Number.isSafeInteger(departmentId) &&
+        requireFixtureValue(departmentId) > 0,
+    ).toBe(true);
     await page.goto(routePath('/notification'));
     await expect(page.locator('.ops-page h1')).toHaveText('通知配置');
     for (const kind of ['dept', 'custom']) {
@@ -110,7 +117,7 @@ test('notification department and explicit addresses persist disabled and preser
       });
       await dialog
         .getByPlaceholder('请输入通知配置名称', { exact: true })
-        .fill(names[kind === 'dept' ? 0 : 1]!);
+        .fill(requireFixtureValue(names[kind === 'dept' ? 0 : 1]));
       await dialog
         .getByPlaceholder('请输入通知配置描述', { exact: true })
         .fill('初始描述');
@@ -191,7 +198,9 @@ test('notification department and explicit addresses persist disabled and preser
       expect(dept.max_retries).toBe(0);
       expect(custom.max_retries).toBe(0);
     }
-    await page.getByLabel('搜索通知配置', { exact: true }).fill(names[1]!);
+    await page
+      .getByLabel('搜索通知配置', { exact: true })
+      .fill(requireFixtureValue(names[1]));
     await page.getByLabel('搜索通知配置', { exact: true }).press('Enter');
     const row = page.locator(
       `.ant-table-tbody tr[data-row-key="${custom.id}"]`,
@@ -245,11 +254,11 @@ test('notification department and explicit addresses persist disabled and preser
       expect(control.right).toBeLessThanOrEqual(390);
       expect(control.left).toBeGreaterThanOrEqual(0);
     }
-    expect(addressLayout.controls[1]!.top).toBeGreaterThan(
-      addressLayout.controls[0]!.top,
+    expect(requireFixtureValue(addressLayout.controls[1]).top).toBeGreaterThan(
+      requireFixtureValue(addressLayout.controls[0]).top,
     );
-    expect(addressLayout.controls[2]!.top).toBeGreaterThan(
-      addressLayout.controls[1]!.top,
+    expect(requireFixtureValue(addressLayout.controls[2]).top).toBeGreaterThan(
+      requireFixtureValue(addressLayout.controls[1]).top,
     );
     await page.screenshot({
       path: '/tmp/cloudops-notification-recipients-mobile.png',

@@ -3,6 +3,8 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 
+import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
+
 function password() {
   if (process.env.CLOUDOPS_TEST_PASSWORD)
     return process.env.CLOUDOPS_TEST_PASSWORD;
@@ -60,7 +62,9 @@ test('cloud resource sync selection uses local regions and cancellation never ca
       await page.goto(route('/auth/login'));
       await page.getByLabel('账号', { exact: true }).fill('admin');
       try {
-        await page.getByLabel('密码', { exact: true }).fill(privatePassword!);
+        await page
+          .getByLabel('密码', { exact: true })
+          .fill(requireFixtureValue(privatePassword));
       } catch {
         throw new Error(
           'Private login input unavailable; sensitive detail omitted',

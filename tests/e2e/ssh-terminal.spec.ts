@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
+import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
+
 function administratorPassword() {
   if (process.env.CLOUDOPS_TEST_PASSWORD)
     return process.env.CLOUDOPS_TEST_PASSWORD;
@@ -25,14 +27,18 @@ test('isolated OpenSSH terminal executes, interrupts and resizes from the browse
     !resourceId || !password,
     'Requires an owned local OpenSSH fixture and isolated administrator credentials',
   );
-  expect(['127.0.0.1', 'localhost']).toContain(new URL(baseURL!).hostname);
+  expect(['127.0.0.1', 'localhost']).toContain(
+    new URL(requireFixtureValue(baseURL)).hostname,
+  );
   expect(resourceId).toMatch(/^[1-9]\d*$/);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(route('/auth/login'));
   await page.getByLabel('账号', { exact: true }).fill('admin');
-  await page.getByLabel('密码', { exact: true }).fill(password!);
+  await page
+    .getByLabel('密码', { exact: true })
+    .fill(requireFixtureValue(password));
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(page).not.toHaveURL(/auth\/login/);
   let terminalConnections = 0;

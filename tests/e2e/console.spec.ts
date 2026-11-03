@@ -3,6 +3,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ts from 'typescript';
 
+import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
+
 function routePath(path: string) {
   return process.env.CLOUDOPS_ROUTER_HISTORY === 'hash' ? `/#${path}` : path;
 }
@@ -47,7 +49,9 @@ async function acceptanceLogin(page: Page) {
   await page
     .getByLabel('账号', { exact: true })
     .fill(process.env.CLOUDOPS_TEST_USER || 'admin');
-  await page.getByLabel('密码', { exact: true }).fill(password!);
+  await page
+    .getByLabel('密码', { exact: true })
+    .fill(requireFixtureValue(password));
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await page.evaluate(() => {
     const input = document.querySelector<HTMLInputElement>('#password');
@@ -124,7 +128,9 @@ test('authenticated navigation renders every standalone business route', async (
   await page
     .getByLabel('账号', { exact: true })
     .fill(process.env.CLOUDOPS_TEST_USER || 'admin');
-  await page.getByLabel('密码', { exact: true }).fill(password!);
+  await page
+    .getByLabel('密码', { exact: true })
+    .fill(requireFixtureValue(password));
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await page.evaluate(() => {
     const input = document.querySelector<HTMLInputElement>('#password');
@@ -203,10 +209,14 @@ test('authenticated navigation renders every standalone business route', async (
   const observedFailures = [...new Set(apiFailures)];
   const unexpected = observedFailures.filter((failure) => {
     const [status, path] = failure.split(' ');
-    if (status === '503' && expectedUnavailable.has(path!)) {
-      test
-        .info()
-        .annotations.push({ type: 'expected-unavailable', description: path! });
+    if (
+      status === '503' &&
+      expectedUnavailable.has(requireFixtureValue(path))
+    ) {
+      test.info().annotations.push({
+        type: 'expected-unavailable',
+        description: requireFixtureValue(path),
+      });
       return false;
     }
     return true;
@@ -238,7 +248,9 @@ test('system list layouts preserve responsive filters and role creation controls
   await page
     .getByLabel('账号', { exact: true })
     .fill(process.env.CLOUDOPS_TEST_USER || 'admin');
-  await page.getByLabel('密码', { exact: true }).fill(password!);
+  await page
+    .getByLabel('密码', { exact: true })
+    .fill(requireFixtureValue(password));
   const loginResponse = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname === '/api/user/login' &&
@@ -260,8 +272,10 @@ test('system list layouts preserve responsive filters and role creation controls
   ];
   for (const [route, title] of routes) {
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(routePath(route!));
-    await expect(page.locator('.ops-page h1')).toHaveText(title!);
+    await page.goto(routePath(requireFixtureValue(route)));
+    await expect(page.locator('.ops-page h1')).toHaveText(
+      requireFixtureValue(title),
+    );
     await expect(
       page.locator('.ops-page__filters input').first(),
     ).toBeVisible();
@@ -319,7 +333,9 @@ test('system list layouts preserve responsive filters and role creation controls
         height: element.getBoundingClientRect().height,
       })),
     );
-    expect(cardRects[0]!.top).toBe(cardRects[1]!.top);
+    expect(requireFixtureValue(cardRects[0]).top).toBe(
+      requireFixtureValue(cardRects[1]).top,
+    );
     expect(cardRects.every((card) => card.height <= 100)).toBe(true);
     for (const name of [/^搜\s*索$/, /^重\s*置$/]) {
       const control = page
@@ -368,7 +384,9 @@ test('workorder list layouts preserve mobile actions and cancellation', async ({
   await page
     .getByLabel('账号', { exact: true })
     .fill(process.env.CLOUDOPS_TEST_USER || 'admin');
-  await page.getByLabel('密码', { exact: true }).fill(password!);
+  await page
+    .getByLabel('密码', { exact: true })
+    .fill(requireFixtureValue(password));
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await page.evaluate(() => {
     const input = document.querySelector<HTMLInputElement>('#password');
@@ -381,8 +399,10 @@ test('workorder list layouts preserve mobile actions and cancellation', async ({
     ['/form_management', '表单管理'],
   ]) {
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(routePath(route!));
-    await expect(page.locator('.ops-page h1')).toHaveText(title!);
+    await page.goto(routePath(requireFixtureValue(route)));
+    await expect(page.locator('.ops-page h1')).toHaveText(
+      requireFixtureValue(title),
+    );
     const action = page.locator('.ops-page__actions button').first();
     await expectUncovered(action);
     await action.click();
@@ -440,7 +460,9 @@ test('account menu reflects profile API and notifications have an honest empty s
   await page
     .getByLabel('账号', { exact: true })
     .fill(process.env.CLOUDOPS_TEST_USER || 'admin');
-  await page.getByLabel('密码', { exact: true }).fill(password!);
+  await page
+    .getByLabel('密码', { exact: true })
+    .fill(requireFixtureValue(password));
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await page.evaluate(() => {
     const input = document.querySelector<HTMLInputElement>('#password');
@@ -506,7 +528,9 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
   await page
     .getByLabel('账号', { exact: true })
     .fill(process.env.CLOUDOPS_TEST_USER || 'admin');
-  await page.getByLabel('密码', { exact: true }).fill(password!);
+  await page
+    .getByLabel('密码', { exact: true })
+    .fill(requireFixtureValue(password));
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await page.evaluate(() => {
     const input = document.querySelector<HTMLInputElement>('#password');
@@ -516,7 +540,9 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
   await page.goto(routePath('/k8s_cluster'));
   await expect(page.locator('.ops-page h1')).toHaveText('集群管理');
   await expect(
-    page.locator('.ant-table-tbody').getByText(clusterName!, { exact: true }),
+    page
+      .locator('.ant-table-tbody')
+      .getByText(requireFixtureValue(clusterName), { exact: true }),
   ).toBeVisible();
   await page
     .locator('.ops-page__actions')
@@ -538,7 +564,7 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
   await expect(
     page
       .locator('.ant-table-tbody td:nth-child(2)')
-      .getByText(namespace!, { exact: true }),
+      .getByText(requireFixtureValue(namespace), { exact: true }),
   ).toBeVisible();
   const selector = page.locator('.k8s-cluster-selector');
   await selector.hover();
@@ -552,12 +578,12 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
   await selector.click();
   await page
     .locator('.ant-select-dropdown:visible .ant-select-item-option')
-    .filter({ hasText: clusterName! })
+    .filter({ hasText: requireFixtureValue(clusterName) })
     .click();
   await expect(
     page
       .locator('.ant-table-tbody td:nth-child(2)')
-      .getByText(namespace!, { exact: true }),
+      .getByText(requireFixtureValue(namespace), { exact: true }),
   ).toBeVisible();
   await page.getByLabel('深色', { exact: true }).click();
   await expect(page.locator('html')).toHaveClass(/dark/);
@@ -573,8 +599,11 @@ test('kubernetes cluster and namespace lists use real isolated resources', async
   const accountBounds = await page
     .getByRole('button', { name: '账户菜单', exact: true })
     .boundingBox();
-  expect(accountBounds!.x).toBeGreaterThanOrEqual(0);
-  expect(accountBounds!.x + accountBounds!.width).toBeLessThanOrEqual(390);
+  expect(requireFixtureValue(accountBounds).x).toBeGreaterThanOrEqual(0);
+  expect(
+    requireFixtureValue(accountBounds).x +
+      requireFixtureValue(accountBounds).width,
+  ).toBeLessThanOrEqual(390);
   await expectUncovered(
     page
       .locator('.ops-page__actions')
@@ -623,12 +652,14 @@ test('kubernetes workloads display real Deployment and Pod resources', async ({
     ['/k8s_pod', 'Pod 管理'],
   ]) {
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(routePath(route!));
-    await expect(page.locator('.ops-page h1')).toHaveText(title!);
-    await expect(page.locator('.k8s-cluster-selector')).toContainText(
-      clusterName!,
+    await page.goto(routePath(requireFixtureValue(route)));
+    await expect(page.locator('.ops-page h1')).toHaveText(
+      requireFixtureValue(title),
     );
-    await selectAcceptanceNamespace(page, namespace!);
+    await expect(page.locator('.k8s-cluster-selector')).toContainText(
+      requireFixtureValue(clusterName),
+    );
+    await selectAcceptanceNamespace(page, requireFixtureValue(namespace));
     const rows =
       route === '/k8s_deployment'
         ? page.locator('.ant-table-tbody tr[data-row-key$="/web"]')
@@ -729,7 +760,7 @@ test('pod terminal negotiates credential subprotocol and returns real output', a
   });
   await acceptanceLogin(page);
   await page.goto(routePath('/k8s_pod'));
-  await selectAcceptanceNamespace(page, namespace!);
+  await selectAcceptanceNamespace(page, requireFixtureValue(namespace));
   const pod = page
     .locator('.ant-table-tbody tr[data-row-key*="/web-"]')
     .first();
@@ -941,19 +972,23 @@ test('kubernetes Service and ConfigMap preserve real queries and responsive acti
     ['/k8s_configmap', 'ConfigMap 管理', 'web-content'],
   ]) {
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(routePath(route!));
-    await expect(page.locator('.ops-page h1')).toHaveText(title!);
-    await expect(page.locator('.k8s-cluster-selector')).toContainText(
-      clusterName!,
+    await page.goto(routePath(requireFixtureValue(route)));
+    await expect(page.locator('.ops-page h1')).toHaveText(
+      requireFixtureValue(title),
     );
-    await selectAcceptanceNamespace(page, namespace!);
+    await expect(page.locator('.k8s-cluster-selector')).toContainText(
+      requireFixtureValue(clusterName),
+    );
+    await selectAcceptanceNamespace(page, requireFixtureValue(namespace));
     const row = page.locator(
       `.ant-table-tbody tr[data-row-key$="/${resourceName}"]`,
     );
     await expect(row).toHaveCount(1);
     await row.getByRole('button', { name: '查看详情', exact: true }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
-    await expect(page.getByRole('dialog')).toContainText(resourceName!);
+    await expect(page.getByRole('dialog')).toContainText(
+      requireFixtureValue(resourceName),
+    );
     await page.getByRole('dialog').locator('button.ant-modal-close').click();
     await page.locator('.ops-page__actions button').first().click();
     await expect(page.getByRole('dialog')).toBeVisible();
@@ -967,7 +1002,7 @@ test('kubernetes Service and ConfigMap preserve real queries and responsive acti
     await search.fill('no-such-ui-resource');
     await search.press('Enter');
     await expect(row).toHaveCount(0);
-    await search.fill(resourceName!);
+    await search.fill(requireFixtureValue(resourceName));
     await search.press('Enter');
     await expect(row).toHaveCount(1);
     if (process.env.CLOUDOPS_TEST_K8S_FILTER_READY === 'true') {
@@ -1089,8 +1124,10 @@ test('Prometheus lists preserve real empty queries, cancellation and mobile cont
     const initial = page.waitForResponse(
       (response) => new URL(response.url()).pathname === listPath,
     );
-    await page.goto(routePath(route!));
-    await expect(page.locator('.ops-page h1')).toHaveText(title!);
+    await page.goto(routePath(requireFixtureValue(route)));
+    await expect(page.locator('.ops-page h1')).toHaveText(
+      requireFixtureValue(title),
+    );
     expect((await initial).status()).toBe(200);
     const search = page.locator('.ops-page__filters input').first();
     const searched = page.waitForResponse(
@@ -1279,12 +1316,12 @@ test('on-duty calendar reads an isolated real group and supports month navigatio
     const title = page.locator('.calendar-title h2');
     const initial = await title.textContent();
     await page.getByRole('button', { name: '下个月', exact: true }).click();
-    await expect(title).not.toHaveText(initial!);
+    await expect(title).not.toHaveText(requireFixtureValue(initial));
     await expect(
       page.getByRole('button', { name: '上个月', exact: true }),
     ).toBeEnabled();
     await page.getByRole('button', { name: '上个月', exact: true }).click();
-    await expect(title).toHaveText(initial!);
+    await expect(title).toHaveText(requireFixtureValue(initial));
     const history = page.waitForResponse(
       (response) =>
         new URL(response.url()).pathname ===
@@ -1369,10 +1406,11 @@ test('remaining Kubernetes resource lists preserve real kind scopes and safe can
     await page.goto(routePath(`/k8s_${kind}`));
     await expect(page.locator('.ops-page h1')).toHaveText(title);
     await expect(page.locator('.k8s-cluster-selector')).toContainText(
-      clusterName!,
+      requireFixtureValue(clusterName),
     );
     expect((await initial).status()).toBe(200);
-    if (namespaced) await selectAcceptanceNamespace(page, namespace!);
+    if (namespaced)
+      await selectAcceptanceNamespace(page, requireFixtureValue(namespace));
     await expect(page.locator('.ops-page .ant-alert-error')).toHaveCount(0);
     const create = page
       .locator('.ops-page__actions')
@@ -1468,7 +1506,7 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
     await page.goto(routePath('/k8s_yaml_template'));
     await expect(page.locator('.ops-page h1')).toHaveText('YAML 模板管理');
     await expect(page.locator('.k8s-cluster-selector')).toContainText(
-      clusterName!,
+      requireFixtureValue(clusterName),
     );
     await page
       .locator('.ops-page__actions')
@@ -1541,7 +1579,12 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
     await expect(dialog).not.toBeVisible();
     const objects = await page.request.get('/api/k8s/configmap/1/list', {
       headers,
-      params: { namespace, search: resourceName, page: 1, size: 10 },
+      params: {
+        namespace: requireFixtureValue(namespace),
+        search: resourceName,
+        page: 1,
+        size: 10,
+      },
     });
     expect(objects.status()).toBe(200);
     expect(
@@ -1590,7 +1633,12 @@ test('YAML templates and tasks complete a real isolated dry-run without creating
       ).toBe(200);
     const objects = await page.request.get('/api/k8s/configmap/1/list', {
       headers,
-      params: { namespace, search: resourceName, page: 1, size: 10 },
+      params: {
+        namespace: requireFixtureValue(namespace),
+        search: resourceName,
+        page: 1,
+        size: 10,
+      },
     });
     if (objects.ok())
       for (const item of (await objects.json()).data.items)
@@ -1623,8 +1671,13 @@ test('expired login preserves its dialog and rebuilds current route permissions'
   await page.evaluate(() => {
     const key = Object.keys(localStorage).find((key) =>
       key.endsWith('preferences'),
-    )!;
-    const cached = JSON.parse(localStorage.getItem(key)!);
+    );
+    if (key === undefined)
+      throw new Error('Fixture preference key is unavailable');
+    const serialized = localStorage.getItem(key);
+    if (serialized === null)
+      throw new Error('Fixture preferences are unavailable');
+    const cached = JSON.parse(serialized);
     cached.value.app.loginExpiredMode = 'modal';
     localStorage.setItem(key, JSON.stringify(cached));
   });
@@ -1663,7 +1716,9 @@ test('expired login preserves its dialog and rebuilds current route permissions'
   await dialog
     .getByLabel('账号', { exact: true })
     .fill(process.env.CLOUDOPS_TEST_USER || 'admin');
-  await dialog.getByLabel('密码', { exact: true }).fill(adminPassword()!);
+  await dialog
+    .getByLabel('密码', { exact: true })
+    .fill(requireFixtureValue(adminPassword()));
   const profile = page.waitForResponse(
     (response) => new URL(response.url()).pathname === '/api/user/profile',
   );
@@ -1783,7 +1838,9 @@ test('notification configuration uses real pagination, logs and safe responsive 
         .click();
       expect((await filtered).status()).toBe(200);
       await expect(page.locator('.name-text')).toHaveCount(1);
-      await expect(page.locator('.name-text')).toHaveText(names[0]!);
+      await expect(page.locator('.name-text')).toHaveText(
+        requireFixtureValue(names[0]),
+      );
     }
     const row = page
       .locator('.ant-table-tbody tr[data-row-key]')
@@ -1806,7 +1863,7 @@ test('notification configuration uses real pagination, logs and safe responsive 
     expect(errors).toEqual([]);
     await expect(page.getByRole('dialog')).toBeVisible();
     await expect.poll(() => logsRead.length).toBe(1);
-    const logsURL = new URL(logsRead[0]!);
+    const logsURL = new URL(requireFixtureValue(logsRead[0]));
     expect(logsURL.searchParams.get('notification_id')).toBe(
       String(
         fixture.items.find((item: { name: string }) => item.name === names[0])
@@ -1887,8 +1944,10 @@ test('assistant and autofix pages preserve responsive read-only interactions wit
   ];
   for (const [path, title] of routes) {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(routePath(path!));
-    await expect(page.locator('.ops-page h1')).toHaveText(title!);
+    await page.goto(routePath(requireFixtureValue(path)));
+    await expect(page.locator('.ops-page h1')).toHaveText(
+      requireFixtureValue(title),
+    );
     if (path === '/assistant/query') {
       await expect(page.getByText('助手模式', { exact: true })).toBeVisible();
       await expect(page.locator('.quick-question-btn').first()).toBeVisible();
@@ -2210,8 +2269,10 @@ test('RCA and prediction pages keep initial controls local and cache cancellatio
   ];
   for (const [path, title] of routes) {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(routePath(path!));
-    await expect(page.locator('.ops-page h1')).toHaveText(title!);
+    await page.goto(routePath(requireFixtureValue(path)));
+    await expect(page.locator('.ops-page h1')).toHaveText(
+      requireFixtureValue(title),
+    );
     if (path === '/rca/diagnosis')
       await expect(page.getByRole('switch')).not.toBeChecked();
     if (path === '/rca/cache') {

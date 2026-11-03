@@ -3,6 +3,8 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 
+import { requireFixtureValue } from '../../internal/test-utils/required-fixture-value';
+
 function password() {
   if (process.env.CLOUDOPS_TEST_PASSWORD)
     return process.env.CLOUDOPS_TEST_PASSWORD;
@@ -21,7 +23,9 @@ test('cloud account local CRUD preserves regions and never auto-verifies', async
 }) => {
   test.setTimeout(180_000);
   page.setDefaultTimeout(15_000);
-  expect(['localhost', '127.0.0.1']).toContain(new URL(baseURL!).hostname);
+  expect(['localhost', '127.0.0.1']).toContain(
+    new URL(requireFixtureValue(baseURL)).hostname,
+  );
   const privatePassword = password();
   test.skip(!privatePassword, 'Requires an isolated local administrator');
   const prefix = `cmdb-ui-${randomUUID().replaceAll('-', '').slice(0, 12)}`;
@@ -88,7 +92,9 @@ test('cloud account local CRUD preserves regions and never auto-verifies', async
       await page.goto(routePath('/auth/login'));
       await page.getByLabel('账号', { exact: true }).fill('admin');
       try {
-        await page.getByLabel('密码', { exact: true }).fill(privatePassword!);
+        await page
+          .getByLabel('密码', { exact: true })
+          .fill(requireFixtureValue(privatePassword));
       } catch {
         throw new Error(
           'Private login input unavailable; sensitive details omitted',
