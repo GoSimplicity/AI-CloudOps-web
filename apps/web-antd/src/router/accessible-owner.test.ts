@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createMemoryHistory, createRouter } from 'vue-router';
+import { createDeferred } from '../../../../internal/test-utils/deferred';
 import { generateAccessible } from '../../../../packages/effects/access/src/accessible';
 
 describe('异步权限路由账户归属', () => {
   it('旧菜单返回前账户已变化时不得向真实router注册旧路由', async () => {
     const router = createRouter({ history: createMemoryHistory(), routes: [] });
-    const pending = Promise.withResolvers<any[]>();
+    const pending = createDeferred<any[]>();
     let current = true;
     const task = generateAccessible('backend', {
       router,

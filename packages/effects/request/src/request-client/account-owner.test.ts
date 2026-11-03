@@ -2,6 +2,8 @@ import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createDeferred } from '../../../../../internal/test-utils/deferred';
+
 const state = vi.hoisted(() => ({
   access: null as any,
   user: null as any,
@@ -82,7 +84,7 @@ describe('真实应用请求客户端账户归属', () => {
     expect(mock.history.post).toHaveLength(0);
   });
   it('迟到200不把前账户数据交给调用方', async () => {
-    const pending = Promise.withResolvers<[number, object]>();
+    const pending = createDeferred<[number, object]>();
     mock.onGet('/private').reply(() => pending.promise);
     const result = client.get('/private').then(
       (value) => ({ value }),
@@ -100,7 +102,7 @@ describe('真实应用请求客户端账户归属', () => {
     expect(state.access.accessToken).toBe('credential-two');
   });
   it('迟到401不会刷新、重放旧请求或注销新账户', async () => {
-    const pending = Promise.withResolvers<[number, object]>();
+    const pending = createDeferred<[number, object]>();
     mock.onPost('/private-write').replyOnce(() => pending.promise);
     mock.onPost('/private-write').reply(200, { code: 0, data: 'replayed' });
     api.refreshTokenApi.mockResolvedValue('unexpected-refresh');
@@ -120,7 +122,7 @@ describe('真实应用请求客户端账户归属', () => {
   it.each(['success', 'failure'])(
     '旧账户刷新挂起并%s时，新账户可独立刷新且不被覆盖',
     async (outcome) => {
-      const oldRefresh = Promise.withResolvers<string>();
+      const oldRefresh = createDeferred<string>();
       api.refreshTokenApi
         .mockReturnValueOnce(oldRefresh.promise)
         .mockResolvedValueOnce('fresh-two');
@@ -159,7 +161,7 @@ describe('真实应用请求客户端账户归属', () => {
     },
   );
   it('同UID退出重登后旧响应仍失效', async () => {
-    const pending = Promise.withResolvers<[number, object]>();
+    const pending = createDeferred<[number, object]>();
     mock.onGet('/same-id').reply(() => pending.promise);
     const result = client.get('/same-id').then(
       (value) => ({ value }),
@@ -191,7 +193,7 @@ describe('真实应用请求客户端账户归属', () => {
   });
   it('同代际初始化资料先返回时，权限请求仍可完成', async () => {
     state.user.userInfo = null;
-    const pending = Promise.withResolvers<[number, object]>();
+    const pending = createDeferred<[number, object]>();
     mock.onGet('/bootstrap-codes').reply(() => pending.promise);
     const result = client.get('/bootstrap-codes');
     await vi.waitFor(() => expect(mock.history.get).toHaveLength(1));

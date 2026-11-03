@@ -8,6 +8,7 @@ import { useRolePage } from '../role/Role';
 import { useRoleBindingPage } from '../rolebinding/RoleBinding';
 import { useNodePage } from '../node/Node';
 import { usePVPage } from '../pv/PV';
+import { createDeferred } from '../../../../../../internal/test-utils/deferred';
 import { useClusterRoleBindingPage } from '../clusterrolebinding/ClusterRoleBinding';
 import { useTaskPage } from '../task/Task';
 import { useTemplatePage } from '../template/Template';
@@ -185,7 +186,7 @@ for (const testCase of cases) {
         const page = testCase.create();
         page.state.filterClusterId.value = 1;
         if (page.namespace) page.namespace.value = 'alpha';
-        const old = Promise.withResolvers<{
+        const old = createDeferred<{
           items: { cluster_id: number; name: string; namespace: string }[];
           total: number;
         }>();
@@ -236,7 +237,7 @@ for (const testCase of cases) {
     it('清空集群后待返回请求不能重新显示旧数据', async () => {
       const page = testCase.create();
       page.state.filterClusterId.value = 1;
-      const old = Promise.withResolvers<{
+      const old = createDeferred<{
         items: { cluster_id: number; name: string; namespace: string }[];
         total: number;
       }>();
@@ -260,7 +261,7 @@ describe('yAML 模板目录隔离', () => {
   it('切换集群后迟到目录不能污染新任务的模板选择', async () => {
     const state = useTaskPage();
     state.filterClusterId.value = 1;
-    const old = Promise.withResolvers<{
+    const old = createDeferred<{
       items: { id: number; name: string }[];
       total: number;
     }>();

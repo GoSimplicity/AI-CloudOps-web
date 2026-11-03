@@ -7,6 +7,7 @@ import {
 import Antd, { message, Modal } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
+import { createDeferred } from '../../../../../internal/test-utils/deferred';
 import CloudAccountManagement from './CloudAccountManagement.vue';
 import AccountRegionsEditor from './cloudaccountmanagement/AccountRegionsEditor.vue';
 
@@ -295,7 +296,7 @@ describe('云账户真实表单合同', () => {
     expect(client.post).not.toHaveBeenCalled();
     expect(client.put).not.toHaveBeenCalled();
     expect(client.delete).not.toHaveBeenCalled();
-    const late = Promise.withResolvers<unknown>();
+    const late = createDeferred<unknown>();
     client.get.mockImplementation((path: string) =>
       path.endsWith('/detail')
         ? late.promise
@@ -358,7 +359,7 @@ it('重复点击提交只创建一次，错误保留表单便于重试', async (
   await fill('请输入 Access Key', 'offline-access-key');
   await fill('请输入 Secret Key', 'offline-secret-key');
   await addRegion('cn-hangzhou');
-  const pending = Promise.withResolvers<unknown>();
+  const pending = createDeferred<unknown>();
   client.post.mockReturnValue(pending.promise);
   const submit = required(
     [
@@ -987,7 +988,7 @@ it.each(['create', 'edit'])(
 );
 
 it('详情读取期间撤销权限不展示迟到数据', async () => {
-  const pending = Promise.withResolvers<unknown>();
+  const pending = createDeferred<unknown>();
   client.get.mockImplementation((url: string) =>
     url.endsWith('/detail')
       ? pending.promise
@@ -1004,7 +1005,7 @@ it('详情读取期间撤销权限不展示迟到数据', async () => {
 });
 
 it('地域读取期间撤销权限不展示迟到结果', async () => {
-  const pending = Promise.withResolvers<unknown>();
+  const pending = createDeferred<unknown>();
   client.get.mockReturnValue(pending.promise);
   wrapper = mount(AccountRegionsEditor, {
     attachTo: document.body,
@@ -1053,7 +1054,7 @@ it('禁用账户不可查询云端地域', async () => {
 });
 
 it('切换厂商后不采纳旧地域请求的迟到结果', async () => {
-  const pending = Promise.withResolvers<unknown>();
+  const pending = createDeferred<unknown>();
   client.get.mockImplementation((url: string) =>
     url.endsWith('/available-regions')
       ? pending.promise

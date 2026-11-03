@@ -6,6 +6,7 @@ import {
 } from '@vue/test-utils';
 import Antd, { message, Modal } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createDeferred } from '../../../../../internal/test-utils/deferred';
 import FormDesign from './FormDesign.vue';
 
 /** 必须存在的工单页面、DOM 或调用缺失时立即失败，保留原测试前提。 */
@@ -73,7 +74,7 @@ async function draft() {
 
 describe('表单设计真实控件合同', () => {
   it('保留字段编辑和void创建合同，重复提交只写一次，失败保留草稿', async () => {
-    const pending = Promise.withResolvers<unknown>();
+    const pending = createDeferred<unknown>();
     client.post.mockReturnValue(pending.promise);
     await draft();
     await button('保存设计');
@@ -186,7 +187,7 @@ describe('表单设计真实控件合同', () => {
     await start();
     await required(wrapper).get('.category-trigger').trigger('click');
     await flushPromises();
-    const old = Promise.withResolvers<unknown>();
+    const old = createDeferred<unknown>();
     client.get.mockImplementation(
       (_path: string, { params }: { params: { search: string } }) =>
         params.search === 'old'

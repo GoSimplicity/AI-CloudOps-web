@@ -2,6 +2,7 @@ import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createDeferred } from '../../../../../internal/test-utils/deferred';
 import { authenticateResponseInterceptor } from './preset-interceptors';
 import { RequestClient } from './request-client';
 
@@ -36,7 +37,7 @@ describe('并发请求的令牌刷新', () => {
   }
 
   it('多个 401 共用一次刷新，并使用新令牌重放', async () => {
-    const refresh = Promise.withResolvers<string>();
+    const refresh = createDeferred<string>();
     const doRefreshToken = vi.fn(() => refresh.promise);
     const reAuthenticate = configure(doRefreshToken);
     mock
@@ -63,7 +64,7 @@ describe('并发请求的令牌刷新', () => {
   });
 
   it('刷新失败时所有等待请求均拒绝，不发送空令牌重试', async () => {
-    const refresh = Promise.withResolvers<string>();
+    const refresh = createDeferred<string>();
     const doRefreshToken = vi.fn(() => refresh.promise);
     const reAuthenticate = configure(doRefreshToken);
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -88,7 +89,7 @@ describe('并发请求的令牌刷新', () => {
   });
 
   it('排队请求重试仍为 401 时不再次刷新', async () => {
-    const refresh = Promise.withResolvers<string>();
+    const refresh = createDeferred<string>();
     const doRefreshToken = vi.fn(() => refresh.promise);
     configure(doRefreshToken);
     mock.onGet('/resource').reply(401);

@@ -12,6 +12,8 @@ import { getTreeNodeCloudResourcesApi } from '#/api/core/tree/tree_cloud';
 import { downloadCsv } from '#/utils/export-csv';
 import { markRequestLayerNotice } from '#/utils/permission/request-notice';
 
+import { createDeferred } from '../../../../../internal/test-utils/deferred';
+
 vi.mock('#/utils/export-csv', () => ({ downloadCsv: vi.fn() }));
 
 /** 必须存在的页面、DOM 和调用缺失时立即失败，保留原非空断言的测试前提。 */
@@ -234,7 +236,7 @@ describe('云资源真实控件合同', () => {
       (code: string) =>
         code !== '/api/tree/cloud/account/:id/detail' || allowed.value,
     );
-    const late = Promise.withResolvers<unknown>();
+    const late = createDeferred<unknown>();
     const original = required(client.get.getMockImplementation());
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
       path === '/tree/cloud/account/7/detail'
@@ -553,7 +555,7 @@ describe('云资源真实控件合同', () => {
     expect(client.post).toHaveBeenCalledTimes(1);
   });
   it('同步取消不发送请求，迟到的旧账户地域不能污染新账户', async () => {
-    const late = Promise.withResolvers<unknown>();
+    const late = createDeferred<unknown>();
     const original = required(client.get.getMockImplementation());
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
       path === '/tree/cloud/account/7/detail'
@@ -637,7 +639,7 @@ describe('云资源真实控件合同', () => {
     ).toEqual([]);
   });
   it('提交期间冻结表单、重复确认只写一次，失败保留选择', async () => {
-    const pending = Promise.withResolvers<unknown>();
+    const pending = createDeferred<unknown>();
     client.post.mockReturnValue(pending.promise);
     await open();
     await select('cloud-sync-regions', '北京');

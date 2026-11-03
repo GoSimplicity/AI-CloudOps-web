@@ -2,6 +2,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { Modal, Select } from 'ant-design-vue';
 import { useAccessStore } from '@vben/stores';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createDeferred } from '../../../../../internal/test-utils/deferred';
 import Instance from './Instance.vue';
 
 /** 必须存在的工单页面、DOM 或调用缺失时立即失败，保留原测试前提。 */
@@ -131,7 +132,7 @@ describe('工单实例真实控件', () => {
   });
   it('旧成功不能覆盖新筛选', async () => {
     await flushPromises();
-    const pending = Promise.withResolvers<any>();
+    const pending = createDeferred<any>();
     client.get.mockImplementation((url, options) =>
       isMain(url, options)
         ? options.params.search === 'old'
@@ -150,7 +151,7 @@ describe('工单实例真实控件', () => {
   });
   it('旧失败不能清除新筛选', async () => {
     await flushPromises();
-    const pending = Promise.withResolvers<any>();
+    const pending = createDeferred<any>();
     client.get.mockImplementation((url, options) =>
       isMain(url, options)
         ? options.params.search === 'old'
@@ -172,7 +173,7 @@ describe('工单实例真实控件', () => {
     '旧详情请求%s不能覆盖后打开的工单',
     async (outcome) => {
       await flushPromises();
-      const pending = Promise.withResolvers<any>();
+      const pending = createDeferred<any>();
       client.get.mockImplementation((url, options) => {
         if (isMain(url, options))
           return Promise.resolve({
@@ -260,7 +261,7 @@ describe('工单实例真实控件', () => {
   });
   it('迟到编辑详情不能覆盖用户新打开的创建表单', async () => {
     await flushPromises();
-    const pending = Promise.withResolvers<any>();
+    const pending = createDeferred<any>();
     client.get.mockImplementation((url, options) => {
       if (isMain(url, options))
         return Promise.resolve({ items: [{ ...row, status: 1 }], total: 1 });
@@ -582,7 +583,7 @@ describe('列表按需读取当前用户可用动作', () => {
   });
 
   it('关闭菜单或换账号后迟到响应不能显示旧用户动作', async () => {
-    const pending = Promise.withResolvers<string[]>();
+    const pending = createDeferred<string[]>();
     let callCount = 0;
     client.get.mockImplementation((url, options) => {
       if (url === '/workorder/instance/actions/7')
@@ -605,7 +606,7 @@ describe('列表按需读取当前用户可用动作', () => {
   });
 
   it('同一工单关闭再打开，旧详情动作响应不能覆盖新结果', async () => {
-    const pending = Promise.withResolvers<string[]>();
+    const pending = createDeferred<string[]>();
     let actionCalls = 0;
     client.get.mockImplementation((url, options) => {
       if (url === '/workorder/instance/actions/7')
@@ -643,7 +644,7 @@ describe('列表按需读取当前用户可用动作', () => {
   });
 
   it('点击审批后切换账号，迟到权限检查不能打开审批弹窗', async () => {
-    const pending = Promise.withResolvers<string[]>();
+    const pending = createDeferred<string[]>();
     let callCount = 0;
     client.get.mockImplementation((url, options) => {
       if (url === '/workorder/instance/actions/7')

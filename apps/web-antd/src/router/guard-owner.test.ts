@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMemoryHistory, createRouter } from 'vue-router';
+import { createDeferred } from '../../../../internal/test-utils/deferred';
 import { createRouterGuard } from './guard';
 
 function required<T>(value: null | T | undefined): T {
@@ -57,7 +58,7 @@ describe('路由守卫账户归属', () => {
       const before = vi.spyOn(router, 'beforeEach');
       createRouterGuard(router);
       const guard = required(before.mock.calls[1])[0];
-      const pending = Promise.withResolvers<any>();
+      const pending = createDeferred<any>();
       access.generateAccess.mockReturnValue(pending.promise);
       const task = Promise.resolve(
         guard.call(

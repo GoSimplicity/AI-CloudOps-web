@@ -1,6 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { message, Modal } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createDeferred } from '../../../../../internal/test-utils/deferred';
 import ProcessDesign from './ProcessDesign.vue';
 
 /** 必须存在的工单页面、DOM 或调用缺失时立即失败，保留原测试前提。 */
@@ -98,7 +99,7 @@ async function draft() {
 }
 describe('流程设计真实控件合同', () => {
   it('保留published设计与void保存合同，重复提交只写一次，失败不丢图', async () => {
-    const pending = Promise.withResolvers<unknown>();
+    const pending = createDeferred<unknown>();
     client.post.mockReturnValue(pending.promise);
     await draft();
     await button('保存流程');
@@ -190,7 +191,7 @@ describe('流程设计真实控件合同', () => {
   });
   it('切换步骤时迟到的旧用户结果不覆盖当前步骤', async () => {
     const original = required(client.get.getMockImplementation());
-    const late = Promise.withResolvers<unknown>();
+    const late = createDeferred<unknown>();
     let requests = 0;
     client.get.mockImplementation((path: string, ...rest: unknown[]) =>
       path === '/user/list'

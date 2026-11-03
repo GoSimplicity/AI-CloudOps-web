@@ -435,3 +435,10 @@ Cron 参数和 Pod 资源输入移除模板非空断言：读取允许缺值，�
 
 - 相关预测、RCA、Cron、Pod 与共享表格15文件185项通过；最终输入格式调整后2文件7项复验，类型检查通过。生产四文件及修改的 Cron 测试逐规则诊断未增加，新增 Pod 测试 lint 为0。
 - 独立审查确认4个资源字段映射及原 payload 默认结构保持；去除8处模板断言，未改变样式、接口或缺值的业务意义。完整 SFC 语法门禁将在下一阶段接入，不能以原脚本门禁宣称已覆盖模板。
+
+## 阶段三十八：测试 Promise 能力与声明运行时一致
+
+15个测试文件的47处 Promise.withResolvers 改用共享 createDeferred，基于原生 Promise executor 保持 resolve/reject、thenable 同化与微任务顺序，不要求新增静态 API；避免仓库 .node-version=20.14.0 与测试依赖能力不一致。其它通知测试由下一阶段处理，不宣称本阶段全部替换。
+
+- 辅助函数4项与受影响测试共16文件288项通过，应用类型检查通过；helper 在实际 Node18.17 的独立脚本中也验证 resolve/thenable/reject，这不等同于应用支持 Node18 或完整测试在 Node20 执行。
+- 新 helper/test lint 为0，15个测试逐规则无新增。去除新增导入并反向替换调用后的 TypeScript AST 与原文件相同，原业务断言未更改；未重排旧导入或升级依赖。

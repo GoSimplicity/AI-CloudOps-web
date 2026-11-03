@@ -6,6 +6,7 @@ import {
 } from '#/utils/permission/forbidden';
 import { markRequestLayerTrace } from '#/utils/permission/request-notice';
 
+import { createDeferred } from '../../../../../../internal/test-utils/deferred';
 import { useNamespacePage } from './Namespace';
 
 const client = vi.hoisted(() => ({ get: vi.fn() }));
@@ -21,7 +22,7 @@ describe('命名空间查询作用域', () => {
   it('清除集群选择时取消旧数据、分页、选择和待返回查询', async () => {
     const page = useNamespacePage();
     page.filterClusterId.value = 1;
-    const response = Promise.withResolvers<{
+    const response = createDeferred<{
       items: { cluster_id: number; name: string }[];
       total: number;
     }>();
@@ -41,7 +42,7 @@ describe('命名空间查询作用域', () => {
 
   it('慢的旧集群响应不能覆盖新集群的命名空间', async () => {
     const page = useNamespacePage();
-    const old = Promise.withResolvers<{
+    const old = createDeferred<{
       items: { cluster_id: number; name: string }[];
       total: number;
     }>();

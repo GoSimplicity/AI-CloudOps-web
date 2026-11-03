@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { markRequestLayerTrace } from '#/utils/permission/request-notice';
 
+import { createDeferred } from '../../../../../../internal/test-utils/deferred';
 import { useCronJobPage } from './Management';
 
 function required<T>(value: null | T | undefined): T {
@@ -83,7 +84,7 @@ describe('定时任务请求与操作边界', () => {
 
   it('服务端筛选结果与总数保持一致，迟到响应不能覆盖新查询', async () => {
     const page = useCronJobPage();
-    const old = Promise.withResolvers<unknown>();
+    const old = createDeferred<unknown>();
     client.get.mockReturnValueOnce(old.promise);
     const first = page.fetchCronJobs();
     page.filterStatus.value = 3;
@@ -116,7 +117,7 @@ describe('定时任务请求与操作边界', () => {
 
   it('关闭详情或清理账号后不能回填迟到内容', async () => {
     const page = useCronJobPage();
-    const pending = Promise.withResolvers<CronJob>();
+    const pending = createDeferred<CronJob>();
     client.get.mockReturnValueOnce(pending.promise);
     const fetch = page.showJobDetail(job(1));
     page.closeDetailModal();
@@ -124,7 +125,7 @@ describe('定时任务请求与操作边界', () => {
     await fetch;
     expect(page.currentJobDetail.value).toBeNull();
     expect(page.isDetailModalVisible.value).toBe(false);
-    const list = Promise.withResolvers<unknown>();
+    const list = createDeferred<unknown>();
     client.get.mockReturnValueOnce(list.promise);
     const query = page.fetchCronJobs();
     page.clearPage();
@@ -136,7 +137,7 @@ describe('定时任务请求与操作边界', () => {
 
   it('关闭编辑后迟到详情不能重新打开弹窗', async () => {
     const page = useCronJobPage();
-    const pending = Promise.withResolvers<CronJob>();
+    const pending = createDeferred<CronJob>();
     client.get.mockReturnValueOnce(pending.promise);
     const fetch = page.openEditModal(job(1));
     page.closeEditModal();
@@ -163,7 +164,7 @@ describe('定时任务请求与操作边界', () => {
   it('异步校验期间重复提交只写一次', async () => {
     const page = useCronJobPage();
     page.openCreateModal();
-    const validation = Promise.withResolvers<unknown>();
+    const validation = createDeferred<unknown>();
     page.formRef.value = {
       validate: () => validation.promise,
     } as unknown as FormInstance;
@@ -177,7 +178,7 @@ describe('定时任务请求与操作边界', () => {
   it('取消后重开的表单不能被旧校验提交', async () => {
     const page = useCronJobPage();
     page.openCreateModal();
-    const validation = Promise.withResolvers<unknown>();
+    const validation = createDeferred<unknown>();
     page.formRef.value = {
       validate: () => validation.promise,
     } as unknown as FormInstance;
@@ -323,7 +324,7 @@ describe('编辑任务配置', () => {
     const page = useCronJobPage();
     page.openCreateModal();
     page.createFormModel.value.schedule = '@every 1h';
-    const pending = Promise.withResolvers<unknown>();
+    const pending = createDeferred<unknown>();
     client.post.mockReturnValueOnce(pending.promise);
     const request = page.validateScheduleExpression('create');
     page.createFormModel.value.schedule = '@every 2h';
@@ -350,7 +351,7 @@ describe('编辑任务配置', () => {
     const page = useCronJobPage();
     client.get.mockResolvedValueOnce(job(8));
     await page.openEditModal(job(8));
-    const validation = Promise.withResolvers<unknown>();
+    const validation = createDeferred<unknown>();
     page.formRef.value = {
       validate: () => validation.promise,
     } as unknown as FormInstance;

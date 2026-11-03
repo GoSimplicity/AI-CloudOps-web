@@ -4,6 +4,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import Antd, { message } from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createDeferred } from '../../../../../internal/test-utils/deferred';
 import CloudAccount from './CloudAccountManagement.vue';
 import CloudResource from './CloudResourceManager.vue';
 import LocalResource from './LocalResourceManagement.vue';
@@ -160,7 +161,7 @@ for (const page of pages) {
     });
 
     it('用户切换查询后迟到结果不能覆盖新范围', async () => {
-      const old = Promise.withResolvers<unknown>();
+      const old = createDeferred<unknown>();
       let calls = 0;
       client.get.mockImplementation((path: string) => {
         if (path !== page.path) return Promise.resolve({ items: [], total: 0 });

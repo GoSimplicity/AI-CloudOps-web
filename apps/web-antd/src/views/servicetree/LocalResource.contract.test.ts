@@ -7,6 +7,7 @@ import {
 import Antd, { message, Modal } from 'ant-design-vue';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { createDeferred } from '../../../../../internal/test-utils/deferred';
 import LocalResource from './LocalResourceManagement.vue';
 
 function required<T>(value: null | T | undefined): T {
@@ -137,7 +138,7 @@ it('新增标签提交对象数组，同键标签不能重复', async () => {
   );
 });
 it('校验期间锁定重复提交，旧请求完成不关闭重新打开的表单', async () => {
-  const pending = Promise.withResolvers<unknown>();
+  const pending = createDeferred<unknown>();
   client.put.mockReturnValue(pending.promise);
   await start();
   await action('编辑');

@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDeploymentPage } from '../deployment/Deployment';
 import { usePodPage } from '../pod/Pod';
 import { useServicePage } from '../service/Service';
+import { createDeferred } from '../../../../../../internal/test-utils/deferred';
 import { useConfigMapPage } from '../configmap/ConfigMap';
 
 const client = vi.hoisted(() => ({ get: vi.fn() }));
@@ -81,7 +82,7 @@ for (const testCase of cases) {
       const page = testCase.create();
       page.state.filterClusterId.value = 1;
       page.state.filterNamespace.value = 'alpha';
-      const old = Promise.withResolvers<Result>();
+      const old = createDeferred<Result>();
       client.get.mockReturnValueOnce(old.promise);
       const pending = page.fetch();
       page.state.filterNamespace.value = 'beta';
@@ -102,7 +103,7 @@ for (const testCase of cases) {
     it('清空集群后待返回请求不能恢复旧行和分页', async () => {
       const page = testCase.create();
       page.state.filterClusterId.value = 1;
-      const old = Promise.withResolvers<Result>();
+      const old = createDeferred<Result>();
       client.get.mockReturnValueOnce(old.promise);
       const pending = page.fetch();
       page.state.selectedRowKeys.value = ['old'];
@@ -179,7 +180,7 @@ for (const testCase of cases) {
         expect(page.items.value).toHaveLength(1);
         page.state.selectedRowKeys.value = ['old'];
 
-        const pending = Promise.withResolvers<Result>();
+        const pending = createDeferred<Result>();
         client.get.mockReturnValueOnce(pending.promise);
         const request = page.fetch();
         expect(page.state.loading.value).toBe(true);
