@@ -496,3 +496,13 @@ Cron 参数和 Pod 资源输入移除模板非空断言：读取允许缺值，�
 - 新51项真实组件回归，连列表37/请求扫描29共117项通过；应用类型检查通过，生产lint77→64，各规则无新增，新Safety0/0。
 - 根复核移除owner观察器额外发起列表读取，仅清理过渡身份的窗口、私有数据与旧读取；对应回归明确不新增GET、旧reject不toast，保留手动刷新入口。列表旧fixture仅更新固定错误文案，其清理/重试断言完整保留。
 - 未连接真实AlertManager、用户服务或数据库，也未部署。
+
+## 阶段四十六：真实SFC语法与不可绕过的保护门禁
+
+新增cloudops/no-sfc-non-null-assertion，真实Vue factory默认error，同时访问script和template的TSNonNullExpression，保留原TS规则。普通逻辑!、!!、optional和显式guard合法；缺parser服务、关闭script parser、表达式解析失败、未配置可审查tokenizer的非HTML模板，以及script/template外链src均失败关闭，不提供危险自动修复。
+
+门禁增加第五保护类，原生suppressedMessages中的保护诊断仍为失败；对含eslint指令标记的实际源文件补审，禁inline config并停用Vue指令后处理的抑制，只把保护诊断和解析/工具故障并回。普通规则waiver及原始lint总数保持其原义；补审必须完整覆盖请求的路径集合，空、缺失、额外或重复结果均失败，不泄露错误原文。
+
+- 55项真实根配置/解析器及分类测试通过，原6fixtures内容和期望保留；配置包类型检查及owned lint通过。增强门禁快照为1111文件、protected/parser0，额外41文件；普通lint仍10178 errors/5 warnings。该快照后补审覆盖校验进一步收紧，未用此结果宣称全lint通过，后续整合再取当前快照。
+- 唯一历史保护抑制about.vue的no-undef移除，精确声明实际Vite插件注入的readonly metadata全局。JavaScript/Turbo/Vue中3条已无效ts-expect-error仅删除注释，未修改运行时导入或旧规则。
+- ESLint配置包新增typecheck并进入Verify CI；Vite配置工程独立tsc也实跑通过并加入CI，保留原应用typecheck、全量Vitest（含internal tests）、构建及浏览器验证。配置YAML实际解析通过，未升级依赖、变更忽略规则或设置债务基线。

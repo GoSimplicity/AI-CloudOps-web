@@ -1,10 +1,10 @@
 import type { Linter } from 'eslint';
 
+import { vueNonNullAssertion } from '../rules/vue-non-null-assertion';
 import { interopDefault } from '../util';
 
 export async function vue(): Promise<Linter.Config[]> {
   const [pluginVue, parserVue, parserTs] = await Promise.all([
-    // @ts-expect-error missing types
     interopDefault(import('eslint-plugin-vue')),
     interopDefault(import('vue-eslint-parser')),
     // @ts-expect-error missing types
@@ -15,6 +15,10 @@ export async function vue(): Promise<Linter.Config[]> {
     {
       files: ['**/*.vue'],
       languageOptions: {
+        globals: {
+          // Vite's owned inject-metadata plugin provides this build-time constant.
+          __VBEN_ADMIN_METADATA__: 'readonly',
+        },
         parser: parserVue,
         parserOptions: {
           ecmaFeatures: {
@@ -26,6 +30,9 @@ export async function vue(): Promise<Linter.Config[]> {
         },
       },
       plugins: {
+        cloudops: {
+          rules: { 'no-sfc-non-null-assertion': vueNonNullAssertion },
+        },
         vue: pluginVue,
       },
       processor: pluginVue.processors['.vue'],
@@ -34,6 +41,8 @@ export async function vue(): Promise<Linter.Config[]> {
         ...pluginVue.configs['vue3-essential'].rules,
         ...pluginVue.configs['vue3-strongly-recommended'].rules,
         ...pluginVue.configs['vue3-recommended'].rules,
+
+        'cloudops/no-sfc-non-null-assertion': 'error',
 
         'vue/attribute-hyphenation': [
           'error',
