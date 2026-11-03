@@ -1,4 +1,9 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import {
+  DOMWrapper,
+  flushPromises,
+  mount,
+  type VueWrapper,
+} from '@vue/test-utils';
 import Antd from 'ant-design-vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -154,4 +159,36 @@ describe('sEC-03A 本地命令/脚本开关（真实页面）', () => {
       wrapper = undefined;
     }
   });
+});
+
+it('命令参数真实输入与缺失数组边界不再依赖模板断言', async () => {
+  await start(true);
+  const create = required(
+    required(wrapper)
+      .findAll('button')
+      .find((button) => button.text().includes('创建任务')),
+  );
+  await create.trigger('click');
+  await flushPromises();
+  const setup = Reflect.get(required(wrapper).vm.$, 'setupState');
+  const model = Reflect.get(setup, 'createFormModel');
+  Reflect.set(model, 'job_type', 2);
+  Reflect.set(model, 'args', ['before']);
+  await flushPromises();
+  await new DOMWrapper(
+    required(
+      document.querySelector<HTMLInputElement>('input[placeholder="输入参数"]'),
+    ),
+  ).setValue('after');
+  expect(Reflect.get(model, 'args')).toEqual(['after']);
+  Reflect.set(model, 'args', undefined);
+  const update = Reflect.get(setup, 'updateCommandArgument');
+  expect(update).toBeTypeOf('function');
+  update(0, 'late');
+  expect(Reflect.get(model, 'args')).toBeUndefined();
+  Reflect.set(model, 'args', ['kept']);
+  update(-1, 'invalid');
+  update(0, 123);
+  expect(Reflect.get(model, 'args')).toEqual(['kept']);
+  expect(client.post).not.toHaveBeenCalled();
 });

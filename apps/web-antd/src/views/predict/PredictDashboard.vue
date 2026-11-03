@@ -141,6 +141,12 @@ const aiInsights = ref<string[]>([]);
 // 预测数据缓存
 const predictionCache = ref<Record<string, PredictionResponse>>({});
 const predictionFailures = ref<string[]>([]);
+const metricCards = computed(() =>
+  metricsData.value.map((metric) => ({
+    ...metric,
+    prediction: predictionCache.value[metric.type],
+  })),
+);
 const scope = useAiRequestScope(() => {
   clearPredictions();
   inputData.value = {
@@ -683,7 +689,7 @@ onUnmounted(() => {
     />
     <!-- 关键指标卡片 -->
     <a-row :gutter="[16, 16]" class="metrics-overview">
-      <a-col v-for="metric in metricsData" :key="metric.type" :lg="6" :xs="12">
+      <a-col v-for="metric in metricCards" :key="metric.type" :lg="6" :xs="12">
         <a-card :class="['metric-card', `metric-${metric.type}`]">
           <div class="metric-content">
             <div class="metric-header">
@@ -702,9 +708,9 @@ onUnmounted(() => {
               </div>
             </div>
             <PredictionProvenance
-              v-if="predictionCache[metric.type]"
+              v-if="metric.prediction"
               :ai-requested="aiEnhanced"
-              :result="predictionCache[metric.type]!"
+              :result="metric.prediction"
             />
             <div class="metric-trend">
               <div class="trend-info">

@@ -337,9 +337,10 @@ const formatStatusMessage = (message?: string) => {
             <a-descriptions-item label="命中率">
               <a-progress
                 v-if="
+                  typeof cacheStats.hit_rate === 'number' &&
                   Number.isFinite(cacheStats.hit_rate) &&
-                  cacheStats.hit_rate! >= 0 &&
-                  cacheStats.hit_rate! <= 100
+                  cacheStats.hit_rate >= 0 &&
+                  cacheStats.hit_rate <= 100
                 "
                 :percent="getHitRatePercent(cacheStats.hit_rate)"
                 :stroke-color="getHitRateColor(cacheStats.hit_rate)"

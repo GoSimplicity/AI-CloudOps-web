@@ -225,6 +225,19 @@ const handleTableChange = (pagination: any) => {
 };
 
 // 初始化数据加载
+function updateCommandArgument(index: number, value: unknown) {
+  const args = createFormModel.value.args;
+  if (
+    typeof value !== 'string' ||
+    !args ||
+    !Number.isSafeInteger(index) ||
+    index < 0 ||
+    index >= args.length
+  )
+    return;
+  args[index] = value;
+}
+
 onMounted(async () => {
   if (!accessStore.accessToken) {
     return;
@@ -675,10 +688,13 @@ onUnmounted(clearPage);
                 class="k8s-key-value-row"
               >
                 <a-input
-                  v-model:value="createFormModel.args![index]"
+                  :value="createFormModel.args?.[index]"
                   class="k8s-form-input"
                   placeholder="输入参数"
                   style="flex: 1; margin-right: 8px"
+                  @update:value="
+                    (value: unknown) => updateCommandArgument(index, value)
+                  "
                 />
                 <a-button
                   danger

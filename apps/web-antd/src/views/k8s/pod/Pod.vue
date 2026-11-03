@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import type { CreatePodContainer } from '#/api/core/k8s/k8s_pod';
+
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { onMounted, ref, watch } from 'vue';
 import { message } from 'ant-design-vue';
@@ -476,6 +478,24 @@ const resetFilters = () => {
   clearNamespaces();
   message.success('已重置所有筛选条件');
 };
+
+function updateContainerResource(
+  container: CreatePodContainer,
+  section: 'limits' | 'requests',
+  resource: 'cpu' | 'memory',
+  value: unknown,
+) {
+  if (
+    typeof value !== 'string' ||
+    !createFormModel.value.containers.includes(container)
+  )
+    return;
+  container.resources ??= {
+    limits: { cpu: '', memory: '' },
+    requests: { cpu: '', memory: '' },
+  };
+  container.resources[section][resource] = value;
+}
 
 onMounted(async () => {
   await fetchClusters();
@@ -1380,14 +1400,32 @@ const handleCloseFileManagerModal = () => {
                     <a-row :gutter="8">
                       <a-col :span="12">
                         <a-input
-                          v-model:value="container.resources!.requests.cpu"
+                          :value="container.resources?.requests.cpu"
                           placeholder="CPU (如 100m)"
+                          @update:value="
+                            (value: unknown) =>
+                              updateContainerResource(
+                                container,
+                                'requests',
+                                'cpu',
+                                value,
+                              )
+                          "
                         />
                       </a-col>
                       <a-col :span="12">
                         <a-input
-                          v-model:value="container.resources!.requests.memory"
+                          :value="container.resources?.requests.memory"
                           placeholder="内存 (如 128Mi)"
+                          @update:value="
+                            (value: unknown) =>
+                              updateContainerResource(
+                                container,
+                                'requests',
+                                'memory',
+                                value,
+                              )
+                          "
                         />
                       </a-col>
                     </a-row>
@@ -1397,14 +1435,32 @@ const handleCloseFileManagerModal = () => {
                     <a-row :gutter="8">
                       <a-col :span="12">
                         <a-input
-                          v-model:value="container.resources!.limits.cpu"
+                          :value="container.resources?.limits.cpu"
                           placeholder="CPU (如 500m)"
+                          @update:value="
+                            (value: unknown) =>
+                              updateContainerResource(
+                                container,
+                                'limits',
+                                'cpu',
+                                value,
+                              )
+                          "
                         />
                       </a-col>
                       <a-col :span="12">
                         <a-input
-                          v-model:value="container.resources!.limits.memory"
+                          :value="container.resources?.limits.memory"
                           placeholder="内存 (如 512Mi)"
+                          @update:value="
+                            (value: unknown) =>
+                              updateContainerResource(
+                                container,
+                                'limits',
+                                'memory',
+                                value,
+                              )
+                          "
                         />
                       </a-col>
                     </a-row>
