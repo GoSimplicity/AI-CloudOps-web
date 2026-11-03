@@ -1,14 +1,25 @@
 <script setup lang="ts">
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { useListRequest } from './useListRequest';
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { message, Modal } from 'ant-design-vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  toRaw,
+  watch,
+} from 'vue';
+
+import { useUserStore } from '@vben/stores';
+import { cloneDeep } from '@vben/utils';
+
 import {
   DownOutlined,
   MinusCircleOutlined,
   PlusOutlined,
 } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+import { type FormInstance, message, Modal } from 'ant-design-vue';
+
 import {
   createMonitorAlertManagerPoolApi,
   type CreateMonitorAlertManagerPoolReq,
@@ -20,15 +31,37 @@ import {
   updateMonitorAlertManagerPoolApi,
   type UpdateMonitorAlertManagerPoolReq,
 } from '#/api/core/prometheus/prometheus_alert_pool';
-
-import { getUserList, type GetUserListReq } from '#/api/core/system/user';
-
+import {
+  getUserList,
+  type GetUserListReq,
+  type User,
+} from '#/api/core/system/user';
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useAuthStore } from '#/store';
 import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+import { useListRequest } from './useListRequest';
 
+const { can } = usePermission();
+const userStore = useUserStore();
+const authStore = useAuthStore();
+const validId = (id: unknown): id is number =>
+  typeof id === 'number' && Number.isSafeInteger(id) && id > 0;
+const operationOwner = () => {
+  const id = Number(userStore.userInfo?.userId);
+  return validId(id)
+    ? JSON.stringify([id, authStore.getAuthGeneration()])
+    : undefined;
+};
+let disposed = false;
+const windowRevision = ref(0);
+let userRevision = 0;
+let windowOwner: string | undefined;
+let deleteDialog: ReturnType<typeof Modal.confirm> | undefined;
+const submitting = ref(false);
+const detailLoading = ref(false);
 // 动态表单项接口
 interface DynamicItem {
   value: string;
@@ -103,7 +136,7 @@ const columns = [
 
 // 状态数据
 const loading = ref(false);
-const { loadError, beginRequest } = useListRequest(loading);
+const { loadError, beginRequest, invalidate } = useListRequest(loading);
 const searchText = ref('');
 const data = ref<MonitorAlertManagerPool[]>([]);
 
@@ -168,7 +201,7 @@ const detailDialog = reactive({
 
 // 用户选择模态框状态
 const isUserModalVisible = ref(false);
-const userList = ref<any[]>([]);
+const userList = ref<User[]>([]);
 const userLoading = ref(false);
 const userPagination = reactive({
   current: 1,
@@ -190,11 +223,46 @@ const userColumns = [
 const formRules = {
   name: [
     { required: true, message: '请输入实例池名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' },
+    { min: 1, max: 50, message: '长度应为1到50个字符', trigger: 'blur' },
+  ],
+  receiver: [
+    { required: true, message: '请选择兜底接收者', trigger: 'change' },
+    { min: 1, max: 100, message: '长度应为1到100个字符', trigger: 'change' },
   ],
 };
 
+function captureWindow() {
+  const revision = windowRevision.value;
+  const owner = windowOwner;
+  return () =>
+    !disposed &&
+    owner !== undefined &&
+    owner === operationOwner() &&
+    revision === windowRevision.value;
+}
+function invalidateWindow() {
+  windowRevision.value += 1;
+  userRevision += 1;
+  deleteDialog?.destroy();
+  deleteDialog = undefined;
+  isAddModalVisible.value = false;
+  isEditModalVisible.value = false;
+  detailDialogVisible.value = false;
+  detailDialog.form = null;
+  isUserModalVisible.value = false;
+  activeForm.value = null;
+  userList.value = [];
+  userLoading.value = false;
+  submitting.value = false;
+  detailLoading.value = false;
+}
 
+function beginWindow() {
+  if (disposed || !operationOwner()) return false;
+  invalidateWindow();
+  windowOwner = operationOwner();
+  return true;
+}
 const getInitials = (name: string): string => {
   if (!name) return '';
   return name.slice(0, 2).toUpperCase();
@@ -234,6 +302,8 @@ const updateStats = () => {
 
 // 数据加载
 const fetchAlertManagerPools = async (): Promise<void> => {
+  const owner = operationOwner();
+  if (disposed || !owner) return;
   const request = beginRequest();
   try {
     const params: GetAlertManagerPoolListParams = {
@@ -243,14 +313,18 @@ const fetchAlertManagerPools = async (): Promise<void> => {
     };
 
     const response = await getMonitorAlertManagerPoolListApi(params);
-    if (!request.isCurrent()) return;
+    if (!request.isCurrent() || disposed || owner !== operationOwner()) return;
     if (response) {
       data.value = response.items || [];
       paginationConfig.total = response.total || 0;
       updateStats();
     }
   } catch (error: any) {
-    if (!request.fail(error, '加载实例池列表失败')) return;
+    if (
+      owner !== operationOwner() ||
+      !request.fail(new Error('加载实例池列表失败'), '加载实例池列表失败')
+    )
+      return;
     data.value = [];
     paginationConfig.total = 0;
     updateStats();
@@ -288,6 +362,7 @@ const handleReset = (): void => {
 };
 
 const showAddModal = (): void => {
+  if (!beginWindow()) return;
   resetAddForm();
   isAddModalVisible.value = true;
 };
@@ -295,17 +370,28 @@ const showAddModal = (): void => {
 const handleViewPool = async (
   record: MonitorAlertManagerPool,
 ): Promise<void> => {
+  const id = record.id;
+  if (!validId(id)) {
+    message.error('记录ID不合法');
+    return;
+  }
+  if (!beginWindow()) return;
+  const current = captureWindow();
+  detailDialogVisible.value = true;
+  detailLoading.value = true;
   try {
-    if (record.id == null) {
-      message.error('记录ID缺失');
-      return;
-    }
-    const response = await getMonitorAlertManagerPoolApi(record.id);
+    const response = await getMonitorAlertManagerPoolApi(id);
+    if (!current()) return;
+    if (!response || response.id !== id)
+      throw new Error('Invalid pool response');
     detailDialog.form = response;
-    detailDialogVisible.value = true;
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取实例池详情失败');
+  } catch (error: unknown) {
+    if (current()) {
+      detailDialogVisible.value = false;
+      if (shouldNotifyPageError(error)) message.error('获取实例池详情失败');
+    }
+  } finally {
+    if (current()) detailLoading.value = false;
   }
 };
 
@@ -322,32 +408,49 @@ const handleMenuClick = (
 };
 
 const confirmDelete = (record: MonitorAlertManagerPool): void => {
-  Modal.confirm({
+  const id = record.id;
+  const name = record.name;
+  if (!validId(id)) {
+    message.error('记录ID不合法');
+    return;
+  }
+  if (!beginWindow()) return;
+  const current = captureWindow();
+  let consumed = false;
+  deleteDialog = Modal.confirm({
     title: '警告',
-    content: `确定要删除实例池 "${record.name}" 吗？`,
+    content: `确定要删除实例池 "${name}" 吗？`,
     okText: '删除',
     okType: 'danger',
     cancelText: '取消',
+    onCancel() {
+      consumed = true;
+    },
     async onOk() {
+      if (consumed || !current() || record.id !== id) return;
+      consumed = true;
       try {
-        if (record.id == null) {
-          message.error('记录ID缺失');
-          return;
-        }
-        await deleteMonitorAlertManagerPoolApi(record.id);
-        message.success(`实例池 "${record.name}" 已删除`);
-        fetchAlertManagerPools();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(error.message || '删除实例池失败');
+        await deleteMonitorAlertManagerPoolApi(id);
+        if (!current()) return;
+        message.success(`实例池 "${name}" 已删除`);
+        await fetchAlertManagerPools();
+      } catch (error: unknown) {
+        if (current() && shouldNotifyPageError(error))
+          message.error('删除实例池失败');
       }
     },
   });
 };
 
-// 用户选择相关
+// 用户目录归属于打开它的表单窗口；每次查询单独编号。
 const fetchUsers = async () => {
+  if (!isUserModalVisible.value) return;
+  const currentWindow = captureWindow();
+  const revision = ++userRevision;
+  const current = () =>
+    currentWindow() && isUserModalVisible.value && revision === userRevision;
   userLoading.value = true;
+  userList.value = [];
   try {
     const params: GetUserListReq = {
       page: userPagination.current,
@@ -355,52 +458,68 @@ const fetchUsers = async () => {
       search: userSearchText.value,
     };
     const response = await getUserList(params);
-    if (response) {
-      userList.value = response.items || [];
-      userPagination.total = response.total || 0;
-    }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '加载用户列表失败');
+    if (!current()) return;
+    userList.value = cloneDeep(response?.items ?? []).filter(
+      (user: User) =>
+        validId(user.id) &&
+        typeof user.username === 'string' &&
+        user.username.length > 0 &&
+        [...user.username].length <= 100,
+    );
+    userPagination.total = response?.total ?? 0;
+  } catch (error: unknown) {
+    if (current() && shouldNotifyPageError(error))
+      message.error('加载用户列表失败');
   } finally {
-    userLoading.value = false;
+    if (current()) userLoading.value = false;
   }
 };
-
-const handleUserTableChange = (pagination: any) => {
+const handleUserTableChange = (pagination: { current: number }) => {
   userPagination.current = pagination.current;
-  fetchUsers();
+  void fetchUsers();
 };
-
 const handleUserSearch = () => {
   userPagination.current = 1;
-  fetchUsers();
+  void fetchUsers();
 };
-
 const showUserModal = (formType: 'add' | 'edit') => {
+  if (
+    !captureWindow()() ||
+    !(formType === 'add' ? isAddModalVisible.value : isEditModalVisible.value)
+  )
+    return;
   activeForm.value = formType;
   userPagination.current = 1;
   userSearchText.value = '';
-  fetchUsers();
   isUserModalVisible.value = true;
+  void fetchUsers();
 };
-
 const closeUserModal = () => {
+  userRevision += 1;
   isUserModalVisible.value = false;
+  userList.value = [];
+  userLoading.value = false;
+  activeForm.value = null;
 };
-
-const handleSelectUser = (user: any) => {
-  if (activeForm.value === 'add') {
+const handleSelectUser = (user: User) => {
+  if (
+    !captureWindow()() ||
+    !isUserModalVisible.value ||
+    userLoading.value ||
+    !validId(user.id) ||
+    !userList.value.includes(user)
+  )
+    return;
+  if (activeForm.value === 'add' && isAddModalVisible.value)
     addForm.receiver = user.username;
-  } else if (activeForm.value === 'edit') {
+  else if (activeForm.value === 'edit' && isEditModalVisible.value)
     editForm.receiver = user.username;
-  }
   closeUserModal();
 };
 
 // 表单相关
-const addFormRef = ref();
-const editFormRef = ref();
+const addFormRef = ref<FormInstance>();
+const editFormRef = ref<FormInstance>();
 
 const resetAddForm = (): void => {
   Object.assign(addForm, {
@@ -416,15 +535,15 @@ const resetAddForm = (): void => {
 };
 
 const closeAddModal = (): void => {
-  isAddModalVisible.value = false;
+  invalidateWindow();
 };
 
 const closeEditModal = (): void => {
-  isEditModalVisible.value = false;
+  invalidateWindow();
 };
 
 const closeDetailDialog = (): void => {
-  detailDialogVisible.value = false;
+  invalidateWindow();
 };
 
 // 动态表单项操作
@@ -487,38 +606,84 @@ const removeEditLabel = (label: LabelItem): void => {
   }
 };
 
-const handleAdd = async (): Promise<void> => {
-  try {
-    await addFormRef.value?.validate();
-    const formData: CreateMonitorAlertManagerPoolReq = {
-      name: addForm.name,
-      alert_manager_instances: addForm.alert_manager_instances
-        .map((item) => item.value)
-        .filter((v) => v.trim() !== ''),
-      resolve_timeout: addForm.resolve_timeout,
-      group_wait: addForm.group_wait,
-      group_interval: addForm.group_interval,
-      repeat_interval: addForm.repeat_interval,
-      group_by: addForm.group_by
-        .filter((item) => item.labelKey && item.labelValue)
-        .map((item) => `${item.labelKey},${item.labelValue}`),
-      receiver: addForm.receiver,
-    };
-    await createMonitorAlertManagerPoolApi(formData);
-    message.success('新增实例池成功');
-    await fetchAlertManagerPools();
-    closeAddModal();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '新增实例池失败');
-  }
-};
-
-const showEditModal = (record: MonitorAlertManagerPool): void => {
-  if (record.id == null) {
-    message.error('记录ID缺失');
+// 验证与发送使用同一个字段快照；空时长仍交给既有后端默认规则。
+const savePool = async (mode: 'add' | 'edit'): Promise<void> => {
+  const form = mode === 'add' ? addForm : editForm;
+  const formRef = mode === 'add' ? addFormRef.value : editFormRef.value;
+  const currentWindow = captureWindow();
+  const id = mode === 'edit' ? editForm.id : undefined;
+  if (
+    !currentWindow() ||
+    submitting.value ||
+    !(mode === 'add' ? isAddModalVisible.value : isEditModalVisible.value) ||
+    (mode === 'edit' && !validId(id))
+  )
+    return;
+  if (!formRef || typeof formRef.validate !== 'function') {
+    message.error('表单尚未就绪');
     return;
   }
+  const snapshot = cloneDeep(toRaw(form));
+  const fingerprint = JSON.stringify(snapshot);
+  const currentFields = () =>
+    currentWindow() && fingerprint === JSON.stringify(form);
+  submitting.value = true;
+  try {
+    try {
+      await formRef.validate();
+    } catch {
+      return;
+    }
+    if (!currentFields()) return;
+    const instances = snapshot.alert_manager_instances
+      .map((item) => item.value)
+      .filter((value) => value.trim() !== '');
+    if (
+      [...snapshot.name].length === 0 ||
+      [...snapshot.name].length > 50 ||
+      [...snapshot.receiver].length === 0 ||
+      [...snapshot.receiver].length > 100 ||
+      instances.length === 0
+    ) {
+      message.error('请完善实例池必填信息');
+      return;
+    }
+    const payload: CreateMonitorAlertManagerPoolReq = {
+      name: snapshot.name,
+      alert_manager_instances: instances,
+      resolve_timeout: snapshot.resolve_timeout,
+      group_wait: snapshot.group_wait,
+      group_interval: snapshot.group_interval,
+      repeat_interval: snapshot.repeat_interval,
+      group_by: snapshot.group_by
+        .filter((item) => item.labelKey && item.labelValue)
+        .map((item) => `${item.labelKey},${item.labelValue}`),
+      receiver: snapshot.receiver,
+    };
+    if (mode === 'edit') {
+      if (!validId(id)) return;
+      const update: UpdateMonitorAlertManagerPoolReq = { ...payload, id };
+      await updateMonitorAlertManagerPoolApi(update);
+    } else await createMonitorAlertManagerPoolApi(payload);
+    if (!currentFields()) return;
+    message.success(mode === 'add' ? '新增实例池成功' : '更新实例池成功');
+    invalidateWindow();
+    await fetchAlertManagerPools();
+  } catch (error: unknown) {
+    if (currentFields() && shouldNotifyPageError(error))
+      message.error(mode === 'add' ? '新增实例池失败' : '更新实例池失败');
+  } finally {
+    if (currentWindow()) submitting.value = false;
+  }
+};
+const handleAdd = () => savePool('add');
+
+const showEditModal = (record: MonitorAlertManagerPool): void => {
+  if (!validId(record.id)) {
+    message.error('记录ID不合法');
+    return;
+  }
+  if (!beginWindow()) return;
   editForm.id = record.id;
   editForm.name = record.name ?? '';
   editForm.alert_manager_instances = (record.alert_manager_instances ?? []).map(
@@ -546,36 +711,26 @@ const showEditModal = (record: MonitorAlertManagerPool): void => {
   }
   editForm.receiver = record.receiver ?? '';
   isEditModalVisible.value = true;
-  detailDialogVisible.value = false;
 };
 
-const handleEdit = async (): Promise<void> => {
-  try {
-    await editFormRef.value?.validate();
-    const formData: UpdateMonitorAlertManagerPoolReq = {
-      id: editForm.id,
-      name: editForm.name,
-      alert_manager_instances: editForm.alert_manager_instances
-        .map((item) => item.value)
-        .filter((v) => v.trim() !== ''),
-      resolve_timeout: editForm.resolve_timeout,
-      group_wait: editForm.group_wait,
-      group_interval: editForm.group_interval,
-      repeat_interval: editForm.repeat_interval,
-      group_by: editForm.group_by
-        .filter((item) => item.labelKey && item.labelValue)
-        .map((item) => `${item.labelKey},${item.labelValue}`),
-      receiver: editForm.receiver,
-    };
-    await updateMonitorAlertManagerPoolApi(formData);
-    message.success('更新实例池成功');
-    await fetchAlertManagerPools();
-    closeEditModal();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '更新实例池失败');
-  }
-};
+const handleEdit = () => savePool('edit');
+watch(
+  operationOwner,
+  () => {
+    invalidateWindow();
+    invalidate();
+    resetAddForm();
+    Object.assign(editForm, addForm, { id: 0 });
+    data.value = [];
+    paginationConfig.total = 0;
+    updateStats();
+  },
+  { flush: 'sync' },
+);
+onBeforeUnmount(() => {
+  disposed = true;
+  invalidateWindow();
+});
 
 // 生命周期钩子
 onMounted(() => {
@@ -820,6 +975,7 @@ onMounted(() => {
 
     <!-- 新增AlertManager实例池模态框 -->
     <a-modal
+      :confirm-loading="submitting"
       :destroy-on-close="true"
       :open="isAddModalVisible"
       :width="formDialogWidth"
@@ -829,6 +985,7 @@ onMounted(() => {
       @ok="handleAdd"
     >
       <a-form
+        :key="windowRevision"
         ref="addFormRef"
         :model="addForm"
         :rules="formRules"
@@ -839,7 +996,7 @@ onMounted(() => {
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item
-                :rules="[{ required: true, message: '请输入实例池名称' }]"
+                :rules="formRules.name"
                 label="实例池名称"
                 name="name"
               >
@@ -986,6 +1143,7 @@ onMounted(() => {
 
     <!-- 编辑AlertManager实例池模态框 -->
     <a-modal
+      :confirm-loading="submitting"
       :destroy-on-close="true"
       :open="isEditModalVisible"
       :width="formDialogWidth"
@@ -995,6 +1153,7 @@ onMounted(() => {
       @ok="handleEdit"
     >
       <a-form
+        :key="windowRevision"
         ref="editFormRef"
         :model="editForm"
         :rules="formRules"
@@ -1005,7 +1164,7 @@ onMounted(() => {
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item
-                :rules="[{ required: true, message: '请输入实例池名称' }]"
+                :rules="formRules.name"
                 label="实例池名称"
                 name="name"
               >
@@ -1203,7 +1362,7 @@ onMounted(() => {
       </div>
 
       <!-- 加载状态 -->
-      <div v-else class="loading-container">
+      <div v-else-if="detailLoading" class="loading-container">
         <a-spin size="large" />
         <p style="margin-top: 16px; text-align: center">正在加载详情...</p>
       </div>

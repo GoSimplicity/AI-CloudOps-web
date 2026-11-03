@@ -98,6 +98,7 @@ const pages: {
     component: MonitorAlertPool,
     title: '告警实例池',
     path: '/monitor/alert_manager_pools/list',
+    expectedFailure: '加载实例池列表失败',
     create: '新增AlertManager实例池',
   },
   {
