@@ -555,6 +555,56 @@ const manualSendRules = {
   content: [{ required: true, message: '请输入通知内容', trigger: 'blur' }],
 };
 
+// 计算统计数据
+const calculateStats = (): void => {
+  stats.total = paginationConfig.total;
+  stats.enabled = notifications.value.filter(
+    (item) => item.status === NotificationStatus.Enabled,
+  ).length;
+  stats.disabled = notifications.value.filter(
+    (item) => item.status === NotificationStatus.Disabled,
+  ).length;
+};
+
+// 数据加载
+const loadNotifications = async (): Promise<void> => {
+  const request = ++listRequest;
+  loading.value = true;
+  loadError.value = '';
+
+  try {
+    const params: ListNotificationReq = {
+      page: paginationConfig.current,
+      page_size: paginationConfig.pageSize,
+      name: searchQuery.value,
+      channel: channelFilter.value,
+      status: statusFilter.value,
+    };
+
+    const res = await getNotificationList(params);
+    if (request !== listRequest) return;
+    if (res) {
+      notifications.value = (res.items || []).map((item: any) => ({
+        ...item,
+        statusLoading: false,
+      }));
+      paginationConfig.total = res.total || 0;
+
+      // 计算统计数据
+      calculateStats();
+    }
+  } catch (error) {
+    if (request !== listRequest) return;
+    notifications.value = [];
+    paginationConfig.total = 0;
+    calculateStats();
+    if (shouldRecordPageError(error))
+      loadError.value = '加载通知配置失败，请重试';
+  } finally {
+    if (request === listRequest) loading.value = false;
+  }
+};
+
 // 防抖搜索
 const debouncedSearch = debounce(() => {
   paginationConfig.current = 1;
@@ -915,68 +965,6 @@ const handleTableChange = (
   loadNotifications();
 };
 
-// 计算统计数据
-const calculateStats = (): void => {
-  stats.total = paginationConfig.total;
-  stats.enabled = notifications.value.filter(
-    (item) => item.status === NotificationStatus.Enabled,
-  ).length;
-  stats.disabled = notifications.value.filter(
-    (item) => item.status === NotificationStatus.Disabled,
-  ).length;
-};
-
-// 数据加载
-const loadNotifications = async (): Promise<void> => {
-  const request = ++listRequest;
-  loading.value = true;
-  loadError.value = '';
-
-  try {
-    const params: ListNotificationReq = {
-      page: paginationConfig.current,
-      page_size: paginationConfig.pageSize,
-      name: searchQuery.value,
-      channel: channelFilter.value,
-      status: statusFilter.value,
-    };
-
-    const res = await getNotificationList(params);
-    if (request !== listRequest) return;
-    if (res) {
-      notifications.value = (res.items || []).map((item: any) => ({
-        ...item,
-        statusLoading: false,
-      }));
-      paginationConfig.total = res.total || 0;
-
-      // 计算统计数据
-      calculateStats();
-    }
-  } catch (error) {
-    if (request !== listRequest) return;
-    notifications.value = [];
-    paginationConfig.total = 0;
-    calculateStats();
-    if (shouldRecordPageError(error))
-      loadError.value = '加载通知配置失败，请重试';
-  } finally {
-    if (request === listRequest) loading.value = false;
-  }
-};
-
-// 处理发送记录表格分页变化
-const handleLogsTableChange = (pagination: any): void => {
-  logsPagination.current = pagination.current;
-  if (pagination.pageSize !== logsPagination.pageSize) {
-    logsPagination.pageSize = pagination.pageSize;
-    logsPagination.current = 1; // 当改变页面大小时重置到第一页
-  }
-  if (activeLogsNotificationId.value) {
-    loadSendLogs(activeLogsNotificationId.value);
-  }
-};
-
 // 加载发送记录
 const loadSendLogs = async (notificationId: number): Promise<void> => {
   const request = ++logsRequest;
@@ -1004,6 +992,18 @@ const loadSendLogs = async (notificationId: number): Promise<void> => {
       logsError.value = '加载发送记录失败，请重试';
   } finally {
     if (request === logsRequest) logsLoading.value = false;
+  }
+};
+
+// 处理发送记录表格分页变化
+const handleLogsTableChange = (pagination: any): void => {
+  logsPagination.current = pagination.current;
+  if (pagination.pageSize !== logsPagination.pageSize) {
+    logsPagination.pageSize = pagination.pageSize;
+    logsPagination.current = 1; // 当改变页面大小时重置到第一页
+  }
+  if (activeLogsNotificationId.value) {
+    loadSendLogs(activeLogsNotificationId.value);
   }
 };
 
@@ -1196,29 +1196,89 @@ const handleStatusToggle = async (
   }
 };
 
-const handleMenuClick = (command: string, record: Notification): void => {
-  switch (command) {
-    case 'test': {
-      handleTestSend(record);
-      break;
-    }
-    case 'manual': {
-      handleManualSend(record);
-      break;
-    }
-    case 'logs': {
-      handleViewLogs(record);
-      break;
-    }
-    case 'duplicate': {
-      handleDuplicateNotification(record);
-      break;
-    }
-    case 'delete': {
-      handleDeleteNotification(record);
-      break;
-    }
+const handleViewLogs = (record: Notification): void => {
+  if (record.id) {
+    // 重置分页到第一页并加载数据
+    logsPagination.current = 1;
+    logsPagination.pageSize = 10;
+    loadSendLogs(record.id);
+    logsDialogVisible.value = true;
+  } else {
+    message.error('通知配置ID不存在');
   }
+};
+
+const handleDuplicateNotification = (record: Notification): void => {
+  // 服务端没有复制端点，复用已有创建流程让用户审阅后保存
+  handleEditNotification(record);
+  notificationDialog.isEdit = false;
+  notificationDialog.form.id = undefined;
+  notificationDialog.form.name = `${record.name}（副本）`;
+};
+
+const handleDeleteNotification = (record: Notification): void => {
+  const id = record.id;
+  const owner = notificationOwner();
+  if (disposed || !owner || !can('workorder.notification.delete')) return;
+  if (!validNotificationId(id)) {
+    message.error('通知配置ID不存在或无效');
+    return;
+  }
+  const epoch = formEpoch;
+  const listEpoch = listRequest;
+  const details = detailRequest;
+  const isCurrent = () =>
+    !disposed &&
+    notificationOwner() === owner &&
+    record.id === id &&
+    formEpoch === epoch &&
+    listRequest === listEpoch &&
+    detailRequest === details &&
+    can('workorder.notification.delete');
+  let confirmationConsumed = false;
+  Modal.confirm({
+    title: '删除确认',
+    content: `确定要删除表单"${getFormName(record.template_id)}"的通知配置吗？`,
+    okText: '删除',
+    okType: 'danger',
+    cancelText: '取消',
+    onOk: async () => {
+      if (confirmationConsumed || !isCurrent()) return;
+      confirmationConsumed = true;
+      let hideLoading: ReturnType<typeof message.loading> | undefined;
+      try {
+        hideLoading = message.loading('正在删除通知配置...', 0);
+        await deleteNotification(id);
+        if (!isCurrent()) return;
+        message.success('通知配置已删除');
+        loadNotifications();
+      } catch (error: unknown) {
+        if (isCurrent() && shouldNotifyPageError(error)) {
+          const detail =
+            error &&
+            typeof error === 'object' &&
+            'message' in error &&
+            typeof error.message === 'string'
+              ? error.message
+              : '';
+          let errorMessage = '删除失败';
+          if (detail.includes('timeout') || detail.includes('超时'))
+            errorMessage = '删除超时，请稍后重试';
+          else if (detail.includes('404'))
+            errorMessage = '通知配置不存在或已被删除';
+          else if (detail.includes('403')) errorMessage = '没有权限执行此操作';
+          else if (detail.includes('409'))
+            errorMessage = '配置正在使用中，无法删除';
+          else if (detail.includes('500'))
+            errorMessage = '服务器内部错误，请联系管理员';
+          else if (detail) errorMessage = `删除失败: ${detail}`;
+          message.error(errorMessage);
+        }
+      } finally {
+        hideLoading?.();
+      }
+    },
+  });
 };
 
 const testSendDialog = reactive({
@@ -1363,89 +1423,29 @@ const handleManualSend = (record: Notification): void => {
   manualSendDialogVisible.value = true;
 };
 
-const handleViewLogs = (record: Notification): void => {
-  if (record.id) {
-    // 重置分页到第一页并加载数据
-    logsPagination.current = 1;
-    logsPagination.pageSize = 10;
-    loadSendLogs(record.id);
-    logsDialogVisible.value = true;
-  } else {
-    message.error('通知配置ID不存在');
+const handleMenuClick = (command: string, record: Notification): void => {
+  switch (command) {
+    case 'test': {
+      handleTestSend(record);
+      break;
+    }
+    case 'manual': {
+      handleManualSend(record);
+      break;
+    }
+    case 'logs': {
+      handleViewLogs(record);
+      break;
+    }
+    case 'duplicate': {
+      handleDuplicateNotification(record);
+      break;
+    }
+    case 'delete': {
+      handleDeleteNotification(record);
+      break;
+    }
   }
-};
-
-const handleDuplicateNotification = (record: Notification): void => {
-  // 服务端没有复制端点，复用已有创建流程让用户审阅后保存
-  handleEditNotification(record);
-  notificationDialog.isEdit = false;
-  notificationDialog.form.id = undefined;
-  notificationDialog.form.name = `${record.name}（副本）`;
-};
-
-const handleDeleteNotification = (record: Notification): void => {
-  const id = record.id;
-  const owner = notificationOwner();
-  if (disposed || !owner || !can('workorder.notification.delete')) return;
-  if (!validNotificationId(id)) {
-    message.error('通知配置ID不存在或无效');
-    return;
-  }
-  const epoch = formEpoch;
-  const listEpoch = listRequest;
-  const details = detailRequest;
-  const isCurrent = () =>
-    !disposed &&
-    notificationOwner() === owner &&
-    record.id === id &&
-    formEpoch === epoch &&
-    listRequest === listEpoch &&
-    detailRequest === details &&
-    can('workorder.notification.delete');
-  let confirmationConsumed = false;
-  Modal.confirm({
-    title: '删除确认',
-    content: `确定要删除表单"${getFormName(record.template_id)}"的通知配置吗？`,
-    okText: '删除',
-    okType: 'danger',
-    cancelText: '取消',
-    onOk: async () => {
-      if (confirmationConsumed || !isCurrent()) return;
-      confirmationConsumed = true;
-      let hideLoading: ReturnType<typeof message.loading> | undefined;
-      try {
-        hideLoading = message.loading('正在删除通知配置...', 0);
-        await deleteNotification(id);
-        if (!isCurrent()) return;
-        message.success('通知配置已删除');
-        loadNotifications();
-      } catch (error: unknown) {
-        if (isCurrent() && shouldNotifyPageError(error)) {
-          const detail =
-            error &&
-            typeof error === 'object' &&
-            'message' in error &&
-            typeof error.message === 'string'
-              ? error.message
-              : '';
-          let errorMessage = '删除失败';
-          if (detail.includes('timeout') || detail.includes('超时'))
-            errorMessage = '删除超时，请稍后重试';
-          else if (detail.includes('404'))
-            errorMessage = '通知配置不存在或已被删除';
-          else if (detail.includes('403')) errorMessage = '没有权限执行此操作';
-          else if (detail.includes('409'))
-            errorMessage = '配置正在使用中，无法删除';
-          else if (detail.includes('500'))
-            errorMessage = '服务器内部错误，请联系管理员';
-          else if (detail) errorMessage = `删除失败: ${detail}`;
-          message.error(errorMessage);
-        }
-      } finally {
-        hideLoading?.();
-      }
-    },
-  });
 };
 
 const saveNotification = async (): Promise<void> => {

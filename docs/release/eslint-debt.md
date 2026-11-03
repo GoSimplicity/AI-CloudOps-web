@@ -665,3 +665,12 @@ MonitorAlertPool、MonitorConfig和MonitorOnDutyGroupTable三个SFC搬移11段�
 - 原/新真实编译setup使用真实Vue、useListRequest和cloneDeep，在Fake传输及受控时钟下构造请求均为0；受控调用已注册mounted回调后，列表、详情后并行计划/历史/调班读取、对话框动作与失败清理轨迹一致。这是setup/mounted阶段探针，不冒称浏览器或DOM挂载；实际DOM行为另由既有挂载测试覆盖。
 - 实际源码比对确认完整声明和其它statement原文顺序、script外字节保持；真实编译binding分类、生产DOM/SSR render一致。三文件定向lint215→200，no-use-before-define 15→0，各规则无新增，其余200条既有债保留。
 - AlertPoolSafety、FormSafety、Lists和值班表四份现有真实测试186项、应用类型检查通过；没有新增镜像测试、规则或ignore，也未重复全仓测试及构建。没有真实集群、通知或配置写入，未上线。
+
+## 阶段六十六：工单回调的固定初始化边界
+
+Instance、Notification和WorkorderComments三个SFC搬移46段完整const-arrow声明，no-use-before-define分别31、12、7条归零。保留声明kind、名称、函数体、同一script作用域与捕获binding；所有其它statement原文顺序及模板、style字节保持，没有移动ref/reactive、watch、生命周期或debounce初始化。
+
+- Instance将关闭表单回调延后到formDesignLoading初始化之后；评论将提交回调延后到quotedComment及textarea ref之后。通知列表统计和读取声明提前到debounce之前，菜单声明延后到发送处理函数之后；固定数据初始化保持原位。原watch非immediate，生命周期仅注册回调，defineExpose仍暴露相同两个方法。
+- 核对已安装lodash-es的实际debounce构造：构造只创建包装器，不执行用户回调。原/新真实编译setup使用真实Vue与实际debounce源码，在Fake API和受控计时器下，成功/失败六组构造、受控mounted读取、表单关闭及评论expose/open/post/refresh轨迹相同；factory零请求和零timer，搜索499/500ms、直接搜索取消与卸载取消保持。这是setup/mounted调用探针，不冒称DOM挂载或真实通知投递。
+- 磁盘源码与提案逐字核对，46段完整声明及其余statement顺序保持；真实compileScript binding分类、生产DOM/SSR render输出一致。三文件定向lint479 errors/2 warnings→429 errors/2 warnings，逐文件各规则无新增；其余既有诊断保留，不代表全仓lint通过。
+- 工单目录全部现有12个测试文件260项及应用类型检查通过，覆盖通知权限、取消、并发与失败动作等既有回归；没有新增镜像测试、修改断言或规则，也未重复全仓测试和构建。全部API为替身，没有真实工单、通知或权限写入，未上线。

@@ -190,33 +190,36 @@ const showCommentDialog = (instanceId: number) => {
   commentDialog.visible = true;
 };
 
-// 快速评论
-const submitQuickComment = async () => {
-  if (!quickCommentText.value.trim()) {
-    message.warning('请输入评论内容');
-    return;
-  }
-
+// 加载评论
+const loadComments = async (instanceId: number) => {
   try {
-    quickCommenting.value = true;
-    const commentData: CreateWorkorderInstanceCommentReq = {
-      instance_id: commentsViewDialog.instanceId,
-      content: quickCommentText.value,
-      is_system: 0,
-    };
+    loading.value = true;
+    const params: GetInstanceCommentsTreeReq = { id: instanceId };
+    const res = await getInstanceCommentsTree(params);
 
-    await createWorkorderInstanceComment(commentData);
-
-    quickCommentText.value = '';
-    quotedComment.value = null; // 清除引用状态
-    message.success('评论发布成功');
-    await refreshComments();
-    emit('commentAdded');
+    if (res) {
+      commentsList.value = res;
+      // 初始化回复展开状态
+      res.forEach((comment: WorkorderInstanceCommentItem) => {
+        if (comment.children && comment.children.length > 0) {
+          repliesExpanded.value[comment.id] = false;
+        }
+      });
+    } else {
+      commentsList.value = [];
+    }
   } catch (error: any) {
     if (shouldNotifyPageError(error))
-      message.error(`发布评论失败: ${error.message || '未知错误'}`);
+      message.error(`加载评论失败: ${error.message || '未知错误'}`);
+    commentsList.value = [];
   } finally {
-    quickCommenting.value = false;
+    loading.value = false;
+  }
+};
+
+const refreshComments = async () => {
+  if (commentsViewDialog.instanceId) {
+    await loadComments(commentsViewDialog.instanceId);
   }
 };
 
@@ -288,30 +291,34 @@ const toggleReplies = (commentId: number) => {
 const quotedComment = ref<WorkorderInstanceCommentItem | null>(null);
 const quickTextareaRef = ref();
 
-// 其他功能 - 优化后的引用评论功能
-const quoteComment = async (comment: WorkorderInstanceCommentItem) => {
-  // 格式化引用内容
-  const quotedContent = formatQuotedContent(comment);
-
-  // 设置引用内容到快速评论框
-  if (quickCommentText.value.trim()) {
-    // 如果已经有内容，追加引用
-    quickCommentText.value = `${quickCommentText.value}\n\n${quotedContent}`;
-  } else {
-    // 如果没有内容，直接设置引用
-    quickCommentText.value = quotedContent;
+// 快速评论
+const submitQuickComment = async () => {
+  if (!quickCommentText.value.trim()) {
+    message.warning('请输入评论内容');
+    return;
   }
 
-  // 设置当前引用的评论
-  quotedComment.value = comment;
+  try {
+    quickCommenting.value = true;
+    const commentData: CreateWorkorderInstanceCommentReq = {
+      instance_id: commentsViewDialog.instanceId,
+      content: quickCommentText.value,
+      is_system: 0,
+    };
 
-  // 自动滚动到快速评论输入框并聚焦
-  await nextTick();
-  scrollToQuickComment();
-  focusQuickComment();
+    await createWorkorderInstanceComment(commentData);
 
-  // 显示成功反馈
-  message.success(`已引用 ${comment.operator_name} 的评论`);
+    quickCommentText.value = '';
+    quotedComment.value = null; // 清除引用状态
+    message.success('评论发布成功');
+    await refreshComments();
+    emit('commentAdded');
+  } catch (error: any) {
+    if (shouldNotifyPageError(error))
+      message.error(`发布评论失败: ${error.message || '未知错误'}`);
+  } finally {
+    quickCommenting.value = false;
+  }
 };
 
 // 格式化引用内容
@@ -359,6 +366,32 @@ const focusQuickComment = () => {
       }
     }
   });
+};
+
+// 其他功能 - 优化后的引用评论功能
+const quoteComment = async (comment: WorkorderInstanceCommentItem) => {
+  // 格式化引用内容
+  const quotedContent = formatQuotedContent(comment);
+
+  // 设置引用内容到快速评论框
+  if (quickCommentText.value.trim()) {
+    // 如果已经有内容，追加引用
+    quickCommentText.value = `${quickCommentText.value}\n\n${quotedContent}`;
+  } else {
+    // 如果没有内容，直接设置引用
+    quickCommentText.value = quotedContent;
+  }
+
+  // 设置当前引用的评论
+  quotedComment.value = comment;
+
+  // 自动滚动到快速评论输入框并聚焦
+  await nextTick();
+  scrollToQuickComment();
+  focusQuickComment();
+
+  // 显示成功反馈
+  message.success(`已引用 ${comment.operator_name} 的评论`);
 };
 
 // 清除引用
@@ -411,39 +444,6 @@ const copyComment = async (content: string) => {
 // 排序和刷新
 const handleSortChange = ({ key }: { key: string }) => {
   sortOrder.value = key as 'newest' | 'oldest';
-};
-
-const refreshComments = async () => {
-  if (commentsViewDialog.instanceId) {
-    await loadComments(commentsViewDialog.instanceId);
-  }
-};
-
-// 加载评论
-const loadComments = async (instanceId: number) => {
-  try {
-    loading.value = true;
-    const params: GetInstanceCommentsTreeReq = { id: instanceId };
-    const res = await getInstanceCommentsTree(params);
-
-    if (res) {
-      commentsList.value = res;
-      // 初始化回复展开状态
-      res.forEach((comment: WorkorderInstanceCommentItem) => {
-        if (comment.children && comment.children.length > 0) {
-          repliesExpanded.value[comment.id] = false;
-        }
-      });
-    } else {
-      commentsList.value = [];
-    }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(`加载评论失败: ${error.message || '未知错误'}`);
-    commentsList.value = [];
-  } finally {
-    loading.value = false;
-  }
 };
 
 const saveComment = async () => {

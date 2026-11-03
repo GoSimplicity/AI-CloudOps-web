@@ -373,16 +373,6 @@ const formRules = {
   ],
 };
 
-const closeInstanceForm = () => {
-  ++formRequest;
-  ++designRequest;
-  ++processOptionsRequest;
-  ++userOptionsRequest;
-  instanceDialog.visible = false;
-  formLoading.value = false;
-  formDesignLoading.value = false;
-};
-
 // 从模板创建对话框
 const templateDialog = reactive({
   visible: false,
@@ -421,6 +411,156 @@ const closeInstanceDetail = () => {
   detailDialog.instance = null;
   detailDialog.availableActions = [];
   detailLoading.value = false;
+};
+
+// 获取可用动作
+const loadAvailableActions = async (instanceId: number) => {
+  const request = detailRequest;
+  const ticket = ++detailActionsRequest;
+  const isCurrent = () =>
+    ticket === detailActionsRequest && isDetailCurrent(instanceId, request);
+  if (!isCurrent()) return;
+  detailDialog.actionsLoading = true;
+  detailMetadataErrors.actions = '';
+  detailDialog.availableActions = [];
+  try {
+    const actions = await getAvailableActions(instanceId);
+    if (!isCurrent()) return;
+    if (!Array.isArray(actions)) throw new Error('无效动作目录');
+    detailDialog.availableActions = actions.map((action) =>
+      String(action).toLowerCase(),
+    );
+  } catch {
+    if (isCurrent()) detailMetadataErrors.actions = '获取可用操作失败';
+  } finally {
+    if (isCurrent()) detailDialog.actionsLoading = false;
+  }
+};
+
+// 加载流程定义和步骤导航
+const loadProcessStepsNavigation = async (instance: WorkorderInstanceItem) => {
+  const request = detailRequest;
+  if (!isDetailCurrent(instance.id, request)) return;
+  detailMetadataErrors.navigation = '';
+  if (!instance.process_id || !instance.current_step_id) {
+    detailDialog.previousStep = null;
+    detailDialog.nextStep = null;
+    detailDialog.allSteps = [];
+    detailDialog.processDefinition = null;
+    return;
+  }
+
+  try {
+    // 获取流程定义
+    const processDetail = await detailWorkorderProcess({
+      id: instance.process_id,
+    } as DetailWorkorderProcessReq);
+    if (!isDetailCurrent(instance.id, request)) return;
+    if (processDetail && processDetail.definition) {
+      detailDialog.processDefinition = processDetail.definition;
+      const steps = processDetail.definition.steps || [];
+
+      // 按 sort_order 排序步骤
+      const sortedSteps = [...steps].sort(
+        (a, b) => a.sort_order - b.sort_order,
+      );
+      detailDialog.allSteps = sortedSteps;
+
+      // 找到当前步骤在排序后数组中的索引
+      const currentStepIndex = sortedSteps.findIndex(
+        (step) => step.id === instance.current_step_id,
+      );
+
+      if (currentStepIndex >= 0) {
+        // 获取前一步骤
+        if (currentStepIndex > 0) {
+          detailDialog.previousStep = sortedSteps[currentStepIndex - 1];
+        } else {
+          detailDialog.previousStep = null;
+        }
+
+        // 获取下一步骤
+        if (currentStepIndex < sortedSteps.length - 1) {
+          detailDialog.nextStep = sortedSteps[currentStepIndex + 1];
+        } else {
+          detailDialog.nextStep = null;
+        }
+      } else {
+        detailDialog.previousStep = null;
+        detailDialog.nextStep = null;
+      }
+    }
+  } catch {
+    if (!isDetailCurrent(instance.id, request)) return;
+    detailMetadataErrors.navigation = '获取步骤导航失败';
+    detailDialog.previousStep = null;
+    detailDialog.nextStep = null;
+    detailDialog.allSteps = [];
+    detailDialog.processDefinition = null;
+  }
+};
+
+// 获取当前步骤 - 优化版本，基于 current_step_id 字段
+const loadCurrentStep = async (
+  instanceId: number,
+  instance?: WorkorderInstanceItem,
+) => {
+  const request = detailRequest;
+  if (!isDetailCurrent(instanceId, request)) return;
+  detailMetadataErrors.step = '';
+  detailDialog.currentStep = null;
+  if (!instance?.current_step_id) {
+    detailDialog.stepLoading = false;
+    return;
+  }
+  detailDialog.stepLoading = true;
+  try {
+    const step = await getCurrentStep(instanceId);
+    if (!isDetailCurrent(instanceId, request)) return;
+    if (step?.id && step.id !== instance.current_step_id) {
+      detailMetadataErrors.step = '工单状态已变化，请刷新详情';
+      return;
+    }
+    detailDialog.currentStep = step;
+    await loadProcessStepsNavigation(instance);
+  } catch {
+    if (isDetailCurrent(instanceId, request))
+      detailMetadataErrors.step = '获取当前步骤失败';
+  } finally {
+    if (isDetailCurrent(instanceId, request)) detailDialog.stepLoading = false;
+  }
+};
+
+const handleViewInstance = async (row: WorkorderInstanceItem) => {
+  const request = ++detailRequest;
+  ++detailActionsRequest;
+  detailTarget.value = row;
+  detailDialog.visible = true;
+  detailDialog.instance = null;
+  detailDialog.availableActions = [];
+  detailDialog.currentStep = null;
+  detailDialog.allSteps = [];
+  detailDialog.previousStep = null;
+  detailDialog.nextStep = null;
+  detailMetadataErrors.actions = '';
+  detailMetadataErrors.step = '';
+  detailMetadataErrors.navigation = '';
+  detailError.value = '';
+  detailLoading.value = true;
+  try {
+    const res = await detailWorkorderInstance({ id: row.id });
+    if (request !== detailRequest || !detailDialog.visible) return;
+    if (!res) throw new Error('空详情');
+    detailDialog.instance = res;
+    loadAvailableActions(row.id);
+    loadCurrentStep(row.id, res);
+  } catch (error) {
+    if (request !== detailRequest || !detailDialog.visible) return;
+    if (shouldRecordPageError(error))
+      detailError.value = '获取工单详情失败，请重试';
+  } finally {
+    if (request === detailRequest) detailLoading.value = false;
+  }
 };
 const retryInstanceDetail = () => {
   if (detailTarget.value) handleViewInstance(detailTarget.value);
@@ -464,6 +604,16 @@ const formEditMode = ref<'json' | 'visual'>('visual');
 // 当前流程的表单设计
 const currentFormDesign = ref<WorkorderFormDesignItem | null>(null);
 const formDesignLoading = ref(false);
+
+const closeInstanceForm = () => {
+  ++formRequest;
+  ++designRequest;
+  ++processOptionsRequest;
+  ++userOptionsRequest;
+  instanceDialog.visible = false;
+  formLoading.value = false;
+  formDesignLoading.value = false;
+};
 
 // 可视化表单数据
 const visualFormData = ref<Record<string, any>>({});
@@ -650,6 +800,65 @@ const getPriorityClass = (priority: number): string => {
   return classMap[priority as keyof typeof classMap] || 'priority-normal';
 };
 
+// 主用户数据加载方法 - 实现真分页
+const loadUsers = async (
+  reset: boolean = false,
+  search?: string,
+): Promise<void> => {
+  if (usersLoading.value && !reset) {
+    return;
+  }
+
+  usersLoading.value = true;
+
+  try {
+    const params: GetUserListReq = {
+      page: reset ? 1 : usersPagination.current + 1,
+      size: usersPagination.pageSize,
+      search: search || usersSearchKeyword.value || '',
+    };
+
+    const res = await getUserList(params);
+
+    if (res && res.items) {
+      if (reset) {
+        users.value = res.items;
+        usersPagination.current = params.page || 1;
+      } else {
+        // 追加模式，用于加载更多
+        users.value = [...users.value, ...res.items];
+        usersPagination.current = params.page || 1;
+      }
+
+      usersPagination.total = res.total || 0;
+      usersPagination.hasMore =
+        usersPagination.current * usersPagination.pageSize <
+        usersPagination.total;
+    } else {
+      if (reset) {
+        users.value = [];
+        usersPagination.current = 1;
+        usersPagination.total = 0;
+        usersPagination.hasMore = false;
+      }
+    }
+  } catch (error: any) {
+    if (reset) {
+      if (shouldNotifyPageError(error))
+        message.error(error.message || '加载用户数据失败');
+      users.value = [];
+      usersPagination.current = 1;
+      usersPagination.total = 0;
+      usersPagination.hasMore = false;
+    }
+  } finally {
+    usersLoading.value = false;
+  }
+};
+
+// 加载更多主用户数据
+const loadMoreMainUsers = () => loadUsers(false);
+
 // 修改getAssigneeName方法 - 支持动态加载
 const getAssigneeName = (assigneeId?: number): string => {
   if (!assigneeId) return '';
@@ -751,50 +960,6 @@ const getAvatarColor = (name: string | undefined) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-// 获取表单设计详情
-const loadFormDesign = async (processId: number): Promise<void> => {
-  const request = ++designRequest;
-  const form = formRequest;
-  const isCurrent = () =>
-    request === designRequest &&
-    form === formRequest &&
-    instanceDialog.visible &&
-    instanceDialog.form.process_id === processId;
-  if (!processId) {
-    currentFormDesign.value = null;
-    return;
-  }
-
-  try {
-    formDesignLoading.value = true;
-
-    // 先从已选择的流程中获取form_design_id
-    const selectedProcess =
-      dialogProcesses.value.find((p) => p.id === processId) ||
-      processes.value.find((p) => p.id === processId);
-
-    if (!selectedProcess?.form_design_id) {
-      currentFormDesign.value = null;
-      return;
-    }
-
-    const res = await detailWorkorderFormDesign({
-      id: selectedProcess.form_design_id,
-    } as DetailWorkorderFormDesignReq);
-    if (!isCurrent()) return;
-    if (res) {
-      currentFormDesign.value = res;
-      // 初始化可视化表单数据
-      initializeVisualFormData();
-    }
-  } catch {
-    if (!isCurrent()) return;
-    currentFormDesign.value = null;
-  } finally {
-    if (request === designRequest) formDesignLoading.value = false;
-  }
-};
-
 // 初始化可视化表单数据
 const initializeVisualFormData = (): void => {
   if (!currentFormDesign.value?.schema?.fields) {
@@ -852,6 +1017,50 @@ const initializeVisualFormData = (): void => {
   });
 
   visualFormData.value = newData;
+};
+
+// 获取表单设计详情
+const loadFormDesign = async (processId: number): Promise<void> => {
+  const request = ++designRequest;
+  const form = formRequest;
+  const isCurrent = () =>
+    request === designRequest &&
+    form === formRequest &&
+    instanceDialog.visible &&
+    instanceDialog.form.process_id === processId;
+  if (!processId) {
+    currentFormDesign.value = null;
+    return;
+  }
+
+  try {
+    formDesignLoading.value = true;
+
+    // 先从已选择的流程中获取form_design_id
+    const selectedProcess =
+      dialogProcesses.value.find((p) => p.id === processId) ||
+      processes.value.find((p) => p.id === processId);
+
+    if (!selectedProcess?.form_design_id) {
+      currentFormDesign.value = null;
+      return;
+    }
+
+    const res = await detailWorkorderFormDesign({
+      id: selectedProcess.form_design_id,
+    } as DetailWorkorderFormDesignReq);
+    if (!isCurrent()) return;
+    if (res) {
+      currentFormDesign.value = res;
+      // 初始化可视化表单数据
+      initializeVisualFormData();
+    }
+  } catch {
+    if (!isCurrent()) return;
+    currentFormDesign.value = null;
+  } finally {
+    if (request === designRequest) formDesignLoading.value = false;
+  }
 };
 
 // 模式切换处理
@@ -936,65 +1145,6 @@ const validateFormDataJson = (): void => {
     message.error('JSON验证失败');
   }
 };
-
-// 主用户数据加载方法 - 实现真分页
-const loadUsers = async (
-  reset: boolean = false,
-  search?: string,
-): Promise<void> => {
-  if (usersLoading.value && !reset) {
-    return;
-  }
-
-  usersLoading.value = true;
-
-  try {
-    const params: GetUserListReq = {
-      page: reset ? 1 : usersPagination.current + 1,
-      size: usersPagination.pageSize,
-      search: search || usersSearchKeyword.value || '',
-    };
-
-    const res = await getUserList(params);
-
-    if (res && res.items) {
-      if (reset) {
-        users.value = res.items;
-        usersPagination.current = params.page || 1;
-      } else {
-        // 追加模式，用于加载更多
-        users.value = [...users.value, ...res.items];
-        usersPagination.current = params.page || 1;
-      }
-
-      usersPagination.total = res.total || 0;
-      usersPagination.hasMore =
-        usersPagination.current * usersPagination.pageSize <
-        usersPagination.total;
-    } else {
-      if (reset) {
-        users.value = [];
-        usersPagination.current = 1;
-        usersPagination.total = 0;
-        usersPagination.hasMore = false;
-      }
-    }
-  } catch (error: any) {
-    if (reset) {
-      if (shouldNotifyPageError(error))
-        message.error(error.message || '加载用户数据失败');
-      users.value = [];
-      usersPagination.current = 1;
-      usersPagination.total = 0;
-      usersPagination.hasMore = false;
-    }
-  } finally {
-    usersLoading.value = false;
-  }
-};
-
-// 加载更多主用户数据
-const loadMoreMainUsers = () => loadUsers(false);
 
 // 流程选择器方法 - 使用listWorkorderProcess接口实现动态分页
 const loadDialogProcesses = async (
@@ -1115,6 +1265,8 @@ const handleProcessDropdownChange = (open: boolean): void => {
   }
 };
 
+const loadMoreProcesses = () => loadDialogProcesses(false);
+
 const handleProcessScroll = (e: Event): void => {
   const { target } = e;
   if (!target) return;
@@ -1130,8 +1282,6 @@ const handleProcessScroll = (e: Event): void => {
     loadMoreProcesses();
   }
 };
-
-const loadMoreProcesses = () => loadDialogProcesses(false);
 
 // 处理流程选择变化
 const handleProcessSelectChange = (processId: number | undefined): void => {
@@ -1225,6 +1375,8 @@ const handleUserDropdownChange = (open: boolean): void => {
   }
 };
 
+const loadMoreUsers = () => loadDialogUsers(false);
+
 const handleUserScroll = (e: Event): void => {
   const { target } = e;
   if (!target) return;
@@ -1246,19 +1398,18 @@ const handleAssigneeChange = (value: number | undefined): void => {
   instanceDialog.form.assignee_id = value;
 };
 
-const loadMoreUsers = () => loadDialogUsers(false);
-
-// 表格变化处理
-const handleTableChange = (pagination: any): void => {
-  if (pagination.current !== currentPage.value) {
-    currentPage.value = pagination.current;
-  }
-  if (pagination.pageSize !== pageSize.value) {
-    // 确保pageSize不小于10，满足后端验证要求
-    pageSize.value = Math.max(10, pagination.pageSize);
-    currentPage.value = 1;
-  }
-  loadInstances();
+// 匹配总数来自服务端，状态只计算本页，不再额外读取四次全局列表
+const updatePageStats = () => {
+  stats.total = total.value;
+  stats.pending = instanceList.value.filter(
+    (item) => item.status === InstanceStatus.Pending,
+  ).length;
+  stats.processing = instanceList.value.filter(
+    (item) => item.status === InstanceStatus.Processing,
+  ).length;
+  stats.completed = instanceList.value.filter(
+    (item) => item.status === InstanceStatus.Completed,
+  ).length;
 };
 
 // 数据加载
@@ -1294,18 +1445,17 @@ const loadInstances = async () => {
   }
 };
 
-// 匹配总数来自服务端，状态只计算本页，不再额外读取四次全局列表
-const updatePageStats = () => {
-  stats.total = total.value;
-  stats.pending = instanceList.value.filter(
-    (item) => item.status === InstanceStatus.Pending,
-  ).length;
-  stats.processing = instanceList.value.filter(
-    (item) => item.status === InstanceStatus.Processing,
-  ).length;
-  stats.completed = instanceList.value.filter(
-    (item) => item.status === InstanceStatus.Completed,
-  ).length;
+// 表格变化处理
+const handleTableChange = (pagination: any): void => {
+  if (pagination.current !== currentPage.value) {
+    currentPage.value = pagination.current;
+  }
+  if (pagination.pageSize !== pageSize.value) {
+    // 确保pageSize不小于10，满足后端验证要求
+    pageSize.value = Math.max(10, pagination.pageSize);
+    currentPage.value = 1;
+  }
+  loadInstances();
 };
 
 const resetFilters = () => {
@@ -1349,6 +1499,31 @@ const handleExport = () => {
   message.success('已导出当前页记录');
 };
 
+// 重置选择器状态
+const resetSelectors = (): void => {
+  ++processOptionsRequest;
+  ++userOptionsRequest;
+  // 重置流程选择器
+  Object.assign(processPagination, { current: 1, total: 0, hasMore: false });
+  dialogProcesses.value = [];
+  processSearchKeyword.value = '';
+  processSelectorLoading.value = false;
+  if (processSearchTimeout) {
+    clearTimeout(processSearchTimeout);
+    processSearchTimeout = null;
+  }
+
+  // 重置用户选择器
+  Object.assign(userPagination, { current: 1, total: 0, hasMore: false });
+  dialogUsers.value = [];
+  userSearchKeyword.value = '';
+  userSelectorLoading.value = false;
+  if (userSearchTimeout) {
+    clearTimeout(userSearchTimeout);
+    userSearchTimeout = null;
+  }
+};
+
 const handleCreateInstance = () => {
   ++formRequest;
   ++designRequest;
@@ -1375,27 +1550,6 @@ const handleCreateInstance = () => {
   visualFormData.value = {};
   instanceDialog.visible = true;
   resetSelectors();
-};
-
-// 从模板创建工单
-const handleCreateFromTemplate = () => {
-  ++formRequest;
-  ++designRequest;
-  formLoading.value = false;
-  formDesignLoading.value = false;
-  ++templateOptionsRequest;
-  templateSearchKeyword.value = '';
-  dialogTemplates.value = [];
-  templateDialog.form = {
-    template_id: undefined,
-    title: '',
-    description: '',
-    priority: Priority.Normal,
-    tags: [],
-    due_date: undefined,
-  };
-  templateDialog.visible = true;
-  loadTemplates();
 };
 
 // 加载模板列表
@@ -1427,6 +1581,27 @@ const loadTemplates = async (search?: string) => {
     if (request === templateOptionsRequest)
       templateSelectorLoading.value = false;
   }
+};
+
+// 从模板创建工单
+const handleCreateFromTemplate = () => {
+  ++formRequest;
+  ++designRequest;
+  formLoading.value = false;
+  formDesignLoading.value = false;
+  ++templateOptionsRequest;
+  templateSearchKeyword.value = '';
+  dialogTemplates.value = [];
+  templateDialog.form = {
+    template_id: undefined,
+    title: '',
+    description: '',
+    priority: Priority.Normal,
+    tags: [],
+    due_date: undefined,
+  };
+  templateDialog.visible = true;
+  loadTemplates();
 };
 
 // 模板搜索
@@ -1506,6 +1681,52 @@ const handleTemplateSubmit = async () => {
   }
 };
 
+// 确保当前选中的处理人在用户列表中
+const ensureCurrentAssigneeInList = async (): Promise<void> => {
+  const currentAssigneeId = instanceDialog.form.assignee_id;
+
+  if (currentAssigneeId == null) {
+    return;
+  }
+
+  // 检查当前处理人是否已经在dialogUsers中
+  const isAssigneeInList = dialogUsers.value.some(
+    (user: UserListItem) => user.id === Number(currentAssigneeId),
+  );
+
+  if (!isAssigneeInList) {
+    try {
+      // 加载更多用户数据或搜索特定用户
+      // 先尝试通过搜索当前处理人的ID来找到他
+      const assigneeUser = users.value.find(
+        (user: UserListItem) => user.id === Number(currentAssigneeId),
+      );
+
+      if (assigneeUser) {
+        // 如果在主用户列表中找到了，添加到dialog用户列表中
+        const existsInDialog = dialogUsers.value.some(
+          (user: UserListItem) => user.id === assigneeUser.id,
+        );
+        if (!existsInDialog) {
+          dialogUsers.value.unshift(assigneeUser);
+        }
+      }
+    } catch {}
+  }
+};
+
+// 为编辑模式加载选择器信息
+const loadSelectorsForEdit = async (): Promise<void> => {
+  resetSelectors();
+
+  try {
+    await Promise.all([loadDialogProcesses(true), loadDialogUsers(true)]);
+
+    // 确保当前选中的处理人在用户列表中
+    await ensureCurrentAssigneeInList();
+  } catch {}
+};
+
 const handleEditInstance = async (row: WorkorderInstanceItem) => {
   const request = ++formRequest;
   ++designRequest;
@@ -1550,124 +1771,6 @@ const handleEditInstance = async (row: WorkorderInstanceItem) => {
     if (shouldNotifyPageError(error)) message.error('获取工单详情失败');
   } finally {
     if (request === formRequest) formLoading.value = false;
-  }
-};
-
-// 获取可用动作
-const loadAvailableActions = async (instanceId: number) => {
-  const request = detailRequest;
-  const ticket = ++detailActionsRequest;
-  const isCurrent = () =>
-    ticket === detailActionsRequest && isDetailCurrent(instanceId, request);
-  if (!isCurrent()) return;
-  detailDialog.actionsLoading = true;
-  detailMetadataErrors.actions = '';
-  detailDialog.availableActions = [];
-  try {
-    const actions = await getAvailableActions(instanceId);
-    if (!isCurrent()) return;
-    if (!Array.isArray(actions)) throw new Error('无效动作目录');
-    detailDialog.availableActions = actions.map((action) =>
-      String(action).toLowerCase(),
-    );
-  } catch {
-    if (isCurrent()) detailMetadataErrors.actions = '获取可用操作失败';
-  } finally {
-    if (isCurrent()) detailDialog.actionsLoading = false;
-  }
-};
-
-// 加载流程定义和步骤导航
-const loadProcessStepsNavigation = async (instance: WorkorderInstanceItem) => {
-  const request = detailRequest;
-  if (!isDetailCurrent(instance.id, request)) return;
-  detailMetadataErrors.navigation = '';
-  if (!instance.process_id || !instance.current_step_id) {
-    detailDialog.previousStep = null;
-    detailDialog.nextStep = null;
-    detailDialog.allSteps = [];
-    detailDialog.processDefinition = null;
-    return;
-  }
-
-  try {
-    // 获取流程定义
-    const processDetail = await detailWorkorderProcess({
-      id: instance.process_id,
-    } as DetailWorkorderProcessReq);
-    if (!isDetailCurrent(instance.id, request)) return;
-    if (processDetail && processDetail.definition) {
-      detailDialog.processDefinition = processDetail.definition;
-      const steps = processDetail.definition.steps || [];
-
-      // 按 sort_order 排序步骤
-      const sortedSteps = [...steps].sort(
-        (a, b) => a.sort_order - b.sort_order,
-      );
-      detailDialog.allSteps = sortedSteps;
-
-      // 找到当前步骤在排序后数组中的索引
-      const currentStepIndex = sortedSteps.findIndex(
-        (step) => step.id === instance.current_step_id,
-      );
-
-      if (currentStepIndex >= 0) {
-        // 获取前一步骤
-        if (currentStepIndex > 0) {
-          detailDialog.previousStep = sortedSteps[currentStepIndex - 1];
-        } else {
-          detailDialog.previousStep = null;
-        }
-
-        // 获取下一步骤
-        if (currentStepIndex < sortedSteps.length - 1) {
-          detailDialog.nextStep = sortedSteps[currentStepIndex + 1];
-        } else {
-          detailDialog.nextStep = null;
-        }
-      } else {
-        detailDialog.previousStep = null;
-        detailDialog.nextStep = null;
-      }
-    }
-  } catch {
-    if (!isDetailCurrent(instance.id, request)) return;
-    detailMetadataErrors.navigation = '获取步骤导航失败';
-    detailDialog.previousStep = null;
-    detailDialog.nextStep = null;
-    detailDialog.allSteps = [];
-    detailDialog.processDefinition = null;
-  }
-};
-
-// 获取当前步骤 - 优化版本，基于 current_step_id 字段
-const loadCurrentStep = async (
-  instanceId: number,
-  instance?: WorkorderInstanceItem,
-) => {
-  const request = detailRequest;
-  if (!isDetailCurrent(instanceId, request)) return;
-  detailMetadataErrors.step = '';
-  detailDialog.currentStep = null;
-  if (!instance?.current_step_id) {
-    detailDialog.stepLoading = false;
-    return;
-  }
-  detailDialog.stepLoading = true;
-  try {
-    const step = await getCurrentStep(instanceId);
-    if (!isDetailCurrent(instanceId, request)) return;
-    if (step?.id && step.id !== instance.current_step_id) {
-      detailMetadataErrors.step = '工单状态已变化，请刷新详情';
-      return;
-    }
-    detailDialog.currentStep = step;
-    await loadProcessStepsNavigation(instance);
-  } catch {
-    if (isDetailCurrent(instanceId, request))
-      detailMetadataErrors.step = '获取当前步骤失败';
-  } finally {
-    if (isDetailCurrent(instanceId, request)) detailDialog.stepLoading = false;
   }
 };
 
@@ -1750,36 +1853,189 @@ const loadNotificationLogs = async (instanceId?: number, resetPage = false) => {
   }
 };
 
-const handleViewInstance = async (row: WorkorderInstanceItem) => {
-  const request = ++detailRequest;
-  ++detailActionsRequest;
-  detailTarget.value = row;
-  detailDialog.visible = true;
-  detailDialog.instance = null;
-  detailDialog.availableActions = [];
-  detailDialog.currentStep = null;
-  detailDialog.allSteps = [];
-  detailDialog.previousStep = null;
-  detailDialog.nextStep = null;
-  detailMetadataErrors.actions = '';
-  detailMetadataErrors.step = '';
-  detailMetadataErrors.navigation = '';
-  detailError.value = '';
-  detailLoading.value = true;
+const showCommentDialog = (instance: WorkorderInstanceItem) => {
+  commentsRef.value?.showCommentDialog(instance.id);
+};
+
+const handleViewTimeline = (instance: WorkorderInstanceItem) => {
+  timelineRef.value?.showTimeline(instance.id);
+};
+
+const handleViewFlow = (instance: WorkorderInstanceItem) => {
+  flowRef.value?.showFlow(instance.id);
+};
+
+const handleViewNotificationLogs = (instance: WorkorderInstanceItem) => {
+  notificationLogsDialog.visible = true;
+  notificationLogsDialog.instanceId = instance.id;
+  loadNotificationLogs(instance.id, true);
+};
+
+// 带权限检查的动作处理
+const handleActionWithPermission = async (
+  instance: WorkorderInstanceItem,
+  action: string,
+  callback: (instance: WorkorderInstanceItem) => void | Promise<void>,
+) => {
+  const listGeneration = listRequest;
+  const ticket = ++actionRequest;
+  const token = accessStore.accessToken;
+  const detailGeneration =
+    detailDialog.visible && detailDialog.instance?.id === instance.id
+      ? detailRequest
+      : null;
+  const isCurrent = () =>
+    ticket === actionRequest &&
+    listGeneration === listRequest &&
+    token === accessStore.accessToken &&
+    (detailGeneration === null ||
+      isDetailCurrent(instance.id, detailGeneration));
   try {
-    const res = await detailWorkorderInstance({ id: row.id });
-    if (request !== detailRequest || !detailDialog.visible) return;
-    if (!res) throw new Error('空详情');
-    detailDialog.instance = res;
-    loadAvailableActions(row.id);
-    loadCurrentStep(row.id, res);
+    const actions = await getAvailableActions(instance.id);
+    if (!isCurrent()) return;
+    if (action === 'edit' && !canEditInstance()) return;
+    if (!Array.isArray(actions)) throw new Error('无效动作目录');
+    const normalizedActions = actions.map((actionName: string) =>
+      actionName.toLowerCase(),
+    );
+    if (!normalizedActions.includes(action)) {
+      const actionMap: Record<string, string> = {
+        submit: '提交',
+        assign: '分配',
+        approve: '审批',
+        reject: '拒绝',
+        cancel: '取消',
+        complete: '完成',
+        return: '退回',
+      };
+      message.error(`您没有${actionMap[action] || action}此工单的权限`);
+      return;
+    }
+
+    await callback(instance);
   } catch (error) {
-    if (request !== detailRequest || !detailDialog.visible) return;
-    if (shouldRecordPageError(error))
-      detailError.value = '获取工单详情失败，请重试';
-  } finally {
-    if (request === detailRequest) detailLoading.value = false;
+    if (isCurrent() && shouldNotifyPageError(error))
+      message.error('获取可用操作失败，请重试');
   }
+};
+
+const handleActionEdit = (instance: WorkorderInstanceItem) =>
+  handleActionWithPermission(instance, 'edit', handleEditInstance);
+
+const handleSubmitInstance = async (instance: WorkorderInstanceItem) => {
+  Modal.confirm({
+    title: '提交确认',
+    content: `确定要提交工单 "${instance.title}" 吗？提交后将无法撤回。`,
+    okText: '提交',
+    cancelText: '取消',
+    async onOk() {
+      try {
+        loading.value = true;
+        const params: SubmitWorkorderInstanceReq = {
+          id: instance.id,
+        };
+
+        await submitWorkorderInstance(params);
+        message.success(`工单 "${instance.title}" 提交成功`);
+
+        await syncStepStatus(instance.id, 'submit');
+      } catch (error: any) {
+        if (shouldNotifyPageError(error))
+          message.error(`提交工单失败: ${error.message || '未知错误'}`);
+      } finally {
+        loading.value = false;
+      }
+    },
+  });
+};
+
+const handleActionSubmit = (instance: WorkorderInstanceItem) =>
+  handleActionWithPermission(instance, 'submit', handleSubmitInstance);
+
+const showAssignDialog = (instance: WorkorderInstanceItem) => {
+  assignDialog.instanceId = instance.id;
+  assignDialog.form.assignee_id = undefined;
+  assignDialog.visible = true;
+  loadDialogUsers(true);
+};
+
+const handleActionAssign = (instance: WorkorderInstanceItem) =>
+  handleActionWithPermission(instance, 'assign', showAssignDialog);
+
+const showApprovalDialog = (
+  instance: WorkorderInstanceItem,
+  type: 'approve' | 'reject',
+) => {
+  approvalDialog.instanceId = instance.id;
+  approvalDialog.type = type;
+  approvalDialog.form.comment = '';
+  approvalDialog.visible = true;
+};
+
+const handleActionApprove = (instance: WorkorderInstanceItem) =>
+  handleActionWithPermission(instance, 'approve', (inst) =>
+    showApprovalDialog(inst, 'approve'),
+  );
+
+const handleActionReject = (instance: WorkorderInstanceItem) =>
+  handleActionWithPermission(instance, 'reject', (inst) =>
+    showApprovalDialog(inst, 'reject'),
+  );
+
+const handleActionCancel = (instance: WorkorderInstanceItem) =>
+  handleActionWithPermission(instance, 'cancel', (instance) => {
+    actionDialog.instanceId = instance.id;
+    actionDialog.type = 'cancel';
+    actionDialog.form.comment = '';
+    actionDialog.visible = true;
+  });
+
+const handleActionComplete = (instance: WorkorderInstanceItem) =>
+  handleActionWithPermission(instance, 'complete', (instance) => {
+    actionDialog.instanceId = instance.id;
+    actionDialog.type = 'complete';
+    actionDialog.form.comment = '';
+    actionDialog.visible = true;
+  });
+
+const handleActionReturn = (instance: WorkorderInstanceItem) =>
+  handleActionWithPermission(instance, 'return', (instance) => {
+    actionDialog.instanceId = instance.id;
+    actionDialog.type = 'return';
+    actionDialog.form.comment = '';
+    actionDialog.visible = true;
+  });
+
+const confirmDelete = (instance: WorkorderInstanceItem) => {
+  Modal.confirm({
+    title: '警告',
+    content: `确定要删除工单 "${instance.title}" 吗？这个操作不可恢复！`,
+    okText: '删除',
+    okType: 'danger',
+    cancelText: '取消',
+    async onOk() {
+      try {
+        loading.value = true;
+        const params: DeleteWorkorderInstanceReq = {
+          id: instance.id,
+        };
+
+        await deleteWorkorderInstance(params);
+        message.success(`工单 "${instance.title}" 已删除`);
+
+        if (instanceList.value.length === 1 && currentPage.value > 1) {
+          currentPage.value = currentPage.value - 1;
+        }
+
+        loadInstances();
+      } catch (error: any) {
+        if (shouldNotifyPageError(error))
+          message.error(`删除工单失败: ${error.message || '未知错误'}`);
+      } finally {
+        loading.value = false;
+      }
+    },
+  });
 };
 
 const handleCommand = async (command: string, row: WorkorderInstanceItem) => {
@@ -1839,26 +2095,8 @@ const handleCommand = async (command: string, row: WorkorderInstanceItem) => {
   }
 };
 
-const showCommentDialog = (instance: WorkorderInstanceItem) => {
-  commentsRef.value?.showCommentDialog(instance.id);
-};
-
 const handleViewComments = (instance: WorkorderInstanceItem) => {
   commentsRef.value?.showCommentsView(instance.id);
-};
-
-const handleViewTimeline = (instance: WorkorderInstanceItem) => {
-  timelineRef.value?.showTimeline(instance.id);
-};
-
-const handleViewFlow = (instance: WorkorderInstanceItem) => {
-  flowRef.value?.showFlow(instance.id);
-};
-
-const handleViewNotificationLogs = (instance: WorkorderInstanceItem) => {
-  notificationLogsDialog.visible = true;
-  notificationLogsDialog.instanceId = instance.id;
-  loadNotificationLogs(instance.id, true);
 };
 
 // 处理通知记录分页变化
@@ -1909,131 +2147,6 @@ const viewNotificationDetail = (log: NotificationLog) => {
         ),
     ),
   });
-};
-
-// 带权限检查的动作处理
-const handleActionWithPermission = async (
-  instance: WorkorderInstanceItem,
-  action: string,
-  callback: (instance: WorkorderInstanceItem) => void | Promise<void>,
-) => {
-  const listGeneration = listRequest;
-  const ticket = ++actionRequest;
-  const token = accessStore.accessToken;
-  const detailGeneration =
-    detailDialog.visible && detailDialog.instance?.id === instance.id
-      ? detailRequest
-      : null;
-  const isCurrent = () =>
-    ticket === actionRequest &&
-    listGeneration === listRequest &&
-    token === accessStore.accessToken &&
-    (detailGeneration === null ||
-      isDetailCurrent(instance.id, detailGeneration));
-  try {
-    const actions = await getAvailableActions(instance.id);
-    if (!isCurrent()) return;
-    if (action === 'edit' && !canEditInstance()) return;
-    if (!Array.isArray(actions)) throw new Error('无效动作目录');
-    const normalizedActions = actions.map((actionName: string) =>
-      actionName.toLowerCase(),
-    );
-    if (!normalizedActions.includes(action)) {
-      const actionMap: Record<string, string> = {
-        submit: '提交',
-        assign: '分配',
-        approve: '审批',
-        reject: '拒绝',
-        cancel: '取消',
-        complete: '完成',
-        return: '退回',
-      };
-      message.error(`您没有${actionMap[action] || action}此工单的权限`);
-      return;
-    }
-
-    await callback(instance);
-  } catch (error) {
-    if (isCurrent() && shouldNotifyPageError(error))
-      message.error('获取可用操作失败，请重试');
-  }
-};
-
-const handleActionEdit = (instance: WorkorderInstanceItem) =>
-  handleActionWithPermission(instance, 'edit', handleEditInstance);
-
-const handleActionSubmit = (instance: WorkorderInstanceItem) =>
-  handleActionWithPermission(instance, 'submit', handleSubmitInstance);
-
-const handleActionAssign = (instance: WorkorderInstanceItem) =>
-  handleActionWithPermission(instance, 'assign', showAssignDialog);
-
-const handleActionApprove = (instance: WorkorderInstanceItem) =>
-  handleActionWithPermission(instance, 'approve', (inst) =>
-    showApprovalDialog(inst, 'approve'),
-  );
-
-const handleActionReject = (instance: WorkorderInstanceItem) =>
-  handleActionWithPermission(instance, 'reject', (inst) =>
-    showApprovalDialog(inst, 'reject'),
-  );
-
-const handleActionCancel = (instance: WorkorderInstanceItem) =>
-  handleActionWithPermission(instance, 'cancel', (instance) => {
-    actionDialog.instanceId = instance.id;
-    actionDialog.type = 'cancel';
-    actionDialog.form.comment = '';
-    actionDialog.visible = true;
-  });
-
-const handleActionComplete = (instance: WorkorderInstanceItem) =>
-  handleActionWithPermission(instance, 'complete', (instance) => {
-    actionDialog.instanceId = instance.id;
-    actionDialog.type = 'complete';
-    actionDialog.form.comment = '';
-    actionDialog.visible = true;
-  });
-
-const handleActionReturn = (instance: WorkorderInstanceItem) =>
-  handleActionWithPermission(instance, 'return', (instance) => {
-    actionDialog.instanceId = instance.id;
-    actionDialog.type = 'return';
-    actionDialog.form.comment = '';
-    actionDialog.visible = true;
-  });
-
-const handleSubmitInstance = async (instance: WorkorderInstanceItem) => {
-  Modal.confirm({
-    title: '提交确认',
-    content: `确定要提交工单 "${instance.title}" 吗？提交后将无法撤回。`,
-    okText: '提交',
-    cancelText: '取消',
-    async onOk() {
-      try {
-        loading.value = true;
-        const params: SubmitWorkorderInstanceReq = {
-          id: instance.id,
-        };
-
-        await submitWorkorderInstance(params);
-        message.success(`工单 "${instance.title}" 提交成功`);
-
-        await syncStepStatus(instance.id, 'submit');
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(`提交工单失败: ${error.message || '未知错误'}`);
-      } finally {
-        loading.value = false;
-      }
-    },
-  });
-};
-
-const showAssignDialog = (instance: WorkorderInstanceItem) => {
-  assignDialog.instanceId = instance.id;
-  assignDialog.form.assignee_id = undefined;
-  assignDialog.visible = true;
-  loadDialogUsers(true);
 };
 
 const saveAssign = async () => {
@@ -2260,16 +2373,6 @@ const saveActionComment = async () => {
   }
 };
 
-const showApprovalDialog = (
-  instance: WorkorderInstanceItem,
-  type: 'approve' | 'reject',
-) => {
-  approvalDialog.instanceId = instance.id;
-  approvalDialog.type = type;
-  approvalDialog.form.comment = '';
-  approvalDialog.visible = true;
-};
-
 const saveApproval = async () => {
   if (loading.value) return;
   try {
@@ -2345,38 +2448,6 @@ const saveApproval = async () => {
   } finally {
     loading.value = false;
   }
-};
-
-const confirmDelete = (instance: WorkorderInstanceItem) => {
-  Modal.confirm({
-    title: '警告',
-    content: `确定要删除工单 "${instance.title}" 吗？这个操作不可恢复！`,
-    okText: '删除',
-    okType: 'danger',
-    cancelText: '取消',
-    async onOk() {
-      try {
-        loading.value = true;
-        const params: DeleteWorkorderInstanceReq = {
-          id: instance.id,
-        };
-
-        await deleteWorkorderInstance(params);
-        message.success(`工单 "${instance.title}" 已删除`);
-
-        if (instanceList.value.length === 1 && currentPage.value > 1) {
-          currentPage.value = currentPage.value - 1;
-        }
-
-        loadInstances();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(`删除工单失败: ${error.message || '未知错误'}`);
-      } finally {
-        loading.value = false;
-      }
-    },
-  });
 };
 
 const saveInstance = async () => {
@@ -2463,77 +2534,6 @@ const saveInstance = async () => {
       message.error(`${action}工单失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
-  }
-};
-
-// 重置选择器状态
-const resetSelectors = (): void => {
-  ++processOptionsRequest;
-  ++userOptionsRequest;
-  // 重置流程选择器
-  Object.assign(processPagination, { current: 1, total: 0, hasMore: false });
-  dialogProcesses.value = [];
-  processSearchKeyword.value = '';
-  processSelectorLoading.value = false;
-  if (processSearchTimeout) {
-    clearTimeout(processSearchTimeout);
-    processSearchTimeout = null;
-  }
-
-  // 重置用户选择器
-  Object.assign(userPagination, { current: 1, total: 0, hasMore: false });
-  dialogUsers.value = [];
-  userSearchKeyword.value = '';
-  userSelectorLoading.value = false;
-  if (userSearchTimeout) {
-    clearTimeout(userSearchTimeout);
-    userSearchTimeout = null;
-  }
-};
-
-// 为编辑模式加载选择器信息
-const loadSelectorsForEdit = async (): Promise<void> => {
-  resetSelectors();
-
-  try {
-    await Promise.all([loadDialogProcesses(true), loadDialogUsers(true)]);
-
-    // 确保当前选中的处理人在用户列表中
-    await ensureCurrentAssigneeInList();
-  } catch {}
-};
-
-// 确保当前选中的处理人在用户列表中
-const ensureCurrentAssigneeInList = async (): Promise<void> => {
-  const currentAssigneeId = instanceDialog.form.assignee_id;
-
-  if (currentAssigneeId == null) {
-    return;
-  }
-
-  // 检查当前处理人是否已经在dialogUsers中
-  const isAssigneeInList = dialogUsers.value.some(
-    (user: UserListItem) => user.id === Number(currentAssigneeId),
-  );
-
-  if (!isAssigneeInList) {
-    try {
-      // 加载更多用户数据或搜索特定用户
-      // 先尝试通过搜索当前处理人的ID来找到他
-      const assigneeUser = users.value.find(
-        (user: UserListItem) => user.id === Number(currentAssigneeId),
-      );
-
-      if (assigneeUser) {
-        // 如果在主用户列表中找到了，添加到dialog用户列表中
-        const existsInDialog = dialogUsers.value.some(
-          (user: UserListItem) => user.id === assigneeUser.id,
-        );
-        if (!existsInDialog) {
-          dialogUsers.value.unshift(assigneeUser);
-        }
-      }
-    } catch {}
   }
 };
 
