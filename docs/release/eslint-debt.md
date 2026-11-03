@@ -222,3 +222,10 @@ TypeScript 检查确认 `SshTerminal.test.ts` 的6处断言作用于既有 any �
 - 9spec与依赖helper在strict/noUncheckedIndexedAccess/ES2022/Bundler的真实TypeScript program中零诊断。
 - 同一配置下定向ESLint555→484，唯一规则变化为71处非空断言清除；Playwright收集29项/9文件，仍不把收集当实际浏览器验收。
 - 当前产品构建11项通过；浏览器改动需以新固定三仓源码CI实际验收。没有改skip以绕过测试或访问生产。
+
+## 阶段十五：剩余SFC顺序与请求测试检查（2026-11-03）
+
+- FormDesign、Instance、ProcessDesign剩余3处SFC区块顺序统一；使用真实Vue脚本及模板编译证明运行代码相同，样式/块属性不变。至此block-order和组件模板命名这两类历史错误已清除。
+- SystemWelcome与MonitorOnDutyGroupTable的4处类型排列规范化，只接受简单union/无重复属性签名；实际compileScript再TypeScript输出JavaScript保持相同，bindings/模板/样式不变。另10个文件因Vue运行时props顺序会变化而拒绝批修，保留可见技术债。
+- 请求账户隔离测试最后1处非空断言改为明确前置请求配置存在性检查，缺失直接失败，不再把缺失配置spread成空对象后继续测试。
+- 相关5文件54项测试与应用类型检查通过。产品11项构建已覆盖这些SFC修改；最后账户改动仅为测试，未重复构建。全仓lint将由下一阶段统一实扫确认，不以局部检查宣称全绿。未访问生产。

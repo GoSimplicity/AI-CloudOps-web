@@ -182,7 +182,8 @@ describe('真实应用请求客户端账户归属', () => {
   it('复制旧请求配置重放时在注入新凭证前拒绝', async () => {
     mock.onPost('/write').reply(200, { code: 0, data: 'ok' });
     await client.post('/write', { private: 'owner-one' });
-    const config = mock.history.post[0]!;
+    const config = mock.history.post[0];
+    if (!config) throw new Error('测试前置请求配置缺失');
     switchAccount('2', 'credential-two');
     await expect(client.request('/write', { ...config })).rejects.toBeDefined();
     expect(mock.history.post).toHaveLength(1);

@@ -44,8 +44,8 @@ echarts.use([
 ]);
 
 const moduleData = ref<{
-  systemInfo: Snapshot | null;
-  systemMetrics: Snapshot | null;
+  systemInfo: null | Snapshot;
+  systemMetrics: null | Snapshot;
 }>({ systemInfo: null, systemMetrics: null });
 const history = ref<Record<MetricKey, Array<null | number>>>({
   cpu_usage: [],

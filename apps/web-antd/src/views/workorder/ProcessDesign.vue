@@ -1,492 +1,3 @@
-<template>
-  <OpsPage
-    class="process-design-engine"
-    description="关联已发布表单，配置步骤与连接后保存为草稿或发布"
-    title="流程设计"
-  >
-    <template #actions>
-      <a-button
-        :disabled="formsLoading || !!formLoadError"
-        :loading="saving"
-        aria-label="保存流程"
-        type="primary"
-        @click="saveProcess"
-      >
-        <SaveOutlined /> 保存流程
-      </a-button>
-      <a-button @click="copyProcessJson"><CopyOutlined /> 复制JSON</a-button>
-    </template>
-    <a-alert v-if="saveError" :message="saveError" show-icon type="error" />
-    <a-alert
-      v-if="formLoadError"
-      :message="formLoadError"
-      show-icon
-      type="error"
-    >
-      <template #action>
-        <a-button :loading="formsLoading" @click="loadFormDesigns">
-          重试表单
-        </a-button>
-      </template>
-    </a-alert>
-    <a-alert
-      v-if="categoryLoadError"
-      :message="categoryLoadError"
-      show-icon
-      type="error"
-    >
-      <template #action>
-        <a-button :loading="categoriesLoading" @click="loadCategories">
-          重试分类
-        </a-button>
-      </template>
-    </a-alert>
-    <div :inert="saving || undefined" class="edit-mode-tabs">
-      <a-tabs v-model:activeKey="editMode" type="card">
-        <a-tab-pane key="basic" tab="基本信息">
-          <div class="basic-info-form">
-            <a-form :model="processBasicInfo" layout="vertical">
-              <a-row :gutter="16">
-                <a-col :sm="12" :xs="24">
-                  <a-form-item label="流程名称" required>
-                    <a-input
-                      v-model:value="processBasicInfo.name"
-                      :maxlength="200"
-                      placeholder="请输入流程名称"
-                    />
-                  </a-form-item>
-                </a-col>
-                <a-col :sm="12" :xs="24">
-                  <a-form-item label="关联表单" required>
-                    <a-select
-                      id="process-design-form"
-                      v-model:value="processBasicInfo.form_design_id"
-                      :loading="formsLoading"
-                      placeholder="选择关联表单"
-                    >
-                      <a-select-option
-                        v-for="form in formDesigns"
-                        :key="form.id"
-                        :value="form.id"
-                      >
-                        {{ form.name }}
-                      </a-select-option>
-                    </a-select>
-                    <div class="field-hint">
-                      <InfoCircleOutlined /> 只能选择已发布的表单设计
-                    </div>
-                  </a-form-item>
-                </a-col>
-              </a-row>
-
-              <a-row :gutter="16">
-                <a-col :sm="12" :xs="24">
-                  <a-form-item label="分类">
-                    <a-select
-                      v-model:value="processBasicInfo.category_id"
-                      :loading="categoriesLoading"
-                      allow-clear
-                      placeholder="选择分类"
-                    >
-                      <a-select-option
-                        v-for="category in categories"
-                        :key="category.id"
-                        :value="category.id"
-                      >
-                        {{ category.name }}
-                      </a-select-option>
-                    </a-select>
-                  </a-form-item>
-                </a-col>
-                <a-col :sm="12" :xs="24">
-                  <a-form-item label="状态">
-                    <a-select
-                      id="process-design-status"
-                      v-model:value="processBasicInfo.status"
-                      placeholder="选择状态"
-                    >
-                      <a-select-option :value="ProcessStatus.Draft">
-                        草稿
-                      </a-select-option>
-                      <a-select-option :value="ProcessStatus.Published">
-                        已发布
-                      </a-select-option>
-                    </a-select>
-                  </a-form-item>
-                </a-col>
-              </a-row>
-
-              <a-form-item label="描述">
-                <a-textarea
-                  v-model:value="processBasicInfo.description"
-                  :maxlength="1000"
-                  :rows="3"
-                  placeholder="请输入流程描述"
-                />
-              </a-form-item>
-
-              <a-form-item label="标签">
-                <a-select
-                  v-model:value="processBasicInfo.tags"
-                  mode="tags"
-                  placeholder="输入标签，按回车添加"
-                  style="width: 100%"
-                />
-              </a-form-item>
-
-              <a-form-item label="设为默认流程">
-                <a-radio-group v-model:value="processBasicInfo.is_default">
-                  <a-radio :value="1">是</a-radio>
-                  <a-radio :value="2">否</a-radio>
-                </a-radio-group>
-              </a-form-item>
-            </a-form>
-          </div>
-        </a-tab-pane>
-
-        <a-tab-pane key="visual" tab="可视化设计">
-          <div class="visual-designer">
-            <div class="designer-toolbar">
-              <a-space>
-                <a-button type="primary" @click="addProcessStep">
-                  <PlusOutlined /> 添加步骤
-                </a-button>
-                <a-button @click="previewFlow">
-                  <EyeOutlined /> 预览流程
-                </a-button>
-                <a-button @click="validateFlow">
-                  <CheckCircleOutlined /> 验证流程
-                </a-button>
-              </a-space>
-            </div>
-
-            <div class="process-canvas">
-              <div v-if="processSteps.length === 0" class="empty-canvas">
-                <a-empty :image="emptyImage" description="暂无流程步骤">
-                  <a-button type="primary" @click="addProcessStep">
-                    开始设计流程
-                  </a-button>
-                </a-empty>
-              </div>
-
-              <div v-else class="process-steps">
-                <div
-                  v-for="(step, index) in sortedProcessSteps"
-                  :key="step.id"
-                  class="step-container"
-                >
-                  <div
-                    class="process-step"
-                    :class="{ active: selectedStep?.id === step.id }"
-                    role="button"
-                    tabindex="0"
-                    @keydown.enter="selectStepById(step.id)"
-                    @keydown.space.prevent="selectStepById(step.id)"
-                    @click="selectStepById(step.id)"
-                  >
-                    <div class="step-header">
-                      <div
-                        class="step-icon"
-                        :class="getStepTypeClass(step.type)"
-                      >
-                        <component :is="getStepIcon(step.type)" />
-                      </div>
-                      <div class="step-info">
-                        <div class="step-title">
-                          {{ step.name || `步骤 ${index + 1}` }}
-                        </div>
-                        <div class="step-type">
-                          {{ getStepTypeText(step.type) }}
-                        </div>
-                      </div>
-                      <div class="step-actions">
-                        <a-button
-                          danger
-                          size="small"
-                          title="删除"
-                          type="text"
-                          @click.stop="removeStepById(step.id)"
-                        >
-                          <DeleteOutlined />
-                        </a-button>
-                      </div>
-                    </div>
-
-                    <div
-                      v-if="step.assignee_type && step.assignee_ids?.length"
-                      class="step-assignees"
-                    >
-                      <a-tag color="blue" size="small">
-                        {{ getAssigneeTypeText(step.assignee_type) }}:
-                        {{ step.assignee_ids.length }}人
-                      </a-tag>
-                    </div>
-
-                    <div v-if="step.actions?.length" class="step-actions-list">
-                      <a-tag
-                        v-for="action in step.actions"
-                        :key="action"
-                        color="green"
-                        size="small"
-                      >
-                        {{ getActionText(action) }}
-                      </a-tag>
-                    </div>
-                  </div>
-
-                  <div
-                    v-if="getOutgoingConnections(step.id).length > 0"
-                    class="step-connections-display"
-                  >
-                    <div class="connector-arrow">
-                      <ArrowDownOutlined />
-                    </div>
-                    <div class="connection-tags">
-                      <a-tag
-                        v-for="conn in getOutgoingConnections(step.id)"
-                        :key="conn.to"
-                        color="purple"
-                      >
-                        连接到: {{ getStepNameById(conn.to) || '未知步骤' }}
-                      </a-tag>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div v-if="selectedStep" class="step-detail-panel">
-              <a-card
-                :title="`编辑步骤: ${selectedStep.name || '未命名'}`"
-                size="small"
-              >
-                <template #extra>
-                  <a-button
-                    size="small"
-                    type="text"
-                    @click="selectedStepIndex = null"
-                  >
-                    <CloseOutlined />
-                  </a-button>
-                </template>
-
-                <a-form :model="selectedStep" layout="vertical">
-                  <a-row :gutter="16">
-                    <a-col :sm="12" :xs="24">
-                      <a-form-item label="步骤名称">
-                        <a-input
-                          v-model:value="selectedStep.name"
-                          placeholder="请输入步骤名称"
-                        />
-                      </a-form-item>
-                    </a-col>
-                    <a-col :sm="12" :xs="24">
-                      <a-form-item label="步骤类型">
-                        <a-select
-                          v-model:value="selectedStep.type"
-                          placeholder="选择步骤类型"
-                        >
-                          <a-select-option :value="ProcessStepType.Start">
-                            开始
-                          </a-select-option>
-                          <a-select-option :value="ProcessStepType.Approval">
-                            审批
-                          </a-select-option>
-                          <a-select-option :value="ProcessStepType.Task">
-                            任务
-                          </a-select-option>
-                          <a-select-option :value="ProcessStepType.End">
-                            结束
-                          </a-select-option>
-                        </a-select>
-                      </a-form-item>
-                    </a-col>
-                  </a-row>
-
-                  <a-row :gutter="16">
-                    <a-col :sm="12" :xs="24">
-                      <a-form-item label="受理人类型">
-                        <a-select
-                          v-model:value="selectedStep.assignee_type"
-                          allow-clear
-                          placeholder="选择受理人类型"
-                        >
-                          <a-select-option :value="AssigneeType.User">
-                            用户
-                          </a-select-option>
-                          <a-select-option :value="AssigneeType.Group">
-                            系统
-                          </a-select-option>
-                        </a-select>
-                      </a-form-item>
-                    </a-col>
-                    <a-col :sm="12" :xs="24">
-                      <a-form-item label="排序(仅影响显示顺序)">
-                        <a-input-number
-                          v-model:value="selectedStep.sort_order"
-                          :min="1"
-                          style="width: 100%"
-                        />
-                      </a-form-item>
-                    </a-col>
-                  </a-row>
-
-                  <a-divider />
-
-                  <a-form-item label="后续步骤 (连接)">
-                    <a-select
-                      v-model:value="selectedStepConnections"
-                      :options="otherStepsOptions"
-                      mode="multiple"
-                      placeholder="选择此步骤完成后要流向的步骤"
-                      style="width: 100%"
-                    />
-                    <div class="field-hint">
-                      定义流程分支、并行或汇合。可选择多个后续步骤。
-                    </div>
-                  </a-form-item>
-
-                  <a-divider />
-
-                  <a-alert
-                    v-if="userLoadError"
-                    :message="userLoadError"
-                    show-icon
-                    type="error"
-                  >
-                    <template #action>
-                      <a-button @click="fetchUserList(false)">
-                        重试用户
-                      </a-button>
-                    </template>
-                  </a-alert>
-                  <a-form-item label="受理人ID列表">
-                    <a-select
-                      id="process-assignees"
-                      v-model:value="selectedStep.assignee_ids"
-                      :filter-option="false"
-                      :loading="userLoading"
-                      :options="userOptions"
-                      mode="multiple"
-                      placeholder="搜索并选择受理人"
-                      show-search
-                      style="width: 100%"
-                      @popupScroll="handleUserScroll"
-                      @search="handleUserSearch"
-                    >
-                      <template v-if="userLoading" #notFoundContent>
-                        <div style="text-align: center">
-                          <ASpin size="small" />
-                        </div>
-                      </template>
-                    </a-select>
-                    <div class="field-hint">
-                      点击下拉框，滚动加载更多用户，或输入关键词搜索。
-                    </div>
-                  </a-form-item>
-
-                  <a-form-item label="可执行动作">
-                    <a-checkbox-group
-                      v-model:value="selectedStep.actions"
-                      :options="actionOptions"
-                    />
-                    <div class="field-hint">选择该步骤可以执行的动作</div>
-                  </a-form-item>
-                </a-form>
-              </a-card>
-            </div>
-          </div>
-        </a-tab-pane>
-
-        <a-tab-pane key="json" tab="JSON编辑">
-          <div class="json-editor">
-            <div class="json-toolbar">
-              <a-space>
-                <a-button @click="formatJson">
-                  <FormatPainterOutlined /> 格式化
-                </a-button>
-                <a-button @click="validateJson">
-                  <CheckCircleOutlined /> 验证JSON
-                </a-button>
-                <a-button type="primary" @click="syncToVisual">
-                  <SyncOutlined /> 应用到可视化
-                </a-button>
-                <a-button @click="copyProcessJson">
-                  <CopyOutlined /> 复制JSON
-                </a-button>
-              </a-space>
-            </div>
-
-            <a-form-item>
-              <a-textarea
-                v-model:value="definitionJsonString"
-                :rows="20"
-                class="json-textarea"
-                placeholder="请输入或粘贴流程定义JSON"
-              />
-              <div class="json-hint">
-                <a-typography-text type="secondary">
-                  <InfoCircleOutlined />
-                  JSON格式说明：包含steps（步骤数组）和connections（连接数组）
-                </a-typography-text>
-              </div>
-            </a-form-item>
-          </div>
-        </a-tab-pane>
-      </a-tabs>
-    </div>
-
-    <a-modal
-      v-model:open="isPreviewModalVisible"
-      :footer="null"
-      title="流程预览"
-      width="800px"
-      @cancel="handlePreviewCancel"
-    >
-      <div class="preview-container">
-        <div v-if="processSteps.length === 0" class="empty-canvas">
-          <a-empty description="没有可供预览的流程" />
-        </div>
-        <div v-else class="preview-steps-wrapper">
-          <div
-            v-for="step in sortedProcessSteps"
-            :key="`preview-${step.id}`"
-            class="preview-step-container"
-          >
-            <div class="preview-step">
-              <div
-                class="preview-step-icon"
-                :class="getStepTypeClass(step.type)"
-              >
-                <component :is="getStepIcon(step.type)" />
-              </div>
-              <div class="preview-step-info">
-                <div class="preview-step-title">{{ step.name }}</div>
-                <div class="preview-step-type">
-                  {{ getStepTypeText(step.type) }}
-                </div>
-              </div>
-            </div>
-            <div
-              v-if="getOutgoingConnections(step.id).length > 0"
-              class="preview-connections"
-            >
-              <div
-                v-for="conn in getOutgoingConnections(step.id)"
-                :key="conn.to"
-                class="preview-connection-item"
-              >
-                <ArrowDownOutlined class="preview-arrow" />
-                <a-tag color="cyan">{{ getStepNameById(conn.to) }}</a-tag>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </a-modal>
-  </OpsPage>
-</template>
-
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { computed, h, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -1258,6 +769,495 @@ onBeforeUnmount(() => {
   validationDialog?.destroy();
 });
 </script>
+
+<template>
+  <OpsPage
+    class="process-design-engine"
+    description="关联已发布表单，配置步骤与连接后保存为草稿或发布"
+    title="流程设计"
+  >
+    <template #actions>
+      <a-button
+        :disabled="formsLoading || !!formLoadError"
+        :loading="saving"
+        aria-label="保存流程"
+        type="primary"
+        @click="saveProcess"
+      >
+        <SaveOutlined /> 保存流程
+      </a-button>
+      <a-button @click="copyProcessJson"><CopyOutlined /> 复制JSON</a-button>
+    </template>
+    <a-alert v-if="saveError" :message="saveError" show-icon type="error" />
+    <a-alert
+      v-if="formLoadError"
+      :message="formLoadError"
+      show-icon
+      type="error"
+    >
+      <template #action>
+        <a-button :loading="formsLoading" @click="loadFormDesigns">
+          重试表单
+        </a-button>
+      </template>
+    </a-alert>
+    <a-alert
+      v-if="categoryLoadError"
+      :message="categoryLoadError"
+      show-icon
+      type="error"
+    >
+      <template #action>
+        <a-button :loading="categoriesLoading" @click="loadCategories">
+          重试分类
+        </a-button>
+      </template>
+    </a-alert>
+    <div :inert="saving || undefined" class="edit-mode-tabs">
+      <a-tabs v-model:activeKey="editMode" type="card">
+        <a-tab-pane key="basic" tab="基本信息">
+          <div class="basic-info-form">
+            <a-form :model="processBasicInfo" layout="vertical">
+              <a-row :gutter="16">
+                <a-col :sm="12" :xs="24">
+                  <a-form-item label="流程名称" required>
+                    <a-input
+                      v-model:value="processBasicInfo.name"
+                      :maxlength="200"
+                      placeholder="请输入流程名称"
+                    />
+                  </a-form-item>
+                </a-col>
+                <a-col :sm="12" :xs="24">
+                  <a-form-item label="关联表单" required>
+                    <a-select
+                      id="process-design-form"
+                      v-model:value="processBasicInfo.form_design_id"
+                      :loading="formsLoading"
+                      placeholder="选择关联表单"
+                    >
+                      <a-select-option
+                        v-for="form in formDesigns"
+                        :key="form.id"
+                        :value="form.id"
+                      >
+                        {{ form.name }}
+                      </a-select-option>
+                    </a-select>
+                    <div class="field-hint">
+                      <InfoCircleOutlined /> 只能选择已发布的表单设计
+                    </div>
+                  </a-form-item>
+                </a-col>
+              </a-row>
+
+              <a-row :gutter="16">
+                <a-col :sm="12" :xs="24">
+                  <a-form-item label="分类">
+                    <a-select
+                      v-model:value="processBasicInfo.category_id"
+                      :loading="categoriesLoading"
+                      allow-clear
+                      placeholder="选择分类"
+                    >
+                      <a-select-option
+                        v-for="category in categories"
+                        :key="category.id"
+                        :value="category.id"
+                      >
+                        {{ category.name }}
+                      </a-select-option>
+                    </a-select>
+                  </a-form-item>
+                </a-col>
+                <a-col :sm="12" :xs="24">
+                  <a-form-item label="状态">
+                    <a-select
+                      id="process-design-status"
+                      v-model:value="processBasicInfo.status"
+                      placeholder="选择状态"
+                    >
+                      <a-select-option :value="ProcessStatus.Draft">
+                        草稿
+                      </a-select-option>
+                      <a-select-option :value="ProcessStatus.Published">
+                        已发布
+                      </a-select-option>
+                    </a-select>
+                  </a-form-item>
+                </a-col>
+              </a-row>
+
+              <a-form-item label="描述">
+                <a-textarea
+                  v-model:value="processBasicInfo.description"
+                  :maxlength="1000"
+                  :rows="3"
+                  placeholder="请输入流程描述"
+                />
+              </a-form-item>
+
+              <a-form-item label="标签">
+                <a-select
+                  v-model:value="processBasicInfo.tags"
+                  mode="tags"
+                  placeholder="输入标签，按回车添加"
+                  style="width: 100%"
+                />
+              </a-form-item>
+
+              <a-form-item label="设为默认流程">
+                <a-radio-group v-model:value="processBasicInfo.is_default">
+                  <a-radio :value="1">是</a-radio>
+                  <a-radio :value="2">否</a-radio>
+                </a-radio-group>
+              </a-form-item>
+            </a-form>
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="visual" tab="可视化设计">
+          <div class="visual-designer">
+            <div class="designer-toolbar">
+              <a-space>
+                <a-button type="primary" @click="addProcessStep">
+                  <PlusOutlined /> 添加步骤
+                </a-button>
+                <a-button @click="previewFlow">
+                  <EyeOutlined /> 预览流程
+                </a-button>
+                <a-button @click="validateFlow">
+                  <CheckCircleOutlined /> 验证流程
+                </a-button>
+              </a-space>
+            </div>
+
+            <div class="process-canvas">
+              <div v-if="processSteps.length === 0" class="empty-canvas">
+                <a-empty :image="emptyImage" description="暂无流程步骤">
+                  <a-button type="primary" @click="addProcessStep">
+                    开始设计流程
+                  </a-button>
+                </a-empty>
+              </div>
+
+              <div v-else class="process-steps">
+                <div
+                  v-for="(step, index) in sortedProcessSteps"
+                  :key="step.id"
+                  class="step-container"
+                >
+                  <div
+                    class="process-step"
+                    :class="{ active: selectedStep?.id === step.id }"
+                    role="button"
+                    tabindex="0"
+                    @keydown.enter="selectStepById(step.id)"
+                    @keydown.space.prevent="selectStepById(step.id)"
+                    @click="selectStepById(step.id)"
+                  >
+                    <div class="step-header">
+                      <div
+                        class="step-icon"
+                        :class="getStepTypeClass(step.type)"
+                      >
+                        <component :is="getStepIcon(step.type)" />
+                      </div>
+                      <div class="step-info">
+                        <div class="step-title">
+                          {{ step.name || `步骤 ${index + 1}` }}
+                        </div>
+                        <div class="step-type">
+                          {{ getStepTypeText(step.type) }}
+                        </div>
+                      </div>
+                      <div class="step-actions">
+                        <a-button
+                          danger
+                          size="small"
+                          title="删除"
+                          type="text"
+                          @click.stop="removeStepById(step.id)"
+                        >
+                          <DeleteOutlined />
+                        </a-button>
+                      </div>
+                    </div>
+
+                    <div
+                      v-if="step.assignee_type && step.assignee_ids?.length"
+                      class="step-assignees"
+                    >
+                      <a-tag color="blue" size="small">
+                        {{ getAssigneeTypeText(step.assignee_type) }}:
+                        {{ step.assignee_ids.length }}人
+                      </a-tag>
+                    </div>
+
+                    <div v-if="step.actions?.length" class="step-actions-list">
+                      <a-tag
+                        v-for="action in step.actions"
+                        :key="action"
+                        color="green"
+                        size="small"
+                      >
+                        {{ getActionText(action) }}
+                      </a-tag>
+                    </div>
+                  </div>
+
+                  <div
+                    v-if="getOutgoingConnections(step.id).length > 0"
+                    class="step-connections-display"
+                  >
+                    <div class="connector-arrow">
+                      <ArrowDownOutlined />
+                    </div>
+                    <div class="connection-tags">
+                      <a-tag
+                        v-for="conn in getOutgoingConnections(step.id)"
+                        :key="conn.to"
+                        color="purple"
+                      >
+                        连接到: {{ getStepNameById(conn.to) || '未知步骤' }}
+                      </a-tag>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="selectedStep" class="step-detail-panel">
+              <a-card
+                :title="`编辑步骤: ${selectedStep.name || '未命名'}`"
+                size="small"
+              >
+                <template #extra>
+                  <a-button
+                    size="small"
+                    type="text"
+                    @click="selectedStepIndex = null"
+                  >
+                    <CloseOutlined />
+                  </a-button>
+                </template>
+
+                <a-form :model="selectedStep" layout="vertical">
+                  <a-row :gutter="16">
+                    <a-col :sm="12" :xs="24">
+                      <a-form-item label="步骤名称">
+                        <a-input
+                          v-model:value="selectedStep.name"
+                          placeholder="请输入步骤名称"
+                        />
+                      </a-form-item>
+                    </a-col>
+                    <a-col :sm="12" :xs="24">
+                      <a-form-item label="步骤类型">
+                        <a-select
+                          v-model:value="selectedStep.type"
+                          placeholder="选择步骤类型"
+                        >
+                          <a-select-option :value="ProcessStepType.Start">
+                            开始
+                          </a-select-option>
+                          <a-select-option :value="ProcessStepType.Approval">
+                            审批
+                          </a-select-option>
+                          <a-select-option :value="ProcessStepType.Task">
+                            任务
+                          </a-select-option>
+                          <a-select-option :value="ProcessStepType.End">
+                            结束
+                          </a-select-option>
+                        </a-select>
+                      </a-form-item>
+                    </a-col>
+                  </a-row>
+
+                  <a-row :gutter="16">
+                    <a-col :sm="12" :xs="24">
+                      <a-form-item label="受理人类型">
+                        <a-select
+                          v-model:value="selectedStep.assignee_type"
+                          allow-clear
+                          placeholder="选择受理人类型"
+                        >
+                          <a-select-option :value="AssigneeType.User">
+                            用户
+                          </a-select-option>
+                          <a-select-option :value="AssigneeType.Group">
+                            系统
+                          </a-select-option>
+                        </a-select>
+                      </a-form-item>
+                    </a-col>
+                    <a-col :sm="12" :xs="24">
+                      <a-form-item label="排序(仅影响显示顺序)">
+                        <a-input-number
+                          v-model:value="selectedStep.sort_order"
+                          :min="1"
+                          style="width: 100%"
+                        />
+                      </a-form-item>
+                    </a-col>
+                  </a-row>
+
+                  <a-divider />
+
+                  <a-form-item label="后续步骤 (连接)">
+                    <a-select
+                      v-model:value="selectedStepConnections"
+                      :options="otherStepsOptions"
+                      mode="multiple"
+                      placeholder="选择此步骤完成后要流向的步骤"
+                      style="width: 100%"
+                    />
+                    <div class="field-hint">
+                      定义流程分支、并行或汇合。可选择多个后续步骤。
+                    </div>
+                  </a-form-item>
+
+                  <a-divider />
+
+                  <a-alert
+                    v-if="userLoadError"
+                    :message="userLoadError"
+                    show-icon
+                    type="error"
+                  >
+                    <template #action>
+                      <a-button @click="fetchUserList(false)">
+                        重试用户
+                      </a-button>
+                    </template>
+                  </a-alert>
+                  <a-form-item label="受理人ID列表">
+                    <a-select
+                      id="process-assignees"
+                      v-model:value="selectedStep.assignee_ids"
+                      :filter-option="false"
+                      :loading="userLoading"
+                      :options="userOptions"
+                      mode="multiple"
+                      placeholder="搜索并选择受理人"
+                      show-search
+                      style="width: 100%"
+                      @popupScroll="handleUserScroll"
+                      @search="handleUserSearch"
+                    >
+                      <template v-if="userLoading" #notFoundContent>
+                        <div style="text-align: center">
+                          <ASpin size="small" />
+                        </div>
+                      </template>
+                    </a-select>
+                    <div class="field-hint">
+                      点击下拉框，滚动加载更多用户，或输入关键词搜索。
+                    </div>
+                  </a-form-item>
+
+                  <a-form-item label="可执行动作">
+                    <a-checkbox-group
+                      v-model:value="selectedStep.actions"
+                      :options="actionOptions"
+                    />
+                    <div class="field-hint">选择该步骤可以执行的动作</div>
+                  </a-form-item>
+                </a-form>
+              </a-card>
+            </div>
+          </div>
+        </a-tab-pane>
+
+        <a-tab-pane key="json" tab="JSON编辑">
+          <div class="json-editor">
+            <div class="json-toolbar">
+              <a-space>
+                <a-button @click="formatJson">
+                  <FormatPainterOutlined /> 格式化
+                </a-button>
+                <a-button @click="validateJson">
+                  <CheckCircleOutlined /> 验证JSON
+                </a-button>
+                <a-button type="primary" @click="syncToVisual">
+                  <SyncOutlined /> 应用到可视化
+                </a-button>
+                <a-button @click="copyProcessJson">
+                  <CopyOutlined /> 复制JSON
+                </a-button>
+              </a-space>
+            </div>
+
+            <a-form-item>
+              <a-textarea
+                v-model:value="definitionJsonString"
+                :rows="20"
+                class="json-textarea"
+                placeholder="请输入或粘贴流程定义JSON"
+              />
+              <div class="json-hint">
+                <a-typography-text type="secondary">
+                  <InfoCircleOutlined />
+                  JSON格式说明：包含steps（步骤数组）和connections（连接数组）
+                </a-typography-text>
+              </div>
+            </a-form-item>
+          </div>
+        </a-tab-pane>
+      </a-tabs>
+    </div>
+
+    <a-modal
+      v-model:open="isPreviewModalVisible"
+      :footer="null"
+      title="流程预览"
+      width="800px"
+      @cancel="handlePreviewCancel"
+    >
+      <div class="preview-container">
+        <div v-if="processSteps.length === 0" class="empty-canvas">
+          <a-empty description="没有可供预览的流程" />
+        </div>
+        <div v-else class="preview-steps-wrapper">
+          <div
+            v-for="step in sortedProcessSteps"
+            :key="`preview-${step.id}`"
+            class="preview-step-container"
+          >
+            <div class="preview-step">
+              <div
+                class="preview-step-icon"
+                :class="getStepTypeClass(step.type)"
+              >
+                <component :is="getStepIcon(step.type)" />
+              </div>
+              <div class="preview-step-info">
+                <div class="preview-step-title">{{ step.name }}</div>
+                <div class="preview-step-type">
+                  {{ getStepTypeText(step.type) }}
+                </div>
+              </div>
+            </div>
+            <div
+              v-if="getOutgoingConnections(step.id).length > 0"
+              class="preview-connections"
+            >
+              <div
+                v-for="conn in getOutgoingConnections(step.id)"
+                :key="conn.to"
+                class="preview-connection-item"
+              >
+                <ArrowDownOutlined class="preview-arrow" />
+                <a-tag color="cyan">{{ getStepNameById(conn.to) }}</a-tag>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </a-modal>
+  </OpsPage>
+</template>
 
 <style scoped>
 .process-design-engine {

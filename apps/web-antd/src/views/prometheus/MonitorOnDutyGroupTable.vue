@@ -30,7 +30,7 @@ interface User {
 // 定义接口 - 修复API响应结构
 interface Day {
   date: string;
-  user: User | null;
+  user: null | User;
   originUser?: string;
   isCurrentMonth: boolean;
   isAdjusted: boolean;
@@ -39,7 +39,7 @@ interface Day {
 // 根据API响应修复数据结构
 interface DutyPlanDetail {
   date: string;
-  user: User | null | number;
+  user: null | number | User;
   origin_user?: string;
 }
 
