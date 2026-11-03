@@ -8,6 +8,10 @@ The web console for **AI-CloudOps**, an open-source, AI-assisted cloud-native op
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+## Local demonstration
+
+See the [demo guide](docs/demo/README.md) and [startup and test instructions](scripts/demo/README.md). Explicit development demo mode combines local Go authentication and isolated business fixtures with marked synthetic cloud, Kubernetes and AI responses. External execution is blocked; ordinary development, builds and preview do not automatically enable demo mode. Prepare the sibling backend first and keep credentials in private local configuration.
+
 ## Project Components
 
 AI-CloudOps is made up of three repositories that are deployed together:
