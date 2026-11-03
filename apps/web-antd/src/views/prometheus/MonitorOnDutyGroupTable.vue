@@ -626,7 +626,9 @@ const getAvatarColor = (name: string): string => {
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return colors[Math.abs(hash) % colors.length]!;
+  const color = colors[Math.abs(hash) % colors.length];
+  if (color === undefined) throw new Error('Invalid duty avatar palette index');
+  return color;
 };
 
 const getInitials = (name: string): string => {
@@ -636,9 +638,8 @@ const getInitials = (name: string): string => {
 
 const getUserName = (userId: number): string => {
   // 先从缓存中查找
-  if (userCache.value.has(userId)) {
-    return userCache.value.get(userId)!;
-  }
+  const cached = userCache.value.get(userId);
+  if (cached !== undefined) return cached;
 
   // 从值班组详情中查找
   const user = dutyGroupDetail.value?.users?.find((u) => u.id === userId);
