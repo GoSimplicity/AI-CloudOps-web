@@ -26,6 +26,7 @@ import {
 } from '#/api/core/system/audit';
 
 import { getUserDetailApi } from '#/api/core/system/user';
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
@@ -175,26 +176,26 @@ const getUserDisplayName = (log: AuditLogWithUser) => {
 const getOperationColor = (operation: string) => {
   const colorMap: Record<string, string> = {
     CREATE: 'green',
-    UPDATE: 'blue',
     DELETE: 'red',
-    VIEW: 'default',
-    LOGIN: 'purple',
-    LOGOUT: 'orange',
     EXPORT: 'cyan',
     IMPORT: 'gold',
+    LOGIN: 'purple',
+    LOGOUT: 'orange',
+    UPDATE: 'blue',
+    VIEW: 'default',
   };
-  return colorMap[operation] || 'default';
+  return getOwnLookupValue(colorMap, operation) || 'default';
 };
 
 const getMethodColor = (method: string) => {
   const colorMap: Record<string, string> = {
+    DELETE: 'red',
     GET: 'blue',
+    PATCH: 'cyan',
     POST: 'green',
     PUT: 'orange',
-    DELETE: 'red',
-    PATCH: 'cyan',
   };
-  return colorMap[method] || 'default';
+  return getOwnLookupValue(colorMap, method) || 'default';
 };
 
 const getStatusColor = (status: number) => {

@@ -32,6 +32,7 @@ import {
   type K8sCluster,
   type ListClustersReq,
 } from '#/api/core/k8s/k8s_cluster';
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
@@ -260,12 +261,12 @@ export function usePVPage() {
   // 获取访问模式显示文本
   const getAccessModeText = (mode: string): string => {
     const modeMap: Record<string, string> = {
-      ReadWriteOnce: 'RWO',
       ReadOnlyMany: 'ROX',
       ReadWriteMany: 'RWX',
+      ReadWriteOnce: 'RWO',
       ReadWriteOncePod: 'RWOP',
     };
-    return modeMap[mode] || mode;
+    return getOwnLookupValue(modeMap, mode) || mode;
   };
 
   // cluster operations

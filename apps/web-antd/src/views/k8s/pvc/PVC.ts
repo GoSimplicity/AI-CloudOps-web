@@ -46,6 +46,7 @@ import {
   type K8sPV,
   K8sPVStatus,
 } from '#/api/core/k8s/k8s_pv';
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
@@ -319,12 +320,12 @@ export function usePVCPage() {
 
   const getAccessModeText = (mode: string): string => {
     const modeMap: Record<string, string> = {
-      ReadWriteOnce: 'RWO',
       ReadOnlyMany: 'ROX',
       ReadWriteMany: 'RWX',
+      ReadWriteOnce: 'RWO',
       ReadWriteOncePod: 'RWOP',
     };
-    return modeMap[mode] || mode;
+    return getOwnLookupValue(modeMap, mode) || mode;
   };
 
   const clearPVCs = () => {

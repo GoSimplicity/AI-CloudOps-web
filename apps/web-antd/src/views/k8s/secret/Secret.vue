@@ -37,6 +37,7 @@ import {
   SECRET_DETAIL_PERMISSION_CODE,
   SECRET_UPDATE_PERMISSION_CODE,
 } from '#/constants/permission-codes';
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
@@ -264,16 +265,16 @@ const addNewEditAnnotation = () => {
 // 获取Secret类型CSS类名
 const getSecretTypeClass = (type: string) => {
   const typeClassMap: Record<string, string> = {
-    Opaque: 'secret-type-opaque',
-    'kubernetes.io/service-account-token': 'secret-type-service-account',
+    'bootstrap.kubernetes.io/token': 'secret-type-auth',
+    'kubernetes.io/basic-auth': 'secret-type-auth',
     'kubernetes.io/dockercfg': 'secret-type-docker',
     'kubernetes.io/dockerconfigjson': 'secret-type-docker',
-    'kubernetes.io/basic-auth': 'secret-type-auth',
+    'kubernetes.io/service-account-token': 'secret-type-service-account',
     'kubernetes.io/ssh-auth': 'secret-type-auth',
     'kubernetes.io/tls': 'secret-type-tls',
-    'bootstrap.kubernetes.io/token': 'secret-type-auth',
+    Opaque: 'secret-type-opaque',
   };
-  return typeClassMap[type] || 'secret-type-default';
+  return getOwnLookupValue(typeClassMap, type) || 'secret-type-default';
 };
 
 // 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime 和 formatK8sAge

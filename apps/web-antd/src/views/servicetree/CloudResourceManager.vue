@@ -96,6 +96,7 @@ import { getTreeList } from '#/api/core/tree/tree_node';
 import { isSupportedAccountProvider } from './cloudaccountmanagement/provider';
 import type { TreeNode } from '#/api/core/tree/tree_local';
 
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
 import {
   getRequestLayerNoticeKey,
@@ -374,21 +375,21 @@ const getResourceTypeIcon = (type: CloudResourceType) => {
 const getEnvironmentColor = (environment?: string): string => {
   const colors: Record<string, string> = {
     dev: '#1890ff',
-    test: '#faad14',
-    staging: '#722ed1',
     prod: '#f5222d',
+    staging: '#722ed1',
+    test: '#faad14',
   };
-  return colors[environment || ''] || '#d9d9d9';
+  return getOwnLookupValue(colors, environment || '') || '#d9d9d9';
 };
 
 const getEnvironmentText = (environment?: string): string => {
   const texts: Record<string, string> = {
     dev: '开发',
-    test: '测试',
-    staging: '预发布',
     prod: '生产',
+    staging: '预发布',
+    test: '测试',
   };
-  return texts[environment || ''] || '-';
+  return getOwnLookupValue(texts, environment || '') || '-';
 };
 
 const getStatusBadgeType = (
@@ -420,21 +421,21 @@ const getStatusText = (status: CloudResourceStatus): string => {
 const getChangeTypeColor = (type: string): string => {
   const colors: Record<string, string> = {
     create: '#52c41a',
-    update: '#1890ff',
     delete: '#f5222d',
     sync: '#722ed1',
+    update: '#1890ff',
   };
-  return colors[type] || '#d9d9d9';
+  return getOwnLookupValue(colors, type) || '#d9d9d9';
 };
 
 const getChangeTypeText = (type: string): string => {
   const texts: Record<string, string> = {
     create: '创建',
-    update: '更新',
     delete: '删除',
     sync: '同步',
+    update: '更新',
   };
-  return texts[type] || type;
+  return getOwnLookupValue(texts, type) || type;
 };
 
 const getAvatarColor = (name: string): string => {

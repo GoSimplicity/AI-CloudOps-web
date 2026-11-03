@@ -29,6 +29,7 @@ import {
   getSessionInfo,
   type SessionInfoResponse,
 } from '#/api/core/aiops/assistant';
+import { getOwnLookupValue } from '#/utils/own-lookup';
 
 // 响应式数据
 const router = useRouter();
@@ -82,29 +83,29 @@ const sessionStats = computed(() => {
 // 获取状态颜色
 const getStatusColor = (status?: string) => {
   const colorMap: Record<string, string> = {
-    idle: 'green',
-    running: 'blue',
-    unknown: 'orange',
     active: 'green',
-    inactive: 'orange',
     ended: 'red',
     error: 'red',
+    idle: 'green',
+    inactive: 'orange',
+    running: 'blue',
+    unknown: 'orange',
   };
-  return colorMap[status || ''] || 'default';
+  return getOwnLookupValue(colorMap, status || '') || 'default';
 };
 
 // 获取状态文本
 const getStatusText = (status?: string) => {
   const textMap: Record<string, string> = {
-    idle: '可继续',
-    running: '处理中',
-    unknown: '结果未知',
     active: '活跃',
-    inactive: '不活跃',
     ended: '已结束',
     error: '错误',
+    idle: '可继续',
+    inactive: '不活跃',
+    running: '处理中',
+    unknown: '结果未知',
   };
-  return textMap[status || ''] || '未知';
+  return getOwnLookupValue(textMap, status || '') || '未知';
 };
 
 // 获取模式颜色

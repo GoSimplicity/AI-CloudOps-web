@@ -674,3 +674,13 @@ Instance、Notification和WorkorderComments三个SFC搬移46段完整const-arrow
 - 核对已安装lodash-es的实际debounce构造：构造只创建包装器，不执行用户回调。原/新真实编译setup使用真实Vue与实际debounce源码，在Fake API和受控计时器下，成功/失败六组构造、受控mounted读取、表单关闭及评论expose/open/post/refresh轨迹相同；factory零请求和零timer，搜索499/500ms、直接搜索取消与卸载取消保持。这是setup/mounted调用探针，不冒称DOM挂载或真实通知投递。
 - 磁盘源码与提案逐字核对，46段完整声明及其余statement顺序保持；真实compileScript binding分类、生产DOM/SSR render输出一致。三文件定向lint479 errors/2 warnings→429 errors/2 warnings，逐文件各规则无新增；其余既有诊断保留，不代表全仓lint通过。
 - 工单目录全部现有12个测试文件260项及应用类型检查通过，覆盖通知权限、取消、并发与失败动作等既有回归；没有新增镜像测试、修改断言或规则，也未重复全仓测试和构建。全部API为替身，没有真实工单、通知或权限写入，未上线。
+
+## 阶段六十七：自有映射值查询与局部字典排序
+
+16个源文件的24处局部字典读取改为共享`getOwnLookupValue`，只返回自有字段，未知的constructor、__proto__、toString和继承getter不再越过原fallback。调用者原`|| fallback`保持，已知值、0/false/空串及key求值时机不变；这是明确的未知键硬化，不把它描述为所有JavaScript环境下完全没有行为变化。
+
+- 使用ES2015已有的hasOwnProperty.call，不引入Object.hasOwn运行时要求。对本批只读、不逃逸、无type反射、无computed/duplicate/__proto__/spread/getter/method且值为primitive的24个对象，建立自有读取后再安全排序151个字段。不对任意对象、列配置、样式或有副作用值机械排序；不承诺Proxy、own accessor或不符合number|string合同的对象key无副作用。
+- 仅24处读取、选定字段顺序及16个纯helper导入变化，旧导入声明原文顺序保持。独立TS AST还原排序和guard后，各实际函数与原文相同；已知151键与原函数相同，未知/原型键fallback及24个继承getter零调用通过，ES2015编译验证通过。
+- 16源文件定向1372→1307净减65：选中sort-objects减少64，RCA仅新导入位置同时减少1条旧sort-imports，其余逐文件规则不增；helper与测试lint0。Instance和WorkorderComments不在本批，未与阶段66写入交叉。
+- 206项关联测试和最终应用类型通过，Root统一全量166文件3619测试、11构建任务通过。新增helper测试直接验证未知键、惰性fallback、同名遮蔽和继承getter，未新增镜像测试。没有改变规则、ignore或调用真实服务，未上线。
+- 完整边界1129文件通过：5类保护规则0、parser/tool失败0、额外补审41文件；普通源码仍9682 errors/5 warnings，未全清。

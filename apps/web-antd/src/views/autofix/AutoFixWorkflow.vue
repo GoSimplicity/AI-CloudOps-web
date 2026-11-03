@@ -28,6 +28,7 @@ import {
   normalizeWorkflowResult,
 } from './autofix-format';
 
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
 
 const { can } = usePermission();
@@ -120,18 +121,18 @@ const {
 } = useAutoFixWorkflow();
 function operationLabel(state: string) {
   const labels: Record<string, string> = {
-    none: '无',
-    unverified: '待核对',
-    not_found: '未找到',
     building: '处理中',
-    running: '处理中',
-    executing: '处理中',
-    pending: '待审批',
     completed: '已结束',
-    uncertain: '结果不确定',
+    executing: '处理中',
     invalidated: '已失效',
+    none: '无',
+    not_found: '未找到',
+    pending: '待审批',
+    running: '处理中',
+    uncertain: '结果不确定',
+    unverified: '待核对',
   };
-  return labels[state] || '状态未知';
+  return getOwnLookupValue(labels, state) || '状态未知';
 }
 function formatOperationTime(value?: string) {
   const time = value ? Date.parse(value) : Number.NaN;

@@ -31,6 +31,7 @@ import type { WorkorderCategoryItem } from '#/api/core/workorder/workorder_categ
 import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
 
 import { getAvatarColor } from '#/utils/avatar-color';
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
 import {
   shouldNotifyPageError,
@@ -365,17 +366,17 @@ const getStatusClass = (status: number): string => {
 
 const getFieldTypeName = (type: string): string => {
   const typeMap: Record<string, string> = {
-    text: '文本框',
+    checkbox: '复选框',
+    date: '日期',
     number: '数字',
     password: '密码',
-    textarea: '多行文本',
-    date: '日期',
-    select: '下拉选择',
-    checkbox: '复选框',
     radio: '单选框',
+    select: '下拉选择',
     switch: '开关',
+    text: '文本框',
+    textarea: '多行文本',
   };
-  return typeMap[type] || type;
+  return getOwnLookupValue(typeMap, type) || type;
 };
 
 const formatDate = (dateStr: string): string => {

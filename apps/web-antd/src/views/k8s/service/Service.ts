@@ -35,6 +35,7 @@ import {
   type K8sNamespace,
   type K8sNamespaceListReq,
 } from '#/api/core/k8s/k8s_namespace';
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
@@ -252,21 +253,21 @@ export function useServicePage() {
   const getServiceTypeText = (type?: string) => {
     const map: Record<string, string> = {
       ClusterIP: 'ClusterIP',
-      NodePort: 'NodePort',
-      LoadBalancer: 'LoadBalancer',
       ExternalName: 'ExternalName',
+      LoadBalancer: 'LoadBalancer',
+      NodePort: 'NodePort',
     };
-    return type ? map[type] || type : '-';
+    return type ? getOwnLookupValue(map, type) || type : '-';
   };
 
   const getServiceTypeColor = (type?: string) => {
     const map: Record<string, string> = {
       ClusterIP: 'blue',
-      NodePort: 'green',
-      LoadBalancer: 'orange',
       ExternalName: 'purple',
+      LoadBalancer: 'orange',
+      NodePort: 'green',
     };
-    return type ? map[type] || 'default' : 'default';
+    return type ? getOwnLookupValue(map, type) || 'default' : 'default';
   };
 
   // 转换函数：Record<string, string> -> KeyValueList

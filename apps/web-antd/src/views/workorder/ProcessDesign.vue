@@ -40,6 +40,7 @@ import {
   listWorkorderFormDesign,
   type WorkorderFormDesignItem,
 } from '#/api/core/workorder/workorder_form_design';
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
@@ -509,27 +510,27 @@ const getStepIcon = (type: string) => {
 };
 const getStepTypeText = (type: string): string => {
   const types: { [key: string]: string } = {
-    start: '开始',
     approval: '审批',
-    task: '任务',
     end: '结束',
+    start: '开始',
+    task: '任务',
   };
-  return types[type] || '未知';
+  return getOwnLookupValue(types, type) || '未知';
 };
 const getAssigneeTypeText = (type: string | undefined): string =>
   type === AssigneeType.User ? '用户' : '系统';
 const getActionText = (action: string): string => {
   const actions: { [key: string]: string } = {
-    submit: '提交',
-    assign: '指派',
     approve: '审批通过',
-    reject: '驳回',
-    complete: '完成',
-    return: '退回',
+    assign: '指派',
     cancel: '取消',
+    complete: '完成',
     notify: '通知',
+    reject: '驳回',
+    return: '退回',
+    submit: '提交',
   };
-  return actions[action] || action;
+  return getOwnLookupValue(actions, action) || action;
 };
 
 // === 数据加载函数 ===

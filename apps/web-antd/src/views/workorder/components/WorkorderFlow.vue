@@ -18,28 +18,29 @@ import {
 } from '#/api/core/workorder/workorder_instance_flow';
 
 import { InstanceStatus } from '#/api/core/workorder/workorder_instance';
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // 图标组件
 const IconComponent = ({ icon }: { icon: string }) => {
   const iconMap: Record<string, string> = {
+    approve: '✅',
+    arrow: '➡️',
+    assign: '👤',
+    comment: '💬',
+    detail: '🔍',
+    'empty-flow': '🌀',
+    filter: '🔍',
     flow: '🔄',
     refresh: '🔃',
-    filter: '🔍',
-    list: '📋',
-    timeline: '⏰',
-    approve: '✅',
     reject: '❌',
-    assign: '👤',
-    total: '📊',
-    time: '⏰',
-    detail: '🔍',
     system: '⚙️',
-    arrow: '➡️',
-    comment: '💬',
-    'empty-flow': '🌀',
+    time: '⏰',
+    timeline: '⏰',
+    total: '📊',
+    list: '📋',
   };
-  return iconMap[icon] || '';
+  return getOwnLookupValue(iconMap, icon) || '';
 };
 
 // 状态数据

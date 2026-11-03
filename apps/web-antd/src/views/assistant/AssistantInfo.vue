@@ -19,6 +19,7 @@ import {
   type ServiceConfigResponse,
   type ServiceInfoResponse,
 } from '#/api/core/aiops/assistant';
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
 import { useAiRequestScope } from './useAiRequestScope';
 import {
@@ -95,14 +96,14 @@ const configInfo = ref<Partial<ServiceConfigResponse>>({
 // 获取状态文本
 const getStatusText = (status: string) => {
   const statusMap: Record<string, string> = {
-    initialized: '已初始化',
-    not_initialized: '未初始化',
-    online: '在线',
-    offline: '离线',
     error: '错误',
+    initialized: '已初始化',
     maintenance: '维护中',
+    not_initialized: '未初始化',
+    offline: '离线',
+    online: '在线',
   };
-  return statusMap[status] || '未知';
+  return getOwnLookupValue(statusMap, status) || '未知';
 };
 
 // 格式化配置值

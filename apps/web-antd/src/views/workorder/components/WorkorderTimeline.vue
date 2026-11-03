@@ -19,29 +19,30 @@ import {
   TimelineAction,
   type WorkorderInstanceTimelineItem,
 } from '#/api/core/workorder/workorder_instance_time_line';
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 // 图标组件
 const IconComponent = ({ icon }: { icon: string }) => {
   const iconMap: Record<string, string> = {
-    timeline: '⏳',
-    refresh: '🔄',
-    filter: '🔍',
-    'time-desc': '⬇️',
-    'time-asc': '⬆️',
-    create: '➕',
-    update: '✏️',
     approve: '✅',
-    total: '📊',
-    time: '⏰',
-    detail: '🔍',
-    comment: '💬',
-    data: '📊',
-    expand: '⬇️',
     collapse: '⬆️',
+    comment: '💬',
+    create: '➕',
+    data: '📊',
+    detail: '🔍',
     'empty-timeline': '📅',
+    expand: '⬇️',
+    filter: '🔍',
+    refresh: '🔄',
+    time: '⏰',
+    'time-asc': '⬆️',
+    'time-desc': '⬇️',
+    timeline: '⏳',
+    total: '📊',
+    update: '✏️',
   };
-  return iconMap[icon] || '';
+  return getOwnLookupValue(iconMap, icon) || '';
 };
 
 // 状态数据

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
+import { getOwnLookupValue } from '#/utils/own-lookup';
+
 import CollectionSummary from './CollectionSummary.vue';
 import { useAiRequestScope } from '../assistant/useAiRequestScope';
 import { chartColors, useChartAppearance } from '../assistant/chart-appearance';
@@ -545,11 +547,11 @@ const getSeverityColor = (severity: string) => {
   const severityMap: Record<string, string> = {
     critical: '#ff4d4f',
     high: '#ff7875',
-    medium: '#faad14',
-    low: '#1890ff',
     info: '#52c41a',
+    low: '#1890ff',
+    medium: '#faad14',
   };
-  return severityMap[severity] || '#d9d9d9';
+  return getOwnLookupValue(severityMap, severity) || '#d9d9d9';
 };
 
 // 处理窗口调整

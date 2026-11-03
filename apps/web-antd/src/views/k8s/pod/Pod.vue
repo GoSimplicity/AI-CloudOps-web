@@ -40,6 +40,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons-vue';
 
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
@@ -276,11 +277,11 @@ const isFullyReady = (ready: string) => {
 // 获取QoS等级颜色
 const getQosClassColor = (qosClass: string) => {
   const map: Record<string, string> = {
-    Guaranteed: 'green',
-    Burstable: 'orange',
     BestEffort: 'blue',
+    Burstable: 'orange',
+    Guaranteed: 'green',
   };
-  return map[qosClass] || 'default';
+  return getOwnLookupValue(map, qosClass) || 'default';
 };
 
 // 注意：时间格式化函数已移至 shared/utils.ts，使用 formatK8sTime

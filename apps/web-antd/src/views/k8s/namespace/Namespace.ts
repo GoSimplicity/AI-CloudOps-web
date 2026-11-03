@@ -22,6 +22,7 @@ import {
   type KeyValueList,
   type ListClustersReq,
 } from '#/api/core/k8s/k8s_cluster';
+import { getOwnLookupValue } from '#/utils/own-lookup';
 import {
   shouldNotifyPageError,
   shouldRecordPageError,
@@ -248,11 +249,11 @@ export function useNamespacePage() {
 
     const map: Record<string, string> = {
       Active: '活跃',
-      Terminating: '终止中',
-      Pending: '待定',
       Failed: '失败',
+      Pending: '待定',
+      Terminating: '终止中',
     };
-    return map[phase] || phase;
+    return getOwnLookupValue(map, phase) || phase;
   };
 
   const getPhaseColor = (phase?: string) => {
@@ -260,11 +261,11 @@ export function useNamespacePage() {
 
     const map: Record<string, string> = {
       Active: 'success',
-      Terminating: 'warning',
-      Pending: 'processing',
       Failed: 'error',
+      Pending: 'processing',
+      Terminating: 'warning',
     };
-    return map[phase] || 'default';
+    return getOwnLookupValue(map, phase) || 'default';
   };
 
   const getClusterName = (clusterId?: number) => {
