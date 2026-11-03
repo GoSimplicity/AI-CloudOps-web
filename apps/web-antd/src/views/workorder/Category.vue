@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import OpsPage from '#/components/ops/OpsPage.vue';
 
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+
+import { useUserStore } from '@vben/stores';
+
 import { type FormInstance, message, Modal } from 'ant-design-vue';
 import {
   CheckCircleOutlined,
@@ -27,10 +30,14 @@ import {
   type WorkorderCategoryItem,
 } from '#/api/core/workorder/workorder_category';
 
+import { useAuthStore } from '#/store/auth';
+import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
-const { can } = usePermission();
+const { can, hasPerm } = usePermission();
+const userStore = useUserStore();
+const authStore = useAuthStore();
 
 /**
  * 表格列配置
@@ -83,6 +90,47 @@ const tableColumns = [
  */
 const loading = ref<boolean>(false);
 const submitLoading = ref<boolean>(false);
+const detailLoading = ref(false);
+const formReady = ref(false);
+let disposed = false;
+let interactionRevision = 0;
+let submitRevision = 0;
+let listRevision = 0;
+let formOwner: string | undefined;
+let deleteDialog: ReturnType<typeof Modal.confirm> | undefined;
+
+const pageOwner = () =>
+  JSON.stringify([
+    userStore.userInfo?.userId ?? '',
+    authStore.getAuthGeneration(),
+  ]);
+
+const validId = (id: number | undefined): id is number =>
+  typeof id === 'number' && Number.isSafeInteger(id) && id > 0;
+
+const invalidateInteraction = () => {
+  ++interactionRevision;
+  ++submitRevision;
+  formOwner = undefined;
+  detailLoading.value = false;
+  submitLoading.value = false;
+  formReady.value = false;
+  const dialog = deleteDialog;
+  deleteDialog = undefined;
+  dialog?.destroy();
+};
+
+const beginInteraction = (permission: string) => {
+  if (disposed || !userStore.userInfo?.userId || !hasPerm(permission)) return;
+  invalidateInteraction();
+  const revision = interactionRevision;
+  const owner = pageOwner();
+  return () =>
+    !disposed &&
+    revision === interactionRevision &&
+    owner === pageOwner() &&
+    hasPerm(permission);
+};
 
 // 搜索和筛选
 const searchQuery = ref<string>('');
@@ -146,6 +194,32 @@ const detailDialog = reactive({
   data: null as WorkorderCategoryItem | null,
 });
 
+watch(
+  pageOwner,
+  () => {
+    invalidateInteraction();
+    ++listRevision;
+    loading.value = false;
+    formDialog.visible = false;
+    formDialog.data = {
+      description: '',
+      name: '',
+      status: CategoryStatus.Enabled,
+    };
+    detailDialog.visible = false;
+    detailDialog.data = null;
+    categoryList.value = [];
+    total.value = 0;
+    Object.assign(statistics, { disabled: 0, enabled: 0, total: 0 });
+  },
+  { flush: 'sync' },
+);
+onUnmounted(() => {
+  disposed = true;
+  invalidateInteraction();
+  ++listRevision;
+});
+
 /**
  * 表单验证规则
  */
@@ -160,7 +234,15 @@ const formRules = {
 /**
  * 核心数据加载方法 - 使用真分页
  */
-const loadCategoryList = async (): Promise<void> => {
+const loadCategoryList = async (
+  stillCurrent: () => boolean = () => true,
+): Promise<void> => {
+  const owner = pageOwner();
+  const revision = ++listRevision;
+  const ownsRequest = () =>
+    !disposed && revision === listRevision && owner === pageOwner();
+  const isCurrent = () => ownsRequest() && stillCurrent();
+  if (!isCurrent()) return;
   loading.value = true;
   try {
     const params: ListWorkorderCategoryReq = {
@@ -179,6 +261,7 @@ const loadCategoryList = async (): Promise<void> => {
     }
 
     const response = await listWorkorderCategory(params);
+    if (!isCurrent()) return;
 
     if (response) {
       categoryList.value = response.items || [];
@@ -191,11 +274,12 @@ const loadCategoryList = async (): Promise<void> => {
       total.value = 0;
     }
   } catch (error) {
+    if (!isCurrent()) return;
     if (shouldNotifyPageError(error)) message.error('加载分类列表失败');
     categoryList.value = [];
     total.value = 0;
   } finally {
-    loading.value = false;
+    if (ownsRequest()) loading.value = false;
   }
 };
 
@@ -245,58 +329,101 @@ const handleStatusChange = (): void => {
 /**
  * 操作处理方法
  */
+const closeFormDialog = (): void => {
+  if (!formDialog.visible) return;
+  invalidateInteraction();
+  formDialog.visible = false;
+  formRef.value?.resetFields();
+};
+
+const closeDetailDialog = (): void => {
+  if (!detailDialog.visible) return;
+  invalidateInteraction();
+  detailDialog.visible = false;
+  detailDialog.data = null;
+};
+
 const handleCreate = (): void => {
+  if (!beginInteraction('/api/workorder/category/create')) return;
+  formOwner = pageOwner();
+  detailDialog.visible = false;
+  detailDialog.data = null;
   formDialog.isEdit = false;
   formDialog.data = {
     name: '',
     description: '',
     status: CategoryStatus.Enabled,
   };
+  formReady.value = true;
   formDialog.visible = true;
 };
 
-const handleEdit = async (record: WorkorderCategoryItem): Promise<void> => {
+const readCategoryDetail = async (
+  record: WorkorderCategoryItem,
+  mode: 'edit' | 'view',
+): Promise<void> => {
+  const id = record.id;
+  if (!validId(id)) {
+    message.warning('分类标识无效，请刷新后重试');
+    return;
+  }
+  const isCurrent = beginInteraction(
+    mode === 'edit'
+      ? '/api/workorder/category/update/:id'
+      : '/api/workorder/category/detail/:id',
+  );
+  if (!isCurrent) return;
+  const readRevision = interactionRevision;
+  const readOwner = pageOwner();
+  detailDialog.data = null;
+  detailDialog.visible = mode === 'view';
+  formDialog.visible = mode === 'edit';
+  if (mode === 'edit') {
+    formOwner = pageOwner();
+    formDialog.isEdit = true;
+    formDialog.data = {
+      description: '',
+      id,
+      name: '',
+      status: CategoryStatus.Enabled,
+    };
+  }
+  detailLoading.value = true;
   try {
-    const loadingMsg = message.loading('加载分类详情...', 0);
-
-    const params: DetailWorkorderCategoryReq = { id: record.id! };
+    const params: DetailWorkorderCategoryReq = { id };
     const response = await detailWorkorderCategory(params);
-
-    loadingMsg();
-
-    if (response) {
+    if (!isCurrent()) return;
+    if (!response || response.id !== id) throw new Error('分类详情标识不匹配');
+    if (mode === 'edit') {
       formDialog.isEdit = true;
       formDialog.data = {
+        description: response.description || '',
         id: response.id,
         name: response.name,
-        description: response.description || '',
         status: response.status,
       };
-      formDialog.visible = true;
-      detailDialog.visible = false; // 如果是从详情对话框打开的，关闭详情对话框
-    }
-  } catch (error) {
-    if (shouldNotifyPageError(error)) message.error('加载分类详情失败');
-  }
-};
-
-const handleView = async (record: WorkorderCategoryItem): Promise<void> => {
-  try {
-    const loadingMsg = message.loading('加载分类详情...', 0);
-
-    const params: DetailWorkorderCategoryReq = { id: record.id! };
-    const response = await detailWorkorderCategory(params);
-
-    loadingMsg();
-
-    if (response) {
+      formReady.value = true;
+    } else {
       detailDialog.data = response;
-      detailDialog.visible = true;
     }
   } catch (error) {
+    if (!isCurrent()) return;
     if (shouldNotifyPageError(error)) message.error('加载分类详情失败');
+  } finally {
+    if (
+      !disposed &&
+      interactionRevision === readRevision &&
+      pageOwner() === readOwner
+    )
+      detailLoading.value = false;
   }
 };
+
+const handleEdit = (record: WorkorderCategoryItem) =>
+  readCategoryDetail(record, 'edit');
+
+const handleView = (record: WorkorderCategoryItem) =>
+  readCategoryDetail(record, 'view');
 
 const handleMenuAction = (key: string, record: WorkorderCategoryItem): void => {
   switch (key) {
@@ -317,27 +444,34 @@ const handleMenuAction = (key: string, record: WorkorderCategoryItem): void => {
 const handleToggleStatus = async (
   record: WorkorderCategoryItem,
 ): Promise<void> => {
+  const id = record.id;
+  if (!validId(id)) return;
+  const isCurrent = beginInteraction('/api/workorder/category/update/:id');
+  if (!isCurrent) return;
+  formDialog.visible = false;
+  detailDialog.visible = false;
+  const name = record.name;
+  const newStatus =
+    record.status === CategoryStatus.Enabled
+      ? CategoryStatus.Disabled
+      : CategoryStatus.Enabled;
+  const params: UpdateWorkorderCategoryReq = {
+    description: record.description,
+    id,
+    name,
+    status: newStatus,
+  };
   try {
-    const newStatus =
-      record.status === CategoryStatus.Enabled
-        ? CategoryStatus.Disabled
-        : CategoryStatus.Enabled;
-
-    const params: UpdateWorkorderCategoryReq = {
-      id: record.id!,
-      name: record.name,
-      description: record.description,
-      status: newStatus,
-    };
-
     await updateWorkorderCategory(params);
+    if (!isCurrent()) return;
 
     const statusText = newStatus === CategoryStatus.Enabled ? '启用' : '禁用';
-    message.success(`分类 "${record.name}" 已${statusText}`);
+    message.success(`分类 "${name}" 已${statusText}`);
 
     // 重新加载当前页数据
-    await loadCategoryList();
+    await loadCategoryList(isCurrent);
   } catch (error) {
+    if (!isCurrent()) return;
     if (shouldNotifyPageError(error)) message.error('更新分类状态失败');
   }
 };
@@ -346,26 +480,40 @@ const handleToggleStatus = async (
  * 删除分类
  */
 const handleDelete = (record: WorkorderCategoryItem): void => {
-  Modal.confirm({
+  const id = record.id;
+  if (!validId(id)) return;
+  const isCurrent = beginInteraction('/api/workorder/category/delete/:id');
+  if (!isCurrent) return;
+  formDialog.visible = false;
+  detailDialog.visible = false;
+  const name = record.name;
+  let confirmed = false;
+  deleteDialog = Modal.confirm({
     title: '确认删除',
-    content: `确定要删除分类 "${record.name}" 吗？删除后不可恢复。`,
+    content: `确定要删除分类 "${name}" 吗？删除后不可恢复。`,
     okText: '删除',
     okType: 'danger',
     cancelText: '取消',
+    onCancel() {
+      if (isCurrent()) invalidateInteraction();
+    },
     async onOk() {
+      if (!isCurrent() || confirmed) return;
+      confirmed = true;
       try {
-        const params: DeleteWorkorderCategoryReq = { id: record.id! };
+        const params: DeleteWorkorderCategoryReq = { id };
         await deleteWorkorderCategory(params);
-
-        message.success(`分类 "${record.name}" 已删除`);
+        if (!isCurrent()) return;
+        message.success(`分类 "${name}" 已删除`);
 
         // 如果当前页删除后没有数据且不是第一页，回到上一页
         if (categoryList.value.length === 1 && currentPage.value > 1) {
           currentPage.value = currentPage.value - 1;
         }
 
-        await loadCategoryList();
+        await loadCategoryList(isCurrent);
       } catch (error) {
+        if (!isCurrent()) return;
         if (shouldNotifyPageError(error)) message.error('删除分类失败');
       }
     },
@@ -376,61 +524,97 @@ const handleDelete = (record: WorkorderCategoryItem): void => {
  * 表单提交
  */
 const handleSubmit = async (): Promise<void> => {
-  if (!formRef.value) return;
+  const form = formRef.value;
+  if (!form || !formDialog.visible || !formReady.value || submitLoading.value)
+    return;
+  const owner = formOwner;
+  if (!owner || owner !== pageOwner() || !userStore.userInfo?.userId) return;
+  const data = formDialog.data;
+  const isEdit = formDialog.isEdit;
+  const id = data.id;
+  if (isEdit && !validId(id)) return;
+  const revision = interactionRevision;
+  const ticket = ++submitRevision;
+  const permission = isEdit
+    ? '/api/workorder/category/update/:id'
+    : '/api/workorder/category/create';
+  const snapshot: CreateWorkorderCategoryReq = {
+    description: data.description,
+    name: data.name,
+    status: data.status,
+  };
+  const ownsOperation = () =>
+    !disposed &&
+    ticket === submitRevision &&
+    revision === interactionRevision &&
+    owner === pageOwner() &&
+    formDialog.visible &&
+    formDialog.isEdit === isEdit &&
+    formDialog.data === data &&
+    data.id === id;
+  const isCurrent = () =>
+    ownsOperation() &&
+    hasPerm(permission) &&
+    data.name === snapshot.name &&
+    data.description === snapshot.description &&
+    data.status === snapshot.status &&
+    formRef.value === form;
+  if (!isCurrent()) return;
+  submitLoading.value = true;
 
   try {
-    await formRef.value.validate();
+    await form.validate();
   } catch {
+    if (ownsOperation()) submitLoading.value = false;
     return;
   }
-
-  submitLoading.value = true;
+  if (!isCurrent()) {
+    if (ownsOperation()) submitLoading.value = false;
+    return;
+  }
   try {
-    if (formDialog.isEdit) {
+    if (isEdit && validId(id)) {
       // 更新分类
       const params: UpdateWorkorderCategoryReq = {
-        id: formDialog.data.id!,
-        name: formDialog.data.name,
-        description: formDialog.data.description,
-        status: formDialog.data.status,
+        ...snapshot,
+        id,
       };
 
       await updateWorkorderCategory(params);
-      message.success(`分类 "${formDialog.data.name}" 更新成功`);
+      if (!isCurrent()) return;
+      message.success(`分类 "${snapshot.name}" 更新成功`);
     } else {
       // 创建分类
-      const params: CreateWorkorderCategoryReq = {
-        name: formDialog.data.name,
-        description: formDialog.data.description,
-        status: formDialog.data.status,
-      };
-
-      await createWorkorderCategory(params);
-      message.success(`分类 "${formDialog.data.name}" 创建成功`);
+      await createWorkorderCategory(snapshot);
+      if (!isCurrent()) return;
+      message.success(`分类 "${snapshot.name}" 创建成功`);
 
       // 创建成功后跳转到第一页
       currentPage.value = 1;
     }
 
-    closeFormDialog();
-    await loadCategoryList();
+    formDialog.visible = false;
+    formRef.value?.resetFields();
+    // The completed operation owns this refresh; closing the saved form is expected.
+    await loadCategoryList(
+      () =>
+        !disposed &&
+        revision === interactionRevision &&
+        owner === pageOwner() &&
+        hasPerm(permission),
+    );
   } catch (error) {
+    if (!isCurrent()) return;
     if (shouldNotifyPageError(error)) message.error('保存分类失败');
   } finally {
-    submitLoading.value = false;
+    if (
+      !disposed &&
+      ticket === submitRevision &&
+      revision === interactionRevision &&
+      owner === pageOwner()
+    )
+      submitLoading.value = false;
   }
-};
-
-/**
- * 对话框控制
- */
-const closeFormDialog = (): void => {
-  formDialog.visible = false;
-  formRef.value?.resetFields();
-};
-
-const closeDetailDialog = (): void => {
-  detailDialog.visible = false;
 };
 
 /**
@@ -460,30 +644,10 @@ const getInitials = (name: string): string => {
   return words.slice(0, 2).join('').toUpperCase();
 };
 
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  return colors[Math.abs(hash) % colors.length]!;
-};
-
 /**
  * 监听搜索条件变化，自动触发搜索
  */
-watch([searchQuery, statusFilter], () => {
+watch([searchQuery, statusFilter], (_value, _oldValue, onCleanup) => {
   // 防抖处理，避免频繁请求
   const timeoutId = setTimeout(() => {
     if (searchQuery.value.trim() !== '' || statusFilter.value !== undefined) {
@@ -491,7 +655,7 @@ watch([searchQuery, statusFilter], () => {
     }
   }, 500);
 
-  return () => clearTimeout(timeoutId);
+  onCleanup(() => clearTimeout(timeoutId));
 });
 
 /**
@@ -690,6 +854,7 @@ onMounted(() => {
     <!-- 创建/编辑对话框 -->
     <a-modal
       :confirm-loading="submitLoading"
+      :ok-button-props="{ disabled: !formReady }"
       :open="formDialog.visible"
       :title="formDialog.isEdit ? '编辑分类' : '创建分类'"
       :width="dialogWidth"
@@ -697,8 +862,17 @@ onMounted(() => {
       @cancel="closeFormDialog"
       @ok="handleSubmit"
     >
+      <a-spin v-if="detailLoading" />
+      <a-alert
+        v-else-if="!formReady"
+        message="分类详情读取失败，请关闭后重新打开"
+        show-icon
+        type="error"
+      />
       <a-form
+        v-show="formReady"
         ref="formRef"
+        :disabled="!formReady"
         :model="formDialog.data"
         :rules="formRules"
         layout="vertical"
@@ -706,7 +880,7 @@ onMounted(() => {
         <a-form-item label="分类名称" name="name">
           <a-input
             v-model:value="formDialog.data.name"
-            maxlength="100"
+            :maxlength="100"
             placeholder="请输入分类名称"
           />
         </a-form-item>
@@ -714,8 +888,8 @@ onMounted(() => {
         <a-form-item label="分类描述" name="description">
           <a-textarea
             v-model:value="formDialog.data.description"
+            :maxlength="500"
             :rows="3"
-            maxlength="500"
             placeholder="请输入分类描述（可选）"
           />
         </a-form-item>
@@ -737,7 +911,14 @@ onMounted(() => {
       title="分类详情"
       @cancel="closeDetailDialog"
     >
-      <div v-if="detailDialog.data" class="detail-content">
+      <a-spin v-if="detailLoading" />
+      <a-alert
+        v-else-if="!detailDialog.data"
+        message="分类详情读取失败，请关闭后重新打开"
+        show-icon
+        type="error"
+      />
+      <div v-else class="detail-content">
         <a-descriptions :column="1" bordered>
           <a-descriptions-item label="分类ID">
             {{ detailDialog.data.id }}

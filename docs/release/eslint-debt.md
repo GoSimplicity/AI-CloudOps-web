@@ -323,3 +323,13 @@ Deployment/DaemonSet/StatefulSet回滚不再从确认时已变化的ref重读目
 - 模板/样式字节相同；首次普通Prettier引入的顺带模板换行已撤回，只保留脚本函数/导入重构。
 - 相关5文件123项测试及应用类型检查通过；helper与新测试ESLint0/0，五生产文件逐规则唯一变化为prefer-code-point5→0，没有增加其它诊断或规则豁免。
 - 未重复声明产品构建/全量已跑，下一次检查点统一验证；没有真实服务调用。
+
+## 阶段二十六：工单分类交互与保存快照（2026-11-03）
+
+Category按合法safe-int ID、UID/authGeneration及交互票据隔离view/edit/启停/delete；详情响应必须匹配目标ID，打开窗口即提供可取消loading，读取未完成不能提交。表单在validate前捕获引用、模式、ID及字段快照，每个await后复核；旧成功/错误/finally不操作新窗口，列表刷新/分页读取各有请求归属。
+
+删除确认绑定原ID/name，只消费一次；主代理复查纠正失败catch重置消费标记的遗漏，pending/成功/失败后同一callback都不再外发，新确认可重试。本页确认框在新交互、取消、换账号及卸载时仅销毁本页实例。修复防抖onCleanup，避免卸载后旧timer发起读取；头像复用公共函数。
+
+- 新31项真实SFC+AntD/Mock回归，连原Process/scanner共58项通过；应用类型检查通过。
+- 生产ESLint33→26且其它规则无增，新测试0/0；清除6处隐藏SFC语法，未扩大规则作用域。
+- 有意NaN ID反例有Vue invalid-key warning，未隐藏。Process尚未修改、真实工单API未访问，全量/构建另待整合检查点。
