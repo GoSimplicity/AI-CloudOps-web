@@ -373,7 +373,7 @@ onMounted(() => {
         <div class="search-left">
           <a-input
             v-model:value="searchParams.search"
-            allowClear
+            allow-clear
             aria-label="搜索API"
             class="search-input"
             placeholder="搜索API名称或路径"
@@ -386,7 +386,7 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.method"
-            allowClear
+            allow-clear
             class="method-select"
             placeholder="请求方法"
           >
@@ -398,7 +398,7 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.is_public"
-            allowClear
+            allow-clear
             class="access-select"
             placeholder="访问权限"
           >

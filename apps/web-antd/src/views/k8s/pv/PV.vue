@@ -659,11 +659,11 @@ onMounted(async () => {
     <a-modal
       v-model:open="isCreateModalVisible"
       :confirm-loading="submitLoading"
-      :maskClosable="false"
+      :mask-closable="false"
       :width="800"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="创建 PersistentVolume"
       @cancel="resetCreateForm"
       @ok="createPV"
@@ -696,7 +696,7 @@ onMounted(async () => {
         <a-form-item label="访问模式" name="access_modes">
           <a-select
             v-model:value="createFormModel.access_modes"
-            :maxTagCount="2"
+            :max-tag-count="2"
             class="k8s-form-input"
             mode="multiple"
             placeholder="选择访问模式"
@@ -963,11 +963,11 @@ onMounted(async () => {
     <a-modal
       v-model:open="isCreateYamlModalVisible"
       :confirm-loading="submitLoading"
-      :maskClosable="false"
+      :mask-closable="false"
       :width="900"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="通过 YAML 创建 PV"
       @cancel="resetCreateYamlForm"
       @ok="createPVByYaml"
@@ -1028,11 +1028,11 @@ onMounted(async () => {
     <a-modal
       v-model:open="isEditModalVisible"
       :confirm-loading="submitLoading"
-      :maskClosable="false"
+      :mask-closable="false"
       :width="800"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存"
       title="编辑 PersistentVolume"
       @cancel="resetEditForm"
       @ok="updatePV"
@@ -1062,7 +1062,7 @@ onMounted(async () => {
         <a-form-item label="访问模式">
           <a-select
             v-model:value="editFormModel.access_modes"
-            :maxTagCount="2"
+            :max-tag-count="2"
             class="k8s-form-input"
             mode="multiple"
             placeholder="选择访问模式"
@@ -1304,11 +1304,11 @@ onMounted(async () => {
     <a-modal
       v-model:open="isDetailModalVisible"
       :footer="null"
-      :maskClosable="false"
+      :mask-closable="false"
       :title="`PV 详情: ${currentOperationPV?.name}`"
       :width="900"
       class="k8s-detail-modal"
-      destroyOnClose
+      destroy-on-close
     >
       <div v-if="currentPVDetail" class="k8s-detail-content">
         <a-card class="k8s-detail-card" size="small" title="基本信息">
@@ -1492,12 +1492,12 @@ onMounted(async () => {
     <a-modal
       v-model:open="isYamlModalVisible"
       :confirm-loading="submitLoading"
-      :maskClosable="false"
+      :mask-closable="false"
       :title="`查看/编辑 ${currentOperationPV?.name} YAML`"
       :width="900"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存修改"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存修改"
       @cancel="resetYamlForm"
       @ok="updatePVByYaml"
     >

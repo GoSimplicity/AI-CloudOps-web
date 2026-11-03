@@ -746,13 +746,13 @@ onMounted(async () => {
     <a-modal
       v-model:open="isLabelModalVisible"
       :autoFocus="false"
-      :confirmLoading="submitLoading"
-      :focusTriggerAfterClose="false"
+      :confirm-loading="submitLoading"
+      :focus-trigger-after-close="false"
       :keyboard="true"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存更改"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存更改"
       title="管理节点标签 (Node Labels)"
       width="800px"
       @cancel="closeLabelModal"
@@ -845,14 +845,14 @@ onMounted(async () => {
     <a-modal
       v-model:open="isTaintModalVisible"
       :autoFocus="false"
-      :confirmLoading="submitLoading"
-      :focusTriggerAfterClose="false"
+      :confirm-loading="submitLoading"
+      :focus-trigger-after-close="false"
       :keyboard="true"
-      :maskClosable="false"
-      :okButtonProps="{ disabled: !hasTaintChanges }"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存更改"
+      :mask-closable="false"
+      :ok-button-props="{ disabled: !hasTaintChanges }"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存更改"
       title="管理节点污点 (Node Taints)"
       width="800px"
       @cancel="closeTaintModal"
@@ -1005,13 +1005,13 @@ onMounted(async () => {
     <a-modal
       v-model:open="isDrainModalVisible"
       :autoFocus="false"
-      :confirmLoading="submitLoading"
-      :focusTriggerAfterClose="false"
+      :confirm-loading="submitLoading"
+      :focus-trigger-after-close="false"
       :keyboard="true"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="确认驱逐"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="确认驱逐"
       title="驱逐节点 (Drain Node)"
       width="650px"
       @cancel="closeDrainModal"
@@ -1166,11 +1166,11 @@ onMounted(async () => {
     <a-modal
       v-model:open="isDetailModalVisible"
       :autoFocus="false"
-      :focusTriggerAfterClose="false"
+      :focus-trigger-after-close="false"
       :footer="null"
       :keyboard="true"
-      :maskClosable="false"
-      destroyOnClose
+      :mask-closable="false"
+      destroy-on-close
       title="节点详情 (Node Details)"
       width="1000px"
       @cancel="closeDetailModal"

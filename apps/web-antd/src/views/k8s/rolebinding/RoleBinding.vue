@@ -809,11 +809,11 @@ onMounted(async () => {
     <!-- 创建 RoleBinding 模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="创建 RoleBinding"
       width="900px"
       @cancel="closeCreateModal"
@@ -1083,11 +1083,11 @@ onMounted(async () => {
     <!-- 编辑 RoleBinding 模态框 -->
     <a-modal
       v-model:open="isEditModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存"
       title="编辑 RoleBinding"
       width="900px"
       @cancel="closeEditModal"
@@ -1330,11 +1330,11 @@ onMounted(async () => {
     <!-- 通过 YAML 创建 RoleBinding 模态框 -->
     <a-modal
       v-model:open="isCreateYamlModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="通过 YAML 创建 RoleBinding"
       width="900px"
       @cancel="closeCreateYamlModal"
@@ -1396,8 +1396,8 @@ onMounted(async () => {
     <a-modal
       v-model:open="isDetailModalVisible"
       :footer="null"
-      :maskClosable="false"
-      destroyOnClose
+      :mask-closable="false"
+      destroy-on-close
       title="RoleBinding 详情"
       width="1000px"
       @cancel="closeDetailModal"
@@ -1609,12 +1609,12 @@ onMounted(async () => {
     <!-- YAML 模态框 -->
     <a-modal
       v-model:open="isYamlModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
       :title="`查看/编辑 ${currentOperationRoleBinding?.name} YAML`"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存修改"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存修改"
       width="900px"
       @cancel="closeYamlModal"
       @ok="submitYamlForm"
@@ -1660,10 +1660,10 @@ onMounted(async () => {
     <!-- 标签过滤模态框 -->
     <a-modal
       v-model:open="isLabelsFilterModalVisible"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="应用过滤"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="应用过滤"
       title="本页标签过滤设置"
       width="550px"
       @cancel="closeLabelsFilterModal"

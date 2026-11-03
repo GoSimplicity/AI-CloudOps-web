@@ -468,12 +468,12 @@ onMounted(async () => {
     <!-- 创建模板模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
       centered
-      destroyOnClose
-      okText="创建"
+      destroy-on-close
+      ok-text="创建"
       title="创建 YAML 模板"
       width="900px"
       @cancel="closeCreateModal"
@@ -548,12 +548,12 @@ onMounted(async () => {
     <!-- 编辑模板模态框 -->
     <a-modal
       v-model:open="isEditModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
       centered
-      destroyOnClose
-      okText="保存"
+      destroy-on-close
+      ok-text="保存"
       title="编辑 YAML 模板"
       width="900px"
       @cancel="closeEditModal"
@@ -613,7 +613,7 @@ onMounted(async () => {
       v-model:open="isDetailModalVisible"
       :footer="null"
       centered
-      destroyOnClose
+      destroy-on-close
       title="模板详情"
       width="900px"
       @cancel="closeDetailModal"
@@ -692,9 +692,9 @@ onMounted(async () => {
     <a-modal
       v-model:open="isYamlModalVisible"
       :footer="null"
-      :maskClosable="false"
+      :mask-closable="false"
       :title="`查看模板: ${currentOperationTemplate?.name}`"
-      destroyOnClose
+      destroy-on-close
       width="900px"
       @cancel="closeYamlModal"
     >

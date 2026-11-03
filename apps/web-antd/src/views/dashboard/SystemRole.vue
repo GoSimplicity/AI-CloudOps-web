@@ -666,7 +666,7 @@ onMounted(() => {
         <div class="search-left">
           <a-input
             v-model:value="searchParams.search"
-            allowClear
+            allow-clear
             aria-label="搜索角色"
             class="search-input"
             placeholder="搜索角色名称或编码"
@@ -679,7 +679,7 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.status"
-            allowClear
+            allow-clear
             class="status-select"
             placeholder="状态筛选"
           >
@@ -689,7 +689,7 @@ onMounted(() => {
 
           <a-select
             v-model:value="typeFilter"
-            allowClear
+            allow-clear
             class="type-select"
             placeholder="类型筛选"
           >
@@ -939,7 +939,7 @@ onMounted(() => {
             <div class="api-search-container">
               <a-input
                 v-model:value="apiSearchParams.search"
-                allowClear
+                allow-clear
                 class="api-search-input"
                 placeholder="搜索API名称"
                 @pressEnter="handleApiSearch"

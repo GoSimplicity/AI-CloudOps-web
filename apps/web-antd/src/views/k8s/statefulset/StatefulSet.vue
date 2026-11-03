@@ -1033,11 +1033,11 @@ onMounted(async () => {
     <!-- 创建 StatefulSet 模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="创建 StatefulSet"
       width="800px"
       @cancel="closeCreateModal"
@@ -1275,11 +1275,11 @@ onMounted(async () => {
     <!-- 通过 YAML 创建 StatefulSet 模态框 -->
     <a-modal
       v-model:open="isCreateYamlModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="通过 YAML 创建 StatefulSet"
       width="900px"
       @cancel="closeCreateYamlModal"
@@ -1340,11 +1340,11 @@ onMounted(async () => {
     <!-- 编辑 StatefulSet 模态框 -->
     <a-modal
       v-model:open="isEditModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存"
       title="编辑 StatefulSet"
       width="800px"
       @cancel="closeEditModal"
@@ -1537,8 +1537,8 @@ onMounted(async () => {
     <a-modal
       v-model:open="isDetailModalVisible"
       :footer="null"
-      :maskClosable="false"
-      destroyOnClose
+      :mask-closable="false"
+      destroy-on-close
       title="StatefulSet 详情"
       width="1000px"
       @cancel="closeDetailModal"
@@ -1944,11 +1944,11 @@ onMounted(async () => {
     <!-- 伸缩模态框 -->
     <a-modal
       v-model:open="isScaleModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="确认伸缩"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="确认伸缩"
       title="伸缩 StatefulSet"
       width="500px"
       @cancel="closeScaleModal"
@@ -1989,12 +1989,12 @@ onMounted(async () => {
     <!-- YAML 模态框 -->
     <a-modal
       v-model:open="isYamlModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
       :title="`查看/编辑 ${currentOperationStatefulSet?.name} YAML`"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存修改"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存修改"
       width="900px"
       @cancel="closeYamlModal"
       @ok="submitYamlForm"
@@ -2041,9 +2041,9 @@ onMounted(async () => {
     <a-modal
       v-model:open="isPodModalVisible"
       :footer="null"
-      :maskClosable="false"
+      :mask-closable="false"
       :title="`${currentOperationStatefulSet?.name} Pod 列表`"
-      destroyOnClose
+      destroy-on-close
       width="1000px"
       @cancel="closePodModal"
     >
@@ -2080,9 +2080,9 @@ onMounted(async () => {
     <a-modal
       v-model:open="isHistoryModalVisible"
       :footer="null"
-      :maskClosable="false"
+      :mask-closable="false"
       :title="`${currentOperationStatefulSet?.name} 版本历史`"
-      destroyOnClose
+      destroy-on-close
       width="800px"
       @cancel="closeHistoryModal"
     >
@@ -2114,10 +2114,10 @@ onMounted(async () => {
     <!-- 标签过滤模态框 -->
     <a-modal
       v-model:open="isLabelsFilterModalVisible"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="应用过滤"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="应用过滤"
       title="标签过滤设置"
       width="550px"
       @cancel="closeLabelsFilterModal"

@@ -238,3 +238,12 @@ TypeScript 检查确认 `SshTerminal.test.ts` 的6处断言作用于既有 any �
 - 13项回归验证真实配置中各类拒绝、parser/tool异常、空扫描与配置缺失；新脚本/test定向lint零错误/警告。
 - 整合全量139文件2191项单元测试通过。此前11项产品构建证据保持原范围，本阶段只修改工具、CI及回归。
 - **覆盖边界**：现有JS/TS配置关闭no-undef，需各自类型/运行检查补充；SFC尚未启用TS非空断言规则。额外TS AST盘点发现33个Vue脚本仍106处NonNullExpression，此门禁不代表全代码不存在该语法，下一阶段按模块修复后再统一SFC规则。
+
+
+## 阶段十七：声明式组件属性拼写统一（2026-11-03）
+
+28个非Prometheus SFC的473处属性规范为连字符，仅选择应用实际注册的AntD组件且真实声明的14种props。跳过v-model、onX处理器、未知或局部遮蔽组件、无声明props的TableColumn占位组件及过期位置；没有调整模板求值次序。脚本/样式字节相同，模板AST只允许目标prop拼写差异，真实模板重新编译无错。
+
+- 初审用实际Vue SSR验证14prop各10种输入的规范化结果相同；独立复查实际AntD4.2.6六组件在JSDOM挂载、初始化及两次响应式更新，真实patchFlag=8/dynamicProps路径的props和DOM一致。清除按钮/Select标签、Modal取消、Table行数、Descriptions样式均有行为断言；没有声称真实浏览器焦点/动画已经验收。
+- 全量139文件2191项单元测试、应用类型检查、11项产品构建通过。
+- 28文件真实ESLint逐规则比较唯一变化为attribute-hyphenation507→34，减少473；其他规则不增不减。全仓仍有遗留lint债，后续统一扫描记录，未改规则。

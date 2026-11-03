@@ -1854,7 +1854,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <a-descriptions :column="1" :labelStyle="{ width: '120px' }" bordered>
+        <a-descriptions :column="1" :label-style="{ width: '120px' }" bordered>
           <a-descriptions-item label="ID">
             {{ detailDialog.form.id }}
           </a-descriptions-item>

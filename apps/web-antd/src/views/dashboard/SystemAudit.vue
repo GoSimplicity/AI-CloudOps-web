@@ -520,7 +520,7 @@ onMounted(() => {
         <div class="search-left">
           <a-input
             v-model:value="searchParams.search"
-            allowClear
+            allow-clear
             aria-label="搜索审计日志"
             class="search-input"
             placeholder="搜索关键词、Trace ID..."
@@ -533,7 +533,7 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.operation_type"
-            allowClear
+            allow-clear
             class="status-select"
             placeholder="操作类型"
           >
@@ -548,7 +548,7 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.target_type"
-            allowClear
+            allow-clear
             class="type-select"
             placeholder="目标类型"
           >
@@ -563,7 +563,7 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.status_code"
-            allowClear
+            allow-clear
             class="type-select"
             placeholder="状态码"
           >

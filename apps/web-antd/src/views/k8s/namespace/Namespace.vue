@@ -701,11 +701,11 @@ onMounted(async () => {
     <!-- 创建命名空间模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="创建命名空间"
       width="600px"
       @cancel="closeCreateModal"
@@ -849,12 +849,12 @@ onMounted(async () => {
     <!-- 标签/注解管理模态框 -->
     <a-modal
       v-model:open="isLabelModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
       :title="isLabelEdit ? '编辑命名空间标签/注解' : '添加命名空间标签/注解'"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存"
       width="800px"
       @cancel="closeLabelModal"
       @ok="submitLabelForm"
@@ -986,8 +986,8 @@ onMounted(async () => {
     <a-modal
       v-model:open="isDetailModalVisible"
       :footer="null"
-      :maskClosable="false"
-      destroyOnClose
+      :mask-closable="false"
+      destroy-on-close
       title="命名空间详情"
       width="1000px"
       @cancel="closeDetailModal"
@@ -1127,12 +1127,12 @@ onMounted(async () => {
     <!-- 删除命名空间模态框 -->
     <a-modal
       v-model:open="isDeleteModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="确认删除"
-      okType="danger"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="确认删除"
+      ok-type="danger"
       title="删除命名空间"
       width="500px"
       @cancel="closeDeleteModal"
@@ -1192,10 +1192,10 @@ onMounted(async () => {
     <!-- 标签过滤模态框 -->
     <a-modal
       v-model:open="isLabelsFilterModalVisible"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="应用过滤"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="应用过滤"
       title="标签过滤设置"
       width="550px"
       @cancel="closeLabelsFilterModal"

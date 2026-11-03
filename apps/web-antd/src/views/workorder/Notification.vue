@@ -2669,7 +2669,7 @@ onMounted(() => {
           />
         </div>
 
-        <a-descriptions :column="1" :labelStyle="{ width: '120px' }" bordered>
+        <a-descriptions :column="1" :label-style="{ width: '120px' }" bordered>
           <a-descriptions-item label="配置ID">
             {{ detailDialog.notification.id }}
           </a-descriptions-item>

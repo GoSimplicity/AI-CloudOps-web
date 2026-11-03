@@ -635,11 +635,11 @@ onMounted(async () => {
     <!-- 创建任务模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="创建 YAML 任务"
       width="700px"
       @cancel="closeCreateModal"
@@ -762,11 +762,11 @@ onMounted(async () => {
     <!-- 编辑任务模态框 -->
     <a-modal
       v-model:open="isEditModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存"
       title="编辑 YAML 任务"
       width="700px"
       @cancel="closeEditModal"
@@ -870,11 +870,11 @@ onMounted(async () => {
     <!-- 执行任务模态框 -->
     <a-modal
       v-model:open="isExecuteModalVisible"
-      :confirmLoading="executeLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="执行"
+      :confirm-loading="executeLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="执行"
       title="执行任务"
       width="500px"
       @cancel="closeExecuteModal"
@@ -942,8 +942,8 @@ onMounted(async () => {
     <a-modal
       v-model:open="isDetailModalVisible"
       :footer="null"
-      :maskClosable="false"
-      destroyOnClose
+      :mask-closable="false"
+      destroy-on-close
       title="任务详情"
       width="900px"
       @cancel="closeDetailModal"

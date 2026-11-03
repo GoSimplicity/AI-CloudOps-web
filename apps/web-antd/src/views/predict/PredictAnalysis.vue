@@ -676,7 +676,7 @@ onUnmounted(() => {
                 :marks="timeMarks"
                 :max="168"
                 :min="1"
-                :tipFormatter="(value: number) => `${value}小时`"
+                :tip-formatter="(value: number) => `${value}小时`"
               />
             </a-form-item>
 
@@ -699,7 +699,7 @@ onUnmounted(() => {
                     :max="100"
                     :min="0"
                     :step="5"
-                    :tipFormatter="(value: number) => `${value}%`"
+                    :tip-formatter="(value: number) => `${value}%`"
                   />
                 </a-form-item>
 
@@ -709,7 +709,7 @@ onUnmounted(() => {
                     :max="1"
                     :min="0"
                     :step="0.1"
-                    :tipFormatter="(value: number) => value"
+                    :tip-formatter="(value: number) => value"
                   />
                 </a-form-item>
 

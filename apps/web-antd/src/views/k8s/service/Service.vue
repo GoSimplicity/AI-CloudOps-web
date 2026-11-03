@@ -1002,11 +1002,11 @@ onMounted(async () => {
     <!-- 创建 Service 模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="创建 Service"
       width="800px"
       @cancel="closeCreateModal"
@@ -1297,11 +1297,11 @@ onMounted(async () => {
     <!-- 编辑 Service 模态框 -->
     <a-modal
       v-model:open="isEditModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="更新"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="更新"
       title="编辑 Service"
       width="800px"
       @cancel="closeEditModal"
@@ -1588,11 +1588,11 @@ onMounted(async () => {
     <!-- 通过 YAML 创建 Service 模态框 -->
     <a-modal
       v-model:open="isCreateYamlModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="通过 YAML 创建 Service"
       width="900px"
       @cancel="closeCreateYamlModal"
@@ -1654,8 +1654,8 @@ onMounted(async () => {
     <a-modal
       v-model:open="isDetailModalVisible"
       :footer="null"
-      :maskClosable="false"
-      destroyOnClose
+      :mask-closable="false"
+      destroy-on-close
       title="Service 详情"
       width="1000px"
       @cancel="closeDetailModal"
@@ -1910,12 +1910,12 @@ onMounted(async () => {
     <!-- YAML 模态框 -->
     <a-modal
       v-model:open="isYamlModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
       :title="`查看/编辑 ${currentOperationService?.name} YAML`"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存修改"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存修改"
       width="900px"
       @cancel="closeYamlModal"
       @ok="submitYamlForm"
@@ -1942,9 +1942,9 @@ onMounted(async () => {
     <a-modal
       v-model:open="isEndpointsModalVisible"
       :footer="null"
-      :maskClosable="false"
+      :mask-closable="false"
       :title="`${currentOperationService?.name} 端点列表`"
-      destroyOnClose
+      destroy-on-close
       width="800px"
       @cancel="closeEndpointsModal"
     >
@@ -1980,10 +1980,10 @@ onMounted(async () => {
     <!-- 标签过滤模态框 -->
     <a-modal
       v-model:open="isLabelsFilterModalVisible"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="应用过滤"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="应用过滤"
       title="标签过滤设置"
       width="550px"
       @cancel="closeLabelsFilterModal"

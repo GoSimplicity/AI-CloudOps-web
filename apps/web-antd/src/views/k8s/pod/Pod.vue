@@ -1170,11 +1170,11 @@ const handleCloseFileManagerModal = () => {
     <!-- 创建 Pod 模态框 -->
     <a-modal
       v-model:open="isCreateModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="创建 Pod"
       width="900px"
       @cancel="closeCreateModal"
@@ -1593,11 +1593,11 @@ const handleCloseFileManagerModal = () => {
     <!-- 通过 YAML 创建 Pod 模态框 -->
     <a-modal
       v-model:open="isCreateYamlModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="通过 YAML 创建 Pod"
       width="900px"
       @cancel="closeCreateYamlModal"
@@ -1659,8 +1659,8 @@ const handleCloseFileManagerModal = () => {
     <a-modal
       v-model:open="isDetailModalVisible"
       :footer="null"
-      :maskClosable="false"
-      destroyOnClose
+      :mask-closable="false"
+      destroy-on-close
       title="Pod 详情"
       width="1200px"
       @cancel="closeDetailModal"
@@ -1927,12 +1927,12 @@ const handleCloseFileManagerModal = () => {
     <!-- YAML 模态框 -->
     <a-modal
       v-model:open="isYamlModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
       :title="`查看/编辑 ${currentOperationPod?.name} YAML`"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存修改"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存修改"
       width="900px"
       @cancel="closeYamlModal"
       @ok="submitYamlForm"
@@ -1978,11 +1978,11 @@ const handleCloseFileManagerModal = () => {
     <!-- 编辑 Pod 模态框 -->
     <a-modal
       v-model:open="isEditModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存"
       title="编辑 Pod"
       width="800px"
       @cancel="closeEditModal"
@@ -2124,9 +2124,9 @@ const handleCloseFileManagerModal = () => {
     <a-modal
       v-model:open="isLogsModalVisible"
       :footer="null"
-      :maskClosable="false"
+      :mask-closable="false"
       :title="`${currentOperationPod?.name} 日志`"
-      destroyOnClose
+      destroy-on-close
       width="1000px"
       @cancel="closeLogsModal"
     >
@@ -2241,9 +2241,9 @@ const handleCloseFileManagerModal = () => {
     <a-modal
       v-model:open="isExecModalVisible"
       :footer="null"
-      :maskClosable="false"
+      :mask-closable="false"
       class="terminal-modal"
-      destroyOnClose
+      destroy-on-close
       title="Pod 终端"
       width="1200px"
       @cancel="closeExecModal"
@@ -2397,11 +2397,11 @@ const handleCloseFileManagerModal = () => {
     <!-- 端口转发模态框 -->
     <a-modal
       v-model:open="isPortForwardModalVisible"
-      :confirmLoading="submitLoading"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="设置转发"
+      :confirm-loading="submitLoading"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="设置转发"
       title="端口转发"
       width="600px"
       @cancel="closePortForwardModal"
@@ -2454,8 +2454,8 @@ const handleCloseFileManagerModal = () => {
     <a-modal
       v-model:open="isFileManagerModalVisible"
       :footer="null"
-      :maskClosable="false"
-      destroyOnClose
+      :mask-closable="false"
+      destroy-on-close
       title="文件管理"
       width="900px"
       @cancel="handleCloseFileManagerModal"
@@ -2647,10 +2647,10 @@ const handleCloseFileManagerModal = () => {
     <!-- 标签过滤模态框 -->
     <a-modal
       v-model:open="isLabelsFilterModalVisible"
-      :maskClosable="false"
-      cancelText="取消"
-      destroyOnClose
-      okText="应用过滤"
+      :mask-closable="false"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="应用过滤"
       title="标签过滤设置"
       width="550px"
       @cancel="closeLabelsFilterModal"

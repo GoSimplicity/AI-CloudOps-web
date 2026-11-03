@@ -1627,7 +1627,7 @@ onMounted(async () => {
           </a-tag>
         </div>
 
-        <a-descriptions :column="2" :labelStyle="{ width: '120px' }" bordered>
+        <a-descriptions :column="2" :label-style="{ width: '120px' }" bordered>
           <a-descriptions-item label="模板ID">
             {{ detailDialog.template.id }}
           </a-descriptions-item>

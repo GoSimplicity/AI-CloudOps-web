@@ -821,11 +821,11 @@ onMounted(async () => {
     <a-modal
       v-model:open="isCreateModalVisible"
       :confirm-loading="submitLoading"
-      :maskClosable="false"
+      :mask-closable="false"
       :width="800"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="创建 PersistentVolumeClaim"
       @cancel="resetCreateForm"
       @ok="createPVC"
@@ -918,7 +918,7 @@ onMounted(async () => {
             >
               <a-select
                 v-model:value="createFormModel.spec.access_modes"
-                :maxTagCount="1"
+                :max-tag-count="1"
                 class="k8s-form-input"
                 mode="multiple"
                 placeholder="选择访问模式"
@@ -1347,11 +1347,11 @@ onMounted(async () => {
     <a-modal
       v-model:open="isCreateYamlModalVisible"
       :confirm-loading="submitLoading"
-      :maskClosable="false"
+      :mask-closable="false"
       :width="900"
-      cancelText="取消"
-      destroyOnClose
-      okText="创建"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="创建"
       title="通过 YAML 创建 PVC"
       @cancel="resetCreateYamlForm"
       @ok="createPVCByYaml"
@@ -1412,11 +1412,11 @@ onMounted(async () => {
     <a-modal
       v-model:open="isEditModalVisible"
       :confirm-loading="submitLoading"
-      :maskClosable="false"
+      :mask-closable="false"
       :width="800"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存"
       title="编辑 PersistentVolumeClaim"
       @cancel="resetEditForm"
       @ok="updatePVC"
@@ -1650,11 +1650,11 @@ onMounted(async () => {
     <a-modal
       v-model:open="isDetailModalVisible"
       :footer="null"
-      :maskClosable="false"
+      :mask-closable="false"
       :title="`PVC 详情: ${currentOperationPVC?.name}`"
       :width="900"
       class="k8s-detail-modal"
-      destroyOnClose
+      destroy-on-close
     >
       <div v-if="currentPVCDetail" class="k8s-detail-content">
         <a-card class="k8s-detail-card" size="small" title="基本信息">
@@ -1824,12 +1824,12 @@ onMounted(async () => {
     <a-modal
       v-model:open="isYamlModalVisible"
       :confirm-loading="submitLoading"
-      :maskClosable="false"
+      :mask-closable="false"
       :title="`查看/编辑 ${currentOperationPVC?.name} YAML`"
       :width="900"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存修改"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存修改"
       @cancel="resetYamlForm"
       @ok="updatePVCByYaml"
     >
@@ -1875,12 +1875,12 @@ onMounted(async () => {
     <a-modal
       v-model:open="isExpandModalVisible"
       :confirm-loading="submitLoading"
-      :maskClosable="false"
+      :mask-closable="false"
       :title="`扩容 PVC: ${currentOperationPVC?.name}`"
       :width="600"
-      cancelText="取消"
-      destroyOnClose
-      okText="确认扩容"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="确认扩容"
       @cancel="resetExpandForm"
       @ok="expandPVC"
     >
@@ -1938,11 +1938,11 @@ onMounted(async () => {
     <a-modal
       v-model:open="isPodsModalVisible"
       :footer="null"
-      :maskClosable="false"
+      :mask-closable="false"
       :title="`使用 PVC 的 Pod: ${currentOperationPVC?.name}`"
       :width="800"
       class="k8s-detail-modal"
-      destroyOnClose
+      destroy-on-close
     >
       <div v-if="podsLoading" style="text-align: center; padding: 50px">
         <a-spin size="large" />

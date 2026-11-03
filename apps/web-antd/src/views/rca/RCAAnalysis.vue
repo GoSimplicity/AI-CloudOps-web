@@ -641,7 +641,7 @@ onUnmounted(() => {
                 :max="24"
                 :min="0.5"
                 :step="0.5"
-                :tipFormatter="(value: number) => `${value}小时`"
+                :tip-formatter="(value: number) => `${value}小时`"
                 class="time-window-slider"
               />
             </a-form-item>
@@ -952,7 +952,7 @@ onUnmounted(() => {
                     <h4 class="section-title">关键事件列表</h4>
                     <div class="table-wrapper">
                       <a-table
-                        :dataSource="getCriticalEventsTableData()"
+                        :data-source="getCriticalEventsTableData()"
                         :columns="criticalEventsColumns"
                         :pagination="{ pageSize: 5, size: 'small' }"
                         size="small"

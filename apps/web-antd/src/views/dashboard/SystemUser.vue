@@ -708,7 +708,7 @@ onMounted(() => {
         <div class="search-left">
           <a-input
             v-model:value="searchParams.search"
-            allowClear
+            allow-clear
             aria-label="搜索用户"
             class="search-input"
             placeholder="搜索用户名"
@@ -721,7 +721,7 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.enable"
-            allowClear
+            allow-clear
             class="status-select"
             placeholder="状态筛选"
           >
@@ -731,7 +731,7 @@ onMounted(() => {
 
           <a-select
             v-model:value="searchParams.account_type"
-            allowClear
+            allow-clear
             class="type-select"
             placeholder="账号类型"
           >

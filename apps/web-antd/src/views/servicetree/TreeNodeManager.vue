@@ -959,7 +959,7 @@ onBeforeUnmount(() => {
               <a-tab-pane key="info" tab="基本信息">
                 <a-descriptions
                   :column="2"
-                  :labelStyle="{ width: '120px' }"
+                  :label-style="{ width: '120px' }"
                   bordered
                 >
                   <a-descriptions-item label="节点ID">

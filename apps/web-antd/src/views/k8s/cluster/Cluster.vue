@@ -452,13 +452,13 @@ onMounted(async () => {
 
     <a-modal
       v-model:open="isModalVisible"
-      :confirmLoading="submitLoading"
+      :confirm-loading="submitLoading"
       :keyboard="false"
-      :maskClosable="false"
+      :mask-closable="false"
       :title="isEdit ? '编辑集群' : '新建集群'"
-      cancelText="取消"
-      destroyOnClose
-      okText="保存"
+      cancel-text="取消"
+      destroy-on-close
+      ok-text="保存"
       width="800px"
       @cancel="closeModal"
       @ok="submitForm"
@@ -650,7 +650,7 @@ onMounted(async () => {
         <a-form-item label="资源限制命名空间" name="restrict_namespace">
           <a-select
             v-model:value="formModel.restrict_namespace"
-            :maxTagCount="10"
+            :max-tag-count="10"
             class="form-input"
             mode="tags"
             placeholder="输入命名空间名称并回车添加"
@@ -742,8 +742,8 @@ onMounted(async () => {
     <a-modal
       v-model:open="isDetailModalVisible"
       :footer="null"
-      :maskClosable="false"
-      destroyOnClose
+      :mask-closable="false"
+      destroy-on-close
       title="集群详情"
       width="1000px"
       @cancel="closeDetailModal"
