@@ -35,6 +35,9 @@ const client = vi.hoisted(() => ({
 }));
 vi.mock('#/api/request', () => ({ requestClient: client }));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock('#/store', () => ({
+  useAuthStore: () => ({ getAuthGeneration: () => 0 }),
+}));
 vi.mock('@vben/stores', () => ({
   useUserStore: () => ({ userInfo: { userId: 1 } }),
 }));

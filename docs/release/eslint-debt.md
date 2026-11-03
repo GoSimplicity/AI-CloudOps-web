@@ -272,3 +272,13 @@ TypeScript 检查确认 `SshTerminal.test.ts` 的6处断言作用于既有 any �
 - 安装AntD4.2.6会把原列对象通过__originColumn__交给slot，因此对象键次序并非普遍无语义。逐页确认当前slot不枚举键；实际28页原/新真实列、代表行及当前完整slot的SSR HTML相同，Object.keys负对照确实产生差异。页面helper/权限为隔离fixture，没有初始化外部API，不当作业务端到端。
 - 主代理再次运行源码及SFC编译AST证明，只有选定对象属性排列差异；模板与样式字节相同。真实ESLint减少426条sort-objects，其余逐文件规则计数完全不变。
 - 13相关文件356项测试和应用类型检查通过；SSR原/新均出现4条已有fixed-left列警告，保留数组次序而未顺带改列布局。没有宣称本阶段全量或浏览器已复跑。
+
+## 阶段二十一：告警确认与记录规则回执隔离（2026-11-03）
+
+MonitorAlertEvent/MonitorAlertRecord清除10处SFC脚本隐藏非空断言，并修复实际操作竞态：正safe-int ID及账号必需；确认绑定原用户与authGeneration，旧确认不能借新身份执行；详情读取按窗口世代拒绝乱序/同记录关重开，写回仅更新原ID及原窗口。同记录新旧写入各有ticket，旧成功/失败不覆盖新动作或新详情。动作不再finally清空列表请求的loading。
+
+主代理复查补一次性确认消费：同一onOk在pending/成功/失败后均不能再次外发；新确认可以重试。mutation Map仅在finally匹配自身ticket时删除，不动更新的ticket，不累计已完成记录，也不在finally return/throw。
+
+- 新42项真实组件/延迟Promise场景+原列表37项+请求通知scanner23项，最终102项通过；应用类型检查通过。
+- 当前失败提示、Abort静默、账号切换/sameUID重登、A/B及同记录详情世代、旧删除回执、完成顺序和列表loading独立均覆盖；2010个Unicode/长字符串头像颜色新旧一致。
+- 模板/样式字节相同、旧模块import相对次序保留；生产ESLint132→128且逐规则只下降，新测试零错误/警告，四protected类别0。没有扩大SFC全局TS规则或调用真实Prometheus。

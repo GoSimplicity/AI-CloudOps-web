@@ -18,7 +18,27 @@ import {
   type MonitorAlertEvent,
   MonitorAlertEventStatus,
 } from '#/api/core/prometheus/prometheus_alert_event';
+import { useAuthStore } from '#/store';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
+
+let disposed = false;
+let detailRevision = 0;
+const mutationVersions = new Map<number, number>();
+let mutationRevision = 0;
+onBeforeUnmount(() => {
+  disposed = true;
+  detailRevision += 1;
+  mutationVersions.clear();
+});
+
+const operationOwner = (): string | undefined => {
+  const userId = Number(useUserStore().userInfo?.userId);
+  if (!Number.isSafeInteger(userId) || userId <= 0) return undefined;
+  return JSON.stringify([userId, useAuthStore().getAuthGeneration()]);
+};
+
+const validRecordId = (id: unknown): id is number =>
+  typeof id === 'number' && Number.isSafeInteger(id) && id > 0;
 
 // 响应式对话框宽度
 const previewDialogWidth = computed(() => {
@@ -217,7 +237,9 @@ const getAvatarColor = (name: string): string => {
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return colors[Math.abs(hash) % colors.length]!;
+  const color = colors[Math.abs(hash) % colors.length];
+  if (color === undefined) throw new Error('Invalid avatar palette index');
+  return color;
 };
 
 const getInitials = (name: string): string => {
@@ -348,109 +370,111 @@ const handleMenuClick = (command: string, record: MonitorAlertEvent): void => {
 };
 
 const showDetailDialog = (record: MonitorAlertEvent): void => {
+  detailRevision += 1;
   detailDialog.form = record;
   detailDialogVisible.value = true;
 };
 
-// 处理屏蔽告警
-const handleSilence = async (record: MonitorAlertEvent) => {
-  Modal.confirm({
-    title: '确认屏蔽',
-    content: `您确定要屏蔽告警 "${record.alert_name}" 吗？`,
-    okText: '确认',
-    cancelText: '取消',
-    onOk: async () => {
-      try {
-        loading.value = true;
-        const userStore = useUserStore();
-        const currentUserId = Number(userStore.userInfo?.userId) || 0;
-        const params: EventAlertSilenceReq = {
-          id: record.id!,
-          user_id: currentUserId,
-          time: '2h',
-        };
-        await eventAlertSilenceApi(params);
-        message.success(`屏蔽告警 "${record.alert_name}" 成功`);
-        fetchResources();
-        detailDialogVisible.value = false;
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(
-            error.message || `屏蔽告警 "${record.alert_name}" 失败`,
-          );
-      } finally {
-        loading.value = false;
-      }
-    },
-  });
-};
-
-// 处理认领告警
-const handleClaim = async (record: MonitorAlertEvent) => {
-  Modal.confirm({
-    title: '确认认领',
-    content: `您确定要认领告警 "${record.alert_name}" 吗？`,
-    okText: '确认',
-    cancelText: '取消',
-    onOk: async () => {
-      try {
-        loading.value = true;
-        const userStore = useUserStore();
-        const currentUserId = Number(userStore.userInfo?.userId) || 0;
-        const params: EventAlertClaimReq = {
-          id: record.id!,
-          user_id: currentUserId,
-        };
-        await eventAlertClaimApi(params);
-        message.success(`认领告警 "${record.alert_name}" 成功`);
-        fetchResources();
-        detailDialogVisible.value = false;
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(
-            error.message || `认领告警 "${record.alert_name}" 失败`,
-          );
-      } finally {
-        loading.value = false;
-      }
-    },
-  });
-};
-
-// 处理取消屏蔽告警
-const handleCancelSilence = async (record: MonitorAlertEvent) => {
-  Modal.confirm({
-    title: '确认取消屏蔽',
-    content: `您确定要取消屏蔽告警 "${record.alert_name}" 吗？`,
-    okText: '确认',
-    cancelText: '取消',
-    onOk: async () => {
-      try {
-        loading.value = true;
-        const userStore = useUserStore();
-        const currentUserId = Number(userStore.userInfo?.userId) || 0;
-        const params: EventAlertUnSilenceReq = {
-          id: record.id!,
-          user_id: currentUserId,
-        };
-        await eventAlertUnSilenceApi(params);
-        message.success(`取消屏蔽告警 "${record.alert_name}" 成功`);
-        fetchResources();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(
-            error.message || `取消屏蔽告警 "${record.alert_name}" 失败`,
-          );
-      } finally {
-        loading.value = false;
-      }
-    },
-  });
-};
-
 // 对话框关闭
 const closeDetailDialog = (): void => {
+  detailRevision += 1;
   detailDialogVisible.value = false;
+};
+
+// 确认框绑定打开时的账号与事件，不能借用切换后的身份执行旧操作。
+const confirmEventAction = (
+  record: MonitorAlertEvent,
+  action: {
+    closeDetail: boolean;
+    label: string;
+    run: (id: number, userId: number) => Promise<unknown>;
+  },
+): void => {
+  if (disposed) return;
+  const id = record.id;
+  const userId = Number(useUserStore().userInfo?.userId);
+  if (!validRecordId(id) || !validRecordId(userId)) {
+    message.warning('告警或账号标识无效，请刷新后重试');
+    return;
+  }
+  const owner = operationOwner();
+  const name = record.alert_name;
+  const detailTicket = detailRevision;
+  const fromDetail = detailDialogVisible.value && detailDialog.form?.id === id;
+  const inScope = () =>
+    !disposed &&
+    record.id === id &&
+    operationOwner() === owner &&
+    (!fromDetail || detailRevision === detailTicket);
+  let confirmationConsumed = false;
+  Modal.confirm({
+    title: `确认${action.label}`,
+    content: `您确定要${action.label}告警 "${name}" 吗？`,
+    okText: '确认',
+    cancelText: '取消',
+    onOk: async () => {
+      if (confirmationConsumed || !inScope()) return;
+      confirmationConsumed = true;
+      const ticket = ++mutationRevision;
+      mutationVersions.set(id, ticket);
+      const isCurrent = () => inScope() && mutationVersions.get(id) === ticket;
+      try {
+        // Modal 自己等待此 Promise；列表 loading 只由列表请求管理。
+        await action.run(id, userId);
+        if (!isCurrent()) return;
+        message.success(`${action.label}告警 "${name}" 成功`);
+        fetchResources();
+        if (action.closeDetail && fromDetail && detailDialog.form?.id === id) {
+          closeDetailDialog();
+        }
+      } catch (error: unknown) {
+        if (isCurrent() && shouldNotifyPageError(error)) {
+          message.error(
+            error instanceof Error && error.message
+              ? error.message
+              : `${action.label}告警失败`,
+          );
+        }
+      } finally {
+        if (mutationVersions.get(id) === ticket) {
+          mutationVersions.delete(id);
+        }
+      }
+    },
+  });
+};
+
+const handleSilence = (record: MonitorAlertEvent): void => {
+  confirmEventAction(record, {
+    label: '屏蔽',
+    closeDetail: true,
+    run: (id, userId) => {
+      const params: EventAlertSilenceReq = { id, user_id: userId, time: '2h' };
+      return eventAlertSilenceApi(params);
+    },
+  });
+};
+
+const handleClaim = (record: MonitorAlertEvent): void => {
+  confirmEventAction(record, {
+    label: '认领',
+    closeDetail: true,
+    run: (id, userId) => {
+      const params: EventAlertClaimReq = { id, user_id: userId };
+      return eventAlertClaimApi(params);
+    },
+  });
+};
+
+const handleCancelSilence = (record: MonitorAlertEvent): void => {
+  confirmEventAction(record, {
+    label: '取消屏蔽',
+    closeDetail: false,
+    run: (id, userId) => {
+      const params: EventAlertUnSilenceReq = { id, user_id: userId };
+      return eventAlertUnSilenceApi(params);
+    },
+  });
 };
 
 // 生命周期钩子

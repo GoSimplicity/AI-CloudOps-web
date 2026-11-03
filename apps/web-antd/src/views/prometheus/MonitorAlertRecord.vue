@@ -2,6 +2,9 @@
 import OpsPage from '#/components/ops/OpsPage.vue';
 import { useListRequest } from './useListRequest';
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+
+import { useUserStore } from '@vben/stores';
+
 import { message, Modal } from 'ant-design-vue';
 import { DownOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
@@ -17,6 +20,7 @@ import {
 import { getMonitorScrapePoolListApi } from '#/api/core/prometheus/prometheus_scrape_pool';
 import { promqlExprCheckApi } from '#/api/core/prometheus/prometheus_alert_rule';
 
+import { useAuthStore } from '#/store';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
@@ -27,6 +31,25 @@ interface Pool {
   id: number;
   name: string;
 }
+
+let disposed = false;
+let detailRevision = 0;
+const mutationVersions = new Map<number, number>();
+let mutationRevision = 0;
+onBeforeUnmount(() => {
+  disposed = true;
+  detailRevision += 1;
+  mutationVersions.clear();
+});
+
+const operationOwner = (): string | undefined => {
+  const userId = Number(useUserStore().userInfo?.userId);
+  if (!Number.isSafeInteger(userId) || userId <= 0) return undefined;
+  return JSON.stringify([userId, useAuthStore().getAuthGeneration()]);
+};
+
+const validRecordId = (id: unknown): id is number =>
+  typeof id === 'number' && Number.isSafeInteger(id) && id > 0;
 
 // 响应式对话框宽度
 const formDialogWidth = computed(() => {
@@ -224,7 +247,9 @@ const getAvatarColor = (name: string): string => {
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return colors[Math.abs(hash) % colors.length]!;
+  const color = colors[Math.abs(hash) % colors.length];
+  if (color === undefined) throw new Error('Invalid avatar palette index');
+  return color;
 };
 
 const getInitials = (name: string): string => {
@@ -361,13 +386,34 @@ const handleReset = (): void => {
 
 // 查看记录详情
 const handleViewRecord = async (record: MonitorRecordRule): Promise<void> => {
+  if (disposed) return;
+  const id = record.id;
+  const owner = operationOwner();
+  if (!validRecordId(id) || !owner) {
+    message.warning('记录规则或账号标识无效，请刷新后重试');
+    return;
+  }
+  const ticket = ++detailRevision;
+  const isCurrent = () =>
+    !disposed &&
+    record.id === id &&
+    detailRevision === ticket &&
+    operationOwner() === owner;
   try {
-    const response = await getMonitorRecordRuleApi(record.id!);
+    const response = await getMonitorRecordRuleApi(id);
+    if (!isCurrent()) return;
+    if (response?.id !== id)
+      throw new Error('记录规则详情标识无效，请刷新后重试');
     detailDialog.form = response;
     detailDialogVisible.value = true;
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取记录详情失败');
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error)) {
+      message.error(
+        error instanceof Error && error.message
+          ? error.message
+          : '获取记录详情失败',
+      );
+    }
   }
 };
 
@@ -389,52 +435,67 @@ const handleMenuClick = (command: string, record: MonitorRecordRule): void => {
   }
 };
 
-// 启用记录
-const handleEnableRecord = async (record: MonitorRecordRule): Promise<void> => {
+// 每条记录的最新写入回执只更新原详情窗口，不触碰后来打开的记录。
+const setRecordEnabled = async (
+  record: MonitorRecordRule,
+  enable: 1 | 2,
+): Promise<void> => {
+  if (disposed) return;
+  const id = record.id;
+  const owner = operationOwner();
+  if (!validRecordId(id) || !owner) {
+    message.warning('记录规则或账号标识无效，请刷新后重试');
+    return;
+  }
+  const ticket = ++mutationRevision;
+  mutationVersions.set(id, ticket);
+  const detailTicket = detailRevision;
+  const isCurrent = () =>
+    !disposed &&
+    record.id === id &&
+    operationOwner() === owner &&
+    mutationVersions.get(id) === ticket;
+  const name = record.name;
   try {
     const payload = {
-      id: record.id!,
-      name: record.name,
+      id,
+      name,
       pool_id: record.pool_id,
       ip_address: record.ip_address,
-      enable: 1 as 1 | 2,
+      enable,
       expr: record.expr,
       labels: record.labels,
     };
     await updateMonitorRecordRuleApi(payload);
-    message.success(`记录规则 "${record.name}" 已启用`);
+    if (!isCurrent()) return;
+    message.success(`记录规则 "${name}" 已${enable === 1 ? '启用' : '禁用'}`);
     fetchRecordRules();
-    if (detailDialogVisible.value) {
-      detailDialog.form!.enable = 1;
+    if (
+      detailDialogVisible.value &&
+      detailRevision === detailTicket &&
+      detailDialog.form?.id === id
+    ) {
+      detailDialog.form.enable = enable;
     }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '启用记录规则失败');
+  } catch (error: unknown) {
+    if (isCurrent() && shouldNotifyPageError(error)) {
+      message.error(
+        error instanceof Error && error.message
+          ? error.message
+          : `${enable === 1 ? '启用' : '禁用'}记录规则失败`,
+      );
+    }
+  } finally {
+    if (mutationVersions.get(id) === ticket) {
+      mutationVersions.delete(id);
+    }
   }
 };
 
-// 禁用记录
-const handleDisableRecord = async (
-  record: MonitorRecordRule,
-): Promise<void> => {
-  try {
-    const payload = {
-      id: record.id!,
-      name: record.name,
-      pool_id: record.pool_id,
-      ip_address: record.ip_address,
-      enable: 2 as 1 | 2,
-      expr: record.expr,
-      labels: record.labels,
-    };
-    await updateMonitorRecordRuleApi(payload);
-    message.success(`记录规则 "${record.name}" 已禁用`);
-    fetchRecordRules();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '禁用记录规则失败');
-  }
-};
+const handleEnableRecord = (record: MonitorRecordRule): Promise<void> =>
+  setRecordEnabled(record, 1);
+const handleDisableRecord = (record: MonitorRecordRule): Promise<void> =>
+  setRecordEnabled(record, 2);
 
 // 模态框操作
 const showAddModal = (): void => {
@@ -447,6 +508,7 @@ const closeAddModal = (): void => {
 };
 
 const showEditModal = (record: MonitorRecordRule): void => {
+  detailRevision += 1;
   Object.assign(editForm, {
     id: record.id,
     name: record.name,
@@ -465,6 +527,7 @@ const closeEditModal = (): void => {
 };
 
 const closeDetailDialog = (): void => {
+  detailRevision += 1;
   detailDialogVisible.value = false;
 };
 
@@ -534,7 +597,17 @@ const handleUpdate = async (): Promise<void> => {
 };
 
 // 处理删除记录规则
-const handleDelete = (record: MonitorRecordRule) => {
+const handleDelete = (record: MonitorRecordRule): void => {
+  if (disposed) return;
+  const id = record.id;
+  const owner = operationOwner();
+  if (!validRecordId(id) || !owner) {
+    message.warning('记录规则或账号标识无效，请刷新后重试');
+    return;
+  }
+  const inScope = () =>
+    !disposed && record.id === id && operationOwner() === owner;
+  let confirmationConsumed = false;
   Modal.confirm({
     title: '警告',
     content: `确定要删除记录规则 "${record.name}" 吗？`,
@@ -542,13 +615,28 @@ const handleDelete = (record: MonitorRecordRule) => {
     okType: 'danger',
     cancelText: '取消',
     onOk: async () => {
+      if (confirmationConsumed || !inScope()) return;
+      confirmationConsumed = true;
+      const ticket = ++mutationRevision;
+      mutationVersions.set(id, ticket);
+      const isCurrent = () => inScope() && mutationVersions.get(id) === ticket;
       try {
-        await deleteMonitorRecordRuleApi(record.id!);
+        await deleteMonitorRecordRuleApi(id);
+        if (!isCurrent()) return;
         message.success('记录规则已删除');
         fetchRecordRules();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(error.message || '删除记录规则失败');
+      } catch (error: unknown) {
+        if (isCurrent() && shouldNotifyPageError(error)) {
+          message.error(
+            error instanceof Error && error.message
+              ? error.message
+              : '删除记录规则失败',
+          );
+        }
+      } finally {
+        if (mutationVersions.get(id) === ticket) {
+          mutationVersions.delete(id);
+        }
       }
     },
   });
