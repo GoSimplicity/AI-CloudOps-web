@@ -361,6 +361,19 @@ const handleReset = (): void => {
   fetchAlertManagerPools();
 };
 
+const resetAddForm = (): void => {
+  Object.assign(addForm, {
+    name: '',
+    alert_manager_instances: [{ value: '', key: Date.now() }],
+    resolve_timeout: '',
+    group_wait: '',
+    group_interval: '',
+    repeat_interval: '',
+    group_by: [{ labelKey: '', labelValue: '', key: Date.now() }],
+    receiver: '',
+  });
+};
+
 const showAddModal = (): void => {
   if (!beginWindow()) return;
   resetAddForm();
@@ -392,18 +405,6 @@ const handleViewPool = async (
     }
   } finally {
     if (current()) detailLoading.value = false;
-  }
-};
-
-const handleMenuClick = (
-  command: string,
-  record: MonitorAlertManagerPool,
-): void => {
-  switch (command) {
-    case 'delete': {
-      confirmDelete(record);
-      break;
-    }
   }
 };
 
@@ -440,6 +441,18 @@ const confirmDelete = (record: MonitorAlertManagerPool): void => {
       }
     },
   });
+};
+
+const handleMenuClick = (
+  command: string,
+  record: MonitorAlertManagerPool,
+): void => {
+  switch (command) {
+    case 'delete': {
+      confirmDelete(record);
+      break;
+    }
+  }
 };
 
 // 用户目录归属于打开它的表单窗口；每次查询单独编号。
@@ -520,19 +533,6 @@ const handleSelectUser = (user: User) => {
 // 表单相关
 const addFormRef = ref<FormInstance>();
 const editFormRef = ref<FormInstance>();
-
-const resetAddForm = (): void => {
-  Object.assign(addForm, {
-    name: '',
-    alert_manager_instances: [{ value: '', key: Date.now() }],
-    resolve_timeout: '',
-    group_wait: '',
-    group_interval: '',
-    repeat_interval: '',
-    group_by: [{ labelKey: '', labelValue: '', key: Date.now() }],
-    receiver: '',
-  });
-};
 
 const closeAddModal = (): void => {
   invalidateWindow();

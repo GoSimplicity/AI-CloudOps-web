@@ -150,109 +150,46 @@ const isCurrentMonthToday = computed(() => {
   return now.isSame(current, 'month');
 });
 
-// 数据加载函数声明（提前声明避免初始化问题）
-const fetchDutyGroups = async (): Promise<void> => {
-  invalidateSchedule();
-  invalidateHistory();
-  invalidateChanges();
-  const request = beginDetailRequest();
-  try {
-    const id = dutyGroupId.value;
-    if (!id) {
-      throw new Error('无效的值班组ID');
-    }
+const getUserName = (userId: number): string => {
+  // 先从缓存中查找
+  const cached = userCache.value.get(userId);
+  if (cached !== undefined) return cached;
 
-    const response = await getMonitorOnDutyGroupDetailApi(id);
-    if (!request.isCurrent()) return;
-
-    // 改进的API响应结构处理 - 使用与值班组页面相同的逻辑
-    let groupData = null;
-
-    if (response) {
-      if (response.id && response.name) {
-        groupData = response;
-      }
-      // 如果response包含data字段
-      else if (response.data && typeof response.data === 'object') {
-        if (response.data.id && response.data.name) {
-          groupData = response.data;
-        }
-      }
-      // 如果response包含result字段
-      else if (response.result && typeof response.result === 'object') {
-        if (response.result.id && response.result.name) {
-          groupData = response.result;
-        }
-      }
-      // 如果response包含items字段且是数组，取第一个
-      else if (
-        response.items &&
-        Array.isArray(response.items) &&
-        response.items.length > 0
-      ) {
-        groupData = response.items[0];
-      }
-    }
-
-    if (groupData) {
-      dutyGroupDetail.value = groupData;
-
-      // 初始化用户缓存
-      if (groupData.users && Array.isArray(groupData.users)) {
-        groupData.users.forEach((user: User) => {
-          const userName = user.real_name || user.username || `用户${user.id}`;
-          userCache.value.set(user.id, userName);
-        });
-      }
-
-      updateStats();
-
-      // 在获取到值班组详情后立即加载其他数据
-      await Promise.all([
-        fetchDutySchedule(),
-        loadHistoryRecords(),
-        loadChangeRecords(1),
-      ]);
-    } else {
-      throw new Error('获取值班组信息失败：数据格式异常');
-    }
-  } catch (error: any) {
-    if (!request.isCurrent()) return;
-
-    // 更详细的错误信息
-    let errorMessage = '获取值班组信息失败';
-    if (error.response) {
-      const status = error.response.status;
-      const responseData = error.response.data;
-
-      if (status === 404) {
-        errorMessage = '值班组不存在或已被删除';
-      } else if (status === 403) {
-        errorMessage = '无权限访问该值班组';
-      } else if (status === 500) {
-        errorMessage = '服务器内部错误';
-      } else {
-        errorMessage = `请求失败 (${status}): ${responseData?.message || error.message}`;
-      }
-    } else if (error.request) {
-      errorMessage = '网络连接失败，请检查网络连接';
-    } else {
-      errorMessage = error.message || '未知错误';
-    }
-
-    request.fail(new Error(errorMessage), '数据加载失败');
-    if (shouldNotifyPageError(error)) message.error(detailError.value);
-
-    dutyGroupDetail.value = null;
-    dutyPlanData.value = [];
-    calendarDays.value = [];
-    historyList.value = [];
-    changeRecordsList.value = [];
-    paginationConfig.total = 0;
-    updateStats();
-  } finally {
-    request.finish();
+  // 从值班组详情中查找
+  const user = dutyGroupDetail.value?.users?.find((u) => u.id === userId);
+  if (user) {
+    const userName = user.real_name || user.username || `用户${userId}`;
+    userCache.value.set(userId, userName);
+    return userName;
   }
+
+  return `用户${userId}`;
+};
+
+// 更新统计数据
+const updateStats = (): void => {
+  if (dutyGroupDetail.value) {
+    stats.totalMembers = dutyGroupDetail.value.users?.length || 0;
+  } else {
+    stats.totalMembers = 0;
+  }
+
+  // 今日值班 - 显示值班人姓名
+  const todayStr = dayjs().format('YYYY-MM-DD');
+  const todayDuty = calendarDays.value.find(
+    (day) => day.date === todayStr && day.user,
+  );
+  stats.todayOnDuty = todayDuty?.user
+    ? todayDuty.user.real_name || todayDuty.user.username
+    : '无安排';
+
+  // 本月值班天数
+  stats.monthlyDutyDays = calendarDays.value.filter(
+    (day) => day.isCurrentMonth && day.user,
+  ).length;
+
+  // 调班记录数
+  stats.changeRecords = changeRecordsList.value.length;
 };
 
 const fetchDutySchedule = async (): Promise<void> => {
@@ -591,6 +528,111 @@ const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
   }
 };
 
+// 数据加载函数声明（提前声明避免初始化问题）
+const fetchDutyGroups = async (): Promise<void> => {
+  invalidateSchedule();
+  invalidateHistory();
+  invalidateChanges();
+  const request = beginDetailRequest();
+  try {
+    const id = dutyGroupId.value;
+    if (!id) {
+      throw new Error('无效的值班组ID');
+    }
+
+    const response = await getMonitorOnDutyGroupDetailApi(id);
+    if (!request.isCurrent()) return;
+
+    // 改进的API响应结构处理 - 使用与值班组页面相同的逻辑
+    let groupData = null;
+
+    if (response) {
+      if (response.id && response.name) {
+        groupData = response;
+      }
+      // 如果response包含data字段
+      else if (response.data && typeof response.data === 'object') {
+        if (response.data.id && response.data.name) {
+          groupData = response.data;
+        }
+      }
+      // 如果response包含result字段
+      else if (response.result && typeof response.result === 'object') {
+        if (response.result.id && response.result.name) {
+          groupData = response.result;
+        }
+      }
+      // 如果response包含items字段且是数组，取第一个
+      else if (
+        response.items &&
+        Array.isArray(response.items) &&
+        response.items.length > 0
+      ) {
+        groupData = response.items[0];
+      }
+    }
+
+    if (groupData) {
+      dutyGroupDetail.value = groupData;
+
+      // 初始化用户缓存
+      if (groupData.users && Array.isArray(groupData.users)) {
+        groupData.users.forEach((user: User) => {
+          const userName = user.real_name || user.username || `用户${user.id}`;
+          userCache.value.set(user.id, userName);
+        });
+      }
+
+      updateStats();
+
+      // 在获取到值班组详情后立即加载其他数据
+      await Promise.all([
+        fetchDutySchedule(),
+        loadHistoryRecords(),
+        loadChangeRecords(1),
+      ]);
+    } else {
+      throw new Error('获取值班组信息失败：数据格式异常');
+    }
+  } catch (error: any) {
+    if (!request.isCurrent()) return;
+
+    // 更详细的错误信息
+    let errorMessage = '获取值班组信息失败';
+    if (error.response) {
+      const status = error.response.status;
+      const responseData = error.response.data;
+
+      if (status === 404) {
+        errorMessage = '值班组不存在或已被删除';
+      } else if (status === 403) {
+        errorMessage = '无权限访问该值班组';
+      } else if (status === 500) {
+        errorMessage = '服务器内部错误';
+      } else {
+        errorMessage = `请求失败 (${status}): ${responseData?.message || error.message}`;
+      }
+    } else if (error.request) {
+      errorMessage = '网络连接失败，请检查网络连接';
+    } else {
+      errorMessage = error.message || '未知错误';
+    }
+
+    request.fail(new Error(errorMessage), '数据加载失败');
+    if (shouldNotifyPageError(error)) message.error(detailError.value);
+
+    dutyGroupDetail.value = null;
+    dutyPlanData.value = [];
+    calendarDays.value = [];
+    historyList.value = [];
+    changeRecordsList.value = [];
+    paginationConfig.total = 0;
+    updateStats();
+  } finally {
+    request.finish();
+  }
+};
+
 // 初始化函数
 const initializeData = async (): Promise<void> => {
   const id = parseInt(route.query.id as string) || 0;
@@ -634,22 +676,6 @@ const getAvatarColor = (name: string): string => {
 const getInitials = (name: string): string => {
   if (!name) return '';
   return name.slice(0, 2).toUpperCase();
-};
-
-const getUserName = (userId: number): string => {
-  // 先从缓存中查找
-  const cached = userCache.value.get(userId);
-  if (cached !== undefined) return cached;
-
-  // 从值班组详情中查找
-  const user = dutyGroupDetail.value?.users?.find((u) => u.id === userId);
-  if (user) {
-    const userName = user.real_name || user.username || `用户${userId}`;
-    userCache.value.set(userId, userName);
-    return userName;
-  }
-
-  return `用户${userId}`;
 };
 
 const formatDate = (dateStr: string): string => {
@@ -701,32 +727,6 @@ const isWeekend = (dateStr: string): boolean => {
 const getWeekendType = (dateStr: string): string => {
   const day = dayjs(dateStr).day();
   return day === 0 ? '周日' : '周六';
-};
-
-// 更新统计数据
-const updateStats = (): void => {
-  if (dutyGroupDetail.value) {
-    stats.totalMembers = dutyGroupDetail.value.users?.length || 0;
-  } else {
-    stats.totalMembers = 0;
-  }
-
-  // 今日值班 - 显示值班人姓名
-  const todayStr = dayjs().format('YYYY-MM-DD');
-  const todayDuty = calendarDays.value.find(
-    (day) => day.date === todayStr && day.user,
-  );
-  stats.todayOnDuty = todayDuty?.user
-    ? todayDuty.user.real_name || todayDuty.user.username
-    : '无安排';
-
-  // 本月值班天数
-  stats.monthlyDutyDays = calendarDays.value.filter(
-    (day) => day.isCurrentMonth && day.user,
-  ).length;
-
-  // 调班记录数
-  stats.changeRecords = changeRecordsList.value.length;
 };
 
 // 返回按钮
@@ -817,6 +817,17 @@ const handleDateChange = (): void => {
   loadHistoryRecords();
 };
 
+// 重置表单对话框
+const resetFormDialog = (): void => {
+  formDialog.form = {
+    id: undefined,
+    date: undefined,
+    origin_user_id: null,
+    on_duty_user_id: null,
+    reason: '',
+  };
+};
+
 const handleCreateChange = (): void => {
   formDialog.isEdit = false;
   resetFormDialog();
@@ -892,17 +903,6 @@ const saveChange = async (): Promise<void> => {
   } finally {
     submitting.value = false;
   }
-};
-
-// 重置表单对话框
-const resetFormDialog = (): void => {
-  formDialog.form = {
-    id: undefined,
-    date: undefined,
-    origin_user_id: null,
-    on_duty_user_id: null,
-    reason: '',
-  };
 };
 
 // 对话框关闭

@@ -427,36 +427,6 @@ const handleReset = (): void => {
   fetchConfigs();
 };
 
-const handleMenuClick = (command: string, record: MonitorConfigItem): void => {
-  switch (command) {
-    case 'preview': {
-      showPreviewModal(record);
-      break;
-    }
-    case 'delete': {
-      confirmDelete(record);
-      break;
-    }
-  }
-};
-
-const validConfigTypes = new Set<number>([
-  ConfigType.AlertManager,
-  ConfigType.AlertRule,
-  ConfigType.Prometheus,
-  ConfigType.RecordRule,
-  ConfigType.WebhookFile,
-]);
-const validConfigType = (value: unknown): value is ConfigType =>
-  typeof value === 'number' && validConfigTypes.has(value);
-
-const validConfigStatuses = new Set<number>([
-  ConfigStatus.Active,
-  ConfigStatus.Inactive,
-]);
-const validConfigStatus = (value: unknown): value is ConfigStatus =>
-  typeof value === 'number' && validConfigStatuses.has(value);
-
 const errorText = (error: unknown, fallback = '未知错误'): string =>
   error &&
   typeof error === 'object' &&
@@ -465,8 +435,6 @@ const errorText = (error: unknown, fallback = '未知错误'): string =>
   error.message
     ? error.message
     : fallback;
-
-let editTarget: MonitorConfigItem | undefined;
 
 const confirmDelete = (record: MonitorConfigItem): void => {
   if (disposed) return;
@@ -501,6 +469,43 @@ const confirmDelete = (record: MonitorConfigItem): void => {
     },
   });
 };
+
+const showPreviewModal = (record: MonitorConfigItem): void => {
+  previewConfig.value = record;
+  isPreviewModalVisible.value = true;
+};
+
+const handleMenuClick = (command: string, record: MonitorConfigItem): void => {
+  switch (command) {
+    case 'preview': {
+      showPreviewModal(record);
+      break;
+    }
+    case 'delete': {
+      confirmDelete(record);
+      break;
+    }
+  }
+};
+
+const validConfigTypes = new Set<number>([
+  ConfigType.AlertManager,
+  ConfigType.AlertRule,
+  ConfigType.Prometheus,
+  ConfigType.RecordRule,
+  ConfigType.WebhookFile,
+]);
+const validConfigType = (value: unknown): value is ConfigType =>
+  typeof value === 'number' && validConfigTypes.has(value);
+
+const validConfigStatuses = new Set<number>([
+  ConfigStatus.Active,
+  ConfigStatus.Inactive,
+]);
+const validConfigStatus = (value: unknown): value is ConfigStatus =>
+  typeof value === 'number' && validConfigStatuses.has(value);
+
+let editTarget: MonitorConfigItem | undefined;
 
 const resetAddForm = (): void => {
   Object.assign(addForm, {
@@ -716,11 +721,6 @@ const handleViewDetail = async (record: MonitorConfigItem): Promise<void> => {
     if (isCurrent() && shouldNotifyPageError(error))
       message.error('获取配置详情失败: ' + errorText(error));
   }
-};
-
-const showPreviewModal = (record: MonitorConfigItem): void => {
-  previewConfig.value = record;
-  isPreviewModalVisible.value = true;
 };
 
 const closePreviewModal = (): void => {

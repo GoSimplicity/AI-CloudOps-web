@@ -656,3 +656,12 @@ API管理使用明确create/edit模式和响应式窗口key，真实必需Form�
 - 22文件定向lint总诊断1635→1552，no-use-before-define 113→30，逐文件各规则无新增；其余1552条诊断保留，不代表全仓lint已通过，也不把本批83条当作剩余221条全部完成。
 - 全Web现有165文件3609项测试、应用类型检查及单次build:antd通过（11任务成功，其中10项复用缓存）。没有新增镜像测试或改动测试断言、规则及ignore。
 - 宏、watch与调用初始化等更复杂边界及非本批helper未变，没有把所有剩余声明换成function或移动const数据初始化。没有真实接口、模型、集群或权限写入，未上线。
+
+## 阶段六十五：Prometheus固定初始化边界的纯声明顺序
+
+MonitorAlertPool、MonitorConfig和MonitorOnDutyGroupTable三个SFC搬移11段完整const-arrow声明。前两页仅跨无回调的ref、原生Set和let初始化；值班表将fetchDutyGroups声明延后到loadChangeRecords后，使分页reactive数据及被调用函数都已初始化。固定ref/reactive/Set/let、watch和所有其它statement的原文顺序保持，未改变kind、函数体、作用域、捕获binding或模板style。
+
+- 核对Set的真实symbol来自TypeScript全局lib，两处边界输入仅为枚举数值数组；ref/reactive使用真实Vue。固定构造器不接收或观察被搬移函数，Vue生命周期注册本身不执行mounted回调；值班表原watch默认非immediate、onMounted先nextTick的协议保持。
+- 原/新真实编译setup使用真实Vue、useListRequest和cloneDeep，在Fake传输及受控时钟下构造请求均为0；受控调用已注册mounted回调后，列表、详情后并行计划/历史/调班读取、对话框动作与失败清理轨迹一致。这是setup/mounted阶段探针，不冒称浏览器或DOM挂载；实际DOM行为另由既有挂载测试覆盖。
+- 实际源码比对确认完整声明和其它statement原文顺序、script外字节保持；真实编译binding分类、生产DOM/SSR render一致。三文件定向lint215→200，no-use-before-define 15→0，各规则无新增，其余200条既有债保留。
+- AlertPoolSafety、FormSafety、Lists和值班表四份现有真实测试186项、应用类型检查通过；没有新增镜像测试、规则或ignore，也未重复全仓测试及构建。没有真实集群、通知或配置写入，未上线。
