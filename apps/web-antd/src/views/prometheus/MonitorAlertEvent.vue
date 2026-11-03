@@ -19,6 +19,7 @@ import {
   MonitorAlertEventStatus,
 } from '#/api/core/prometheus/prometheus_alert_event';
 import { useAuthStore } from '#/store';
+import { getAvatarColor } from '#/utils/avatar-color';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
 
 let disposed = false;
@@ -220,26 +221,6 @@ const getStatusText = (status: MonitorAlertEventStatus): string => {
       return '未知';
     }
   }
-};
-
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const color = colors[Math.abs(hash) % colors.length];
-  if (color === undefined) throw new Error('Invalid avatar palette index');
-  return color;
 };
 
 const getInitials = (name: string): string => {

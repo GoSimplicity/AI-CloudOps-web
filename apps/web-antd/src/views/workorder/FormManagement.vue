@@ -30,6 +30,7 @@ import {
 import type { WorkorderCategoryItem } from '#/api/core/workorder/workorder_category';
 import { listWorkorderCategory } from '#/api/core/workorder/workorder_category';
 
+import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import {
   shouldNotifyPageError,
@@ -398,24 +399,6 @@ const formatFullDateTime = (dateStr: string): string => {
 const getInitials = (name: string): string => {
   if (!name) return '';
   return name.slice(0, 2).toUpperCase();
-};
-
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length]!;
 };
 
 // 分页分类加载方法

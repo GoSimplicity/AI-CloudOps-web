@@ -38,6 +38,7 @@ import {
 } from '#/api/core/tree/tree_local';
 import { getTreeList } from '#/api/core/tree/tree_node';
 
+import { getAvatarColor } from '#/utils/avatar-color';
 import { usePermission } from '#/utils/permission';
 import {
   shouldNotifyPageError,
@@ -228,24 +229,6 @@ const getServerStatusClass = (record: TreeLocalResource): string => {
       return 'status-unknown';
     }
   }
-};
-
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length]!;
 };
 
 const getInitials = (name: string): string => {
