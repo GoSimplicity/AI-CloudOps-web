@@ -568,3 +568,11 @@ Cron 参数和 Pod 资源输入移除模板非空断言：读取允许缺值，�
 
 - namespace9+原FormSafety89/Lists37/scanner29共164项及类型检查通过，新测试0/0；页面71→70，仅import类减少无新增。原Safety仅3处endpoint fixture迁移，全部断言保持。
 - 后端同阶段service/DI与实际Wire验证使用不同ID的Alert99/Scrape7，阻止错实体保存。旧pool_id不自动按数字相同转换，发布前需人工核对；未迁移数据库或调用真实集群。
+
+## 阶段五十五：API目录编辑与权限回执
+
+API管理使用明确create/edit模式和响应式窗口key，真实必需Form、owner/auth世代、目标及字段快照覆盖验证和API等待。表单/查看切换统一失效旧交互，列表与统计独立latest-only，同记录访问权限与删除互斥、确认one-shot。失败rollback仅回仍owned同row，提示/刷新另受查询scope约束，避免只改未提交搜索输入就留下假成功状态。Owner观察器只清理不自动GET。
+
+- 保category0/undefined与现methods1..4；已有is_public0按私有展示，普通编辑明确规范为2，不自动公开；新请求只接受1/2。未修改Go DTO或504条真实目录。
+- 原31项保留、补4红共35新Safety，连Role5/coverage82共122项、全类型及owned lint通过（原33→0）。独立4反例针对新版本再执行全部转绿；外置复制的旧31有一条仍假设watch自动刷新，未据此改坏生产合同，正式用例已显式刷新并保原断言。
+- SFC标准块/样式字节保持，新增测试0/0。所有API替身，无真实权限写入；已发请求仅隔离回执，不宣称撤销。

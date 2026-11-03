@@ -1,26 +1,27 @@
 <script lang="ts" setup>
 import type { FormInstance } from 'ant-design-vue';
 
-import OpsPage from '#/components/ops/OpsPage.vue';
-import { onMounted, reactive, ref } from 'vue';
-import { message } from 'ant-design-vue';
+import type { CreateApiReq, UpdateApiReq } from '#/api/core/system/api';
+
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+
+import { useUserStore } from '@vben/stores';
+
 import { Icon } from '@iconify/vue';
+import { message, Modal } from 'ant-design-vue';
 
 import {
   createApiApi,
-  type CreateApiReq,
   deleteApiApi,
   getApiDetailApi,
   getApiStatisticsApi,
   listApisApi,
   updateApiApi,
-  type UpdateApiReq,
 } from '#/api/core/system/api';
-
+import OpsPage from '#/components/ops/OpsPage.vue';
+import { useAuthStore } from '#/store/auth';
 import { usePermission } from '#/utils/permission';
 import { shouldNotifyPageError } from '#/utils/permission/request-notice';
-
-const { can } = usePermission();
 
 interface ApiInfo {
   id: number;
@@ -31,13 +32,29 @@ interface ApiInfo {
   version?: string;
   category?: number;
   is_public: number;
-  created_at?: any;
+  created_at?: number | string;
 }
-
-// 表单引用
+interface ApiStatistics {
+  public_count: number;
+  private_count: number;
+}
+type FormMode = 'create' | 'edit';
+type ActionKind = 'access' | 'delete' | 'edit';
+interface ActionTicket {
+  id: number;
+  kind: ActionKind;
+  owner: string;
+  source: ApiInfo;
+  fingerprint: string;
+  query: string;
+}
+const CREATE = '/api/apis/create';
+const UPDATE = '/api/apis/update/:id';
+const DETAIL = '/api/apis/detail/:id';
+const { can, hasPerm } = usePermission();
+const userStore = useUserStore();
+const authStore = useAuthStore();
 const formRef = ref<FormInstance>();
-
-// 表格列配置
 const tableColumns = [
   { fixed: 'left', key: 'api', title: 'API信息', width: 300 },
   {
@@ -53,286 +70,594 @@ const tableColumns = [
   { fixed: 'right', key: 'actions', title: '操作', width: 160 },
 ];
 
-// 状态管理
 const loading = ref(false);
 const submitLoading = ref(false);
 const modalVisible = ref(false);
 const viewModalVisible = ref(false);
-const modalTitle = ref('');
-
-// 数据
+const formMode = ref<FormMode>('create');
+const modalTitle = computed(() =>
+  formMode.value === 'create' ? '新建API' : '编辑API',
+);
+const formWindowKey = ref(0);
+const viewWindowKey = ref(0);
 const apiList = ref<ApiInfo[]>([]);
 const viewApiData = ref<ApiInfo | null>(null);
-const apiStatistics = ref<any>({
-  public_count: 0,
-  private_count: 0,
-});
-
-// 搜索参数
+const apiStatistics = ref<ApiStatistics>({ private_count: 0, public_count: 0 });
+const actionLoading = reactive<Record<number, boolean>>({});
 const searchParams = reactive({
-  search: '',
-  method: undefined as number | undefined,
   is_public: undefined as number | undefined,
+  method: undefined as number | undefined,
+  search: '',
 });
-
-// 分页配置
 const paginationConfig = reactive({
   current: 1,
   pageSize: 20,
-  total: 0,
-  showSizeChanger: true,
-  showQuickJumper: true,
   pageSizeOptions: ['10', '20', '50', '100'],
+  showQuickJumper: true,
+  showSizeChanger: true,
   showTotal: (total: number, range: [number, number]) =>
     `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+  total: 0,
 });
-
-// 表单数据初始化
 const initFormData = () => ({
+  category: undefined as null | number | undefined,
+  description: '',
+  id: 0,
+  is_public: 2,
+  method: 1,
   name: '',
   path: '',
-  method: 1,
-  description: '',
   version: '',
-  category: undefined as number | undefined,
-  is_public: 2, // 默认为私有（禁用状态为2）
-  id: 0,
 });
-
 const formData = reactive(initFormData());
-
-// 表单验证规则
 const formRules = {
-  name: [{ required: true, message: '请输入API名称', trigger: 'blur' }],
-  path: [{ required: true, message: '请输入API路径', trigger: 'blur' }],
-  method: [{ required: true, message: '请选择请求方法', trigger: 'change' }],
+  method: [{ message: '请选择请求方法', required: true, trigger: 'change' }],
+  name: [{ message: '请输入API名称', required: true, trigger: 'blur' }],
+  path: [{ message: '请输入API路径', required: true, trigger: 'blur' }],
 };
+let active = true;
+let listRequest = 0;
+let statisticsRequest = 0;
+let editRequest = 0;
+let viewRequest = 0;
+let submitRequest = 0;
+let listOwner = '';
+let formOwner = '';
+let formSource: ApiInfo | undefined;
+let formSourceFingerprint = '';
+const actions = new Map<number, ActionTicket>();
+let deleteDialog:
+  | { cancel: () => void; destroy: () => void; ticket: ActionTicket }
+  | undefined;
 
-// 工具函数
-const formatTime = (timestamp: any) => {
-  if (!timestamp) return '-';
-  return new Date(
-    typeof timestamp === 'number' ? timestamp * 1000 : timestamp,
-  ).toLocaleDateString('zh-CN');
-};
-
-const getMethodName = (method: number) => {
-  const methodMap: Record<number, string> = {
-    1: 'GET',
-    2: 'POST',
-    3: 'PUT',
-    4: 'DELETE',
+function ownerKey() {
+  const uid = userStore.userInfo?.userId;
+  const generation = authStore.getAuthGeneration();
+  if (
+    uid === undefined ||
+    uid === null ||
+    !String(uid).trim() ||
+    String(uid).trim() === '0' ||
+    !Number.isSafeInteger(generation) ||
+    generation < 0
+  )
+    return '';
+  return JSON.stringify([String(uid).trim(), generation]);
+}
+function validId(id: unknown): id is number {
+  return typeof id === 'number' && Number.isSafeInteger(id) && id > 0;
+}
+function supportedMethod(method: number) {
+  return [1, 2, 3, 4].includes(method);
+}
+function readableRecord(record: ApiInfo) {
+  return (
+    validId(record.id) &&
+    typeof record.name === 'string' &&
+    !!record.name.trim() &&
+    typeof record.path === 'string' &&
+    !!record.path.trim() &&
+    supportedMethod(record.method) &&
+    [0, 1, 2].includes(record.is_public) &&
+    (record.category === undefined || Number.isSafeInteger(record.category))
+  );
+}
+function recordFingerprint(record: ApiInfo) {
+  return JSON.stringify([
+    record.id,
+    record.name,
+    record.path,
+    record.method,
+    record.description,
+    record.version,
+    record.category,
+    record.is_public,
+  ]);
+}
+function listParams() {
+  return {
+    page: paginationConfig.current,
+    search: searchParams.search || '',
+    size: paginationConfig.pageSize,
+    ...(searchParams.method === undefined
+      ? {}
+      : { method: searchParams.method }),
+    ...(searchParams.is_public === 1 || searchParams.is_public === 2
+      ? { is_public: searchParams.is_public }
+      : {}),
   };
-  return methodMap[method] || '未知';
-};
-
-const getMethodColor = (method: number) => {
-  const colorMap: Record<number, string> = {
-    1: '#1890ff', // 蓝色 - GET
-    2: '#52c41a', // 绿色 - POST
-    3: '#faad14', // 橙色 - PUT
-    4: '#f5222d', // 红色 - DELETE
+}
+function queryKey() {
+  return JSON.stringify(listParams());
+}
+function currentSource(record: ApiInfo, owner: string) {
+  return (
+    active &&
+    !!owner &&
+    owner === ownerKey() &&
+    owner === listOwner &&
+    apiList.value.includes(record)
+  );
+}
+function permitted(kind: ActionKind) {
+  return kind === 'delete' ? can('system.api.delete') : hasPerm(UPDATE);
+}
+function ownsActionRow(ticket: ActionTicket) {
+  // 未提交的筛选输入不改变行归属；回滚只认仍属于本次操作的同一行。
+  return (
+    actions.get(ticket.id) === ticket &&
+    currentSource(ticket.source, ticket.owner) &&
+    recordFingerprint(ticket.source) === ticket.fingerprint
+  );
+}
+function currentAction(ticket: ActionTicket) {
+  return (
+    ownsActionRow(ticket) &&
+    ticket.query === queryKey() &&
+    permitted(ticket.kind)
+  );
+}
+function releaseAction(ticket: ActionTicket) {
+  if (actions.get(ticket.id) === ticket) {
+    actions.delete(ticket.id);
+    delete actionLoading[ticket.id];
+  }
+}
+function beginAction(record: ApiInfo, kind: ActionKind) {
+  const owner = ownerKey();
+  if (
+    !currentSource(record, owner) ||
+    !readableRecord(record) ||
+    !permitted(kind) ||
+    actions.has(record.id)
+  )
+    return;
+  const ticket: ActionTicket = {
+    fingerprint: recordFingerprint(record),
+    id: record.id,
+    kind,
+    owner,
+    query: queryKey(),
+    source: record,
   };
-  return colorMap[method] || '#d9d9d9';
+  actions.set(record.id, ticket);
+  actionLoading[record.id] = true;
+  return ticket;
+}
+function closeDeleteDialog() {
+  const dialog = deleteDialog;
+  deleteDialog = undefined;
+  if (dialog) {
+    dialog.cancel();
+    dialog.destroy();
+  }
+}
+function closeForm() {
+  editRequest++;
+  submitRequest++;
+  formWindowKey.value++;
+  formOwner = '';
+  formSource = undefined;
+  formSourceFingerprint = '';
+  modalVisible.value = false;
+  submitLoading.value = false;
+  Object.assign(formData, initFormData());
+}
+function closeView() {
+  viewRequest++;
+  viewWindowKey.value++;
+  viewModalVisible.value = false;
+  viewApiData.value = null;
+}
+function beginWindowInteraction() {
+  closeForm();
+  closeView();
+}
+function formCurrent(owner: string, window: number, mode: FormMode) {
+  return (
+    active &&
+    !!owner &&
+    owner === ownerKey() &&
+    owner === formOwner &&
+    window === formWindowKey.value &&
+    mode === formMode.value &&
+    modalVisible.value
+  );
+}
+function validPayload(payload: CreateApiReq) {
+  return (
+    typeof payload.name === 'string' &&
+    !!payload.name.trim() &&
+    typeof payload.path === 'string' &&
+    !!payload.path.trim() &&
+    supportedMethod(payload.method) &&
+    (payload.category === undefined ||
+      Number.isSafeInteger(payload.category)) &&
+    [1, 2].includes(payload.is_public)
+  );
+}
+const formatTime = (timestamp?: number | string) =>
+  timestamp
+    ? new Date(
+        typeof timestamp === 'number' ? timestamp * 1000 : timestamp,
+      ).toLocaleDateString('zh-CN')
+    : '-';
+const methodNames: Record<number, string> = {
+  1: 'GET',
+  2: 'POST',
+  3: 'PUT',
+  4: 'DELETE',
 };
+const getMethodName = (method: number) => methodNames[method] || '未知';
+const methodColors: Record<number, string> = {
+  1: '#1890ff',
+  2: '#52c41a',
+  3: '#faad14',
+  4: '#f5222d',
+};
+const getMethodColor = (method: number) => methodColors[method] || '#d9d9d9';
 
-// API 调用
-const fetchApiList = async () => {
+async function fetchApiList() {
+  const owner = ownerKey();
+  if (!active || !owner || !hasPerm('/api/apis/list')) return;
+  const params = listParams();
+  const query = queryKey();
+  if (!validId(params.page) || !validId(params.size)) return;
+  const ticket = ++listRequest;
+  const sameRequest = () =>
+    active && ticket === listRequest && owner === ownerKey();
+  const current = () =>
+    sameRequest() && query === queryKey() && hasPerm('/api/apis/list');
   loading.value = true;
   try {
-    const params: any = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      search: searchParams.search || '',
-    };
-
-    if (searchParams.method) {
-      params.method = searchParams.method;
-    }
-
-    if (searchParams.is_public === 1 || searchParams.is_public === 2) {
-      params.is_public = searchParams.is_public;
-    }
-
     const response = await listApisApi(params);
-
+    if (!current()) return;
     apiList.value = response.items || [];
     paginationConfig.total = response.total || 0;
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取API列表失败');
+    listOwner = owner;
+  } catch (error) {
+    if (!current()) return;
     apiList.value = [];
     paginationConfig.total = 0;
+    listOwner = '';
+    if (shouldNotifyPageError(error)) message.error('获取API列表失败');
   } finally {
-    loading.value = false;
+    if (sameRequest()) loading.value = false;
   }
-};
-
-const fetchApiStatistics = async () => {
+}
+async function fetchApiStatistics() {
+  const owner = ownerKey();
+  if (!active || !owner || !hasPerm('/api/apis/statistics')) return;
+  const ticket = ++statisticsRequest;
+  const current = () =>
+    active && ticket === statisticsRequest && owner === ownerKey();
   try {
     const response = await getApiStatisticsApi();
-    apiStatistics.value = response;
+    if (current()) apiStatistics.value = response;
   } catch {
-    // 不显示错误信息，因为这是后台请求
+    if (current()) apiStatistics.value = { private_count: 0, public_count: 0 };
   }
-};
-
-// 事件处理
-const handleSearch = () => {
+}
+function handleSearch() {
   paginationConfig.current = 1;
-  fetchApiList();
-};
-
-const handleReset = () => {
+  void fetchApiList();
+}
+function handleReset() {
   searchParams.search = '';
   searchParams.method = undefined;
   searchParams.is_public = undefined;
   paginationConfig.current = 1;
-  fetchApiList();
-};
-
-const handleRefresh = async () => {
+  void fetchApiList();
+}
+async function handleRefresh() {
   await Promise.all([fetchApiList(), fetchApiStatistics()]);
-};
-
-const handleTableChange = (pagination: any) => {
+}
+function handleTableChange(pagination: {
+  current?: number;
+  pageSize?: number;
+}) {
+  if (!validId(pagination.current) || !validId(pagination.pageSize)) return;
   paginationConfig.current = pagination.current;
   paginationConfig.pageSize = pagination.pageSize;
-  fetchApiList();
-};
-
-const handleAdd = () => {
-  modalTitle.value = '新建API';
-  Object.assign(formData, initFormData());
+  void fetchApiList();
+}
+function handleAdd() {
+  const owner = ownerKey();
+  if (!active || !owner || !hasPerm(CREATE)) return;
+  beginWindowInteraction();
+  formMode.value = 'create';
+  formOwner = owner;
   modalVisible.value = true;
-};
-
-const handleEdit = async (api: ApiInfo) => {
+}
+async function handleEdit(record: ApiInfo) {
+  const owner = ownerKey();
+  if (
+    !currentSource(record, owner) ||
+    !hasPerm(UPDATE) ||
+    !hasPerm(DETAIL) ||
+    actions.has(record.id)
+  )
+    return;
+  if (!readableRecord(record)) {
+    message.error('API数据无效');
+    return;
+  }
+  beginWindowInteraction();
+  formMode.value = 'edit';
+  formOwner = owner;
+  formSource = record;
+  formSourceFingerprint = recordFingerprint(record);
+  const ticket = ++editRequest;
+  const window = formWindowKey.value;
+  const current = () =>
+    active &&
+    ticket === editRequest &&
+    owner === ownerKey() &&
+    owner === formOwner &&
+    window === formWindowKey.value &&
+    currentSource(record, owner) &&
+    recordFingerprint(record) === formSourceFingerprint &&
+    hasPerm(UPDATE) &&
+    hasPerm(DETAIL);
   try {
-    modalTitle.value = '编辑API';
-    const response = await getApiDetailApi(api.id);
+    const response: ApiInfo = await getApiDetailApi(record.id);
+    if (!current()) return;
+    if (!response || response.id !== record.id || !readableRecord(response)) {
+      message.error('API数据无效');
+      return;
+    }
     Object.assign(formData, {
+      category: response.category,
+      description: response.description || '',
       id: response.id,
+      is_public: response.is_public === 0 ? 2 : response.is_public,
+      method: response.method,
       name: response.name,
       path: response.path,
-      method: response.method,
-      description: response.description || '',
       version: response.version || '',
-      category: response.category,
-      is_public: response.is_public,
     });
     modalVisible.value = true;
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取API详情失败');
+  } catch (error) {
+    if (current() && shouldNotifyPageError(error))
+      message.error('获取API详情失败');
   }
-};
-
-const handleView = async (api: ApiInfo) => {
+}
+async function handleView(record: ApiInfo) {
+  const owner = ownerKey();
+  if (!currentSource(record, owner) || !validId(record.id) || !hasPerm(DETAIL))
+    return;
+  beginWindowInteraction();
+  viewModalVisible.value = true;
+  const ticket = ++viewRequest;
+  const window = viewWindowKey.value;
+  const current = () =>
+    active &&
+    ticket === viewRequest &&
+    window === viewWindowKey.value &&
+    owner === ownerKey() &&
+    viewModalVisible.value &&
+    hasPerm(DETAIL);
   try {
-    const response = await getApiDetailApi(api.id);
+    const response: ApiInfo = await getApiDetailApi(record.id);
+    if (!current()) return;
+    if (!response || response.id !== record.id || !readableRecord(response)) {
+      message.error('API数据无效');
+      return;
+    }
     viewApiData.value = response;
-    viewModalVisible.value = true;
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '获取API详情失败');
+  } catch (error) {
+    if (current() && shouldNotifyPageError(error))
+      message.error('获取API详情失败');
   }
-};
-
-const handleDelete = async (api: ApiInfo) => {
-  try {
-    await deleteApiApi(api.id);
-    message.success('删除成功');
-    if (apiList.value.length === 1 && paginationConfig.current > 1) {
-      paginationConfig.current--;
-    }
-    await Promise.all([fetchApiList(), fetchApiStatistics()]);
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '删除失败');
+}
+function handleDelete(record: ApiInfo) {
+  if (actions.has(record.id)) return;
+  closeDeleteDialog();
+  const ticket = beginAction(record, 'delete');
+  if (!ticket) return;
+  const detailWindow = viewWindowKey.value;
+  let used = false;
+  const dialog = Modal.confirm({
+    onCancel() {
+      if (used) return;
+      used = true;
+      if (deleteDialog?.ticket === ticket) deleteDialog = undefined;
+      releaseAction(ticket);
+    },
+    async onOk() {
+      if (used) return;
+      used = true;
+      try {
+        if (!currentAction(ticket)) return;
+        await deleteApiApi(ticket.id);
+        if (!currentAction(ticket)) return;
+        message.success('删除成功');
+        if (
+          detailWindow === viewWindowKey.value &&
+          viewApiData.value?.id === ticket.id
+        )
+          closeView();
+        if (apiList.value.length === 1 && paginationConfig.current > 1)
+          paginationConfig.current--;
+        await handleRefresh();
+      } catch (error) {
+        if (currentAction(ticket) && shouldNotifyPageError(error))
+          message.error('删除失败');
+      } finally {
+        if (deleteDialog?.ticket === ticket) deleteDialog = undefined;
+        releaseAction(ticket);
+      }
+    },
+    title: '确定要删除吗？',
+  });
+  deleteDialog = {
+    cancel() {
+      if (used) return;
+      used = true;
+      releaseAction(ticket);
+    },
+    destroy: () => dialog.destroy(),
+    ticket,
+  };
+}
+async function handleAccessChange(record: ApiInfo, newAccess: number) {
+  if (!readableRecord(record) || ![1, 2].includes(newAccess)) {
+    message.error('API数据无效');
+    return;
   }
-};
-
-const handleAccessChange = async (api: ApiInfo, newAccess: number) => {
-  const originalAccess = api.is_public;
-
+  const ticket = beginAction(record, 'access');
+  if (!ticket) return;
+  const original = record.is_public;
+  record.is_public = newAccess;
+  ticket.fingerprint = recordFingerprint(record);
+  const payload: UpdateApiReq = {
+    category: record.category,
+    description: record.description || '',
+    id: ticket.id,
+    is_public: newAccess === 1 ? 1 : 2,
+    method: record.method,
+    name: record.name,
+    path: record.path,
+    version: record.version || '',
+  };
   try {
-    // 乐观更新
-    api.is_public = newAccess;
-
-    const updateData: UpdateApiReq = {
-      id: api.id,
-      name: api.name,
-      path: api.path,
-      method: api.method,
-      description: api.description || '',
-      version: api.version || '',
-      category: api.category,
-      is_public: newAccess as 1 | 2,
-    };
-
-    await updateApiApi(updateData);
+    await updateApiApi(payload);
+    if (!currentAction(ticket)) return;
     message.success('访问权限更新成功');
-
-    // 重新获取统计数据
     await fetchApiStatistics();
-  } catch (error: any) {
-    // 发生错误时，恢复原来的状态
-    api.is_public = originalAccess;
-    if (shouldNotifyPageError(error))
-      message.error(error.message || '访问权限更新失败');
-  }
-};
-
-const handleSubmit = async () => {
-  try {
-    await formRef.value?.validate();
-    submitLoading.value = true;
-
-    if (modalTitle.value === '新建API') {
-      const createData: CreateApiReq = {
-        name: formData.name,
-        path: formData.path,
-        method: formData.method,
-        description: formData.description,
-        version: formData.version,
-        category: formData.category,
-        is_public: formData.is_public as 1 | 2,
-      };
-
-      await createApiApi(createData);
-      message.success('创建成功');
-    } else {
-      const updateData: UpdateApiReq = {
-        id: formData.id,
-        name: formData.name,
-        path: formData.path,
-        method: formData.method,
-        description: formData.description,
-        version: formData.version,
-        category: formData.category,
-        is_public: formData.is_public as 1 | 2,
-      };
-      await updateApiApi(updateData);
-      message.success('更新成功');
-    }
-
-    modalVisible.value = false;
-    await Promise.all([fetchApiList(), fetchApiStatistics()]);
-  } catch (error: any) {
-    if (!error.errorFields) {
-      if (shouldNotifyPageError(error))
-        message.error(error.message || '操作失败');
-    }
+  } catch (error) {
+    if (!ownsActionRow(ticket)) return;
+    const notify = currentAction(ticket);
+    record.is_public = original;
+    if (notify && shouldNotifyPageError(error))
+      message.error('访问权限更新失败');
   } finally {
-    submitLoading.value = false;
+    releaseAction(ticket);
   }
-};
-
-// 初始化
+}
+async function handleSubmit() {
+  const owner = ownerKey();
+  const window = formWindowKey.value;
+  const mode = formMode.value;
+  const form = formRef.value;
+  if (
+    !formCurrent(owner, window, mode) ||
+    submitLoading.value ||
+    !hasPerm(mode === 'create' ? CREATE : UPDATE)
+  )
+    return;
+  if (!form || typeof form.validate !== 'function') {
+    message.error('表单尚未就绪');
+    return;
+  }
+  const snapshot = { ...formData };
+  const fingerprint = JSON.stringify(snapshot);
+  const ticket = ++submitRequest;
+  const sameSubmission = () =>
+    formCurrent(owner, window, mode) && ticket === submitRequest;
+  const current = () =>
+    sameSubmission() &&
+    hasPerm(mode === 'create' ? CREATE : UPDATE) &&
+    JSON.stringify(formData) === fingerprint;
+  submitLoading.value = true;
+  let action: ActionTicket | undefined;
+  try {
+    await form.validate();
+    if (
+      !current() ||
+      formRef.value !== form ||
+      JSON.stringify(formData) !== fingerprint
+    )
+      return;
+    const payload: CreateApiReq = {
+      category: snapshot.category ?? undefined,
+      description: snapshot.description,
+      is_public: snapshot.is_public === 1 ? 1 : 2,
+      method: snapshot.method,
+      name: snapshot.name,
+      path: snapshot.path,
+      version: snapshot.version,
+    };
+    if (![1, 2].includes(snapshot.is_public) || !validPayload(payload)) {
+      message.error('API表单数据无效');
+      return;
+    }
+    if (mode === 'create') {
+      await createApiApi(payload);
+    } else {
+      if (
+        !formSource ||
+        !validId(snapshot.id) ||
+        formSource.id !== snapshot.id ||
+        recordFingerprint(formSource) !== formSourceFingerprint
+      )
+        return;
+      action = beginAction(formSource, 'edit');
+      if (!action) return;
+      await updateApiApi({ ...payload, id: snapshot.id });
+    }
+    if (!current() || (action && !currentAction(action))) return;
+    message.success(mode === 'create' ? '创建成功' : '更新成功');
+    closeForm();
+    await handleRefresh();
+  } catch (error) {
+    if (!current()) return;
+    const validation =
+      typeof error === 'object' && error !== null && 'errorFields' in error;
+    if (!validation && shouldNotifyPageError(error)) message.error('操作失败');
+  } finally {
+    if (action) releaseAction(action);
+    if (sameSubmission()) submitLoading.value = false;
+  }
+}
+function invalidateOwner() {
+  listRequest++;
+  statisticsRequest++;
+  closeForm();
+  closeView();
+  closeDeleteDialog();
+  actions.clear();
+  for (const id of Object.keys(actionLoading)) delete actionLoading[Number(id)];
+  loading.value = false;
+  apiList.value = [];
+  listOwner = '';
+  paginationConfig.total = 0;
+  apiStatistics.value = { private_count: 0, public_count: 0 };
+}
+watch(
+  ownerKey,
+  () => {
+    // 登录世代可能先于资料清理更新，此处只失效，避免过渡身份发起读取。
+    invalidateOwner();
+  },
+  { flush: 'sync' },
+);
 onMounted(() => {
-  fetchApiList();
-  fetchApiStatistics();
+  void handleRefresh();
+});
+onUnmounted(() => {
+  active = false;
+  invalidateOwner();
 });
 </script>
 
@@ -344,7 +669,7 @@ onMounted(() => {
         <Icon icon="material-symbols:refresh" />
         刷新
       </a-button>
-      <a-button type="primary" @click="handleAdd">
+      <a-button v-if="hasPerm(CREATE)" type="primary" @click="handleAdd">
         <Icon icon="material-symbols:add" />
         新建API
       </a-button>
@@ -378,7 +703,7 @@ onMounted(() => {
             aria-label="搜索API"
             class="search-input"
             placeholder="搜索API名称或路径"
-            @pressEnter="handleSearch"
+            @press-enter="handleSearch"
           >
             <template #prefix>
               <Icon icon="material-symbols:search" />
@@ -455,6 +780,8 @@ onMounted(() => {
           <template v-if="column.key === 'access'">
             <a-switch
               :checked="record.is_public === 1"
+              :disabled="!hasPerm(UPDATE) || actionLoading[record.id]"
+              :loading="actionLoading[record.id]"
               size="small"
               @change="
                 (checked: boolean) =>
@@ -474,19 +801,33 @@ onMounted(() => {
 
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
-              <a-button size="small" type="text" @click="handleView(record)">
+              <a-button
+                v-if="hasPerm(DETAIL)"
+                size="small"
+                type="text"
+                @click="handleView(record)"
+              >
                 查看
               </a-button>
-              <a-button size="small" type="text" @click="handleEdit(record)">
+              <a-button
+                v-if="hasPerm(UPDATE)"
+                :disabled="actionLoading[record.id]"
+                size="small"
+                type="text"
+                @click="handleEdit(record)"
+              >
                 编辑
               </a-button>
-              <a-popconfirm
+              <a-button
                 v-if="can('system.api.delete')"
-                title="确定要删除吗？"
-                @confirm="handleDelete(record)"
+                :disabled="actionLoading[record.id]"
+                danger
+                size="small"
+                type="text"
+                @click="handleDelete(record)"
               >
-                <a-button danger size="small" type="text">删除</a-button>
-              </a-popconfirm>
+                删除
+              </a-button>
             </div>
           </template>
         </template>
@@ -495,10 +836,12 @@ onMounted(() => {
 
     <!-- 查看API详情 -->
     <a-modal
-      v-model:open="viewModalVisible"
+      :key="viewWindowKey"
       :footer="null"
+      :open="viewModalVisible"
       title="API详情"
       width="700px"
+      @cancel="closeView"
     >
       <div v-if="viewApiData" class="api-detail">
         <div class="detail-section">
@@ -547,13 +890,15 @@ onMounted(() => {
 
     <!-- 编辑API -->
     <a-modal
-      v-model:open="modalVisible"
       :confirm-loading="submitLoading"
+      :open="modalVisible"
       :title="modalTitle"
       width="800px"
+      @cancel="closeForm"
       @ok="handleSubmit"
     >
       <a-form
+        :key="formWindowKey"
         ref="formRef"
         :model="formData"
         :rules="formRules"
