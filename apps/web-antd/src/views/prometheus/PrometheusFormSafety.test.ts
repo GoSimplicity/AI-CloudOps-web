@@ -56,6 +56,7 @@ const Table = defineComponent({
   props: {
     columns: { default: () => [], type: Array },
     dataSource: { default: () => [], type: Array },
+    children: { default: undefined },
   },
   setup(props, { slots }) {
     return () =>
@@ -104,6 +105,7 @@ const Dialog = defineComponent({
   },
 });
 const Passthrough = defineComponent({
+  props: { children: { default: undefined } },
   setup:
     (_, { slots }) =>
     () =>
@@ -157,7 +159,7 @@ const titles = {
 };
 let wrapper: undefined | VueWrapper;
 const rule = (id?: number, name = 'owned rule', poolId = 1, groupId = 1) => ({
-  annotations: ['summary,local'],
+  annotations: ['summary=local'],
   create_user_name: 'local fixture',
   enable: 2,
   expr: 'up',
@@ -165,7 +167,7 @@ const rule = (id?: number, name = 'owned rule', poolId = 1, groupId = 1) => ({
   grafana_link: 'http://localhost/metrics',
   id,
   ip_address: '127.0.0.1:9090',
-  labels: ['app,cloud'],
+  labels: ['app=cloud'],
   name,
   pool_id: poolId,
   send_group_id: groupId,
@@ -558,10 +560,10 @@ it.each<Kind>(['config', 'rules'])(
       expect.objectContaining(
         kind === 'rules'
           ? {
-              annotations: ['summary,local'],
+              annotations: ['summary=local'],
               enable: 2,
               id: 7,
-              labels: ['app,cloud'],
+              labels: ['app=cloud'],
               pool_id: 1,
               send_group_id: 1,
               severity: 2,
@@ -1013,3 +1015,150 @@ for (const mode of ['add', 'edit'] as const) {
     },
   );
 }
+
+type RuleEntryFixture = {
+  labelKey: string;
+  labelValue: string;
+  unparsedEntry?: string;
+};
+function ruleEntryFixture(value: unknown): value is RuleEntryFixture {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    'labelKey' in value &&
+    typeof value.labelKey === 'string' &&
+    'labelValue' in value &&
+    typeof value.labelValue === 'string'
+  );
+}
+function ruleEntries(field: 'annotations' | 'labels'): RuleEntryFixture[] {
+  const model = required(required(wrapper).getComponent(Form).props('model'));
+  const entries: unknown = model[field];
+  if (
+    !Array.isArray(entries) ||
+    !entries.every((entry): entry is RuleEntryFixture =>
+      ruleEntryFixture(entry),
+    )
+  )
+    throw new Error('Rule entry fixture has an invalid shape');
+  return entries;
+}
+it('rules use first equals in list, editor and update without losing commas, later equals or empty values', async () => {
+  const record = {
+    ...rule(7),
+    annotations: ['summary=a=b,c', 'template={{ $labels.team }}=正常,ready'],
+    labels: ['team=ops', 'url=https://demo.invalid/?q=a=b,c', 'empty='],
+  };
+  await mountPage('rules', [record]);
+  expect(required(wrapper).text()).toContain('https://demo.invalid/?q=a=b,c');
+  expect(required(wrapper).text()).toContain('a=b,c');
+  await rowAction('编辑');
+  expect(
+    ruleEntries('labels').map(({ labelKey, labelValue }) => ({
+      labelKey,
+      labelValue,
+    })),
+  ).toEqual([
+    { labelKey: 'team', labelValue: 'ops' },
+    { labelKey: 'url', labelValue: 'https://demo.invalid/?q=a=b,c' },
+    { labelKey: 'empty', labelValue: '' },
+  ]);
+  expect(ruleEntries('annotations')[1]?.labelValue).toBe(
+    '{{ $labels.team }}=正常,ready',
+  );
+  await dialog('rules', 'edit').get('[data-save]').trigger('click');
+  await flushPromises();
+  expect(client.put).toHaveBeenCalledWith(
+    '/monitor/alert_rules/update/7',
+    expect.objectContaining({
+      annotations: record.annotations,
+      labels: record.labels,
+    }),
+  );
+  const body = required(client.put.mock.calls[0]?.[1]);
+  expect(body.labels.every((entry: unknown) => typeof entry === 'string')).toBe(
+    true,
+  );
+  expect(JSON.stringify(body)).not.toContain('"unparsedEntry":');
+});
+it('rules retain key= while omitting only newly empty editor placeholders', async () => {
+  await mountPage('rules');
+  await create('rules');
+  await fillAdd('rules');
+  required(ruleEntries('labels')[0]).labelKey = 'empty';
+  await dialog('rules').get('[data-save]').trigger('click');
+  await flushPromises();
+  expect(client.post).toHaveBeenCalledWith(
+    '/monitor/alert_rules/create',
+    expect.objectContaining({ annotations: [], labels: ['empty='] }),
+  );
+});
+it('rules leave untouched malformed legacy entries unchanged, then send only explicitly corrected string entries', async () => {
+  const record = {
+    ...rule(7),
+    annotations: ['summary,legacy'],
+    labels: ['team,ops', ''],
+  };
+  await mountPage('rules', [record]);
+  await rowAction('编辑');
+  client.put.mockRejectedValueOnce(
+    new Error('告警规则标签无效，请使用合法的key=value'),
+  );
+  await dialog('rules', 'edit')
+    .get('input[placeholder="请输入名称"]')
+    .setValue('rename only');
+  await dialog('rules', 'edit').get('[data-save]').trigger('click');
+  await flushPromises();
+  const unchanged = required(client.put.mock.calls[0]?.[1]);
+  expect(unchanged.labels).toEqual(['team,ops', '']);
+  expect(unchanged.annotations).toEqual(['summary,legacy']);
+  expect(JSON.stringify(unchanged)).not.toContain('"unparsedEntry":');
+  expect(dialog('rules', 'edit').element).toBeInstanceOf(HTMLElement);
+  expect(message.error).toHaveBeenCalledWith(
+    '告警规则标签无效，请使用合法的key=value',
+  );
+  Object.assign(required(ruleEntries('labels')[0]), {
+    labelKey: 'team',
+    labelValue: 'ops=ready,stable',
+  });
+  ruleEntries('labels').splice(1, 1);
+  Object.assign(required(ruleEntries('annotations')[0]), {
+    labelKey: 'summary',
+    labelValue: 'corrected=a,b',
+  });
+  await dialog('rules', 'edit').get('[data-save]').trigger('click');
+  await flushPromises();
+  const corrected = required(client.put.mock.calls[1]?.[1]);
+  expect(corrected.labels).toEqual(['team=ops=ready,stable']);
+  expect(corrected.annotations).toEqual(['summary=corrected=a,b']);
+  expect(JSON.stringify(corrected)).not.toContain('"unparsedEntry":');
+});
+it('rules can explicitly remove a sole malformed stored entry instead of reinterpreting it as a valid empty label', async () => {
+  await mountPage('rules', [{ ...rule(7), annotations: [], labels: [''] }]);
+  await rowAction('编辑');
+  const remove = dialog('rules', 'edit').findAll('.dynamic-delete-button');
+  expect(remove).toHaveLength(1);
+  await required(remove[0]).trigger('click');
+  await dialog('rules', 'edit').get('[data-save]').trigger('click');
+  await flushPromises();
+  expect(client.put).toHaveBeenCalledWith(
+    '/monitor/alert_rules/update/7',
+    expect.objectContaining({ annotations: [], labels: [] }),
+  );
+});
+it('rules refuse an editor key containing equals before any write rather than changing its meaning', async () => {
+  await mountPage('rules');
+  await create('rules');
+  await fillAdd('rules');
+  Object.assign(required(ruleEntries('labels')[0]), {
+    labelKey: 'a=b',
+    labelValue: 'c',
+  });
+  await dialog('rules').get('[data-save]').trigger('click');
+  await flushPromises();
+  expect(client.post).not.toHaveBeenCalled();
+  expect(dialog('rules').element).toBeInstanceOf(HTMLElement);
+  expect(message.error).toHaveBeenCalledWith(
+    '标签或注解名称不能包含等号，请将其放在值中',
+  );
+});

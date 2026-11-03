@@ -77,9 +77,22 @@ interface LabelOrAnnotationItem {
   key: number;
   labelKey: string;
   labelValue: string;
+  unparsedEntry?: string;
 }
 
 // --- 分页状态 ---
+// The API uses the first '=' as its separator. Historical malformed entries stay
+// unparsed until explicitly corrected; commas are ordinary key/value content.
+function parseRuleEntry(entry: string): Omit<LabelOrAnnotationItem, 'key'> {
+  const separator = entry.indexOf('=');
+  if (separator < 0)
+    return { labelKey: entry, labelValue: '', unparsedEntry: entry };
+  return {
+    labelKey: entry.slice(0, separator),
+    labelValue: entry.slice(separator + 1),
+  };
+}
+
 const poolPagination = reactive({
   current: 1,
   pageSize: 20,
@@ -634,11 +647,11 @@ const showEditModal = async (record: MonitorAlertRule): Promise<void> => {
     editForm.id === id;
   const [ip, port] = record.ip_address?.split(':') || ['', ''];
   const parseItems = (items: string[] | undefined) =>
-    items?.length && items[0] !== ''
-      ? items.map((item) => {
-          const [labelKey, labelValue] = item.split(',');
-          return { key: Date.now() + Math.random(), labelKey, labelValue };
-        })
+    items?.length
+      ? items.map((item) => ({
+          key: Date.now() + Math.random(),
+          ...parseRuleEntry(item),
+        }))
       : [{ key: Date.now(), labelKey: '', labelValue: '' }];
   // 先绑定原记录；关联选项的慢请求不能延后覆盖另一条记录的表单。
   Object.assign(editForm, {
@@ -691,10 +704,24 @@ const showEditModal = async (record: MonitorAlertRule): Promise<void> => {
   }
 };
 
-const formatItemsForApi = (items: LabelOrAnnotationItem[]) =>
-  items
-    .filter((item) => item.labelKey && item.labelValue)
-    .map((item) => `${item.labelKey},${item.labelValue}`);
+const formatItemsForApi = (items: LabelOrAnnotationItem[]): string[] => {
+  const entries: string[] = [];
+  for (const item of items) {
+    if (
+      item.unparsedEntry !== undefined &&
+      item.labelKey === item.unparsedEntry &&
+      item.labelValue === ''
+    ) {
+      entries.push(item.unparsedEntry);
+      continue;
+    }
+    if (item.labelKey === '' && item.labelValue === '') continue;
+    if (item.labelKey.includes('='))
+      throw new Error('标签或注解名称不能包含等号，请将其放在值中');
+    entries.push(`${item.labelKey}=${item.labelValue}`);
+  }
+  return entries;
+};
 
 const handleAdd = async (): Promise<void> => {
   if (disposed || addSubmitting.value || !isAddModalVisible.value) return;
@@ -1112,9 +1139,13 @@ onMounted(() => {
                     :key="label"
                   >
                     <a-tag class="tech-tag label-tag">
-                      <span class="label-key">{{ label.split(',')[0] }}</span>
+                      <span class="label-key">{{
+                        parseRuleEntry(label).labelKey
+                      }}</span>
                       <span class="label-separator">:</span>
-                      <span class="label-value">{{ label.split(',')[1] }}</span>
+                      <span class="label-value">{{
+                        parseRuleEntry(label).labelValue
+                      }}</span>
                     </a-tag>
                   </template>
                   <a-popover
@@ -1131,11 +1162,11 @@ onMounted(() => {
                           class="tech-tag label-tag"
                         >
                           <span class="label-key">{{
-                            label.split(',')[0]
+                            parseRuleEntry(label).labelKey
                           }}</span>
                           <span class="label-separator">:</span>
                           <span class="label-value">{{
-                            label.split(',')[1]
+                            parseRuleEntry(label).labelValue
                           }}</span>
                         </a-tag>
                       </div>
@@ -1164,11 +1195,11 @@ onMounted(() => {
                   >
                     <a-tag class="tech-tag annotation-tag">
                       <span class="label-key">{{
-                        annotation.split(',')[0]
+                        parseRuleEntry(annotation).labelKey
                       }}</span>
                       <span class="label-separator">:</span>
                       <span class="label-value">{{
-                        annotation.split(',')[1]
+                        parseRuleEntry(annotation).labelValue
                       }}</span>
                     </a-tag>
                   </template>
@@ -1186,11 +1217,11 @@ onMounted(() => {
                           class="tech-tag annotation-tag"
                         >
                           <span class="label-key">{{
-                            annotation.split(',')[0]
+                            parseRuleEntry(annotation).labelKey
                           }}</span>
                           <span class="label-separator">:</span>
                           <span class="label-value">{{
-                            annotation.split(',')[1]
+                            parseRuleEntry(annotation).labelValue
                           }}</span>
                         </a-tag>
                       </div>
@@ -1701,7 +1732,10 @@ onMounted(() => {
                 placeholder="标签值"
               />
               <MinusCircleOutlined
-                v-if="editForm.labels.length > 1"
+                v-if="
+                  editForm.labels.length > 1 ||
+                  label.unparsedEntry !== undefined
+                "
                 class="dynamic-delete-button"
                 @click="removeEditLabel(label)"
               />
@@ -1738,7 +1772,10 @@ onMounted(() => {
                 placeholder="注解值"
               />
               <MinusCircleOutlined
-                v-if="editForm.annotations.length > 1"
+                v-if="
+                  editForm.annotations.length > 1 ||
+                  annotation.unparsedEntry !== undefined
+                "
                 class="dynamic-delete-button"
                 @click="removeEditAnnotation(annotation)"
               />
