@@ -84,6 +84,13 @@ const appendAnswer = (data: AssistantResponse) => {
   pendingTurn.value = null;
 };
 
+// 滚动到底部
+const scrollToBottom = () => {
+  if (chatHistoryRef.value) {
+    chatHistoryRef.value.scrollTop = chatHistoryRef.value.scrollHeight;
+  }
+};
+
 const sendMessage = async () => {
   const question = questionInput.value.trim();
   if (
@@ -303,13 +310,6 @@ const formatTime = (timestamp: string) => {
 const formatMarkdown = (content: string) => {
   const html = marked(content);
   return DOMPurify.sanitize(html as string);
-};
-
-// 滚动到底部
-const scrollToBottom = () => {
-  if (chatHistoryRef.value) {
-    chatHistoryRef.value.scrollTop = chatHistoryRef.value.scrollHeight;
-  }
 };
 
 // 只在本地保存会话 ID，实际历史和未确认状态按当前用户从服务端读取。

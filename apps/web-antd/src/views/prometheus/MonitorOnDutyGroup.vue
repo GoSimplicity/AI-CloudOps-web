@@ -1238,16 +1238,6 @@ function validGroupPayload(
   );
 }
 
-// 模态框控制
-const showAddModal = (): void => {
-  if (!beginCrud()) return;
-  resetAddForm();
-  userSearchText.value = '';
-  userPaginationConfig.current = 1;
-  fetchUserList(1);
-  isAddModalVisible.value = true;
-};
-
 const resetAddForm = (): void => {
   if (addFormRef.value) {
     addFormRef.value.resetFields();
@@ -1256,6 +1246,16 @@ const resetAddForm = (): void => {
   addForm.shift_days = 7;
   addForm.user_ids = [];
   addForm.description = '';
+};
+
+// 模态框控制
+const showAddModal = (): void => {
+  if (!beginCrud()) return;
+  resetAddForm();
+  userSearchText.value = '';
+  userPaginationConfig.current = 1;
+  fetchUserList(1);
+  isAddModalVisible.value = true;
 };
 
 const closeAddModal = (): void => {
@@ -1536,27 +1536,6 @@ const handleCreatePlanFromDialog = (): void => {
   });
 };
 
-const handleMenuClick = (command: string, record: MonitorOnDutyGroup): void => {
-  switch (command) {
-    case 'edit': {
-      showEditModal(record);
-      break;
-    }
-    case 'history': {
-      handleViewHistory(record);
-      break;
-    }
-    case 'change': {
-      handleViewChange(record);
-      break;
-    }
-    case 'delete': {
-      confirmDelete(record);
-      break;
-    }
-  }
-};
-
 const handleViewChange = async (record: MonitorOnDutyGroup): Promise<void> => {
   const owner = operationOwner();
   if (
@@ -1612,6 +1591,27 @@ const confirmDelete = (record: MonitorOnDutyGroup): void => {
       }
     },
   });
+};
+
+const handleMenuClick = (command: string, record: MonitorOnDutyGroup): void => {
+  switch (command) {
+    case 'edit': {
+      showEditModal(record);
+      break;
+    }
+    case 'history': {
+      handleViewHistory(record);
+      break;
+    }
+    case 'change': {
+      handleViewChange(record);
+      break;
+    }
+    case 'delete': {
+      confirmDelete(record);
+      break;
+    }
+  }
 };
 
 // 生命周期钩子

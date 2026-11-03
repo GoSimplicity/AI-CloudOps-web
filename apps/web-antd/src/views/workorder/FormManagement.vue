@@ -483,6 +483,16 @@ const handleCategoryDropdownChange = (open: boolean): void => {
   }
 };
 
+// 加载更多分类
+const loadMoreCategories = async (): Promise<void> => {
+  if (!categoryPagination.hasMore || categorySelectorLoading.value) {
+    return;
+  }
+
+  categoryPagination.current += 1;
+  await loadFormDialogCategories(false);
+};
+
 // 处理滚动加载更多
 const handleCategoryScroll = (e: Event): void => {
   const { target } = e;
@@ -498,16 +508,6 @@ const handleCategoryScroll = (e: Event): void => {
   ) {
     loadMoreCategories();
   }
-};
-
-// 加载更多分类
-const loadMoreCategories = async (): Promise<void> => {
-  if (!categoryPagination.hasMore || categorySelectorLoading.value) {
-    return;
-  }
-
-  categoryPagination.current += 1;
-  await loadFormDialogCategories(false);
 };
 
 // JSON相关方法
@@ -741,6 +741,21 @@ const handleResetFilters = (): void => {
   message.success('过滤条件已重置');
 };
 
+// 重置分类选择器状态
+const resetCategorySelector = (): void => {
+  formDialogCategories.value = [];
+  categoryPagination.current = 1;
+  categoryPagination.total = 0;
+  categoryPagination.hasMore = false;
+  categorySearchKeyword.value = '';
+  categorySelectorLoading.value = false;
+
+  if (categorySearchTimeout) {
+    clearTimeout(categorySearchTimeout);
+    categorySearchTimeout = null;
+  }
+};
+
 const handleCreateForm = (): void => {
   formDialog.isEdit = false;
   formDialog.form = {
@@ -756,33 +771,6 @@ const handleCreateForm = (): void => {
   jsonValidationError.value = '';
   formDialogVisible.value = true;
   resetCategorySelector();
-};
-
-const handleEditForm = async (
-  record: WorkorderFormDesignItem,
-): Promise<void> => {
-  try {
-    const response = await detailWorkorderFormDesign({ id: record.id });
-    if (response) {
-      formDialog.isEdit = true;
-      formDialog.form = {
-        id: response.id,
-        name: response.name,
-        description: response.description,
-        category_id: response.category_id,
-        status: response.status,
-        tags: response.tags || [],
-        is_template: response.is_template,
-        fieldsJson: JSON.stringify(response.schema.fields || [], null, 2),
-      };
-      jsonValidationError.value = '';
-      formDialogVisible.value = true;
-      detailDialogVisible.value = false;
-      await loadCategoryForEdit(response);
-    }
-  } catch (error) {
-    if (shouldNotifyPageError(error)) message.error('加载表单详情失败');
-  }
 };
 
 // 为编辑模式加载分类信息的专用方法
@@ -833,18 +821,30 @@ const loadCategoryForEdit = async (
   }
 };
 
-// 重置分类选择器状态
-const resetCategorySelector = (): void => {
-  formDialogCategories.value = [];
-  categoryPagination.current = 1;
-  categoryPagination.total = 0;
-  categoryPagination.hasMore = false;
-  categorySearchKeyword.value = '';
-  categorySelectorLoading.value = false;
-
-  if (categorySearchTimeout) {
-    clearTimeout(categorySearchTimeout);
-    categorySearchTimeout = null;
+const handleEditForm = async (
+  record: WorkorderFormDesignItem,
+): Promise<void> => {
+  try {
+    const response = await detailWorkorderFormDesign({ id: record.id });
+    if (response) {
+      formDialog.isEdit = true;
+      formDialog.form = {
+        id: response.id,
+        name: response.name,
+        description: response.description,
+        category_id: response.category_id,
+        status: response.status,
+        tags: response.tags || [],
+        is_template: response.is_template,
+        fieldsJson: JSON.stringify(response.schema.fields || [], null, 2),
+      };
+      jsonValidationError.value = '';
+      formDialogVisible.value = true;
+      detailDialogVisible.value = false;
+      await loadCategoryForEdit(response);
+    }
+  } catch (error) {
+    if (shouldNotifyPageError(error)) message.error('加载表单详情失败');
   }
 };
 
@@ -862,32 +862,45 @@ const handleViewForm = async (
   }
 };
 
-const handleMenuClick = (
-  command: string,
-  record: WorkorderFormDesignItem,
-): void => {
-  switch (command) {
-    case 'preview': {
-      handlePreviewForm(record);
-      break;
+// 预览表单数据初始化
+const initPreviewFormData = (schema: FormSchema): void => {
+  const data: Record<string, any> = {};
+
+  schema.fields.forEach((field: FormField) => {
+    switch (field.type) {
+      case FormFieldType.Text:
+      case FormFieldType.Password:
+      case FormFieldType.Textarea: {
+        data[field.name] = field.default || '';
+        break;
+      }
+      case FormFieldType.Number: {
+        data[field.name] = field.default || undefined;
+        break;
+      }
+      case FormFieldType.Date: {
+        data[field.name] = field.default || undefined;
+        break;
+      }
+      case FormFieldType.Select:
+      case FormFieldType.Radio:
+        data[field.name] = field.default || undefined;
+        break;
+      case FormFieldType.Checkbox: {
+        data[field.name] = field.default || [];
+        break;
+      }
+      case FormFieldType.Switch: {
+        data[field.name] = field.default || false;
+        break;
+      }
+      default: {
+        data[field.name] = field.default || '';
+      }
     }
-    case 'publish': {
-      publishForm(record);
-      break;
-    }
-    case 'archive': {
-      archiveForm(record);
-      break;
-    }
-    case 'unarchive': {
-      unarchiveForm(record);
-      break;
-    }
-    case 'delete': {
-      confirmDelete(record);
-      break;
-    }
-  }
+  });
+
+  previewFormData.value = data;
 };
 
 const handlePreviewForm = async (
@@ -990,6 +1003,34 @@ const confirmDelete = (record: WorkorderFormDesignItem): void => {
   });
 };
 
+const handleMenuClick = (
+  command: string,
+  record: WorkorderFormDesignItem,
+): void => {
+  switch (command) {
+    case 'preview': {
+      handlePreviewForm(record);
+      break;
+    }
+    case 'publish': {
+      publishForm(record);
+      break;
+    }
+    case 'archive': {
+      archiveForm(record);
+      break;
+    }
+    case 'unarchive': {
+      unarchiveForm(record);
+      break;
+    }
+    case 'delete': {
+      confirmDelete(record);
+      break;
+    }
+  }
+};
+
 // 表单保存
 const saveForm = async (): Promise<void> => {
   if (!formDialog.form.name.trim()) {
@@ -1047,47 +1088,6 @@ const saveForm = async (): Promise<void> => {
   } catch (error) {
     if (shouldNotifyPageError(error)) message.error('保存表单失败');
   }
-};
-
-// 预览表单数据初始化
-const initPreviewFormData = (schema: FormSchema): void => {
-  const data: Record<string, any> = {};
-
-  schema.fields.forEach((field: FormField) => {
-    switch (field.type) {
-      case FormFieldType.Text:
-      case FormFieldType.Password:
-      case FormFieldType.Textarea: {
-        data[field.name] = field.default || '';
-        break;
-      }
-      case FormFieldType.Number: {
-        data[field.name] = field.default || undefined;
-        break;
-      }
-      case FormFieldType.Date: {
-        data[field.name] = field.default || undefined;
-        break;
-      }
-      case FormFieldType.Select:
-      case FormFieldType.Radio:
-        data[field.name] = field.default || undefined;
-        break;
-      case FormFieldType.Checkbox: {
-        data[field.name] = field.default || [];
-        break;
-      }
-      case FormFieldType.Switch: {
-        data[field.name] = field.default || false;
-        break;
-      }
-      default: {
-        data[field.name] = field.default || '';
-      }
-    }
-  });
-
-  previewFormData.value = data;
 };
 
 const resetPreviewForm = (): void => {

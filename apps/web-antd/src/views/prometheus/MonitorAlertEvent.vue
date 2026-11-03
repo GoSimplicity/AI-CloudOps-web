@@ -337,19 +337,6 @@ const handleResetFilters = (): void => {
   fetchResources();
 };
 
-const handleMenuClick = (command: string, record: MonitorAlertEvent): void => {
-  switch (command) {
-    case 'unsilence': {
-      handleCancelSilence(record);
-      break;
-    }
-    case 'detail': {
-      showDetailDialog(record);
-      break;
-    }
-  }
-};
-
 const showDetailDialog = (record: MonitorAlertEvent): void => {
   detailRevision += 1;
   detailDialog.form = record;
@@ -425,6 +412,30 @@ const confirmEventAction = (
   });
 };
 
+const handleCancelSilence = (record: MonitorAlertEvent): void => {
+  confirmEventAction(record, {
+    label: '取消屏蔽',
+    closeDetail: false,
+    run: (id, userId) => {
+      const params: EventAlertUnSilenceReq = { id, user_id: userId };
+      return eventAlertUnSilenceApi(params);
+    },
+  });
+};
+
+const handleMenuClick = (command: string, record: MonitorAlertEvent): void => {
+  switch (command) {
+    case 'unsilence': {
+      handleCancelSilence(record);
+      break;
+    }
+    case 'detail': {
+      showDetailDialog(record);
+      break;
+    }
+  }
+};
+
 const handleSilence = (record: MonitorAlertEvent): void => {
   confirmEventAction(record, {
     label: '屏蔽',
@@ -443,17 +454,6 @@ const handleClaim = (record: MonitorAlertEvent): void => {
     run: (id, userId) => {
       const params: EventAlertClaimReq = { id, user_id: userId };
       return eventAlertClaimApi(params);
-    },
-  });
-};
-
-const handleCancelSilence = (record: MonitorAlertEvent): void => {
-  confirmEventAction(record, {
-    label: '取消屏蔽',
-    closeDetail: false,
-    run: (id, userId) => {
-      const params: EventAlertUnSilenceReq = { id, user_id: userId };
-      return eventAlertUnSilenceApi(params);
     },
   });
 };

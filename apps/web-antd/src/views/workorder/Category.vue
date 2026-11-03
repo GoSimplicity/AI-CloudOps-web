@@ -232,6 +232,19 @@ const formRules = {
 };
 
 /**
+ * 更新统计数据
+ */
+const updateStatistics = (): void => {
+  statistics.total = total.value;
+  statistics.enabled = categoryList.value.filter(
+    (item) => item.status === CategoryStatus.Enabled,
+  ).length;
+  statistics.disabled = categoryList.value.filter(
+    (item) => item.status === CategoryStatus.Disabled,
+  ).length;
+};
+
+/**
  * 核心数据加载方法 - 使用真分页
  */
 const loadCategoryList = async (
@@ -281,19 +294,6 @@ const loadCategoryList = async (
   } finally {
     if (ownsRequest()) loading.value = false;
   }
-};
-
-/**
- * 更新统计数据
- */
-const updateStatistics = (): void => {
-  statistics.total = total.value;
-  statistics.enabled = categoryList.value.filter(
-    (item) => item.status === CategoryStatus.Enabled,
-  ).length;
-  statistics.disabled = categoryList.value.filter(
-    (item) => item.status === CategoryStatus.Disabled,
-  ).length;
 };
 
 /**
@@ -425,19 +425,6 @@ const handleEdit = (record: WorkorderCategoryItem) =>
 const handleView = (record: WorkorderCategoryItem) =>
   readCategoryDetail(record, 'view');
 
-const handleMenuAction = (key: string, record: WorkorderCategoryItem): void => {
-  switch (key) {
-    case 'toggleStatus': {
-      handleToggleStatus(record);
-      break;
-    }
-    case 'delete': {
-      handleDelete(record);
-      break;
-    }
-  }
-};
-
 /**
  * 状态切换
  */
@@ -518,6 +505,19 @@ const handleDelete = (record: WorkorderCategoryItem): void => {
       }
     },
   });
+};
+
+const handleMenuAction = (key: string, record: WorkorderCategoryItem): void => {
+  switch (key) {
+    case 'toggleStatus': {
+      handleToggleStatus(record);
+      break;
+    }
+    case 'delete': {
+      handleDelete(record);
+      break;
+    }
+  }
 };
 
 /**

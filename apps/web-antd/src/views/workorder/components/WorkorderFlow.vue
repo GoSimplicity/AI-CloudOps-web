@@ -212,6 +212,55 @@ const toggleViewMode = () => {
   viewMode.value = viewMode.value === 'timeline' ? 'list' : 'timeline';
 };
 
+// 加载流转记录
+const loadFlow = async (instanceId: number) => {
+  try {
+    loading.value = true;
+
+    let allFlows: any[] = [];
+    let currentPage = 1;
+    const pageSize = 50;
+    let hasMoreData = true;
+
+    while (hasMoreData) {
+      const params: ListWorkorderInstanceFlowReq = {
+        page: currentPage,
+        size: pageSize,
+        instance_id: instanceId,
+      };
+
+      const res = await listWorkorderInstanceFlow(params);
+
+      if (res && res.items && res.items.length > 0) {
+        allFlows = [...allFlows, ...res.items];
+
+        if (
+          res.items.length < pageSize ||
+          allFlows.length >= (res.total || 0)
+        ) {
+          hasMoreData = false;
+        } else {
+          currentPage++;
+        }
+      } else {
+        hasMoreData = false;
+      }
+    }
+
+    if (allFlows.length > 0) {
+      flowList.value = allFlows;
+    } else {
+      flowList.value = [];
+    }
+  } catch (error: any) {
+    if (shouldNotifyPageError(error))
+      message.error(`加载流转记录失败: ${error.message || '未知错误'}`);
+    flowList.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
 const refreshFlow = async () => {
   if (flowDialog.instanceId) {
     await loadFlow(flowDialog.instanceId);
@@ -281,55 +330,6 @@ const getFlowActionText = (action: string): string => {
     [FlowAction.Return]: '退回工单',
   };
   return textMap[action] || action;
-};
-
-// 加载流转记录
-const loadFlow = async (instanceId: number) => {
-  try {
-    loading.value = true;
-
-    let allFlows: any[] = [];
-    let currentPage = 1;
-    const pageSize = 50;
-    let hasMoreData = true;
-
-    while (hasMoreData) {
-      const params: ListWorkorderInstanceFlowReq = {
-        page: currentPage,
-        size: pageSize,
-        instance_id: instanceId,
-      };
-
-      const res = await listWorkorderInstanceFlow(params);
-
-      if (res && res.items && res.items.length > 0) {
-        allFlows = [...allFlows, ...res.items];
-
-        if (
-          res.items.length < pageSize ||
-          allFlows.length >= (res.total || 0)
-        ) {
-          hasMoreData = false;
-        } else {
-          currentPage++;
-        }
-      } else {
-        hasMoreData = false;
-      }
-    }
-
-    if (allFlows.length > 0) {
-      flowList.value = allFlows;
-    } else {
-      flowList.value = [];
-    }
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(`加载流转记录失败: ${error.message || '未知错误'}`);
-    flowList.value = [];
-  } finally {
-    loading.value = false;
-  }
 };
 
 // 主要方法

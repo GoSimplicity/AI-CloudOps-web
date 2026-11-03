@@ -412,6 +412,15 @@ const handleCategoryDropdownChange = (open: boolean): void => {
   }
 };
 
+const loadMoreCategories = async (): Promise<void> => {
+  if (!categoryPagination.hasMore || categorySelectorLoading.value) {
+    return;
+  }
+
+  categoryPagination.current += 1;
+  await loadDialogCategories(false);
+};
+
 const handleCategoryScroll = (e: Event): void => {
   const { target } = e;
   if (!target) return;
@@ -426,15 +435,6 @@ const handleCategoryScroll = (e: Event): void => {
   ) {
     loadMoreCategories();
   }
-};
-
-const loadMoreCategories = async (): Promise<void> => {
-  if (!categoryPagination.hasMore || categorySelectorLoading.value) {
-    return;
-  }
-
-  categoryPagination.current += 1;
-  await loadDialogCategories(false);
 };
 
 // 流程选择器方法
@@ -512,6 +512,15 @@ const handleProcessDropdownChange = (open: boolean): void => {
   }
 };
 
+const loadMoreProcesses = async (): Promise<void> => {
+  if (!processPagination.hasMore || processSelectorLoading.value) {
+    return;
+  }
+
+  processPagination.current += 1;
+  await loadDialogProcesses(false);
+};
+
 const handleProcessScroll = (e: Event): void => {
   const { target } = e;
   if (!target) return;
@@ -526,15 +535,6 @@ const handleProcessScroll = (e: Event): void => {
   ) {
     loadMoreProcesses();
   }
-};
-
-const loadMoreProcesses = async (): Promise<void> => {
-  if (!processPagination.hasMore || processSelectorLoading.value) {
-    return;
-  }
-
-  processPagination.current += 1;
-  await loadDialogProcesses(false);
 };
 
 // 表单选择器方法
@@ -610,6 +610,15 @@ const handleFormDropdownChange = (open: boolean): void => {
   }
 };
 
+const loadMoreForms = async (): Promise<void> => {
+  if (!formPagination.hasMore || formSelectorLoading.value) {
+    return;
+  }
+
+  formPagination.current += 1;
+  await loadDialogForms(false);
+};
+
 const handleFormScroll = (e: Event): void => {
   const { target } = e;
   if (!target) return;
@@ -624,15 +633,6 @@ const handleFormScroll = (e: Event): void => {
   ) {
     loadMoreForms();
   }
-};
-
-const loadMoreForms = async (): Promise<void> => {
-  if (!formPagination.hasMore || formSelectorLoading.value) {
-    return;
-  }
-
-  formPagination.current += 1;
-  await loadDialogForms(false);
 };
 
 // 表格变化处理
@@ -752,177 +752,6 @@ const handleCategoryChange = () => {
   loadTemplates();
 };
 
-const handleCreateTemplate = () => {
-  templateDialog.isEdit = false;
-  templateDialog.form = {
-    name: '',
-    description: '',
-    status: TemplateStatus.Enabled,
-    category_id: undefined,
-    process_id: 0,
-    form_design_id: 0,
-    tags: [],
-    default_values: {},
-  };
-  templateDialog.visible = true;
-  resetSelectors();
-};
-
-const handleEditTemplate = async (row: WorkorderTemplateItem) => {
-  templateDialog.isEdit = true;
-  loading.value = true;
-
-  try {
-    const res = await detailWorkorderTemplate({
-      id: row.id,
-    } as DetailWorkorderTemplateReq);
-    if (res) {
-      templateDialog.form = {
-        id: res.id,
-        name: res.name,
-        description: res.description,
-        status: res.status,
-        category_id: res.category_id,
-        process_id: res.process_id,
-        form_design_id: res.form_design_id,
-        tags: res.tags || [],
-        default_values: res.default_values || {},
-      };
-
-      templateDialog.visible = true;
-      detailDialog.visible = false;
-      await loadSelectorsForEdit(res);
-    }
-  } catch (error) {
-    if (shouldNotifyPageError(error)) message.error('获取模板详情失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleViewTemplate = async (row: WorkorderTemplateItem) => {
-  loading.value = true;
-
-  try {
-    const res = await detailWorkorderTemplate({
-      id: row.id,
-    } as DetailWorkorderTemplateReq);
-    if (res) {
-      detailDialog.template = res;
-      detailDialog.visible = true;
-    }
-  } catch (error) {
-    if (shouldNotifyPageError(error)) message.error('获取模板详情失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleCommand = async (command: string, row: WorkorderTemplateItem) => {
-  switch (command) {
-    case 'delete': {
-      confirmDelete(row);
-      break;
-    }
-  }
-};
-
-const confirmDelete = (template: WorkorderTemplateItem) => {
-  Modal.confirm({
-    title: '警告',
-    content: `确定要删除模板 "${template.name}" 吗？这个操作不可恢复！`,
-    okText: '删除',
-    okType: 'danger',
-    cancelText: '取消',
-    async onOk() {
-      try {
-        loading.value = true;
-        const params: DeleteWorkorderTemplateReq = {
-          id: template.id,
-        };
-
-        await deleteWorkorderTemplate(params);
-        message.success(`模板 "${template.name}" 已删除`);
-
-        if (templateList.value.length === 1 && currentPage.value > 1) {
-          currentPage.value = currentPage.value - 1;
-        }
-
-        loadTemplates();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(`删除模板失败: ${error.message || '未知错误'}`);
-      } finally {
-        loading.value = false;
-      }
-    },
-  });
-};
-
-const saveTemplate = async () => {
-  try {
-    if (!templateDialog.form.name.trim()) {
-      message.error('模板名称不能为空');
-      return;
-    }
-
-    if (!templateDialog.form.process_id) {
-      message.error('请选择关联流程');
-      return;
-    }
-
-    if (!templateDialog.form.form_design_id) {
-      message.error('请选择关联表单');
-      return;
-    }
-
-    loading.value = true;
-
-    if (templateDialog.isEdit && templateDialog.form.id) {
-      const updateData: UpdateWorkorderTemplateReq = {
-        id: templateDialog.form.id,
-        name: templateDialog.form.name,
-        description: templateDialog.form.description || '',
-        process_id: templateDialog.form.process_id,
-        form_design_id: templateDialog.form.form_design_id,
-        status: templateDialog.form.status,
-        category_id: templateDialog.form.category_id,
-        tags: templateDialog.form.tags,
-      };
-
-      await updateWorkorderTemplate(updateData);
-      message.success(`模板 "${templateDialog.form.name}" 已更新`);
-    } else {
-      const createData: CreateWorkorderTemplateReq = {
-        name: templateDialog.form.name,
-        description: templateDialog.form.description,
-        process_id: templateDialog.form.process_id,
-        form_design_id: templateDialog.form.form_design_id,
-        status: templateDialog.form.status,
-        category_id: templateDialog.form.category_id,
-        tags: templateDialog.form.tags,
-      };
-
-      await createWorkorderTemplate(createData);
-      message.success(`模板 "${templateDialog.form.name}" 已创建`);
-
-      currentPage.value = 1;
-    }
-
-    templateDialog.visible = false;
-    loadTemplates();
-  } catch (error: any) {
-    if (shouldNotifyPageError(error))
-      message.error(
-        templateDialog.isEdit
-          ? `更新模板失败: ${error.message || '未知错误'}`
-          : `创建模板失败: ${error.message || '未知错误'}`,
-      );
-  } finally {
-    loading.value = false;
-  }
-};
-
 // 重置选择器状态
 const resetSelectors = (): void => {
   // 重置分类选择器
@@ -965,19 +794,20 @@ const resetSelectors = (): void => {
   }
 };
 
-// 为编辑模式加载选择器信息
-const loadSelectorsForEdit = async (
-  templateData: WorkorderTemplateItem,
-): Promise<void> => {
+const handleCreateTemplate = () => {
+  templateDialog.isEdit = false;
+  templateDialog.form = {
+    name: '',
+    description: '',
+    status: TemplateStatus.Enabled,
+    category_id: undefined,
+    process_id: 0,
+    form_design_id: 0,
+    tags: [],
+    default_values: {},
+  };
+  templateDialog.visible = true;
   resetSelectors();
-
-  try {
-    await Promise.all([
-      loadCategoryForEdit(templateData),
-      loadProcessForEdit(templateData),
-      loadFormForEdit(templateData),
-    ]);
-  } catch {}
 };
 
 const loadCategoryForEdit = async (
@@ -1083,6 +913,176 @@ const loadFormForEdit = async (
       ];
     }
   } catch {}
+};
+
+// 为编辑模式加载选择器信息
+const loadSelectorsForEdit = async (
+  templateData: WorkorderTemplateItem,
+): Promise<void> => {
+  resetSelectors();
+
+  try {
+    await Promise.all([
+      loadCategoryForEdit(templateData),
+      loadProcessForEdit(templateData),
+      loadFormForEdit(templateData),
+    ]);
+  } catch {}
+};
+
+const handleEditTemplate = async (row: WorkorderTemplateItem) => {
+  templateDialog.isEdit = true;
+  loading.value = true;
+
+  try {
+    const res = await detailWorkorderTemplate({
+      id: row.id,
+    } as DetailWorkorderTemplateReq);
+    if (res) {
+      templateDialog.form = {
+        id: res.id,
+        name: res.name,
+        description: res.description,
+        status: res.status,
+        category_id: res.category_id,
+        process_id: res.process_id,
+        form_design_id: res.form_design_id,
+        tags: res.tags || [],
+        default_values: res.default_values || {},
+      };
+
+      templateDialog.visible = true;
+      detailDialog.visible = false;
+      await loadSelectorsForEdit(res);
+    }
+  } catch (error) {
+    if (shouldNotifyPageError(error)) message.error('获取模板详情失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleViewTemplate = async (row: WorkorderTemplateItem) => {
+  loading.value = true;
+
+  try {
+    const res = await detailWorkorderTemplate({
+      id: row.id,
+    } as DetailWorkorderTemplateReq);
+    if (res) {
+      detailDialog.template = res;
+      detailDialog.visible = true;
+    }
+  } catch (error) {
+    if (shouldNotifyPageError(error)) message.error('获取模板详情失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+const confirmDelete = (template: WorkorderTemplateItem) => {
+  Modal.confirm({
+    title: '警告',
+    content: `确定要删除模板 "${template.name}" 吗？这个操作不可恢复！`,
+    okText: '删除',
+    okType: 'danger',
+    cancelText: '取消',
+    async onOk() {
+      try {
+        loading.value = true;
+        const params: DeleteWorkorderTemplateReq = {
+          id: template.id,
+        };
+
+        await deleteWorkorderTemplate(params);
+        message.success(`模板 "${template.name}" 已删除`);
+
+        if (templateList.value.length === 1 && currentPage.value > 1) {
+          currentPage.value = currentPage.value - 1;
+        }
+
+        loadTemplates();
+      } catch (error: any) {
+        if (shouldNotifyPageError(error))
+          message.error(`删除模板失败: ${error.message || '未知错误'}`);
+      } finally {
+        loading.value = false;
+      }
+    },
+  });
+};
+
+const handleCommand = async (command: string, row: WorkorderTemplateItem) => {
+  switch (command) {
+    case 'delete': {
+      confirmDelete(row);
+      break;
+    }
+  }
+};
+
+const saveTemplate = async () => {
+  try {
+    if (!templateDialog.form.name.trim()) {
+      message.error('模板名称不能为空');
+      return;
+    }
+
+    if (!templateDialog.form.process_id) {
+      message.error('请选择关联流程');
+      return;
+    }
+
+    if (!templateDialog.form.form_design_id) {
+      message.error('请选择关联表单');
+      return;
+    }
+
+    loading.value = true;
+
+    if (templateDialog.isEdit && templateDialog.form.id) {
+      const updateData: UpdateWorkorderTemplateReq = {
+        id: templateDialog.form.id,
+        name: templateDialog.form.name,
+        description: templateDialog.form.description || '',
+        process_id: templateDialog.form.process_id,
+        form_design_id: templateDialog.form.form_design_id,
+        status: templateDialog.form.status,
+        category_id: templateDialog.form.category_id,
+        tags: templateDialog.form.tags,
+      };
+
+      await updateWorkorderTemplate(updateData);
+      message.success(`模板 "${templateDialog.form.name}" 已更新`);
+    } else {
+      const createData: CreateWorkorderTemplateReq = {
+        name: templateDialog.form.name,
+        description: templateDialog.form.description,
+        process_id: templateDialog.form.process_id,
+        form_design_id: templateDialog.form.form_design_id,
+        status: templateDialog.form.status,
+        category_id: templateDialog.form.category_id,
+        tags: templateDialog.form.tags,
+      };
+
+      await createWorkorderTemplate(createData);
+      message.success(`模板 "${templateDialog.form.name}" 已创建`);
+
+      currentPage.value = 1;
+    }
+
+    templateDialog.visible = false;
+    loadTemplates();
+  } catch (error: any) {
+    if (shouldNotifyPageError(error))
+      message.error(
+        templateDialog.isEdit
+          ? `更新模板失败: ${error.message || '未知错误'}`
+          : `创建模板失败: ${error.message || '未知错误'}`,
+      );
+  } finally {
+    loading.value = false;
+  }
 };
 
 // 初始化加载

@@ -287,52 +287,6 @@ const toggleTimeSort = () => {
   timeSortOrder.value = timeSortOrder.value === 'desc' ? 'asc' : 'desc';
 };
 
-const refreshTimeline = async () => {
-  if (timelineDialog.instanceId) {
-    await loadTimeline(timelineDialog.instanceId);
-  }
-};
-
-const getTimelineIcon = (action: string) => {
-  const iconMap: Record<string, any> = {
-    [TimelineAction.Create]: PlusOutlined,
-    [TimelineAction.Update]: EditOutlined,
-    [TimelineAction.Submit]: SendOutlined,
-    [TimelineAction.Assign]: UserOutlined,
-    [TimelineAction.Approve]: CheckCircleOutlined,
-    [TimelineAction.Reject]: ExclamationCircleOutlined,
-    [TimelineAction.Cancel]: StopOutlined,
-    [TimelineAction.Complete]: CheckCircleOutlined,
-    [TimelineAction.Return]: ExclamationCircleOutlined,
-    [TimelineAction.Comment]: MessageOutlined,
-    [TimelineAction.View]: FileTextOutlined,
-    [TimelineAction.Attach]: PlusOutlined,
-    [TimelineAction.Notify]: MessageOutlined,
-    [TimelineAction.Remind]: ExclamationCircleOutlined,
-  };
-  return iconMap[action] || EditOutlined;
-};
-
-const getActionText = (action: string): string => {
-  const textMap: Record<string, string> = {
-    [TimelineAction.Create]: '创建工单',
-    [TimelineAction.Update]: '更新工单',
-    [TimelineAction.Submit]: '提交工单',
-    [TimelineAction.Assign]: '分配处理人',
-    [TimelineAction.Approve]: '审批通过',
-    [TimelineAction.Reject]: '拒绝工单',
-    [TimelineAction.Cancel]: '取消工单',
-    [TimelineAction.Complete]: '完成工单',
-    [TimelineAction.Return]: '退回工单',
-    [TimelineAction.Comment]: '添加评论',
-    [TimelineAction.View]: '查看工单',
-    [TimelineAction.Attach]: '添加附件',
-    [TimelineAction.Notify]: '发送通知',
-    [TimelineAction.Remind]: '催办提醒',
-  };
-  return textMap[action] || action;
-};
-
 // 加载时间线
 const loadTimeline = async (instanceId: number) => {
   try {
@@ -382,6 +336,52 @@ const loadTimeline = async (instanceId: number) => {
   } finally {
     loading.value = false;
   }
+};
+
+const refreshTimeline = async () => {
+  if (timelineDialog.instanceId) {
+    await loadTimeline(timelineDialog.instanceId);
+  }
+};
+
+const getTimelineIcon = (action: string) => {
+  const iconMap: Record<string, any> = {
+    [TimelineAction.Create]: PlusOutlined,
+    [TimelineAction.Update]: EditOutlined,
+    [TimelineAction.Submit]: SendOutlined,
+    [TimelineAction.Assign]: UserOutlined,
+    [TimelineAction.Approve]: CheckCircleOutlined,
+    [TimelineAction.Reject]: ExclamationCircleOutlined,
+    [TimelineAction.Cancel]: StopOutlined,
+    [TimelineAction.Complete]: CheckCircleOutlined,
+    [TimelineAction.Return]: ExclamationCircleOutlined,
+    [TimelineAction.Comment]: MessageOutlined,
+    [TimelineAction.View]: FileTextOutlined,
+    [TimelineAction.Attach]: PlusOutlined,
+    [TimelineAction.Notify]: MessageOutlined,
+    [TimelineAction.Remind]: ExclamationCircleOutlined,
+  };
+  return iconMap[action] || EditOutlined;
+};
+
+const getActionText = (action: string): string => {
+  const textMap: Record<string, string> = {
+    [TimelineAction.Create]: '创建工单',
+    [TimelineAction.Update]: '更新工单',
+    [TimelineAction.Submit]: '提交工单',
+    [TimelineAction.Assign]: '分配处理人',
+    [TimelineAction.Approve]: '审批通过',
+    [TimelineAction.Reject]: '拒绝工单',
+    [TimelineAction.Cancel]: '取消工单',
+    [TimelineAction.Complete]: '完成工单',
+    [TimelineAction.Return]: '退回工单',
+    [TimelineAction.Comment]: '添加评论',
+    [TimelineAction.View]: '查看工单',
+    [TimelineAction.Attach]: '添加附件',
+    [TimelineAction.Notify]: '发送通知',
+    [TimelineAction.Remind]: '催办提醒',
+  };
+  return textMap[action] || action;
 };
 
 // 主要方法

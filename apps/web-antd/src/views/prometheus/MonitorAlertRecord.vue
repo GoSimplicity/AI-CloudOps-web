@@ -543,24 +543,6 @@ const handleViewRecord = async (record: MonitorRecordRule): Promise<void> => {
   }
 };
 
-// 菜单点击处理
-const handleMenuClick = (command: string, record: MonitorRecordRule): void => {
-  switch (command) {
-    case 'enable': {
-      handleEnableRecord(record);
-      break;
-    }
-    case 'disable': {
-      handleDisableRecord(record);
-      break;
-    }
-    case 'delete': {
-      handleDelete(record);
-      break;
-    }
-  }
-};
-
 // 每条记录的最新写入回执只更新原详情窗口，不触碰后来打开的记录。
 const setRecordEnabled = async (
   record: MonitorRecordRule,
@@ -623,9 +605,83 @@ const handleEnableRecord = (record: MonitorRecordRule): Promise<void> =>
 const handleDisableRecord = (record: MonitorRecordRule): Promise<void> =>
   setRecordEnabled(record, 2);
 
+// 处理删除记录规则
+const handleDelete = (record: MonitorRecordRule): void => {
+  if (disposed) return;
+  const id = record.id;
+  const owner = operationOwner();
+  if (!validRecordId(id) || !owner) {
+    message.warning('记录规则或账号标识无效，请刷新后重试');
+    return;
+  }
+  const inScope = () =>
+    !disposed && record.id === id && operationOwner() === owner;
+  let confirmationConsumed = false;
+  Modal.confirm({
+    title: '警告',
+    content: `确定要删除记录规则 "${record.name}" 吗？`,
+    okText: '删除',
+    okType: 'danger',
+    cancelText: '取消',
+    onOk: async () => {
+      if (confirmationConsumed || !inScope()) return;
+      confirmationConsumed = true;
+      const ticket = ++mutationRevision;
+      mutationVersions.set(id, ticket);
+      const isCurrent = () => inScope() && mutationVersions.get(id) === ticket;
+      try {
+        await deleteMonitorRecordRuleApi(id);
+        if (!isCurrent()) return;
+        message.success('记录规则已删除');
+        fetchRecordRules();
+      } catch (error: unknown) {
+        if (isCurrent() && shouldNotifyPageError(error)) {
+          message.error(
+            error instanceof Error && error.message
+              ? error.message
+              : '删除记录规则失败',
+          );
+        }
+      } finally {
+        if (mutationVersions.get(id) === ticket) {
+          mutationVersions.delete(id);
+        }
+      }
+    },
+  });
+};
+
+// 菜单点击处理
+const handleMenuClick = (command: string, record: MonitorRecordRule): void => {
+  switch (command) {
+    case 'enable': {
+      handleEnableRecord(record);
+      break;
+    }
+    case 'disable': {
+      handleDisableRecord(record);
+      break;
+    }
+    case 'delete': {
+      handleDelete(record);
+      break;
+    }
+  }
+};
+
 const closeDetailDialog = (): void => {
   detailRevision += 1;
   detailDialogVisible.value = false;
+};
+
+// 重置新增表单
+const resetAddForm = (): void => {
+  addForm.name = '';
+  addForm.pool_id = 0;
+  addForm.ip_address = '';
+  addForm.enable = 2 as 1 | 2;
+  addForm.expr = '';
+  addForm.labels = [];
 };
 
 // 模态框操作
@@ -677,16 +733,6 @@ const showEditModal = (record: MonitorRecordRule): void => {
 
 const closeEditModal = (): void => {
   if (isEditModalVisible.value) clearFormScope();
-};
-
-// 重置新增表单
-const resetAddForm = (): void => {
-  addForm.name = '';
-  addForm.pool_id = 0;
-  addForm.ip_address = '';
-  addForm.enable = 2 as 1 | 2;
-  addForm.expr = '';
-  addForm.labels = [];
 };
 
 // Validation and API callbacks only own the window that started them.
@@ -751,52 +797,6 @@ const submitRecordForm = async (mode: RecordFormMode): Promise<void> => {
 };
 const handleAdd = () => submitRecordForm('add');
 const handleUpdate = () => submitRecordForm('edit');
-
-// 处理删除记录规则
-const handleDelete = (record: MonitorRecordRule): void => {
-  if (disposed) return;
-  const id = record.id;
-  const owner = operationOwner();
-  if (!validRecordId(id) || !owner) {
-    message.warning('记录规则或账号标识无效，请刷新后重试');
-    return;
-  }
-  const inScope = () =>
-    !disposed && record.id === id && operationOwner() === owner;
-  let confirmationConsumed = false;
-  Modal.confirm({
-    title: '警告',
-    content: `确定要删除记录规则 "${record.name}" 吗？`,
-    okText: '删除',
-    okType: 'danger',
-    cancelText: '取消',
-    onOk: async () => {
-      if (confirmationConsumed || !inScope()) return;
-      confirmationConsumed = true;
-      const ticket = ++mutationRevision;
-      mutationVersions.set(id, ticket);
-      const isCurrent = () => inScope() && mutationVersions.get(id) === ticket;
-      try {
-        await deleteMonitorRecordRuleApi(id);
-        if (!isCurrent()) return;
-        message.success('记录规则已删除');
-        fetchRecordRules();
-      } catch (error: unknown) {
-        if (isCurrent() && shouldNotifyPageError(error)) {
-          message.error(
-            error instanceof Error && error.message
-              ? error.message
-              : '删除记录规则失败',
-          );
-        }
-      } finally {
-        if (mutationVersions.get(id) === ticket) {
-          mutationVersions.delete(id);
-        }
-      }
-    },
-  });
-};
 
 const validateExpression = async (mode: RecordFormMode) => {
   const context = captureFormScope(mode);

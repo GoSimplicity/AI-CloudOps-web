@@ -219,25 +219,6 @@ const getFieldDisplayName = (field: FormField) => {
   return `${typeText} - ${labelText} ${requiredText}`;
 };
 
-// 添加字段
-const addFieldType = (type: string) => {
-  if (saving.value) return;
-  importRequest++;
-  const fieldNumber = formSchema.fields.length + 1;
-  const field: FormField = {
-    name: generateFieldName(type),
-    type,
-    label: `${fieldTypeMap[type]}${fieldNumber}`,
-    required: 0,
-    placeholder: `请输入${fieldTypeMap[type]}`,
-    default: getDefaultValue(type),
-    options: needsOptions(type) ? ['选项1', '选项2'] : undefined,
-  };
-
-  formSchema.fields.push(field);
-  message.success(`已添加${fieldTypeMap[type]}字段`);
-};
-
 // 获取默认值
 const getDefaultValue = (type: string) => {
   switch (type) {
@@ -263,6 +244,25 @@ const needsOptions = (type: string) => {
     FormFieldType.Radio,
     FormFieldType.Checkbox,
   ].includes(type as any);
+};
+
+// 添加字段
+const addFieldType = (type: string) => {
+  if (saving.value) return;
+  importRequest++;
+  const fieldNumber = formSchema.fields.length + 1;
+  const field: FormField = {
+    name: generateFieldName(type),
+    type,
+    label: `${fieldTypeMap[type]}${fieldNumber}`,
+    required: 0,
+    placeholder: `请输入${fieldTypeMap[type]}`,
+    default: getDefaultValue(type),
+    options: needsOptions(type) ? ['选项1', '选项2'] : undefined,
+  };
+
+  formSchema.fields.push(field);
+  message.success(`已添加${fieldTypeMap[type]}字段`);
 };
 
 // 更新字段
@@ -307,19 +307,6 @@ const moveField = (index: number, direction: number) => {
   message.success('字段位置已调整');
 };
 
-// 切换预览模式
-const togglePreview = () => {
-  if (showDesigner.value && formSchema.fields.length === 0) {
-    message.warning('请先添加表单字段');
-    return;
-  }
-
-  showDesigner.value = !showDesigner.value;
-  if (!showDesigner.value) {
-    initFormData();
-  }
-};
-
 // 初始化表单数据
 const initFormData = () => {
   const data: Record<string, any> = {};
@@ -331,6 +318,19 @@ const initFormData = () => {
     }
   });
   formData.value = data;
+};
+
+// 切换预览模式
+const togglePreview = () => {
+  if (showDesigner.value && formSchema.fields.length === 0) {
+    message.warning('请先添加表单字段');
+    return;
+  }
+
+  showDesigner.value = !showDesigner.value;
+  if (!showDesigner.value) {
+    initFormData();
+  }
 };
 
 // 重置表单数据
@@ -361,6 +361,45 @@ const clearForm = () => {
       formData.value = {};
       importRequest++;
     },
+  });
+};
+
+const isValidSchema = (value: unknown): value is FormSchema => {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('fields' in value) ||
+    !Array.isArray(value.fields)
+  )
+    return false;
+  const names = new Set<string>();
+  return value.fields.every((field: FormField) => {
+    if (
+      !field ||
+      typeof field.name !== 'string' ||
+      !field.name.trim() ||
+      names.has(field.name) ||
+      typeof field.label !== 'string' ||
+      !field.label.trim() ||
+      !Object.values(FormFieldType).includes(
+        field.type as typeof FormFieldType.Text,
+      )
+    )
+      return false;
+    if (
+      field.options !== undefined &&
+      (!Array.isArray(field.options) ||
+        !field.options.every((option) => typeof option === 'string'))
+    )
+      return false;
+    if (
+      field.required !== undefined &&
+      field.required !== 0 &&
+      field.required !== 1
+    )
+      return false;
+    names.add(field.name);
+    return true;
   });
 };
 
@@ -406,6 +445,11 @@ const saveFormDesign = async () => {
   }
 };
 
+// 处理表单提交
+const handleSubmit = (_data: Record<string, any>) => {
+  message.success('预览校验通过，未创建工单');
+};
+
 // 提交表单
 const submitForm = async () => {
   if (dynamicFormRef.value) {
@@ -417,11 +461,6 @@ const submitForm = async () => {
         message.error('表单验证失败，请检查输入');
     }
   }
-};
-
-// 处理表单提交
-const handleSubmit = (_data: Record<string, any>) => {
-  message.success('预览校验通过，未创建工单');
 };
 
 // 切换JSON查看器
@@ -464,45 +503,6 @@ const exportConfig = () => {
   link.click();
   URL.revokeObjectURL(url);
   message.success('表单设计导出成功');
-};
-
-const isValidSchema = (value: unknown): value is FormSchema => {
-  if (
-    !value ||
-    typeof value !== 'object' ||
-    !('fields' in value) ||
-    !Array.isArray(value.fields)
-  )
-    return false;
-  const names = new Set<string>();
-  return value.fields.every((field: FormField) => {
-    if (
-      !field ||
-      typeof field.name !== 'string' ||
-      !field.name.trim() ||
-      names.has(field.name) ||
-      typeof field.label !== 'string' ||
-      !field.label.trim() ||
-      !Object.values(FormFieldType).includes(
-        field.type as typeof FormFieldType.Text,
-      )
-    )
-      return false;
-    if (
-      field.options !== undefined &&
-      (!Array.isArray(field.options) ||
-        !field.options.every((option) => typeof option === 'string'))
-    )
-      return false;
-    if (
-      field.required !== undefined &&
-      field.required !== 0 &&
-      field.required !== 1
-    )
-      return false;
-    names.add(field.name);
-    return true;
-  });
 };
 
 // 导入配置

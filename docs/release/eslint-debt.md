@@ -647,3 +647,12 @@ API管理使用明确create/edit模式和响应式窗口key，真实必需Form�
 - Pod和流式认证/提示、WebSocket客户端/URL、终端UTF-8分片六份现有测试72项及应用类型检查通过。该文件定向lint249→244，no-use-before-define 5→0，各规则无新增，其余244条既有债保留；没有新增镜像测试或重跑全仓。
 - 该阶段明确改变两个私有入口的声明种类以表达真实递归，不把const-arrow批量替换成function，也不宣称消除了重连逻辑循环。没有真实Pod、终端或集群操作，未上线。
 - 完整边界及指令审计1127文件通过，5类保护规则0、parser/tool失败0、补审41文件；当前普通源码lint仍9895 errors/5 warnings，不代表全lint通过。
+
+## 阶段六十四：SFC纯函数创建区间的依赖顺序
+
+22个SFC仅在连续纯const-arrow创建区间内搬移73段完整声明。保留声明kind、名称、函数体、script作用域、捕获binding和所有其它statement原文顺序；每个箭头函数前的固定statement序号保持，未跨macro/watch/computed/call或数据初始化边界，不混入其它保留候选。
+
+- 独立核对实际磁盘源码与已审提案相同；script外模板、style及其它原文字节保持。各自真实compileScript的binding分类相同，在同一文件ID和实际scoped配置下，完整生产DOM/SSR render输出逐字一致。
+- 22文件定向lint总诊断1635→1552，no-use-before-define 113→30，逐文件各规则无新增；其余1552条诊断保留，不代表全仓lint已通过，也不把本批83条当作剩余221条全部完成。
+- 全Web现有165文件3609项测试、应用类型检查及单次build:antd通过（11任务成功，其中10项复用缓存）。没有新增镜像测试或改动测试断言、规则及ignore。
+- 宏、watch与调用初始化等更复杂边界及非本批helper未变，没有把所有剩余声明换成function或移动const数据初始化。没有真实接口、模型、集群或权限写入，未上线。

@@ -413,6 +413,18 @@ const handleResetFilters = (): void => {
   message.success('过滤条件已重置');
 };
 
+// 重置表单对话框
+const resetFormDialog = (): void => {
+  formDialog.form = {
+    id: undefined,
+    name: '',
+    parent_id: undefined,
+    description: '',
+    status: TreeNodeStatus.ACTIVE,
+    is_leaf: 1,
+  };
+};
+
 // 节点操作事件处理
 const handleCreateNode = (): void => {
   formDialog.isEdit = false;
@@ -431,6 +443,48 @@ const handleEditNode = (record: TreeNodeWithRelations): void => {
     is_leaf: record.is_leaf,
   };
   formDialogVisible.value = true;
+};
+
+const handleMoveNodeDialog = (record: TreeNodeWithRelations): void => {
+  moveDialog.nodeId = record.id;
+  moveDialog.newParentId = record.parent_id || undefined;
+  moveDialogVisible.value = true;
+};
+
+const handleCreateChildNode = (record: TreeNodeWithRelations): void => {
+  formDialog.isEdit = false;
+  resetFormDialog();
+  formDialog.form.parent_id = record.id;
+  formDialogVisible.value = true;
+};
+
+const handleBindResource = (): void => {
+  if (!selectedNode.value) return;
+  selectedResourceIds.value = [];
+  loadAvailableResources();
+  bindResourceDialogVisible.value = true;
+};
+
+const confirmDelete = (record: TreeNode): void => {
+  Modal.confirm({
+    title: '警告',
+    content: `确定要删除节点 "${record.name}" 吗？删除后将无法恢复！`,
+    okText: '删除',
+    okButtonProps: { danger: true },
+    cancelText: '取消',
+    async onOk() {
+      try {
+        await deleteNode(record.id);
+        message.success(`节点 "${record.name}" 已删除`);
+        selectedNode.value = null;
+        selectedKeys.value = [];
+        loadTreeData();
+      } catch (error: any) {
+        if (shouldNotifyPageError(error))
+          message.error(error.message || '删除节点失败');
+      }
+    },
+  });
 };
 
 const handleMenuClick = async (
@@ -460,19 +514,6 @@ const handleMenuClick = async (
   }
 };
 
-const handleMoveNodeDialog = (record: TreeNodeWithRelations): void => {
-  moveDialog.nodeId = record.id;
-  moveDialog.newParentId = record.parent_id || undefined;
-  moveDialogVisible.value = true;
-};
-
-const handleCreateChildNode = (record: TreeNodeWithRelations): void => {
-  formDialog.isEdit = false;
-  resetFormDialog();
-  formDialog.form.parent_id = record.id;
-  formDialogVisible.value = true;
-};
-
 const handleAddMember = (memberType: TreeNodeMemberType): void => {
   if (!selectedNode.value) return;
   addMemberDialog.nodeId = selectedNode.value.id;
@@ -486,13 +527,6 @@ const handleAddMember = (memberType: TreeNodeMemberType): void => {
   } else {
     addMemberDialogVisible.value = true;
   }
-};
-
-const handleBindResource = (): void => {
-  if (!selectedNode.value) return;
-  selectedResourceIds.value = [];
-  loadAvailableResources();
-  bindResourceDialogVisible.value = true;
 };
 
 const handleUnbindResource = async (resourceId: number): Promise<void> => {
@@ -534,28 +568,6 @@ const removeMember = async (
     if (shouldNotifyPageError(error))
       message.error(error.message || '移除成员失败');
   }
-};
-
-const confirmDelete = (record: TreeNode): void => {
-  Modal.confirm({
-    title: '警告',
-    content: `确定要删除节点 "${record.name}" 吗？删除后将无法恢复！`,
-    okText: '删除',
-    okButtonProps: { danger: true },
-    cancelText: '取消',
-    async onOk() {
-      try {
-        await deleteNode(record.id);
-        message.success(`节点 "${record.name}" 已删除`);
-        selectedNode.value = null;
-        selectedKeys.value = [];
-        loadTreeData();
-      } catch (error: any) {
-        if (shouldNotifyPageError(error))
-          message.error(error.message || '删除节点失败');
-      }
-    },
-  });
 };
 
 // 对话框确认事件处理
@@ -696,18 +708,6 @@ const closeAddMemberDialog = (): void => {
 
 const closeBindResourceDialog = (): void => {
   bindResourceDialogVisible.value = false;
-};
-
-// 重置表单对话框
-const resetFormDialog = (): void => {
-  formDialog.form = {
-    id: undefined,
-    name: '',
-    parent_id: undefined,
-    description: '',
-    status: TreeNodeStatus.ACTIVE,
-    is_leaf: 1,
-  };
 };
 
 // 监听选中节点变化

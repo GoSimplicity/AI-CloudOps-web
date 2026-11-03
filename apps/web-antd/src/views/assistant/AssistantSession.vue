@@ -123,6 +123,24 @@ const formatTime = (timestamp?: string) => {
   return new Date(timestamp).toLocaleString();
 };
 
+// 浏览器只缓存索引；对话与待核对问题只从已授权的服务端读取。
+const sessionMetadata = (
+  session: Partial<SessionInfoResponse>,
+): SessionInfoResponse => ({
+  session_id: session.session_id || '',
+  created_time: session.created_time || '',
+  last_activity: session.last_activity || '',
+  message_count: session.message_count || 0,
+  mode: session.mode || 1,
+  status: session.status || '',
+  revision: session.revision,
+});
+
+// 保存历史记录到本地存储
+const saveHistoryToStorage = () => {
+  accountScope.write('history', sessionHistory.value.map(sessionMetadata));
+};
+
 // 搜索会话
 const searchSession = async () => {
   if (!searchSessionId.value.trim()) {
@@ -270,24 +288,6 @@ const createNewSession = () => {
 const showStatistics = () => {
   showStats.value = !showStats.value;
 };
-
-// 保存历史记录到本地存储
-const saveHistoryToStorage = () => {
-  accountScope.write('history', sessionHistory.value.map(sessionMetadata));
-};
-
-// 浏览器只缓存索引；对话与待核对问题只从已授权的服务端读取。
-const sessionMetadata = (
-  session: Partial<SessionInfoResponse>,
-): SessionInfoResponse => ({
-  session_id: session.session_id || '',
-  created_time: session.created_time || '',
-  last_activity: session.last_activity || '',
-  message_count: session.message_count || 0,
-  mode: session.mode || 1,
-  status: session.status || '',
-  revision: session.revision,
-});
 
 // 从本地存储加载历史记录
 const loadHistoryFromStorage = () => {

@@ -309,6 +309,13 @@ const handleUserScroll = (e: Event) => {
   }
 };
 
+const selectStepById = (stepId: string): void => {
+  const index = processSteps.value.findIndex((s) => s.id === stepId);
+  if (index !== -1) {
+    selectedStepIndex.value = index;
+  }
+};
+
 const addProcessStep = (): void => {
   let tempId: string;
   do {
@@ -345,13 +352,6 @@ const removeStepById = (stepIdToRemove: string): void => {
     (step) => step.id === selectedId,
   );
   selectedStepIndex.value = selectedIndex === -1 ? null : selectedIndex;
-};
-
-const selectStepById = (stepId: string): void => {
-  const index = processSteps.value.findIndex((s) => s.id === stepId);
-  if (index !== -1) {
-    selectedStepIndex.value = index;
-  }
 };
 
 const previewFlow = (): void => {

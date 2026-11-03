@@ -208,99 +208,8 @@ const onPredictionTypeChange = () => {
   // 清空之前的预测结果
   predictionResult.value = null;
 };
-
-const startAnalysis = async () => {
-  if (!scope.owner.value || analyzing.value) return;
-  if (!isFormValid.value) {
-    message.warning(`请填写有效的${getCurrentValueLabel()}值`);
-    return;
-  }
-
-  const ticket = analysisLane.begin();
-  analyzing.value = true;
-  predictionResult.value = null;
-  predictionError.value = '';
-  disposeCharts();
-  try {
-    let response: PredictionResponse;
-
-    const baseRequest = {
-      prediction_hours: formData.predictionHours,
-      granularity: formData.granularity,
-      include_confidence: formData.includeConfidence,
-      include_anomaly_detection: formData.includeAnomalyDetection,
-      target_utilization: formData.targetUtilization / 100, // 将百分比转换为小数
-      sensitivity: formData.sensitivity,
-      enable_ai_insights: formData.enableAiInsights,
-    };
-
-    switch (formData.predictionType) {
-      case 'qps': {
-        response = await predictQps({
-          ...baseRequest,
-          current_qps: formData.currentValue,
-        } as QpsPredictionRequest);
-        break;
-      }
-      case 'cpu': {
-        response = await predictCpu({
-          ...baseRequest,
-          current_cpu_percent: formData.currentValue,
-        } as CpuPredictionRequest);
-        break;
-      }
-      case 'memory': {
-        response = await predictMemory({
-          ...baseRequest,
-          current_memory_percent: formData.currentValue,
-        } as MemoryPredictionRequest);
-        break;
-      }
-      case 'disk': {
-        response = await predictDisk({
-          ...baseRequest,
-          current_disk_percent: formData.currentValue,
-        } as DiskPredictionRequest);
-        break;
-      }
-      default: {
-        throw new Error('不支持的预测类型');
-      }
-    }
-
-    if (!analysisLane.current(ticket)) return;
-    forecastPoints(response);
-    predictionResult.value = response;
-
-    await nextTick();
-    if (!analysisLane.current(ticket)) return;
-    initCharts();
-    if (
-      response.fallback_mode ||
-      response.method === 'rule_based' ||
-      response.ai_fallback_reason ||
-      (formData.enableAiInsights && response.ai_enhanced !== true) ||
-      response.analysis_failures?.length
-    )
-      message.warning('预测已返回，部分功能降级，请查看来源和状态');
-    else message.success('预测分析完成');
-  } catch (error) {
-    if (!analysisLane.current(ticket)) return;
-    predictionResult.value = null;
-    disposeCharts();
-    predictionError.value =
-      error instanceof Error ? error.message : '预测分析失败，请核对输入后重试';
-  } finally {
-    if (analysisLane.current(ticket)) analyzing.value = false;
-  }
-};
-
-const initCharts = () => {
-  initTrendChart();
-  if (formData.includeConfidence) {
-    initConfidenceChart();
-  }
-};
+const formatTimeForChart = (timestamp: string | Date) =>
+  formatPredictionTime(timestamp, true);
 
 const initTrendChart = () => {
   if (!trendChartRef.value || !predictionResult.value) return;
@@ -437,6 +346,99 @@ const initConfidenceChart = () => {
   confidenceChart.setOption(option);
 };
 
+const initCharts = () => {
+  initTrendChart();
+  if (formData.includeConfidence) {
+    initConfidenceChart();
+  }
+};
+
+const startAnalysis = async () => {
+  if (!scope.owner.value || analyzing.value) return;
+  if (!isFormValid.value) {
+    message.warning(`请填写有效的${getCurrentValueLabel()}值`);
+    return;
+  }
+
+  const ticket = analysisLane.begin();
+  analyzing.value = true;
+  predictionResult.value = null;
+  predictionError.value = '';
+  disposeCharts();
+  try {
+    let response: PredictionResponse;
+
+    const baseRequest = {
+      prediction_hours: formData.predictionHours,
+      granularity: formData.granularity,
+      include_confidence: formData.includeConfidence,
+      include_anomaly_detection: formData.includeAnomalyDetection,
+      target_utilization: formData.targetUtilization / 100, // 将百分比转换为小数
+      sensitivity: formData.sensitivity,
+      enable_ai_insights: formData.enableAiInsights,
+    };
+
+    switch (formData.predictionType) {
+      case 'qps': {
+        response = await predictQps({
+          ...baseRequest,
+          current_qps: formData.currentValue,
+        } as QpsPredictionRequest);
+        break;
+      }
+      case 'cpu': {
+        response = await predictCpu({
+          ...baseRequest,
+          current_cpu_percent: formData.currentValue,
+        } as CpuPredictionRequest);
+        break;
+      }
+      case 'memory': {
+        response = await predictMemory({
+          ...baseRequest,
+          current_memory_percent: formData.currentValue,
+        } as MemoryPredictionRequest);
+        break;
+      }
+      case 'disk': {
+        response = await predictDisk({
+          ...baseRequest,
+          current_disk_percent: formData.currentValue,
+        } as DiskPredictionRequest);
+        break;
+      }
+      default: {
+        throw new Error('不支持的预测类型');
+      }
+    }
+
+    if (!analysisLane.current(ticket)) return;
+    forecastPoints(response);
+    predictionResult.value = response;
+
+    await nextTick();
+    if (!analysisLane.current(ticket)) return;
+    initCharts();
+    if (
+      response.fallback_mode ||
+      response.method === 'rule_based' ||
+      response.ai_fallback_reason ||
+      (formData.enableAiInsights && response.ai_enhanced !== true) ||
+      response.analysis_failures?.length
+    )
+      message.warning('预测已返回，部分功能降级，请查看来源和状态');
+    else message.success('预测分析完成');
+  } catch (error) {
+    if (!analysisLane.current(ticket)) return;
+    predictionResult.value = null;
+    disposeCharts();
+    predictionError.value =
+      error instanceof Error ? error.message : '预测分析失败，请核对输入后重试';
+  } finally {
+    if (analysisLane.current(ticket)) analyzing.value = false;
+  }
+};
+
 const onChartTabChange = (key: string) => {
   activeChartTab.value = key;
   const result = predictionResult.value;
@@ -526,8 +528,6 @@ const getActionIcon = (action: string) => {
 
 // 时间转换工具函数：UTC转北京时间
 const formatTime = (timestamp: string) => formatPredictionTime(timestamp);
-const formatTimeForChart = (timestamp: string | Date) =>
-  formatPredictionTime(timestamp, true);
 
 const resetForm = () => {
   analysisLane.invalidate();

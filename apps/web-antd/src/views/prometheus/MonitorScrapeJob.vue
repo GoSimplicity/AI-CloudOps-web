@@ -844,19 +844,6 @@ const handleViewScrapeJob = async (record: MonitorScrapeJob): Promise<void> => {
   }
 };
 
-const handleMenuClick = (command: string, record: MonitorScrapeJob): void => {
-  switch (command) {
-    case 'toggle': {
-      toggleJobStatus(record);
-      break;
-    }
-    case 'delete': {
-      confirmDelete(record);
-      break;
-    }
-  }
-};
-
 const toggleJobStatus = async (record: MonitorScrapeJob): Promise<void> => {
   const ticket = recordTicket(record);
   if (!ticket || !permission('update') || statusTickets.has(ticket.id)) return;
@@ -945,6 +932,19 @@ const confirmDelete = (record: MonitorScrapeJob): void => {
       }
     },
   });
+};
+
+const handleMenuClick = (command: string, record: MonitorScrapeJob): void => {
+  switch (command) {
+    case 'toggle': {
+      toggleJobStatus(record);
+      break;
+    }
+    case 'delete': {
+      confirmDelete(record);
+      break;
+    }
+  }
 };
 
 // 表单保存

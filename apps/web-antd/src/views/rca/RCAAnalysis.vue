@@ -194,147 +194,17 @@ const filterMetrics = (input: string, option: any) => {
   return option.label.toLowerCase().includes(input.toLowerCase());
 };
 
-// 开始分析
-const startAnalysis = async () => {
-  if (!scope.owner.value || analyzing.value) return;
-  if (!isFormValid.value) {
-    message.warning('请填写命名空间');
-    return;
-  }
+// 时间格式化
+const formatShortTime = (timestamp?: string) => {
+  if (!timestamp) return '-';
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) return timestamp;
 
-  // 验证命名空间格式
-  const namespace = formData.namespace.trim();
-  if (!/^[a-z0-9-]+$/.test(namespace)) {
-    message.error('命名空间格式不正确，只能包含小写字母、数字和连字符');
-    return;
-  }
-
-  const ticket = analysisLane.begin();
-  analyzing.value = true;
-  analysisError.value = '';
-  analysisResult.value = null;
-  disposeCharts();
-
-  try {
-    const request: RCAAnalyzeRequest = {
-      namespace,
-      time_window_hours: formData.timeWindowHours,
-      metrics: formData.metrics.length > 0 ? [...formData.metrics] : undefined,
-    };
-
-    const response = await analyzeRootCause(request);
-    if (!analysisLane.current(ticket)) return;
-    analysisResult.value = response;
-
-    await nextTick();
-    if (!analysisLane.current(ticket)) return;
-    if (
-      (response.status === 'completed' || response.status === 'degraded') &&
-      activeResultTab.value === 'anomalies'
-    ) {
-      initCharts();
-    }
-
-    if (response.status === 'completed')
-      message.success('根因分析已完成，请按实际证据评估结果');
-    else if (response.status === 'degraded')
-      message.warning('根因分析已降级，请检查采集状态');
-    else if (response.status === 'failed')
-      message.error('根因分析失败，请检查采集状态');
-    else message.warning('根因分析状态未知，请检查采集状态');
-
-    // 如果有根因结果，显示摘要
-    if (
-      (response.status === 'completed' || response.status === 'degraded') &&
-      response?.root_causes?.length > 0
-    ) {
-      const criticalCount = response.root_causes.filter(
-        (cause) => cause.confidence > 0.7,
-      ).length;
-      if (criticalCount > 0) {
-        message.warning(`发现 ${criticalCount} 个高置信度根因，请及时查看`);
-      }
-    }
-  } catch (error) {
-    if (!analysisLane.current(ticket)) return;
-    analysisResult.value = null;
-    disposeCharts();
-    analysisError.value =
-      error instanceof Error ? error.message : '根因分析失败，请核对参数后重试';
-  } finally {
-    if (analysisLane.current(ticket)) analyzing.value = false;
-  }
-};
-
-// 获取统计数据
-const getCriticalEventsCount = () => {
-  return analysisResult.value?.anomalies?.events?.critical_events?.length || 0;
-};
-
-const getEventClustersCount = () => {
-  return Object.keys(
-    analysisResult.value?.anomalies?.events?.event_clusters || {},
-  ).length;
-};
-
-const getErrorTypesCount = () => {
-  return Object.keys(analysisResult.value?.anomalies?.logs?.error_types || {})
-    .length;
-};
-
-const getTotalErrorCount = () => {
-  const errorFreq =
-    analysisResult.value?.anomalies?.logs?.error_frequency || {};
-  return Object.values(errorFreq).reduce(
-    (sum: number, count: any) => sum + (count as number),
-    0,
-  );
-};
-
-const hasCorrelations = () => {
-  return (
-    analysisResult.value?.correlations &&
-    analysisResult.value.correlations.length > 0
-  );
-};
-
-const hasErrorFrequency = () => {
-  const freq = analysisResult.value?.anomalies?.logs?.error_frequency;
-  return freq && Object.keys(freq).length > 0;
-};
-
-// 获取关键事件表格数据
-const getCriticalEventsTableData = () => {
-  const events = analysisResult.value?.anomalies?.events?.critical_events || [];
-  return events.map((event: any, index: number) => ({
-    key: index,
-    ...event,
-  }));
-};
-
-// 获取错误频率百分比
-const getErrorFrequencyPercent = (count: number) => {
-  const values = Object.values(
-    analysisResult.value?.anomalies?.logs?.error_frequency || {},
-  );
-  const maxCount = Math.max(...values.map((v) => v as number));
-  return maxCount > 0 ? (count / maxCount) * 100 : 0;
-};
-
-// 获取错误频率颜色
-const getErrorFrequencyColor = (count: number) => {
-  const percent = getErrorFrequencyPercent(count);
-  if (percent > 80) return '#ff4d4f';
-  if (percent > 50) return '#faad14';
-  return '#1890ff';
-};
-
-// 初始化图表
-const initCharts = () => {
-  nextTick(() => {
-    initEventsChart();
-    initClustersChart();
-    initErrorLogsChart();
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 };
 
@@ -507,6 +377,150 @@ const initErrorLogsChart = () => {
   errorLogsChart.setOption(option);
 };
 
+// 初始化图表
+const initCharts = () => {
+  nextTick(() => {
+    initEventsChart();
+    initClustersChart();
+    initErrorLogsChart();
+  });
+};
+
+// 开始分析
+const startAnalysis = async () => {
+  if (!scope.owner.value || analyzing.value) return;
+  if (!isFormValid.value) {
+    message.warning('请填写命名空间');
+    return;
+  }
+
+  // 验证命名空间格式
+  const namespace = formData.namespace.trim();
+  if (!/^[a-z0-9-]+$/.test(namespace)) {
+    message.error('命名空间格式不正确，只能包含小写字母、数字和连字符');
+    return;
+  }
+
+  const ticket = analysisLane.begin();
+  analyzing.value = true;
+  analysisError.value = '';
+  analysisResult.value = null;
+  disposeCharts();
+
+  try {
+    const request: RCAAnalyzeRequest = {
+      namespace,
+      time_window_hours: formData.timeWindowHours,
+      metrics: formData.metrics.length > 0 ? [...formData.metrics] : undefined,
+    };
+
+    const response = await analyzeRootCause(request);
+    if (!analysisLane.current(ticket)) return;
+    analysisResult.value = response;
+
+    await nextTick();
+    if (!analysisLane.current(ticket)) return;
+    if (
+      (response.status === 'completed' || response.status === 'degraded') &&
+      activeResultTab.value === 'anomalies'
+    ) {
+      initCharts();
+    }
+
+    if (response.status === 'completed')
+      message.success('根因分析已完成，请按实际证据评估结果');
+    else if (response.status === 'degraded')
+      message.warning('根因分析已降级，请检查采集状态');
+    else if (response.status === 'failed')
+      message.error('根因分析失败，请检查采集状态');
+    else message.warning('根因分析状态未知，请检查采集状态');
+
+    // 如果有根因结果，显示摘要
+    if (
+      (response.status === 'completed' || response.status === 'degraded') &&
+      response?.root_causes?.length > 0
+    ) {
+      const criticalCount = response.root_causes.filter(
+        (cause) => cause.confidence > 0.7,
+      ).length;
+      if (criticalCount > 0) {
+        message.warning(`发现 ${criticalCount} 个高置信度根因，请及时查看`);
+      }
+    }
+  } catch (error) {
+    if (!analysisLane.current(ticket)) return;
+    analysisResult.value = null;
+    disposeCharts();
+    analysisError.value =
+      error instanceof Error ? error.message : '根因分析失败，请核对参数后重试';
+  } finally {
+    if (analysisLane.current(ticket)) analyzing.value = false;
+  }
+};
+
+// 获取统计数据
+const getCriticalEventsCount = () => {
+  return analysisResult.value?.anomalies?.events?.critical_events?.length || 0;
+};
+
+const getEventClustersCount = () => {
+  return Object.keys(
+    analysisResult.value?.anomalies?.events?.event_clusters || {},
+  ).length;
+};
+
+const getErrorTypesCount = () => {
+  return Object.keys(analysisResult.value?.anomalies?.logs?.error_types || {})
+    .length;
+};
+
+const getTotalErrorCount = () => {
+  const errorFreq =
+    analysisResult.value?.anomalies?.logs?.error_frequency || {};
+  return Object.values(errorFreq).reduce(
+    (sum: number, count: any) => sum + (count as number),
+    0,
+  );
+};
+
+const hasCorrelations = () => {
+  return (
+    analysisResult.value?.correlations &&
+    analysisResult.value.correlations.length > 0
+  );
+};
+
+const hasErrorFrequency = () => {
+  const freq = analysisResult.value?.anomalies?.logs?.error_frequency;
+  return freq && Object.keys(freq).length > 0;
+};
+
+// 获取关键事件表格数据
+const getCriticalEventsTableData = () => {
+  const events = analysisResult.value?.anomalies?.events?.critical_events || [];
+  return events.map((event: any, index: number) => ({
+    key: index,
+    ...event,
+  }));
+};
+
+// 获取错误频率百分比
+const getErrorFrequencyPercent = (count: number) => {
+  const values = Object.values(
+    analysisResult.value?.anomalies?.logs?.error_frequency || {},
+  );
+  const maxCount = Math.max(...values.map((v) => v as number));
+  return maxCount > 0 ? (count / maxCount) * 100 : 0;
+};
+
+// 获取错误频率颜色
+const getErrorFrequencyColor = (count: number) => {
+  const percent = getErrorFrequencyPercent(count);
+  if (percent > 80) return '#ff4d4f';
+  if (percent > 50) return '#faad14';
+  return '#1890ff';
+};
+
 // 标签页切换
 const onResultTabChange = async (key: string) => {
   const result = analysisResult.value;
@@ -536,20 +550,6 @@ const getSeverityColor = (severity: string) => {
     info: '#52c41a',
   };
   return severityMap[severity] || '#d9d9d9';
-};
-
-// 时间格式化
-const formatShortTime = (timestamp?: string) => {
-  if (!timestamp) return '-';
-  const date = new Date(timestamp);
-  if (isNaN(date.getTime())) return timestamp;
-
-  return date.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 };
 
 // 处理窗口调整

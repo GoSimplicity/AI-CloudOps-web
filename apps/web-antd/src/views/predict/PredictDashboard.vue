@@ -208,6 +208,131 @@ function clearPredictions() {
   utilizationChart?.clear();
 }
 
+const updateMetricData = (type: string, response: PredictionResponse) => {
+  const metric = metricsData.value.find((m) => m.type === type);
+  if (metric) {
+    metric.currentValue = response.current_value;
+
+    // 计算趋势
+    const predicted = response.predicted_data;
+    if (predicted && predicted.length > 0) {
+      const lastPoint = predicted[predicted.length - 1];
+      if (lastPoint) {
+        const lastValue = lastPoint.predicted_value;
+        metric.trend =
+          response.current_value === 0
+            ? lastValue === 0
+              ? 0
+              : null
+            : ((lastValue - response.current_value) / response.current_value) *
+              100;
+      }
+    }
+  }
+
+  // 更新扩缩容建议
+  if (response.scaling_recommendations) {
+    scalingRecommendations.value.push(
+      ...response.scaling_recommendations.map((item) => ({
+        ...item,
+        source: metric?.name || type,
+      })),
+    );
+  }
+
+  if (response.ai_enhanced === true && response.ai_insights) {
+    aiInsights.value.push(
+      ...response.ai_insights.map(
+        (insight) => `${metric?.name || type}：${insight}`,
+      ),
+    );
+  }
+};
+
+const getSeriesColor = (index: number) => {
+  const colors = ['#1890ff', '#ff4d4f', '#faad14', '#52c41a'];
+  return colors[index % colors.length];
+};
+
+const updateTrendChart = () => {
+  if (!trendChart) return;
+  const data = alignForecasts(predictionCache.value);
+  trendChart.setOption(
+    {
+      textStyle: { color: chartColors().text },
+      xAxis: {
+        type: 'category',
+        data: data.labels,
+        axisLine: { lineStyle: { color: chartColors().border } },
+      },
+      yAxis: [
+        {
+          type: 'value',
+          name: 'QPS (/s)',
+          min: 0,
+          axisLabel: { color: chartColors().muted },
+          splitLine: { lineStyle: { color: chartColors().border } },
+        },
+        {
+          type: 'value',
+          name: '使用率 (%)',
+          min: 0,
+          max: 100,
+          axisLabel: { color: chartColors().muted },
+          splitLine: { show: false },
+        },
+      ],
+      series: data.series.map((series, index) => ({
+        ...series,
+        type: 'line',
+        connectNulls: false,
+        smooth: false,
+        areaStyle: chartType.value === 'area' ? {} : undefined,
+        lineStyle: { width: 2 },
+        itemStyle: { color: getSeriesColor(index) },
+      })),
+    },
+    { replaceMerge: ['series', 'yAxis'] },
+  );
+};
+
+const updateUtilizationChart = () => {
+  if (!utilizationChart) return;
+
+  utilizationChart.setOption(
+    {
+      tooltip: {
+        trigger: 'axis',
+        valueFormatter: (value: number) => `${value}%`,
+      },
+      textStyle: { color: chartColors().text },
+      grid: { left: 48, right: 24, top: 24, bottom: 32 },
+      xAxis: {
+        type: 'value',
+        min: 0,
+        max: 100,
+        axisLabel: { formatter: '{value}%' },
+      },
+      yAxis: { type: 'category', data: ['CPU', '内存', '磁盘'] },
+      series: [
+        {
+          name: '使用率',
+          type: 'bar',
+          data: ['cpu', 'memory', 'disk'].map(
+            (key) => predictionCache.value[key]?.current_value ?? null,
+          ),
+        },
+      ],
+    },
+    true,
+  );
+};
+
+const updateCharts = () => {
+  updateTrendChart();
+  updateUtilizationChart();
+};
+
 // 方法定义
 const refreshAllPredictions = async () => {
   if (!scope.owner.value || loading.value) return;
@@ -298,47 +423,6 @@ const refreshAllPredictions = async () => {
   }
 };
 
-const updateMetricData = (type: string, response: PredictionResponse) => {
-  const metric = metricsData.value.find((m) => m.type === type);
-  if (metric) {
-    metric.currentValue = response.current_value;
-
-    // 计算趋势
-    const predicted = response.predicted_data;
-    if (predicted && predicted.length > 0) {
-      const lastPoint = predicted[predicted.length - 1];
-      if (lastPoint) {
-        const lastValue = lastPoint.predicted_value;
-        metric.trend =
-          response.current_value === 0
-            ? lastValue === 0
-              ? 0
-              : null
-            : ((lastValue - response.current_value) / response.current_value) *
-              100;
-      }
-    }
-  }
-
-  // 更新扩缩容建议
-  if (response.scaling_recommendations) {
-    scalingRecommendations.value.push(
-      ...response.scaling_recommendations.map((item) => ({
-        ...item,
-        source: metric?.name || type,
-      })),
-    );
-  }
-
-  if (response.ai_enhanced === true && response.ai_insights) {
-    aiInsights.value.push(
-      ...response.ai_insights.map(
-        (insight) => `${metric?.name || type}：${insight}`,
-      ),
-    );
-  }
-};
-
 const initTrendChart = () => {
   if (!trendChartRef.value) return;
 
@@ -385,90 +469,6 @@ const initUtilizationChart = () => {
   utilizationChart = echarts.init(utilizationChartRef.value);
 
   updateUtilizationChart();
-};
-
-const updateCharts = () => {
-  updateTrendChart();
-  updateUtilizationChart();
-};
-
-const updateTrendChart = () => {
-  if (!trendChart) return;
-  const data = alignForecasts(predictionCache.value);
-  trendChart.setOption(
-    {
-      textStyle: { color: chartColors().text },
-      xAxis: {
-        type: 'category',
-        data: data.labels,
-        axisLine: { lineStyle: { color: chartColors().border } },
-      },
-      yAxis: [
-        {
-          type: 'value',
-          name: 'QPS (/s)',
-          min: 0,
-          axisLabel: { color: chartColors().muted },
-          splitLine: { lineStyle: { color: chartColors().border } },
-        },
-        {
-          type: 'value',
-          name: '使用率 (%)',
-          min: 0,
-          max: 100,
-          axisLabel: { color: chartColors().muted },
-          splitLine: { show: false },
-        },
-      ],
-      series: data.series.map((series, index) => ({
-        ...series,
-        type: 'line',
-        connectNulls: false,
-        smooth: false,
-        areaStyle: chartType.value === 'area' ? {} : undefined,
-        lineStyle: { width: 2 },
-        itemStyle: { color: getSeriesColor(index) },
-      })),
-    },
-    { replaceMerge: ['series', 'yAxis'] },
-  );
-};
-
-const updateUtilizationChart = () => {
-  if (!utilizationChart) return;
-
-  utilizationChart.setOption(
-    {
-      tooltip: {
-        trigger: 'axis',
-        valueFormatter: (value: number) => `${value}%`,
-      },
-      textStyle: { color: chartColors().text },
-      grid: { left: 48, right: 24, top: 24, bottom: 32 },
-      xAxis: {
-        type: 'value',
-        min: 0,
-        max: 100,
-        axisLabel: { formatter: '{value}%' },
-      },
-      yAxis: { type: 'category', data: ['CPU', '内存', '磁盘'] },
-      series: [
-        {
-          name: '使用率',
-          type: 'bar',
-          data: ['cpu', 'memory', 'disk'].map(
-            (key) => predictionCache.value[key]?.current_value ?? null,
-          ),
-        },
-      ],
-    },
-    true,
-  );
-};
-
-const getSeriesColor = (index: number) => {
-  const colors = ['#1890ff', '#ff4d4f', '#faad14', '#52c41a'];
-  return colors[index % colors.length];
 };
 
 const getActionColor = (action: string) => {

@@ -170,6 +170,128 @@ const formatShortTime = (timestamp: string) => {
   }
 };
 
+const initErrorTrendsChart = () => {
+  if (!errorTrendsChartRef.value) return;
+
+  if (!errorTrendsChart) {
+    errorTrendsChart = echarts.init(errorTrendsChartRef.value);
+  }
+
+  // Diagnosis returns aggregate counts, not a time-series histogram.
+  const data = errorSummaryResult.value
+    ? [{ time: '本次诊断', value: getTotalErrors() }]
+    : [];
+
+  const option = {
+    textStyle: { color: chartColors().text },
+    backgroundColor: 'transparent',
+    color: ['#6366f1'],
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: chartColors().surface,
+      borderColor: chartColors().border,
+      borderWidth: 1,
+      textStyle: { color: chartColors().text },
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: chartType.value === 'bar',
+      data: data.map((d) => d.time),
+      axisLine: { lineStyle: { color: chartColors().border } },
+      axisLabel: { color: chartColors().muted },
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { lineStyle: { color: chartColors().border } },
+      splitLine: { lineStyle: { color: chartColors().ground } },
+      axisLabel: { color: chartColors().muted },
+    },
+    series: [
+      {
+        name: '错误数量',
+        type: chartType.value,
+        data: data.map((d) => d.value),
+        smooth: true,
+        lineStyle: { width: 2 },
+        areaStyle: chartType.value === 'line' ? { opacity: 0.1 } : undefined,
+        itemStyle: {
+          borderRadius: chartType.value === 'bar' ? [4, 4, 0, 0] : 0,
+        },
+      },
+    ],
+  };
+
+  errorTrendsChart.setOption(option);
+};
+
+const initErrorCategoriesChart = () => {
+  if (!errorCategoriesChartRef.value) return;
+
+  if (!errorCategoriesChart) {
+    errorCategoriesChart = echarts.init(errorCategoriesChartRef.value);
+  }
+
+  const topErrors = errorSummaryResult.value?.top_errors || [];
+  const pieData = topErrors
+    .filter((error: any) => Number.isFinite(error.count) && error.count >= 0)
+    .slice(0, 5)
+    .map((error: any, index: number) => ({
+      name: error.error_type || `错误类型 ${index + 1}`,
+      value: error.count,
+    }));
+
+  const option = {
+    textStyle: { color: chartColors().text },
+    backgroundColor: 'transparent',
+    color: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'],
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: chartColors().surface,
+      borderColor: chartColors().border,
+      borderWidth: 1,
+      textStyle: { color: chartColors().text },
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: ['40%', '70%'],
+        avoidLabelOverlap: false,
+        label: {
+          show: false,
+          position: 'center',
+        },
+        emphasis: {
+          label: {
+            show: true,
+            fontSize: '18',
+            fontWeight: 'bold',
+          },
+        },
+        labelLine: { show: false },
+        data: pieData,
+      },
+    ],
+  };
+
+  errorCategoriesChart.setOption(option);
+};
+
+// 初始化图表
+const initCharts = () => {
+  try {
+    initErrorTrendsChart();
+    initErrorCategoriesChart();
+  } catch {
+    message.warning('图表渲染失败，但不影响诊断结果');
+  }
+};
+
 // 获取当前诊断步骤
 const refreshAllDiagnosis = async () => {
   if (!scope.owner.value || loading.value) return;
@@ -312,128 +434,6 @@ const refreshAllDiagnosis = async () => {
   }
 };
 
-// 初始化图表
-const initCharts = () => {
-  try {
-    initErrorTrendsChart();
-    initErrorCategoriesChart();
-  } catch {
-    message.warning('图表渲染失败，但不影响诊断结果');
-  }
-};
-
-const initErrorTrendsChart = () => {
-  if (!errorTrendsChartRef.value) return;
-
-  if (!errorTrendsChart) {
-    errorTrendsChart = echarts.init(errorTrendsChartRef.value);
-  }
-
-  // Diagnosis returns aggregate counts, not a time-series histogram.
-  const data = errorSummaryResult.value
-    ? [{ time: '本次诊断', value: getTotalErrors() }]
-    : [];
-
-  const option = {
-    textStyle: { color: chartColors().text },
-    backgroundColor: 'transparent',
-    color: ['#6366f1'],
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: chartColors().surface,
-      borderColor: chartColors().border,
-      borderWidth: 1,
-      textStyle: { color: chartColors().text },
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true,
-    },
-    xAxis: {
-      type: 'category',
-      boundaryGap: chartType.value === 'bar',
-      data: data.map((d) => d.time),
-      axisLine: { lineStyle: { color: chartColors().border } },
-      axisLabel: { color: chartColors().muted },
-    },
-    yAxis: {
-      type: 'value',
-      axisLine: { lineStyle: { color: chartColors().border } },
-      splitLine: { lineStyle: { color: chartColors().ground } },
-      axisLabel: { color: chartColors().muted },
-    },
-    series: [
-      {
-        name: '错误数量',
-        type: chartType.value,
-        data: data.map((d) => d.value),
-        smooth: true,
-        lineStyle: { width: 2 },
-        areaStyle: chartType.value === 'line' ? { opacity: 0.1 } : undefined,
-        itemStyle: {
-          borderRadius: chartType.value === 'bar' ? [4, 4, 0, 0] : 0,
-        },
-      },
-    ],
-  };
-
-  errorTrendsChart.setOption(option);
-};
-
-const initErrorCategoriesChart = () => {
-  if (!errorCategoriesChartRef.value) return;
-
-  if (!errorCategoriesChart) {
-    errorCategoriesChart = echarts.init(errorCategoriesChartRef.value);
-  }
-
-  const topErrors = errorSummaryResult.value?.top_errors || [];
-  const pieData = topErrors
-    .filter((error: any) => Number.isFinite(error.count) && error.count >= 0)
-    .slice(0, 5)
-    .map((error: any, index: number) => ({
-      name: error.error_type || `错误类型 ${index + 1}`,
-      value: error.count,
-    }));
-
-  const option = {
-    textStyle: { color: chartColors().text },
-    backgroundColor: 'transparent',
-    color: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'],
-    tooltip: {
-      trigger: 'item',
-      backgroundColor: chartColors().surface,
-      borderColor: chartColors().border,
-      borderWidth: 1,
-      textStyle: { color: chartColors().text },
-    },
-    series: [
-      {
-        type: 'pie',
-        radius: ['40%', '70%'],
-        avoidLabelOverlap: false,
-        label: {
-          show: false,
-          position: 'center',
-        },
-        emphasis: {
-          label: {
-            show: true,
-            fontSize: '18',
-            fontWeight: 'bold',
-          },
-        },
-        labelLine: { show: false },
-        data: pieData,
-      },
-    ],
-  };
-
-  errorCategoriesChart.setOption(option);
-};
-
 // 监听图表类型变化
 watch(chartType, () => {
   if (hasInitialData.value) {
@@ -442,14 +442,6 @@ watch(chartType, () => {
     });
   }
 });
-
-const toggleAutoRefresh = (enabled: boolean) => {
-  if (enabled) {
-    startAutoRefresh();
-  } else {
-    stopAutoRefresh();
-  }
-};
 
 const startAutoRefresh = () => {
   if (refreshTimer) {
@@ -463,6 +455,14 @@ const startAutoRefresh = () => {
   }, 30_000);
 
   message.info('已明确开启每30秒诊断，离开页面或切换账户会停止');
+};
+
+const toggleAutoRefresh = (enabled: boolean) => {
+  if (enabled) {
+    startAutoRefresh();
+  } else {
+    stopAutoRefresh();
+  }
 };
 
 function stopAutoRefresh() {

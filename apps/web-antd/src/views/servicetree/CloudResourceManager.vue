@@ -1159,11 +1159,6 @@ const handleDelete = async (record: TreeCloudResource): Promise<void> => {
   });
 };
 
-// ========== 导出功能 ==========
-const handleExportCurrent = () => {
-  exportToExcel(resources.value);
-};
-
 const exportToExcel = (data: TreeCloudResource[]) => {
   if (!data || data.length === 0) {
     message.warning('没有可导出的数据');
@@ -1218,6 +1213,11 @@ const exportToExcel = (data: TreeCloudResource[]) => {
     ...exportData.map((row) => Object.values(row)),
   ]);
   message.success(`导出成功：${filename}`);
+};
+
+// ========== 导出功能 ==========
+const handleExportCurrent = () => {
+  exportToExcel(resources.value);
 };
 
 onMounted(async () => {

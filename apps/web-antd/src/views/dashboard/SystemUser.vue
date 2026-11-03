@@ -332,6 +332,21 @@ const handleAvatarError = (event: Event) => {
   }
 };
 
+const handleAvatarUploadLocal = (file: File) => {
+  avatarUploading.value = true;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    setTimeout(() => {
+      if (e.target?.result) {
+        formData.avatar = e.target.result as string;
+        message.success('头像设置成功');
+      }
+      avatarUploading.value = false;
+    }, 1000);
+  };
+  reader.readAsDataURL(file);
+};
+
 const beforeAvatarUpload = (file: File) => {
   const isJpgOrPng =
     file.type === 'image/jpeg' ||
@@ -351,21 +366,6 @@ const beforeAvatarUpload = (file: File) => {
 
   handleAvatarUploadLocal(file);
   return false;
-};
-
-const handleAvatarUploadLocal = (file: File) => {
-  avatarUploading.value = true;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    setTimeout(() => {
-      if (e.target?.result) {
-        formData.avatar = e.target.result as string;
-        message.success('头像设置成功');
-      }
-      avatarUploading.value = false;
-    }, 1000);
-  };
-  reader.readAsDataURL(file);
 };
 
 const handleAvatarChange = (info: any) => {

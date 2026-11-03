@@ -195,6 +195,10 @@ const isApiSelected = (apiId: number): boolean => {
   return selectedApis.value.some((api) => api.id === apiId);
 };
 
+const updateFormApiIds = () => {
+  formData.api_ids = selectedApis.value.map((api: any) => api.id);
+};
+
 const toggleApiSelection = (api: any) => {
   const index = selectedApis.value.findIndex((item) => item.id === api.id);
   if (index >= 0) {
@@ -264,10 +268,6 @@ const selectAllSearchedApis = async () => {
   } finally {
     selectAllLoading.value = false;
   }
-};
-
-const updateFormApiIds = () => {
-  formData.api_ids = selectedApis.value.map((api: any) => api.id);
 };
 
 // API 调用

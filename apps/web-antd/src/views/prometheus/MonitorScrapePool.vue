@@ -467,15 +467,6 @@ const handleViewScrapePool = async (
   }
 };
 
-const handleMenuClick = (command: string, record: MonitorScrapePool): void => {
-  switch (command) {
-    case 'delete': {
-      confirmDelete(record);
-      break;
-    }
-  }
-};
-
 const confirmDelete = (record: MonitorScrapePool): void => {
   const ticket = recordTicket(record);
   if (!ticket || !can('monitor.scrapePool.delete')) return;
@@ -513,6 +504,15 @@ const confirmDelete = (record: MonitorScrapePool): void => {
       }
     },
   });
+};
+
+const handleMenuClick = (command: string, record: MonitorScrapePool): void => {
+  switch (command) {
+    case 'delete': {
+      confirmDelete(record);
+      break;
+    }
+  }
 };
 
 // 表单保存
